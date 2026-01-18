@@ -1102,7 +1102,10 @@ async def delete_contract_attachment(
         except Exception as e:  # nosec B110  # Intentional: continue DB deletion even if file deletion fails
             # 即使文件删除失败,也继续删除数据库记录
             import logging
-            logging.getLogger(__name__).warning(f"Failed to delete file {file_path}: {e}")
+
+            logging.getLogger(__name__).warning(
+                f"Failed to delete file {file_path}: {e}"
+            )
 
     # 删除数据库记录
     db.delete(attachment)

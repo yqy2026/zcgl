@@ -144,7 +144,7 @@ class TestUpdateTaskStatus:
                 mock_db,
                 task_id="task_123",
                 status=TaskStatus.FAILED,
-                error_message="处理失败"
+                error_message="处理失败",
             )
 
             assert result is not None
@@ -162,10 +162,7 @@ class TestUpdateTaskStatus:
         """测试更新进度"""
         with patch("src.crud.task.task_crud.get", return_value=mock_task):
             result = task_service.update_task_status(
-                mock_db,
-                task_id="task_123",
-                status=TaskStatus.RUNNING,
-                progress=50
+                mock_db, task_id="task_123", status=TaskStatus.RUNNING, progress=50
             )
 
             assert result is not None
@@ -211,9 +208,7 @@ class TestUpdateTask:
 
         with patch("src.crud.task.task_crud.get", return_value=mock_task):
             with pytest.raises(ValueError, match="已完成的任务无法更新"):
-                task_service.update_task(
-                    mock_db, task_id="task_123", obj_in=obj_in
-                )
+                task_service.update_task(mock_db, task_id="task_123", obj_in=obj_in)
 
     def test_update_task_with_status_change(self, task_service, mock_db, mock_task):
         """测试更新任务状态"""
@@ -235,9 +230,7 @@ class TestUpdateTask:
 
         with patch("src.crud.task.task_crud.get", return_value=None):
             with pytest.raises(ValueError, match="任务.*不存在"):
-                task_service.update_task(
-                    mock_db, task_id="nonexistent", obj_in=obj_in
-                )
+                task_service.update_task(mock_db, task_id="nonexistent", obj_in=obj_in)
 
 
 # ============================================================================
@@ -333,7 +326,7 @@ class TestCreateHistory:
             task_id="task_123",
             action="created",
             message="任务已创建",
-            user_id="user_123"
+            user_id="user_123",
         )
 
         assert result is not None
@@ -349,7 +342,7 @@ class TestCreateHistory:
             task_id="task_123",
             action="status_changed",
             message="状态已更改",
-            details=details
+            details=details,
         )
 
         assert result is not None
@@ -358,10 +351,7 @@ class TestCreateHistory:
     def test_create_history_without_user(self, task_service, mock_db):
         """测试创建历史（无用户）"""
         result = task_service.create_history(
-            mock_db,
-            task_id="task_123",
-            action="system",
-            message="系统操作"
+            mock_db, task_id="task_123", action="system", message="系统操作"
         )
 
         assert result is not None
@@ -386,7 +376,9 @@ class TestGetStatistics:
         """测试获取用户统计"""
         stats = {"total": 5, "active": 2}
 
-        with patch("src.crud.task.task_crud.get_statistics", return_value=stats) as mock_stats:
+        with patch(
+            "src.crud.task.task_crud.get_statistics", return_value=stats
+        ) as mock_stats:
             result = task_service.get_statistics(mock_db, user_id="user_123")
 
             mock_stats.assert_called_with(mock_db, user_id="user_123")
@@ -467,7 +459,9 @@ class TestCreateExcelConfig:
         mock_config = MagicMock(spec=ExcelTaskConfig)
         mock_config.id = "config_123"
 
-        with patch("src.crud.task.excel_task_config_crud.create", return_value=mock_config):
+        with patch(
+            "src.crud.task.excel_task_config_crud.create", return_value=mock_config
+        ):
             result = task_service.create_excel_config(mock_db, obj_in=obj_in)
 
             assert result is not None
@@ -491,7 +485,9 @@ class TestCreateExcelConfig:
         mock_config = MagicMock(spec=ExcelTaskConfig)
         mock_config.id = "config_123"
 
-        with patch("src.crud.task.excel_task_config_crud.create", return_value=mock_config):
+        with patch(
+            "src.crud.task.excel_task_config_crud.create", return_value=mock_config
+        ):
             result = task_service.create_excel_config(mock_db, obj_in=obj_in)
 
             assert result is not None

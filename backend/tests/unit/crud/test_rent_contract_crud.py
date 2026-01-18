@@ -96,7 +96,9 @@ class TestContractV2MultiAsset:
         """测试不带资产筛选的查询"""
         # Mock chain for items query (include join since it's called)
         mock_items_query = MagicMock()
-        mock_items_query.join.return_value = mock_items_query  # For include_relations=True
+        mock_items_query.join.return_value = (
+            mock_items_query  # For include_relations=True
+        )
         mock_items_query.filter.return_value = mock_items_query
         mock_items_query.order_by.return_value = mock_items_query
         mock_items_query.offset.return_value = mock_items_query
@@ -260,7 +262,9 @@ class TestQueryBuilderIntegration:
         """测试QueryBuilder不使用db_session参数（V2更新）"""
         # Mock chain for items query (include join since it's called)
         mock_items_query = MagicMock()
-        mock_items_query.join.return_value = mock_items_query  # For include_relations=True
+        mock_items_query.join.return_value = (
+            mock_items_query  # For include_relations=True
+        )
         mock_items_query.filter.return_value = mock_items_query
         mock_items_query.order_by.return_value = mock_items_query
         mock_items_query.offset.return_value = mock_items_query

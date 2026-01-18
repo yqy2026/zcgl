@@ -107,7 +107,9 @@ async def upload_certificate(
                     )
                 temp_file.write(chunk)
 
-        logger.info(f"Processing certificate upload: {safe_filename}, size: {total_size} bytes")
+        logger.info(
+            f"Processing certificate upload: {safe_filename}, size: {total_size} bytes"
+        )
 
         # Extract information from file
         result = await service.extract_from_file(str(temp_file_path), safe_filename)
@@ -161,7 +163,9 @@ async def confirm_import(data: CertificateImportConfirm, db: Session = Depends(g
         service = PropertyCertificateService(db)
         certificate = await service.confirm_import(data.model_dump())
 
-        logger.info(f"Created certificate {certificate.id} from upload session {data.session_id}")
+        logger.info(
+            f"Created certificate {certificate.id} from upload session {data.session_id}"
+        )
 
         return {"certificate_id": certificate.id, "status": "success"}
 
@@ -201,7 +205,9 @@ def list_certificates(
 
     try:
         certificates = property_certificate_crud.get_multi(db, skip=skip, limit=limit)
-        logger.debug(f"Retrieved {len(certificates)} certificates (skip={skip}, limit={limit})")
+        logger.debug(
+            f"Retrieved {len(certificates)} certificates (skip={skip}, limit={limit})"
+        )
         return certificates
     except Exception as e:
         logger.error(f"Error listing certificates: {e}", exc_info=True)
@@ -275,7 +281,9 @@ def create_certificate(
 
     try:
         result = property_certificate_crud.create(db, obj_in=certificate)
-        logger.info(f"Created certificate {result.id} (number: {certificate.certificate_number})")
+        logger.info(
+            f"Created certificate {result.id} (number: {certificate.certificate_number})"
+        )
         return result
     except Exception as e:
         logger.error(f"Error creating certificate: {e}", exc_info=True)

@@ -70,13 +70,15 @@ def mock_current_user():
 def mock_excel_file():
     """Create mock Excel file"""
     content = io.BytesIO()
-    df = pd.DataFrame({
-        "物业名称": ["Test Property 1", "Test Property 2"],
-        "地址": ["Address 1", "Address 2"],
-        "确权状态": ["已确权", "未确权"],
-        "物业性质": ["经营性", "非经营性"],
-        "使用状态": ["出租", "空置"],
-    })
+    df = pd.DataFrame(
+        {
+            "物业名称": ["Test Property 1", "Test Property 2"],
+            "地址": ["Address 1", "Address 2"],
+            "确权状态": ["已确权", "未确权"],
+            "物业性质": ["经营性", "非经营性"],
+            "使用状态": ["出租", "空置"],
+        }
+    )
     df.to_excel(content, index=False)
     content.seek(0)
     return content
@@ -87,14 +89,18 @@ def mock_upload_file():
     """Create mock UploadFile object"""
     file = MagicMock(spec=UploadFile)
     file.filename = "test.xlsx"
-    file.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    file.content_type = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     file.size = 1024
 
     content = io.BytesIO()
-    df = pd.DataFrame({
-        "物业名称": ["Test Property 1"],
-        "地址": ["Address 1"],
-    })
+    df = pd.DataFrame(
+        {
+            "物业名称": ["Test Property 1"],
+            "地址": ["Address 1"],
+        }
+    )
     df.to_excel(content, index=False)
     content.seek(0)
     file.read = AsyncMock(return_value=content.getvalue())
@@ -111,7 +117,9 @@ class TestDownloadTemplate:
 
     @patch("src.api.v1.excel.ExcelTemplateService")
     @pytest.mark.asyncio
-    async def test_download_template_success(self, mock_template_service_class, mock_db, mock_current_user):
+    async def test_download_template_success(
+        self, mock_template_service_class, mock_db, mock_current_user
+    ):
         """Test successful template download"""
         from src.api.v1.excel import download_template
 
@@ -124,12 +132,20 @@ class TestDownloadTemplate:
         result = await download_template(db=mock_db, current_user=mock_current_user)
 
         assert isinstance(result, StreamingResponse)
-        assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        assert result.headers["Content-Disposition"] == "attachment; filename=land_property_asset_template.xlsx"
+        assert (
+            result.media_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert (
+            result.headers["Content-Disposition"]
+            == "attachment; filename=land_property_asset_template.xlsx"
+        )
 
     @patch("src.api.v1.excel.ExcelTemplateService")
     @pytest.mark.asyncio
-    async def test_download_template_buffer_cleanup(self, mock_template_service_class, mock_db, mock_current_user):
+    async def test_download_template_buffer_cleanup(
+        self, mock_template_service_class, mock_db, mock_current_user
+    ):
         """Test that buffer is properly closed after download"""
         from src.api.v1.excel import download_template
 
@@ -210,7 +226,9 @@ class TestCreateExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_create_config_with_all_fields(self, mock_crud, mock_db, mock_current_user):
+    async def test_create_config_with_all_fields(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test configuration creation with all optional fields"""
         from src.api.v1.excel import create_excel_config
         from src.schemas.excel_advanced import (
@@ -280,11 +298,15 @@ class TestGetExcelConfigs:
 
         assert result["total"] == 5
         assert len(result["items"]) == 5
-        mock_crud.get_multi.assert_called_once_with(db=mock_db, limit=50, config_type=None, task_type=None)
+        mock_crud.get_multi.assert_called_once_with(
+            db=mock_db, limit=50, config_type=None, task_type=None
+        )
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_get_configs_with_filters(self, mock_crud, mock_db, mock_current_user):
+    async def test_get_configs_with_filters(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test getting configurations with type and task filters"""
         from src.api.v1.excel import get_excel_configs
 
@@ -501,12 +523,16 @@ class TestPreviewExcelAdvanced:
     @patch("src.api.v1.excel.security_middleware")
     @patch("src.api.v1.excel.security_auditor")
     @pytest.mark.asyncio
-    async def test_preview_advanced_success(self, mock_auditor, mock_middleware, mock_upload_file, mock_db):
+    async def test_preview_advanced_success(
+        self, mock_auditor, mock_middleware, mock_upload_file, mock_db
+    ):
         """Test successful advanced preview"""
         from src.api.v1.excel import preview_excel_advanced
         from src.schemas.excel_advanced import ExcelPreviewRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         request = ExcelPreviewRequest(max_rows=10)
 
@@ -524,12 +550,16 @@ class TestPreviewExcelAdvanced:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_advanced_with_custom_rows(self, mock_middleware, mock_upload_file, mock_db):
+    async def test_preview_advanced_with_custom_rows(
+        self, mock_middleware, mock_upload_file, mock_db
+    ):
         """Test preview with custom row limit"""
         from src.api.v1.excel import preview_excel_advanced
         from src.schemas.excel_advanced import ExcelPreviewRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         request = ExcelPreviewRequest(max_rows=50)
 
@@ -543,12 +573,16 @@ class TestPreviewExcelAdvanced:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_advanced_detects_mappings(self, mock_middleware, mock_upload_file, mock_db):
+    async def test_preview_advanced_detects_mappings(
+        self, mock_middleware, mock_upload_file, mock_db
+    ):
         """Test that preview detects field mappings"""
         from src.api.v1.excel import preview_excel_advanced
         from src.schemas.excel_advanced import ExcelPreviewRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         request = ExcelPreviewRequest(max_rows=10)
 
@@ -572,11 +606,15 @@ class TestPreviewExcel:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_success(self, mock_middleware, mock_upload_file, mock_db, mock_current_user):
+    async def test_preview_success(
+        self, mock_middleware, mock_upload_file, mock_db, mock_current_user
+    ):
         """Test successful Excel preview"""
         from src.api.v1.excel import preview_excel
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         result = await preview_excel(
             file=mock_upload_file,
@@ -592,11 +630,15 @@ class TestPreviewExcel:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_with_custom_max_rows(self, mock_middleware, mock_upload_file, mock_db, mock_current_user):
+    async def test_preview_with_custom_max_rows(
+        self, mock_middleware, mock_upload_file, mock_db, mock_current_user
+    ):
         """Test preview with custom max_rows parameter"""
         from src.api.v1.excel import preview_excel
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         result = await preview_excel(
             file=mock_upload_file,
@@ -608,12 +650,16 @@ class TestPreviewExcel:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_invalid_file_type(self, mock_middleware, mock_upload_file, mock_db, mock_current_user):
+    async def test_preview_invalid_file_type(
+        self, mock_middleware, mock_upload_file, mock_db, mock_current_user
+    ):
         """Test preview with invalid file type"""
         from src.api.v1.excel import preview_excel
         from src.core.exception_handler import BusinessValidationError
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
         mock_upload_file.filename = "test.txt"
 
         with pytest.raises(BusinessValidationError) as exc_info:
@@ -627,12 +673,16 @@ class TestPreviewExcel:
 
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_preview_no_filename(self, mock_middleware, mock_upload_file, mock_db, mock_current_user):
+    async def test_preview_no_filename(
+        self, mock_middleware, mock_upload_file, mock_db, mock_current_user
+    ):
         """Test preview when filename is None"""
         from src.api.v1.excel import preview_excel
         from src.core.exception_handler import BusinessValidationError
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
         mock_upload_file.filename = None
 
         with pytest.raises(BusinessValidationError):
@@ -655,19 +705,31 @@ class TestImportExcelSync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_import_success(self, mock_middleware, mock_auditor, mock_import_service_class, mock_upload_file, mock_db, mock_current_user):
+    async def test_import_success(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_import_service_class,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test successful synchronous import"""
         from src.api.v1.excel import import_excel
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = AsyncMock(return_value={
-            "total": 10,
-            "success": 8,
-            "failed": 2,
-            "errors": [],
-        })
+        mock_service.import_assets_from_excel = AsyncMock(
+            return_value={
+                "total": 10,
+                "success": 8,
+                "failed": 2,
+                "errors": [],
+            }
+        )
         mock_import_service_class.return_value = mock_service
 
         result = await import_excel(
@@ -688,19 +750,31 @@ class TestImportExcelSync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_import_with_skip_errors(self, mock_middleware, mock_auditor, mock_import_service_class, mock_upload_file, mock_db, mock_current_user):
+    async def test_import_with_skip_errors(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_import_service_class,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test import with skip_errors enabled"""
         from src.api.v1.excel import import_excel
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = AsyncMock(return_value={
-            "total": 10,
-            "success": 10,
-            "failed": 0,
-            "errors": [],
-        })
+        mock_service.import_assets_from_excel = AsyncMock(
+            return_value={
+                "total": 10,
+                "success": 10,
+                "failed": 0,
+                "errors": [],
+            }
+        )
         mock_import_service_class.return_value = mock_service
 
         result = await import_excel(
@@ -717,12 +791,22 @@ class TestImportExcelSync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_import_invalid_file_type(self, mock_middleware, mock_auditor, mock_import_service_class, mock_upload_file, mock_db, mock_current_user):
+    async def test_import_invalid_file_type(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_import_service_class,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test import with invalid file type"""
         from src.api.v1.excel import import_excel
         from src.core.exception_handler import BusinessValidationError
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
         mock_upload_file.filename = "test.txt"
 
         with pytest.raises(BusinessValidationError):
@@ -738,19 +822,31 @@ class TestImportExcelSync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_import_with_errors(self, mock_middleware, mock_auditor, mock_import_service_class, mock_upload_file, mock_db, mock_current_user):
+    async def test_import_with_errors(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_import_service_class,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test import with validation errors"""
         from src.api.v1.excel import import_excel
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = AsyncMock(return_value={
-            "total": 10,
-            "success": 5,
-            "failed": 5,
-            "errors": [{"row": 3, "error": "Invalid value"}],
-        })
+        mock_service.import_assets_from_excel = AsyncMock(
+            return_value={
+                "total": 10,
+                "success": 5,
+                "failed": 5,
+                "errors": [{"row": 3, "error": "Invalid value"}],
+            }
+        )
         mock_import_service_class.return_value = mock_service
 
         result = await import_excel(
@@ -778,12 +874,23 @@ class TestImportExcelAsync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_async_import_success(self, mock_middleware, mock_auditor, mock_task_crud, mock_import_service_class, mock_upload_file, mock_db, mock_current_user):
+    async def test_async_import_success(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_task_crud,
+        mock_import_service_class,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test successful asynchronous import"""
         from src.api.v1.excel import import_excel_async
         from src.schemas.excel_advanced import ExcelImportRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         mock_task = MagicMock()
         mock_task.id = "task-123"
@@ -808,12 +915,22 @@ class TestImportExcelAsync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_async_import_with_config(self, mock_middleware, mock_auditor, mock_task_crud, mock_upload_file, mock_db, mock_current_user):
+    async def test_async_import_with_config(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_task_crud,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test asynchronous import with custom config"""
         from src.api.v1.excel import import_excel_async
         from src.schemas.excel_advanced import ExcelImportRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
 
         mock_task = MagicMock()
         mock_task.id = "task-456"
@@ -840,13 +957,23 @@ class TestImportExcelAsync:
     @patch("src.api.v1.excel.security_auditor")
     @patch("src.api.v1.excel.security_middleware")
     @pytest.mark.asyncio
-    async def test_async_import_invalid_file_type(self, mock_middleware, mock_auditor, mock_task_crud, mock_upload_file, mock_db, mock_current_user):
+    async def test_async_import_invalid_file_type(
+        self,
+        mock_middleware,
+        mock_auditor,
+        mock_task_crud,
+        mock_upload_file,
+        mock_db,
+        mock_current_user,
+    ):
         """Test asynchronous import with invalid file type"""
         from src.api.v1.excel import import_excel_async
         from src.core.exception_handler import BusinessValidationError
         from src.schemas.excel_advanced import ExcelImportRequest
 
-        mock_middleware.validate_file_upload = AsyncMock(return_value={"hash": "test-hash"})
+        mock_middleware.validate_file_upload = AsyncMock(
+            return_value={"hash": "test-hash"}
+        )
         mock_upload_file.filename = "test.txt"
 
         request = ExcelImportRequest()
@@ -871,7 +998,9 @@ class TestExportExcel:
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_success(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_success(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test successful Excel export"""
         from src.api.v1.excel import export_excel
 
@@ -890,12 +1019,17 @@ class TestExportExcel:
         )
 
         assert isinstance(result, StreamingResponse)
-        assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert (
+            result.media_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         assert "assets_export.xlsx" in result.headers["Content-Disposition"]
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_with_filters(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_with_filters(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test export with filters applied"""
         from src.api.v1.excel import export_excel
 
@@ -918,7 +1052,9 @@ class TestExportExcel:
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_with_search_only(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_with_search_only(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test export with only search term"""
         from src.api.v1.excel import export_excel
 
@@ -949,7 +1085,9 @@ class TestExportExcelAsync:
 
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_async_export_success(self, mock_task_crud, mock_db, mock_current_user):
+    async def test_async_export_success(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test successful asynchronous export"""
         from src.api.v1.excel import export_excel_async
         from src.schemas.excel_advanced import ExcelExportRequest
@@ -974,7 +1112,9 @@ class TestExportExcelAsync:
 
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_async_export_with_filters(self, mock_task_crud, mock_db, mock_current_user):
+    async def test_async_export_with_filters(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test asynchronous export with filters"""
         from src.api.v1.excel import export_excel_async
         from src.schemas.excel_advanced import ExcelExportRequest
@@ -1001,7 +1141,9 @@ class TestExportExcelAsync:
 
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_async_export_with_config(self, mock_task_crud, mock_db, mock_current_user):
+    async def test_async_export_with_config(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test asynchronous export with custom config"""
         from src.api.v1.excel import export_excel_async
         from src.schemas.excel_advanced import ExcelExportRequest
@@ -1057,7 +1199,10 @@ class TestDownloadExportFile:
             result = await download_export_file(task_id="task-123", db=mock_db)
 
             assert isinstance(result, StreamingResponse)
-            assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            assert (
+                result.media_type
+                == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         finally:
             # Cleanup
             if os.path.exists(temp_path):
@@ -1105,7 +1250,10 @@ class TestDownloadExportFile:
         mock_task = MagicMock()
         mock_task.id = "task-no-file"
         mock_task.status = TaskStatus.COMPLETED
-        mock_task.result_data = {"file_path": "/nonexistent/file.xlsx", "file_name": "test.xlsx"}
+        mock_task.result_data = {
+            "file_path": "/nonexistent/file.xlsx",
+            "file_name": "test.xlsx",
+        }
         mock_task_crud.get.return_value = mock_task
 
         with pytest.raises(HTTPException) as exc_info:
@@ -1357,7 +1505,9 @@ class TestExportSelectedAssets:
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_selected_assets_success(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_selected_assets_success(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test successful export of selected assets"""
         from src.api.v1.excel import export_selected_assets
 
@@ -1385,7 +1535,9 @@ class TestExportSelectedAssets:
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_filtered_assets(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_filtered_assets(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test export with filters instead of asset IDs"""
         from src.api.v1.excel import export_selected_assets
 
@@ -1410,7 +1562,9 @@ class TestExportSelectedAssets:
 
     @patch("src.api.v1.excel.ExcelExportService")
     @pytest.mark.asyncio
-    async def test_export_empty_asset_list(self, mock_export_service_class, mock_db, mock_current_user):
+    async def test_export_empty_asset_list(
+        self, mock_export_service_class, mock_db, mock_current_user
+    ):
         """Test export with empty asset ID list"""
         from src.api.v1.excel import export_selected_assets
 
@@ -1445,7 +1599,9 @@ class TestProcessExcelImportAsync:
     @patch("src.api.v1.excel.ExcelImportService")
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_process_import_async_success(self, mock_task_crud, mock_import_service_class, mock_db):
+    async def test_process_import_async_success(
+        self, mock_task_crud, mock_import_service_class, mock_db
+    ):
         """Test successful background import processing"""
         from src.api.v1.excel import _process_excel_import_async
         from src.schemas.excel_advanced import ExcelImportRequest
@@ -1461,13 +1617,15 @@ class TestProcessExcelImportAsync:
             mock_task_crud.get.return_value = mock_task
 
             mock_service = MagicMock()
-            mock_service.import_assets_from_excel = AsyncMock(return_value={
-                "total": 10,
-                "success": 10,
-                "failed": 0,
-                "created_assets": 10,
-                "updated_assets": 0,
-            })
+            mock_service.import_assets_from_excel = AsyncMock(
+                return_value={
+                    "total": 10,
+                    "success": 10,
+                    "failed": 0,
+                    "created_assets": 10,
+                    "updated_assets": 0,
+                }
+            )
             mock_import_service_class.return_value = mock_service
 
             request = ExcelImportRequest()
@@ -1489,7 +1647,9 @@ class TestProcessExcelImportAsync:
     @patch("src.api.v1.excel.ExcelImportService")
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_process_import_async_failure(self, mock_task_crud, mock_import_service_class, mock_db):
+    async def test_process_import_async_failure(
+        self, mock_task_crud, mock_import_service_class, mock_db
+    ):
         """Test background import processing with failure"""
         from src.api.v1.excel import _process_excel_import_async
         from src.schemas.excel_advanced import ExcelImportRequest
@@ -1505,7 +1665,9 @@ class TestProcessExcelImportAsync:
             mock_task_crud.get.return_value = mock_task
 
             mock_service = MagicMock()
-            mock_service.import_assets_from_excel = AsyncMock(side_effect=Exception("Import failed"))
+            mock_service.import_assets_from_excel = AsyncMock(
+                side_effect=Exception("Import failed")
+            )
             mock_import_service_class.return_value = mock_service
 
             request = ExcelImportRequest()
@@ -1538,7 +1700,9 @@ class TestProcessExcelExportAsync:
     @patch("src.api.v1.excel.ExcelExportService")
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_process_export_async_success(self, mock_task_crud, mock_export_service_class, mock_db):
+    async def test_process_export_async_success(
+        self, mock_task_crud, mock_export_service_class, mock_db
+    ):
         """Test successful background export processing"""
         from src.api.v1.excel import _process_excel_export_async
         from src.schemas.excel_advanced import ExcelExportRequest
@@ -1570,7 +1734,9 @@ class TestProcessExcelExportAsync:
     @patch("src.api.v1.excel.ExcelExportService")
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
-    async def test_process_export_async_failure(self, mock_task_crud, mock_export_service_class, mock_db):
+    async def test_process_export_async_failure(
+        self, mock_task_crud, mock_export_service_class, mock_db
+    ):
         """Test background export processing with failure"""
         from src.api.v1.excel import _process_excel_export_async
         from src.schemas.excel_advanced import ExcelExportRequest

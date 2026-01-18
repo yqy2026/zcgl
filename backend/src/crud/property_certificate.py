@@ -3,7 +3,6 @@ Property Certificate CRUD Operations
 产权证CRUD操作
 """
 
-
 from sqlalchemy.orm import Session
 
 from ..models.property_certificate import PropertyCertificate
@@ -19,7 +18,9 @@ class CRUDPropertyCertificate(
 ):
     """产权证CRUD操作类"""
 
-    def get_by_certificate_number(self, db: Session, certificate_number: str) -> PropertyCertificate | None:
+    def get_by_certificate_number(
+        self, db: Session, certificate_number: str
+    ) -> PropertyCertificate | None:
         """
         根据证书编号获取产权证
 
@@ -37,7 +38,11 @@ class CRUDPropertyCertificate(
         )
 
     def create_with_owners(
-        self, db: Session, *, obj_in: PropertyCertificateCreate, owner_ids: list[str] | None = None
+        self,
+        db: Session,
+        *,
+        obj_in: PropertyCertificateCreate,
+        owner_ids: list[str] | None = None,
     ) -> PropertyCertificate:
         """
         创建产权证并关联权利人
@@ -59,7 +64,9 @@ class CRUDPropertyCertificate(
         # Link owners if provided
         if owner_ids:
             for owner_id in owner_ids:
-                owner = db.query(PropertyOwner).filter(PropertyOwner.id == owner_id).first()
+                owner = (
+                    db.query(PropertyOwner).filter(PropertyOwner.id == owner_id).first()
+                )
                 if owner:
                     db_obj.owners.append(owner)
 

@@ -27,6 +27,7 @@ def mock_db():
 def excel_service():
     """Excel模板服务实例"""
     from unittest.mock import Mock
+
     return ExcelTemplateService(Mock(spec=Session))
 
 
@@ -72,14 +73,27 @@ class TestGenerateTemplateSuccess:
 
         # 验证基本列存在
         required_columns = [
-            "权属方", "权属类别", "项目名称", "物业名称", "物业地址",
-            "土地面积(平方米)", "实际房产面积(平方米)", "非经营物业面积(平方米)",
-            "可出租面积(平方米)", "已出租面积(平方米)",
-            "确权状态（已确权、未确权、部分确权）", "证载用途（商业、住宅、办公、厂房、车库等）",
-            "实际用途（商业、住宅、办公、厂房、车库等）", "业态类别",
-            "使用状态（出租、闲置、自用、公房、其他）", "是否涉诉",
-            "物业性质（经营类、非经营类）", "是否计入出租率",
-            "接收模式", "(当前)接收协议开始日期", "(当前)接收协议结束日期"
+            "权属方",
+            "权属类别",
+            "项目名称",
+            "物业名称",
+            "物业地址",
+            "土地面积(平方米)",
+            "实际房产面积(平方米)",
+            "非经营物业面积(平方米)",
+            "可出租面积(平方米)",
+            "已出租面积(平方米)",
+            "确权状态（已确权、未确权、部分确权）",
+            "证载用途（商业、住宅、办公、厂房、车库等）",
+            "实际用途（商业、住宅、办公、厂房、车库等）",
+            "业态类别",
+            "使用状态（出租、闲置、自用、公房、其他）",
+            "是否涉诉",
+            "物业性质（经营类、非经营类）",
+            "是否计入出租率",
+            "接收模式",
+            "(当前)接收协议开始日期",
+            "(当前)接收协议结束日期",
         ]
 
         for col in required_columns:
@@ -140,8 +154,29 @@ class TestColumnWidths:
         ws = wb["资产导入模板"]
 
         # 验证A-U列都有宽度设置
-        for col in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-                    "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U"]:
+        for col in [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
+            "K",
+            "L",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+        ]:
             assert col in ws.column_dimensions
             assert ws.column_dimensions[col].width > 0
 
@@ -359,7 +394,10 @@ class TestDataConsistency:
 
         # 数值字段（pandas返回numpy类型，需要特殊检查）
         import numpy as np
-        assert isinstance(df.iloc[0]["土地面积(平方米)"], (int, float, np.integer, np.floating))
+
+        assert isinstance(
+            df.iloc[0]["土地面积(平方米)"], (int, float, np.integer, np.floating)
+        )
 
         # 验证数值
         assert df.iloc[0]["土地面积(平方米)"] in [1000, 1000.0]

@@ -586,7 +586,13 @@ class TestGetAssetAttachments:
     @patch("src.api.v1.asset_attachments.asset_crud")
     @pytest.mark.asyncio
     async def test_get_attachments_empty_directory(
-        self, mock_asset_crud_obj, mock_listdir, mock_exists, mock_db, mock_regular_user, mock_asset
+        self,
+        mock_asset_crud_obj,
+        mock_listdir,
+        mock_exists,
+        mock_db,
+        mock_regular_user,
+        mock_asset,
     ):
         """Test getting attachments from empty directory"""
         from src.api.v1.asset_attachments import get_asset_attachments
@@ -625,7 +631,12 @@ class TestGetAssetAttachments:
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
-        mock_listdir.return_value = ["document.pdf", "image.jpg", "data.txt", "report.PDF"]
+        mock_listdir.return_value = [
+            "document.pdf",
+            "image.jpg",
+            "data.txt",
+            "report.PDF",
+        ]
         mock_join.return_value = "uploads/attachments/asset-123/document.pdf"
 
         mock_file_stat = MagicMock()
@@ -864,7 +875,9 @@ class TestDeleteAssetAttachment:
         )
 
         assert result["message"] == "附件删除成功"
-        mock_remove.assert_called_once_with("uploads/attachments/asset-123/document.pdf")
+        mock_remove.assert_called_once_with(
+            "uploads/attachments/asset-123/document.pdf"
+        )
 
     @patch("src.api.v1.asset_attachments.asset_crud")
     @pytest.mark.asyncio

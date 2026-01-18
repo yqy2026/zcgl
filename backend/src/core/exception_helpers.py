@@ -38,7 +38,7 @@ def handle_service_exception(
     logger.error(
         f"{service_name} - {operation} failed",
         exc_info=True,
-        extra={"service": service_name, "operation": operation}
+        extra={"service": service_name, "operation": operation},
     )
 
     # 数据库唯一约束冲突

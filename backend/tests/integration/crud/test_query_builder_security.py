@@ -145,7 +145,12 @@ class TestQueryBuilderSecurityIntegration:
         qb = QueryBuilder(Asset)
 
         # Safe sort fields
-        sort_fields = ["created_at", "updated_at", "property_name", "actual_property_area"]
+        sort_fields = [
+            "created_at",
+            "updated_at",
+            "property_name",
+            "actual_property_area",
+        ]
 
         for sort_field in sort_fields:
             query = qb.build_query(sort_by=sort_field, sort_desc=True)
@@ -372,9 +377,9 @@ class TestWhitelistCompliance:
         whitelist = get_whitelist_for_model(Asset)
 
         # Should not be EmptyWhitelist (should have explicit whitelist)
-        assert not isinstance(
-            whitelist, EmptyWhitelist
-        ), "Asset should have explicit whitelist, not empty"
+        assert not isinstance(whitelist, EmptyWhitelist), (
+            "Asset should have explicit whitelist, not empty"
+        )
 
     def test_rent_contract_has_whitelist(self):
         """RentContract model should have a whitelist registered."""
@@ -385,9 +390,9 @@ class TestWhitelistCompliance:
         from src.models.rent_contract import RentContract
 
         whitelist = get_whitelist_for_model(RentContract)
-        assert not isinstance(
-            whitelist, EmptyWhitelist
-        ), "RentContract should have explicit whitelist"
+        assert not isinstance(whitelist, EmptyWhitelist), (
+            "RentContract should have explicit whitelist"
+        )
 
     def test_ownership_has_whitelist(self):
         """Ownership model should have a whitelist registered."""
@@ -398,6 +403,6 @@ class TestWhitelistCompliance:
         from src.models.asset import Ownership  # Ownership is in models/asset.py
 
         whitelist = get_whitelist_for_model(Ownership)
-        assert not isinstance(
-            whitelist, EmptyWhitelist
-        ), "Ownership should have explicit whitelist"
+        assert not isinstance(whitelist, EmptyWhitelist), (
+            "Ownership should have explicit whitelist"
+        )

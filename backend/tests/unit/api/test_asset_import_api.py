@@ -9,7 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication and database mocking setup")
+pytestmark = pytest.mark.skip(
+    reason="Unit API tests require proper authentication and database mocking setup"
+)
 from fastapi.testclient import TestClient
 
 
@@ -57,9 +59,7 @@ class TestAssetImport:
 
     @patch("src.api.v1.asset_import.validate_asset_data")
     @patch("src.api.v1.asset_import.asset_crud")
-    def test_import_assets_dry_run(
-        self, mock_asset_crud, mock_validate, client
-    ):
+    def test_import_assets_dry_run(self, mock_asset_crud, mock_validate, client):
         """Test asset import in dry run mode"""
         mock_validation_result = MagicMock()
         mock_validation_result.is_valid = True
@@ -87,9 +87,7 @@ class TestAssetImport:
         mock_asset_crud.create.assert_not_called()
 
     @patch("src.api.v1.asset_import.validate_asset_data")
-    def test_import_assets_with_validation_errors(
-        self, mock_validate, client
-    ):
+    def test_import_assets_with_validation_errors(self, mock_validate, client):
         """Test import with validation errors"""
         # Mock validation to fail
         mock_validation_result = MagicMock()
@@ -117,9 +115,7 @@ class TestAssetImport:
         assert len(data["errors"]) > 0
 
     @patch("src.api.v1.asset_import.validate_asset_data")
-    def test_import_assets_skip_errors(
-        self, mock_validate, client
-    ):
+    def test_import_assets_skip_errors(self, mock_validate, client):
         """Test import with skip_errors enabled"""
         # First record fails validation, second passes
         call_count = [0]
@@ -157,9 +153,7 @@ class TestAssetImport:
 
     @patch("src.api.v1.asset_import.validate_asset_data")
     @patch("src.api.v1.asset_import.asset_crud")
-    def test_import_assets_merge_mode(
-        self, mock_asset_crud, mock_validate, client
-    ):
+    def test_import_assets_merge_mode(self, mock_asset_crud, mock_validate, client):
         """Test asset import in merge mode"""
         mock_validation_result = MagicMock()
         mock_validation_result.is_valid = True
@@ -234,7 +228,9 @@ class TestAssetImportUnauthorized:
             "dry_run": False,
         }
 
-        response = unauthenticated_client.post("/api/v1/assets/import", json=import_data)
+        response = unauthenticated_client.post(
+            "/api/v1/assets/import", json=import_data
+        )
         assert response.status_code == 401
 
 
@@ -242,4 +238,5 @@ class TestAssetImportUnauthorized:
 def unauthenticated_client():
     """Fixture providing unauthenticated client"""
     from src.main import app
+
     return TestClient(app)

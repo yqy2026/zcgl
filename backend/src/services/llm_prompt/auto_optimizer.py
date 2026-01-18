@@ -46,9 +46,11 @@ class AutoOptimizer:
             db: 数据库会话
         """
         # 获取所有活跃的Prompt
-        active_prompts = db.query(PromptTemplate).filter(
-            PromptTemplate.status == PromptStatus.ACTIVE
-        ).all()
+        active_prompts = (
+            db.query(PromptTemplate)
+            .filter(PromptTemplate.status == PromptStatus.ACTIVE)
+            .all()
+        )
 
         logger.info(f"🔍 检查{len(active_prompts)}个活跃Prompt...")
 
@@ -71,7 +73,9 @@ class AutoOptimizer:
 
         return optimization_results
 
-    async def _should_optimize(self, db: Session, prompt: PromptTemplate) -> tuple[bool, str]:
+    async def _should_optimize(
+        self, db: Session, prompt: PromptTemplate
+    ) -> tuple[bool, str]:
         """
         判断Prompt是否需要优化
 
@@ -84,21 +88,30 @@ class AutoOptimizer:
         """
         # 1. 检查最近7天的反馈数量
         week_ago = datetime.utcnow() - timedelta(days=7)
-        feedback_count = db.query(ExtractionFeedback).filter(
-            ExtractionFeedback.template_id == prompt.id,
-            ExtractionFeedback.created_at >= week_ago
-        ).count()
+        feedback_count = (
+            db.query(ExtractionFeedback)
+            .filter(
+                ExtractionFeedback.template_id == prompt.id,
+                ExtractionFeedback.created_at >= week_ago,
+            )
+            .count()
+        )
 
         if feedback_count >= self.min_feedback_count:
             return True, f"收集到{feedback_count}条反馈(≥{self.min_feedback_count})"
 
         # 2. 检查当前准确率
-        latest_metrics = db.query(func.avg(PromptTemplate.avg_accuracy)).filter(
-            PromptTemplate.id == prompt.id
-        ).scalar()
+        latest_metrics = (
+            db.query(func.avg(PromptTemplate.avg_accuracy))
+            .filter(PromptTemplate.id == prompt.id)
+            .scalar()
+        )
 
         if latest_metrics and latest_metrics < self.accuracy_threshold:
-            return True, f"准确率{latest_metrics:.1%}低于阈值{self.accuracy_threshold:.1%}"
+            return (
+                True,
+                f"准确率{latest_metrics:.1%}低于阈值{self.accuracy_threshold:.1%}",
+            )
 
         return False, "反馈数量和准确率均正常"
 
@@ -114,9 +127,13 @@ class AutoOptimizer:
             优化结果字典
         """
         # 1. 收集反馈数据
-        feedbacks = db.query(ExtractionFeedback).filter(
-            ExtractionFeedback.template_id == template_id
-        ).order_by(ExtractionFeedback.created_at.desc()).limit(100).all()
+        feedbacks = (
+            db.query(ExtractionFeedback)
+            .filter(ExtractionFeedback.template_id == template_id)
+            .order_by(ExtractionFeedback.created_at.desc())
+            .limit(100)
+            .all()
+        )
 
         if not feedbacks:
             logger.warning(f"❌ Prompt {template_id} 没有足够反馈数据,跳过优化")
@@ -143,8 +160,7 @@ class AutoOptimizer:
         updated_system_prompt = template.system_prompt
         if "⚠️ 重要:" in updated_system_prompt or "⚠️ 重要" in updated_system_prompt:
             updated_system_prompt = updated_system_prompt.replace(
-                "⚠️ 重要:",
-                f"⚠️ 重要:\n{chr(10).join(new_rules)}\n"
+                "⚠️ 重要:", f"⚠️ 重要:\n{chr(10).join(new_rules)}\n"
             )
         else:
             updated_system_prompt += f"\n\n⚠️ 重要:\n{chr(10).join(new_rules)}"
@@ -161,7 +177,7 @@ class AutoOptimizer:
             few_shot_examples=template.few_shot_examples,
             change_description=f"自动优化: 新增{len(new_rules)}条规则 (基于{len(feedbacks)}个反馈)",
             change_type="optimized",
-            auto_generated=True
+            auto_generated=True,
         )
 
         # 6. 更新模板
@@ -183,10 +199,12 @@ class AutoOptimizer:
             "new_version": new_version,
             "rules_added": len(new_rules),
             "feedback_count": len(feedbacks),
-            "rules": new_rules
+            "rules": new_rules,
         }
 
-    def _analyze_error_patterns(self, feedbacks: list[ExtractionFeedback]) -> dict[str, Any]:
+    def _analyze_error_patterns(
+        self, feedbacks: list[ExtractionFeedback]
+    ) -> dict[str, Any]:
         """
         分析错误模式
 
@@ -197,26 +215,28 @@ class AutoOptimizer:
             错误模式字典
         """
         patterns = {
-            'by_field': Counter(),
-            'by_error_type': Counter(),
-            'examples': defaultdict(list)
+            "by_field": Counter(),
+            "by_error_type": Counter(),
+            "examples": defaultdict(list),
         }
 
         for fb in feedbacks:
             # 统计字段错误
-            patterns['by_field'][fb.field_name] += 1
+            patterns["by_field"][fb.field_name] += 1
 
             # 分析错误类型
             error_type = self._classify_error(fb.original_value, fb.corrected_value)
-            patterns['by_error_type'][error_type] += 1
+            patterns["by_error_type"][error_type] += 1
 
             # 保存示例(每个类型最多3个)
-            if len(patterns['examples'][error_type]) < 3:
-                patterns['examples'][error_type].append({
-                    'field': fb.field_name,
-                    'original': fb.original_value,
-                    'corrected': fb.corrected_value
-                })
+            if len(patterns["examples"][error_type]) < 3:
+                patterns["examples"][error_type].append(
+                    {
+                        "field": fb.field_name,
+                        "original": fb.original_value,
+                        "corrected": fb.corrected_value,
+                    }
+                )
 
         logger.info(f"📊 错误分析完成: {dict(patterns['by_error_type'])}")
         return patterns
@@ -234,25 +254,26 @@ class AutoOptimizer:
             错误类型
         """
         if not original:
-            return 'missing'
+            return "missing"
         elif len(corrected) > len(original) and corrected.startswith(original):
-            return 'truncation'
+            return "truncation"
         elif original.isdigit() and corrected.isdigit() and original != corrected:
-            return 'number_mismatch'
+            return "number_mismatch"
         elif AutoOptimizer._is_date_error(original, corrected):
-            return 'date_format'
-        elif '号' not in original and '号' in corrected:
-            return 'certificate_format'
+            return "date_format"
+        elif "号" not in original and "号" in corrected:
+            return "certificate_format"
         else:
-            return 'other'
+            return "other"
 
     @staticmethod
     def _is_date_error(original: str, corrected: str) -> bool:
         """检查是否为日期格式错误"""
         try:
             from datetime import datetime
-            datetime.strptime(original, '%Y-%m-%d')
-            datetime.strptime(corrected, '%Y-%m-%d')
+
+            datetime.strptime(original, "%Y-%m-%d")
+            datetime.strptime(corrected, "%Y-%m-%d")
             return False
         except ValueError:
             return True
@@ -270,10 +291,10 @@ class AutoOptimizer:
         rules = []
 
         # 规则1: 截断问题
-        truncation_errors = patterns['by_error_type'].get('truncation', 0)
+        truncation_errors = patterns["by_error_type"].get("truncation", 0)
         if truncation_errors >= 10:  # 截断错误≥10次
-            top_field = patterns['by_field'].most_common(1)[0][0]
-            example = patterns['examples']['truncation'][0]
+            top_field = patterns["by_field"].most_common(1)[0][0]
+            example = patterns["examples"]["truncation"][0]
             rules.append(
                 f"⚠️ {top_field}字段常见问题({truncation_errors}次):识别结果被截断\n"
                 f"   示例:{example['original'][:50]}... → {example['corrected'][:50]}...\n"
@@ -281,7 +302,7 @@ class AutoOptimizer:
             )
 
         # 规则2: 格式问题
-        format_errors = patterns['by_error_type'].get('certificate_format', 0)
+        format_errors = patterns["by_error_type"].get("certificate_format", 0)
         if format_errors >= 10:
             rules.append(
                 f"⚠️ 证书编号格式问题({format_errors}次):必须包含'号'字,确保提取完整编号\n"
@@ -289,7 +310,7 @@ class AutoOptimizer:
             )
 
         # 规则3: 日期格式
-        date_errors = patterns['by_error_type'].get('date_format', 0)
+        date_errors = patterns["by_error_type"].get("date_format", 0)
         if date_errors >= 10:
             rules.append(
                 f"⚠️ 日期格式问题({date_errors}次):必须统一为YYYY-MM-DD\n"
@@ -297,10 +318,8 @@ class AutoOptimizer:
             )
 
         # 规则4: 高频错误字段
-        for field, count in patterns['by_field'].most_common(3):
+        for field, count in patterns["by_field"].most_common(3):
             if count >= 20:  # 某个字段错误≥20次
-                rules.append(
-                    f"⚠️ {field}字段需要特别仔细核对(错误{count}次),准确率较低"
-                )
+                rules.append(f"⚠️ {field}字段需要特别仔细核对(错误{count}次),准确率较低")
 
         return rules

@@ -75,7 +75,9 @@ class ResourceNotFoundError(BaseBusinessError):
         resource_id: str | None = None,
         details: dict[str, Any] | None = None,
     ):
-        message = f"{resource_type}{ErrorMessages.RESOURCE_NOT_FOUND.replace('资源', '')}"
+        message = (
+            f"{resource_type}{ErrorMessages.RESOURCE_NOT_FOUND.replace('资源', '')}"
+        )
         if resource_id:
             message += f" (ID: {resource_id})"
 

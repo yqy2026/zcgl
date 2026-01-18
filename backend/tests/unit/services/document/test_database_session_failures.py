@@ -172,7 +172,9 @@ class TestDatabaseSessionManagement:
             }
         }
 
-        result = await service.confirm_import(mock_db, session_id, confirmed_data, user_id=1)
+        result = await service.confirm_import(
+            mock_db, session_id, confirmed_data, user_id=1
+        )
 
         # 应该返回用户错误（不是系统错误）
         assert result["success"] is False

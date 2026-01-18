@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # 错误处理包装 - 捕获模型导入错误
 try:
     from src.database import Base
+
     logger = None
 
     # Import all models so Alembic can detect them
@@ -36,7 +37,7 @@ try:
 
 except ImportError as e:
     error_msg = f"""
-{'='*60}
+{"=" * 60}
 CRITICAL: 无法导入模型进行数据库迁移
 错误: {e}
 
@@ -45,26 +46,21 @@ CRITICAL: 无法导入模型进行数据库迁移
 2. 检查src/models/目录是否存在所有模型文件
 3. 检查数据库依赖是否已安装 (psycopg2等)
 4. 查看 docs/POSTGRESQL_MIGRATION.md 获取帮助
-{'='*60}
+{"=" * 60}
 """
     print(error_msg)
     # ✅ 抛出异常而不是退出
-    raise ImportError(
-        f"Alembic模型导入失败: {e}\n"
-        f"请运行: uv pip install -e ."
-    ) from e
+    raise ImportError(f"Alembic模型导入失败: {e}\n请运行: uv pip install -e .") from e
 
 except Exception as e:
     error_msg = f"""
-{'='*60}
+{"=" * 60}
 Alembic初始化失败: {e}
-{'='*60}
+{"=" * 60}
 """
     print(error_msg)
     # ✅ 抛出异常而不是退出
-    raise RuntimeError(
-        f"Alembic初始化失败: {e}"
-    ) from e
+    raise RuntimeError(f"Alembic初始化失败: {e}") from e
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -235,9 +235,7 @@ class TestUserCRUD:
         assert users == [sample_user]
         assert total == 1
 
-    def test_get_multi_with_filters_organization(
-        self, user_crud, mock_db, sample_user
-    ):
+    def test_get_multi_with_filters_organization(self, user_crud, mock_db, sample_user):
         """Test getting users filtered by organization"""
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -412,9 +410,7 @@ class TestUserSessionCRUD:
         assert result == sample_session
         mock_db.query.assert_called_once_with(UserSession)
 
-    def test_get_session_by_refresh_token(
-        self, session_crud, mock_db, sample_session
-    ):
+    def test_get_session_by_refresh_token(self, session_crud, mock_db, sample_session):
         """Test getting session by refresh token"""
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -612,9 +608,7 @@ class TestAuditLogCRUD:
         mock_query.limit.return_value = mock_query
         mock_query.all.return_value = [sample_audit_log]
 
-        logs, total = audit_crud.get_multi(
-            mock_db, skip=0, limit=10, action="login"
-        )
+        logs, total = audit_crud.get_multi(mock_db, skip=0, limit=10, action="login")
 
         assert logs == [sample_audit_log]
         assert total == 1
@@ -902,4 +896,6 @@ class TestAuthCRUDEdgeCases:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short", "--cov=src/crud/auth", "--cov-report=term"])
+    pytest.main(
+        [__file__, "-v", "--tb=short", "--cov=src/crud/auth", "--cov-report=term"]
+    )

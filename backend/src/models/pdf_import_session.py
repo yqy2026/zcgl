@@ -94,7 +94,9 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
         String(50)
     )  # pdfplumber, markitdown, llm_vision
     # OCR 功能已移除（v2.0），字段保留用于历史数据兼容
-    ocr_used: Mapped[bool] = mapped_column(Boolean, default=False)  # REMOVED: OCR engine
+    ocr_used: Mapped[bool] = mapped_column(
+        Boolean, default=False
+    )  # REMOVED: OCR engine
     processing_options: Mapped[dict[str, Any] | None] = mapped_column(
         JSON
     )  # 用户选择的处理选项
@@ -183,7 +185,9 @@ class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
 
     # PDF处理配置
     # OCR 功能已移除（v2.0），配置保留用于历史数据兼容
-    prefer_ocr: Mapped[bool] = mapped_column(Boolean, default=False)  # REMOVED: OCR preference
+    prefer_ocr: Mapped[bool] = mapped_column(
+        Boolean, default=False
+    )  # REMOVED: OCR preference
     ocr_languages: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, default=list
     )  # DEPRECATED: OCR识别语言

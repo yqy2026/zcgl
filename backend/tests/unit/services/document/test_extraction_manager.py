@@ -197,7 +197,9 @@ class TestDocumentExtractionManager:
         """Should successfully extract from contract document"""
         manager._contract_extractor = mock_contract_extractor
 
-        result = await manager.extract(sample_contract_pdf, doc_type=DocumentType.CONTRACT)
+        result = await manager.extract(
+            sample_contract_pdf, doc_type=DocumentType.CONTRACT
+        )
 
         assert result.success is True
         assert result.document_type == DocumentType.CONTRACT
@@ -273,7 +275,9 @@ class TestDocumentExtractionManager:
     ):
         """Should handle exceptions from extractor gracefully"""
         # Mock extractor that raises exception
-        manager._contract_extractor.extract = AsyncMock(side_effect=RuntimeError("Extraction failed"))
+        manager._contract_extractor.extract = AsyncMock(
+            side_effect=RuntimeError("Extraction failed")
+        )
 
         result = await manager.extract(sample_contract_pdf)
 
@@ -283,9 +287,7 @@ class TestDocumentExtractionManager:
         assert result.processing_time_ms >= 0  # Can be 0 if very fast
 
     @pytest.mark.asyncio
-    async def test_extract_with_warning_response(
-        self, manager, sample_contract_pdf
-    ):
+    async def test_extract_with_warning_response(self, manager, sample_contract_pdf):
         """Should pass through warnings from extractor"""
         mock_extractor = MagicMock()
         mock_extractor.extract = AsyncMock(

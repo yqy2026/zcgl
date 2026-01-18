@@ -82,7 +82,9 @@ class TestCreateCustomField:
 
         with patch(
             "src.services.custom_field.service.custom_field_crud.get_by_field_name",
-            return_value=AssetCustomField(id="existing_id", field_name="existing_field"),
+            return_value=AssetCustomField(
+                id="existing_id", field_name="existing_field"
+            ),
         ):
             with pytest.raises(ValueError) as excinfo:
                 service.create_custom_field(mock_db, obj_in=obj_in)
@@ -133,9 +135,7 @@ class TestUpdateCustomField:
         """Test updating field name to existing name raises ValueError."""
         obj_in = AssetCustomFieldUpdate(field_name="existing_field")
 
-        existing_field = AssetCustomField(
-            id="another_id", field_name="existing_field"
-        )
+        existing_field = AssetCustomField(id="another_id", field_name="existing_field")
 
         with patch(
             "src.services.custom_field.service.custom_field_crud.get",
@@ -152,7 +152,9 @@ class TestUpdateCustomField:
 
                 assert "已存在" in str(excinfo.value)
 
-    def test_update_custom_field_same_name_allowed(self, service, mock_db, sample_field):
+    def test_update_custom_field_same_name_allowed(
+        self, service, mock_db, sample_field
+    ):
         """Test updating field with same name is allowed."""
         obj_in = AssetCustomFieldUpdate(field_name="test_field")
 
@@ -355,11 +357,13 @@ class TestValidateFieldValue:
         sample_field.field_type = "decimal"
         sample_field.display_name = "Decimal Field"
 
-        is_valid, error_msg = service.validate_field_value(sample_field, "not_a_decimal")
+        is_valid, error_msg = service.validate_field_value(
+            sample_field, "not_a_decimal"
+        )
 
         assert not is_valid
         # The error could be either the specific error or a general validation error
-        assert ("必须为数字类型" in error_msg or "发生错误" in error_msg)
+        assert "必须为数字类型" in error_msg or "发生错误" in error_msg
 
     def test_validate_decimal_max_value(self, service, sample_field):
         """Test validation fails for decimal exceeding max value."""
@@ -406,9 +410,7 @@ class TestValidateFieldValue:
         """Test validation passes for valid date field."""
         sample_field.field_type = "date"
 
-        is_valid, error_msg = service.validate_field_value(
-            sample_field, "2026-01-15"
-        )
+        is_valid, error_msg = service.validate_field_value(sample_field, "2026-01-15")
 
         assert is_valid
         assert error_msg is None
@@ -418,9 +420,7 @@ class TestValidateFieldValue:
         sample_field.field_type = "date"
         sample_field.display_name = "Date Field"
 
-        is_valid, error_msg = service.validate_field_value(
-            sample_field, "15-01-2026"
-        )
+        is_valid, error_msg = service.validate_field_value(sample_field, "15-01-2026")
 
         assert not is_valid
         assert "日期格式不正确" in error_msg
@@ -464,7 +464,9 @@ class TestValidateFieldValue:
         sample_field.field_options = '[{"value": "option1"}, {"value": "option2"}]'
         sample_field.display_name = "Select Field"
 
-        is_valid, error_msg = service.validate_field_value(sample_field, "invalid_option")
+        is_valid, error_msg = service.validate_field_value(
+            sample_field, "invalid_option"
+        )
 
         assert not is_valid
         assert "不在允许范围内" in error_msg
@@ -472,7 +474,9 @@ class TestValidateFieldValue:
     def test_validate_multiselect_type_success(self, service, sample_field):
         """Test validation passes for valid multiselect field."""
         sample_field.field_type = "multiselect"
-        sample_field.field_options = '[{"value": "opt1"}, {"value": "opt2"}, {"value": "opt3"}]'
+        sample_field.field_options = (
+            '[{"value": "opt1"}, {"value": "opt2"}, {"value": "opt3"}]'
+        )
 
         is_valid, error_msg = service.validate_field_value(
             sample_field, ["opt1", "opt2"]
@@ -521,7 +525,9 @@ class TestValidateFieldValue:
         sample_field.field_type = "email"
         sample_field.display_name = "Email Field"
 
-        is_valid, error_msg = service.validate_field_value(sample_field, "invalid_email")
+        is_valid, error_msg = service.validate_field_value(
+            sample_field, "invalid_email"
+        )
 
         assert not is_valid
         assert "邮箱格式不正确" in error_msg
@@ -613,13 +619,17 @@ class TestUpdateAssetFieldValues:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=sample_field,
         ):
-            result = service.update_asset_field_values(mock_db, asset_id=TEST_ASSET_ID, values=values)
+            result = service.update_asset_field_values(
+                mock_db, asset_id=TEST_ASSET_ID, values=values
+            )
 
             assert len(result) == 1
             assert result[0]["field_id"] == TEST_FIELD_ID
             assert result[0]["value"] == "test_value"
 
-    def test_update_asset_field_values_validation_error(self, service, mock_db, sample_field):
+    def test_update_asset_field_values_validation_error(
+        self, service, mock_db, sample_field
+    ):
         """Test update fails when validation fails."""
         sample_field.is_required = True
         sample_field.display_name = "Required Field"
@@ -632,7 +642,9 @@ class TestUpdateAssetFieldValues:
             return_value=sample_field,
         ):
             with pytest.raises(ValueError) as excinfo:
-                service.update_asset_field_values(mock_db, asset_id=TEST_ASSET_ID, values=values)
+                service.update_asset_field_values(
+                    mock_db, asset_id=TEST_ASSET_ID, values=values
+                )
 
             assert "必填项" in str(excinfo.value)
 
@@ -646,7 +658,9 @@ class TestUpdateAssetFieldValues:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=None,
         ):
-            result = service.update_asset_field_values(mock_db, asset_id=TEST_ASSET_ID, values=values)
+            result = service.update_asset_field_values(
+                mock_db, asset_id=TEST_ASSET_ID, values=values
+            )
 
             assert len(result) == 0
 
@@ -660,11 +674,15 @@ class TestUpdateAssetFieldValues:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=None,
         ):
-            result = service.update_asset_field_values(mock_db, asset_id=TEST_ASSET_ID, values=values)
+            result = service.update_asset_field_values(
+                mock_db, asset_id=TEST_ASSET_ID, values=values
+            )
 
             assert len(result) == 0
 
-    def test_update_asset_field_values_multiple_fields(self, service, mock_db, sample_field):
+    def test_update_asset_field_values_multiple_fields(
+        self, service, mock_db, sample_field
+    ):
         """Test update with multiple field values."""
         sample_field2 = AssetCustomField(
             id="field_456",
@@ -683,7 +701,9 @@ class TestUpdateAssetFieldValues:
             "src.services.custom_field.service.custom_field_crud.get",
             side_effect=[sample_field, sample_field2],
         ):
-            result = service.update_asset_field_values(mock_db, asset_id=TEST_ASSET_ID, values=values)
+            result = service.update_asset_field_values(
+                mock_db, asset_id=TEST_ASSET_ID, values=values
+            )
 
             assert len(result) == 2
             assert result[0]["field_id"] == TEST_FIELD_ID
@@ -804,7 +824,9 @@ class TestUpdateSortOrders:
 
             assert len(result) == 0
 
-    def test_update_sort_orders_skip_missing_sort_order(self, service, mock_db, sample_field):
+    def test_update_sort_orders_skip_missing_sort_order(
+        self, service, mock_db, sample_field
+    ):
         """Test update skips entries without sort_order."""
         sort_data = [
             {"id": TEST_FIELD_ID},  # No sort_order
@@ -832,7 +854,9 @@ class TestUpdateSortOrders:
 
             assert len(result) == 0
 
-    def test_update_sort_orders_mixed_valid_invalid(self, service, mock_db, sample_field):
+    def test_update_sort_orders_mixed_valid_invalid(
+        self, service, mock_db, sample_field
+    ):
         """Test update with mix of valid and invalid entries."""
         sort_data = [
             {"id": TEST_FIELD_ID, "sort_order": 1},  # Valid

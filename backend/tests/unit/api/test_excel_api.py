@@ -15,7 +15,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication setup")
+pytestmark = pytest.mark.skip(
+    reason="Unit API tests require proper authentication setup"
+)
 from fastapi.testclient import TestClient
 
 
@@ -34,7 +36,10 @@ class TestDownloadTemplate:
         response = client.get("/api/v1/excel/template")
 
         assert response.status_code == 200
-        assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert (
+            response.headers["content-type"]
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         assert "attachment" in response.headers["content-disposition"]
 
     def test_download_template_unauthorized(self, unauthenticated_client):
@@ -50,12 +55,16 @@ class TestExcelImportSync:
         """Test successful synchronous Excel import"""
         # Create a mock Excel file
         file_content = b"fake excel content"
-        files = {"file": ("test.xlsx", file_content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        files = {
+            "file": (
+                "test.xlsx",
+                file_content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        }
 
         response = client.post(
-            "/api/v1/excel/import",
-            files=files,
-            data={"create_db": False}
+            "/api/v1/excel/import", files=files, data={"create_db": False}
         )
 
         # Note: This will likely fail without proper service setup,
@@ -66,10 +75,7 @@ class TestExcelImportSync:
         """Test import with invalid file format"""
         files = {"file": ("test.txt", b"text content", "text/plain")}
 
-        response = client.post(
-            "/api/v1/excel/import",
-            files=files
-        )
+        response = client.post("/api/v1/excel/import", files=files)
 
         # Should return validation error
         assert response.status_code in [400, 422]
@@ -86,7 +92,9 @@ class TestExcelImportAsync:
 
     @patch("src.api.v1.excel.ExcelImportService")
     @patch("src.api.v1.excel.task_crud")
-    def test_async_import_success(self, mock_task_crud, mock_import_service, client, mock_excel_file):
+    def test_async_import_success(
+        self, mock_task_crud, mock_import_service, client, mock_excel_file
+    ):
         """Test successful asynchronous Excel import"""
         # Mock task creation
         mock_task = MagicMock()
@@ -96,13 +104,14 @@ class TestExcelImportAsync:
 
         file_content = b"fake excel content"
         files = {
-            "file": ("test.xlsx", file_content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            "file": (
+                "test.xlsx",
+                file_content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
         }
 
-        response = client.post(
-            "/api/v1/excel/import/async",
-            files=files
-        )
+        response = client.post("/api/v1/excel/import/async", files=files)
 
         # Should return task ID or 202
         assert response.status_code in [200, 201, 202, 400]
@@ -113,13 +122,14 @@ class TestExcelImportAsync:
         with patch("src.api.v1.excel.BackgroundTasks"):
             file_content = b"fake excel content"
             files = {
-                "file": ("test.xlsx", file_content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                "file": (
+                    "test.xlsx",
+                    file_content,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
             }
 
-            response = client.post(
-                "/api/v1/excel/import/async",
-                files=files
-            )
+            response = client.post("/api/v1/excel/import/async", files=files)
 
             # Background tasks should be added
             # (This is a basic test; real testing would verify the task is created correctly)
@@ -224,7 +234,9 @@ class TestExcelOperationHistory:
         mock_task_crud.get_multi.return_value = []
         mock_task_crud.count.return_value = 0
 
-        response = client.get("/api/v1/excel/history?task_type=excel_import&status=completed")
+        response = client.get(
+            "/api/v1/excel/history?task_type=excel_import&status=completed"
+        )
 
         assert response.status_code == 200
 
@@ -236,13 +248,14 @@ class TestExcelErrorHandling:
         """Test import with corrupted Excel file"""
         corrupted_content = b"\x00\x01\x02\x03\x04\x05"
         files = {
-            "file": ("corrupted.xlsx", corrupted_content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            "file": (
+                "corrupted.xlsx",
+                corrupted_content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
         }
 
-        response = client.post(
-            "/api/v1/excel/import",
-            files=files
-        )
+        response = client.post("/api/v1/excel/import", files=files)
 
         # Should handle corrupted file gracefully
         assert response.status_code in [400, 500]
@@ -250,13 +263,14 @@ class TestExcelErrorHandling:
     def test_import_with_empty_file(self, client):
         """Test import with empty file"""
         files = {
-            "file": ("empty.xlsx", b"", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            "file": (
+                "empty.xlsx",
+                b"",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
         }
 
-        response = client.post(
-            "/api/v1/excel/import",
-            files=files
-        )
+        response = client.post("/api/v1/excel/import", files=files)
 
         # Should validate file is not empty
         assert response.status_code in [400, 422]
@@ -284,7 +298,13 @@ class TestExcelUnauthorized:
 
     def test_import_unauthorized(self, unauthenticated_client):
         """Test unauthorized import"""
-        files = {"file": ("test.xlsx", b"content", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        files = {
+            "file": (
+                "test.xlsx",
+                b"content",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        }
         response = unauthenticated_client.post("/api/v1/excel/import", files=files)
         assert response.status_code == 401
 
@@ -309,4 +329,5 @@ def mock_excel_file():
 def unauthenticated_client():
     """Fixture providing unauthenticated client for testing"""
     from src.main import app
+
     return TestClient(app)

@@ -217,7 +217,9 @@ class TestUpdateRole:
         mock_db.query = Mock(side_effect=query_side_effect)
 
         with patch.object(rbac_service, "_assign_permissions_to_role"):
-            updated_role = rbac_service.update_role("role-1", role_data, updated_by="admin")
+            updated_role = rbac_service.update_role(
+                "role-1", role_data, updated_by="admin"
+            )
 
             assert updated_role.display_name == "更新后的显示名称"
             assert updated_role.description == "更新后的描述"
@@ -446,9 +448,7 @@ class TestGetRoles:
         assert len(roles) == 1
         assert total == 1
 
-    def test_get_roles_with_category_filter(
-        self, rbac_service, mock_db, sample_role
-    ):
+    def test_get_roles_with_category_filter(self, rbac_service, mock_db, sample_role):
         """测试按类别筛选角色"""
         mock_query = Mock()
         mock_query.filter = Mock(return_value=mock_query)
@@ -487,9 +487,7 @@ class TestGetRoles:
 class TestCreatePermission:
     """测试创建权限"""
 
-    def test_create_permission_success(
-        self, rbac_service, mock_db, sample_permission
-    ):
+    def test_create_permission_success(self, rbac_service, mock_db, sample_permission):
         """测试成功创建权限"""
         perm_data = PermissionCreate(
             name="asset.create",
@@ -702,7 +700,9 @@ class TestAssignRoleToUser:
         mock_db.query = Mock(side_effect=query_side_effect)
 
         with patch.object(rbac_service, "_create_permission_audit_log"):
-            assignment = rbac_service.assign_role_to_user(assignment_data, assigned_by="admin")
+            assignment = rbac_service.assign_role_to_user(
+                assignment_data, assigned_by="admin"
+            )
             assert assignment.user_id == "user-1"
             assert assignment.role_id == "role-1"
 
@@ -818,7 +818,9 @@ class TestRevokeRoleFromUser:
         mock_db.query = Mock(return_value=mock_query)
 
         with patch.object(rbac_service, "_create_permission_audit_log"):
-            result = rbac_service.revoke_role_from_user("user-1", "role-1", revoked_by="admin")
+            result = rbac_service.revoke_role_from_user(
+                "user-1", "role-1", revoked_by="admin"
+            )
             assert result is True
             assert assignment.is_active is False
 
@@ -830,7 +832,9 @@ class TestRevokeRoleFromUser:
         mock_filter.first = Mock(return_value=None)
         mock_db.query = Mock(return_value=mock_query)
 
-        result = rbac_service.revoke_role_from_user("user-1", "role-1", revoked_by="admin")
+        result = rbac_service.revoke_role_from_user(
+            "user-1", "role-1", revoked_by="admin"
+        )
         assert result is False
 
 
@@ -876,9 +880,7 @@ class TestGetUserRoles:
 class TestCheckPermission:
     """测试权限检查"""
 
-    def test_check_permission_admin_user(
-        self, rbac_service, mock_db, sample_user
-    ):
+    def test_check_permission_admin_user(self, rbac_service, mock_db, sample_user):
         """测试管理员用户拥有所有权限"""
         sample_user.role = "admin"
 
@@ -1021,7 +1023,9 @@ class TestAssignPermissionsToRole:
         mock_execute_result = Mock()
         mock_db.execute.return_value = mock_execute_result
 
-        rbac_service._assign_permissions_to_role("role-1", ["perm-1", "perm-2"], "admin")
+        rbac_service._assign_permissions_to_role(
+            "role-1", ["perm-1", "perm-2"], "admin"
+        )
 
         assert mock_db.execute.call_count == 3  # delete + 2 inserts
 
@@ -1071,9 +1075,7 @@ class TestGetUserResourcePermissions:
 
         assert result is None
 
-    def test_get_resource_permissions_insufficient_level(
-        self, rbac_service, mock_db
-    ):
+    def test_get_resource_permissions_insufficient_level(self, rbac_service, mock_db):
         """测试权限级别不足"""
         mock_permission = Mock()
         mock_permission.permission_level = "read"
@@ -1395,9 +1397,7 @@ class TestAsyncAdapterMethods:
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_check_organization_access(
-        self, rbac_service, mock_db, sample_user
-    ):
+    async def test_check_organization_access(self, rbac_service, mock_db, sample_user):
         """测试检查组织访问权限（异步适配器）"""
         mock_query = Mock()
         mock_filter = Mock(return_value=mock_query)
@@ -1406,7 +1406,5 @@ class TestAsyncAdapterMethods:
         mock_db.query = Mock(return_value=mock_query)
 
         with patch.object(rbac_service, "get_user_roles", return_value=[]):
-            result = await rbac_service.check_organization_access(
-                "user-1", "org-1"
-            )
+            result = await rbac_service.check_organization_access("user-1", "org-1")
             assert result is False

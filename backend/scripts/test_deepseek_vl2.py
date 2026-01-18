@@ -60,7 +60,7 @@ async def test_structured_extraction():
         pix = page.get_pixmap(matrix=mat)
         img_bytes = pix.tobytes("png")
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-        print(f"[INFO] Converted page 1 to image ({len(img_bytes)/1024:.1f} KB)")
+        print(f"[INFO] Converted page 1 to image ({len(img_bytes) / 1024:.1f} KB)")
         doc.close()
     except Exception as e:
         print(f"[ERROR] Failed to convert PDF: {e}")

@@ -32,7 +32,7 @@ if __name__ == "__main__":
         print("请在 .env 文件中设置强随机密钥（32+字符）")
         print()
         print("生成方法:")
-        print("  python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+        print('  python -c "import secrets; print(secrets.token_urlsafe(32))"')
         print()
         print("然后将生成的密钥添加到 .env 文件:")
         print("  SECRET_KEY=<生成的密钥>")

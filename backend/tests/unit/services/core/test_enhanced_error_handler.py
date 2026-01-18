@@ -91,7 +91,9 @@ class TestEnhancedPDFImportErrorInit:
 class TestHandleError:
     """测试 handle_error 方法"""
 
-    def test_handle_file_too_large_error(self, error_handler, sample_error, sample_context):
+    def test_handle_file_too_large_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理文件过大错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -123,7 +125,9 @@ class TestHandleError:
         assert result["retry_count"] == 1
         assert result["suggested_action"] == "转换文件格式为PDF"
 
-    def test_handle_corrupted_file_error(self, error_handler, sample_error, sample_context):
+    def test_handle_corrupted_file_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理损坏文件错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -136,7 +140,9 @@ class TestHandleError:
         assert result["error_type"] == "corrupted_file"
         assert result["suggested_action"] == "重新扫描文件或修复文件"
 
-    def test_handle_processing_timeout_error(self, error_handler, sample_error, sample_context):
+    def test_handle_processing_timeout_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理超时错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -247,7 +253,9 @@ class TestHandleError:
         assert "status_code" in result
         assert result["status_code"] == 500
 
-    def test_handle_custom_error_type(self, error_handler, sample_error, sample_context):
+    def test_handle_custom_error_type(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理自定义错误类型（未定义的）"""
         custom_error = ValueError("Custom error")
         result = error_handler.handle_error(
@@ -279,9 +287,7 @@ class TestHandleError:
         )
         assert result2["retry_count"] == 3
 
-    def test_error_with_different_exception_types(
-        self, error_handler, sample_context
-    ):
+    def test_error_with_different_exception_types(self, error_handler, sample_context):
         """测试不同异常类型的处理"""
         exceptions = [
             ValueError("Value error"),
@@ -696,9 +702,7 @@ class TestRetryLogic:
             assert result["retry_count"] > 0
             assert result["max_retries"] == 3
 
-    def test_retry_progression_across_multiple_calls(
-        self, error_handler, sample_error
-    ):
+    def test_retry_progression_across_multiple_calls(self, error_handler, sample_error):
         """测试多次调用的重试进程"""
         results = []
 

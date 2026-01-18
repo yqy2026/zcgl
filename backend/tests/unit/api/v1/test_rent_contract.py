@@ -174,7 +174,9 @@ class TestCreateContract:
         mock_service.create_contract.assert_called_once()
 
     @patch("src.api.v1.rent_contract.asset_crud")
-    def test_create_contract_asset_not_found(self, mock_asset_crud, mock_db, mock_current_user):
+    def test_create_contract_asset_not_found(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test contract creation with non-existent asset"""
         from src.api.v1.rent_contract import create_contract
         from src.schemas.rent_contract import RentContractCreate, RentTermCreate
@@ -267,7 +269,9 @@ class TestGetContract:
         mock_rent_contract.get_with_details.assert_called_once()
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_get_contract_not_found(self, mock_rent_contract, mock_db, mock_current_user):
+    def test_get_contract_not_found(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test getting non-existent contract"""
         from src.api.v1.rent_contract import get_contract
 
@@ -291,7 +295,9 @@ class TestGetContracts:
     """Tests for GET /contracts endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_get_contracts_default_params(self, mock_rent_contract, mock_db, mock_current_user):
+    def test_get_contracts_default_params(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test listing contracts with default parameters"""
         from src.api.v1.rent_contract import get_contracts
 
@@ -344,7 +350,7 @@ class TestGetContracts:
             ownership_id=None,
             contract_status=None,
             start_date=None,
-            end_date=None
+            end_date=None,
         )
 
         assert result.total == 3
@@ -352,7 +358,9 @@ class TestGetContracts:
         assert result.limit == 10
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_get_contracts_with_pagination(self, mock_rent_contract, mock_db, mock_current_user):
+    def test_get_contracts_with_pagination(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test listing contracts with pagination"""
         from src.api.v1.rent_contract import get_contracts
 
@@ -391,7 +399,10 @@ class TestGetContracts:
             contract.contract_notes = None
             mock_contracts.append(contract)
 
-        mock_rent_contract.get_multi_with_filters.return_value = (mock_contracts[:10], 25)
+        mock_rent_contract.get_multi_with_filters.return_value = (
+            mock_contracts[:10],
+            25,
+        )
 
         result = get_contracts(
             db=mock_db,
@@ -404,7 +415,7 @@ class TestGetContracts:
             ownership_id=None,
             contract_status=None,
             start_date=None,
-            end_date=None
+            end_date=None,
         )
 
         assert result.total == 25
@@ -425,7 +436,12 @@ class TestUpdateContract:
     @patch("src.api.v1.rent_contract.rent_contract")
     @patch("src.api.v1.rent_contract.rent_contract_service")
     def test_update_contract_success(
-        self, mock_service, mock_rent_contract, mock_can_edit, mock_db, mock_current_user
+        self,
+        mock_service,
+        mock_rent_contract,
+        mock_can_edit,
+        mock_db,
+        mock_current_user,
     ):
         """Test successful contract update"""
         from src.api.v1.rent_contract import update_contract
@@ -448,7 +464,9 @@ class TestUpdateContract:
         mock_service.update_contract.assert_called_once()
 
     @patch("src.api.v1.rent_contract.can_edit_contract")
-    def test_update_contract_permission_denied(self, mock_can_edit, mock_db, mock_current_user):
+    def test_update_contract_permission_denied(
+        self, mock_can_edit, mock_db, mock_current_user
+    ):
         """Test contract update without permission"""
         from src.api.v1.rent_contract import update_contract
         from src.schemas.rent_contract import RentContractUpdate
@@ -493,7 +511,9 @@ class TestDeleteContract:
 
         assert result["message"] == "合同删除成功"
 
-    def test_delete_contract_permission_denied(self, mock_db, mock_current_user_regular):
+    def test_delete_contract_permission_denied(
+        self, mock_db, mock_current_user_regular
+    ):
         """Test contract deletion by non-admin user"""
         from src.api.v1.rent_contract import delete_contract
 
@@ -516,7 +536,9 @@ class TestGetContractTerms:
     """Tests for GET /contracts/{contract_id}/terms endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_term")
-    def test_get_contract_terms_success(self, mock_rent_term, mock_db, mock_current_user):
+    def test_get_contract_terms_success(
+        self, mock_rent_term, mock_db, mock_current_user
+    ):
         """Test successful contract terms retrieval"""
         from src.api.v1.rent_contract import get_contract_terms
 
@@ -540,7 +562,9 @@ class TestAddRentTerm:
 
     @patch("src.api.v1.rent_contract.rent_contract")
     @patch("src.api.v1.rent_contract.rent_term")
-    def test_add_rent_term_success(self, mock_rent_term, mock_rent_contract, mock_db, mock_current_user):
+    def test_add_rent_term_success(
+        self, mock_rent_term, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test successful rent term addition"""
         from src.api.v1.rent_contract import add_rent_term
         from src.schemas.rent_contract import RentTermCreate
@@ -573,7 +597,9 @@ class TestGetRentLedger:
     """Tests for GET /ledger endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_get_rent_ledger_default_params(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_get_rent_ledger_default_params(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test listing rent ledger with default parameters"""
         from src.api.v1.rent_contract import get_rent_ledger
 
@@ -614,7 +640,7 @@ class TestGetRentLedger:
             year_month=None,
             payment_status=None,
             start_date=None,
-            end_date=None
+            end_date=None,
         )
 
         assert result.total == 5
@@ -631,7 +657,9 @@ class TestGetRentLedgerDetail:
     """Tests for GET /ledger/{ledger_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_get_rent_ledger_detail_success(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_get_rent_ledger_detail_success(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test successful ledger detail retrieval"""
         from src.api.v1.rent_contract import get_rent_ledger_detail
 
@@ -644,7 +672,9 @@ class TestGetRentLedgerDetail:
         assert result is not None
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_get_rent_ledger_detail_not_found(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_get_rent_ledger_detail_not_found(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test getting non-existent ledger"""
         from src.api.v1.rent_contract import get_rent_ledger_detail
 
@@ -667,7 +697,9 @@ class TestUpdateRentLedger:
     """Tests for PUT /ledger/{ledger_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_update_rent_ledger_success(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_update_rent_ledger_success(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test successful ledger update"""
         from src.api.v1.rent_contract import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
@@ -687,7 +719,9 @@ class TestUpdateRentLedger:
         assert result is not None
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_update_rent_ledger_not_found(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_update_rent_ledger_not_found(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test updating non-existent ledger"""
         from src.api.v1.rent_contract import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
@@ -707,7 +741,9 @@ class TestUpdateRentLedger:
         assert exc_info.value.status_code == 404
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_update_rent_ledger_invalid_status(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_update_rent_ledger_invalid_status(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test ledger update with invalid payment status"""
         from src.api.v1.rent_contract import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
@@ -736,7 +772,9 @@ class TestStatisticsEndpoints:
     """Tests for statistics endpoints"""
 
     @patch("src.api.v1.rent_contract.rent_contract_service")
-    def test_get_rent_statistics_success(self, mock_service, mock_db, mock_current_user):
+    def test_get_rent_statistics_success(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test successful statistics retrieval"""
         from src.api.v1.rent_contract import get_rent_statistics
 
@@ -759,7 +797,9 @@ class TestStatisticsEndpoints:
         assert result["total_contracts"] == 10
 
     @patch("src.api.v1.rent_contract.rent_contract_service")
-    def test_get_ownership_statistics_success(self, mock_service, mock_db, mock_current_user):
+    def test_get_ownership_statistics_success(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test successful ownership statistics retrieval"""
         from src.api.v1.rent_contract import get_ownership_statistics
 
@@ -777,7 +817,9 @@ class TestStatisticsEndpoints:
         assert len(result) == 1
 
     @patch("src.api.v1.rent_contract.rent_contract_service")
-    def test_get_asset_statistics_success(self, mock_service, mock_db, mock_current_user):
+    def test_get_asset_statistics_success(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test successful asset statistics retrieval"""
         from src.api.v1.rent_contract import get_asset_statistics
 
@@ -795,7 +837,9 @@ class TestStatisticsEndpoints:
         assert len(result) == 1
 
     @patch("src.api.v1.rent_contract.rent_contract_service")
-    def test_get_monthly_statistics_success(self, mock_service, mock_db, mock_current_user):
+    def test_get_monthly_statistics_success(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test successful monthly statistics retrieval"""
         from src.api.v1.rent_contract import get_monthly_statistics
 
@@ -821,7 +865,9 @@ class TestGetContractLedger:
     """Tests for GET /contracts/{contract_id}/ledger endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_ledger")
-    def test_get_contract_ledger_success(self, mock_rent_ledger, mock_db, mock_current_user):
+    def test_get_contract_ledger_success(
+        self, mock_rent_ledger, mock_db, mock_current_user
+    ):
         """Test successful contract ledger retrieval"""
         from src.api.v1.rent_contract import get_contract_ledger
 
@@ -844,7 +890,9 @@ class TestGetAssetContracts:
     """Tests for GET /assets/{asset_id}/contracts endpoint"""
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_get_asset_contracts_success(self, mock_rent_contract, mock_db, mock_current_user):
+    def test_get_asset_contracts_success(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test successful asset contracts retrieval"""
         from src.api.v1.rent_contract import get_asset_contracts
 
@@ -868,7 +916,9 @@ class TestExcelOperations:
 
     @patch("src.api.v1.rent_contract.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.rent_contract_excel_service")
-    def test_download_excel_template_success(self, mock_excel_service, mock_current_user):
+    def test_download_excel_template_success(
+        self, mock_excel_service, mock_current_user
+    ):
         """Test successful Excel template download"""
         from fastapi.responses import FileResponse
 
@@ -886,7 +936,9 @@ class TestExcelOperations:
 
     @patch("src.api.v1.rent_contract.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.rent_contract_excel_service")
-    def test_export_contracts_to_excel_success(self, mock_excel_service, mock_current_user):
+    def test_export_contracts_to_excel_success(
+        self, mock_excel_service, mock_current_user
+    ):
         """Test successful Excel export"""
         from fastapi.responses import FileResponse
 
@@ -976,7 +1028,9 @@ class TestAttachmentManagement:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_download_contract_attachment_not_found(self, mock_db, mock_current_user):
+    async def test_download_contract_attachment_not_found(
+        self, mock_db, mock_current_user
+    ):
         """Test downloading non-existent attachment"""
         from src.api.v1.rent_contract import download_contract_attachment
 
@@ -997,7 +1051,9 @@ class TestAttachmentManagement:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_contract_attachment_not_found(self, mock_db, mock_current_user):
+    async def test_delete_contract_attachment_not_found(
+        self, mock_db, mock_current_user
+    ):
         """Test deleting non-existent attachment"""
         from src.api.v1.rent_contract import delete_contract_attachment
 
@@ -1027,7 +1083,9 @@ class TestAdditionalErrorCases:
     """Additional tests for error handling and edge cases"""
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_update_contract_not_found(self, mock_rent_contract, mock_db, mock_current_user):
+    def test_update_contract_not_found(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test updating non-existent contract"""
         from src.api.v1.rent_contract import update_contract
         from src.schemas.rent_contract import RentContractUpdate
@@ -1047,7 +1105,9 @@ class TestAdditionalErrorCases:
         assert exc_info.value.status_code == 404
 
     @patch("src.api.v1.rent_contract.rent_contract")
-    def test_delete_contract_not_found(self, mock_rent_contract, mock_db, mock_current_user_admin):
+    def test_delete_contract_not_found(
+        self, mock_rent_contract, mock_db, mock_current_user_admin
+    ):
         """Test deleting non-existent contract"""
         from src.api.v1.rent_contract import delete_contract
 
@@ -1055,7 +1115,9 @@ class TestAdditionalErrorCases:
 
         with pytest.raises(HTTPException) as exc_info:
             delete_contract(
-                contract_id="nonexistent", db=mock_db, current_user=mock_current_user_admin
+                contract_id="nonexistent",
+                db=mock_db,
+                current_user=mock_current_user_admin,
             )
 
         assert exc_info.value.status_code == 404

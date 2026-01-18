@@ -80,6 +80,7 @@ MALFORMED_DATES_CONTRACT = """
 # ContractExtractor 初始化测试
 # ============================================================================
 
+
 class TestContractExtractorInitialization:
     """测试 ContractExtractor 初始化"""
 
@@ -130,6 +131,7 @@ class TestContractExtractorInitialization:
 # 合同数据提取测试
 # ============================================================================
 
+
 class TestContractDataExtraction:
     """测试合同数据提取功能"""
 
@@ -141,7 +143,10 @@ class TestContractDataExtraction:
 
         assert result["success"] is True
         assert "contract_number" in result["extracted_fields"]
-        assert "包装合字（2025）第022号" in result["extracted_fields"]["contract_number"]["value"]
+        assert (
+            "包装合字（2025）第022号"
+            in result["extracted_fields"]["contract_number"]["value"]
+        )
 
     @pytest.mark.unit
     def test_extract_landlord_name(self):
@@ -151,7 +156,10 @@ class TestContractDataExtraction:
 
         assert result["success"] is True
         assert "landlord_name" in result["extracted_fields"]
-        assert "广州包装制品厂发展有限责任公司" in result["extracted_fields"]["landlord_name"]["value"]
+        assert (
+            "广州包装制品厂发展有限责任公司"
+            in result["extracted_fields"]["landlord_name"]["value"]
+        )
 
     @pytest.mark.unit
     def test_extract_landlord_legal_rep(self):
@@ -244,7 +252,9 @@ class TestContractDataExtraction:
         assert result["success"] is True
         assert "property_certificate" in result["extracted_fields"]
         # 证号可能被截断，只验证关键部分
-        assert "粤房地权证" in result["extracted_fields"]["property_certificate"]["value"]
+        assert (
+            "粤房地权证" in result["extracted_fields"]["property_certificate"]["value"]
+        )
 
     @pytest.mark.unit
     def test_extract_lease_dates(self):
@@ -332,6 +342,7 @@ class TestContractDataExtraction:
 # 字段解析和验证测试
 # ============================================================================
 
+
 class TestFieldParsingAndValidation:
     """测试字段解析和验证功能"""
 
@@ -405,7 +416,9 @@ class TestFieldParsingAndValidation:
 
         # 无效电话号
         assert extractor._validate_field_value("tenant_phone", "12345") is False
-        assert extractor._validate_field_value("tenant_phone", "13800138000") is False  # 虚假数据
+        assert (
+            extractor._validate_field_value("tenant_phone", "13800138000") is False
+        )  # 虚假数据
 
     @pytest.mark.unit
     def test_validate_field_value_for_name(self):
@@ -414,12 +427,21 @@ class TestFieldParsingAndValidation:
 
         # 有效姓名
         assert extractor._validate_field_value("tenant_name", "王军") is True
-        assert extractor._validate_field_value("landlord_name", "广州包装制品厂发展有限责任公司") is True
+        assert (
+            extractor._validate_field_value(
+                "landlord_name", "广州包装制品厂发展有限责任公司"
+            )
+            is True
+        )
 
         # 无效姓名
-        assert extractor._validate_field_value("tenant_name", "张三") is False  # 虚假数据
+        assert (
+            extractor._validate_field_value("tenant_name", "张三") is False
+        )  # 虚假数据
         assert extractor._validate_field_value("tenant_name", "A") is False  # 太短
-        assert extractor._validate_field_value("tenant_name", "王123") is False  # 包含数字
+        assert (
+            extractor._validate_field_value("tenant_name", "王123") is False
+        )  # 包含数字
 
     @pytest.mark.unit
     def test_validate_field_value_for_id_card(self):
@@ -427,13 +449,21 @@ class TestFieldParsingAndValidation:
         extractor = ContractExtractor()
 
         # 有效身份证号 - 必须是18位（17位数字 + 1位数字/X）
-        assert extractor._validate_field_value("tenant_id", "110101199001011234") is True
-        assert extractor._validate_field_value("tenant_id", "12345678901234567X") is True  # 18位带X
+        assert (
+            extractor._validate_field_value("tenant_id", "110101199001011234") is True
+        )
+        assert (
+            extractor._validate_field_value("tenant_id", "12345678901234567X") is True
+        )  # 18位带X
 
         # 无效身份证号
         assert extractor._validate_field_value("tenant_id", "12345") is False
-        assert extractor._validate_field_value("tenant_id", "1234567890123456") is False  # 16位太短
-        assert extractor._validate_field_value("tenant_id", "44823197907091936") is False  # 17位不够（需要18位）
+        assert (
+            extractor._validate_field_value("tenant_id", "1234567890123456") is False
+        )  # 16位太短
+        assert (
+            extractor._validate_field_value("tenant_id", "44823197907091936") is False
+        )  # 17位不够（需要18位）
 
     @pytest.mark.unit
     def test_validate_field_value_for_area(self):
@@ -455,17 +485,34 @@ class TestFieldParsingAndValidation:
         extractor = ContractExtractor()
 
         # 有效日期 - 必须带"日"字，且格式为 YYYY年M月D日 或 YYYY年MM月DD日
-        assert extractor._validate_field_value("lease_start_date", "2025年01月01日") is True
-        assert extractor._validate_field_value("lease_end_date", "2028年12月31日") is True
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025年01月01日")
+            is True
+        )
+        assert (
+            extractor._validate_field_value("lease_end_date", "2028年12月31日") is True
+        )
 
         # 无效日期
-        assert extractor._validate_field_value("lease_start_date", "2025年13月1日") is False
-        assert extractor._validate_field_value("lease_start_date", "2025年1月32日") is False
-        assert extractor._validate_field_value("lease_start_date", "2025-01-01") is False
-        assert extractor._validate_field_value("lease_start_date", "2025年1月1") is False  # 缺少"日"
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025年13月1日")
+            is False
+        )
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025年1月32日")
+            is False
+        )
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025-01-01") is False
+        )
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025年1月1") is False
+        )  # 缺少"日"
         # 测试9位日期（测试数据中的格式）- 这个应该返回False因为验证需要解析日期
         # "2025年1月1日" 只有9位，无法正确解析年月日
-        assert extractor._validate_field_value("lease_start_date", "2025年1月1日") is False
+        assert (
+            extractor._validate_field_value("lease_start_date", "2025年1月1日") is False
+        )
 
     @pytest.mark.unit
     def test_validate_field_value_for_duration(self):
@@ -498,6 +545,7 @@ class TestFieldParsingAndValidation:
 # ============================================================================
 # PDF 处理逻辑测试
 # ============================================================================
+
 
 class TestPDFProcessingLogic:
     """测试 PDF 处理逻辑"""
@@ -542,6 +590,7 @@ class TestPDFProcessingLogic:
 # ============================================================================
 # 错误处理测试
 # ============================================================================
+
 
 class TestErrorHandling:
     """测试错误处理功能"""
@@ -649,6 +698,7 @@ class TestErrorHandling:
 # 置信度计算测试
 # ============================================================================
 
+
 class TestConfidenceCalculation:
     """测试置信度计算功能"""
 
@@ -657,7 +707,9 @@ class TestConfidenceCalculation:
         """测试基础置信度"""
         extractor = ContractExtractor()
 
-        confidence = extractor._calculate_confidence("payment_method", "支付方式:按季度支付")
+        confidence = extractor._calculate_confidence(
+            "payment_method", "支付方式:按季度支付"
+        )
 
         assert 0.0 <= confidence <= 1.0
 
@@ -668,14 +720,12 @@ class TestConfidenceCalculation:
 
         # 重要字段
         important_confidence = extractor._calculate_confidence(
-            "contract_number",
-            "合同编号:包装合字（2025）第022号"
+            "contract_number", "合同编号:包装合字（2025）第022号"
         )
 
         # 普通字段
         normal_confidence = extractor._calculate_confidence(
-            "payment_method",
-            "支付方式:按季度支付"
+            "payment_method", "支付方式:按季度支付"
         )
 
         assert important_confidence > normal_confidence
@@ -690,8 +740,7 @@ class TestConfidenceCalculation:
 
         # 长源文本
         long_confidence = extractor._calculate_confidence(
-            "monthly_rent",
-            "月租金为人民币7483元整，含税"
+            "monthly_rent", "月租金为人民币7483元整，含税"
         )
 
         assert long_confidence >= short_confidence
@@ -713,8 +762,7 @@ class TestConfidenceCalculation:
 
         # 极端情况：重要字段 + 长源文本
         confidence = extractor._calculate_confidence(
-            "contract_number",
-            "合同编号:包装合字（2025）第022号，这是唯一标识符"
+            "contract_number", "合同编号:包装合字（2025）第022号，这是唯一标识符"
         )
 
         assert confidence <= 1.0
@@ -723,6 +771,7 @@ class TestConfidenceCalculation:
 # ============================================================================
 # 边缘情况和集成测试
 # ============================================================================
+
 
 class TestEdgeCasesAndIntegration:
     """测试边缘情况和集成功能"""
@@ -836,6 +885,7 @@ class TestEdgeCasesAndIntegration:
 # ExtractedField 数据类测试
 # ============================================================================
 
+
 class TestExtractedFieldDataclass:
     """测试 ExtractedField 数据类"""
 
@@ -866,6 +916,7 @@ class TestExtractedFieldDataclass:
 # 性能和压力测试
 # ============================================================================
 
+
 class TestPerformance:
     """测试性能相关功能"""
 
@@ -878,6 +929,7 @@ class TestPerformance:
         large_text = VALID_CONTRACT_TEXT * 100
 
         import time
+
         start_time = time.time()
         result = extractor.extract_contract_info(large_text)
         end_time = time.time()

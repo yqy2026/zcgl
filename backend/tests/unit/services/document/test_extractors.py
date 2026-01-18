@@ -6,7 +6,9 @@ Unit Tests for Contract Extractor Adapters
 import pytest
 
 # Skip all tests in this module - API mismatches with implementation
-pytestmark = pytest.mark.skip(reason="Config/extractor tests have API mismatches with implementation")
+pytestmark = pytest.mark.skip(
+    reason="Config/extractor tests have API mismatches with implementation"
+)
 
 from unittest.mock import MagicMock
 

@@ -46,7 +46,9 @@ def mock_dictionary():
 class TestCreateDictionary:
     """测试创建字典项"""
 
-    def test_create_dictionary_success(self, dictionary_service, mock_db, mock_dictionary):
+    def test_create_dictionary_success(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试成功创建字典项"""
         obj_in = SystemDictionaryCreate(
             dict_type="contract_type",
@@ -56,13 +58,21 @@ class TestCreateDictionary:
             sort_order=2,
         )
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code", return_value=None):
-            with patch("src.crud.system_dictionary.system_dictionary_crud.create", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code",
+            return_value=None,
+        ):
+            with patch(
+                "src.crud.system_dictionary.system_dictionary_crud.create",
+                return_value=mock_dictionary,
+            ):
                 result = dictionary_service.create_dictionary(mock_db, obj_in=obj_in)
 
                 assert result is not None
 
-    def test_create_dictionary_duplicate_code(self, dictionary_service, mock_db, mock_dictionary):
+    def test_create_dictionary_duplicate_code(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试字典代码重复错误"""
         obj_in = SystemDictionaryCreate(
             dict_type="contract_type",
@@ -71,7 +81,10 @@ class TestCreateDictionary:
             dict_value="lease",
         )
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code",
+            return_value=mock_dictionary,
+        ):
             with pytest.raises(ValueError, match="字典代码.*已存在"):
                 dictionary_service.create_dictionary(mock_db, obj_in=obj_in)
 
@@ -82,12 +95,20 @@ class TestCreateDictionary:
 class TestUpdateDictionary:
     """测试更新字典项"""
 
-    def test_update_dictionary_basic(self, dictionary_service, mock_db, mock_dictionary):
+    def test_update_dictionary_basic(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试基本更新"""
         obj_in = SystemDictionaryUpdate(dict_label="新标签")
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
-            with patch("src.crud.system_dictionary.system_dictionary_crud.update", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
+            with patch(
+                "src.crud.system_dictionary.system_dictionary_crud.update",
+                return_value=mock_dictionary,
+            ):
                 result = dictionary_service.update_dictionary(
                     mock_db, id="dict_123", obj_in=obj_in
                 )
@@ -98,7 +119,9 @@ class TestUpdateDictionary:
         """测试字典项不存在"""
         obj_in = SystemDictionaryUpdate(dict_label="新标签")
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=None):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
+        ):
             with pytest.raises(ValueError, match="字典项不存在"):
                 dictionary_service.update_dictionary(
                     mock_db, id="nonexistent", obj_in=obj_in
@@ -111,17 +134,27 @@ class TestUpdateDictionary:
 class TestDeleteDictionary:
     """测试删除字典项"""
 
-    def test_delete_dictionary_success(self, dictionary_service, mock_db, mock_dictionary):
+    def test_delete_dictionary_success(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试成功删除"""
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
-            with patch("src.crud.system_dictionary.system_dictionary_crud.remove", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
+            with patch(
+                "src.crud.system_dictionary.system_dictionary_crud.remove",
+                return_value=mock_dictionary,
+            ):
                 result = dictionary_service.delete_dictionary(mock_db, id="dict_123")
 
                 assert result is not None
 
     def test_delete_dictionary_not_found(self, dictionary_service, mock_db):
         """测试字典项不存在"""
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=None):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
+        ):
             with pytest.raises(ValueError, match="字典项不存在"):
                 dictionary_service.delete_dictionary(mock_db, id="nonexistent")
 
@@ -132,28 +165,40 @@ class TestDeleteDictionary:
 class TestToggleActiveStatus:
     """测试切换启用状态"""
 
-    def test_toggle_status_from_active_to_inactive(self, dictionary_service, mock_db, mock_dictionary):
+    def test_toggle_status_from_active_to_inactive(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试从启用切换到禁用"""
         mock_dictionary.is_active = True
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
             result = dictionary_service.toggle_active_status(mock_db, id="dict_123")
 
             assert result is not None
             mock_db.commit.assert_called_once()
 
-    def test_toggle_status_from_inactive_to_active(self, dictionary_service, mock_db, mock_dictionary):
+    def test_toggle_status_from_inactive_to_active(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试从禁用切换到启用"""
         mock_dictionary.is_active = False
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
             result = dictionary_service.toggle_active_status(mock_db, id="dict_123")
 
             assert result is not None
 
     def test_toggle_status_not_found(self, dictionary_service, mock_db):
         """测试字典项不存在"""
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=None):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
+        ):
             with pytest.raises(ValueError, match="字典项不存在"):
                 dictionary_service.toggle_active_status(mock_db, id="nonexistent")
 
@@ -164,15 +209,18 @@ class TestToggleActiveStatus:
 class TestUpdateSortOrders:
     """测试批量更新排序"""
 
-    def test_update_sort_orders_single(self, dictionary_service, mock_db, mock_dictionary):
+    def test_update_sort_orders_single(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试更新单个排序"""
-        sort_data = [
-            {"id": "dict_123", "sort_order": 5}
-        ]
+        sort_data = [{"id": "dict_123", "sort_order": 5}]
 
         mock_dictionary.dict_type = "contract_type"
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
             result = dictionary_service.update_sort_orders(
                 mock_db, dict_type="contract_type", sort_data=sort_data
             )
@@ -192,7 +240,7 @@ class TestUpdateSortOrders:
 
         sort_data = [
             {"id": "dict_123", "sort_order": 1},
-            {"id": "dict_456", "sort_order": 2}
+            {"id": "dict_456", "sort_order": 2},
         ]
 
         call_count = [0]
@@ -204,7 +252,10 @@ class TestUpdateSortOrders:
             else:
                 return mock_dict2
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", side_effect=get_side_effect):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            side_effect=get_side_effect,
+        ):
             result = dictionary_service.update_sort_orders(
                 mock_db, dict_type="contract_type", sort_data=sort_data
             )
@@ -212,15 +263,18 @@ class TestUpdateSortOrders:
             assert len(result) == 2
             mock_db.commit.assert_called_once()
 
-    def test_update_sort_orders_skips_mismatched_type(self, dictionary_service, mock_db, mock_dictionary):
+    def test_update_sort_orders_skips_mismatched_type(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试跳过类型不匹配的字典项"""
         mock_dictionary.dict_type = "other_type"  # Different type
 
-        sort_data = [
-            {"id": "dict_123", "sort_order": 5}
-        ]
+        sort_data = [{"id": "dict_123", "sort_order": 5}]
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
             result = dictionary_service.update_sort_orders(
                 mock_db, dict_type="contract_type", sort_data=sort_data
             )
@@ -241,7 +295,9 @@ class TestUpdateSortOrders:
         # Should skip the item with no id
         assert len(result) == 0
 
-    def test_update_sort_orders_skips_missing_sort_order(self, dictionary_service, mock_db, mock_dictionary):
+    def test_update_sort_orders_skips_missing_sort_order(
+        self, dictionary_service, mock_db, mock_dictionary
+    ):
         """测试跳过没有sort_order的项目"""
         sort_data = [
             {"id": "dict_123"}  # Missing sort_order
@@ -249,7 +305,10 @@ class TestUpdateSortOrders:
 
         mock_dictionary.dict_type = "contract_type"
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=mock_dictionary):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get",
+            return_value=mock_dictionary,
+        ):
             result = dictionary_service.update_sort_orders(
                 mock_db, dict_type="contract_type", sort_data=sort_data
             )
@@ -257,13 +316,15 @@ class TestUpdateSortOrders:
             # Should skip the item with no sort_order
             assert len(result) == 0
 
-    def test_update_sort_orders_skips_none_dictionary(self, dictionary_service, mock_db):
+    def test_update_sort_orders_skips_none_dictionary(
+        self, dictionary_service, mock_db
+    ):
         """测试跳过不存在的字典项"""
-        sort_data = [
-            {"id": "nonexistent", "sort_order": 5}
-        ]
+        sort_data = [{"id": "nonexistent", "sort_order": 5}]
 
-        with patch("src.crud.system_dictionary.system_dictionary_crud.get", return_value=None):
+        with patch(
+            "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
+        ):
             result = dictionary_service.update_sort_orders(
                 mock_db, dict_type="contract_type", sort_data=sort_data
             )

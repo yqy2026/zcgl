@@ -476,17 +476,29 @@ class DatabaseOptimizer:
         for query in slow_queries:
             query_name = query["query_name"]
 
-            if "batch_update" in query_name and query["avg_duration_ms"] > PerformanceThresholds.BATCH_UPDATE_THRESHOLD_MS:
+            if (
+                "batch_update" in query_name
+                and query["avg_duration_ms"]
+                > PerformanceThresholds.BATCH_UPDATE_THRESHOLD_MS
+            ):
                 recommendations.append(
                     f"考虑优化批量更新操作: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "list" in query_name and query["avg_duration_ms"] > PerformanceThresholds.LIST_QUERY_THRESHOLD_MS:
+            if (
+                "list" in query_name
+                and query["avg_duration_ms"]
+                > PerformanceThresholds.LIST_QUERY_THRESHOLD_MS
+            ):
                 recommendations.append(
                     f"考虑为列表查询添加分页和索引: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "statistics" in query_name and query["avg_duration_ms"] > PerformanceThresholds.STATISTICS_QUERY_THRESHOLD_MS:
+            if (
+                "statistics" in query_name
+                and query["avg_duration_ms"]
+                > PerformanceThresholds.STATISTICS_QUERY_THRESHOLD_MS
+            ):
                 recommendations.append(
                     f"考虑缓存统计查询结果: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )

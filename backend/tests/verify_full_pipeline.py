@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO)
 # Load env
 try:
     from dotenv import load_dotenv
+
     env_path = os.path.join(os.path.dirname(__file__), "../.env")
     load_dotenv(env_path)
 except ImportError:
@@ -25,15 +26,20 @@ from services.document.llm_contract_extractor import LLMContractExtractor
 # PaddleOCR is an optional dependency
 try:
     from services.document.paddleocr_service import get_paddleocr_service
+
     PADDLEOCR_AVAILABLE = True
 except (ImportError, ModuleNotFoundError):
     PADDLEOCR_AVAILABLE = False
-    print("WARNING: PaddleOCR service not available. Install with: pip install paddleocr")
+    print(
+        "WARNING: PaddleOCR service not available. Install with: pip install paddleocr"
+    )
 
 
 async def verify_full_pipeline(pdf_path_str: str):
     if not PADDLEOCR_AVAILABLE:
-        print("ERROR: PaddleOCR service is not available. Cannot run full pipeline verification.")
+        print(
+            "ERROR: PaddleOCR service is not available. Cannot run full pipeline verification."
+        )
         return
 
     pdf_path = Path(pdf_path_str)
@@ -58,18 +64,21 @@ async def verify_full_pipeline(pdf_path_str: str):
         # Run synchronous code in thread pool if needed, but for script is fine
         ocr_result = paddle_service.to_markdown(str(pdf_path))
 
-        if not ocr_result['success']:
+        if not ocr_result["success"]:
             print(f"[ERROR] OCR Stage Failed: {ocr_result.get('error')}")
             return
 
-        markdown_content = ocr_result['markdown']
-        print(f"[SUCCESS] OCR Success! Generated {len(markdown_content)} characters of Markdown.")
+        markdown_content = ocr_result["markdown"]
+        print(
+            f"[SUCCESS] OCR Success! Generated {len(markdown_content)} characters of Markdown."
+        )
         # Preview
         print(f"Preview:\n{markdown_content[:300]}...\n")
 
     except Exception as e:
         print(f"[ERROR] OCR Exception: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -81,10 +90,12 @@ async def verify_full_pipeline(pdf_path_str: str):
     try:
         llm_result = await extractor.extract(markdown_content)
 
-        if llm_result['success']:
+        if llm_result["success"]:
             print("[SUCCESS] LLM Extraction Success!")
             print("\n>>> Extracted Data <<<")
-            print(json.dumps(llm_result['extracted_fields'], indent=2, ensure_ascii=False))
+            print(
+                json.dumps(llm_result["extracted_fields"], indent=2, ensure_ascii=False)
+            )
             print("------------------------")
             print(f"Confidence: {llm_result.get('confidence')}")
         else:
@@ -93,7 +104,9 @@ async def verify_full_pipeline(pdf_path_str: str):
     except Exception as e:
         print(f"[ERROR] LLM Exception: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

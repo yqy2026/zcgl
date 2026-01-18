@@ -58,12 +58,15 @@ def mock_session_service():
 @pytest.fixture
 def user_management_service(mock_db, mock_password_service, mock_session_service):
     """Create user management service instance"""
-    with patch(
-        "src.services.core.user_management_service.PasswordService",
-        return_value=mock_password_service,
-    ), patch(
-        "src.services.core.user_management_service.SessionService",
-        return_value=mock_session_service,
+    with (
+        patch(
+            "src.services.core.user_management_service.PasswordService",
+            return_value=mock_password_service,
+        ),
+        patch(
+            "src.services.core.user_management_service.SessionService",
+            return_value=mock_session_service,
+        ),
     ):
         return UserManagementService(mock_db)
 
@@ -515,9 +518,7 @@ class TestUserDeactivation:
 class TestUserActivation:
     """Test user activation functionality"""
 
-    def test_activate_user_success(
-        self, user_management_service, mock_db, sample_user
-    ):
+    def test_activate_user_success(self, user_management_service, mock_db, sample_user):
         """Test successful user activation"""
         sample_user.is_active = False
         sample_user.is_locked = True
@@ -584,9 +585,7 @@ class TestUserActivation:
 class TestUserUnlock:
     """Test user unlock functionality"""
 
-    def test_unlock_user_success(
-        self, user_management_service, mock_db, sample_user
-    ):
+    def test_unlock_user_success(self, user_management_service, mock_db, sample_user):
         """Test successful user unlock"""
         sample_user.is_locked = True
         sample_user.locked_until = datetime.now()
@@ -695,9 +694,7 @@ class TestPasswordChange:
         mock_password_service.validate_password_strength.return_value = False
 
         with pytest.raises(BusinessLogicError) as exc_info:
-            user_management_service.change_password(
-                sample_user, "OldPass123!", "weak"
-            )
+            user_management_service.change_password(sample_user, "OldPass123!", "weak")
 
         assert "新密码不符合安全要求" in str(exc_info.value)
 
@@ -763,7 +760,11 @@ class TestEdgeCases:
     """Test edge cases and error handling"""
 
     def test_create_user_database_error(
-        self, user_management_service, mock_db, sample_user_create, mock_password_service
+        self,
+        user_management_service,
+        mock_db,
+        sample_user_create,
+        mock_password_service,
     ):
         """Test handling of database error during user creation"""
         mock_query = MagicMock()

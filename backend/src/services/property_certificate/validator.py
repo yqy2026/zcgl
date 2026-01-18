@@ -12,6 +12,7 @@ from src.models.property_certificate import CertificateType
 @dataclass
 class ValidationResult:
     """验证结果"""
+
     errors: list[str]
     warnings: list[str]
 
@@ -24,25 +25,15 @@ class PropertyCertificateValidator:
 
     # Required fields by certificate type
     REQUIRED_FIELDS = {
-        CertificateType.REAL_ESTATE: [
-            "certificate_number", "property_address"
-        ],
-        CertificateType.HOUSE_OWNERSHIP: [
-            "certificate_number", "property_address"
-        ],
-        CertificateType.LAND_USE: [
-            "certificate_number", "property_address"
-        ],
-        CertificateType.OTHER: [
-            "certificate_number"
-        ],
+        CertificateType.REAL_ESTATE: ["certificate_number", "property_address"],
+        CertificateType.HOUSE_OWNERSHIP: ["certificate_number", "property_address"],
+        CertificateType.LAND_USE: ["certificate_number", "property_address"],
+        CertificateType.OTHER: ["certificate_number"],
     }
 
     @classmethod
     def validate_extracted_fields(
-        cls,
-        data: dict,
-        cert_type: CertificateType
+        cls, data: dict, cert_type: CertificateType
     ) -> ValidationResult:
         """验证提取的字段"""
         errors = []

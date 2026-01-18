@@ -4,15 +4,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Skip these tests - they require real JWT authentication which is complex to set up
-pytestmark = pytest.mark.skip(reason="Integration API tests require real JWT authentication setup")
+pytestmark = pytest.mark.skip(
+    reason="Integration API tests require real JWT authentication setup"
+)
 
 
 class TestAssetFilterEndpoints:
     """Test suite for asset filter/dropdown endpoints"""
 
-    def test_ownership_entities_endpoint(
-        self, client: TestClient, test_token: str
-    ):
+    def test_ownership_entities_endpoint(self, client: TestClient, test_token: str):
         """Test GET /ownership-entities"""
         response = client.get(
             "/api/v1/assets/ownership-entities",
@@ -24,9 +24,7 @@ class TestAssetFilterEndpoints:
         assert isinstance(data, list)
         assert all(isinstance(item, str) for item in data)
 
-    def test_business_categories_endpoint(
-        self, client: TestClient, test_token: str
-    ):
+    def test_business_categories_endpoint(self, client: TestClient, test_token: str):
         """Test GET /business-categories"""
         response = client.get(
             "/api/v1/assets/business-categories",
@@ -57,9 +55,7 @@ class TestAssetFilterEndpoints:
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
-    def test_ownership_statuses_endpoint(
-        self, client: TestClient, test_token: str
-    ):
+    def test_ownership_statuses_endpoint(self, client: TestClient, test_token: str):
         """Test GET /ownership-statuses"""
         response = client.get(
             "/api/v1/assets/ownership-statuses",

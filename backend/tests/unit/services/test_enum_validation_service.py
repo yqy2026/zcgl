@@ -57,7 +57,7 @@ class TestEnumValidationServiceInit:
         assert service._cache_timestamps == {}
         # _validation_stats is a defaultdict, check it exists
         assert service._validation_stats is not None
-        assert hasattr(service._validation_stats, 'default_factory')
+        assert hasattr(service._validation_stats, "default_factory")
 
     def test_cache_ttl_constant(self):
         """测试缓存TTL常量"""

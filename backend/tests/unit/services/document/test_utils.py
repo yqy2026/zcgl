@@ -328,7 +328,7 @@ class TestSafeParseJson:
 
     def test_parse_invalid_json(self):
         """测试解析无效JSON"""
-        result = safe_parse_json('not a json')
+        result = safe_parse_json("not a json")
         assert result is None
 
     def test_parse_empty_string(self):
@@ -359,7 +359,7 @@ class TestExtractJsonFromResponse:
 
     def test_extract_no_json(self):
         """测试没有JSON的响应"""
-        response = 'This is just plain text'
+        response = "This is just plain text"
         result = extract_json_from_response(response)
         assert result is None
 

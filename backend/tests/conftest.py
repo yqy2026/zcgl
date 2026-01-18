@@ -16,7 +16,9 @@ os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite:///./test_databas
 # 这里使用动态生成，因为测试不应依赖于特定的密钥值
 # 注意：必须使用真正随机的密钥，不能包含 "test", "secret", "key" 等弱模式
 test_secret_key = os.getenv("SECRET_KEY")
-if not test_secret_key or any(weak in test_secret_key.lower() for weak in ["test", "secret", "key", "changeme"]):
+if not test_secret_key or any(
+    weak in test_secret_key.lower() for weak in ["test", "secret", "key", "changeme"]
+):
     # 使用固定的测试密钥（确保无弱模式）
     # 这是个43字符的URL安全字符串，不包含任何弱密钥模式
     os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6"
@@ -153,7 +155,9 @@ def setup_test_database():
     yield
 
     # Cleanup: Optionally remove test database file
-    if ("sqlite" in database_url or "postgresql" in database_url) and "test" in database_url:
+    if (
+        "sqlite" in database_url or "postgresql" in database_url
+    ) and "test" in database_url:
         db_path = database_url.replace("sqlite:///", "")
         if os.path.exists(db_path):
             try:

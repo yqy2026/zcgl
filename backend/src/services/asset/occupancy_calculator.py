@@ -96,7 +96,9 @@ class OccupancyRateCalculator:
                         "total_rentable_area": 0.0,
                         "total_rented_area": 0.0,
                         "total_unrented_area": 0.0,
-                        "asset_count": len(assets),  # Count all assets when no rentable assets
+                        "asset_count": len(
+                            assets
+                        ),  # Count all assets when no rentable assets
                         "rentable_asset_count": 0,
                     }
 
@@ -145,9 +147,7 @@ class OccupancyRateCalculator:
                     func.sum(func.coalesce(Asset.rentable_area, 0)).label(
                         "total_rentable"
                     ),
-                    func.sum(func.coalesce(Asset.rented_area, 0)).label(
-                        "total_rented"
-                    ),
+                    func.sum(func.coalesce(Asset.rented_area, 0)).label("total_rented"),
                     func.count(Asset.id).label("total_count"),
                     func.count(case((Asset.rentable_area > 0, Asset.id))).label(
                         "rentable_count"
@@ -164,10 +164,13 @@ class OccupancyRateCalculator:
                 if filters:
                     if "include_in_occupancy_rate" in filters:
                         query = query.filter(
-                            Asset.include_in_occupancy_rate == filters["include_in_occupancy_rate"]
+                            Asset.include_in_occupancy_rate
+                            == filters["include_in_occupancy_rate"]
                         )
                     if "data_status" in filters:
-                        query = query.filter(Asset.data_status == filters["data_status"])
+                        query = query.filter(
+                            Asset.data_status == filters["data_status"]
+                        )
 
                 # 使用SQL聚合函数计算总面积
                 occupancy_stats = query.first()

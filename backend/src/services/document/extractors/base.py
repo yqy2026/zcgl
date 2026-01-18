@@ -220,13 +220,19 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
                 # Check if error is retryable
                 retryable_errors = (
-                    "ConnectionError", "TimeoutError", "ConnectTimeout",
-                    "ReadTimeout", "RateLimitError", "APIError"
+                    "ConnectionError",
+                    "TimeoutError",
+                    "ConnectTimeout",
+                    "ReadTimeout",
+                    "RateLimitError",
+                    "APIError",
                 )
 
                 if error_type not in retryable_errors:
                     # Non-retryable error, raise immediately
-                    logger.warning(f"Non-retryable error in vision API call: {error_type}: {e}")
+                    logger.warning(
+                        f"Non-retryable error in vision API call: {error_type}: {e}"
+                    )
                     raise
 
                 if attempt < max_attempts:

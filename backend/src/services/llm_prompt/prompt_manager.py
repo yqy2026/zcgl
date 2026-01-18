@@ -19,10 +19,7 @@ class PromptManager:
     """Prompt管理器"""
 
     def get_active_prompt(
-        self,
-        db: Session,
-        doc_type: str,
-        provider: str | None = None
+        self, db: Session, doc_type: str, provider: str | None = None
     ) -> PromptTemplate | None:
         """
         获取当前活跃的Prompt
@@ -37,7 +34,7 @@ class PromptManager:
         """
         query = db.query(PromptTemplate).filter(
             PromptTemplate.doc_type == doc_type,
-            PromptTemplate.status == PromptStatus.ACTIVE
+            PromptTemplate.status == PromptStatus.ACTIVE,
         )
 
         if provider:
@@ -48,15 +45,14 @@ class PromptManager:
         if prompt:
             logger.info(f"✅ 获取活跃Prompt: {prompt.name} (v{prompt.version})")
         else:
-            logger.warning(f"⚠️  未找到活跃的Prompt: doc_type={doc_type}, provider={provider}")
+            logger.warning(
+                f"⚠️  未找到活跃的Prompt: doc_type={doc_type}, provider={provider}"
+            )
 
         return prompt
 
     def create_prompt(
-        self,
-        db: Session,
-        data: PromptTemplateCreate,
-        user_id: str | None = None
+        self, db: Session, data: PromptTemplateCreate, user_id: str | None = None
     ) -> PromptTemplate:
         """
         创建新Prompt模板
@@ -70,9 +66,9 @@ class PromptManager:
             PromptTemplate
         """
         # 1. 检查名称是否已存在
-        existing = db.query(PromptTemplate).filter(
-            PromptTemplate.name == data.name
-        ).first()
+        existing = (
+            db.query(PromptTemplate).filter(PromptTemplate.name == data.name).first()
+        )
 
         if existing:
             raise ValueError(f"Prompt名称已存在: {data.name}")
@@ -93,7 +89,7 @@ class PromptManager:
             version=version,
             status=PromptStatus.DRAFT,
             tags=data.tags or [],
-            created_by=user_id
+            created_by=user_id,
         )
 
         # 4. 创建初始版本
@@ -106,7 +102,7 @@ class PromptManager:
             few_shot_examples=data.few_shot_examples or {},
             change_description="初始版本",
             change_type="created",
-            created_by=user_id
+            created_by=user_id,
         )
 
         db.add(template)
@@ -122,7 +118,7 @@ class PromptManager:
         db: Session,
         template_id: str,
         data: PromptTemplateUpdate,
-        user_id: str | None = None
+        user_id: str | None = None,
     ) -> PromptTemplate:
         """
         更新Prompt(自动创建新版本)
@@ -146,7 +142,11 @@ class PromptManager:
         # 2. 准备新内容
         new_system_prompt = data.system_prompt or template.system_prompt
         new_user_prompt = data.user_prompt_template or template.user_prompt_template
-        new_examples = data.few_shot_examples if data.few_shot_examples is not None else template.few_shot_examples
+        new_examples = (
+            data.few_shot_examples
+            if data.few_shot_examples is not None
+            else template.few_shot_examples
+        )
 
         # 3. 创建版本记录
         version_record = PromptVersion(
@@ -158,7 +158,7 @@ class PromptManager:
             few_shot_examples=new_examples,
             change_description=data.change_description or "手动更新",
             change_type="optimized",
-            created_by=user_id
+            created_by=user_id,
         )
 
         # 4. 更新模板
@@ -176,14 +176,12 @@ class PromptManager:
         db.commit()
         db.refresh(template)
 
-        logger.info(f"✅ 更新Prompt: {template.name} (v{template.version} → {new_version})")
+        logger.info(
+            f"✅ 更新Prompt: {template.name} (v{template.version} → {new_version})"
+        )
         return template
 
-    def activate_prompt(
-        self,
-        db: Session,
-        template_id: str
-    ) -> PromptTemplate:
+    def activate_prompt(self, db: Session, template_id: str) -> PromptTemplate:
         """
         激活指定Prompt
 
@@ -202,11 +200,8 @@ class PromptManager:
         db.query(PromptTemplate).filter(
             PromptTemplate.doc_type == template.doc_type,
             PromptTemplate.status == PromptStatus.ACTIVE,
-            PromptTemplate.id != template_id
-        ).update({
-            'status': PromptStatus.ARCHIVED,
-            'updated_at': datetime.utcnow()
-        })
+            PromptTemplate.id != template_id,
+        ).update({"status": PromptStatus.ARCHIVED, "updated_at": datetime.utcnow()})
 
         # 2. 激活目标Prompt
         template.status = PromptStatus.ACTIVE
@@ -218,11 +213,7 @@ class PromptManager:
         return template
 
     def rollback_to_version(
-        self,
-        db: Session,
-        template_id: str,
-        version_id: str,
-        user_id: str | None = None
+        self, db: Session, template_id: str, version_id: str, user_id: str | None = None
     ) -> PromptTemplate:
         """
         回滚到指定版本
@@ -258,7 +249,7 @@ class PromptManager:
             few_shot_examples=target_version.few_shot_examples,
             change_description=f"回滚到版本{target_version.version}",
             change_type="rollback",
-            created_by=user_id
+            created_by=user_id,
         )
 
         # 4. 更新模板
@@ -273,14 +264,12 @@ class PromptManager:
         db.commit()
         db.refresh(template)
 
-        logger.info(f"✅ 回滚Prompt: {template.name} (v{template.version} ← v{target_version.version})")
+        logger.info(
+            f"✅ 回滚Prompt: {template.name} (v{template.version} ← v{target_version.version})"
+        )
         return template
 
-    def get_prompt_history(
-        self,
-        db: Session,
-        template_id: str
-    ) -> list[PromptVersion]:
+    def get_prompt_history(self, db: Session, template_id: str) -> list[PromptVersion]:
         """
         获取Prompt的所有历史版本
 
@@ -291,9 +280,12 @@ class PromptManager:
         Returns:
             版本列表(按创建时间倒序)
         """
-        versions = db.query(PromptVersion).filter(
-            PromptVersion.template_id == template_id
-        ).order_by(PromptVersion.created_at.desc()).all()
+        versions = (
+            db.query(PromptVersion)
+            .filter(PromptVersion.template_id == template_id)
+            .order_by(PromptVersion.created_at.desc())
+            .all()
+        )
 
         logger.info(f"📜 Prompt历史: {template_id}, 共{len(versions)}个版本")
         return versions
@@ -311,8 +303,8 @@ class PromptManager:
         """
         try:
             # 移除'v'前缀，分割版本号
-            version_str = current_version.replace('v', '')
-            parts = version_str.split('.')
+            version_str = current_version.replace("v", "")
+            parts = version_str.split(".")
 
             if len(parts) == 3:
                 major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])

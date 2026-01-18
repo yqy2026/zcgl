@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Count mypy errors from output"""
+
 from collections import defaultdict
 
 # 从任务输出复制的错误列表
@@ -52,32 +53,34 @@ src\crud\rbac.py:118: error: Argument "base_query" to "build_query" of "QueryBui
 src\crud\project.py:11: error: Missing type parameters for generic type "CRUDBase"  [type-arg]
 """
 
+
 def main():
     errors_by_file = defaultdict(list)
 
-    for line in errors.strip().split('\n'):
-        if ':' not in line or 'error:' not in line:
+    for line in errors.strip().split("\n"):
+        if ":" not in line or "error:" not in line:
             continue
 
-        parts = line.split(':', 2)
+        parts = line.split(":", 2)
         if len(parts) >= 3:
             file_path = parts[0].strip()
             error_info = parts[2].strip() if len(parts) > 2 else ""
 
-            if 'error:' in error_info:
+            if "error:" in error_info:
                 # Extract error code
-                error_code = 'unknown'
-                if '[' in error_info and ']' in error_info:
-                    error_code = error_info[error_info.rfind('[')+1:error_info.rfind(']')]
+                error_code = "unknown"
+                if "[" in error_info and "]" in error_info:
+                    error_code = error_info[
+                        error_info.rfind("[") + 1 : error_info.rfind("]")
+                    ]
 
-                errors_by_file[file_path].append({
-                    'code': error_code,
-                    'message': error_info
-                })
+                errors_by_file[file_path].append(
+                    {"code": error_code, "message": error_info}
+                )
 
-    print("="*70)
+    print("=" * 70)
     print("MYPY ERROR ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
     total_errors = sum(len(errs) for errs in errors_by_file.values())
     print(f"\nTotal errors: {total_errors}")
@@ -87,29 +90,26 @@ def main():
     error_codes = defaultdict(int)
     for errs in errors_by_file.values():
         for err in errs:
-            error_codes[err['code']] += 1
+            error_codes[err["code"]] += 1
 
     print("\nError code distribution:")
     for code, count in sorted(error_codes.items(), key=lambda x: -x[1]):
         print(f"  {code:20s}: {count:3d}")
 
     # Sort files by error count
-    sorted_files = sorted(
-        errors_by_file.items(),
-        key=lambda x: len(x[1]),
-        reverse=True
-    )
+    sorted_files = sorted(errors_by_file.items(), key=lambda x: len(x[1]), reverse=True)
 
     print("\nTop 20 files with most errors:")
     for i, (file_path, errs) in enumerate(sorted_files[:20], 1):
-        file_name = file_path.split('\\')[-1]
+        file_name = file_path.split("\\")[-1]
         print(f"{i:2d}. {file_name:40s} ({len(errs):2d} errors)")
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"REMAINING: {total_errors} errors")
     print("TARGET: <50 errors")
     print(f"NEED TO FIX: {max(0, total_errors - 50)} errors")
-    print("="*70)
+    print("=" * 70)
+
 
 if __name__ == "__main__":
     main()

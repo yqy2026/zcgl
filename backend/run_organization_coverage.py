@@ -1,6 +1,7 @@
 """
 Script to run organization CRUD tests with proper environment setup
 """
+
 import os
 import sys
 
@@ -14,10 +15,14 @@ os.environ["PYDANTIC_SETTINGS_IGNORE_DOT_ENV"] = "1"
 # Now run pytest with coverage
 import pytest
 
-sys.exit(pytest.main([
-    "tests/unit/crud/test_organization.py",
-    "--cov=src.crud.organization",
-    "--cov-report=term-missing",
-    "--cov-report=html:htmlcov",
-    "-v"
-]))
+sys.exit(
+    pytest.main(
+        [
+            "tests/unit/crud/test_organization.py",
+            "--cov=src.crud.organization",
+            "--cov-report=term-missing",
+            "--cov-report=html:htmlcov",
+            "-v",
+        ]
+    )
+)

@@ -15,23 +15,28 @@ from pydantic import BaseModel, Field
 
 class PromptTemplateBase(BaseModel):
     """Prompt模板基础Schema"""
+
     name: str = Field(..., min_length=1, max_length=100, description="Prompt名称")
     doc_type: str = Field(..., description="文档类型: CONTRACT, PROPERTY_CERT等")
     provider: str = Field(..., description="LLM提供商: qwen, hunyuan, deepseek, glm")
     description: str | None = Field(None, max_length=500, description="Prompt描述")
     system_prompt: str = Field(..., min_length=1, description="系统提示词")
     user_prompt_template: str = Field(..., min_length=1, description="用户提示词模板")
-    few_shot_examples: dict[str, Any] | None = Field(default={}, description="Few-shot示例")
+    few_shot_examples: dict[str, Any] | None = Field(
+        default={}, description="Few-shot示例"
+    )
     tags: list[str] | None = Field(default=[], description="标签列表")
 
 
 class PromptTemplateCreate(PromptTemplateBase):
     """创建Prompt模板"""
+
     pass
 
 
 class PromptTemplateUpdate(BaseModel):
     """更新Prompt模板"""
+
     name: str | None = Field(None, min_length=1, max_length=100)
     description: str | None = Field(None, max_length=500)
     system_prompt: str | None = Field(None, min_length=1)
@@ -43,6 +48,7 @@ class PromptTemplateUpdate(BaseModel):
 
 class PromptTemplateResponse(PromptTemplateBase):
     """Prompt模板响应"""
+
     id: str
     version: str
     status: str
@@ -60,6 +66,7 @@ class PromptTemplateResponse(PromptTemplateBase):
 
 class PromptTemplateListResponse(BaseModel):
     """Prompt模板列表响应"""
+
     items: list[PromptTemplateResponse]
     total: int
     page: int
@@ -73,6 +80,7 @@ class PromptTemplateListResponse(BaseModel):
 
 class PromptVersionResponse(BaseModel):
     """Prompt版本响应"""
+
     id: str
     template_id: str
     version: str
@@ -94,6 +102,7 @@ class PromptVersionResponse(BaseModel):
 
 class PromptVersionHistory(BaseModel):
     """Prompt版本历史"""
+
     template_id: str
     versions: list[PromptVersionResponse]
 
@@ -105,6 +114,7 @@ class PromptVersionHistory(BaseModel):
 
 class ExtractionFeedbackCreate(BaseModel):
     """创建提取反馈"""
+
     template_id: str
     version_id: str | None
     doc_type: str
@@ -119,6 +129,7 @@ class ExtractionFeedbackCreate(BaseModel):
 
 class ExtractionFeedbackResponse(BaseModel):
     """提取反馈响应"""
+
     id: str
     template_id: str
     version_id: str | None
@@ -141,6 +152,7 @@ class ExtractionFeedbackResponse(BaseModel):
 
 class PromptMetricsResponse(BaseModel):
     """Prompt性能指标响应"""
+
     id: str
     template_id: str
     version_id: str | None
@@ -157,6 +169,7 @@ class PromptMetricsResponse(BaseModel):
 
 class MetricsDashboard(BaseModel):
     """性能指标Dashboard"""
+
     total_extractions: int
     avg_accuracy: float
     avg_confidence: float
@@ -172,6 +185,7 @@ class MetricsDashboard(BaseModel):
 
 class PromptOptimizationResult(BaseModel):
     """Prompt优化结果"""
+
     template_id: str
     old_version: str
     new_version: str
@@ -182,9 +196,11 @@ class PromptOptimizationResult(BaseModel):
 
 class PromptRollbackRequest(BaseModel):
     """Prompt回滚请求"""
+
     version_id: str = Field(..., description="要回滚到的目标版本ID")
 
 
 class PromptActivationRequest(BaseModel):
     """Prompt激活请求"""
+
     template_id: str = Field(..., description="要激活的Prompt模板ID")

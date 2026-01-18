@@ -15,23 +15,27 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.database import get_session_factory
 from src.models.llm_prompt import PromptTemplate
 
+
 def verify_prompts():
     """Verify property cert prompts exist"""
     SessionLocal = get_session_factory()
     db = SessionLocal()
     try:
-        prompts = db.query(PromptTemplate).filter(
-            PromptTemplate.doc_type == 'PROPERTY_CERT'
-        ).all()
+        prompts = (
+            db.query(PromptTemplate)
+            .filter(PromptTemplate.doc_type == "PROPERTY_CERT")
+            .all()
+        )
 
-        print(f'Found {len(prompts)} prompts')
+        print(f"Found {len(prompts)} prompts")
         for p in prompts:
-            print(f'  - {p.name} (version: {p.version}, status: {p.status})')
+            print(f"  - {p.name} (version: {p.version}, status: {p.status})")
 
         return len(prompts)
     finally:
         db.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     count = verify_prompts()
     sys.exit(0 if count == 4 else 1)

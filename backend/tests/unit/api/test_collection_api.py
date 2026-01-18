@@ -13,7 +13,9 @@ This test module covers all endpoints in the collection management API:
 import pytest
 
 # Skip all tests in this module - requires proper authentication setup
-pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication setup")
+pytestmark = pytest.mark.skip(
+    reason="Unit API tests require proper authentication setup"
+)
 
 from datetime import date
 from decimal import Decimal
@@ -287,7 +289,9 @@ class TestUpdateCollectionRecord:
             "promise_date": date.today().isoformat(),
         }
 
-        response = client.put("/api/v1/collection/records/test-record-1", json=update_data)
+        response = client.put(
+            "/api/v1/collection/records/test-record-1", json=update_data
+        )
 
         assert response.status_code == 200
         data = response.json()

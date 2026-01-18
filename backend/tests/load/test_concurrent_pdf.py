@@ -20,6 +20,7 @@ from src.services.document.pdf_import_service import (
 # 并发信号量测试
 # ============================================================================
 
+
 class TestConcurrencySemaphore:
     """并发信号量测试"""
 
@@ -42,6 +43,7 @@ class TestConcurrencySemaphore:
 # ============================================================================
 # 并发 PDF 处理测试
 # ============================================================================
+
 
 class TestConcurrentPDFProcessing:
     """并发 PDF 处理测试"""
@@ -66,7 +68,9 @@ class TestConcurrentPDFProcessing:
 
         # Mock session query to return None (no existing session)
         mock_query_result = Mock()
-        mock_query_result.filter = Mock(return_value=Mock(first=Mock(return_value=None)))
+        mock_query_result.filter = Mock(
+            return_value=Mock(first=Mock(return_value=None))
+        )
         db.query = Mock(return_value=mock_query_result)
 
         return db
@@ -98,7 +102,7 @@ class TestConcurrentPDFProcessing:
             return {"success": True}
 
         # Mock 内部处理方法
-        with patch.object(service, '_process_background', new=mock_processing):
+        with patch.object(service, "_process_background", new=mock_processing):
             # 启动超过限制数量的任务
             num_tasks = MAX_CONCURRENT_PDF_TASKS + 2
             tasks = []
@@ -160,8 +164,7 @@ class TestConcurrentPDFProcessing:
         # 创建并执行多个任务
         task_ids = list(range(5))
         await asyncio.gather(
-            *[mock_task_with_tracking(tid) for tid in task_ids],
-            return_exceptions=True
+            *[mock_task_with_tracking(tid) for tid in task_ids], return_exceptions=True
         )
 
         # 验证所有任务都成功完成
@@ -182,10 +185,7 @@ class TestConcurrentPDFProcessing:
             completed.append(task_id)
             return {"success": True}
 
-        await asyncio.gather(
-            *[flaky_task(i) for i in range(5)],
-            return_exceptions=True
-        )
+        await asyncio.gather(*[flaky_task(i) for i in range(5)], return_exceptions=True)
 
         # 验证只有任务2失败
         assert len(completed) == 4
@@ -196,6 +196,7 @@ class TestConcurrentPDFProcessing:
 # ============================================================================
 # 负载测试场景
 # ============================================================================
+
 
 class TestLoadScenarios:
     """负载测试场景"""
@@ -251,7 +252,10 @@ class TestLoadScenarios:
 
         for batch_num in range(num_batches):
             batch_results = await asyncio.gather(
-                *[self._process_mock_pdf(batch_num * 100 + i) for i in range(batch_size)]
+                *[
+                    self._process_mock_pdf(batch_num * 100 + i)
+                    for i in range(batch_size)
+                ]
             )
             all_results.extend(batch_results)
 
@@ -297,6 +301,7 @@ class TestLoadScenarios:
 # 资源限制测试
 # ============================================================================
 
+
 class TestResourceLimits:
     """资源限制测试"""
 
@@ -307,7 +312,7 @@ class TestResourceLimits:
 
         # 获取初始内存使用
         # 注意：这只是粗略估计
-        len(gc.get_objects()) if 'gc' in sys.modules else 0
+        len(gc.get_objects()) if "gc" in sys.modules else 0
 
         # 处理多个任务
         async def _process_mock_pdf(pdf_id):
@@ -351,13 +356,20 @@ class TestResourceLimits:
                 active_tasks -= 1
 
         # 启动超过限制数量的任务
-        tasks = [asyncio.create_task(blocking_task()) for _ in range(MAX_CONCURRENT_PDF_TASKS + 2)]
+        tasks = [
+            asyncio.create_task(blocking_task())
+            for _ in range(MAX_CONCURRENT_PDF_TASKS + 2)
+        ]
 
         # 等待第一批任务启动
         await asyncio.sleep(0.1)
 
         # 获取当前活动任务数（信号量内部的值）
-        current_slots = semaphore._value if hasattr(semaphore, '_value') else MAX_CONCURRENT_PDF_TASKS
+        current_slots = (
+            semaphore._value
+            if hasattr(semaphore, "_value")
+            else MAX_CONCURRENT_PDF_TASKS
+        )
         active_count = MAX_CONCURRENT_PDF_TASKS - current_slots
 
         # 验证并发数没有超过限制
@@ -402,6 +414,7 @@ class TestResourceLimits:
 # 压力测试
 # ============================================================================
 
+
 class TestStressScenarios:
     """压力测试场景"""
 
@@ -445,10 +458,7 @@ class TestStressScenarios:
 
         for iteration in range(iterations):
             # 快速启动一组任务
-            tasks = [
-                asyncio.create_task(self._process_mock_pdf(i))
-                for i in range(5)
-            ]
+            tasks = [asyncio.create_task(self._process_mock_pdf(i)) for i in range(5)]
 
             # 等待完成
             await asyncio.gather(*tasks)

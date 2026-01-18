@@ -76,7 +76,9 @@ class TestPDFImportServiceInit:
 class TestUploadFile:
     """测试文件上传"""
 
-    @pytest.mark.skip(reason="upload_file has relative import that fails in unit test context. Better tested via integration tests.")
+    @pytest.mark.skip(
+        reason="upload_file has relative import that fails in unit test context. Better tested via integration tests."
+    )
     @pytest.mark.asyncio
     async def test_upload_file_basic(self, pdf_service):
         """测试基本文件上传"""
@@ -84,7 +86,9 @@ class TestUploadFile:
         # This functionality is better tested through integration tests
         pass
 
-    @pytest.mark.skip(reason="upload_file has relative import that fails in unit test context. Better tested via integration tests.")
+    @pytest.mark.skip(
+        reason="upload_file has relative import that fails in unit test context. Better tested via integration tests."
+    )
     @pytest.mark.asyncio
     async def test_upload_file_generates_unique_id(self, pdf_service):
         """测试生成唯一文件ID"""
@@ -196,7 +200,9 @@ class TestProcessPdfFile:
     """测试启动PDF处理"""
 
     @pytest.mark.asyncio
-    async def test_process_pdf_file_starts_task(self, pdf_service, mock_db, mock_session):
+    async def test_process_pdf_file_starts_task(
+        self, pdf_service, mock_db, mock_session
+    ):
         """测试启动处理任务"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_session
@@ -223,7 +229,9 @@ class TestProcessPdfFile:
             mock_task.add_done_callback.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_process_pdf_file_with_options(self, pdf_service, mock_db, mock_session):
+    async def test_process_pdf_file_with_options(
+        self, pdf_service, mock_db, mock_session
+    ):
         """测试带处理选项"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_session
@@ -337,7 +345,9 @@ class TestMergeSmartResults:
             "success": True,
             "confidence": 0.9,
             "extraction_method": "text",
-            "raw_llm_json": {f"field{i}": f"value{i}" for i in range(14)},  # All 14 fields
+            "raw_llm_json": {
+                f"field{i}": f"value{i}" for i in range(14)
+            },  # All 14 fields
             "pdf_analysis": {},
             "usage": {},
         }

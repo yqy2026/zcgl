@@ -20,6 +20,7 @@ from sqlalchemy.orm import sessionmaker
 # Conditionally import testcontainers
 try:
     from testcontainers.postgres import PostgresContainer
+
     HAS_TESTCONTAINERS = True
 except ImportError:
     HAS_TESTCONTAINERS = False
@@ -27,10 +28,7 @@ except ImportError:
 
 
 # Use the same database file as CI for consistency
-TEST_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./test_database.db"
-)
+TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_database.db")
 
 
 @pytest.fixture(scope="session")
@@ -68,8 +66,10 @@ def engine(test_database_url):
         # Use SQLite for faster tests
         engine = create_engine(
             test_database_url,
-            connect_args={"check_same_thread": False} if "sqlite" in test_database_url else {},
-            pool_pre_ping=True
+            connect_args={"check_same_thread": False}
+            if "sqlite" in test_database_url
+            else {},
+            pool_pre_ping=True,
         )
         yield engine
 
@@ -107,6 +107,7 @@ def db_tables(engine):
     if has_migrations:
         # Use Alembic migrations if they exist
         from alembic import command
+
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
         command.upgrade(alembic_cfg, "head")
@@ -133,11 +134,7 @@ def db_session(engine, db_tables):
     This ensures test isolation - changes made in one test
     don't affect other tests.
     """
-    test_session_local = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine
-    )
+    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     session = test_session_local()
 
@@ -174,11 +171,7 @@ def test_data(db_session):
     from src.models.organization import Organization
 
     # Create test organization
-    test_org = Organization(
-        name="Test Organization",
-        code="TEST_ORG",
-        is_active=True
-    )
+    test_org = Organization(name="Test Organization", code="TEST_ORG", is_active=True)
     db_session.add(test_org)
     db_session.commit()
 
@@ -190,16 +183,13 @@ def test_data(db_session):
         password_hash=get_password_hash("Admin123!@#"),
         role="admin",
         is_active=True,
-        organization_id=test_org.id
+        organization_id=test_org.id,
     )
     db_session.add(test_admin)
     db_session.commit()
 
     # Provide test data as a dictionary
-    yield {
-        "organization": test_org,
-        "admin": test_admin
-    }
+    yield {"organization": test_org, "admin": test_admin}
 
     # Cleanup is handled by db_session fixture (rollback)
 

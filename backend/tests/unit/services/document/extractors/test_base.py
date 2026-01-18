@@ -71,7 +71,9 @@ class TestContractExtractorInterface:
         """Interface should have abstract extract method"""
         assert hasattr(ContractExtractorInterface, "extract")
         # Check that it's abstract
-        assert getattr(ContractExtractorInterface.extract, "__isabstractmethod__", False)
+        assert getattr(
+            ContractExtractorInterface.extract, "__isabstractmethod__", False
+        )
 
 
 # ============================================================================
@@ -168,7 +170,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf")
 
@@ -194,7 +197,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=2)
 
@@ -217,7 +221,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ) as mock_convert:
             result = await adapter.extract(
                 "/fake/path.pdf", max_pages=5, dpi=300, batch_size=2
@@ -244,7 +249,8 @@ class TestBaseVisionAdapterExtract:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -263,7 +269,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.side_effect = Exception("API Error")
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -286,7 +293,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             with patch(
                 "src.services.document.extractors.base.cleanup_temp_images"
@@ -308,7 +316,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.side_effect = Exception("API Error")
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             with patch(
                 "src.services.document.extractors.base.cleanup_temp_images"
@@ -457,9 +466,7 @@ class TestBaseVisionAdapterExtractWithRetry:
         )
 
         with pytest.raises(RuntimeError, match="failed after 3 attempts"):
-            await adapter._extract_with_retry(
-                image_paths=["page1.png"], prompt="test"
-            )
+            await adapter._extract_with_retry(image_paths=["page1.png"], prompt="test")
 
         assert adapter.vision_service.extract_from_images.call_count == 3
 
@@ -474,9 +481,7 @@ class TestBaseVisionAdapterExtractWithRetry:
         )
 
         with pytest.raises(ValueError, match="Invalid input"):
-            await adapter._extract_with_retry(
-                image_paths=["page1.png"], prompt="test"
-            )
+            await adapter._extract_with_retry(image_paths=["page1.png"], prompt="test")
 
         # Should only call once (no retries)
         assert adapter.vision_service.extract_from_images.call_count == 1
@@ -748,8 +753,16 @@ class TestBaseVisionAdapterMergeMultiPageResults:
         adapter = ConcreteAdapter()
 
         results = [
-            {"success": True, "data": {"contract_number": "CT001", "landlord": "Alice"}, "images_count": 1},
-            {"success": True, "data": {"tenant": "Bob", "landlord": None}, "images_count": 1},
+            {
+                "success": True,
+                "data": {"contract_number": "CT001", "landlord": "Alice"},
+                "images_count": 1,
+            },
+            {
+                "success": True,
+                "data": {"tenant": "Bob", "landlord": None},
+                "images_count": 1,
+            },
         ]
 
         merged = adapter._merge_multi_page_results(results)
@@ -1012,9 +1025,7 @@ class TestBaseVisionAdapterAggregateUsage:
         """Should aggregate single batch usage"""
         adapter = ConcreteAdapter()
 
-        results = [
-            {"success": True, "usage": {"total_tokens": 100}, "images_count": 2}
-        ]
+        results = [{"success": True, "usage": {"total_tokens": 100}, "images_count": 2}]
 
         aggregated = adapter._aggregate_usage(results)
 
@@ -1139,7 +1150,8 @@ class TestBaseVisionAdapterIntegration:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -1173,7 +1185,8 @@ class TestBaseVisionAdapterIntegration:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=image_paths
+            "src.services.document.extractors.base.pdf_to_images",
+            return_value=image_paths,
         ):
             result = await adapter.extract("/fake/path.pdf")
 

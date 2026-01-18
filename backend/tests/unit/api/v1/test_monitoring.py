@@ -147,20 +147,26 @@ class TestReportRoutePerformance:
 
         # Mock logger to avoid any side effects
         with patch("src.api.v1.monitoring.logger"):
-            result = await report_route_performance(report=sample_performance_report, db=mock_db)
+            result = await report_route_performance(
+                report=sample_performance_report, db=mock_db
+            )
 
             assert result["success"] == str(True)
             assert result["message"] == "性能指标已保存"
 
     @pytest.mark.skip(reason="Logger mocking issue - coverage already achieved")
     @pytest.mark.asyncio
-    async def test_report_performance_with_slow_routes(self, mock_db, sample_slow_route_report):
+    async def test_report_performance_with_slow_routes(
+        self, mock_db, sample_slow_route_report
+    ):
         """Test reporting performance with slow route detection"""
         from src.api.v1.monitoring import report_route_performance
 
         # Mock logger to avoid any side effects
         with patch("src.api.v1.monitoring.logger"):
-            result = await report_route_performance(report=sample_slow_route_report, db=mock_db)
+            result = await report_route_performance(
+                report=sample_slow_route_report, db=mock_db
+            )
 
             assert result["success"] == str(True)
             assert result["message"] == "性能指标已保存"
@@ -541,7 +547,9 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_healthy_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_healthy_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for healthy system"""
         from src.api.v1.monitoring import (
             ApplicationMetrics,
@@ -610,7 +618,9 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_degraded_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_degraded_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for degraded system"""
         from src.api.v1.monitoring import (
             ApplicationMetrics,
@@ -657,7 +667,9 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_unhealthy_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_unhealthy_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for unhealthy system"""
         from src.api.v1.monitoring import (
             ApplicationMetrics,
@@ -728,7 +740,9 @@ class TestTriggerMetricsCollection:
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @pytest.mark.asyncio
-    async def test_trigger_metrics_collection_success(self, mock_collect_sys, mock_collect_app):
+    async def test_trigger_metrics_collection_success(
+        self, mock_collect_sys, mock_collect_app
+    ):
         """Test manual metrics collection successfully"""
         from src.api.v1.monitoring import (
             ApplicationMetrics,
@@ -942,7 +956,9 @@ class TestMonitoringEdgeCases:
         )
 
         with patch("src.api.v1.monitoring.collect_system_metrics") as mock_collect_sys:
-            with patch("src.api.v1.monitoring.collect_application_metrics") as mock_collect_app:
+            with patch(
+                "src.api.v1.monitoring.collect_application_metrics"
+            ) as mock_collect_app:
                 from src.api.v1.monitoring import ApplicationMetrics, SystemMetrics
 
                 mock_sys_metrics = SystemMetrics(

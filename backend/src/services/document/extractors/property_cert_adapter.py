@@ -67,7 +67,9 @@ class PropertyCertAdapter(BaseVisionAdapter):
             self.prompt_manager = PromptManager()
         else:
             self.prompt_manager = None
-            logger.warning("PropertyCertAdapter initialized without PromptManager - will require explicit prompt")
+            logger.warning(
+                "PropertyCertAdapter initialized without PromptManager - will require explicit prompt"
+            )
 
         logger.info("PropertyCertAdapter initialized with Qwen Vision")
 
@@ -111,7 +113,7 @@ class PropertyCertAdapter(BaseVisionAdapter):
             prompt = self.prompt_manager.get_active_prompt(
                 db=db,
                 doc_type="PROPERTY_CERT",
-                provider="qwen"  # PropertyCertAdapter uses Qwen
+                provider="qwen",  # PropertyCertAdapter uses Qwen
             )
 
             if not prompt:
@@ -120,7 +122,9 @@ class PropertyCertAdapter(BaseVisionAdapter):
                     f"Please ensure prompts are initialized (certificate_type={certificate_type})"
                 )
 
-            logger.info(f"Retrieved prompt from database: {prompt.name} (v{prompt.version})")
+            logger.info(
+                f"Retrieved prompt from database: {prompt.name} (v{prompt.version})"
+            )
 
         # Format user prompt with file name
         file_name = Path(file_path).name
@@ -146,7 +150,7 @@ class PropertyCertAdapter(BaseVisionAdapter):
                     "id": prompt.id,
                     "name": prompt.name,
                     "version": prompt.version,
-                    "certificate_type": certificate_type or "real_estate"
+                    "certificate_type": certificate_type or "real_estate",
                 }
             return result
         finally:

@@ -34,9 +34,7 @@ class PropertyCertificateService:
         self.db = db
         self.extractor = PropertyCertAdapter()
 
-    async def extract_from_file(
-        self, file_path: str, filename: str
-    ) -> dict[str, Any]:
+    async def extract_from_file(self, file_path: str, filename: str) -> dict[str, Any]:
         """
         从文件提取产权证信息
 
@@ -58,7 +56,9 @@ class PropertyCertificateService:
             # 使用 PropertyCertAdapter 提取信息
             result = await self.extractor.extract(file_path)
 
-            logger.info(f"产权证提取完成: {filename}, confidence={result.get('confidence', 0)}")
+            logger.info(
+                f"产权证提取完成: {filename}, confidence={result.get('confidence', 0)}"
+            )
 
             return {
                 "success": result.get("success", False),

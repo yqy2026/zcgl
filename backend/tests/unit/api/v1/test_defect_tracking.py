@@ -35,7 +35,9 @@ def create_mock_defect_row(defect_id="DEF-20260116-ABC12345"):
         "status": "open",
         "category": "functional",
         "module": "authentication",
-        "reproduction_steps": json.dumps(["1. Go to login page", "2. Click login button"]),
+        "reproduction_steps": json.dumps(
+            ["1. Go to login page", "2. Click login button"]
+        ),
         "expected_behavior": "User should be logged in",
         "actual_behavior": "Nothing happens",
         "reporter": "testuser@example.com",
@@ -52,7 +54,7 @@ def create_mock_defect_row(defect_id="DEF-20260116-ABC12345"):
         "resolution": None,
     }
     # Use a simple dict-like mock
-    row = type('MockRow', (), row_data)()
+    row = type("MockRow", (), row_data)()
     row.__getitem__ = lambda self, key: row_data.get(key)
     return row
 
@@ -131,7 +133,9 @@ class TestCreateDefect:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        mock_conn.cursor.execute.side_effect = IntegrityError("UNIQUE constraint failed")
+        mock_conn.cursor.execute.side_effect = IntegrityError(
+            "UNIQUE constraint failed"
+        )
 
         defect = DefectReport(**sample_data)
 
@@ -162,7 +166,11 @@ class TestGetDefects:
 
         mock_conn.cursor.fetchall.return_value = []
 
-        total_mock = type('MockRow', (), {'total': 0, '__getitem__': lambda self, k: 0 if k == 'total' else None})()
+        total_mock = type(
+            "MockRow",
+            (),
+            {"total": 0, "__getitem__": lambda self, k: 0 if k == "total" else None},
+        )()
         mock_conn.cursor.fetchone.return_value = total_mock
 
         result = await get_defects()
@@ -182,7 +190,11 @@ class TestGetDefects:
         mock_row = create_mock_defect_row()
         mock_conn.cursor.fetchall.return_value = [mock_row]
 
-        total_mock = type('MockRow', (), {'total': 1, '__getitem__': lambda self, k: 1 if k == 'total' else None})()
+        total_mock = type(
+            "MockRow",
+            (),
+            {"total": 1, "__getitem__": lambda self, k: 1 if k == "total" else None},
+        )()
         mock_conn.cursor.fetchone.return_value = total_mock
 
         result = await get_defects(status=DefectStatus.OPEN)
@@ -201,7 +213,11 @@ class TestGetDefects:
 
         mock_conn.cursor.fetchall.return_value = []
 
-        total_mock = type('MockRow', (), {'total': 0, '__getitem__': lambda self, k: 0 if k == 'total' else None})()
+        total_mock = type(
+            "MockRow",
+            (),
+            {"total": 0, "__getitem__": lambda self, k: 0 if k == "total" else None},
+        )()
         mock_conn.cursor.fetchone.return_value = total_mock
 
         result = await get_defects(sort_by="created_at", sort_order="desc")
@@ -218,7 +234,14 @@ class TestGetDefects:
 
         mock_conn.cursor.fetchall.return_value = []
 
-        total_mock = type('MockRow', (), {'total': 100, '__getitem__': lambda self, k: 100 if k == 'total' else None})()
+        total_mock = type(
+            "MockRow",
+            (),
+            {
+                "total": 100,
+                "__getitem__": lambda self, k: 100 if k == "total" else None,
+            },
+        )()
         mock_conn.cursor.fetchone.return_value = total_mock
 
         result = await get_defects(limit=10, offset=20)
@@ -401,25 +424,33 @@ class TestGetDefectHistory:
         mock_get_conn.return_value = mock_conn
 
         # Create proper mock rows
-        history_row1 = type('MockRow', (), {
-            'action': 'created',
-            'old_value': None,
-            'new_value': 'Login bug',
-            'changed_by': 'user@example.com',
-            'changed_at': datetime.now(),
-            'comment': 'Created',
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        history_row1 = type(
+            "MockRow",
+            (),
+            {
+                "action": "created",
+                "old_value": None,
+                "new_value": "Login bug",
+                "changed_by": "user@example.com",
+                "changed_at": datetime.now(),
+                "comment": "Created",
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
-        history_row2 = type('MockRow', (), {
-            'action': 'updated_status',
-            'old_value': 'open',
-            'new_value': 'in_progress',
-            'changed_by': 'dev@example.com',
-            'changed_at': datetime.now(),
-            'comment': 'Status updated',
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        history_row2 = type(
+            "MockRow",
+            (),
+            {
+                "action": "updated_status",
+                "old_value": "open",
+                "new_value": "in_progress",
+                "changed_by": "dev@example.com",
+                "changed_at": datetime.now(),
+                "comment": "Status updated",
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchall.return_value = [history_row1, history_row2]
 
@@ -463,13 +494,17 @@ class TestGetDefectTrends:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        trend_row = type('MockRow', (), {
-            'period': '2026-01-15',
-            'open_count': 5,
-            'resolved_count': 3,
-            'reopened_count': 1,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        trend_row = type(
+            "MockRow",
+            (),
+            {
+                "period": "2026-01-15",
+                "open_count": 5,
+                "resolved_count": 3,
+                "reopened_count": 1,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchall.side_effect = [[trend_row], []]
 
@@ -511,13 +546,17 @@ class TestGetDefectAnalysis:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        stats_row = type('MockRow', (), {
-            'total_defects': 100,
-            'new_defects': 20,
-            'resolved_defects': 15,
-            'avg_resolution_time': 24.5,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        stats_row = type(
+            "MockRow",
+            (),
+            {
+                "total_defects": 100,
+                "new_defects": 20,
+                "resolved_defects": 15,
+                "avg_resolution_time": 24.5,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchone.return_value = stats_row
         mock_conn.cursor.fetchall.side_effect = [[], [], [], []]
@@ -538,38 +577,58 @@ class TestGetDefectAnalysis:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        stats_row = type('MockRow', (), {
-            'total_defects': 100,
-            'new_defects': 20,
-            'resolved_defects': 15,
-            'avg_resolution_time': 24.5,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        stats_row = type(
+            "MockRow",
+            (),
+            {
+                "total_defects": 100,
+                "new_defects": 20,
+                "resolved_defects": 15,
+                "avg_resolution_time": 24.5,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchone.return_value = stats_row
 
-        sev_row = type('MockRow', (), {
-            'severity': 'critical',
-            'count': 2,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        sev_row = type(
+            "MockRow",
+            (),
+            {
+                "severity": "critical",
+                "count": 2,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
-        cat_row = type('MockRow', (), {
-            'category': 'functional',
-            'count': 12,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        cat_row = type(
+            "MockRow",
+            (),
+            {
+                "category": "functional",
+                "count": 12,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
-        mod_row = type('MockRow', (), {
-            'module': 'auth',
-            'count': 10,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        mod_row = type(
+            "MockRow",
+            (),
+            {
+                "module": "auth",
+                "count": 10,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
-        reopened_row = type('MockRow', (), {
-            'reopened_count': 2,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        reopened_row = type(
+            "MockRow",
+            (),
+            {
+                "reopened_count": 2,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchall.side_effect = [
             [sev_row],
@@ -615,25 +674,29 @@ class TestCreatePreventionMeasure:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        mock_row = type('MockRow', (), {
-            'prevention_id': 'PREV-20260116-XYZ12345',
-            'category': 'functional',
-            'title': 'Add unit tests',
-            'description': 'Implement tests',
-            'implementation_steps': json.dumps(['Step 1', 'Step 2']),
-            'estimated_impact': 'High',
-            'priority': 'high',
-            'created_at': datetime.now(),
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        mock_row = type(
+            "MockRow",
+            (),
+            {
+                "prevention_id": "PREV-20260116-XYZ12345",
+                "category": "functional",
+                "title": "Add unit tests",
+                "description": "Implement tests",
+                "implementation_steps": json.dumps(["Step 1", "Step 2"]),
+                "estimated_impact": "High",
+                "priority": "high",
+                "created_at": datetime.now(),
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchone.return_value = mock_row
 
         prevention = DefectPrevention(**sample_data)
         result = await create_prevention_measure(prevention)
 
-        assert result.prevention_id == 'PREV-20260116-XYZ12345'
-        assert result.title == 'Add unit tests'
+        assert result.prevention_id == "PREV-20260116-XYZ12345"
+        assert result.title == "Add unit tests"
         mock_conn.cursor.execute.assert_called()
         mock_conn.commit.assert_called_once()
 
@@ -705,17 +768,21 @@ class TestGetPreventionMeasures:
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
 
-        mock_row = type('MockRow', (), {
-            'prevention_id': 'PREV-001',
-            'category': 'functional',
-            'title': 'Test prevention',
-            'description': 'Description',
-            'implementation_steps': json.dumps(['Step 1']),
-            'estimated_impact': 'High',
-            'priority': 'high',
-            'created_at': datetime.now(),
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        mock_row = type(
+            "MockRow",
+            (),
+            {
+                "prevention_id": "PREV-001",
+                "category": "functional",
+                "title": "Test prevention",
+                "description": "Description",
+                "implementation_steps": json.dumps(["Step 1"]),
+                "estimated_impact": "High",
+                "priority": "high",
+                "created_at": datetime.now(),
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         mock_conn.cursor.fetchall.return_value = [mock_row]
 
@@ -752,22 +819,26 @@ class TestHelperFunctions:
         """Test _row_to_prevention conversion"""
         from src.api.v1.defect_tracking import _row_to_prevention
 
-        mock_row = type('MockRow', (), {
-            'prevention_id': 'PREV-001',
-            'category': 'functional',
-            'title': 'Test',
-            'description': 'Description',
-            'implementation_steps': json.dumps(['Step 1', 'Step 2']),
-            'estimated_impact': 'High',
-            'priority': 'high',
-            'created_at': datetime.now(),
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        mock_row = type(
+            "MockRow",
+            (),
+            {
+                "prevention_id": "PREV-001",
+                "category": "functional",
+                "title": "Test",
+                "description": "Description",
+                "implementation_steps": json.dumps(["Step 1", "Step 2"]),
+                "estimated_impact": "High",
+                "priority": "high",
+                "created_at": datetime.now(),
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
 
         result = _row_to_prevention(mock_row)
 
-        assert result.prevention_id == 'PREV-001'
-        assert result.category == 'functional'
+        assert result.prevention_id == "PREV-001"
+        assert result.category == "functional"
         assert isinstance(result.implementation_steps, list)
         assert len(result.implementation_steps) == 2
 
@@ -791,11 +862,15 @@ class TestHelperFunctions:
         assert severity == "low"
 
         # Test with severity data
-        sev_row = type('MockRow', (), {
-            'severity': 'critical',
-            'count': 1,
-            '__getitem__': lambda self, key: getattr(self, key, None)
-        })()
+        sev_row = type(
+            "MockRow",
+            (),
+            {
+                "severity": "critical",
+                "count": 1,
+                "__getitem__": lambda self, key: getattr(self, key, None),
+            },
+        )()
         mock_conn.cursor.fetchall.return_value = [sev_row]
 
         severity = _get_module_severity(mock_conn, "auth", datetime.now())
@@ -835,7 +910,11 @@ class TestDefectTrackingEdgeCases:
 
         mock_conn.cursor.fetchall.return_value = []
 
-        total_mock = type('MockRow', (), {'total': 0, '__getitem__': lambda self, k: 0 if k == 'total' else None})()
+        total_mock = type(
+            "MockRow",
+            (),
+            {"total": 0, "__getitem__": lambda self, k: 0 if k == "total" else None},
+        )()
         mock_conn.cursor.fetchone.return_value = total_mock
 
         result = await get_defects(

@@ -168,7 +168,7 @@ def seed_prompts(db: Session) -> None:
             # Check for existing prompt using raw SQL (avoiding ORM relationship issues)
             existing = db.execute(
                 text("SELECT id FROM prompt_templates WHERE name = :name"),
-                {"name": prompt_data["name"]}
+                {"name": prompt_data["name"]},
             ).fetchone()
 
             if existing:
@@ -210,6 +210,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[ERROR] Error: {e}")
         import traceback
+
         traceback.print_exc()
         db.rollback()
     finally:

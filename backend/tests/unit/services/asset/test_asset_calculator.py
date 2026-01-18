@@ -302,9 +302,15 @@ class TestCalculateOverallOccupancyRate:
     def test_excludes_assets_not_included(self):
         """测试排除不计入出租率的资产"""
         assets = [
-            MockAsset(rentable_area=100.0, rented_area=50.0, include_in_occupancy_rate=True),
-            MockAsset(rentable_area=100.0, rented_area=100.0, include_in_occupancy_rate=False),  # 应该被排除
-            MockAsset(rentable_area=100.0, rented_area=0.0, include_in_occupancy_rate=True),
+            MockAsset(
+                rentable_area=100.0, rented_area=50.0, include_in_occupancy_rate=True
+            ),
+            MockAsset(
+                rentable_area=100.0, rented_area=100.0, include_in_occupancy_rate=False
+            ),  # 应该被排除
+            MockAsset(
+                rentable_area=100.0, rented_area=0.0, include_in_occupancy_rate=True
+            ),
         ]
         # 只计算前两个和最后一个: 200平米可租，50平米已租 = 25%
         result = OccupancyRateCalculator.calculate_overall_occupancy_rate(assets)

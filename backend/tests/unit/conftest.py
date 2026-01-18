@@ -31,10 +31,15 @@ def client(monkeypatch):
     def mock_require_permission(resource, action):
         def dependency():
             return mock_user
+
         return dependency
 
-    monkeypatch.setattr("src.middleware.auth.get_current_active_user", mock_get_current_user)
-    monkeypatch.setattr("src.middleware.auth.require_permission", mock_require_permission)
+    monkeypatch.setattr(
+        "src.middleware.auth.get_current_active_user", mock_get_current_user
+    )
+    monkeypatch.setattr(
+        "src.middleware.auth.require_permission", mock_require_permission
+    )
 
     # Override dependencies in FastAPI app
     app.dependency_overrides[get_current_active_user] = mock_get_current_user

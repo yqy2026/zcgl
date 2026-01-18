@@ -387,7 +387,8 @@ def create_asset_validation_schema() -> ValidationSchema:
         ),
     )
     schema.add_rule(
-        "address", LengthRule(max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, required=False)
+        "address",
+        LengthRule(max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, required=False),
     )
 
     # 状态枚举验证
@@ -493,7 +494,9 @@ def create_project_validation_schema() -> ValidationSchema:
     schema.add_rule(
         "code",
         LengthRule(
-            min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX // 2, required=False
+            min_length=1,
+            max_length=FieldLengthLimits.SHORT_TEXT_MAX // 2,
+            required=False,
         ),
     )
 

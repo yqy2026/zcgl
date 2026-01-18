@@ -325,9 +325,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
         assert "total_assets" in result
 
-    def test_get_comprehensive_analytics_with_deleted_assets(
-        self, analytics_service
-    ):
+    def test_get_comprehensive_analytics_with_deleted_assets(self, analytics_service):
         """Test analytics including deleted assets"""
         analytics_service.cache.get = MagicMock(return_value=None)
 
@@ -728,9 +726,7 @@ class TestAreaServiceMemoryCalculation:
         assert result["total_non_commercial_area"] == 30.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_all_null_values(
-        self, mock_crud, area_service
-    ):
+    def test_calculate_summary_in_memory_all_null_values(self, mock_crud, area_service):
         """Test memory calculation with all null values"""
         mock_assets = [
             MagicMock(
@@ -801,9 +797,7 @@ class TestAreaServiceMemoryCalculation:
         assert result["total_non_commercial_area"] == 51.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_pagination(
-        self, mock_crud, area_service
-    ):
+    def test_calculate_summary_in_memory_pagination(self, mock_crud, area_service):
         """Test memory calculation handles pagination correctly"""
         # Create 1500 assets to test pagination (batch_size=1000)
         mock_assets_batch1 = [MagicMock(land_area=100.0, rentable_area=50.0)] * 1000
@@ -977,9 +971,7 @@ class TestServiceIntegration:
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
                 mock_assets = [MagicMock(data_status="正常")]
-                analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-                    mock_assets
-                )
+                analytics_service.db.query.return_value.filter.return_value.all.return_value = mock_assets
 
                 result = analytics_service.get_comprehensive_analytics(
                     filters={}, use_cache=True

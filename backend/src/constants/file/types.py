@@ -44,7 +44,9 @@ class FileTypes:
 
     # MIME types
     MIME_PDF: Final[str] = "application/pdf"
-    MIME_EXCEL: Final[str] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    MIME_EXCEL: Final[str] = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     MIME_EXCEL_LEGACY: Final[str] = "application/vnd.ms-excel"
     MIME_CSV: Final[str] = "text/csv"
     MIME_JSON: Final[str] = "application/json"
@@ -52,7 +54,9 @@ class FileTypes:
     MIME_PNG: Final[str] = "image/png"
     MIME_JPEG: Final[str] = "image/jpeg"
     MIME_GIF: Final[str] = "image/gif"
-    MIME_WORD: Final[str] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    MIME_WORD: Final[str] = (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
     MIME_ZIP: Final[str] = "application/zip"
 
     # Allowed extensions for uploads
@@ -104,7 +108,9 @@ class FileTypes:
         return extensions[file_type]
 
     @classmethod
-    def is_allowed(cls, filename: str, allowed_extensions: list[str] | None = None) -> bool:
+    def is_allowed(
+        cls, filename: str, allowed_extensions: list[str] | None = None
+    ) -> bool:
         """
         Check if a file extension is allowed.
 
@@ -169,4 +175,3 @@ class FileTypes:
 PDF_FILE = FileTypes.PDF_TYPE
 EXCEL_FILE = FileTypes.EXCEL_TYPE
 CSV_FILE = FileTypes.CSV_TYPE
-

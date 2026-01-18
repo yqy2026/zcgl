@@ -118,7 +118,9 @@ class DocumentExtractionManager:
     """
 
     _contract_extractor: Any
-    _property_cert_extractor: Any  # PropertyCertAdapter | None (use Any to avoid TYPE_CHECKING issues)
+    _property_cert_extractor: (
+        Any  # PropertyCertAdapter | None (use Any to avoid TYPE_CHECKING issues)
+    )
     classifier: KeywordClassifier
 
     def __init__(self) -> None:

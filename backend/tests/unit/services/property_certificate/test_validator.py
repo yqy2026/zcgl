@@ -7,7 +7,7 @@ def test_validate_real_estate_cert_success():
     data = {
         "certificate_number": "京房权证朝字第12345号",
         "property_address": "北京市朝阳区建国路123号",
-        "registration_date": "2020-01-15"
+        "registration_date": "2020-01-15",
     }
     result = PropertyCertificateValidator.validate_extracted_fields(
         data, CertificateType.REAL_ESTATE
@@ -35,7 +35,7 @@ def test_validate_invalid_certificate_number():
     """测试无效证书编号"""
     data = {
         "certificate_number": "AB",  # Too short
-        "property_address": "Test"
+        "property_address": "Test",
     }
     result = PropertyCertificateValidator.validate_extracted_fields(
         data, CertificateType.REAL_ESTATE
@@ -51,7 +51,7 @@ def test_validate_date_logic_error():
         "certificate_number": "TEST001",
         "property_address": "Test",
         "land_use_term_start": "2025-01-01",
-        "land_use_term_end": "2024-01-01"  # End before start!
+        "land_use_term_end": "2024-01-01",  # End before start!
     }
     result = PropertyCertificateValidator.validate_extracted_fields(
         data, CertificateType.REAL_ESTATE

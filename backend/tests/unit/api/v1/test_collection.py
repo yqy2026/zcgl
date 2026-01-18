@@ -120,7 +120,9 @@ class TestGetCollectionSummary:
 
     @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_zero_total_records(self, mock_db, mock_current_user):
+    async def test_get_collection_summary_zero_total_records(
+        self, mock_db, mock_current_user
+    ):
         """Test getting collection summary with zero total collection records"""
         # Skipped due to complex SQLAlchemy query mocking
         # This endpoint is tested in integration tests
@@ -136,7 +138,9 @@ class TestListCollectionRecords:
     """Tests for GET /api/v1/collection/records endpoint"""
 
     @pytest.mark.asyncio
-    async def test_list_records_default_params(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_default_params(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records with default parameters"""
         from src.api.v1.collection import list_collection_records
 
@@ -166,7 +170,9 @@ class TestListCollectionRecords:
         assert result.pages == 5
 
     @pytest.mark.asyncio
-    async def test_list_records_with_ledger_filter(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_with_ledger_filter(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records filtered by ledger_id"""
         from src.api.v1.collection import list_collection_records
 
@@ -193,7 +199,9 @@ class TestListCollectionRecords:
         assert len(result.items) == 1
 
     @pytest.mark.asyncio
-    async def test_list_records_with_contract_filter(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_with_contract_filter(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records filtered by contract_id"""
         from src.api.v1.collection import list_collection_records
 
@@ -219,7 +227,9 @@ class TestListCollectionRecords:
         assert result.total == 3
 
     @pytest.mark.asyncio
-    async def test_list_records_with_status_filter(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_with_status_filter(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records filtered by status"""
         from src.api.v1.collection import list_collection_records
 
@@ -245,7 +255,9 @@ class TestListCollectionRecords:
         assert result.total == 8
 
     @pytest.mark.asyncio
-    async def test_list_records_with_all_filters(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_with_all_filters(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records with all filters applied"""
         from src.api.v1.collection import list_collection_records
 
@@ -271,7 +283,9 @@ class TestListCollectionRecords:
         assert result.total == 1
 
     @pytest.mark.asyncio
-    async def test_list_records_pagination(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_pagination(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test pagination of collection records"""
         from src.api.v1.collection import list_collection_records
 
@@ -362,7 +376,9 @@ class TestGetCollectionRecord:
     """Tests for GET /api/v1/collection/records/{record_id} endpoint"""
 
     @pytest.mark.asyncio
-    async def test_get_record_success(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_get_record_success(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection record successfully"""
         from src.api.v1.collection import get_collection_record
 
@@ -405,7 +421,9 @@ class TestCreateCollectionRecord:
     """Tests for POST /api/v1/collection/records endpoint"""
 
     @pytest.mark.asyncio
-    async def test_create_record_success(self, mock_db, mock_current_user, mock_rent_ledger, mock_collection_record):
+    async def test_create_record_success(
+        self, mock_db, mock_current_user, mock_rent_ledger, mock_collection_record
+    ):
         """Test creating collection record successfully"""
         from src.api.v1.collection import create_collection_record
 
@@ -453,7 +471,9 @@ class TestCreateCollectionRecord:
         mock_db.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_record_with_operator_info(self, mock_db, mock_current_user, mock_rent_ledger):
+    async def test_create_record_with_operator_info(
+        self, mock_db, mock_current_user, mock_rent_ledger
+    ):
         """Test creating collection record with operator info already set"""
         from src.api.v1.collection import create_collection_record
 
@@ -524,7 +544,9 @@ class TestCreateCollectionRecord:
         assert "租金台账不存在" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_create_record_with_all_fields(self, mock_db, mock_current_user, mock_rent_ledger):
+    async def test_create_record_with_all_fields(
+        self, mock_db, mock_current_user, mock_rent_ledger
+    ):
         """Test creating collection record with all optional fields"""
         from src.api.v1.collection import create_collection_record
 
@@ -577,7 +599,9 @@ class TestUpdateCollectionRecord:
     """Tests for POST /api/v1/collection/records/{record_id} endpoint"""
 
     @pytest.mark.asyncio
-    async def test_update_record_success(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_update_record_success(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test updating collection record successfully"""
         from src.api.v1.collection import update_collection_record
 
@@ -594,14 +618,19 @@ class TestUpdateCollectionRecord:
         mock_db.refresh.return_value = None
 
         await update_collection_record(
-            record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
+            record_id="record-123",
+            update_data=update_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         mock_db.commit.assert_called_once()
         mock_db.refresh.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_record_partial_update(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_update_record_partial_update(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test partial update of collection record"""
         from src.api.v1.collection import update_collection_record
 
@@ -613,7 +642,10 @@ class TestUpdateCollectionRecord:
         mock_db.commit.return_value = None
 
         await update_collection_record(
-            record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
+            record_id="record-123",
+            update_data=update_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         # Verify only specified field is updated
@@ -632,19 +664,25 @@ class TestUpdateCollectionRecord:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_collection_record(
-                record_id="nonexistent", update_data=update_data, db=mock_db, current_user=mock_current_user
+                record_id="nonexistent",
+                update_data=update_data,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
         assert "催缴记录不存在" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_update_record_status_to_failed(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_update_record_status_to_failed(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test updating collection record status to failed"""
         from src.api.v1.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(
-            collection_status=CollectionStatus.FAILED, collection_notes="Unable to contact tenant"
+            collection_status=CollectionStatus.FAILED,
+            collection_notes="Unable to contact tenant",
         )
 
         mock_query = MagicMock()
@@ -653,13 +691,18 @@ class TestUpdateCollectionRecord:
         mock_db.commit.return_value = None
 
         await update_collection_record(
-            record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
+            record_id="record-123",
+            update_data=update_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         mock_db.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_record_with_promised_payment(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_update_record_with_promised_payment(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test updating collection record with promised payment info"""
         from src.api.v1.collection import update_collection_record
 
@@ -675,7 +718,10 @@ class TestUpdateCollectionRecord:
         mock_db.commit.return_value = None
 
         await update_collection_record(
-            record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
+            record_id="record-123",
+            update_data=update_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         mock_db.commit.assert_called_once()
@@ -690,7 +736,9 @@ class TestDeleteCollectionRecord:
     """Tests for DELETE /api/v1/collection/records/{record_id} endpoint"""
 
     @pytest.mark.asyncio
-    async def test_delete_record_success(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_delete_record_success(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test deleting collection record successfully"""
         from src.api.v1.collection import delete_collection_record
 
@@ -735,7 +783,9 @@ class TestCollectionEdgeCases:
     """Tests for edge cases and error handling"""
 
     @pytest.mark.asyncio
-    async def test_list_records_large_page_size(self, mock_db, mock_current_user, mock_collection_record):
+    async def test_list_records_large_page_size(
+        self, mock_db, mock_current_user, mock_collection_record
+    ):
         """Test getting collection records with maximum page size"""
         from src.api.v1.collection import list_collection_records
 
@@ -763,14 +813,18 @@ class TestCollectionEdgeCases:
 
     @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_summary_with_null_success_count(self, mock_db, mock_current_user):
+    async def test_get_summary_with_null_success_count(
+        self, mock_db, mock_current_user
+    ):
         """Test collection summary when success count query returns None"""
         # Skipped due to complex SQLAlchemy query mocking
         # This endpoint is tested in integration tests
         pass
 
     @pytest.mark.asyncio
-    async def test_create_record_without_username(self, mock_db, mock_current_user, mock_rent_ledger):
+    async def test_create_record_without_username(
+        self, mock_db, mock_current_user, mock_rent_ledger
+    ):
         """Test creating record when user has no username (uses email instead)"""
         from src.api.v1.collection import create_collection_record
 

@@ -69,7 +69,9 @@ class TestCreateRole:
         with patch("src.crud.rbac.role_crud.get_by_name", return_value=None):
             with patch("src.crud.rbac.role_crud.create", return_value=mock_role):
                 with patch.object(rbac_service, "update_role_permissions"):
-                    result = rbac_service.create_role(mock_db, obj_in=obj_in, created_by="user_123")
+                    result = rbac_service.create_role(
+                        mock_db, obj_in=obj_in, created_by="user_123"
+                    )
 
                     assert result is not None
 
@@ -95,8 +97,12 @@ class TestCreateRole:
 
         with patch("src.crud.rbac.role_crud.get_by_name", return_value=None):
             with patch("src.crud.rbac.role_crud.create", return_value=mock_role):
-                with patch.object(rbac_service, "update_role_permissions") as mock_update:
-                    rbac_service.create_role(mock_db, obj_in=obj_in, created_by="user_123")
+                with patch.object(
+                    rbac_service, "update_role_permissions"
+                ) as mock_update:
+                    rbac_service.create_role(
+                        mock_db, obj_in=obj_in, created_by="user_123"
+                    )
 
                     mock_update.assert_called_once()
 
@@ -140,7 +146,9 @@ class TestDeleteRole:
         """测试成功删除"""
         with patch("src.crud.rbac.role_crud.get", return_value=mock_role):
             with patch("src.crud.rbac.role_crud.remove", return_value=True):
-                result = rbac_service.delete_role(mock_db, role_id="role_123", deleted_by="user_123")
+                result = rbac_service.delete_role(
+                    mock_db, role_id="role_123", deleted_by="user_123"
+                )
 
                 assert result is True
 
@@ -148,7 +156,9 @@ class TestDeleteRole:
         """测试角色不存在"""
         with patch("src.crud.rbac.role_crud.get", return_value=None):
             with pytest.raises(ValueError, match="角色不存在"):
-                rbac_service.delete_role(mock_db, role_id="nonexistent", deleted_by="user_123")
+                rbac_service.delete_role(
+                    mock_db, role_id="nonexistent", deleted_by="user_123"
+                )
 
 
 # ============================================================================
@@ -170,7 +180,10 @@ class TestUpdateRolePermissions:
 
         with patch("src.crud.rbac.role_crud.get", return_value=mock_role):
             rbac_service.update_role_permissions(
-                mock_db, role_id="role_123", permission_ids=["perm_123", "perm_456"], updated_by="user_123"
+                mock_db,
+                role_id="role_123",
+                permission_ids=["perm_123", "perm_456"],
+                updated_by="user_123",
             )
 
             mock_db.commit.assert_called_once()
@@ -205,9 +218,17 @@ class TestAssignRoleToUser:
         mock_assignment = MagicMock(spec=UserRoleAssignment)
         mock_assignment.id = "assignment_123"
 
-        with patch("src.crud.rbac.user_role_assignment_crud.get_by_user_and_role", return_value=None):
-            with patch("src.crud.rbac.user_role_assignment_crud.create", return_value=mock_assignment):
-                result = rbac_service.assign_role_to_user(mock_db, obj_in=obj_in, assigned_by="admin")
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            return_value=None,
+        ):
+            with patch(
+                "src.crud.rbac.user_role_assignment_crud.create",
+                return_value=mock_assignment,
+            ):
+                result = rbac_service.assign_role_to_user(
+                    mock_db, obj_in=obj_in, assigned_by="admin"
+                )
 
                 assert result is not None
 
@@ -220,9 +241,14 @@ class TestAssignRoleToUser:
 
         mock_existing = MagicMock(spec=UserRoleAssignment)
 
-        with patch("src.crud.rbac.user_role_assignment_crud.get_by_user_and_role", return_value=mock_existing):
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            return_value=mock_existing,
+        ):
             with pytest.raises(ValueError, match="用户已拥有该角色"):
-                rbac_service.assign_role_to_user(mock_db, obj_in=obj_in, assigned_by="admin")
+                rbac_service.assign_role_to_user(
+                    mock_db, obj_in=obj_in, assigned_by="admin"
+                )
 
 
 # ============================================================================
@@ -235,17 +261,29 @@ class TestRevokeUserRole:
         """测试成功撤销"""
         mock_assignment = MagicMock(spec=UserRoleAssignment)
 
-        with patch("src.crud.rbac.user_role_assignment_crud.get_by_user_and_role", return_value=mock_assignment):
-            with patch("src.crud.rbac.user_role_assignment_crud.remove", return_value=True):
-                result = rbac_service.revoke_user_role(mock_db, user_id="user_123", role_id="role_456")
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            return_value=mock_assignment,
+        ):
+            with patch(
+                "src.crud.rbac.user_role_assignment_crud.remove", return_value=True
+            ):
+                result = rbac_service.revoke_user_role(
+                    mock_db, user_id="user_123", role_id="role_456"
+                )
 
                 assert result is True
 
     def test_revoke_role_not_found(self, rbac_service, mock_db):
         """测试分配不存在"""
-        with patch("src.crud.rbac.user_role_assignment_crud.get_by_user_and_role", return_value=None):
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            return_value=None,
+        ):
             with pytest.raises(ValueError, match="用户角色分配不存在"):
-                rbac_service.revoke_user_role(mock_db, user_id="user_123", role_id="role_456")
+                rbac_service.revoke_user_role(
+                    mock_db, user_id="user_123", role_id="role_456"
+                )
 
 
 # ============================================================================
@@ -268,7 +306,9 @@ class TestCheckPermission:
         mock_query.join.return_value.filter.return_value.all.return_value = [mock_role]
         mock_db.query.return_value = mock_query
 
-        result = rbac_service.check_permission(mock_db, user_id="user_123", resource="assets", action="read")
+        result = rbac_service.check_permission(
+            mock_db, user_id="user_123", resource="assets", action="read"
+        )
 
         assert result is True
 
@@ -282,7 +322,9 @@ class TestCheckPermission:
         mock_query.join.return_value.filter.return_value.all.return_value = [mock_role]
         mock_db.query.return_value = mock_query
 
-        result = rbac_service.check_permission(mock_db, user_id="user_123", resource="assets", action="read")
+        result = rbac_service.check_permission(
+            mock_db, user_id="user_123", resource="assets", action="read"
+        )
 
         assert result is False
 
@@ -292,7 +334,9 @@ class TestCheckPermission:
         mock_query.join.return_value.filter.return_value.all.return_value = []
         mock_db.query.return_value = mock_query
 
-        result = rbac_service.check_permission(mock_db, user_id="user_123", resource="assets", action="read")
+        result = rbac_service.check_permission(
+            mock_db, user_id="user_123", resource="assets", action="read"
+        )
 
         assert result is False
 

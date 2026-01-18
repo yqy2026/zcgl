@@ -14,6 +14,7 @@ try:
         PADDLEOCR_AVAILABLE,
         PaddleOCRService,
     )
+
     _paddleocr_exists = True
 except (ImportError, ModuleNotFoundError):
     _paddleocr_exists = False

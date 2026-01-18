@@ -24,10 +24,17 @@ from ..database import Base
 property_certificate_owners = Table(
     "property_certificate_owners",
     Base.metadata,
-    Column("certificate_id", String, ForeignKey("property_certificates.id"), primary_key=True),
+    Column(
+        "certificate_id",
+        String,
+        ForeignKey("property_certificates.id"),
+        primary_key=True,
+    ),
     Column("owner_id", String, ForeignKey("property_owners.id"), primary_key=True),
     Column("ownership_share", Numeric(5, 2), comment="拥有权比例（百分比）"),
-    Column("owner_category", String(50), comment="权利人类别（单独所有/共同共有/按份共有）"),
+    Column(
+        "owner_category", String(50), comment="权利人类别（单独所有/共同共有/按份共有）"
+    ),
     comment="产权证权利人关联表",
 )
 
@@ -35,7 +42,12 @@ property_certificate_owners = Table(
 property_cert_assets = Table(
     "property_cert_assets",
     Base.metadata,
-    Column("certificate_id", String, ForeignKey("property_certificates.id"), primary_key=True),
+    Column(
+        "certificate_id",
+        String,
+        ForeignKey("property_certificates.id"),
+        primary_key=True,
+    ),
     Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
     Column("link_type", String(50), comment="关联类型（primary/secondary/partial）"),
     Column("notes", String(500), comment="关联备注"),
@@ -83,7 +95,9 @@ class PropertyOwner(Base):  # type: ignore[valid-type, misc]
     id_number: Mapped[str | None] = mapped_column(
         String(100), comment="证件号码（加密存储）"
     )
-    phone: Mapped[str | None] = mapped_column(String(20), comment="联系电话（加密存储）")
+    phone: Mapped[str | None] = mapped_column(
+        String(20), comment="联系电话（加密存储）"
+    )
     address: Mapped[str | None] = mapped_column(String(500), comment="地址")
 
     # Optional organization linkage
@@ -142,7 +156,9 @@ class PropertyCertificate(Base):  # type: ignore[valid-type, misc]
     property_address: Mapped[str | None] = mapped_column(
         String(500), comment="坐落地址"
     )
-    property_type: Mapped[str | None] = mapped_column(String(50), comment="用途（住宅/商业/工业/办公）")
+    property_type: Mapped[str | None] = mapped_column(
+        String(50), comment="用途（住宅/商业/工业/办公）"
+    )
 
     # House information
     building_area: Mapped[str | None] = mapped_column(
@@ -157,8 +173,12 @@ class PropertyCertificate(Base):  # type: ignore[valid-type, misc]
     land_use_type: Mapped[str | None] = mapped_column(
         String(50), comment="土地使用权类型（出让/划拨）"
     )
-    land_use_term_start: Mapped[date | None] = mapped_column(Date, comment="土地使用期限起")
-    land_use_term_end: Mapped[date | None] = mapped_column(Date, comment="土地使用期限止")
+    land_use_term_start: Mapped[date | None] = mapped_column(
+        Date, comment="土地使用期限起"
+    )
+    land_use_term_end: Mapped[date | None] = mapped_column(
+        Date, comment="土地使用期限止"
+    )
 
     # Other information
     co_ownership: Mapped[str | None] = mapped_column(String(200), comment="共有情况")
@@ -185,4 +205,3 @@ class PropertyCertificate(Base):  # type: ignore[valid-type, misc]
         secondary="property_cert_assets",
         back_populates="certificates",
     )
-

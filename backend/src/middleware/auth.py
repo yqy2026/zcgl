@@ -568,7 +568,7 @@ def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
             resource="rent_contract",
             action="edit",
             resource_id=contract_id,
-            context=None
+            context=None,
         )
 
         result = rbac_service.check_permission(user.id, permission_request)

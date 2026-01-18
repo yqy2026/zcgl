@@ -92,9 +92,7 @@ class DatabaseManager:
     def _load_config(self) -> ConnectionPoolConfig:
         """加载数据库配置"""
         return ConnectionPoolConfig(
-            pool_size=get_config(
-                "database.pool_size", DatabasePoolConfig.SIZE_DEFAULT
-            ),
+            pool_size=get_config("database.pool_size", DatabasePoolConfig.SIZE_DEFAULT),
             max_overflow=get_config(
                 "database.max_overflow", DatabasePoolConfig.MAX_OVERFLOW
             ),
@@ -160,7 +158,10 @@ class DatabaseManager:
 
             # 创建会话工厂
             self.session_factory = sessionmaker(
-                bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
+                bind=self.engine,
+                autocommit=False,
+                autoflush=False,
+                expire_on_commit=False,
             )
 
             logger.info("数据库引擎初始化完成")
@@ -173,17 +174,24 @@ class DatabaseManager:
             # 根据错误类型提供具体建议
             if "connection refused" in error_str:
                 hint = "PostgreSQL服务未运行或端口配置错误"
-                suggestion = "请检查: 1) PostgreSQL服务是否启动 2) DATABASE_URL中的端口是否正确"
+                suggestion = (
+                    "请检查: 1) PostgreSQL服务是否启动 2) DATABASE_URL中的端口是否正确"
+                )
             elif "authentication failed" in error_str or "password" in error_str:
                 hint = "数据库密码错误或用户不存在"
                 suggestion = "请检查: 1) DATABASE_URL中的用户名和密码 2) 数据库用户是否存在 3) 用户密码是否正确"
             elif "database" in error_str and "does not exist" in error_str:
                 hint = "数据库不存在"
-                suggestion = "请先创建数据库: python scripts/setup_postgresql.py 或 createdb命令"
+                suggestion = (
+                    "请先创建数据库: python scripts/setup_postgresql.py 或 createdb命令"
+                )
             elif "timeout" in error_str:
                 hint = "连接超时"
                 suggestion = "请检查: 1) 网络连接 2) 防火墙设置 3) PostgreSQL服务器负载"
-            elif "no such host" in error_str or "could not translate host name" in error_str:
+            elif (
+                "no such host" in error_str
+                or "could not translate host name" in error_str
+            ):
                 hint = "主机名无法解析"
                 suggestion = "请检查DATABASE_URL中的主机名是否正确，DNS是否可解析"
             else:
@@ -193,10 +201,13 @@ class DatabaseManager:
             # 解析DATABASE_URL以获取安全信息（不含密码）
             try:
                 from urllib.parse import urlparse
+
                 parsed = urlparse(database_url)
                 safe_url = f"postgresql://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
             except Exception:
-                safe_url = database_url.split("@")[-1] if "@" in database_url else database_url
+                safe_url = (
+                    database_url.split("@")[-1] if "@" in database_url else database_url
+                )
 
             logger.critical(
                 "无法连接到PostgreSQL数据库",
@@ -204,8 +215,8 @@ class DatabaseManager:
                     "error_id": ErrorIDs.Database.CONNECTION_FAILED,
                     "database": safe_url,
                     "error_details": str(e),
-                    "hint": hint
-                }
+                    "hint": hint,
+                },
             )
             raise RuntimeError(
                 f"数据库连接失败\n"
@@ -220,7 +231,10 @@ class DatabaseManager:
         except (ValueError, AttributeError) as e:
             logger.critical(
                 "DATABASE_URL配置错误",
-                extra={"error_id": ErrorIDs.Database.URL_MALFORMED, "error_details": str(e)}
+                extra={
+                    "error_id": ErrorIDs.Database.URL_MALFORMED,
+                    "error_details": str(e),
+                },
             )
             raise ValueError(
                 f"DATABASE_URL格式错误: {database_url}\n"
@@ -392,8 +406,8 @@ class DatabaseManager:
                 extra={
                     "error_id": ErrorIDs.Database.HEALTH_CHECK_FAILED,
                     "error_type": "OperationalError",
-                    "severity": "CRITICAL"
-                }
+                    "severity": "CRITICAL",
+                },
             )
             # ✅ 重新抛出异常以确保失败时的可见性
             # 注意：这是breaking change恢复。如果需要返回healthy=False，
@@ -412,7 +426,10 @@ class DatabaseManager:
             logger.critical(
                 f"数据库健康检查失败 - 未知错误: {e}",
                 exc_info=True,
-                extra={"error_id": ErrorIDs.Database.HEALTH_CHECK_UNKNOWN_ERROR, "severity": "CRITICAL"}
+                extra={
+                    "error_id": ErrorIDs.Database.HEALTH_CHECK_UNKNOWN_ERROR,
+                    "severity": "CRITICAL",
+                },
             )
             # ✅ 重新抛出异常以确保失败时的可见性
             raise
@@ -431,7 +448,7 @@ def get_database_url() -> str:
         if environment == "production":
             logger.critical(
                 "生产环境必须设置DATABASE_URL环境变量",
-                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL}
+                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
             )
             raise ValueError(
                 "生产环境必须设置DATABASE_URL环境变量！\n"
@@ -442,15 +459,17 @@ def get_database_url() -> str:
         elif environment in ["development", "testing"]:
             # ✅ 修复: 开发环境需要显式启用SQLite回退
             # 避免意外的配置错误被静默掩盖
-            use_sqlite_fallback = os.getenv("ALLOW_SQLITE_FALLBACK", "false").lower() == "true"
+            use_sqlite_fallback = (
+                os.getenv("ALLOW_SQLITE_FALLBACK", "false").lower() == "true"
+            )
 
             if use_sqlite_fallback:
                 logger.warning(
                     "未设置DATABASE_URL，使用SQLite后备数据库（已通过ALLOW_SQLITE_FALLBACK显式启用）",
                     extra={
                         "error_id": ErrorIDs.Database.SQLITE_FALLBACK_EXPLICIT,
-                        "fallback_enabled": "true"
-                    }
+                        "fallback_enabled": "true",
+                    },
                 )
                 return "sqlite:///./data/land_property.db"
             else:
@@ -459,8 +478,8 @@ def get_database_url() -> str:
                     "开发环境未设置DATABASE_URL",
                     extra={
                         "error_id": ErrorIDs.Database.MISSING_DATABASE_URL_DEV,
-                        "hint": "请设置DATABASE_URL或设置ALLOW_SQLITE_FALLBACK=true"
-                    }
+                        "hint": "请设置DATABASE_URL或设置ALLOW_SQLITE_FALLBACK=true",
+                    },
                 )
                 raise ValueError(
                     "开发环境必须设置DATABASE_URL环境变量！\n"
@@ -472,7 +491,7 @@ def get_database_url() -> str:
             # staging等其他环境
             logger.critical(
                 f"环境 '{environment}' 必须设置DATABASE_URL",
-                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL_STAGING}
+                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL_STAGING},
             )
             raise ValueError(f"环境 '{environment}' 必须设置DATABASE_URL环境变量！")
 
@@ -480,6 +499,7 @@ def get_database_url() -> str:
     if database_url.startswith("postgresql://"):
         try:
             from urllib.parse import urlparse
+
             parsed = urlparse(database_url)
 
             # 检查必需组件
@@ -500,8 +520,7 @@ def get_database_url() -> str:
 
         except ValueError as e:
             logger.error(
-                f"DATABASE_URL验证失败: {e}",
-                extra={"error_id": "DATABASE_URL_INVALID"}
+                f"DATABASE_URL验证失败: {e}", extra={"error_id": "DATABASE_URL_INVALID"}
             )
             raise ValueError(
                 f"DATABASE_URL格式错误: {e}\n"
@@ -515,7 +534,7 @@ def get_database_url() -> str:
         if environment == "production":
             logger.critical(
                 "生产环境禁止使用SQLite数据库",
-                extra={"error_id": ErrorIDs.Database.SQLITE_IN_PRODUCTION}
+                extra={"error_id": ErrorIDs.Database.SQLITE_IN_PRODUCTION},
             )
             raise ValueError(
                 "生产环境必须使用PostgreSQL数据库！\n"
@@ -527,6 +546,7 @@ def get_database_url() -> str:
         # 验证SQLite路径
         try:
             from urllib.parse import urlparse
+
             parsed = urlparse(database_url)
             db_path = parsed.path
 
@@ -535,15 +555,14 @@ def get_database_url() -> str:
 
         except Exception as e:
             logger.error(
-                f"SQLite URL验证失败: {e}",
-                extra={"error_id": "SQLITE_URL_INVALID"}
+                f"SQLite URL验证失败: {e}", extra={"error_id": "SQLITE_URL_INVALID"}
             )
             raise ValueError(f"SQLite数据库URL格式错误: {e}") from e
 
     else:
         logger.error(
             f"不支持的数据库类型: {database_url[:20]}...",
-            extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"}
+            extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
         )
         raise ValueError(
             f"不支持的数据库类型。支持: postgresql://, sqlite://\n"

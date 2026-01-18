@@ -14,7 +14,7 @@ from src.database import get_database_manager
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL", "").startswith("postgresql://"),
-    reason="PostgreSQL tests required"
+    reason="PostgreSQL tests required",
 )
 
 
@@ -84,9 +84,9 @@ class TestPostgreSQLConcurrency:
         def update_rent(new_rent: float):
             try:
                 with mgr.get_session() as session:
-                    asset_from_db = session.query(Asset).filter(
-                        Asset.id == asset_id
-                    ).first()
+                    asset_from_db = (
+                        session.query(Asset).filter(Asset.id == asset_id).first()
+                    )
 
                     if asset_from_db:
                         asset_from_db.monthly_rent = new_rent

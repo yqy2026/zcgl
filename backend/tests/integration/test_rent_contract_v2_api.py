@@ -14,7 +14,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Integration API tests require real JWT authentication setup")
+pytestmark = pytest.mark.skip(
+    reason="Integration API tests require real JWT authentication setup"
+)
 from fastapi.testclient import TestClient
 
 # Mark all tests as API tests

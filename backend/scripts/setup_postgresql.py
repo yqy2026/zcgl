@@ -2,6 +2,7 @@
 PostgreSQL数据库设置脚本
 创建zcgl_db和zcgl_test数据库
 """
+
 import getpass
 import logging
 import os
@@ -12,11 +13,9 @@ import psycopg
 from psycopg import sql
 
 # ✅ 配置日志记录
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def get_db_config_from_env() -> dict:
     """从环境变量读取数据库配置"""
@@ -30,7 +29,7 @@ def get_db_config_from_env() -> dict:
             "port": parsed.port or 5432,
             "user": parsed.username or "postgres",
             "password": parsed.password or get_password_interactive(),
-            "dbname": parsed.path.lstrip("/") or "postgres"
+            "dbname": parsed.path.lstrip("/") or "postgres",
         }
     else:
         # 从单独的环境变量读取
@@ -39,8 +38,9 @@ def get_db_config_from_env() -> dict:
             "port": int(os.getenv("PGPORT", "5432")),
             "user": os.getenv("PGUSER", "postgres"),
             "password": os.getenv("PGPASSWORD") or get_password_interactive(),
-            "dbname": os.getenv("PGDATABASE", "postgres")
+            "dbname": os.getenv("PGDATABASE", "postgres"),
         }
+
 
 def get_password_interactive() -> str:
     """交互式获取密码"""
@@ -49,8 +49,10 @@ def get_password_interactive() -> str:
         raise ValueError("密码不能为空")
     return password
 
+
 # PostgreSQL连接配置（从环境变量读取）
 DB_CONFIG = get_db_config_from_env()
+
 
 def create_database(db_name: str) -> bool:
     """创建数据库（如果不存在）"""
@@ -73,9 +75,7 @@ def create_database(db_name: str) -> bool:
         else:
             # 创建数据库
             cursor.execute(
-                sql.SQL("CREATE DATABASE {}").format(
-                    sql.Identifier(db_name)
-                )
+                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name))
             )
             logger.info(f"Successfully created database '{db_name}'")
 
@@ -86,6 +86,7 @@ def create_database(db_name: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to create database '{db_name}': {e}")
         return False
+
 
 def verify_connection(db_name: str) -> bool:
     """验证数据库连接"""
@@ -107,6 +108,7 @@ def verify_connection(db_name: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to connect to database '{db_name}': {e}")
         return False
+
 
 if __name__ == "__main__":
     logger.info("=" * 60)

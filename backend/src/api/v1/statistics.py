@@ -488,14 +488,10 @@ def get_financial_summary(
     for asset in assets:
         # 累计可出租面积
         if getattr(asset, "rentable_area", None):
-            summary["total_rentable_area"] += to_float(
-                getattr(asset, "rentable_area")
-            )
+            summary["total_rentable_area"] += to_float(getattr(asset, "rentable_area"))
 
         if getattr(asset, "annual_income", None):
-            summary["total_annual_income"] += to_float(
-                getattr(asset, "annual_income")
-            )
+            summary["total_annual_income"] += to_float(getattr(asset, "annual_income"))
             summary["assets_with_income_data"] += 1
 
         if getattr(asset, "annual_expense", None):
@@ -507,9 +503,7 @@ def get_financial_summary(
             summary["total_net_income"] += to_float(getattr(asset, "net_income"))
 
         if getattr(asset, "monthly_rent", None):
-            summary["total_monthly_rent"] += to_float(
-                getattr(asset, "monthly_rent")
-            )
+            summary["total_monthly_rent"] += to_float(getattr(asset, "monthly_rent"))
             summary["assets_with_rent_data"] += 1
 
         if getattr(asset, "deposit", None):
@@ -774,9 +768,7 @@ async def get_ownership_distribution(
         ChartDataItem(
             name="部分确权",
             value=partial_count,
-            percentage=(partial_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(partial_count / total_assets * 100) if total_assets > 0 else 0,
         ),
     ]
 
@@ -868,16 +860,12 @@ async def get_usage_status_distribution(
         ChartDataItem(
             name="出租",
             value=rented_count,
-            percentage=(rented_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(rented_count / total_assets * 100) if total_assets > 0 else 0,
         ),
         ChartDataItem(
             name="空置",
             value=vacant_count,
-            percentage=(vacant_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(vacant_count / total_assets * 100) if total_assets > 0 else 0,
         ),
         ChartDataItem(
             name="自用",
@@ -931,9 +919,7 @@ async def get_trend_data(
         # 模拟最近6个月的收入趋势
         base_income = 1000000
         for i in range(6):
-            month_income = (
-                base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
-            )
+            month_income = base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
             time_series.append(
                 TimeSeriesDataPoint(
                     date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
@@ -1107,9 +1093,7 @@ async def get_area_statistics(
         "data": {
             "total_assets": summary["total_assets"],
             "total_land_area": summary["total_land_area"],
-            "total_property_area": summary[
-                "total_land_area"
-            ],  # 土地面积作为物业面积
+            "total_property_area": summary["total_land_area"],  # 土地面积作为物业面积
             "total_rentable_area": summary["total_rentable_area"],
             "total_rented_area": summary["total_rented_area"],
             "total_unrented_area": summary["total_unrented_area"],
@@ -1210,9 +1194,7 @@ async def get_comprehensive_statistics(
     for asset in assets:
         # 权属状态分布
         ownership = getattr(asset, "ownership_status", None) or "未知"
-        ownership_distribution[ownership] = (
-            ownership_distribution.get(ownership, 0) + 1
-        )
+        ownership_distribution[ownership] = ownership_distribution.get(ownership, 0) + 1
 
         # 物业性质分布
         nature = getattr(asset, "property_nature", None) or "未知"
@@ -1222,9 +1204,7 @@ async def get_comprehensive_statistics(
 
         # 使用状态分布
         usage = getattr(asset, "usage_status", None) or "未知"
-        usage_status_distribution[usage] = (
-            usage_status_distribution.get(usage, 0) + 1
-        )
+        usage_status_distribution[usage] = usage_status_distribution.get(usage, 0) + 1
 
     comprehensive_data = {
         # 基础统计
@@ -1242,9 +1222,7 @@ async def get_comprehensive_statistics(
         "financial_stats": {
             **financial_stats,
             "total_annual_income": round(financial_stats["total_annual_income"], 2),
-            "total_annual_expense": round(
-                financial_stats["total_annual_expense"], 2
-            ),
+            "total_annual_expense": round(financial_stats["total_annual_expense"], 2),
             "total_net_income": round(financial_stats["total_net_income"], 2),
             "total_monthly_rent": round(financial_stats["total_monthly_rent"], 2),
         },

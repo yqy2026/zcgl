@@ -224,9 +224,7 @@ class TestIsPasswordInHistory:
         hash1 = service.get_password_hash(password1)
         hash2 = service.get_password_hash(password2)
 
-        user = MockUser(
-            password_history=json.dumps({"passwords": [hash1, hash2]})
-        )
+        user = MockUser(password_history=json.dumps({"passwords": [hash1, hash2]}))
 
         assert service.is_password_in_history(user, password1) is True
         assert service.is_password_in_history(user, password2) is True
@@ -314,9 +312,7 @@ class TestAddPasswordToHistory:
     def test_string_password_history(self):
         """测试字符串格式的密码历史"""
         service = PasswordService()
-        user = MockUser(
-            password_history=json.dumps({"passwords": ["$2b$12$oldhash"]})
-        )
+        user = MockUser(password_history=json.dumps({"passwords": ["$2b$12$oldhash"]}))
         new_hash = "$2b$12$newhash"
 
         service.add_password_to_history(user, new_hash)

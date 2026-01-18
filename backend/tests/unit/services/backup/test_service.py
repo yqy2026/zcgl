@@ -38,7 +38,9 @@ class TestBackupServiceInit:
     def test_init_with_default_backup_dir(self, tmp_path):
         """测试使用默认备份目录初始化"""
         with patch("src.services.backup.backup_service.os.makedirs") as mock_makedirs:
-            with patch("src.services.backup.backup_service.os.path.exists") as mock_exists:
+            with patch(
+                "src.services.backup.backup_service.os.path.exists"
+            ) as mock_exists:
                 mock_exists.return_value = False
 
                 service = BackupService()
@@ -79,7 +81,9 @@ class TestCreateBackup:
         assert "created_at" in result
 
         assert result["backup_filename"].endswith(".db")
-        assert result["backup_path"] == str(Path(temp_backup_dir) / result["backup_filename"])
+        assert result["backup_path"] == str(
+            Path(temp_backup_dir) / result["backup_filename"]
+        )
         assert result["backup_size"] > 0
 
         # 验证文件存在
@@ -94,7 +98,9 @@ class TestCreateBackup:
         assert result["backup_filename"] == f"{custom_name}.db"
         assert Path(result["backup_path"]).exists()
 
-    def test_create_backup_with_db_path(self, backup_service, mock_db_file, temp_backup_dir):
+    def test_create_backup_with_db_path(
+        self, backup_service, mock_db_file, temp_backup_dir
+    ):
         """测试从真实数据库文件创建备份"""
         result = backup_service.create_backup(
             backup_name="real_backup", db_path=mock_db_file
@@ -362,7 +368,9 @@ class TestRestoreBackup:
 
         # 恢复备份
         result = backup_service.restore_backup(
-            backup_name="restore_test", db_path=str(target_db), create_current_backup=False
+            backup_name="restore_test",
+            db_path=str(target_db),
+            create_current_backup=False,
         )
 
         assert result["restored_backup"] == "restore_test"
@@ -537,7 +545,9 @@ class TestCleanupOldBackups:
                 raise Exception(f"Failed to delete {name}")
             return original_delete(name)
 
-        with patch.object(backup_service, "delete_backup", side_effect=mock_delete_with_failure):
+        with patch.object(
+            backup_service, "delete_backup", side_effect=mock_delete_with_failure
+        ):
             result = backup_service.cleanup_old_backups(keep_count=10)
 
             # 应该删除了能删除的（10个中的2个失败，删除0个？）
@@ -709,7 +719,9 @@ class TestBackupServiceIntegration:
         target_db.write_text("production data")
 
         # 创建备份
-        backup_service.create_backup(backup_name="prod_snapshot", db_path=str(target_db))
+        backup_service.create_backup(
+            backup_name="prod_snapshot", db_path=str(target_db)
+        )
 
         # 修改生产数据库
         target_db.write_text("modified production data")

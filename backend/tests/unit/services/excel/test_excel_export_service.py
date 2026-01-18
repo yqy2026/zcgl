@@ -241,7 +241,10 @@ class TestGetEmptyExportData:
         assert len(result) == 1
         # 空字段列表应该返回空行
         row = result[0]
-        assert len(row) == 0 or row.get(list(EXPORT_FIELD_MAPPING.values())[0]) == "暂无数据"
+        assert (
+            len(row) == 0
+            or row.get(list(EXPORT_FIELD_MAPPING.values())[0]) == "暂无数据"
+        )
 
 
 # ============================================================================
@@ -315,7 +318,9 @@ class TestExportAssetsToExcel:
         assert isinstance(buffer, io.BytesIO)
 
     @patch("src.services.excel.excel_export_service.asset_crud")
-    def test_export_with_custom_sheet_name(self, mock_crud, excel_service, sample_asset):
+    def test_export_with_custom_sheet_name(
+        self, mock_crud, excel_service, sample_asset
+    ):
         """测试自定义工作表名称"""
         mock_crud.get_multi_with_search.return_value = ([sample_asset], 1)
 
@@ -365,9 +370,7 @@ class TestExportAssetsToFile:
     """测试导出资产到文件"""
 
     @patch("src.services.excel.excel_export_service.os.path.getsize")
-    def test_export_to_file_success(
-        self, mock_getsize, excel_service
-    ):
+    def test_export_to_file_success(self, mock_getsize, excel_service):
         """测试成功导出到文件"""
         mock_getsize.return_value = 1024
 

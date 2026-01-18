@@ -32,10 +32,12 @@ router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
 
 def get_db_or_error(func):
     """包装器：获取数据库或抛出错误"""
+
     def wrapper(*args, db: Session = Depends(get_db), **kwargs):
         if not db:
             raise HTTPException(status_code=500, detail="数据库连接失败")
         return func(*args, db=db, **kwargs)
+
     return wrapper
 
 
@@ -110,7 +112,7 @@ def get_prompts(
         total=total,
         page=page,
         limit=limit,
-        pages=pages
+        pages=pages,
     )
 
 
@@ -144,7 +146,9 @@ def update_prompt(
     """
     manager = PromptManager()
     try:
-        prompt = manager.update_prompt(db, prompt_id, prompt_in, user_id=current_user.id)
+        prompt = manager.update_prompt(
+            db, prompt_id, prompt_in, user_id=current_user.id
+        )
         return prompt
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -215,9 +219,12 @@ def get_prompt_versions(
 
     返回按创建时间倒序的版本列表
     """
-    versions = db.query(PromptVersion).filter(
-        PromptVersion.template_id == prompt_id
-    ).order_by(PromptVersion.created_at.desc()).all()
+    versions = (
+        db.query(PromptVersion)
+        .filter(PromptVersion.template_id == prompt_id)
+        .order_by(PromptVersion.created_at.desc())
+        .all()
+    )
 
     return [PromptVersionResponse.model_validate(v) for v in versions]
 
@@ -243,22 +250,25 @@ def get_statistics(
     total_prompts = db.query(PromptTemplate).count()
 
     # 按状态统计
-    status_stats = db.query(
-        PromptTemplate.status,
-        func.count(PromptTemplate.id)
-    ).group_by(PromptTemplate.status).all()
+    status_stats = (
+        db.query(PromptTemplate.status, func.count(PromptTemplate.id))
+        .group_by(PromptTemplate.status)
+        .all()
+    )
 
     # 按文档类型统计
-    doc_type_stats = db.query(
-        PromptTemplate.doc_type,
-        func.count(PromptTemplate.id)
-    ).group_by(PromptTemplate.doc_type).all()
+    doc_type_stats = (
+        db.query(PromptTemplate.doc_type, func.count(PromptTemplate.id))
+        .group_by(PromptTemplate.doc_type)
+        .all()
+    )
 
     # 按提供商统计
-    provider_stats = db.query(
-        PromptTemplate.provider,
-        func.count(PromptTemplate.id)
-    ).group_by(PromptTemplate.provider).all()
+    provider_stats = (
+        db.query(PromptTemplate.provider, func.count(PromptTemplate.id))
+        .group_by(PromptTemplate.provider)
+        .all()
+    )
 
     # 平均准确率
     avg_accuracy = db.query(func.avg(PromptTemplate.avg_accuracy)).scalar() or 0.0
@@ -266,17 +276,12 @@ def get_statistics(
 
     return {
         "total_prompts": total_prompts,
-        "status_distribution": [
-            {"status": s[0], "count": s[1]}
-            for s in status_stats
-        ],
+        "status_distribution": [{"status": s[0], "count": s[1]} for s in status_stats],
         "doc_type_distribution": [
-            {"doc_type": dt[0], "count": dt[1]}
-            for dt in doc_type_stats
+            {"doc_type": dt[0], "count": dt[1]} for dt in doc_type_stats
         ],
         "provider_distribution": [
-            {"provider": p[0], "count": p[1]}
-            for p in provider_stats
+            {"provider": p[0], "count": p[1]} for p in provider_stats
         ],
         "overall_avg_accuracy": float(avg_accuracy),
         "overall_avg_confidence": float(avg_confidence),
@@ -336,7 +341,7 @@ async def collect_feedback(
         original_value=original_value,
         corrected_value=corrected_value,
         confidence_before=confidence_before,
-        user_action=user_action
+        user_action=user_action,
     )
 
     db.add(feedback)
@@ -348,4 +353,6 @@ async def collect_feedback(
 # 注册路由
 from ...core.router_registry import route_registry
 
-route_registry.register_router(router, prefix="/api/v1", tags=["LLM Prompts"], version="v1")
+route_registry.register_router(
+    router, prefix="/api/v1", tags=["LLM Prompts"], version="v1"
+)
