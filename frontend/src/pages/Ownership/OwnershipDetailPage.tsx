@@ -107,7 +107,13 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <a onClick={() => navigate(`/assets/${record.id}`)}>{text}</a>
+        <Button
+          type="link"
+          onClick={() => navigate(`/assets/${record.id}`)}
+          style={{ padding: 0 }}
+        >
+          {text}
+        </Button>
       ),
     },
     {
@@ -145,7 +151,13 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'contract_number',
       key: 'contract_number',
       render: (text: string, record: RentContract) => (
-        <a onClick={() => navigate(`/rental/contracts/${record.id}`)}>{text}</a>
+        <Button
+          type="link"
+          onClick={() => navigate(`/rental/contracts/${record.id}`)}
+          style={{ padding: 0 }}
+        >
+          {text}
+        </Button>
       ),
     },
     {

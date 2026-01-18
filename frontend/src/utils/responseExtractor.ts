@@ -21,6 +21,38 @@ import {
   type ValidationResult as _ValidationResult,
 } from './responseValidator';
 
+// ==================== 类型定义 ====================
+
+/**
+ * API响应数据结构
+ */
+interface ApiResponseData {
+  success?: boolean;
+  data?: unknown;
+  message?: string;
+  error?: string;
+  detail?: string;
+  code?: string;
+}
+
+/**
+ * 分页响应数据结构
+ */
+interface PaginatedData {
+  items?: unknown;
+  pagination?: unknown;
+}
+
+/**
+ * 带消息的响应数据
+ */
+interface ResponseDataWithMessage {
+  message?: string;
+  data?: {
+    message?: string;
+  };
+}
+
 // ==================== 响应检测器 ====================
 
 /**
@@ -130,7 +162,7 @@ export class ResponseExtractor {
 
     try {
       // 获取响应数据
-      const responseData = response.data;
+      const responseData = response.data as ApiResponseData;
 
       // 开发模式下启用响应格式验证
       if (process.env.NODE_ENV === 'development' && finalOptions.detection?.strict !== false) {
@@ -163,13 +195,13 @@ export class ResponseExtractor {
       // 根据类型提取数据
       switch (responseType) {
         case 'standard':
-          return this.extractStandardResponse<T>(response, finalOptions as any);
+          return this.extractStandardResponse<T>(response, finalOptions);
         case 'paginated':
-          return this.extractPaginatedResponse<T>(response, finalOptions as any);
+          return this.extractPaginatedResponse<T>(response, finalOptions);
         case 'direct':
-          return this.extractDirectResponse<T>(response, finalOptions as any);
+          return this.extractDirectResponse<T>(response, finalOptions);
         case 'error':
-          return this.extractErrorResponse<T>(response, finalOptions as any);
+          return this.extractErrorResponse<T>(response, finalOptions);
         default:
           return {
             success: false,
@@ -193,10 +225,10 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
+    const responseData = response.data as ApiResponseData;
     const dataField = options.detection?.dataField ?? 'data';
 
-    if (responseData[dataField] == null) {
+    if (responseData[dataField as keyof ApiResponseData] == null) {
       return {
         success: false,
         error: '标准响应中缺少数据字段',
@@ -220,9 +252,9 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
+    const responseData = response.data as ApiResponseData;
     const dataField = options.detection?.dataField ?? 'data';
-    const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
+    const dataContainer = (responseData as Record<string, unknown>)[dataField] as PaginatedData | undefined;
 
     if (dataContainer == null || dataContainer.items == null) {
       return {
@@ -246,7 +278,7 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const data = response.data;
+    const data = response.data as unknown;
 
     return {
       success: true,
@@ -262,17 +294,17 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
+    const responseData = response.data as ApiResponseData;
     const errorFields = options.detection?.errorFields ?? ['error', 'message'];
     let errorMessage = '未知错误';
 
     // 尝试从常见字段提取错误信息
     for (const field of errorFields) {
-      if ((responseData as Record<string, unknown>)[field] != null) {
-        const value = (responseData as Record<string, unknown>)[field];
+      const value = (responseData as Record<string, unknown>)[field];
+      if (value != null) {
         if (typeof value === 'string') {
           errorMessage = value;
-        } else if (value != null && typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
+        } else if (typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
           errorMessage = (value as Record<string, unknown>).message as string;
         }
         break;
@@ -296,7 +328,7 @@ export class ResponseExtractor {
 
     try {
       // 如果数据已经是期望的类型，直接返回
-      const expectedType = options.expectedType as any;
+      const expectedType = options.expectedType as new (...args: unknown[]) => T;
       if (data instanceof expectedType) {
         return data as unknown as T;
       }
@@ -338,7 +370,7 @@ export class ResponseExtractor {
    */
   static extractMessage(response: AxiosResponse): string {
     try {
-      const responseData = response.data;
+      const responseData = response.data as ResponseDataWithMessage;
 
       // 尝试从常见字段提取消息
       if (responseData.message != null) {
@@ -444,7 +476,7 @@ export class ApiErrorHandler {
    */
   private static handleAxiosError(error: AxiosError): EnhancedApiError {
     const statusCode = error.response?.status;
-    const responseData = error.response?.data;
+    const responseData = error.response?.data as ApiResponseData | undefined;
 
     // 网络错误
     if (error.response == null) {
@@ -460,40 +492,37 @@ export class ApiErrorHandler {
 
     // 4xx 客户端错误
     if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-      const data = responseData as Record<string, unknown> | undefined;
       return {
         type: this.getClientErrorType(statusCode),
-        code: (data?.code as string) ?? `HTTP_${statusCode}`,
-        message: (data?.message as string) ?? (data?.error as string) ?? this.getDefaultErrorMessage(statusCode),
-        details: data?.details as Record<string, unknown> | undefined,
+        code: responseData?.code ?? `HTTP_${statusCode}`,
+        message: responseData?.message ?? responseData?.error ?? this.getDefaultErrorMessage(statusCode),
+        details: responseData?.detail as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
-        requestId: data?.requestId as string,
+        requestId: responseData?.code,
         originalError: error
       };
     }
 
     // 5xx 服务器错误
     if (statusCode != null && statusCode >= 500) {
-      const data = responseData as Record<string, unknown> | undefined;
       return {
         type: ApiErrorType.SERVER_ERROR,
-        code: (data?.code as string) ?? `HTTP_${statusCode}`,
-        message: (data?.message as string) ?? '服务器内部错误',
-        details: data?.details as Record<string, unknown> | undefined,
+        code: responseData?.code ?? `HTTP_${statusCode}`,
+        message: responseData?.message ?? '服务器内部错误',
+        details: responseData?.detail as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
-        requestId: data?.requestId as string,
+        requestId: responseData?.code,
         originalError: error
       };
     }
 
     // 其他错误
-    const data = responseData as Record<string, unknown> | undefined;
     return {
       type: ApiErrorType.UNKNOWN_ERROR,
       code: 'UNKNOWN_ERROR',
-      message: (data?.message as string) || (error as Error)?.message || '未知错误',
+      message: (responseData?.message?.trim() !== '') ? responseData.message : ((error as Error)?.message?.trim() !== '' ? (error as Error).message : '未知错误'),
       statusCode,
       timestamp: new Date().toISOString(),
       originalError: error

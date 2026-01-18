@@ -578,7 +578,18 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                   {field.editMode ? (
                     renderFieldInput(field)
                   ) : (
-                    <div onClick={() => handleFieldEdit(field.fieldName)}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleFieldEdit(field.fieldName)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleFieldEdit(field.fieldName)
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       {(() => {
                         const val = field.value
                         if (val == null) return <Text type="secondary" italic>未提取</Text>

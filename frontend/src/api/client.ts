@@ -7,7 +7,8 @@ import axios, {
   AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
-  InternalAxiosRequestConfig
+  InternalAxiosRequestConfig,
+  AxiosError
 } from 'axios';
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
 import {
@@ -18,6 +19,15 @@ import {
 import { createLogger } from '../utils/logger';
 
 const apiLogger = createLogger('API');
+
+// ==================== 类型定义 ====================
+
+/**
+ * 扩展的请求配置，包含重试标记
+ */
+interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 // ==================== 缓存管理器 ====================
 
@@ -241,11 +251,12 @@ export class EnhancedApiClient {
 
         return response
       },
-      async (error) => {
-        const originalRequest = error.config
+      async (error: unknown) => {
+        const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>
+        const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined
 
         // 处理401错误 - 自动刷新token
-        if (error.response?.status === 401 && originalRequest != null && originalRequest._retry !== true) {
+        if (axiosError.response?.status === 401 && originalRequest != null && originalRequest._retry !== true) {
           apiLogger.warn('🔑 Token过期，尝试刷新...')
 
           try {
@@ -288,11 +299,9 @@ export class EnhancedApiClient {
         const enhancedError = ApiErrorHandler.handleError(error)
 
         if (this.config.enableLogging === true) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const err = error as Record<string, unknown>
           apiLogger.error(`❌ API Error: ${enhancedError.type} - ${enhancedError.message}`, undefined, {
-            config: err.config,
-            response: err.response
+            config: axiosError.config,
+            response: axiosError.response
           })
         }
 

@@ -521,7 +521,18 @@ export const AssetListABTest: React.FC<{ children: ReactNode }> = ({ children })
   }
 
   return (
-    <div style={getDensityStyle()} onClick={() => handleClick('asset_list')}>
+    <div
+      role="button"
+      tabIndex={0}
+      style={getDensityStyle()}
+      onClick={() => handleClick('asset_list')}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleClick('asset_list')
+        }
+      }}
+    >
       {children}
     </div>
   )

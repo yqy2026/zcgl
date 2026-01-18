@@ -81,7 +81,13 @@ const ProjectDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <a onClick={() => navigate(`/assets/${record.id}`)}>{text}</a>
+        <Button
+          type="link"
+          onClick={() => navigate(`/assets/${record.id}`)}
+          style={{ padding: 0 }}
+        >
+          {text}
+        </Button>
       ),
     },
     {

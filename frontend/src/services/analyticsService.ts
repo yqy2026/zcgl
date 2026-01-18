@@ -9,6 +9,66 @@ const serviceLogger = createLogger('analyticsService')
 // Re-export the types for compatibility
 export type { AnalyticsData, AnalyticsResponse }
 
+// ==================== 类型定义 ====================
+
+/**
+ * 原始API响应数据结构
+ */
+interface RawApiData {
+  area_summary?: RawAreaSummary;
+  financial_summary?: RawFinancialSummary;
+  property_nature_distribution?: unknown[];
+  ownership_status_distribution?: unknown[];
+  usage_status_distribution?: unknown[];
+  business_category_distribution?: RawBusinessCategoryItem[];
+  occupancy_trend?: unknown[];
+  property_nature_area_distribution?: unknown[];
+  ownership_status_area_distribution?: unknown[];
+  usage_status_area_distribution?: unknown[];
+  business_category_area_distribution?: unknown[];
+  occupancy_distribution?: unknown[];
+  data?: RawApiData;
+}
+
+/**
+ * 原始区域摘要
+ */
+interface RawAreaSummary {
+  total_assets?: number;
+  total_land_area?: number;
+  total_area?: number;
+  total_rentable_area?: number;
+  total_rented_area?: number;
+  total_unrented_area?: number;
+  assets_with_area_data?: number;
+  overall_occupancy_rate?: number;
+  occupancy_rate?: number;
+  total_non_commercial_area?: number;
+}
+
+/**
+ * 原始财务摘要
+ */
+interface RawFinancialSummary {
+  estimated_annual_income?: number;
+  total_annual_income?: number;
+  total_annual_expense?: number;
+  total_net_income?: number;
+  total_monthly_rent?: number;
+  total_deposit?: number;
+  assets_with_income_data?: number;
+  assets_with_rent_data?: number;
+  profit_margin?: number;
+}
+
+/**
+ * 业务分类项
+ */
+interface RawBusinessCategoryItem {
+  percentage?: number;
+  [key: string]: unknown;
+}
+
 export class AnalyticsService {
   private api = enhancedApiClient
 
@@ -20,7 +80,7 @@ export class AnalyticsService {
 
       // ApiClient returns ExtractResult<AnalyticsResponse>
       if (response.success && response.data) {
-        const apiData = response.data as any;
+        const apiData = response.data as AnalyticsResponse | RawApiData;
 
         // 检查是否已经是 AnalyticsResponse 格式
         if ('success' in apiData && 'data' in apiData) {
@@ -34,7 +94,7 @@ export class AnalyticsService {
           message: '数据获取成功',
           data: adaptedData,
           cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
-          performance_info: { calculation_time: 0, asset_count: adaptedData.area_summary?.total_assets || 0, cache_enabled: true }
+          performance_info: { calculation_time: 0, asset_count: adaptedData.area_summary?.total_assets ?? 0, cache_enabled: true }
         };
       }
 
@@ -50,14 +110,14 @@ export class AnalyticsService {
   /**
    * 将后端API返回的数据适配为前端期望的 AnalyticsData 格式
    */
-  private adaptApiDataToAnalyticsData(apiData: any): AnalyticsData {
+  private adaptApiDataToAnalyticsData(apiData: RawApiData): AnalyticsData {
     serviceLogger.debug('Adapting API data to AnalyticsData format:', apiData);
 
     // 从 API 数据中提取 area_summary
     const rawAreaSummary = apiData.area_summary ?? apiData.data?.area_summary ?? {};
 
     // 适配 area_summary
-    const area_summary: any = {
+    const area_summary: AnalyticsData['area_summary'] = {
       total_assets: rawAreaSummary.total_assets ?? 0,
       total_area: rawAreaSummary.total_land_area ?? rawAreaSummary.total_area ?? 0,
       total_rentable_area: rawAreaSummary.total_rentable_area ?? 0,
@@ -69,16 +129,17 @@ export class AnalyticsService {
     };
 
     // 提取或生成 financial_summary（如果后端没有返回，使用空值）
-    const financial_summary: any = apiData.financial_summary ?? apiData.data?.financial_summary ?? {
-      estimated_annual_income: 0,
-      total_annual_income: 0,
-      total_annual_expense: 0,
-      total_net_income: 0,
-      total_monthly_rent: 0,
-      total_deposit: 0,
-      assets_with_income_data: 0,
-      assets_with_rent_data: 0,
-      profit_margin: 0,
+    const rawFinancialSummary = apiData.financial_summary ?? apiData.data?.financial_summary ?? {};
+    const financial_summary: AnalyticsData['financial_summary'] = {
+      estimated_annual_income: rawFinancialSummary.estimated_annual_income ?? 0,
+      total_annual_income: rawFinancialSummary.total_annual_income ?? 0,
+      total_annual_expense: rawFinancialSummary.total_annual_expense ?? 0,
+      total_net_income: rawFinancialSummary.total_net_income ?? 0,
+      total_monthly_rent: rawFinancialSummary.total_monthly_rent ?? 0,
+      total_deposit: rawFinancialSummary.total_deposit ?? 0,
+      assets_with_income_data: rawFinancialSummary.assets_with_income_data ?? 0,
+      assets_with_rent_data: rawFinancialSummary.assets_with_rent_data ?? 0,
+      profit_margin: rawFinancialSummary.profit_margin ?? 0,
     };
 
     // 提取分布数据（如果不存在则使用空数组）
@@ -92,7 +153,7 @@ export class AnalyticsService {
     // BusinessCategoryDistribution 需要 percentage 字段
     const rawBusinessCategories = apiData.business_category_distribution ??
                                    apiData.data?.business_category_distribution ?? [];
-    const business_category_distribution = rawBusinessCategories.map((item: any) => ({
+    const business_category_distribution = rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
       ...item,
       percentage: item.percentage ?? 0, // 确保有 percentage 字段
     }));

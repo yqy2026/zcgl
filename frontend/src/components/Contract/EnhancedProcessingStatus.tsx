@@ -300,6 +300,8 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                 color={getStatusColor(step.status)}
               >
                 <div
+                  role={step.details ? "button" : undefined}
+                  tabIndex={step.details ? 0 : undefined}
                   style={{
                     cursor: step.details ? 'pointer' : 'default',
                     padding: '8px 12px',
@@ -307,6 +309,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                     backgroundColor: step.status === 'processing' ? '#f6ffed' : 'transparent'
                   }}
                   onClick={() => step.details && handleStepDetail(step.step)}
+                  onKeyDown={(e) => {
+                    if (step.details && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      handleStepDetail(step.step);
+                    }
+                  }}
                 >
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Space>
