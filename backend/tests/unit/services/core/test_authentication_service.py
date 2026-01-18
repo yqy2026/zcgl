@@ -19,11 +19,10 @@ from src.schemas.auth import TokenResponse
 from src.services.core.authentication_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
-    AuthenticationService,
     REFRESH_TOKEN_EXPIRE_DAYS,
     SECRET_KEY,
+    AuthenticationService,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -77,7 +76,9 @@ class TestAuthenticateUserUsernameEmail:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     result = auth_service.authenticate_user("testuser", "password123")
                     assert result == mock_user
@@ -90,7 +91,9 @@ class TestAuthenticateUserUsernameEmail:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     result = auth_service.authenticate_user(
                         "test@example.com", "password123"
@@ -145,7 +148,9 @@ class TestAuthenticateUserPasswordVerification:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     result = auth_service.authenticate_user("testuser", "correctpass")
                     assert result == mock_user
@@ -171,9 +176,7 @@ class TestAuthenticateUserAccountLockout:
                 auth_service.authenticate_user("testuser", "password")
             assert "账户已被锁定" in str(exc_info.value)
 
-    def test_failed_login_increments_counter(
-        self, auth_service, db_session, mock_user
-    ):
+    def test_failed_login_increments_counter(self, auth_service, db_session, mock_user):
         """Test that failed login increments attempt counter"""
         mock_user.failed_login_attempts = 2
         with patch.object(db_session, "query") as mock_query:
@@ -211,7 +214,9 @@ class TestAuthenticateUserAccountLockout:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     auth_service.authenticate_user("testuser", "correct")
                     assert mock_user.failed_login_attempts == 0
@@ -245,9 +250,7 @@ class TestAuthenticateUserAccountLockout:
 class TestAuthenticateUserPasswordExpiration:
     """Tests for password expiration handling"""
 
-    def test_password_expired_raises_error(
-        self, auth_service, db_session, mock_user
-    ):
+    def test_password_expired_raises_error(self, auth_service, db_session, mock_user):
         """Test that expired password raises error"""
         with patch.object(db_session, "query") as mock_query:
             mock_query.return_value.filter.return_value.first.return_value = mock_user
@@ -255,7 +258,9 @@ class TestAuthenticateUserPasswordExpiration:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=True
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=True,
                 ):
                     with pytest.raises(BusinessLogicError) as exc_info:
                         auth_service.authenticate_user("testuser", "password")
@@ -269,7 +274,9 @@ class TestAuthenticateUserPasswordExpiration:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     result = auth_service.authenticate_user("testuser", "password")
                     assert result is not None
@@ -283,9 +290,7 @@ class TestAuthenticateUserPasswordExpiration:
 class TestCreateTokens:
     """Tests for JWT token creation"""
 
-    def test_create_tokens_returns_valid_response(
-        self, auth_service, mock_user
-    ):
+    def test_create_tokens_returns_valid_response(self, auth_service, mock_user):
         """Test that create_tokens returns valid TokenResponse"""
         tokens = auth_service.create_tokens(mock_user)
         assert isinstance(tokens, TokenResponse)
@@ -299,10 +304,10 @@ class TestCreateTokens:
         """Test access token has correct structure"""
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert payload["sub"] == mock_user.id
         assert payload["username"] == mock_user.username
@@ -318,10 +323,10 @@ class TestCreateTokens:
         """Test refresh token has correct structure"""
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
-            tokens.refresh_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert payload["sub"] == mock_user.id
         assert payload["type"] == "refresh"
@@ -337,16 +342,16 @@ class TestCreateTokens:
         tokens2 = auth_service.create_tokens(mock_user)
 
         payload1_access = jwt.decode(
-            tokens1.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens1.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         payload2_access = jwt.decode(
-            tokens2.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens2.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
 
         assert payload1_access["jti"] != payload2_access["jti"]
@@ -355,16 +360,16 @@ class TestCreateTokens:
         """Test that access and refresh tokens share session_id"""
         tokens = auth_service.create_tokens(mock_user)
         access_payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         refresh_payload = jwt.decode(
-            tokens.refresh_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload["session_id"] == refresh_payload["session_id"]
         assert access_payload["session_id"] == tokens.session_id
@@ -375,10 +380,10 @@ class TestCreateTokens:
         assert tokens.expires_in == ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
         payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         exp = datetime.fromtimestamp(payload["exp"])
         iat = datetime.fromtimestamp(payload["iat"])
@@ -391,10 +396,10 @@ class TestCreateTokens:
         """Test refresh token expiration time"""
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
-            tokens.refresh_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         exp = datetime.fromtimestamp(payload["exp"])
         iat = datetime.fromtimestamp(payload["iat"])
@@ -421,10 +426,10 @@ class TestCreateTokensDeviceFingerprinting:
         }
         tokens = auth_service.create_tokens(mock_user, device_info)
         access_payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert "device_fingerprint" in access_payload
         assert access_payload["device_fingerprint"] is not None
@@ -435,10 +440,10 @@ class TestCreateTokensDeviceFingerprinting:
         device_info = {"user_agent": "Mozilla/5.0", "ip_address": "192.168.1.1"}
         tokens = auth_service.create_tokens(mock_user, device_info)
         access_payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload["device_fingerprint"] is not None
 
@@ -446,10 +451,10 @@ class TestCreateTokensDeviceFingerprinting:
         """Test tokens without device info"""
         tokens = auth_service.create_tokens(mock_user, None)
         access_payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload.get("device_fingerprint") is None
 
@@ -465,16 +470,16 @@ class TestCreateTokensDeviceFingerprinting:
         tokens2 = auth_service.create_tokens(mock_user, device_info)
 
         payload1 = jwt.decode(
-            tokens1.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens1.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         payload2 = jwt.decode(
-            tokens2.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens2.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert payload1["device_fingerprint"] == payload2["device_fingerprint"]
 
@@ -489,16 +494,16 @@ class TestCreateTokensDeviceFingerprinting:
         tokens2 = auth_service.create_tokens(mock_user, device_info2)
 
         payload1 = jwt.decode(
-            tokens1.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens1.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         payload2 = jwt.decode(
-            tokens2.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens2.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert payload1["device_fingerprint"] != payload2["device_fingerprint"]
 
@@ -521,7 +526,9 @@ class TestValidateRefreshToken:
         mock_session.session_id = tokens.session_id
 
         with patch.object(db_session, "query") as mock_query:
-            mock_query.return_value.filter.return_value.first.return_value = mock_session
+            mock_query.return_value.filter.return_value.first.return_value = (
+                mock_session
+            )
             with patch.object(
                 auth_service.user_service, "get_user_by_id", return_value=mock_user
             ):
@@ -537,12 +544,12 @@ class TestValidateRefreshToken:
         """Test validation of revoked token"""
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
-            tokens.refresh_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
-        jti = payload["jti"]
+        payload["jti"]
 
         # Mock token as revoked
         with patch.object(
@@ -567,7 +574,9 @@ class TestValidateRefreshToken:
         mock_session.is_active = True
 
         with patch.object(db_session, "query") as mock_query:
-            mock_query.return_value.filter.return_value.first.return_value = mock_session
+            mock_query.return_value.filter.return_value.first.return_value = (
+                mock_session
+            )
             result = auth_service.validate_refresh_token(tokens.refresh_token)
             assert result is None
 
@@ -582,7 +591,9 @@ class TestValidateRefreshToken:
         mock_user.is_active = False
 
         with patch.object(db_session, "query") as mock_query:
-            mock_query.return_value.filter.return_value.first.return_value = mock_session
+            mock_query.return_value.filter.return_value.first.return_value = (
+                mock_session
+            )
             with patch.object(
                 auth_service.user_service, "get_user_by_id", return_value=mock_user
             ):
@@ -590,9 +601,7 @@ class TestValidateRefreshToken:
                 assert result is None
                 assert mock_session.is_active is False
 
-    def test_validate_session_id_mismatch(
-        self, auth_service, mock_user, db_session
-    ):
+    def test_validate_session_id_mismatch(self, auth_service, mock_user, db_session):
         """Test validation when session ID doesn't match"""
         tokens = auth_service.create_tokens(mock_user)
         mock_session = MagicMock(spec=UserSession)
@@ -601,7 +610,9 @@ class TestValidateRefreshToken:
         mock_session.session_id = "different-session-id"
 
         with patch.object(db_session, "query") as mock_query:
-            mock_query.return_value.filter.return_value.first.return_value = mock_session
+            mock_query.return_value.filter.return_value.first.return_value = (
+                mock_session
+            )
             with patch.object(
                 auth_service.user_service, "get_user_by_id", return_value=mock_user
             ):
@@ -621,7 +632,9 @@ class TestValidateRefreshToken:
         mock_session.last_accessed_at = None
 
         with patch.object(db_session, "query") as mock_query:
-            mock_query.return_value.filter.return_value.first.return_value = mock_session
+            mock_query.return_value.filter.return_value.first.return_value = (
+                mock_session
+            )
             with patch.object(
                 auth_service.user_service, "get_user_by_id", return_value=mock_user
             ):
@@ -711,7 +724,9 @@ class TestEdgeCases:
             result = auth_service.authenticate_user("", "password")
             assert result is None
 
-    def test_authenticate_with_empty_password(self, auth_service, db_session, mock_user):
+    def test_authenticate_with_empty_password(
+        self, auth_service, db_session, mock_user
+    ):
         """Test authentication with empty password"""
         with patch.object(db_session, "query") as mock_query:
             mock_query.return_value.filter.return_value.first.return_value = mock_user
@@ -733,16 +748,18 @@ class TestEdgeCases:
         tokens = auth_service.create_tokens(mock_user)
         assert tokens.access_token is not None
         payload = jwt.decode(
-            tokens.access_token, SECRET_KEY, algorithms=[ALGORITHM], options={
-                "verify_aud": False,
-                "verify_iss": False
-            }
+            tokens.access_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False, "verify_iss": False},
         )
         assert "role" in payload
 
     def test_validate_token_with_wrong_type(self, auth_service):
         """Test validation rejects access token when refresh expected"""
-        tokens = auth_service.create_tokens(Mock(id="user", username="test", role="user"))
+        tokens = auth_service.create_tokens(
+            Mock(id="user", username="test", role="user")
+        )
         # Try to validate access token as refresh token
         result = auth_service.validate_refresh_token(tokens.access_token)
         assert result is None
@@ -750,7 +767,7 @@ class TestEdgeCases:
     def test_validate_token_with_missing_jti(self, auth_service):
         """Test validation handles missing JTI gracefully"""
         # Create a token without jti
-        from datetime import datetime, timedelta, UTC
+        from datetime import UTC, datetime, timedelta
 
         now = datetime.now(UTC)
         payload = {
@@ -779,7 +796,9 @@ class TestEdgeCases:
                 auth_service.password_service, "verify_password", return_value=False
             ):
                 auth_service.authenticate_user("testuser", "wrong")
-                assert mock_user.failed_login_attempts == settings.MAX_FAILED_ATTEMPTS - 1
+                assert (
+                    mock_user.failed_login_attempts == settings.MAX_FAILED_ATTEMPTS - 1
+                )
                 assert mock_user.is_locked is False
 
     def test_password_hash_attribute_missing(self, auth_service, db_session):
@@ -819,7 +838,9 @@ class TestIntegrationScenarios:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     user = auth_service.authenticate_user("testuser", "password")
                     assert user is not None
@@ -859,7 +880,9 @@ class TestIntegrationScenarios:
                 auth_service.password_service, "verify_password", return_value=True
             ):
                 with patch.object(
-                    auth_service.password_service, "is_password_expired", return_value=False
+                    auth_service.password_service,
+                    "is_password_expired",
+                    return_value=False,
                 ):
                     user = auth_service.authenticate_user("testuser", "correct")
                     assert user is not None

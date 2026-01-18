@@ -76,7 +76,6 @@ export interface AuthResponse {
   permissions: string[];
 }
 
-
 /**
  * 资产列表响应
  */
@@ -140,7 +139,7 @@ export enum ApiErrorType {
   AUTH_ERROR = 'AUTH_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   BUSINESS_ERROR = 'BUSINESS_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
 /**

@@ -1,41 +1,41 @@
-import { Component, ErrorInfo, ReactNode } from 'react'
-import { Alert, Button } from 'antd'
-import { createLogger } from '../../utils/logger'
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { Alert, Button } from 'antd';
+import { createLogger } from '../../utils/logger';
 
-const componentLogger = createLogger('ChartErrorBoundary')
+const componentLogger = createLogger('ChartErrorBoundary');
 
 interface Props {
-  children: ReactNode
-  fallback?: ReactNode
-  onError?: (error: Error, errorInfo: ErrorInfo) => void
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
-  hasError: boolean
-  error: Error | null
-  errorInfo: ErrorInfo | null
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
 export class ChartErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
-    errorInfo: null
-  }
+    errorInfo: null,
+  };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null }
+    return { hasError: true, error, errorInfo: null };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    componentLogger.error('Chart Error Boundary caught an error:', error)
+    componentLogger.error('Chart Error Boundary caught an error:', error);
     this.setState({
       error,
-      errorInfo
-    })
+      errorInfo,
+    });
 
     if (this.props.onError) {
-      this.props.onError(error, errorInfo)
+      this.props.onError(error, errorInfo);
     }
   }
 
@@ -43,14 +43,14 @@ export class ChartErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
-    })
-  }
+      errorInfo: null,
+    });
+  };
 
   public render() {
     if (this.state.hasError) {
       if (this.props.fallback !== undefined && this.props.fallback !== null) {
-        return this.props.fallback
+        return this.props.fallback;
       }
 
       return (
@@ -77,11 +77,11 @@ export class ChartErrorBoundary extends Component<Props, State> {
             style={{ marginBottom: '16px' }}
           />
         </div>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
 
-export default ChartErrorBoundary
+export default ChartErrorBoundary;

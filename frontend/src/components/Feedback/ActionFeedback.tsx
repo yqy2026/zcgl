@@ -54,7 +54,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (autoHide !== undefined && autoHide !== null &&  result?.status === 'success') {
+    if (autoHide !== undefined && autoHide !== null && result?.status === 'success') {
       const timer = setTimeout(() => {
         setVisible(false);
         if (onClose !== undefined && onClose !== null) {

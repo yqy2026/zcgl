@@ -20,7 +20,7 @@ import type {
   ProjectStatisticsResponse,
   ProjectDeleteResponse,
   ProjectSearchParams,
-  ProjectDropdownOption
+  ProjectDropdownOption,
 } from '@/types/project';
 
 export class ProjectService {
@@ -33,14 +33,10 @@ export class ProjectService {
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
     try {
-      const result = await enhancedApiClient.post<ProjectListResponse>(
-        'search',
-        searchParams,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.post<ProjectListResponse>('search', searchParams, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`搜索项目失败: ${result.error}`);
@@ -58,14 +54,11 @@ export class ProjectService {
    */
   async getProject(id: string): Promise<Project> {
     try {
-      const result = await enhancedApiClient.get<Project>(
-        `${this.baseUrl}/${id}`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Project>(`${this.baseUrl}/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取项目详情失败: ${result.error}`);
@@ -92,15 +85,12 @@ export class ProjectService {
         ownership_id: params?.ownership_id,
       };
 
-      const result = await enhancedApiClient.get<ProjectListResponse>(
-        this.baseUrl,
-        {
-          params: requestParams,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<ProjectListResponse>(this.baseUrl, {
+        params: requestParams,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取项目列表失败: ${result.error}`);
@@ -118,14 +108,10 @@ export class ProjectService {
    */
   async createProject(data: ProjectCreate): Promise<Project> {
     try {
-      const result = await enhancedApiClient.post<Project>(
-        this.baseUrl,
-        data,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.post<Project>(this.baseUrl, data, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`创建项目失败: ${result.error}`);
@@ -143,14 +129,10 @@ export class ProjectService {
    */
   async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
     try {
-      const result = await enhancedApiClient.put<Project>(
-        `${this.baseUrl}/${id}`,
-        data,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.put<Project>(`${this.baseUrl}/${id}`, data, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`更新项目失败: ${result.error}`);
@@ -172,7 +154,7 @@ export class ProjectService {
         `${this.baseUrl}/${id}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -199,7 +181,7 @@ export class ProjectService {
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -219,14 +201,11 @@ export class ProjectService {
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
     try {
-      const result = await enhancedApiClient.get<ProjectStatisticsResponse>(
-        'statistics/summary',
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<ProjectStatisticsResponse>('statistics/summary', {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取项目统计失败: ${result.error}`);
@@ -249,7 +228,7 @@ export class ProjectService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -313,9 +292,7 @@ export class ProjectService {
   async validateProjectCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: code });
-      return !result.items.some(item =>
-        item.code === code && item.id !== excludeId
-      );
+      return !result.items.some(item => item.code === code && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目编码失败:', undefined, { error: enhancedError.message });
@@ -329,9 +306,7 @@ export class ProjectService {
   async validateProjectName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: name });
-      return !result.items.some(item =>
-        item.name === name && item.id !== excludeId
-      );
+      return !result.items.some(item => item.name === name && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目名称失败:', undefined, { error: enhancedError.message });
@@ -368,7 +343,7 @@ export class ProjectService {
       if (project.asset_count != null && project.asset_count > 0) {
         return {
           canDelete: false,
-          reason: `该项目还有 ${project.asset_count} 个关联资产，无法删除`
+          reason: `该项目还有 ${project.asset_count} 个关联资产，无法删除`,
         };
       }
 
@@ -388,7 +363,7 @@ export class ProjectService {
       const options = await this.getProjectOptions();
       return options.map(option => ({
         value: option.id,
-        label: `${option.name} (${option.code})`
+        label: `${option.name} (${option.code})`,
       }));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -458,16 +433,16 @@ export class ProjectService {
   /**
    * 项目数据导出
    */
-  async exportProjects(format: 'excel' | 'csv' = 'excel', filters?: ProjectSearchParams): Promise<Blob> {
+  async exportProjects(
+    format: 'excel' | 'csv' = 'excel',
+    filters?: ProjectSearchParams
+  ): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        `${this.baseUrl}/export`,
-        {
-          params: { format, ...filters },
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+        params: { format, ...filters },
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出项目数据失败: ${result.error}`);
@@ -498,17 +473,13 @@ export class ProjectService {
         message: string;
         imported?: number;
         errors?: string[];
-      }>(
-        `${this.baseUrl}/import`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`导入项目数据失败: ${result.error}`);
@@ -533,22 +504,24 @@ export class ProjectService {
     try {
       const [project, statistics] = await Promise.all([
         this.getProject(id),
-        this.getProjectStatistics()
+        this.getProjectStatistics(),
       ]);
 
       // 从统计中查找当前项目的数据
       // 从统计中查找当前项目的数据 - 这里使用了类型保护或明确的类型转换
-      const stats = statistics as unknown as { projects?: Array<{ id: string; asset_count: number; total_area: number }> };
+      const stats = statistics as unknown as {
+        projects?: Array<{ id: string; asset_count: number; total_area: number }>;
+      };
       const projectStats = stats.projects?.find(p => p.id === id) || {
         asset_count: 0,
-        total_area: 0
+        total_area: 0,
       };
 
       return {
         project,
         assetCount: projectStats.asset_count ?? project.asset_count ?? 0,
         totalArea: projectStats.total_area ?? 0,
-        lastUpdated: project.updated_at
+        lastUpdated: project.updated_at,
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

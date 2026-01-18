@@ -18,13 +18,11 @@ Testing Approach:
 """
 
 import io
-import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import pytest
 from fastapi import HTTPException, UploadFile
-from fastapi.responses import FileResponse
 
 pytestmark = pytest.mark.api
 
@@ -77,7 +75,7 @@ def mock_pdf_file():
     file = MagicMock(spec=UploadFile)
     file.filename = "test_document.pdf"
     file.content_type = "application/pdf"
-    content = io.BytesIO(b"%PDF-1.4 fake pdf content")
+    io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file = io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file.seek = Mock(return_value=None)
     file.file.tell = Mock(return_value=100)
@@ -448,7 +446,7 @@ class TestUploadAssetAttachments:
 
         # Mock open to raise IOError
         m_open = mock_open()
-        m_open.side_effect = IOError("Disk full")
+        m_open.side_effect = OSError("Disk full")
 
         with patch("builtins.open", m_open):
             result = await upload_asset_attachments(
@@ -588,7 +586,13 @@ class TestGetAssetAttachments:
     @patch("src.api.v1.asset_attachments.asset_crud")
     @pytest.mark.asyncio
     async def test_get_attachments_empty_directory(
-        self, mock_asset_crud_obj, mock_listdir, mock_exists, mock_db, mock_regular_user, mock_asset
+        self,
+        mock_asset_crud_obj,
+        mock_listdir,
+        mock_exists,
+        mock_db,
+        mock_regular_user,
+        mock_asset,
     ):
         """Test getting attachments from empty directory"""
         from src.api.v1.asset_attachments import get_asset_attachments
@@ -627,7 +631,12 @@ class TestGetAssetAttachments:
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
-        mock_listdir.return_value = ["document.pdf", "image.jpg", "data.txt", "report.PDF"]
+        mock_listdir.return_value = [
+            "document.pdf",
+            "image.jpg",
+            "data.txt",
+            "report.PDF",
+        ]
         mock_join.return_value = "uploads/attachments/asset-123/document.pdf"
 
         mock_file_stat = MagicMock()
@@ -866,7 +875,9 @@ class TestDeleteAssetAttachment:
         )
 
         assert result["message"] == "附件删除成功"
-        mock_remove.assert_called_once_with("uploads/attachments/asset-123/document.pdf")
+        mock_remove.assert_called_once_with(
+            "uploads/attachments/asset-123/document.pdf"
+        )
 
     @patch("src.api.v1.asset_attachments.asset_crud")
     @pytest.mark.asyncio

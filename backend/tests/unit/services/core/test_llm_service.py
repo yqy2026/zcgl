@@ -13,23 +13,21 @@ Tests cover:
 Target: 70%+ coverage for llm_service.py
 """
 
-import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
 
 from src.services.core.llm_service import (
-    LLMResponse,
-    LLMServiceInterface,
     BaseOpenAILLM,
-    LLMServiceFactory,
+    LLMResponse,
     LLMService,
-    get_llm_service,
+    LLMServiceFactory,
+    LLMServiceInterface,
     create_llm_service,
+    get_llm_service,
 )
 from src.services.document.config import LLMProvider
-
 
 # ============================================================================
 # Test Fixtures
@@ -163,9 +161,7 @@ class TestBaseOpenAILLM:
             assert service.provider == provider
 
     @pytest.mark.asyncio
-    async def test_chat_completion_success(
-        self, sample_messages, mock_llm_response
-    ):
+    async def test_chat_completion_success(self, sample_messages, mock_llm_response):
         """Test successful chat completion."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
@@ -189,7 +185,9 @@ class TestBaseOpenAILLM:
             result = await service.chat_completion(sample_messages)
 
             assert isinstance(result, LLMResponse)
-            assert result.content == mock_llm_response["choices"][0]["message"]["content"]
+            assert (
+                result.content == mock_llm_response["choices"][0]["message"]["content"]
+            )
             assert result.raw_response == mock_llm_response
             assert result.usage == mock_llm_response["usage"]
             assert result.provider == LLMProvider.GLM.value
@@ -292,9 +290,7 @@ class TestBaseOpenAILLM:
                 model="test-model",
             )
 
-            result = await service.chat_completion(
-                sample_messages, max_tokens=2000
-            )
+            result = await service.chat_completion(sample_messages, max_tokens=2000)
 
             assert result is not None
             call_args = mock_client.post.call_args
@@ -346,7 +342,7 @@ class TestBaseOpenAILLM:
 
         # Make context manager fail with timeout
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
             mock_client_class.side_effect = httpx.ReadTimeout("Request timeout")
 
             service = BaseOpenAILLM(
@@ -368,7 +364,7 @@ class TestBaseOpenAILLM:
         """Test chat_completion handles network errors properly."""
         # Simplified test that verifies exception handling works
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
 
             # Make context manager itself fail
             mock_client_class.side_effect = httpx.ConnectError("Connection refused")
@@ -388,7 +384,7 @@ class TestBaseOpenAILLM:
         """Test chat_completion handles timeout errors properly."""
         # Simplified test that verifies timeout handling
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
 
             # Make context manager fail with timeout
             mock_client_class.side_effect = httpx.ReadTimeout("Request timeout")
@@ -439,9 +435,7 @@ class TestLLMServiceFactory:
 
     def test_register_service_class(self):
         """Test registering a service class."""
-        LLMServiceFactory.register(
-            LLMProvider.GLM, BaseOpenAILLM, {"api_key": "test"}
-        )
+        LLMServiceFactory.register(LLMProvider.GLM, BaseOpenAILLM, {"api_key": "test"})
 
         assert LLMProvider.GLM in LLMServiceFactory._services
         assert LLMServiceFactory._services[LLMProvider.GLM] == BaseOpenAILLM
@@ -826,6 +820,7 @@ class TestLLMServiceIntegration:
 
     def test_factory_with_custom_service_class(self):
         """Test factory with a custom service class."""
+
         # Create a mock service class
         class MockService(LLMServiceInterface):
             def __init__(self, **kwargs):
@@ -875,4 +870,6 @@ class TestLLMServiceIntegration:
             result = await service.chat_completion(messages)
 
             assert isinstance(result, LLMResponse)
-            assert result.content == mock_llm_response["choices"][0]["message"]["content"]
+            assert (
+                result.content == mock_llm_response["choices"][0]["message"]["content"]
+            )

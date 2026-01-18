@@ -21,10 +21,8 @@ Testing Approach:
 
 import io
 import json
-import os
-import tempfile
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, UploadFile
@@ -100,7 +98,9 @@ def create_mock_invalid_file():
 def mock_batch_tracker():
     """Create mock BatchStatusTracker"""
     tracker = MagicMock()
-    tracker.get_stats = MagicMock(return_value={"active_batches": 0, "total_batches": 0})
+    tracker.get_stats = MagicMock(
+        return_value={"active_batches": 0, "total_batches": 0}
+    )
     tracker.get_status = MagicMock(return_value=None)
     tracker.create_batch = MagicMock()
     tracker.update_progress = MagicMock()
@@ -121,9 +121,11 @@ class TestBatchUploadPdfs:
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_batch_upload_success(self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db):
+    async def test_batch_upload_success(
+        self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db
+    ):
         """Test successful batch upload with multiple PDFs"""
-        from src.api.v1.pdf_batch_routes import batch_upload_pdfs, MAX_BATCH_SIZE
+        from src.api.v1.pdf_batch_routes import batch_upload_pdfs
 
         # Setup tracker mock
         mock_tracker = MagicMock()
@@ -138,7 +140,9 @@ class TestBatchUploadPdfs:
         mock_service_class.return_value = mock_service
 
         # Patch asyncio.create_task to avoid real task creation
-        with patch("src.api.v1.pdf_batch_routes.asyncio.create_task") as mock_create_task:
+        with patch(
+            "src.api.v1.pdf_batch_routes.asyncio.create_task"
+        ) as mock_create_task:
             # Make create_task return a mock task
             mock_task = MagicMock()
             mock_task.add_done_callback = MagicMock()
@@ -168,9 +172,11 @@ class TestBatchUploadPdfs:
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_batch_upload_exceeds_limit(self, mock_get_tracker, mock_db, mock_current_user):
+    async def test_batch_upload_exceeds_limit(
+        self, mock_get_tracker, mock_db, mock_current_user
+    ):
         """Test batch upload with too many files"""
-        from src.api.v1.pdf_batch_routes import batch_upload_pdfs, MAX_BATCH_SIZE
+        from src.api.v1.pdf_batch_routes import MAX_BATCH_SIZE, batch_upload_pdfs
 
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {"active_batches": 0, "total_batches": 0}
@@ -196,14 +202,19 @@ class TestBatchUploadPdfs:
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_batch_upload_concurrent_limit_reached(self, mock_get_tracker, mock_pdf_files, mock_db):
+    async def test_batch_upload_concurrent_limit_reached(
+        self, mock_get_tracker, mock_pdf_files, mock_db
+    ):
         """Test batch upload when concurrent limit is reached"""
-        from src.api.v1.pdf_batch_routes import batch_upload_pdfs, MAX_CONCURRENT_BATCHES
+        from src.api.v1.pdf_batch_routes import (
+            MAX_CONCURRENT_BATCHES,
+            batch_upload_pdfs,
+        )
 
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {
             "active_batches": MAX_CONCURRENT_BATCHES,
-            "total_batches": MAX_CONCURRENT_BATCHES
+            "total_batches": MAX_CONCURRENT_BATCHES,
         }
         mock_get_tracker.return_value = mock_tracker
 
@@ -249,7 +260,9 @@ class TestBatchUploadPdfs:
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_batch_upload_with_organization_id(self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db):
+    async def test_batch_upload_with_organization_id(
+        self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db
+    ):
         """Test batch upload with organization ID"""
         from src.api.v1.pdf_batch_routes import batch_upload_pdfs
 
@@ -264,7 +277,9 @@ class TestBatchUploadPdfs:
         mock_service_class.return_value = mock_service
 
         # Patch asyncio.create_task
-        with patch("src.api.v1.pdf_batch_routes.asyncio.create_task") as mock_create_task:
+        with patch(
+            "src.api.v1.pdf_batch_routes.asyncio.create_task"
+        ) as mock_create_task:
             mock_task = MagicMock()
             mock_task.add_done_callback = MagicMock()
             mock_create_task.return_value = mock_task
@@ -288,7 +303,9 @@ class TestBatchUploadPdfs:
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @patch("src.api.v1.pdf_batch_routes.open")
     @pytest.mark.asyncio
-    async def test_batch_upload_filters_non_pdf_files(self, mock_open, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db):
+    async def test_batch_upload_filters_non_pdf_files(
+        self, mock_open, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db
+    ):
         """Test that non-PDF files are filtered out"""
         from src.api.v1.pdf_batch_routes import batch_upload_pdfs
 
@@ -310,7 +327,9 @@ class TestBatchUploadPdfs:
         mock_open.return_value.write = MagicMock()
 
         # Patch asyncio.create_task
-        with patch("src.api.v1.pdf_batch_routes.asyncio.create_task") as mock_create_task:
+        with patch(
+            "src.api.v1.pdf_batch_routes.asyncio.create_task"
+        ) as mock_create_task:
             mock_task = MagicMock()
             mock_task.add_done_callback = MagicMock()
             mock_create_task.return_value = mock_task
@@ -331,7 +350,9 @@ class TestBatchUploadPdfs:
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_batch_upload_service_error_handling(self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db):
+    async def test_batch_upload_service_error_handling(
+        self, mock_service_class, mock_get_tracker, mock_pdf_files, mock_db
+    ):
         """Test batch upload when service raises error for one file"""
         from src.api.v1.pdf_batch_routes import batch_upload_pdfs
 
@@ -344,11 +365,15 @@ class TestBatchUploadPdfs:
 
         mock_service = MagicMock()
         # First file succeeds, second fails, third succeeds
-        mock_service.process_pdf_file = AsyncMock(side_effect=[None, Exception("Processing failed"), None])
+        mock_service.process_pdf_file = AsyncMock(
+            side_effect=[None, Exception("Processing failed"), None]
+        )
         mock_service_class.return_value = mock_service
 
         # Patch asyncio.create_task
-        with patch("src.api.v1.pdf_batch_routes.asyncio.create_task") as mock_create_task:
+        with patch(
+            "src.api.v1.pdf_batch_routes.asyncio.create_task"
+        ) as mock_create_task:
             mock_task = MagicMock()
             mock_task.add_done_callback = MagicMock()
             mock_create_task.return_value = mock_task
@@ -395,8 +420,8 @@ class TestGetBatchStatus:
             "processed": 2,
             "failed": 0,
             "session_ids": ["session-1", "session-2", "session-3"],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
         mock_get_tracker.return_value = mock_tracker
 
@@ -404,8 +429,8 @@ class TestGetBatchStatus:
         mock_sessions = []
         for i in range(3):
             session = MagicMock()
-            session.session_id = f"session-{i+1}"
-            session.original_filename = f"file_{i+1}.pdf"
+            session.session_id = f"session-{i + 1}"
+            session.original_filename = f"file_{i + 1}.pdf"
             session.status = SessionStatus.PROCESSING
             session.progress_percentage = 50.0
             session.error_message = None
@@ -442,7 +467,9 @@ class TestGetBatchStatus:
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_get_batch_status_with_completed_sessions(self, mock_get_tracker, mock_db):
+    async def test_get_batch_status_with_completed_sessions(
+        self, mock_get_tracker, mock_db
+    ):
         """Test batch status with completed sessions"""
         from src.api.v1.pdf_batch_routes import get_batch_status
         from src.models.pdf_import_session import SessionStatus
@@ -457,8 +484,8 @@ class TestGetBatchStatus:
             "processed": 3,
             "failed": 0,
             "session_ids": ["session-1"],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
         mock_get_tracker.return_value = mock_tracker
 
@@ -501,8 +528,8 @@ class TestListBatches:
                 "total": 5,
                 "processed": i + 1,
                 "failed": 0,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
             for i in range(5)
         ]
@@ -532,8 +559,8 @@ class TestListBatches:
                 "total": 5,
                 "processed": 5,
                 "failed": 0,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
         ]
         mock_tracker.list_batches.return_value = mock_batches
@@ -543,7 +570,9 @@ class TestListBatches:
 
         body = json.loads(result.body.decode())
         assert body["data"]["count"] == 1
-        mock_tracker.list_batches.assert_called_once_with(status_filter="completed", limit=10)
+        mock_tracker.list_batches.assert_called_once_with(
+            status_filter="completed", limit=10
+        )
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
@@ -571,7 +600,7 @@ class TestListBatches:
         mock_tracker.list_batches.return_value = []
         mock_get_tracker.return_value = mock_tracker
 
-        result = await list_batches(status_filter=None, limit=50)
+        await list_batches(status_filter=None, limit=50)
 
         mock_tracker.list_batches.assert_called_once_with(status_filter=None, limit=50)
 
@@ -588,10 +617,11 @@ class TestCancelBatch:
     @patch("src.api.v1.pdf_batch_routes._update_batch_status")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_cancel_batch_success(self, mock_service_class, mock_update_status, mock_get_tracker, mock_db):
+    async def test_cancel_batch_success(
+        self, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+    ):
         """Test successful batch cancellation"""
-        from src.api.v1.pdf_batch_routes import cancel_batch, BatchStatus
-        from src.models.pdf_import_session import SessionStatus
+        from src.api.v1.pdf_batch_routes import BatchStatus, cancel_batch
 
         batch_id = "batch-to-cancel"
 
@@ -608,7 +638,7 @@ class TestCancelBatch:
         mock_sessions = []
         for i in range(2):
             session = MagicMock()
-            session.session_id = f"session-{i+1}"
+            session.session_id = f"session-{i + 1}"
             session.is_processing = True
             mock_sessions.append(session)
 
@@ -646,7 +676,7 @@ class TestCancelBatch:
     @pytest.mark.asyncio
     async def test_cancel_batch_already_completed(self, mock_get_tracker, mock_db):
         """Test cancelling batch that is already completed"""
-        from src.api.v1.pdf_batch_routes import cancel_batch, BatchStatus
+        from src.api.v1.pdf_batch_routes import BatchStatus, cancel_batch
 
         batch_id = "batch-completed"
 
@@ -668,9 +698,11 @@ class TestCancelBatch:
     @patch("src.api.v1.pdf_batch_routes._update_batch_status")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_cancel_batch_no_processing_sessions(self, mock_service_class, mock_update_status, mock_get_tracker, mock_db):
+    async def test_cancel_batch_no_processing_sessions(
+        self, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+    ):
         """Test cancelling batch with no processing sessions"""
-        from src.api.v1.pdf_batch_routes import cancel_batch, BatchStatus
+        from src.api.v1.pdf_batch_routes import BatchStatus, cancel_batch
 
         batch_id = "batch-no-processing"
 
@@ -698,9 +730,11 @@ class TestCancelBatch:
     @patch("src.api.v1.pdf_batch_routes._update_batch_status")
     @patch("src.api.v1.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
-    async def test_cancel_batch_already_failed(self, mock_service_class, mock_update_status, mock_get_tracker, mock_db):
+    async def test_cancel_batch_already_failed(
+        self, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+    ):
         """Test cancelling batch that already failed"""
-        from src.api.v1.pdf_batch_routes import cancel_batch, BatchStatus
+        from src.api.v1.pdf_batch_routes import BatchStatus, cancel_batch
 
         batch_id = "batch-failed"
 
@@ -789,13 +823,14 @@ class TestBatchHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check(self, mock_get_tracker):
         """Test successful health check"""
-        from src.api.v1.pdf_batch_routes import batch_health_check, MAX_BATCH_SIZE, MAX_CONCURRENT_BATCHES
+        from src.api.v1.pdf_batch_routes import (
+            MAX_BATCH_SIZE,
+            MAX_CONCURRENT_BATCHES,
+            batch_health_check,
+        )
 
         mock_tracker = MagicMock()
-        mock_tracker.get_stats.return_value = {
-            "active_batches": 2,
-            "total_batches": 10
-        }
+        mock_tracker.get_stats.return_value = {"active_batches": 2, "total_batches": 10}
         mock_get_tracker.return_value = mock_tracker
 
         result = await batch_health_check()
@@ -804,29 +839,37 @@ class TestBatchHealthCheck:
         assert body["success"] is True
         assert body["data"]["status"] == "healthy"
         assert body["data"]["configuration"]["max_batch_size"] == MAX_BATCH_SIZE
-        assert body["data"]["configuration"]["max_concurrent_batches"] == MAX_CONCURRENT_BATCHES
+        assert (
+            body["data"]["configuration"]["max_concurrent_batches"]
+            == MAX_CONCURRENT_BATCHES
+        )
         assert body["data"]["current_usage"]["active_batches"] == 2
-        assert body["data"]["current_usage"]["available_slots"] == MAX_CONCURRENT_BATCHES - 2
+        assert (
+            body["data"]["current_usage"]["available_slots"]
+            == MAX_CONCURRENT_BATCHES - 2
+        )
         assert body["data"]["current_usage"]["total_stored_batches"] == 10
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
     async def test_health_check_no_active_batches(self, mock_get_tracker):
         """Test health check with no active batches"""
-        from src.api.v1.pdf_batch_routes import batch_health_check, MAX_CONCURRENT_BATCHES
+        from src.api.v1.pdf_batch_routes import (
+            MAX_CONCURRENT_BATCHES,
+            batch_health_check,
+        )
 
         mock_tracker = MagicMock()
-        mock_tracker.get_stats.return_value = {
-            "active_batches": 0,
-            "total_batches": 5
-        }
+        mock_tracker.get_stats.return_value = {"active_batches": 0, "total_batches": 5}
         mock_get_tracker.return_value = mock_tracker
 
         result = await batch_health_check()
 
         body = json.loads(result.body.decode())
         assert body["data"]["current_usage"]["active_batches"] == 0
-        assert body["data"]["current_usage"]["available_slots"] == MAX_CONCURRENT_BATCHES
+        assert (
+            body["data"]["current_usage"]["available_slots"] == MAX_CONCURRENT_BATCHES
+        )
 
 
 # ============================================================================
@@ -862,7 +905,10 @@ class TestHelperFunctions:
         from src.api.v1.pdf_batch_routes import _get_batch_status
 
         mock_tracker = MagicMock()
-        mock_tracker.get_status.return_value = {"batch_id": "test", "status": "processing"}
+        mock_tracker.get_status.return_value = {
+            "batch_id": "test",
+            "status": "processing",
+        }
         mock_get_tracker.return_value = mock_tracker
 
         result = _get_batch_status("test-batch")
@@ -886,7 +932,7 @@ class TestHelperFunctions:
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     def test_update_batch_status(self, mock_get_tracker):
         """Test _update_batch_status helper function"""
-        from src.api.v1.pdf_batch_routes import _update_batch_status, BatchStatus
+        from src.api.v1.pdf_batch_routes import BatchStatus, _update_batch_status
 
         mock_tracker = MagicMock()
         mock_tracker.update_progress = MagicMock()
@@ -894,18 +940,16 @@ class TestHelperFunctions:
 
         _update_batch_status("test-batch", BatchStatus.COMPLETED)
 
-        mock_tracker.update_progress.assert_called_once_with("test-batch", status=BatchStatus.COMPLETED)
+        mock_tracker.update_progress.assert_called_once_with(
+            "test-batch", status=BatchStatus.COMPLETED
+        )
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_status")
     def test_calculate_batch_progress(self, mock_get_batch_status):
         """Test _calculate_batch_progress helper function"""
         from src.api.v1.pdf_batch_routes import _calculate_batch_progress
 
-        mock_get_batch_status.return_value = {
-            "total": 10,
-            "processed": 5,
-            "failed": 1
-        }
+        mock_get_batch_status.return_value = {"total": 10, "processed": 5, "failed": 1}
 
         result = _calculate_batch_progress("test-batch")
 
@@ -939,9 +983,11 @@ class TestBackgroundTasks:
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.pdf_batch_routes._update_batch_status")
-    def test_handle_task_exception_with_exception(self, mock_update_status, mock_get_tracker):
+    def test_handle_task_exception_with_exception(
+        self, mock_update_status, mock_get_tracker
+    ):
         """Test _handle_task_exception when task has exception"""
-        from src.api.v1.pdf_batch_routes import _handle_task_exception, BatchStatus
+        from src.api.v1.pdf_batch_routes import _handle_task_exception
 
         mock_task = MagicMock()
         mock_task.exception.return_value = Exception("Test error")
@@ -958,9 +1004,9 @@ class TestBackgroundTasks:
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     def test_handle_task_exception_cancelled(self, mock_get_tracker):
         """Test _handle_task_exception when task is cancelled"""
-        from src.api.v1.pdf_batch_routes import _handle_task_exception
-
         import asyncio
+
+        from src.api.v1.pdf_batch_routes import _handle_task_exception
 
         mock_task = MagicMock()
         mock_task.exception.side_effect = asyncio.CancelledError()
@@ -1004,7 +1050,9 @@ class TestEdgeCases:
 
     @patch("src.api.v1.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_batch_upload_filters_files_with_none_filename(self, mock_get_tracker, mock_db):
+    async def test_batch_upload_filters_files_with_none_filename(
+        self, mock_get_tracker, mock_db
+    ):
         """Test that files with None filename are filtered out"""
         from src.api.v1.pdf_batch_routes import batch_upload_pdfs
 

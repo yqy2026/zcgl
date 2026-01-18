@@ -95,7 +95,7 @@ def install_paddleocr():
                     if result.returncode == 0:
                         logger.info(f"✓ {package} (通过pip) 安装成功")
                         success_count += 1
-                except:
+                except Exception:
                     logger.error(f"✗ {package} (通过pip) 也安装失败")
 
         except subprocess.TimeoutExpired:

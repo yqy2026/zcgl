@@ -5,10 +5,7 @@
 """
 
 import json
-from datetime import datetime, timedelta
-from unittest.mock import Mock
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from src.services.core.password_service import PasswordService
 
@@ -227,9 +224,7 @@ class TestIsPasswordInHistory:
         hash1 = service.get_password_hash(password1)
         hash2 = service.get_password_hash(password2)
 
-        user = MockUser(
-            password_history=json.dumps({"passwords": [hash1, hash2]})
-        )
+        user = MockUser(password_history=json.dumps({"passwords": [hash1, hash2]}))
 
         assert service.is_password_in_history(user, password1) is True
         assert service.is_password_in_history(user, password2) is True
@@ -317,9 +312,7 @@ class TestAddPasswordToHistory:
     def test_string_password_history(self):
         """测试字符串格式的密码历史"""
         service = PasswordService()
-        user = MockUser(
-            password_history=json.dumps({"passwords": ["$2b$12$oldhash"]})
-        )
+        user = MockUser(password_history=json.dumps({"passwords": ["$2b$12$oldhash"]}))
         new_hash = "$2b$12$newhash"
 
         service.add_password_to_history(user, new_hash)
@@ -385,9 +378,8 @@ class TestIsPasswordExpired:
         """测试时区感知的 datetime"""
         service = PasswordService()
         # 带 timezone 的 datetime（虽然 SQLite 通常存储 naive datetime）
-        from datetime import timezone
 
-        tz_aware_date = datetime.now(timezone.utc).replace(tzinfo=None)
+        tz_aware_date = datetime.now(UTC).replace(tzinfo=None)
         user = MockUser(password_last_changed=tz_aware_date)
 
         # 应该不崩溃并返回布尔值

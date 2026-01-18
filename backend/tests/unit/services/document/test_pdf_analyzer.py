@@ -19,7 +19,6 @@ from src.services.document.pdf_analyzer import (
     is_scanned_pdf,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -96,9 +95,7 @@ class TestAnalyzePDF:
         with pytest.raises(FileNotFoundError, match="PDF not found"):
             analyze_pdf("/nonexistent/path.pdf")
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_digital_pdf_recommends_text_extraction(
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
@@ -107,7 +104,9 @@ class TestAnalyzePDF:
         # Mock __getitem__ for page access
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             assert result["is_scanned"] is False
@@ -117,9 +116,7 @@ class TestAnalyzePDF:
             assert result["total_images"] == 0
             assert result["recommendation"] == "text"
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_scanned_pdf_recommends_vision_extraction(
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
@@ -127,7 +124,9 @@ class TestAnalyzePDF:
         # Setup: All pages are scanned (no text, has images)
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             assert result["is_scanned"] is True
@@ -137,9 +136,7 @@ class TestAnalyzePDF:
             assert result["total_images"] > 0
             assert result["recommendation"] == "vision"
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_mixed_pdf_recommends_vision_for_safety(
         self, sample_pdf_path, mock_pdf_doc, mock_mixed_page
     ):
@@ -147,7 +144,9 @@ class TestAnalyzePDF:
         # Setup: All pages have both text and images
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_mixed_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             # Mixed content defaults to vision for Chinese contracts
@@ -156,9 +155,7 @@ class TestAnalyzePDF:
             assert result["has_images"] is True
             assert result["recommendation"] == "vision"
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_pdf_handles_exception_gracefully(
         self, sample_pdf_path, mock_pdf_doc
     ):
@@ -166,7 +163,9 @@ class TestAnalyzePDF:
         # Simulate an exception during PDF processing
         mock_pdf_doc.__len__ = Mock(side_effect=RuntimeError("PDF corrupted"))
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             # Should default to vision on error (safer for Chinese contracts)
@@ -174,9 +173,7 @@ class TestAnalyzePDF:
             assert result["recommendation"] == "vision"
             assert "error" in result
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_pdf_limits_page_check_to_first_5_pages(
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
@@ -185,15 +182,15 @@ class TestAnalyzePDF:
         mock_pdf_doc.__len__ = Mock(return_value=10)
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             # Should report correct total page count
             assert result["page_count"] == 10
 
-    @pytest.mark.skipif(
-        not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed"
-    )
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_analyze_empty_pdf(self, sample_pdf_path, mock_pdf_doc):
         """Should handle PDF with no content gracefully"""
         # Create pages with very little text and no images
@@ -204,7 +201,9 @@ class TestAnalyzePDF:
 
         mock_pdf_doc.__getitem__ = Mock(return_value=nearly_empty_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = analyze_pdf(sample_pdf_path)
 
             # Low text count defaults to vision (recommendation checks avg_chars < 200)
@@ -226,7 +225,9 @@ class TestIsScannedPDF:
         """Should return True for scanned PDF"""
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = is_scanned_pdf(sample_pdf_path)
 
             assert result is True
@@ -237,7 +238,9 @@ class TestIsScannedPDF:
         """Should return False for digital PDF"""
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = is_scanned_pdf(sample_pdf_path)
 
             assert result is False
@@ -268,7 +271,9 @@ class TestGetExtractionRecommendation:
         """Should recommend 'vision' for scanned PDF"""
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = get_extraction_recommendation(sample_pdf_path)
 
             assert result == "vision"
@@ -279,7 +284,9 @@ class TestGetExtractionRecommendation:
         """Should recommend 'text' for digital PDF"""
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = get_extraction_recommendation(sample_pdf_path)
 
             assert result == "text"
@@ -290,7 +297,9 @@ class TestGetExtractionRecommendation:
         """Should default to 'vision' when analysis fails"""
         mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
 
-        with patch("src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc):
+        with patch(
+            "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
+        ):
             result = get_extraction_recommendation(sample_pdf_path)
 
             # Vision is the safer choice for Chinese contracts

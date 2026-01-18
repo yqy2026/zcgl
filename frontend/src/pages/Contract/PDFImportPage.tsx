@@ -55,7 +55,7 @@ const PDFImportPage: React.FC = () => {
             fileInfo={{
               filename: session.currentSession.fileInfo.name,
               size: session.currentSession.fileInfo.size ?? 0,
-              content_type: session.currentSession.fileInfo.type ?? 'application/pdf'
+              content_type: session.currentSession.fileInfo.type ?? 'application/pdf',
             }}
             onComplete={session.handleProcessingComplete}
             onError={session.handleProcessingError}
@@ -97,21 +97,31 @@ const PDFImportPage: React.FC = () => {
           />
         );
     }
-  }, [session.currentSession, session.handleUploadSuccess, session.handleUploadError,
-      session.handleProcessingComplete, session.handleProcessingError, session.handleCancel,
-      session.handleConfirmImport, session.handleBackToUpload, setActiveTab]);
+  }, [
+    session.currentSession,
+    session.handleUploadSuccess,
+    session.handleUploadError,
+    session.handleProcessingComplete,
+    session.handleProcessingError,
+    session.handleCancel,
+    session.handleConfirmImport,
+    session.handleBackToUpload,
+    setActiveTab,
+  ]);
 
   // 页面加载状态
   if (session.loading && session.currentSession == null) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        gap: 16
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
         <Spin size="large" />
         <span style={{ color: '#999' }}>正在初始化PDF导入系统...</span>
       </div>
@@ -119,10 +129,13 @@ const PDFImportPage: React.FC = () => {
   }
 
   return (
-    <div className={styles['pdf-import-page']} style={{
-      animation: 'fadeIn 0.3s ease-in-out',
-      minHeight: '100vh'
-    }}>
+    <div
+      className={styles['pdf-import-page']}
+      style={{
+        animation: 'fadeIn 0.3s ease-in-out',
+        minHeight: '100vh',
+      }}
+    >
       {/* 页面头部 */}
       <PDFImportHeader
         onShowHelp={() => setShowHelp(true)}
@@ -131,24 +144,15 @@ const PDFImportPage: React.FC = () => {
       />
 
       {/* 主要内容区域 */}
-      <Spin
-        spinning={session.loading}
-        tip="正在加载数据..."
-        size="large"
-        delay={300}
-      >
+      <Spin spinning={session.loading} tip="正在加载数据..." size="large" delay={300}>
         <Tabs
           activeKey={activeTab}
-          onChange={(key) => setActiveTab(key as 'upload' | 'history')}
+          onChange={key => setActiveTab(key as 'upload' | 'history')}
           items={[
             {
               key: 'upload',
               label: 'PDF导入',
-              children: (
-                <div>
-                  {renderCurrentSession}
-                </div>
-              )
+              children: <div>{renderCurrentSession}</div>,
             },
             {
               key: 'history',
@@ -158,16 +162,13 @@ const PDFImportPage: React.FC = () => {
                   sessionHistory={session.sessionHistory}
                   onSwitchToUpload={() => setActiveTab('upload')}
                 />
-              )
-            }
+              ),
+            },
           ]}
         />
 
         {/* 使用帮助模态框 */}
-        <PDFImportHelp
-          visible={showHelp}
-          onClose={() => setShowHelp(false)}
-        />
+        <PDFImportHelp visible={showHelp} onClose={() => setShowHelp(false)} />
       </Spin>
     </div>
   );

@@ -12,35 +12,34 @@ Target: 70%+ coverage for each service
 
 import base64
 from io import BytesIO
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
 from PIL import Image
+
+from src.services.core.base_vision_service import VisionAPIError
+from src.services.core.deepseek_vision_service import (
+    DeepSeekVisionResponse,
+    DeepSeekVisionService,
+    get_deepseek_vision_service,
+)
+from src.services.core.hunyuan_vision_service import (
+    HunyuanVisionResponse,
+    HunyuanVisionService,
+    get_hunyuan_vision_service,
+)
+from src.services.core.qwen_vision_service import (
+    QwenVisionResponse,
+    QwenVisionService,
+    get_qwen_vision_service,
+)
 
 # Import all vision services and their response models
 from src.services.core.zhipu_vision_service import (
     ZhipuVisionService,
     get_zhipu_vision_service,
 )
-from src.services.core.deepseek_vision_service import (
-    DeepSeekVisionService,
-    DeepSeekVisionResponse,
-    get_deepseek_vision_service,
-)
-from src.services.core.hunyuan_vision_service import (
-    HunyuanVisionService,
-    HunyuanVisionResponse,
-    get_hunyuan_vision_service,
-)
-from src.services.core.qwen_vision_service import (
-    QwenVisionService,
-    QwenVisionResponse,
-    get_qwen_vision_service,
-)
-from src.services.core.base_vision_service import VisionAPIError
-
 
 # ============================================================================
 # Test Fixtures
@@ -438,9 +437,7 @@ class TestZhipuVisionService:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "choices": [{"message": "not a dict"}]
-            }
+            mock_response.json.return_value = {"choices": [{"message": "not a dict"}]}
             mock_response.raise_for_status = Mock()
 
             mock_client.post = AsyncMock(return_value=mock_response)
@@ -558,7 +555,10 @@ class TestDeepSeekVisionService:
             )
 
             assert isinstance(result, DeepSeekVisionResponse)
-            assert result.content == mock_openai_response["choices"][0]["message"]["content"]
+            assert (
+                result.content
+                == mock_openai_response["choices"][0]["message"]["content"]
+            )
             assert result.usage == mock_openai_response["usage"]
             mock_client.post.assert_called_once()
 
@@ -611,9 +611,7 @@ class TestDeepSeekVisionService:
         assert "DEEPSEEK_API_KEY not configured" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_extract_from_images_http_error(
-        self, temp_image_file, monkeypatch
-    ):
+    async def test_extract_from_images_http_error(self, temp_image_file, monkeypatch):
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
@@ -736,7 +734,10 @@ class TestHunyuanVisionService:
             )
 
             assert isinstance(result, HunyuanVisionResponse)
-            assert result.content == mock_openai_response["choices"][0]["message"]["content"]
+            assert (
+                result.content
+                == mock_openai_response["choices"][0]["message"]["content"]
+            )
             assert result.usage == mock_openai_response["usage"]
             mock_client.post.assert_called_once()
 
@@ -789,9 +790,7 @@ class TestHunyuanVisionService:
         assert "HUNYUAN_API_KEY not configured" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_extract_from_images_http_error(
-        self, temp_image_file, monkeypatch
-    ):
+    async def test_extract_from_images_http_error(self, temp_image_file, monkeypatch):
         """Test extraction with HTTP error."""
         monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
@@ -892,7 +891,10 @@ class TestQwenVisionService:
             )
 
             assert isinstance(result, QwenVisionResponse)
-            assert result.content == mock_openai_response["choices"][0]["message"]["content"]
+            assert (
+                result.content
+                == mock_openai_response["choices"][0]["message"]["content"]
+            )
             assert result.usage == mock_openai_response["usage"]
             mock_client.post.assert_called_once()
 
@@ -945,9 +947,7 @@ class TestQwenVisionService:
         assert "DASHSCOPE_API_KEY not configured" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_extract_from_images_http_error(
-        self, temp_image_file, monkeypatch
-    ):
+    async def test_extract_from_images_http_error(self, temp_image_file, monkeypatch):
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 

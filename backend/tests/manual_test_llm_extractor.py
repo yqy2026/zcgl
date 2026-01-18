@@ -62,11 +62,9 @@ async def test_extraction():
     """
 
     # Mock the chat_completion method
-    extractor.llm_service.chat_completion = AsyncMock(return_value=LLMResponse(
-        content=mock_json_content,
-        raw_response={},
-        usage={}
-    ))
+    extractor.llm_service.chat_completion = AsyncMock(
+        return_value=LLMResponse(content=mock_json_content, raw_response={}, usage={})
+    )
 
     # 2. Run Extraction on "Markdown"
     fake_markdown = "# Contract 2024..."
@@ -76,15 +74,16 @@ async def test_extraction():
     print(f"Success: {result['success']}")
     print(f"Extraction Method: {result['extraction_method']}")
 
-    fields = result['extracted_fields']
+    fields = result["extracted_fields"]
     print(f"Contract Number: {fields['contract_number']}")
     print(f"Monthly Rent: {fields['monthly_rent']}")
 
-    assert fields['contract_number'] == "HT-2024-888"
-    assert fields['monthly_rent'] == 5000.0
-    assert fields['landlord_name'] == "Guangzhou Property Co"
+    assert fields["contract_number"] == "HT-2024-888"
+    assert fields["monthly_rent"] == 5000.0
+    assert fields["landlord_name"] == "Guangzhou Property Co"
 
     print("Verification Passed!")
+
 
 if __name__ == "__main__":
     asyncio.run(test_extraction())

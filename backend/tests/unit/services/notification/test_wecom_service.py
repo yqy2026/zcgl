@@ -6,8 +6,8 @@ WeCom Service 单元测试
 
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 import httpx
+import pytest
 
 from src.services.notification.wecom_service import WecomService, wecom_service
 
@@ -25,7 +25,9 @@ def wecom():
 def mock_settings():
     """模拟设置"""
     settings = Mock()
-    settings.WECOM_WEBHOOK_URL = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test"
+    settings.WECOM_WEBHOOK_URL = (
+        "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test"
+    )
     settings.WECOM_ENABLED = True
     return settings
 
@@ -151,8 +153,7 @@ class TestSendNotificationSuccess:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             result = await wecom.send_notification(
-                "Test message",
-                mentioned_list=["user1", "user2"]
+                "Test message", mentioned_list=["user1", "user2"]
             )
 
             assert result is True
@@ -199,7 +200,10 @@ class TestSendNotificationErrorHandling:
 
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"errcode": 40001, "errmsg": "invalid credential"}
+        mock_response.json.return_value = {
+            "errcode": 40001,
+            "errmsg": "invalid credential",
+        }
 
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
@@ -366,8 +370,7 @@ class TestSendMarkdownNotificationSuccess:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             result = await wecom.send_markdown_notification(
-                title="测试标题",
-                content="测试内容"
+                title="测试标题", content="测试内容"
             )
 
             assert result is True
@@ -388,8 +391,7 @@ class TestSendMarkdownNotificationSuccess:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             await wecom.send_markdown_notification(
-                title="# 标题",
-                content="内容行1\n内容行2"
+                title="# 标题", content="内容行1\n内容行2"
             )
 
             call_args = mock_client.post.call_args
@@ -411,10 +413,7 @@ class TestSendMarkdownNotificationErrorHandling:
         """测试禁用状态下发送Markdown"""
         wecom.enabled = False
 
-        result = await wecom.send_markdown_notification(
-            title="Test",
-            content="Content"
-        )
+        result = await wecom.send_markdown_notification(title="Test", content="Content")
 
         assert result is False
 
@@ -434,8 +433,7 @@ class TestSendMarkdownNotificationErrorHandling:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             result = await wecom.send_markdown_notification(
-                title="Test",
-                content="Content"
+                title="Test", content="Content"
             )
 
             assert result is False
@@ -452,8 +450,7 @@ class TestSendMarkdownNotificationErrorHandling:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             result = await wecom.send_markdown_notification(
-                title="Test",
-                content="Content"
+                title="Test", content="Content"
             )
 
             assert result is False
@@ -467,14 +464,12 @@ class TestSingletonInstance:
 
     def test_wecom_service_singleton_exists(self):
         """测试wecom_service单例存在"""
-        from src.services.notification.wecom_service import wecom_service
 
         assert wecom_service is not None
         assert isinstance(wecom_service, WecomService)
 
     def test_singleton_is_reusable(self):
         """测试单例可重用"""
-        from src.services.notification.wecom_service import wecom_service
 
         # 多次导入应该返回同一个实例
         from src.services.notification import wecom_service as wecom_service2
@@ -523,8 +518,7 @@ class TestSpecialCharacters:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             result = await wecom.send_markdown_notification(
-                title="测试标题 📢",
-                content="## 内容\n- 项目1\n- 项目2 ✅"
+                title="测试标题 📢", content="## 内容\n- 项目1\n- 项目2 ✅"
             )
 
             assert result is True

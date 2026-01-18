@@ -69,10 +69,7 @@ class TestCreateAuditLogSuccess:
         mock_audit_log = Mock(spec=AuditLog)
         mock_audit_log.id = "audit-123"
 
-        result = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="login"
-        )
+        result = audit_service.create_audit_log(user_id=mock_user.id, action="login")
 
         assert result is not None
         mock_db.query.assert_called_once_with(User)
@@ -103,13 +100,15 @@ class TestCreateAuditLogSuccess:
             response_message="成功",
             ip_address="192.168.1.100",
             user_agent="Mozilla/5.0",
-            session_id="session-abc-123"
+            session_id="session-abc-123",
         )
 
         assert result is not None
         mock_db.add.assert_called_once()
 
-    def test_create_audit_log_with_partial_fields(self, audit_service, mock_db, mock_user):
+    def test_create_audit_log_with_partial_fields(
+        self, audit_service, mock_db, mock_user
+    ):
         """测试创建包含部分字段的审计日志"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_user
@@ -119,7 +118,7 @@ class TestCreateAuditLogSuccess:
             user_id=mock_user.id,
             action="logout",
             resource_type="session",
-            ip_address="192.168.1.100"
+            ip_address="192.168.1.100",
         )
 
         assert result is not None
@@ -132,16 +131,10 @@ class TestCreateAuditLogSuccess:
         mock_db.query.return_value = mock_query
 
         # 第一个日志
-        result1 = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="login"
-        )
+        result1 = audit_service.create_audit_log(user_id=mock_user.id, action="login")
 
         # 第二个日志
-        result2 = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="logout"
-        )
+        result2 = audit_service.create_audit_log(user_id=mock_user.id, action="logout")
 
         assert result1 is not None
         assert result2 is not None
@@ -161,10 +154,7 @@ class TestCreateAuditLogRoleHandling:
         mock_query.filter.return_value.first.return_value = mock_user
         mock_db.query.return_value = mock_query
 
-        audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="test_action"
-        )
+        audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
 
         # 验证调用了add
         mock_db.add.assert_called_once()
@@ -176,8 +166,7 @@ class TestCreateAuditLogRoleHandling:
         mock_db.query.return_value = mock_query
 
         audit_service.create_audit_log(
-            user_id=mock_admin_user.id,
-            action="admin_action"
+            user_id=mock_admin_user.id, action="admin_action"
         )
 
         # 验证调用了add
@@ -197,8 +186,7 @@ class TestCreateAuditLogErrorHandling:
         mock_db.query.return_value = mock_query
 
         result = audit_service.create_audit_log(
-            user_id="nonexistent-user",
-            action="test_action"
+            user_id="nonexistent-user", action="test_action"
         )
 
         assert result is None
@@ -211,10 +199,7 @@ class TestCreateAuditLogErrorHandling:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        result = audit_service.create_audit_log(
-            user_id="",
-            action="test_action"
-        )
+        result = audit_service.create_audit_log(user_id="", action="test_action")
 
         assert result is None
 
@@ -223,10 +208,7 @@ class TestCreateAuditLogErrorHandling:
         mock_db.query.side_effect = Exception("Database connection error")
 
         with pytest.raises(Exception, match="Database connection error"):
-            audit_service.create_audit_log(
-                user_id="test-user",
-                action="test_action"
-            )
+            audit_service.create_audit_log(user_id="test-user", action="test_action")
 
     def test_database_error_on_add(self, audit_service, mock_db, mock_user):
         """测试add时数据库错误"""
@@ -236,10 +218,7 @@ class TestCreateAuditLogErrorHandling:
         mock_db.add.side_effect = Exception("Add failed")
 
         with pytest.raises(Exception, match="Add failed"):
-            audit_service.create_audit_log(
-                user_id=mock_user.id,
-                action="test_action"
-            )
+            audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
 
     def test_database_error_on_commit(self, audit_service, mock_db, mock_user):
         """测试commit时数据库错误"""
@@ -249,10 +228,7 @@ class TestCreateAuditLogErrorHandling:
         mock_db.commit.side_effect = Exception("Commit failed")
 
         with pytest.raises(Exception, match="Commit failed"):
-            audit_service.create_audit_log(
-                user_id=mock_user.id,
-                action="test_action"
-            )
+            audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
 
 
 # ============================================================================
@@ -261,28 +237,28 @@ class TestCreateAuditLogErrorHandling:
 class TestCreateAuditLogActionTypes:
     """测试不同的操作类型"""
 
-    @pytest.mark.parametrize("action", [
-        "login",
-        "logout",
-        "create",
-        "update",
-        "delete",
-        "view",
-        "export",
-        "import",
-        "approve",
-        "reject",
-    ])
+    @pytest.mark.parametrize(
+        "action",
+        [
+            "login",
+            "logout",
+            "create",
+            "update",
+            "delete",
+            "view",
+            "export",
+            "import",
+            "approve",
+            "reject",
+        ],
+    )
     def test_various_actions(self, audit_service, mock_db, mock_user, action):
         """测试各种操作类型"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_user
         mock_db.query.return_value = mock_query
 
-        result = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action=action
-        )
+        result = audit_service.create_audit_log(user_id=mock_user.id, action=action)
 
         assert result is not None
 
@@ -296,7 +272,7 @@ class TestCreateAuditLogActionTypes:
             user_id=mock_user.id,
             action="login",
             ip_address="192.168.1.100",
-            user_agent="Mozilla/5.0"
+            user_agent="Mozilla/5.0",
         )
 
         assert result is not None
@@ -312,7 +288,7 @@ class TestCreateAuditLogActionTypes:
             action="view",
             resource_type="asset",
             resource_id="asset-123",
-            api_endpoint="/api/v1/assets/asset-123"
+            api_endpoint="/api/v1/assets/asset-123",
         )
 
         assert result is not None
@@ -344,7 +320,7 @@ class TestCreateAuditLogEdgeCases:
             response_message=None,
             ip_address=None,
             user_agent=None,
-            session_id=None
+            session_id=None,
         )
 
         assert result is not None
@@ -356,17 +332,14 @@ class TestCreateAuditLogEdgeCases:
         mock_db.query.return_value = mock_query
 
         result = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="",
-            resource_type="",
-            resource_id=""
+            user_id=mock_user.id, action="", resource_type="", resource_id=""
         )
 
         assert result is not None
 
     def test_with_special_characters(self, audit_service, mock_db, mock_user):
         """测试特殊字符"""
-        special_chars = '测试\n\t\r\\"\'<>{}[]'
+        special_chars = "测试\n\t\r\\\"'<>{}[]"
 
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_user
@@ -376,7 +349,7 @@ class TestCreateAuditLogEdgeCases:
             user_id=mock_user.id,
             action="test_action",
             resource_name=special_chars,
-            response_message=special_chars
+            response_message=special_chars,
         )
 
         assert result is not None
@@ -390,9 +363,7 @@ class TestCreateAuditLogEdgeCases:
         mock_db.query.return_value = mock_query
 
         result = audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="test_action",
-            resource_name=unicode_text
+            user_id=mock_user.id, action="test_action", resource_name=unicode_text
         )
 
         assert result is not None
@@ -409,7 +380,7 @@ class TestCreateAuditLogEdgeCases:
             user_id=mock_user.id,
             action="test_action",
             request_params=json_data,
-            request_body=json_data
+            request_body=json_data,
         )
 
         assert result is not None
@@ -424,9 +395,7 @@ class TestCreateAuditLogEdgeCases:
 
         for status_code in status_codes:
             result = audit_service.create_audit_log(
-                user_id=mock_user.id,
-                action="test_action",
-                response_status=status_code
+                user_id=mock_user.id, action="test_action", response_status=status_code
             )
 
             assert result is not None
@@ -441,9 +410,7 @@ class TestCreateAuditLogEdgeCases:
 
         for method in http_methods:
             result = audit_service.create_audit_log(
-                user_id=mock_user.id,
-                action="test_action",
-                http_method=method
+                user_id=mock_user.id, action="test_action", http_method=method
             )
 
             assert result is not None
@@ -463,9 +430,7 @@ class TestAuditServiceIntegration:
 
         # 用户登录
         audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="login",
-            ip_address="192.168.1.100"
+            user_id=mock_user.id, action="login", ip_address="192.168.1.100"
         )
 
         # 用户查看数据
@@ -473,14 +438,11 @@ class TestAuditServiceIntegration:
             user_id=mock_user.id,
             action="view",
             resource_type="asset",
-            resource_id="asset-123"
+            resource_id="asset-123",
         )
 
         # 用户登出
-        audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="logout"
-        )
+        audit_service.create_audit_log(user_id=mock_user.id, action="logout")
 
         assert mock_db.commit.call_count == 3
 
@@ -495,7 +457,7 @@ class TestAuditServiceIntegration:
             action="create",
             resource_type="asset",
             response_status=400,
-            response_message="Validation Error: Invalid data"
+            response_message="Validation Error: Invalid data",
         )
 
         mock_db.add.assert_called_once()
@@ -512,7 +474,7 @@ class TestAuditServiceIntegration:
             resource_type="user",
             resource_id="user-to-delete",
             response_status=200,
-            response_message="User deleted successfully"
+            response_message="User deleted successfully",
         )
 
         mock_db.add.assert_called_once()
@@ -530,10 +492,7 @@ class TestDatabaseOperations:
         mock_query.filter.return_value.first.return_value = mock_user
         mock_db.query.return_value = mock_query
 
-        audit_service.create_audit_log(
-            user_id="specific-user-id",
-            action="test_action"
-        )
+        audit_service.create_audit_log(user_id="specific-user-id", action="test_action")
 
         mock_db.query.assert_called_once_with(User)
         mock_query.filter.assert_called_once()
@@ -544,10 +503,7 @@ class TestDatabaseOperations:
         mock_query.filter.return_value.first.return_value = mock_user
         mock_db.query.return_value = mock_query
 
-        audit_service.create_audit_log(
-            user_id=mock_user.id,
-            action="test_action"
-        )
+        audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
 
         # 验证调用顺序
         assert mock_db.query.called

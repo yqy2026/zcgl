@@ -1,14 +1,14 @@
-import React from 'react'
-import { Tag, Tooltip, Space } from 'antd'
-import type { EnumFieldValue } from '@/types/dictionary'
+import React from 'react';
+import { Tag, Tooltip, Space } from 'antd';
+import type { EnumFieldValue } from '@/types/dictionary';
 
 interface EnumValuePreviewProps {
-  values: EnumFieldValue[]
-  maxDisplay?: number
-  showInactiveCount?: boolean
-  _showInactiveCount?: boolean
-  size?: 'small' | 'middle' | 'large'
-  className?: string
+  values: EnumFieldValue[];
+  maxDisplay?: number;
+  showInactiveCount?: boolean;
+  _showInactiveCount?: boolean;
+  size?: 'small' | 'middle' | 'large';
+  className?: string;
 }
 
 /**
@@ -20,70 +20,100 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
   maxDisplay = 5,
   _showInactiveCount = true,
   size = 'small',
-  className = ''
+  className = '',
 }) => {
   if (values === undefined || values === null || !Array.isArray(values) || values.length === 0) {
     return (
-      <span className={`enum-preview-empty ${className}`} style={{ color: '#999', fontSize: '12px' }}>
+      <span
+        className={`enum-preview-empty ${className}`}
+        style={{ color: '#999', fontSize: '12px' }}
+      >
         暂无枚举值
       </span>
-    )
+    );
   }
 
   // 过滤活跃值并按排序排序
   const activeValues = values
     .filter(value => value.is_active)
     .sort((a, b) => a.sort_order - b.sort_order)
-    .slice(0, maxDisplay)
+    .slice(0, maxDisplay);
 
   // 计算非活跃数量
-  const inactiveCount = values.filter(value => !value.is_active).length
-  const remainingCount = values.length - activeValues.length
+  const inactiveCount = values.filter(value => !value.is_active).length;
+  const remainingCount = values.length - activeValues.length;
 
   // 根据size设置样式
   const getTagSize = () => {
     switch (size) {
       case 'large':
-        return { fontSize: '14px', padding: '4px 8px', marginBottom: '4px' }
+        return { fontSize: '14px', padding: '4px 8px', marginBottom: '4px' };
       case 'middle':
-        return { fontSize: '12px', padding: '2px 6px', marginBottom: '3px' }
+        return { fontSize: '12px', padding: '2px 6px', marginBottom: '3px' };
       case 'small':
       default:
-        return { fontSize: '11px', padding: '1px 4px', marginBottom: '2px' }
+        return { fontSize: '11px', padding: '1px 4px', marginBottom: '2px' };
     }
-  }
+  };
 
-  const tagStyle = getTagSize()
+  const tagStyle = getTagSize();
 
   return (
     <div className={`enum-value-preview ${className}`}>
       <Space wrap size={size === 'small' ? 2 : 4}>
-        {activeValues.map((value) => (
+        {activeValues.map(value => (
           <Tooltip
             key={value.id}
             title={
               <div>
-                <div><strong>标签:</strong> {value.label}</div>
-                <div><strong>值:</strong> {value.value}</div>
-                {value.code !== undefined && value.code !== null && value.code !== '' && <div><strong>编码:</strong> {value.code}</div>}
-                {value.description !== undefined && value.description !== null && value.description !== '' && <div><strong>描述:</strong> {value.description}</div>}
-                <div><strong>排序:</strong> {value.sort_order}</div>
-                {value.is_default && <div><strong>默认值:</strong> 是</div>}
+                <div>
+                  <strong>标签:</strong> {value.label}
+                </div>
+                <div>
+                  <strong>值:</strong> {value.value}
+                </div>
+                {value.code !== undefined && value.code !== null && value.code !== '' && (
+                  <div>
+                    <strong>编码:</strong> {value.code}
+                  </div>
+                )}
+                {value.description !== undefined &&
+                  value.description !== null &&
+                  value.description !== '' && (
+                    <div>
+                      <strong>描述:</strong> {value.description}
+                    </div>
+                  )}
+                <div>
+                  <strong>排序:</strong> {value.sort_order}
+                </div>
+                {value.is_default && (
+                  <div>
+                    <strong>默认值:</strong> 是
+                  </div>
+                )}
               </div>
             }
           >
             <Tag
-              color={(value.color !== undefined && value.color !== null && value.color !== '') ? value.color : (value.is_default ? 'gold' : 'green')}
+              color={
+                value.color !== undefined && value.color !== null && value.color !== ''
+                  ? value.color
+                  : value.is_default
+                    ? 'gold'
+                    : 'green'
+              }
               style={{
                 ...tagStyle,
                 cursor: 'default',
-                border: (value.color !== undefined && value.color !== null && value.color !== '') ? 'none' : '1px solid #d9d9d9'
+                border:
+                  value.color !== undefined && value.color !== null && value.color !== ''
+                    ? 'none'
+                    : '1px solid #d9d9d9',
               }}
             >
               {value.label}
-              {value.is_default && (
-                <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>★</span>
-              )}
+              {value.is_default && <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>★</span>}
             </Tag>
           </Tooltip>
         ))}
@@ -103,14 +133,14 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
             fontSize: '11px',
             color: '#ff4d4f',
             marginTop: '2px',
-            lineHeight: 1.2
+            lineHeight: 1.2,
           }}
         >
           {inactiveCount} 个已禁用
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default EnumValuePreview
+export default EnumValuePreview;

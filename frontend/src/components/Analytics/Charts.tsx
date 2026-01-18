@@ -1,42 +1,44 @@
-import React, { useMemo } from 'react'
-import { Pie, Column, Line, Area } from '@ant-design/plots'
-import ChartErrorBoundary from './ChartErrorBoundary'
-import { Empty, Spin } from 'antd'
-import { CHART_COLORS } from '@/styles/colorMap'
+import React, { useMemo } from 'react';
+import { Pie, Column, Line, Area } from '@ant-design/plots';
+import ChartErrorBoundary from './ChartErrorBoundary';
+import { Empty, Spin } from 'antd';
+import { CHART_COLORS } from '@/styles/colorMap';
 
 // Type for chart tooltip/formatter datum with dynamic field access
 interface ChartDatum {
-  type?: string
-  value?: number
-  [key: string]: unknown
+  type?: string;
+  value?: number;
+  [key: string]: unknown;
 }
 
 interface PieChartProps {
-  data: Array<{ name: string; value: number; percentage?: number }>
-  dataKey: string
-  labelKey?: string
-  outerRadius?: number
-  height?: number
-  showLegend?: boolean
-  loading?: boolean
+  data: Array<{ name: string; value: number; percentage?: number }>;
+  dataKey: string;
+  labelKey?: string;
+  outerRadius?: number;
+  height?: number;
+  showLegend?: boolean;
+  loading?: boolean;
 }
 
 export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   data,
-  dataKey: _dataKey,  // Unused in current implementation
-  labelKey: _labelKey = 'name',  // Unused in current implementation
+  dataKey: _dataKey, // Unused in current implementation
+  labelKey: _labelKey = 'name', // Unused in current implementation
   outerRadius = 80,
   height = 300,
   showLegend = true,
-  loading = false
+  loading = false,
 }) => {
   const chartData = useMemo(() => {
-    if (data == null || data.length === 0) return []
-    return data.filter(item => item.value > 0).map(item => ({
-      type: item.name,
-      value: item.value,
-    }))
-  }, [data])
+    if (data == null || data.length === 0) return [];
+    return data
+      .filter(item => item.value > 0)
+      .map(item => ({
+        type: item.name,
+        value: item.value,
+      }));
+  }, [data]);
 
   const config = {
     data: chartData,
@@ -48,51 +50,70 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       type: 'outer' as const,
       content: '{name} {percentage}',
     },
-    legend: showLegend ? {
-      layout: 'horizontal' as const,
-      position: 'bottom' as const,
-    } : false,
+    legend: showLegend
+      ? {
+          layout: 'horizontal' as const,
+          position: 'bottom' as const,
+        }
+      : false,
     tooltip: {
       formatter: (datum: ChartDatum) => ({
         name: datum.type ?? '',
-        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
+        value:
+          typeof datum.value === 'number'
+            ? datum.value.toLocaleString()
+            : String(datum.value ?? ''),
       }),
     },
-  }
+  };
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   return (
     <ChartErrorBoundary>
       <Pie {...config} height={height} />
     </ChartErrorBoundary>
-  )
-}
+  );
+};
 
 interface BarChartProps {
-  data: Array<Record<string, unknown>>
-  xDataKey: string
-  yDataKey: string
-  barName?: string
-  fill?: string
-  height?: number
-  showLegend?: boolean
-  loading?: boolean
-  isPercentage?: boolean
+  data: Array<Record<string, unknown>>;
+  xDataKey: string;
+  yDataKey: string;
+  barName?: string;
+  fill?: string;
+  height?: number;
+  showLegend?: boolean;
+  loading?: boolean;
+  isPercentage?: boolean;
 }
 
 export const AnalyticsBarChart: React.FC<BarChartProps> = ({
@@ -104,12 +125,12 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   height = 300,
   showLegend = true,
   loading = false,
-  isPercentage = false
+  isPercentage = false,
 }) => {
   const chartData = useMemo(() => {
-    if (data == null || data.length === 0) return []
-    return data
-  }, [data])
+    if (data == null || data.length === 0) return [];
+    return data;
+  }, [data]);
 
   const config = {
     data: chartData,
@@ -123,24 +144,22 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     label: {
       position: 'top' as const,
       formatter: (datum: ChartDatum) => {
-        const val = datum[yDataKey] as number | undefined
-        return isPercentage
-          ? `${val?.toFixed(1) ?? '0'}%`
-          : val?.toLocaleString() ?? '0'
+        const val = datum[yDataKey] as number | undefined;
+        return isPercentage ? `${val?.toFixed(1) ?? '0'}%` : (val?.toLocaleString() ?? '0');
       },
     },
-    legend: showLegend ? {
-      position: 'top' as const,
-    } : false,
+    legend: showLegend
+      ? {
+          position: 'top' as const,
+        }
+      : false,
     tooltip: {
       formatter: (datum: ChartDatum) => {
-        const val = datum[yDataKey] as number | undefined
+        const val = datum[yDataKey] as number | undefined;
         return {
           name: barName,
-          value: isPercentage
-            ? `${val?.toFixed(1) ?? '0'}%`
-            : val?.toLocaleString() ?? '0',
-        }
+          value: isPercentage ? `${val?.toFixed(1) ?? '0'}%` : (val?.toLocaleString() ?? '0'),
+        };
       },
     },
     yAxis: {
@@ -156,43 +175,57 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
         offset: 30,
       },
     },
-  }
+  };
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   return (
     <ChartErrorBoundary>
       <Column {...config} height={height} />
     </ChartErrorBoundary>
-  )
-}
+  );
+};
 
 interface LineChartProps {
-  data: Array<Record<string, unknown>>
-  xDataKey: string
-  yDataKey: string
-  lineName?: string
-  stroke?: string
-  strokeWidth?: number
-  height?: number
-  showLegend?: boolean
-  loading?: boolean
-  isPercentage?: boolean
-  showDots?: boolean
+  data: Array<Record<string, unknown>>;
+  xDataKey: string;
+  yDataKey: string;
+  lineName?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  height?: number;
+  showLegend?: boolean;
+  loading?: boolean;
+  isPercentage?: boolean;
+  showDots?: boolean;
 }
 
 export const AnalyticsLineChart: React.FC<LineChartProps> = ({
@@ -206,27 +239,41 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   showLegend = true,
   loading = false,
   isPercentage = false,
-  showDots = true
+  showDots = true,
 }) => {
   const chartData = useMemo(() => {
-    if (data == null || data.length === 0) return []
-    return data
-  }, [data])
+    if (data == null || data.length === 0) return [];
+    return data;
+  }, [data]);
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   const config = {
@@ -238,21 +285,23 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     lineStyle: {
       lineWidth: strokeWidth,
     },
-    point: showDots ? {
-      size: 4,
-    } : false,
-    legend: showLegend ? {
-      position: 'top' as const,
-    } : false,
+    point: showDots
+      ? {
+          size: 4,
+        }
+      : false,
+    legend: showLegend
+      ? {
+          position: 'top' as const,
+        }
+      : false,
     tooltip: {
       formatter: (datum: ChartDatum) => {
-        const val = datum[yDataKey] as number | undefined
+        const val = datum[yDataKey] as number | undefined;
         return {
           name: lineName,
-          value: isPercentage
-            ? `${val?.toFixed(1) ?? '0'}%`
-            : val?.toLocaleString() ?? '0',
-        }
+          value: isPercentage ? `${val?.toFixed(1) ?? '0'}%` : (val?.toLocaleString() ?? '0'),
+        };
       },
     },
     yAxis: {
@@ -267,42 +316,56 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
         offset: 30,
       },
     },
-  }
+  };
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   return (
     <ChartErrorBoundary>
       <Line {...config} height={height} />
     </ChartErrorBoundary>
-  )
-}
+  );
+};
 
 interface MultiBarChartProps {
-  data: Array<Record<string, unknown>>
-  xDataKey: string
+  data: Array<Record<string, unknown>>;
+  xDataKey: string;
   bars: Array<{
-    dataKey: string
-    name: string
-    fill: string
-  }>
-  height?: number
-  showLegend?: boolean
-  loading?: boolean
+    dataKey: string;
+    name: string;
+    fill: string;
+  }>;
+  height?: number;
+  showLegend?: boolean;
+  loading?: boolean;
 }
 
 export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
@@ -311,39 +374,53 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
   bars,
   height = 300,
   showLegend = true,
-  loading = false
+  loading = false,
 }) => {
   const chartData = useMemo(() => {
-    if (data == null || data.length === 0) return []
-    return data
-  }, [data])
+    if (data == null || data.length === 0) return [];
+    return data;
+  }, [data]);
 
   // Transform data for multi-series column chart
   const multiBarData = useMemo(() => {
-    if (chartData === undefined || chartData === null || chartData.length === 0) return []
+    if (chartData === undefined || chartData === null || chartData.length === 0) return [];
     return chartData.flatMap(item =>
       bars.map(bar => ({
         [xDataKey]: item[xDataKey],
         type: bar.name,
         value: item[bar.dataKey],
       }))
-    )
-  }, [chartData, bars, xDataKey])
+    );
+  }, [chartData, bars, xDataKey]);
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   const config = {
@@ -352,21 +429,26 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     yField: 'value',
     seriesField: 'type',
     color: ({ type }: ChartDatum) => {
-      const bar = bars.find(b => b.name === type)
-      return (bar !== undefined && bar !== null) ? bar.fill : CHART_COLORS[0]
+      const bar = bars.find(b => b.name === type);
+      return bar !== undefined && bar !== null ? bar.fill : CHART_COLORS[0];
     },
     isGroup: true,
     columnStyle: {
       fillOpacity: 0.8,
       radius: [4, 4, 0, 0],
     },
-    legend: showLegend ? {
-      position: 'top' as const,
-    } : false,
+    legend: showLegend
+      ? {
+          position: 'top' as const,
+        }
+      : false,
     tooltip: {
       formatter: (datum: ChartDatum) => ({
         name: datum.type ?? '',
-        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
+        value:
+          typeof datum.value === 'number'
+            ? datum.value.toLocaleString()
+            : String(datum.value ?? ''),
       }),
     },
     yAxis: {
@@ -379,45 +461,59 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
         offset: 30,
       },
     },
-  }
+  };
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   return (
     <ChartErrorBoundary>
       <Column {...config} height={height} />
     </ChartErrorBoundary>
-  )
-}
+  );
+};
 
 interface AreaChartProps {
-  data: Array<Record<string, unknown>>
-  xDataKey: string
-  yDataKey: string
-  areaName?: string
-  fill?: string
-  stroke?: string
-  height?: number
-  showLegend?: boolean
-  loading?: boolean
-  isPercentage?: boolean
+  data: Array<Record<string, unknown>>;
+  xDataKey: string;
+  yDataKey: string;
+  areaName?: string;
+  fill?: string;
+  stroke?: string;
+  height?: number;
+  showLegend?: boolean;
+  loading?: boolean;
+  isPercentage?: boolean;
   // Internal properties for compatibility
-  _fill?: string
-  _stroke?: string
+  _fill?: string;
+  _stroke?: string;
 }
 
 export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
@@ -430,27 +526,41 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
   height = 300,
   showLegend = true,
   loading = false,
-  isPercentage = false
+  isPercentage = false,
 }) => {
   const chartData = useMemo(() => {
-    if (data == null || data.length === 0) return []
-    return data
-  }, [data])
+    if (data == null || data.length === 0) return [];
+    return data;
+  }, [data]);
 
   if (loading !== undefined && loading !== null) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
-    )
+    );
   }
 
   if (chartData == null || chartData.length === 0) {
     return (
-      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: `${height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Empty description="暂无数据" />
       </div>
-    )
+    );
   }
 
   const config = {
@@ -468,18 +578,18 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
       },
     },
     color: CHART_COLORS[0],
-    legend: showLegend ? {
-      position: 'top' as const,
-    } : false,
+    legend: showLegend
+      ? {
+          position: 'top' as const,
+        }
+      : false,
     tooltip: {
       formatter: (datum: ChartDatum) => {
-        const val = datum[yDataKey] as number | undefined
+        const val = datum[yDataKey] as number | undefined;
         return {
           name: areaName,
-          value: isPercentage
-            ? `${val?.toFixed(1) ?? '0'}%`
-            : val?.toLocaleString() ?? '0',
-        }
+          value: isPercentage ? `${val?.toFixed(1) ?? '0'}%` : (val?.toLocaleString() ?? '0'),
+        };
       },
     },
     yAxis: {
@@ -494,11 +604,11 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
         offset: 30,
       },
     },
-  }
+  };
 
   return (
     <ChartErrorBoundary>
       <Area {...config} height={height} />
     </ChartErrorBoundary>
-  )
-}
+  );
+};

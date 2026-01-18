@@ -16,7 +16,9 @@ os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite:///./test_databas
 # 这里使用动态生成，因为测试不应依赖于特定的密钥值
 # 注意：必须使用真正随机的密钥，不能包含 "test", "secret", "key" 等弱模式
 test_secret_key = os.getenv("SECRET_KEY")
-if not test_secret_key or any(weak in test_secret_key.lower() for weak in ["test", "secret", "key", "changeme"]):
+if not test_secret_key or any(
+    weak in test_secret_key.lower() for weak in ["test", "secret", "key", "changeme"]
+):
     # 使用固定的测试密钥（确保无弱模式）
     # 这是个43字符的URL安全字符串，不包含任何弱密钥模式
     os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6"
@@ -68,14 +70,14 @@ def hide_env_file():
     if os.path.exists(env_path):
         # Rename .env to .env.backup
         shutil.move(env_path, backup_path)
-        print(f"[*] Temporarily hid .env file for tests (backed up as .env.backup)")
+        print("[*] Temporarily hid .env file for tests (backed up as .env.backup)")
 
     yield
 
     # Restore .env file after all tests complete
     if os.path.exists(backup_path):
         shutil.move(backup_path, env_path)
-        print(f"[*] Restored .env file after tests")
+        print("[*] Restored .env file after tests")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -112,7 +114,7 @@ def setup_test_database():
         # If we can't determine, be safe and run migrations
         run_migrations = True
 
-    if run_migrations and "sqlite" in database_url:
+    if run_migrations and ("sqlite" in database_url or "postgresql" in database_url):
         try:
             # Run Alembic migrations
             print(f"\n[*] Setting up test database: {database_url}")
@@ -153,7 +155,9 @@ def setup_test_database():
     yield
 
     # Cleanup: Optionally remove test database file
-    if "sqlite" in database_url and "test_database.db" in database_url:
+    if (
+        "sqlite" in database_url or "postgresql" in database_url
+    ) and "test" in database_url:
         db_path = database_url.replace("sqlite:///", "")
         if os.path.exists(db_path):
             try:

@@ -21,13 +21,11 @@ Testing Approach:
 - Test permission checks
 """
 
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
-from collections.abc import Callable
+import sys
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
-import sys
-import time
 
 # Create mock modules BEFORE importing
 permission_mock = MagicMock()
@@ -149,20 +147,26 @@ class TestReportRoutePerformance:
 
         # Mock logger to avoid any side effects
         with patch("src.api.v1.monitoring.logger"):
-            result = await report_route_performance(report=sample_performance_report, db=mock_db)
+            result = await report_route_performance(
+                report=sample_performance_report, db=mock_db
+            )
 
             assert result["success"] == str(True)
             assert result["message"] == "性能指标已保存"
 
     @pytest.mark.skip(reason="Logger mocking issue - coverage already achieved")
     @pytest.mark.asyncio
-    async def test_report_performance_with_slow_routes(self, mock_db, sample_slow_route_report):
+    async def test_report_performance_with_slow_routes(
+        self, mock_db, sample_slow_route_report
+    ):
         """Test reporting performance with slow route detection"""
         from src.api.v1.monitoring import report_route_performance
 
         # Mock logger to avoid any side effects
         with patch("src.api.v1.monitoring.logger"):
-            result = await report_route_performance(report=sample_slow_route_report, db=mock_db)
+            result = await report_route_performance(
+                report=sample_slow_route_report, db=mock_db
+            )
 
             assert result["success"] == str(True)
             assert result["message"] == "性能指标已保存"
@@ -189,7 +193,10 @@ class TestReportRoutePerformance:
     @pytest.mark.asyncio
     async def test_report_performance_with_errors(self, mock_db):
         """Test reporting performance with error metrics"""
-        from src.api.v1.monitoring import RoutePerformanceMetric, report_route_performance
+        from src.api.v1.monitoring import (
+            RoutePerformanceMetric,
+            report_route_performance,
+        )
 
         report = {
             "session_id": "error-session",
@@ -428,7 +435,7 @@ class TestCollectSystemMetrics:
     @pytest.mark.asyncio
     async def test_collect_system_metrics_history_limit(self, mock_psutil):
         """Test that metrics history is limited to 100 entries"""
-        from src.api.v1.monitoring import collect_system_metrics, _metrics_history
+        from src.api.v1.monitoring import _metrics_history, collect_system_metrics
 
         # Clear the history first
         _metrics_history.clear()
@@ -477,7 +484,10 @@ class TestCollectApplicationMetrics:
     @pytest.mark.asyncio
     async def test_collect_application_metrics_success(self):
         """Test collecting application metrics successfully"""
-        from src.api.v1.monitoring import collect_application_metrics, _application_metrics
+        from src.api.v1.monitoring import (
+            _application_metrics,
+            collect_application_metrics,
+        )
 
         # Clear the history first
         _application_metrics.clear()
@@ -494,7 +504,10 @@ class TestCollectApplicationMetrics:
     @pytest.mark.asyncio
     async def test_collect_application_metrics_history_limit(self):
         """Test that application metrics history is limited to 100 entries"""
-        from src.api.v1.monitoring import collect_application_metrics, _application_metrics
+        from src.api.v1.monitoring import (
+            _application_metrics,
+            collect_application_metrics,
+        )
 
         # Fill history to 100 items
         for _ in range(100):
@@ -534,11 +547,13 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_healthy_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_healthy_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for healthy system"""
         from src.api.v1.monitoring import (
-            SystemMetrics,
             ApplicationMetrics,
+            SystemMetrics,
             get_system_monitoring_dashboard,
         )
 
@@ -603,11 +618,13 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_degraded_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_degraded_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for degraded system"""
         from src.api.v1.monitoring import (
-            SystemMetrics,
             ApplicationMetrics,
+            SystemMetrics,
             get_system_monitoring_dashboard,
         )
 
@@ -650,11 +667,13 @@ class TestGetSystemMonitoringDashboard:
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @pytest.mark.asyncio
-    async def test_get_dashboard_unhealthy_system(self, mock_collect_app, mock_collect_sys):
+    async def test_get_dashboard_unhealthy_system(
+        self, mock_collect_app, mock_collect_sys
+    ):
         """Test getting dashboard data for unhealthy system"""
         from src.api.v1.monitoring import (
-            SystemMetrics,
             ApplicationMetrics,
+            SystemMetrics,
             get_system_monitoring_dashboard,
         )
 
@@ -721,11 +740,13 @@ class TestTriggerMetricsCollection:
     @patch("src.api.v1.monitoring.collect_application_metrics")
     @patch("src.api.v1.monitoring.collect_system_metrics")
     @pytest.mark.asyncio
-    async def test_trigger_metrics_collection_success(self, mock_collect_sys, mock_collect_app):
+    async def test_trigger_metrics_collection_success(
+        self, mock_collect_sys, mock_collect_app
+    ):
         """Test manual metrics collection successfully"""
         from src.api.v1.monitoring import (
-            SystemMetrics,
             ApplicationMetrics,
+            SystemMetrics,
             trigger_metrics_collection,
         )
 
@@ -903,8 +924,8 @@ class TestMonitoringEdgeCases:
         """Test dashboard with active alerts"""
         from src.api.v1.monitoring import (
             PerformanceAlert,
-            get_system_monitoring_dashboard,
             _active_alerts,
+            get_system_monitoring_dashboard,
         )
 
         # Create sample alerts
@@ -935,8 +956,10 @@ class TestMonitoringEdgeCases:
         )
 
         with patch("src.api.v1.monitoring.collect_system_metrics") as mock_collect_sys:
-            with patch("src.api.v1.monitoring.collect_application_metrics") as mock_collect_app:
-                from src.api.v1.monitoring import SystemMetrics, ApplicationMetrics
+            with patch(
+                "src.api.v1.monitoring.collect_application_metrics"
+            ) as mock_collect_app:
+                from src.api.v1.monitoring import ApplicationMetrics, SystemMetrics
 
                 mock_sys_metrics = SystemMetrics(
                     timestamp=datetime.now(UTC),

@@ -13,7 +13,10 @@ This test module covers batch operations for assets:
 from unittest.mock import MagicMock, patch
 
 import pytest
-pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication and database mocking setup")
+
+pytestmark = pytest.mark.skip(
+    reason="Unit API tests require proper authentication and database mocking setup"
+)
 from fastapi.testclient import TestClient
 
 
@@ -181,14 +184,18 @@ class TestBatchCustomFieldUpdate:
             "custom_fields": {"custom_field_1": "value1"},
         }
 
-        response = client.post("/api/v1/assets/batch-custom-field-update", json=update_request)
+        response = client.post(
+            "/api/v1/assets/batch-custom-field-update", json=update_request
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["success_count"] == 3
 
     @patch("src.api.v1.asset_batch.AssetBatchService")
-    def test_batch_custom_field_update_partial_failure(self, mock_batch_service, client):
+    def test_batch_custom_field_update_partial_failure(
+        self, mock_batch_service, client
+    ):
         """Test batch custom field update with some failures"""
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {
@@ -209,7 +216,9 @@ class TestBatchCustomFieldUpdate:
             "custom_fields": {"custom_field_1": "value1"},
         }
 
-        response = client.post("/api/v1/assets/batch-custom-field-update", json=update_request)
+        response = client.post(
+            "/api/v1/assets/batch-custom-field-update", json=update_request
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -270,9 +279,7 @@ class TestGetAssetsByIds:
 
         mock_asset_crud.get_by_id.side_effect = mock_get_by_id
 
-        request_data = {
-            "ids": ["id1", "id2", "id3"]
-        }
+        request_data = {"ids": ["id1", "id2", "id3"]}
 
         response = client.post("/api/v1/assets/by-ids", json=request_data)
 
@@ -324,9 +331,7 @@ class TestBatchDeleteAssets:
         # Mock deletion
         mock_asset_crud.remove.return_value = None
 
-        delete_request = {
-            "asset_ids": ["id1", "id2", "id3"]
-        }
+        delete_request = {"asset_ids": ["id1", "id2", "id3"]}
 
         response = client.post("/api/v1/assets/batch-delete", json=delete_request)
 
@@ -347,6 +352,7 @@ class TestBatchDeleteAssets:
     @patch("src.api.v1.asset_batch.asset_crud")
     def test_batch_delete_partial_failure(self, mock_asset_crud, client):
         """Test batch delete with some assets not found"""
+
         # Mock to raise exception for some IDs
         def mock_remove(db, id):
             if id == "id1":
@@ -356,9 +362,7 @@ class TestBatchDeleteAssets:
 
         mock_asset_crud.remove.side_effect = mock_remove
 
-        delete_request = {
-            "asset_ids": ["id1", "id2", "id3"]
-        }
+        delete_request = {"asset_ids": ["id1", "id2", "id3"]}
 
         response = client.post("/api/v1/assets/batch-delete", json=delete_request)
 
@@ -375,13 +379,17 @@ class TestBatchOperationsUnauthorized:
             "asset_ids": ["id1"],
             "updates": {"status": "active"},
         }
-        response = unauthenticated_client.post("/api/v1/assets/batch-update", json=update_request)
+        response = unauthenticated_client.post(
+            "/api/v1/assets/batch-update", json=update_request
+        )
         assert response.status_code == 401
 
     def test_batch_delete_unauthorized(self, unauthenticated_client):
         """Test that unauthorized users cannot batch delete"""
         delete_request = {"asset_ids": ["id1"]}
-        response = unauthenticated_client.post("/api/v1/assets/batch-delete", json=delete_request)
+        response = unauthenticated_client.post(
+            "/api/v1/assets/batch-delete", json=delete_request
+        )
         assert response.status_code == 401
 
     def test_validate_authorized(self, unauthenticated_client):
@@ -389,7 +397,9 @@ class TestBatchOperationsUnauthorized:
         validation_request = {
             "data": {"property_name": "Test"},
         }
-        response = unauthenticated_client.post("/api/v1/assets/validate", json=validation_request)
+        response = unauthenticated_client.post(
+            "/api/v1/assets/validate", json=validation_request
+        )
         assert response.status_code == 401
 
 
@@ -397,4 +407,5 @@ class TestBatchOperationsUnauthorized:
 def unauthenticated_client():
     """Fixture providing unauthenticated client"""
     from src.main import app
+
     return TestClient(app)

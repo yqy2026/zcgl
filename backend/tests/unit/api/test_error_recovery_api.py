@@ -15,10 +15,9 @@ This test module covers error recovery management endpoints:
 NOTE: These endpoints are not yet implemented. Tests are skipped until implementation.
 """
 
-import pytest
-
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 # Skip all tests in this module - endpoints not implemented yet
@@ -53,9 +52,7 @@ class TestErrorRecoveryStatistics:
         assert data["success_rate"] == 85.0
 
     @patch("src.api.v1.error_recovery.error_recovery_engine")
-    def test_get_statistics_with_category_filter(
-        self, mock_engine, client, admin_user
-    ):
+    def test_get_statistics_with_category_filter(self, mock_engine, client, admin_user):
         """Test filtering statistics by error category"""
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -127,7 +124,9 @@ class TestUpdateRecoveryStrategy:
             "auto_recovery": False,
         }
 
-        response = client.put("/api/v1/error-recovery/strategies/network", json=update_data)
+        response = client.put(
+            "/api/v1/error-recovery/strategies/network", json=update_data
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -150,9 +149,7 @@ class TestCircuitBreakerStatus:
     """Tests for GET /error-recovery/circuit-breakers endpoint"""
 
     @patch("src.api.v1.error_recovery.error_recovery_engine")
-    def test_get_circuit_breaker_status_success(
-        self, mock_engine, client, admin_user
-    ):
+    def test_get_circuit_breaker_status_success(self, mock_engine, client, admin_user):
         """Test successful retrieval of circuit breaker status"""
         # Mock circuit breaker data
         mock_engine.circuit_breakers = {
@@ -255,7 +252,9 @@ class TestRecoveryHistory:
             },
         ]
 
-        response = client.get("/api/v1/error-recovery/history?category=network&success=true")
+        response = client.get(
+            "/api/v1/error-recovery/history?category=network&success=true"
+        )
 
         assert response.status_code == 200
         data = response.json()

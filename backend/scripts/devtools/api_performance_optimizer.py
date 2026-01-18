@@ -50,7 +50,9 @@ class PerformanceOptimizer:
 
                     # 检查是否超出目标时间
                     if response_time > target_time_ms:
-                        self._record_slow_request(func.__name__, response_time, args, kwargs)
+                        self._record_slow_request(
+                            func.__name__, response_time, args, kwargs
+                        )
                         logger.warning(
                             f"API响应缓慢: {func.__name__} 耗时 {response_time:.1f}ms "
                             f"(目标: {target_time_ms:.1f}ms)"
@@ -100,7 +102,9 @@ class PerformanceOptimizer:
         self.performance_stats["error_rate"] += 1
         logger.error(f"API错误: {func_name} - {error}")
 
-    async def async_cache_result(self, cache_key: str, func: Callable, *args, **kwargs) -> Any:
+    async def async_cache_result(
+        self, cache_key: str, func: Callable, *args, **kwargs
+    ) -> Any:
         """异步缓存装饰器"""
         # 检查缓存
         if cache_key in self.response_cache:
@@ -126,7 +130,9 @@ class PerformanceOptimizer:
             self.response_cache[cache_key] = (result, datetime.now())
             logger.info(f"结果已缓存: {cache_key}")
         else:
-            logger.info(f"结果未缓存: {cache_key} - {self._should_cache_result(result)}")
+            logger.info(
+                f"结果未缓存: {cache_key} - {self._should_cache_result(result)}"
+            )
 
         # 记录性能
         response_time = (time.time() - start_time) * 1000
@@ -191,7 +197,10 @@ class PerformanceOptimizer:
                     [
                         r
                         for r in self.slow_requests
-                        if (now - datetime.fromisoformat(r["timestamp"])).total_seconds() < 3600
+                        if (
+                            now - datetime.fromisoformat(r["timestamp"])
+                        ).total_seconds()
+                        < 3600
                     ]
                 ),
                 "avg_response_time": sum(r["response_time"] for r in self.slow_requests)
@@ -256,7 +265,9 @@ class PerformanceOptimizer:
         functions = {}
         for request in self.slow_requests[-10:]:  # 最近10个慢请求
             func_name = request["function"]
-            functions[func_name] = functions.get(func_name, {"count": 0, "avg_time": 0.0})
+            functions[func_name] = functions.get(
+                func_name, {"count": 0, "avg_time": 0.0}
+            )
             functions[func_name]["count"] += 1
             functions[func_name]["avg_time"] += request["response_time"]
 

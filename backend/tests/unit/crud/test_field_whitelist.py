@@ -8,7 +8,6 @@ Tests cover:
 - Special cases (sorting allowed, filtering blocked)
 """
 
-
 from src.crud.field_whitelist import (
     WHITELIST_REGISTRY,
     AssetWhitelist,
@@ -234,6 +233,7 @@ class TestWhitelistRegistry:
 
     def test_register_and_retrieve_whitelist(self):
         """Should be able to register and retrieve whitelists."""
+
         # Create a mock model class
         class MockModel:
             __name__ = "MockModel"
@@ -252,6 +252,7 @@ class TestWhitelistRegistry:
 
     def test_unregistered_model_returns_empty(self):
         """Models without whitelists should get EmptyWhitelist (security-first)."""
+
         # Create a mock model class (not registered)
         class UnregisteredModel:
             __name__ = "UnregisteredModel"
@@ -327,13 +328,10 @@ class TestQueryBuilderIntegration:
 
         # Should log info
         with caplog.at_level(logging.INFO):
-            qb = QueryBuilder(UnregisteredModel)
+            QueryBuilder(UnregisteredModel)
 
         # Check info was logged
-        assert any(
-            "EMPTY whitelist" in record.message
-            for record in caplog.records
-        )
+        assert any("EMPTY whitelist" in record.message for record in caplog.records)
 
 
 class TestSecurityScenarios:
@@ -347,9 +345,9 @@ class TestSecurityScenarios:
         pii_fields = ["manager_name", "tenant_name", "project_phone"]
 
         for field in pii_fields:
-            assert not whitelist.can_filter(
-                field
-            ), f"PII field '{field}' should be blocked for filtering"
+            assert not whitelist.can_filter(field), (
+                f"PII field '{field}' should be blocked for filtering"
+            )
 
     def test_cannot_discover_financial_data(self):
         """Should not be able to filter by financial data."""

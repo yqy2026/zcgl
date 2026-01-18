@@ -12,9 +12,9 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def client(monkeypatch):
     """Create a test client for unit tests with authentication bypassed"""
+    from src.database import get_db
     from src.main import app
     from src.middleware.auth import get_current_active_user, require_permission
-    from src.database import get_db
 
     # Mock authenticated user
     mock_user = MagicMock()
@@ -31,10 +31,15 @@ def client(monkeypatch):
     def mock_require_permission(resource, action):
         def dependency():
             return mock_user
+
         return dependency
 
-    monkeypatch.setattr("src.middleware.auth.get_current_active_user", mock_get_current_user)
-    monkeypatch.setattr("src.middleware.auth.require_permission", mock_require_permission)
+    monkeypatch.setattr(
+        "src.middleware.auth.get_current_active_user", mock_get_current_user
+    )
+    monkeypatch.setattr(
+        "src.middleware.auth.require_permission", mock_require_permission
+    )
 
     # Override dependencies in FastAPI app
     app.dependency_overrides[get_current_active_user] = mock_get_current_user

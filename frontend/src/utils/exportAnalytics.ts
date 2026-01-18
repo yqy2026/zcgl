@@ -5,8 +5,6 @@
  * Uses native browser APIs for CSV export and provides PDF placeholder.
  */
 
-import type { AnalyticsResponse } from '@/types/analytics';
-
 // Simplified analytics data interface for export
 interface ExportableAnalyticsData {
   area_summary: {
@@ -24,8 +22,17 @@ interface ExportableAnalyticsData {
   ownership_status_distribution?: Array<{ status: string; count: number; percentage?: number }>;
   usage_status_distribution?: Array<{ status: string; count: number; percentage?: number }>;
   occupancy_distribution?: Array<{ range: string; count: number; percentage?: number }>;
-  business_category_distribution?: Array<{ category: string; occupancy_rate: number; count?: number }>;
-  occupancy_trend?: Array<{ date: string; occupancy_rate: number; total_rented_area?: number; total_rentable_area?: number }>;
+  business_category_distribution?: Array<{
+    category: string;
+    occupancy_rate: number;
+    count?: number;
+  }>;
+  occupancy_trend?: Array<{
+    date: string;
+    occupancy_rate: number;
+    total_rented_area?: number;
+    total_rentable_area?: number;
+  }>;
 }
 
 /**
@@ -211,7 +218,9 @@ async function exportToPDF(data: ExportableAnalyticsData, filename: string): Pro
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
+  // eslint-disable-next-line no-console
   console.warn('PDF export requires external library (jsPDF). Exported as text file instead.');
+  // eslint-disable-next-line no-console
   console.info('To enable PDF export, install jsPDF: pnpm add jspdf');
 }
 

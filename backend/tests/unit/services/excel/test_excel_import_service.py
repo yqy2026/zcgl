@@ -3,16 +3,14 @@
 """
 
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 from sqlalchemy.orm import Session
 
 from src.core.exception_handler import BusinessValidationError
-from src.schemas.asset import AssetUpdate
-from src.services.excel.excel_import_service import ExcelImportService, FIELD_MAPPING
+from src.services.excel.excel_import_service import FIELD_MAPPING, ExcelImportService
 
 
 @pytest.fixture
@@ -82,7 +80,9 @@ class TestExcelImportServiceErrorHandling:
             # Row 2: passes validation, counted as success (even though not created due to create_assets=False)
             assert result["failed"] == 1
             assert result["success"] == 1
-            assert result["created_assets"] == 0  # Nothing created because create_assets=False
+            assert (
+                result["created_assets"] == 0
+            )  # Nothing created because create_assets=False
             assert len(result["errors"]) == 1
             assert "property_name" in result["errors"][0]["error"]
 
@@ -372,17 +372,24 @@ class TestFieldMapping:
         assert asset_data["property_nature"] == "经营类"
         assert asset_data["include_in_occupancy_rate"] is True
         assert asset_data["reception_mode"] == "租赁"
-        assert asset_data["operation_agreement_start_date"] == datetime(
-            2024, 1, 1
-        ).date()
-        assert asset_data["operation_agreement_end_date"] == datetime(
-            2024, 12, 31
-        ).date()
+        assert (
+            asset_data["operation_agreement_start_date"] == datetime(2024, 1, 1).date()
+        )
+        assert (
+            asset_data["operation_agreement_end_date"] == datetime(2024, 12, 31).date()
+        )
         assert len(warnings) == 0
 
     def test_map_boolean_fields_true(self, excel_service):
         """测试布尔字段为True的情况"""
-        row = pd.Series({"物业名称": "测试", "物业地址": "地址", "是否涉诉": "是", "是否计入出租率": "True"})
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "是否涉诉": "是",
+                "是否计入出租率": "True",
+            }
+        )
 
         asset_data, _ = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -391,7 +398,14 @@ class TestFieldMapping:
 
     def test_map_boolean_fields_false(self, excel_service):
         """测试布尔字段为False的情况"""
-        row = pd.Series({"物业名称": "测试", "物业地址": "地址", "是否涉诉": "否", "是否计入出租率": "false"})
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "是否涉诉": "否",
+                "是否计入出租率": "false",
+            }
+        )
 
         asset_data, _ = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -400,12 +414,14 @@ class TestFieldMapping:
 
     def test_map_numeric_fields_invalid(self, excel_service):
         """测试无效数值字段"""
-        row = pd.Series({
-            "物业名称": "测试",
-            "物业地址": "地址",
-            "土地面积(平方米)": "invalid",
-            "可出租面积(平方米)": "abc",
-        })
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "土地面积(平方米)": "invalid",
+                "可出租面积(平方米)": "abc",
+            }
+        )
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -416,29 +432,35 @@ class TestFieldMapping:
 
     def test_map_date_fields_valid_string(self, excel_service):
         """测试有效日期字符串"""
-        row = pd.Series({
-            "物业名称": "测试",
-            "物业地址": "地址",
-            "(当前)接收协议开始日期": "2024-01-15",
-            "(当前)接收协议结束日期": "2024-12-31",
-        })
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "(当前)接收协议开始日期": "2024-01-15",
+                "(当前)接收协议结束日期": "2024-12-31",
+            }
+        )
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
-        assert asset_data["operation_agreement_start_date"] == datetime(
-            2024, 1, 15
-        ).date()
-        assert asset_data["operation_agreement_end_date"] == datetime(2024, 12, 31).date()
+        assert (
+            asset_data["operation_agreement_start_date"] == datetime(2024, 1, 15).date()
+        )
+        assert (
+            asset_data["operation_agreement_end_date"] == datetime(2024, 12, 31).date()
+        )
         assert len(warnings) == 0
 
     def test_map_date_fields_invalid_string(self, excel_service):
         """测试无效日期字符串"""
-        row = pd.Series({
-            "物业名称": "测试",
-            "物业地址": "地址",
-            "(当前)接收协议开始日期": "2024/01/15",  # 错误格式
-            "(当前)接收协议结束日期": "invalid",
-        })
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "(当前)接收协议开始日期": "2024/01/15",  # 错误格式
+                "(当前)接收协议结束日期": "invalid",
+            }
+        )
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -450,11 +472,13 @@ class TestFieldMapping:
     def test_map_date_fields_datetime_object(self, excel_service):
         """测试datetime对象"""
         test_date = datetime(2024, 6, 15, 10, 30, 0)
-        row = pd.Series({
-            "物业名称": "测试",
-            "物业地址": "地址",
-            "(当前)接收协议开始日期": test_date,
-        })
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "(当前)接收协议开始日期": test_date,
+            }
+        )
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -475,12 +499,14 @@ class TestFieldMapping:
 
     def test_map_nan_values(self, excel_service):
         """测试NaN值"""
-        row = pd.Series({
-            "物业名称": "测试",
-            "物业地址": "地址",
-            "土地面积(平方米)": None,
-            "是否涉诉": None,
-        })
+        row = pd.Series(
+            {
+                "物业名称": "测试",
+                "物业地址": "地址",
+                "土地面积(平方米)": None,
+                "是否涉诉": None,
+            }
+        )
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
@@ -555,11 +581,13 @@ class TestUpdateExistingAssets:
     async def test_update_existing_asset(self, excel_service, mock_db):
         """测试更新已存在资产"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["已存在资产"],
-                "物业地址": ["地址1"],
-                "权属方": "新权属方",
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["已存在资产"],
+                    "物业地址": ["地址1"],
+                    "权属方": "新权属方",
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
                 return_value=(True, [], [], ["property_name"])
@@ -579,7 +607,9 @@ class TestUpdateExistingAssets:
             existing_asset = MagicMock(id="existing_id")
             excel_service._find_existing_asset = MagicMock(return_value=existing_asset)
 
-            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+            with patch(
+                "src.services.excel.excel_import_service.asset_crud"
+            ) as mock_crud:
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     validate_data=True,
@@ -595,10 +625,12 @@ class TestUpdateExistingAssets:
     async def test_skip_existing_asset_without_update(self, excel_service, mock_db):
         """测试不更新时跳过已存在资产"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["已存在资产"],
-                "物业地址": ["地址1"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["已存在资产"],
+                    "物业地址": ["地址1"],
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
                 return_value=(True, [], [], ["property_name"])
@@ -614,7 +646,9 @@ class TestUpdateExistingAssets:
             existing_asset = MagicMock(id="existing_id")
             excel_service._find_existing_asset = MagicMock(return_value=existing_asset)
 
-            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+            with patch(
+                "src.services.excel.excel_import_service.asset_crud"
+            ) as mock_crud:
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     validate_data=True,
@@ -671,11 +705,13 @@ class TestValidateExcelFile:
         """测试验证成功"""
         with patch("os.path.exists", return_value=True):
             with patch("pandas.read_excel") as mock_read:
-                mock_read.return_value = pd.DataFrame({
-                    "物业名称": ["测试"],
-                    "物业地址": ["地址"],
-                    "权属方": ["权属"],
-                })
+                mock_read.return_value = pd.DataFrame(
+                    {
+                        "物业名称": ["测试"],
+                        "物业地址": ["地址"],
+                        "权属方": ["权属"],
+                    }
+                )
 
                 result = excel_service.validate_excel_file("valid.xlsx")
 
@@ -703,11 +739,13 @@ class TestPreviewExcelFile:
     async def test_preview_success(self, excel_service):
         """测试预览成功"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1", "资产2", "资产3"],
-                "物业地址": ["地址1", "地址2", "地址3"],
-                "权属方": ["权属1", "权属2", "权属3"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1", "资产2", "资产3"],
+                    "物业地址": ["地址1", "地址2", "地址3"],
+                    "权属方": ["权属1", "权属2", "权属3"],
+                }
+            )
 
             result = await excel_service.preview_excel_file("test.xlsx", max_rows=2)
 
@@ -721,10 +759,12 @@ class TestPreviewExcelFile:
     async def test_preview_with_nan_values(self, excel_service):
         """测试预览包含NaN值"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1", None, "资产3"],
-                "物业地址": ["地址1", "地址2", None],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1", None, "资产3"],
+                    "物业地址": ["地址1", "地址2", None],
+                }
+            )
 
             result = await excel_service.preview_excel_file("test.xlsx")
 
@@ -737,10 +777,12 @@ class TestPreviewExcelFile:
         """测试预览包含日期时间"""
         test_date = datetime(2024, 6, 15)
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1"],
-                "创建日期": [test_date],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1"],
+                    "创建日期": [test_date],
+                }
+            )
 
             result = await excel_service.preview_excel_file("test.xlsx")
 
@@ -767,16 +809,24 @@ class TestWarningsCollection:
     async def test_parse_warnings_collection(self, excel_service):
         """测试解析警告收集"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1"],
-                "物业地址": ["地址1"],
-                "土地面积(平方米)": ["invalid"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1"],
+                    "物业地址": ["地址1"],
+                    "土地面积(平方米)": ["invalid"],
+                }
+            )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 return_value=(
                     {"property_name": "资产1", "address": "地址1"},
-                    [{"field": "land_area", "value": "invalid", "warning": "无法解析为数值"}],
+                    [
+                        {
+                            "field": "land_area",
+                            "value": "invalid",
+                            "warning": "无法解析为数值",
+                        }
+                    ],
                 )
             )
 

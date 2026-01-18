@@ -78,7 +78,9 @@ class TestGetBasicStatistics:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_basic_statistics_no_filters(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_basic_statistics_no_filters(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test basic statistics without filters"""
         from src.api.v1.statistics import get_basic_statistics
 
@@ -102,7 +104,9 @@ class TestGetBasicStatistics:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_basic_statistics_with_filters(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_basic_statistics_with_filters(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test basic statistics with ownership_status filter"""
         from src.api.v1.statistics import get_basic_statistics
 
@@ -137,7 +141,9 @@ class TestGetBasicStatistics:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_basic_statistics_all_filters(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_basic_statistics_all_filters(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test basic statistics with all filters applied"""
         from src.api.v1.statistics import get_basic_statistics
 
@@ -170,14 +176,18 @@ class TestGetStatisticsSummary:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_summary_empty_database(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_summary_empty_database(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test summary with empty database"""
         from src.api.v1.statistics import get_statistics_summary
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
-        result = await get_statistics_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_statistics_summary(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_assets == 0
         assert result.ownership_status["confirmed"] == 0
@@ -185,7 +195,9 @@ class TestGetStatisticsSummary:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_summary_with_data(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_summary_with_data(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test summary with actual data"""
         from src.api.v1.statistics import get_statistics_summary
 
@@ -203,7 +215,9 @@ class TestGetStatisticsSummary:
             ([MagicMock() for _ in range(2)], 2),  # vacant
         ]
 
-        result = await get_statistics_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_statistics_summary(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_assets == 20
         assert result.ownership_status["confirmed"] == 10
@@ -221,7 +235,9 @@ class TestGetOverallOccupancyRate:
     """Tests for GET /api/v1/statistics/occupancy-rate/overall endpoint"""
 
     @patch("src.api.v1.statistics.OccupancyService")
-    def test_get_overall_occupancy_rate_default(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    def test_get_overall_occupancy_rate_default(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test overall occupancy rate with default parameters"""
         from src.api.v1.statistics import get_overall_occupancy_rate
 
@@ -235,7 +251,10 @@ class TestGetOverallOccupancyRate:
         mock_occupancy_service_class.return_value = mock_service
 
         result = get_overall_occupancy_rate(
-            include_deleted=False, use_aggregation=True, db=mock_db, current_user=mock_current_user
+            include_deleted=False,
+            use_aggregation=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.overall_occupancy_rate == 75.5
@@ -244,7 +263,9 @@ class TestGetOverallOccupancyRate:
         assert isinstance(result.calculated_at, datetime)
 
     @patch("src.api.v1.statistics.OccupancyService")
-    def test_get_overall_occupancy_rate_include_deleted(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    def test_get_overall_occupancy_rate_include_deleted(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test overall occupancy rate including deleted assets"""
         from src.api.v1.statistics import get_overall_occupancy_rate
 
@@ -257,7 +278,10 @@ class TestGetOverallOccupancyRate:
         mock_occupancy_service_class.return_value = mock_service
 
         result = get_overall_occupancy_rate(
-            include_deleted=True, use_aggregation=True, db=mock_db, current_user=mock_current_user
+            include_deleted=True,
+            use_aggregation=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.overall_occupancy_rate == 80.0
@@ -265,7 +289,9 @@ class TestGetOverallOccupancyRate:
         mock_service.calculate_with_aggregation.assert_called_once()
 
     @patch("src.api.v1.statistics.OccupancyService")
-    def test_get_overall_occupancy_rate_zero_area(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    def test_get_overall_occupancy_rate_zero_area(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test overall occupancy rate with zero area"""
         from src.api.v1.statistics import get_overall_occupancy_rate
 
@@ -278,7 +304,10 @@ class TestGetOverallOccupancyRate:
         mock_occupancy_service_class.return_value = mock_service
 
         result = get_overall_occupancy_rate(
-            include_deleted=False, use_aggregation=True, db=mock_db, current_user=mock_current_user
+            include_deleted=False,
+            use_aggregation=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.overall_occupancy_rate == 0.0
@@ -294,14 +323,26 @@ class TestGetOccupancyRateByCategory:
     """Tests for GET /api/v1/statistics/occupancy-rate/by-category endpoint"""
 
     @patch("src.api.v1.statistics.OccupancyService")
-    def test_get_occupancy_by_category_default_field(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    def test_get_occupancy_by_category_default_field(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test occupancy by category with default field"""
         from src.api.v1.statistics import get_occupancy_rate_by_category
 
         mock_service = MagicMock()
         mock_service.calculate_category_with_aggregation.return_value = {
-            "经营性": {"overall_rate": 80.0, "total_rentable_area": 500.0, "total_rented_area": 400.0, "asset_count": 5},
-            "非经营性": {"overall_rate": 60.0, "total_rentable_area": 300.0, "total_rented_area": 180.0, "asset_count": 3},
+            "经营性": {
+                "overall_rate": 80.0,
+                "total_rentable_area": 500.0,
+                "total_rented_area": 400.0,
+                "asset_count": 5,
+            },
+            "非经营性": {
+                "overall_rate": 60.0,
+                "total_rentable_area": 300.0,
+                "total_rented_area": 180.0,
+                "asset_count": 3,
+            },
         }
         mock_occupancy_service_class.return_value = mock_service
 
@@ -355,7 +396,12 @@ class TestGetOccupancyRateByCategory:
 
         mock_service = MagicMock()
         mock_service.calculate_category_with_aggregation.return_value = {
-            "test_category": {"overall_rate": 70.0, "total_rentable_area": 100.0, "total_rented_area": 70.0, "asset_count": 1}
+            "test_category": {
+                "overall_rate": 70.0,
+                "total_rentable_area": 100.0,
+                "total_rented_area": 70.0,
+                "asset_count": 1,
+            }
         }
         mock_occupancy_service_class.return_value = mock_service
 
@@ -379,7 +425,9 @@ class TestGetAreaSummary:
     """Tests for GET /api/v1/statistics/area-summary endpoint"""
 
     @patch("src.api.v1.statistics.AreaService")
-    def test_get_area_summary_default(self, mock_area_service_class, mock_db, mock_current_user):
+    def test_get_area_summary_default(
+        self, mock_area_service_class, mock_db, mock_current_user
+    ):
         """Test area summary with default parameters"""
         from src.api.v1.statistics import get_area_summary
 
@@ -394,7 +442,10 @@ class TestGetAreaSummary:
         mock_area_service_class.return_value = mock_service
 
         result = get_area_summary(
-            include_deleted=False, use_aggregation=True, db=mock_db, current_user=mock_current_user
+            include_deleted=False,
+            use_aggregation=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.total_area == 5000.0
@@ -404,7 +455,9 @@ class TestGetAreaSummary:
         assert result.occupancy_rate == 80.0
 
     @patch("src.api.v1.statistics.AreaService")
-    def test_get_area_summary_include_deleted(self, mock_area_service_class, mock_db, mock_current_user):
+    def test_get_area_summary_include_deleted(
+        self, mock_area_service_class, mock_db, mock_current_user
+    ):
         """Test area summary including deleted assets"""
         from src.api.v1.statistics import get_area_summary
 
@@ -419,7 +472,10 @@ class TestGetAreaSummary:
         mock_area_service_class.return_value = mock_service
 
         result = get_area_summary(
-            include_deleted=True, use_aggregation=True, db=mock_db, current_user=mock_current_user
+            include_deleted=True,
+            use_aggregation=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.total_area == 6000.0
@@ -436,14 +492,18 @@ class TestGetFinancialSummary:
 
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
-    def test_get_financial_summary_empty(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    def test_get_financial_summary_empty(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test financial summary with no assets"""
         from src.api.v1.statistics import get_financial_summary
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
         mock_to_float.return_value = 0.0
 
-        result = get_financial_summary(include_deleted=False, db=mock_db, current_user=mock_current_user)
+        result = get_financial_summary(
+            include_deleted=False, db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_assets == 0
         assert result.total_annual_income == 0.0
@@ -452,7 +512,9 @@ class TestGetFinancialSummary:
 
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
-    def test_get_financial_summary_with_assets(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    def test_get_financial_summary_with_assets(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test financial summary with assets"""
         from src.api.v1.statistics import get_financial_summary
 
@@ -471,7 +533,9 @@ class TestGetFinancialSummary:
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 3)
         mock_to_float.side_effect = lambda x: x  # Return value as-is
 
-        result = get_financial_summary(include_deleted=False, db=mock_db, current_user=mock_current_user)
+        result = get_financial_summary(
+            include_deleted=False, db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_assets == 3
         assert result.total_annual_income > 0
@@ -482,7 +546,9 @@ class TestGetFinancialSummary:
 
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
-    def test_get_financial_summary_per_sqm_calculation(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    def test_get_financial_summary_per_sqm_calculation(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test per-square-meter calculations"""
         from src.api.v1.statistics import get_financial_summary
 
@@ -501,7 +567,9 @@ class TestGetFinancialSummary:
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 2)
         mock_to_float.side_effect = lambda x: x
 
-        result = get_financial_summary(include_deleted=False, db=mock_db, current_user=mock_current_user)
+        result = get_financial_summary(
+            include_deleted=False, db=mock_db, current_user=mock_current_user
+        )
 
         # 120000 income / 1000 area = 120 per sqm
         expected_income_per_sqm = 120.0
@@ -604,7 +672,9 @@ class TestGetDashboardData:
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
-    async def test_get_dashboard_data_empty(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_dashboard_data_empty(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test dashboard data with no assets"""
         from src.api.v1.statistics import get_dashboard_data
 
@@ -624,7 +694,9 @@ class TestGetDashboardData:
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
-    async def test_get_dashboard_data_with_assets(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_dashboard_data_with_assets(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test dashboard data with assets"""
         from src.api.v1.statistics import get_dashboard_data
 
@@ -672,21 +744,27 @@ class TestGetOwnershipDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_ownership_distribution_empty(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_ownership_distribution_empty(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test ownership distribution with no assets"""
         from src.api.v1.statistics import get_ownership_distribution
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
-        result = await get_ownership_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_ownership_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 0
         assert len(result.categories) == 3  # confirmed, unconfirmed, partial
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_ownership_distribution_with_data(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_ownership_distribution_with_data(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test ownership distribution with assets"""
         from src.api.v1.statistics import get_ownership_distribution
 
@@ -697,7 +775,9 @@ class TestGetOwnershipDistribution:
             ([MagicMock() for _ in range(2)], 2),  # partial
         ]
 
-        result = await get_ownership_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_ownership_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 10
         assert len(result.categories) == 3
@@ -716,21 +796,27 @@ class TestGetPropertyNatureDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_property_nature_distribution_empty(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_property_nature_distribution_empty(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test property nature distribution with no assets"""
         from src.api.v1.statistics import get_property_nature_distribution
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
-        result = await get_property_nature_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_property_nature_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 0
         assert len(result.categories) == 2  # commercial, non_commercial
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_property_nature_distribution_with_data(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_property_nature_distribution_with_data(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test property nature distribution with assets"""
         from src.api.v1.statistics import get_property_nature_distribution
 
@@ -740,7 +826,9 @@ class TestGetPropertyNatureDistribution:
             ([MagicMock() for _ in range(4)], 4),  # non_commercial
         ]
 
-        result = await get_property_nature_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_property_nature_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 10
         assert result.categories[0].name == "经营性"
@@ -758,21 +846,27 @@ class TestGetUsageStatusDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_usage_status_distribution_empty(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_usage_status_distribution_empty(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test usage status distribution with no assets"""
         from src.api.v1.statistics import get_usage_status_distribution
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
-        result = await get_usage_status_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_usage_status_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 0
         assert len(result.categories) == 3  # rented, vacant, self_used
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_usage_status_distribution_with_data(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_usage_status_distribution_with_data(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test usage status distribution with assets"""
         from src.api.v1.statistics import get_usage_status_distribution
 
@@ -783,7 +877,9 @@ class TestGetUsageStatusDistribution:
             ([MagicMock() for _ in range(2)], 2),  # self_used
         ]
 
-        result = await get_usage_status_distribution(db=mock_db, current_user=mock_current_user)
+        result = await get_usage_status_distribution(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 10
         assert result.categories[0].name == "出租"
@@ -801,12 +897,17 @@ class TestGetTrendData:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_trend_occupancy_rate(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_trend_occupancy_rate(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test trend data for occupancy_rate metric"""
         from src.api.v1.statistics import get_trend_data
 
         result = await get_trend_data(
-            metric="occupancy_rate", period="monthly", db=mock_db, current_user=mock_current_user
+            metric="occupancy_rate",
+            period="monthly",
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.metric_name == "occupancy_rate"
@@ -821,7 +922,12 @@ class TestGetTrendData:
         """Test trend data for income metric"""
         from src.api.v1.statistics import get_trend_data
 
-        result = await get_trend_data(metric="income", period="monthly", db=mock_db, current_user=mock_current_user)
+        result = await get_trend_data(
+            metric="income",
+            period="monthly",
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         assert result.metric_name == "income"
         assert len(result.time_series) == 6
@@ -830,12 +936,17 @@ class TestGetTrendData:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_trend_unknown_metric(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_trend_unknown_metric(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test trend data for unknown metric"""
         from src.api.v1.statistics import get_trend_data
 
         result = await get_trend_data(
-            metric="unknown_metric", period="monthly", db=mock_db, current_user=mock_current_user
+            metric="unknown_metric",
+            period="monthly",
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.metric_name == "unknown_metric"
@@ -845,7 +956,9 @@ class TestGetTrendData:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_trend_different_periods(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_trend_different_periods(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test trend data with different periods"""
         from src.api.v1.statistics import get_trend_data
 
@@ -853,7 +966,10 @@ class TestGetTrendData:
 
         for period in periods:
             result = await get_trend_data(
-                metric="occupancy_rate", period=period, db=mock_db, current_user=mock_current_user
+                metric="occupancy_rate",
+                period=period,
+                db=mock_db,
+                current_user=mock_current_user,
             )
             assert result.metric_name == "occupancy_rate"
             assert len(result.time_series) == 6
@@ -869,7 +985,9 @@ class TestGetOccupancyRateStatistics:
 
     @patch("src.api.v1.statistics.OccupancyService")
     @pytest.mark.asyncio
-    async def test_get_occupancy_rate_statistics_no_filters(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    async def test_get_occupancy_rate_statistics_no_filters(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test occupancy rate statistics without filters"""
         from src.api.v1.statistics import get_occupancy_rate_statistics
 
@@ -899,7 +1017,9 @@ class TestGetOccupancyRateStatistics:
 
     @patch("src.api.v1.statistics.OccupancyService")
     @pytest.mark.asyncio
-    async def test_get_occupancy_rate_statistics_with_filters(self, mock_occupancy_service_class, mock_db, mock_current_user):
+    async def test_get_occupancy_rate_statistics_with_filters(
+        self, mock_occupancy_service_class, mock_db, mock_current_user
+    ):
         """Test occupancy rate statistics with filters"""
         from src.api.v1.statistics import get_occupancy_rate_statistics
 
@@ -938,7 +1058,9 @@ class TestGetAssetDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_asset_distribution_default_group(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_asset_distribution_default_group(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test asset distribution with default grouping"""
         from src.api.v1.statistics import get_asset_distribution
 
@@ -952,7 +1074,10 @@ class TestGetAssetDistribution:
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 10)
 
         result = await get_asset_distribution(
-            group_by="ownership_status", include_deleted=False, db=mock_db, current_user=mock_current_user
+            group_by="ownership_status",
+            include_deleted=False,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["success"] is True
@@ -962,7 +1087,9 @@ class TestGetAssetDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_asset_distribution_invalid_group(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_asset_distribution_invalid_group(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test asset distribution with invalid group_by field"""
         from src.api.v1.statistics import get_asset_distribution
 
@@ -970,7 +1097,10 @@ class TestGetAssetDistribution:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_asset_distribution(
-                group_by="invalid_field", include_deleted=False, db=mock_db, current_user=mock_current_user
+                group_by="invalid_field",
+                include_deleted=False,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -978,7 +1108,9 @@ class TestGetAssetDistribution:
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_asset_distribution_all_valid_fields(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_asset_distribution_all_valid_fields(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test asset distribution with all valid group_by fields"""
         from src.api.v1.statistics import get_asset_distribution
 
@@ -995,20 +1127,28 @@ class TestGetAssetDistribution:
 
         for field in valid_fields:
             result = await get_asset_distribution(
-                group_by=field, include_deleted=False, db=mock_db, current_user=mock_current_user
+                group_by=field,
+                include_deleted=False,
+                db=mock_db,
+                current_user=mock_current_user,
             )
             assert result["data"]["group_by"] == field
 
     @patch("src.api.v1.statistics.asset_crud")
     @pytest.mark.asyncio
-    async def test_get_asset_distribution_include_deleted(self, mock_asset_crud, mock_db, mock_current_user):
+    async def test_get_asset_distribution_include_deleted(
+        self, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test asset distribution including deleted assets"""
         from src.api.v1.statistics import get_asset_distribution
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
         result = await get_asset_distribution(
-            group_by="ownership_status", include_deleted=True, db=mock_db, current_user=mock_current_user
+            group_by="ownership_status",
+            include_deleted=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["success"] is True
@@ -1026,7 +1166,9 @@ class TestGetAreaStatistics:
 
     @patch("src.api.v1.statistics.AreaService")
     @pytest.mark.asyncio
-    async def test_get_area_statistics_default(self, mock_area_service_class, mock_db, mock_current_user):
+    async def test_get_area_statistics_default(
+        self, mock_area_service_class, mock_db, mock_current_user
+    ):
         """Test area statistics with default parameters"""
         from src.api.v1.statistics import get_area_statistics
 
@@ -1059,7 +1201,9 @@ class TestGetAreaStatistics:
 
     @patch("src.api.v1.statistics.AreaService")
     @pytest.mark.asyncio
-    async def test_get_area_statistics_with_filters(self, mock_area_service_class, mock_db, mock_current_user):
+    async def test_get_area_statistics_with_filters(
+        self, mock_area_service_class, mock_db, mock_current_user
+    ):
         """Test area statistics with filters"""
         from src.api.v1.statistics import get_area_statistics
 
@@ -1104,7 +1248,13 @@ class TestGetComprehensiveStatistics:
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
     async def test_get_comprehensive_statistics_no_assets(
-        self, mock_to_float, mock_asset_crud, mock_area_service_class, mock_occupancy_service_class, mock_db, mock_current_user
+        self,
+        mock_to_float,
+        mock_asset_crud,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test comprehensive statistics with no matching assets"""
         from src.api.v1.statistics import get_comprehensive_statistics
@@ -1131,7 +1281,13 @@ class TestGetComprehensiveStatistics:
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
     async def test_get_comprehensive_statistics_with_assets(
-        self, mock_to_float, mock_asset_crud, mock_area_service_class, mock_occupancy_service_class, mock_db, mock_current_user
+        self,
+        mock_to_float,
+        mock_asset_crud,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test comprehensive statistics with assets"""
         from src.api.v1.statistics import get_comprehensive_statistics
@@ -1202,7 +1358,13 @@ class TestGetComprehensiveStatistics:
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
     async def test_get_comprehensive_statistics_with_filters(
-        self, mock_to_float, mock_asset_crud, mock_area_service_class, mock_occupancy_service_class, mock_db, mock_current_user
+        self,
+        mock_to_float,
+        mock_asset_crud,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test comprehensive statistics with filters"""
         from src.api.v1.statistics import get_comprehensive_statistics
@@ -1271,7 +1433,9 @@ class TestStatisticsEdgeCases:
     @patch("src.api.v1.statistics.asset_crud")
     @patch("src.api.v1.statistics.to_float")
     @pytest.mark.asyncio
-    async def test_zero_division_protection(self, mock_to_float, mock_asset_crud, mock_db, mock_current_user):
+    async def test_zero_division_protection(
+        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+    ):
         """Test division by zero protection in calculations"""
         from src.api.v1.statistics import get_dashboard_data
 

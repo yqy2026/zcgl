@@ -19,8 +19,6 @@ const SimpleAnalyticsPage: React.FC = () => {
     total_monthly_rent: 80000,
   };
 
-  console.log('SimpleAnalyticsPage rendered with mockData:', mockData);
-
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>资产分析（简化版）</Title>

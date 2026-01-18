@@ -1,5 +1,5 @@
-import React from 'react'
-import { Breadcrumb } from 'antd'
+import React from 'react';
+import { Breadcrumb } from 'antd';
 import {
   HomeOutlined,
   DashboardOutlined,
@@ -15,12 +15,12 @@ import {
   SettingOutlined,
   EditOutlined,
   EyeOutlined,
-} from '@ant-design/icons'
-import { useLocation, Link } from 'react-router-dom'
+} from '@ant-design/icons';
+import { useLocation, Link } from 'react-router-dom';
 
 const AppBreadcrumb: React.FC = () => {
-  const location = useLocation()
-  const pathname = location.pathname
+  const location = useLocation();
+  const pathname = location.pathname;
 
   // 面包屑配置映射
   const breadcrumbNameMap: Record<string, { name: string; icon?: React.ReactNode }> = {
@@ -40,11 +40,11 @@ const AppBreadcrumb: React.FC = () => {
     '/system/logs': { name: '操作日志', icon: <SettingOutlined /> },
     '/system/dictionaries': { name: '枚举值字段', icon: <SettingOutlined /> },
     '/ownership': { name: '权属方管理', icon: <SettingOutlined /> },
-  }
+  };
 
   // 生成面包屑项
   const generateBreadcrumbItems = () => {
-    const pathSnippets = pathname.split('/').filter(i => i)
+    const pathSnippets = pathname.split('/').filter(i => i);
 
     // 首页面包屑
     const breadcrumbItems = [
@@ -56,7 +56,7 @@ const AppBreadcrumb: React.FC = () => {
           </Link>
         ),
       },
-    ]
+    ];
 
     // 处理特殊路径
     if (pathname === '/dashboard' || pathname === '/') {
@@ -69,13 +69,13 @@ const AppBreadcrumb: React.FC = () => {
             </span>
           ),
         },
-      ]
+      ];
     }
 
     // 处理资产详情页面
-    const assetDetailMatch = pathname.match(/^\/assets\/(\d+)$/)
+    const assetDetailMatch = pathname.match(/^\/assets\/(\d+)$/);
     if (assetDetailMatch !== undefined && assetDetailMatch !== null) {
-      const _assetId = assetDetailMatch[1]
+      const _assetId = assetDetailMatch[1];
       return [
         ...breadcrumbItems,
         {
@@ -102,13 +102,13 @@ const AppBreadcrumb: React.FC = () => {
             </span>
           ),
         },
-      ]
+      ];
     }
 
     // 处理资产编辑页面
-    const assetEditMatch = pathname.match(/^\/assets\/(\d+)\/edit$/)
+    const assetEditMatch = pathname.match(/^\/assets\/(\d+)\/edit$/);
     if (assetEditMatch !== undefined && assetEditMatch !== null) {
-      const assetId = assetEditMatch[1]
+      const assetId = assetEditMatch[1];
       return [
         ...breadcrumbItems,
         {
@@ -143,16 +143,16 @@ const AppBreadcrumb: React.FC = () => {
             </span>
           ),
         },
-      ]
+      ];
     }
 
     // 构建普通路径的面包屑
-    let currentPath = ''
+    let currentPath = '';
 
     pathSnippets.forEach((snippet, index) => {
-      currentPath += `/${snippet}`
-      const isLast = index === pathSnippets.length - 1
-      const breadcrumbConfig = breadcrumbNameMap[currentPath]
+      currentPath += `/${snippet}`;
+      const isLast = index === pathSnippets.length - 1;
+      const breadcrumbConfig = breadcrumbNameMap[currentPath];
 
       if (breadcrumbConfig != null) {
         if (isLast !== undefined && isLast !== null) {
@@ -166,7 +166,7 @@ const AppBreadcrumb: React.FC = () => {
                 {breadcrumbConfig.name}
               </span>
             ),
-          })
+          });
         } else {
           // 中间项添加链接
           breadcrumbItems.push({
@@ -178,17 +178,23 @@ const AppBreadcrumb: React.FC = () => {
                 {breadcrumbConfig.name}
               </Link>
             ),
-          })
+          });
         }
       }
-    })
+    });
 
     // 添加分类面包屑
-    if (pathname.startsWith('/assets') && !breadcrumbItems.some(item =>
-      typeof item.title === 'object' &&
-      React.isValidElement(item.title) &&
-      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('资产管理') === true
-    )) {
+    if (
+      pathname.startsWith('/assets') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '资产管理'
+          ) === true
+      )
+    ) {
       breadcrumbItems.splice(1, 0, {
         title: (
           <span>
@@ -196,14 +202,20 @@ const AppBreadcrumb: React.FC = () => {
             资产管理
           </span>
         ),
-      })
+      });
     }
 
-    if (pathname.startsWith('/data') && !breadcrumbItems.some(item =>
-      typeof item.title === 'object' &&
-      React.isValidElement(item.title) &&
-      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('数据管理') === true
-    )) {
+    if (
+      pathname.startsWith('/data') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '数据管理'
+          ) === true
+      )
+    ) {
       breadcrumbItems.splice(1, 0, {
         title: (
           <span>
@@ -211,14 +223,20 @@ const AppBreadcrumb: React.FC = () => {
             数据管理
           </span>
         ),
-      })
+      });
     }
 
-    if (pathname.startsWith('/analytics') && !breadcrumbItems.some(item =>
-      typeof item.title === 'object' &&
-      React.isValidElement(item.title) &&
-      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('数据分析') === true
-    )) {
+    if (
+      pathname.startsWith('/analytics') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '数据分析'
+          ) === true
+      )
+    ) {
       breadcrumbItems.splice(1, 0, {
         title: (
           <span>
@@ -226,14 +244,20 @@ const AppBreadcrumb: React.FC = () => {
             数据分析
           </span>
         ),
-      })
+      });
     }
 
-    if (pathname.startsWith('/system') && !breadcrumbItems.some(item =>
-      typeof item.title === 'object' &&
-      React.isValidElement(item.title) &&
-      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('系统管理') === true
-    )) {
+    if (
+      pathname.startsWith('/system') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '系统管理'
+          ) === true
+      )
+    ) {
       breadcrumbItems.splice(1, 0, {
         title: (
           <span>
@@ -241,14 +265,20 @@ const AppBreadcrumb: React.FC = () => {
             系统管理
           </span>
         ),
-      })
+      });
     }
 
-    if (pathname.startsWith('/ownership') && !breadcrumbItems.some(item =>
-      typeof item.title === 'object' &&
-      React.isValidElement(item.title) &&
-      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('资产管理') === true
-    )) {
+    if (
+      pathname.startsWith('/ownership') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '资产管理'
+          ) === true
+      )
+    ) {
       breadcrumbItems.splice(1, 0, {
         title: (
           <span>
@@ -256,11 +286,11 @@ const AppBreadcrumb: React.FC = () => {
             资产管理
           </span>
         ),
-      })
+      });
     }
 
-    return breadcrumbItems
-  }
+    return breadcrumbItems;
+  };
 
   return (
     <Breadcrumb
@@ -269,7 +299,7 @@ const AppBreadcrumb: React.FC = () => {
         fontSize: '14px',
       }}
     />
-  )
-}
+  );
+};
 
-export default AppBreadcrumb
+export default AppBreadcrumb;

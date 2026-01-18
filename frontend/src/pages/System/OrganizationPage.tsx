@@ -19,7 +19,7 @@ import {
   Tree,
   Tabs,
   Divider,
-  Badge
+  Badge,
 } from 'antd';
 import { COLORS } from '@/styles/colorMap';
 import { MessageManager } from '@/utils/messageManager';
@@ -33,21 +33,26 @@ import {
   BankOutlined,
   ApartmentOutlined,
   SettingOutlined,
-  HistoryOutlined
+  HistoryOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
-import { Organization, OrganizationStatistics, OrganizationHistory, OrganizationTree } from '../../types/organization';
+import {
+  Organization,
+  OrganizationStatistics,
+  OrganizationHistory,
+  OrganizationTree,
+} from '../../types/organization';
 import { organizationService } from '../../services/organizationService';
 // 组织表单数据类型
 interface OrganizationFormData {
-  name: string
-  code: string
-  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office'
-  parent_id?: string
-  description?: string
-  status: 'active' | 'inactive' | 'suspended'
-  sort_order?: number
+  name: string;
+  code: string;
+  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  parent_id?: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'suspended';
+  sort_order?: number;
 }
 
 const { Option } = Select;
@@ -76,14 +81,14 @@ const OrganizationPage: React.FC = () => {
     { value: 'division', label: '事业部', icon: <PartitionOutlined /> },
     { value: 'team', label: '团队', icon: <TeamOutlined /> },
     { value: 'branch', label: '分公司', icon: <BankOutlined /> },
-    { value: 'office', label: '办事处', icon: <SettingOutlined /> }
+    { value: 'office', label: '办事处', icon: <SettingOutlined /> },
   ];
 
   // 状态选项
   const statusOptions = [
     { value: 'active', label: '活跃', color: 'green' },
     { value: 'inactive', label: '停用', color: 'red' },
-    { value: 'suspended', label: '暂停', color: 'orange' }
+    { value: 'suspended', label: '暂停', color: 'orange' },
   ];
 
   useEffect(() => {
@@ -133,7 +138,8 @@ const OrganizationPage: React.FC = () => {
           </Tag>
         </span>
       ),
-      children: org.children != null && org.children.length > 0 ? _convertToTreeData(org.children) : []
+      children:
+        org.children != null && org.children.length > 0 ? _convertToTreeData(org.children) : [],
     }));
   };
 
@@ -148,7 +154,10 @@ const OrganizationPage: React.FC = () => {
           </Tag>
         </span>
       ),
-      children: node.children != null && node.children.length > 0 ? convertTreeToDataNodes(node.children) : []
+      children:
+        node.children != null && node.children.length > 0
+          ? convertTreeToDataNodes(node.children)
+          : [],
     }));
   };
 
@@ -194,7 +203,7 @@ const OrganizationPage: React.FC = () => {
     setEditingOrganization(organization);
     form.setFieldsValue({
       ...organization,
-      parent_id: organization.parent_id ?? undefined
+      parent_id: organization.parent_id ?? undefined,
     });
     setModalVisible(true);
   };
@@ -251,68 +260,59 @@ const OrganizationPage: React.FC = () => {
           <span>{text}</span>
           <Tag color="blue">{record.code}</Tag>
         </Space>
-      )
+      ),
     },
     {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type) => {
+      render: type => {
         const typeConfig = organizationTypes.find(t => t.value === type);
         return typeConfig?.label ?? type;
-      }
+      },
     },
     {
       title: '层级',
       dataIndex: 'level',
       key: 'level',
-      render: (level) => <Badge count={level} color="blue" />
+      render: level => <Badge count={level} color="blue" />,
     },
     {
       title: '负责人',
       dataIndex: 'leader_name',
       key: 'leader_name',
-      render: (name, record) => (
+      render: (name, record) =>
         name != null ? (
-          <Tooltip title={`电话: ${record.leader_phone ?? '未设置'} | 邮箱: ${record.leader_email ?? '未设置'}`}>
+          <Tooltip
+            title={`电话: ${record.leader_phone ?? '未设置'} | 邮箱: ${record.leader_email ?? '未设置'}`}
+          >
             <span>{name}</span>
           </Tooltip>
-        ) : '-'
-      )
+        ) : (
+          '-'
+        ),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={getStatusColor(status)}>
-          {getStatusLabel(status)}
-        </Tag>
-      )
+      render: status => <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>,
     },
     {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => new Date(date).toLocaleString()
+      render: date => new Date(date).toLocaleString(),
     },
     {
       title: '操作',
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Button
-            type="link"
-            icon={<HistoryOutlined />}
-            onClick={() => handleViewHistory(record)}
-          >
+          <Button type="link" icon={<HistoryOutlined />} onClick={() => handleViewHistory(record)}>
             历史
           </Button>
           <Popconfirm
@@ -321,17 +321,13 @@ const OrganizationPage: React.FC = () => {
             okText="确定"
             cancelText="取消"
           >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-            >
+            <Button type="link" danger icon={<DeleteOutlined />}>
               删除
             </Button>
           </Popconfirm>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   const historyColumns: ColumnsType<OrganizationHistory> = [
@@ -339,46 +335,46 @@ const OrganizationPage: React.FC = () => {
       title: '操作类型',
       dataIndex: 'action',
       key: 'action',
-      render: (action) => {
+      render: action => {
         const actionMap: { [key: string]: { label: string; color: string } } = {
           create: { label: '创建', color: 'green' },
           update: { label: '更新', color: 'blue' },
-          delete: { label: '删除', color: 'red' }
+          delete: { label: '删除', color: 'red' },
         };
         const config = actionMap[action] ?? { label: action ?? '未知', color: 'default' };
         return <Tag color={config.color}>{config.label}</Tag>;
-      }
+      },
     },
     {
       title: '字段名称',
       dataIndex: 'field_name',
       key: 'field_name',
-      render: (field) => field ?? '-'
+      render: field => field ?? '-',
     },
     {
       title: '原值',
       dataIndex: 'old_value',
       key: 'old_value',
-      render: (value) => value ?? '-'
+      render: value => value ?? '-',
     },
     {
       title: '新值',
       dataIndex: 'new_value',
       key: 'new_value',
-      render: (value) => value ?? '-'
+      render: value => value ?? '-',
     },
     {
       title: '操作人',
       dataIndex: 'created_by',
       key: 'created_by',
-      render: (user) => user ?? '系统'
+      render: user => user ?? '系统',
     },
     {
       title: '操作时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => new Date(date).toLocaleString()
-    }
+      render: date => new Date(date).toLocaleString(),
+    },
   ];
 
   return (
@@ -388,11 +384,7 @@ const OrganizationPage: React.FC = () => {
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card>
-              <Statistic
-                title="总组织数"
-                value={statistics.total}
-                prefix={<ApartmentOutlined />}
-              />
+              <Statistic title="总组织数" value={statistics.total} prefix={<ApartmentOutlined />} />
             </Card>
           </Col>
           <Col span={6}>
@@ -440,20 +432,13 @@ const OrganizationPage: React.FC = () => {
                       style={{ width: 300 }}
                       onSearch={handleSearch}
                     />
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={loadOrganizations}
-                    >
+                    <Button icon={<ReloadOutlined />} onClick={loadOrganizations}>
                       刷新
                     </Button>
                   </Space>
                 </Col>
                 <Col>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleCreate}
-                  >
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
                     新建组织
                   </Button>
                 </Col>
@@ -470,17 +455,14 @@ const OrganizationPage: React.FC = () => {
                 pageSize: 10,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条记录`
+                showTotal: total => `共 ${total} 条记录`,
               }}
             />
           </TabPane>
 
           <TabPane tab="树形视图" key="tree">
             <div style={{ marginBottom: 16 }}>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={loadOrganizationTree}
-              >
+              <Button icon={<ReloadOutlined />} onClick={loadOrganizationTree}>
                 刷新树形结构
               </Button>
             </div>
@@ -492,7 +474,6 @@ const OrganizationPage: React.FC = () => {
               style={{ background: COLORS.bgSecondary, padding: 16, borderRadius: 6 }}
             />
           </TabPane>
-
         </Tabs>
       </Card>
 
@@ -504,11 +485,7 @@ const OrganizationPage: React.FC = () => {
         footer={null}
         width={800}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -525,7 +502,10 @@ const OrganizationPage: React.FC = () => {
                 label="组织编码"
                 rules={[
                   { required: true, message: '请输入组织编码' },
-                  { pattern: /^[A-Z0-9_-]+$/, message: '编码只能包含大写字母、数字、下划线和连字符' }
+                  {
+                    pattern: /^[A-Z0-9_-]+$/,
+                    message: '编码只能包含大写字母、数字、下划线和连字符',
+                  },
                 ]}
               >
                 <Input placeholder="请输入组织编码" />
@@ -565,19 +545,13 @@ const OrganizationPage: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                name="sort_order"
-                label="排序"
-              >
+              <Form.Item name="sort_order" label="排序">
                 <InputNumber min={0} placeholder="排序号" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item
-            name="parent_id"
-            label="上级组织"
-          >
+          <Form.Item name="parent_id" label="上级组织">
             <TreeSelect
               placeholder="请选择上级组织"
               allowClear
@@ -590,18 +564,12 @@ const OrganizationPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item
-                name="leader_name"
-                label="负责人姓名"
-              >
+              <Form.Item name="leader_name" label="负责人姓名">
                 <Input placeholder="请输入负责人姓名" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                name="leader_phone"
-                label="负责人电话"
-              >
+              <Form.Item name="leader_phone" label="负责人电话">
                 <Input placeholder="请输入负责人电话" />
               </Form.Item>
             </Col>
@@ -620,10 +588,7 @@ const OrganizationPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item
-                name="phone"
-                label="组织电话"
-              >
+              <Form.Item name="phone" label="组织电话">
                 <Input placeholder="请输入组织电话" />
               </Form.Item>
             </Col>
@@ -637,34 +602,23 @@ const OrganizationPage: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                name="address"
-                label="组织地址"
-              >
+              <Form.Item name="address" label="组织地址">
                 <Input placeholder="请输入组织地址" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item
-            name="description"
-            label="组织描述"
-          >
+          <Form.Item name="description" label="组织描述">
             <Input.TextArea rows={3} placeholder="请输入组织描述" />
           </Form.Item>
 
-          <Form.Item
-            name="functions"
-            label="主要职能"
-          >
+          <Form.Item name="functions" label="主要职能">
             <Input.TextArea rows={3} placeholder="请输入主要职能" />
           </Form.Item>
 
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>
-              <Button onClick={() => setModalVisible(false)}>
-                取消
-              </Button>
+              <Button onClick={() => setModalVisible(false)}>取消</Button>
               <Button type="primary" htmlType="submit">
                 {editingOrganization ? '更新' : '创建'}
               </Button>
@@ -688,7 +642,7 @@ const OrganizationPage: React.FC = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条记录`
+            showTotal: total => `共 ${total} 条记录`,
           }}
         />
       </Modal>

@@ -18,11 +18,14 @@ import httpx
 import pytest
 
 # Skip all tests in this module - pdf_to_images module not implemented
-pytestmark = pytest.mark.skip(reason="PDF to images conversion module not yet implemented")
+pytestmark = pytest.mark.skip(
+    reason="PDF to images conversion module not yet implemented"
+)
 
 # ============================================================================
 # PDF 转 图像边缘情况测试
 # ============================================================================
+
 
 class TestPDFToImagesEdgeCases:
     """PDF 转 图像边缘情况测试"""
@@ -58,8 +61,10 @@ class TestPDFToImagesEdgeCases:
 
         # 注：实际创建密码保护的 PDF 需要 pypdf
         # 这里我们模拟这种行为
-        with patch("fitz.open") as mock_open, \
-             patch('pathlib.Path.exists', return_value=True):
+        with (
+            patch("fitz.open") as mock_open,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             mock_doc = Mock()
             mock_doc.__len__ = Mock(return_value=1)
             mock_doc.__getitem__ = Mock(side_effect=Exception("Password required"))
@@ -98,8 +103,10 @@ class TestPDFToImagesEdgeCases:
         from src.services.document.pdf_to_images import pdf_to_images
 
         # 模拟包含不支持特性的 PDF
-        with patch("fitz.open") as mock_open, \
-             patch('pathlib.Path.exists', return_value=True):
+        with (
+            patch("fitz.open") as mock_open,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             mock_doc = Mock()
             mock_page = Mock()
             mock_page.get_pixmap = Mock(side_effect=Exception("Unsupported feature"))
@@ -135,8 +142,8 @@ class TestPDFToImagesEdgeCases:
 
         # 应该只处理 10 页
         if isinstance(result, list):
-                assert len(result) <= 10
-            # mock_doc.__getitem__.assert_called()  # 应该只调用 10 次
+            assert len(result) <= 10
+        # mock_doc.__getitem__.assert_called()  # 应该只调用 10 次
 
     @pytest.mark.unit
     def test_cleanup_on_conversion_failure(self):
@@ -146,19 +153,22 @@ class TestPDFToImagesEdgeCases:
         )
 
         # Use absolute path to fixtures
-        partial_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\empty.pdf"  # Use existing empty.pdf
 
         # 模拟部分转换失败
         # Create a temporary file to avoid the PDF not found error
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
-            temp_file.write(b'%PDF-1.4\nfake content')
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+            temp_file.write(b"%PDF-1.4\nfake content")
             temp_file_path = temp_file.name
 
         try:
             with patch("fitz.open") as mock_open:
                 mock_doc = Mock()
-                mock_doc.__enter__ = Mock(return_value=mock_doc)  # Add context manager support
-                mock_doc.__exit__ = Mock(return_value=None)  # Add context manager support
+                mock_doc.__enter__ = Mock(
+                    return_value=mock_doc
+                )  # Add context manager support
+                mock_doc.__exit__ = Mock(
+                    return_value=None
+                )  # Add context manager support
                 mock_doc.__len__ = Mock(return_value=3)
 
                 call_count = 0
@@ -220,6 +230,7 @@ class TestPDFToImagesEdgeCases:
 # 文件清理验证测试
 # ============================================================================
 
+
 class TestTemporaryFileCleanup:
     """测试临时文件清理"""
 
@@ -255,19 +266,22 @@ class TestTemporaryFileCleanup:
         from src.services.document.pdf_to_images import pdf_to_images
 
         # Use absolute path to fixtures
-        abort_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\empty.pdf"  # Use existing empty.pdf
 
         # 模拟异常终止
         # Create a temporary file to avoid the PDF not found error
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
-            temp_file.write(b'%PDF-1.4\nfake content')
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+            temp_file.write(b"%PDF-1.4\nfake content")
             temp_file_path = temp_file.name
 
         try:
             with patch("fitz.open") as mock_open:
                 mock_doc = Mock()
-                mock_doc.__enter__ = Mock(return_value=mock_doc)  # Add context manager support
-                mock_doc.__exit__ = Mock(return_value=None)  # Add context manager support
+                mock_doc.__enter__ = Mock(
+                    return_value=mock_doc
+                )  # Add context manager support
+                mock_doc.__exit__ = Mock(
+                    return_value=None
+                )  # Add context manager support
                 mock_doc.__len__ = Mock(return_value=1)
 
                 def get_page(idx):
@@ -276,7 +290,9 @@ class TestTemporaryFileCleanup:
                     mock_pix.tobytes = Mock(return_value=b"image_data")
                     mock_page.get_pixmap = Mock(return_value=mock_pix)
                     # 模拟在保存图像时失败
-                    with patch("builtins.open", side_effect=Exception("Abnormal termination")):
+                    with patch(
+                        "builtins.open", side_effect=Exception("Abnormal termination")
+                    ):
                         return mock_page
                     return mock_page
 
@@ -299,6 +315,7 @@ class TestTemporaryFileCleanup:
 # ============================================================================
 # PDF 分析器边缘情况测试
 # ============================================================================
+
 
 class TestPDFAnalyzerEdgeCases:
     """PDF 分析器边缘情况测试"""
@@ -374,6 +391,7 @@ class TestPDFAnalyzerEdgeCases:
 # 缓存边缘情况测试
 # ============================================================================
 
+
 class TestCacheEdgeCases:
     """缓存边缘情况测试"""
 
@@ -391,7 +409,7 @@ class TestCacheEdgeCases:
                 f.write('{"invalid": "json", "missing": }')
 
             # Mock the hash to avoid file access
-            with patch.object(cache, 'get_file_hash', return_value='dummy_hash'):
+            with patch.object(cache, "get_file_hash", return_value="dummy_hash"):
                 # 尝试读取缓存（应该删除损坏的文件并返回 None）
                 result = cache.get("dummy.pdf")
 
@@ -411,7 +429,9 @@ class TestCacheEdgeCases:
                 json.dump({"test": "data"}, f)
 
             # 模拟权限错误
-            with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+            with patch(
+                "builtins.open", side_effect=PermissionError("Permission denied")
+            ):
                 try:
                     cache.get("dummy.pdf")
                     # 权限错误应该被重新抛出
@@ -440,7 +460,8 @@ class TestCacheEdgeCases:
                 file_path = f"key_{i}"
                 Path(file_path).touch()
 
-            with patch.object(cache, 'get_file_hash', side_effect=mock_get_file_hash):
+            with patch.object(cache, "get_file_hash", side_effect=mock_get_file_hash):
+
                 async def concurrent_write(cache_key: str, data: dict):
                     cache.set(cache_key, data)
 
@@ -459,6 +480,7 @@ class TestCacheEdgeCases:
 # 文件大小和内容类型验证测试
 # ============================================================================
 
+
 class TestFileValidation:
     """文件验证测试"""
 
@@ -466,15 +488,15 @@ class TestFileValidation:
     def test_exactly_50mb_file_boundary(self):
         """测试恰好 50MB 的文件边界"""
         # 模拟文件大小检查
-        MAX_SIZE = 50 * 1024 * 1024  # 50MB
+        max_size = 50 * 1024 * 1024  # 50MB
 
-        exactly_50mb = MAX_SIZE
-        just_over = MAX_SIZE + 1
-        just_under = MAX_SIZE - 1
+        exactly_50mb = max_size
+        just_over = max_size + 1
+        just_under = max_size - 1
 
-        assert exactly_50mb <= MAX_SIZE
-        assert just_over > MAX_SIZE
-        assert just_under <= MAX_SIZE
+        assert exactly_50mb <= max_size
+        assert just_over > max_size
+        assert just_under <= max_size
 
     @pytest.mark.unit
     def test_fake_pdf_extension(self):
@@ -523,6 +545,7 @@ class TestFileValidation:
 # 集成测试 - 端到端边缘情况
 # ============================================================================
 
+
 class TestEndToEndEdgeCases:
     """端到端边缘情况测试"""
 
@@ -564,20 +587,29 @@ class TestEndToEndEdgeCases:
             call_count += 1
             if call_count == 1:
                 raise httpx.NetworkError("API temporarily unavailable")
-            return type('MockResponse', (), {
-                'content': '{"contract_number": "CT001"}',
-                'usage': {"total_tokens": 100, "total_images_processed": 1}
-            })()
+            return type(
+                "MockResponse",
+                (),
+                {
+                    "content": '{"contract_number": "CT001"}',
+                    "usage": {"total_tokens": 100, "total_images_processed": 1},
+                },
+            )()
 
         # Mock the vision service to be available
-        with patch.object(QwenAdapter, 'vision_service') as mock_vision_service:
+        with patch.object(QwenAdapter, "vision_service") as mock_vision_service:
             mock_vision_service.is_available = True
 
             # Mock the actual extract_from_images method on the vision service
-            mock_vision_service.extract_from_images = AsyncMock(side_effect=flaky_vision_call)
+            mock_vision_service.extract_from_images = AsyncMock(
+                side_effect=flaky_vision_call
+            )
 
             # Mock PDF conversion
-            with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+            with patch(
+                "src.services.document.pdf_to_images.pdf_to_images",
+                return_value=["image1.png"],
+            ):
                 result = await extractor.extract_smart("dummy.pdf")
 
                 # 应该重试并成功

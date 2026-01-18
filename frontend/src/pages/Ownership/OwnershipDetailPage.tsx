@@ -107,7 +107,9 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <a onClick={() => navigate(`/assets/${record.id}`)}>{text}</a>
+        <Button type="link" onClick={() => navigate(`/assets/${record.id}`)} style={{ padding: 0 }}>
+          {text}
+        </Button>
       ),
     },
     {
@@ -116,9 +118,9 @@ const OwnershipDetailPage: React.FC = () => {
       key: 'usage_status',
       render: (status: string) => {
         const colorMap: Record<string, string> = {
-          '已出租': 'green',
-          '空置': 'orange',
-          '自用': 'blue',
+          已出租: 'green',
+          空置: 'orange',
+          自用: 'blue',
         };
         return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
       },
@@ -145,7 +147,13 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'contract_number',
       key: 'contract_number',
       render: (text: string, record: RentContract) => (
-        <a onClick={() => navigate(`/rental/contracts/${record.id}`)}>{text}</a>
+        <Button
+          type="link"
+          onClick={() => navigate(`/rental/contracts/${record.id}`)}
+          style={{ padding: 0 }}
+        >
+          {text}
+        </Button>
       ),
     },
     {
@@ -173,10 +181,10 @@ const OwnershipDetailPage: React.FC = () => {
       key: 'contract_status',
       render: (status: string) => {
         const colorMap: Record<string, string> = {
-          '有效': 'green',
-          '终止': 'red',
-          '已续签': 'blue',
-          '待生效': 'gold',
+          有效: 'green',
+          终止: 'red',
+          已续签: 'blue',
+          待生效: 'gold',
         };
         return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
       },
@@ -262,7 +270,7 @@ const OwnershipDetailPage: React.FC = () => {
           loading={assetsLoading}
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: total => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联资产' }}
         />
@@ -284,7 +292,7 @@ const OwnershipDetailPage: React.FC = () => {
           loading={contractsLoading}
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: total => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联合同' }}
         />
@@ -299,18 +307,17 @@ const OwnershipDetailPage: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate('/ownership')}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ownership')}>
                 返回列表
               </Button>
               <Title level={2} style={{ margin: 0 }}>
                 {ownership.name}
               </Title>
-              {(ownership.short_name !== null && ownership.short_name !== undefined && ownership.short_name.length > 0) && (
-                <Text type="secondary">({ownership.short_name})</Text>
-              )}
+              {ownership.short_name !== null &&
+                ownership.short_name !== undefined &&
+                ownership.short_name.length > 0 && (
+                  <Text type="secondary">({ownership.short_name})</Text>
+                )}
               <Badge
                 status={ownership.is_active ? 'success' : 'error'}
                 text={ownership.is_active ? '启用' : '禁用'}
@@ -389,9 +396,7 @@ const OwnershipDetailPage: React.FC = () => {
       <Card title="基本信息" style={{ marginBottom: '24px' }}>
         <Descriptions column={2}>
           <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
-          <Descriptions.Item label="权属方简称">
-            {ownership.short_name ?? '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label="权属方简称">{ownership.short_name ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="状态">
             <Badge
               status={ownership.is_active ? 'success' : 'error'}
@@ -402,14 +407,10 @@ const OwnershipDetailPage: React.FC = () => {
             <Tag color="blue">{contracts.length} 个</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">
-            {ownership.created_at
-              ? new Date(ownership.created_at).toLocaleString('zh-CN')
-              : '-'}
+            {ownership.created_at ? new Date(ownership.created_at).toLocaleString('zh-CN') : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="更新时间">
-            {ownership.updated_at
-              ? new Date(ownership.updated_at).toLocaleString('zh-CN')
-              : '-'}
+            {ownership.updated_at ? new Date(ownership.updated_at).toLocaleString('zh-CN') : '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>

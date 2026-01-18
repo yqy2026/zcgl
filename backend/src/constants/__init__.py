@@ -10,4 +10,4 @@ Usage:
     from src.constants.strings.empty import EMPTY_STRING
 """
 
-__all__ = []
+__all__: list[str] = []

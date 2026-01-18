@@ -22,6 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
+    from .property_certificate import PropertyCertificate
     from .rent_contract import RentContract
 
 
@@ -180,6 +181,11 @@ class Asset(Base):  # type: ignore[valid-type, misc]
     rent_contracts: Mapped[list["RentContract"]] = relationship(
         "RentContract",
         secondary="rent_contract_assets",
+        back_populates="assets",
+    )
+    certificates: Mapped[list["PropertyCertificate"]] = relationship(
+        "PropertyCertificate",
+        secondary="property_cert_assets",
         back_populates="assets",
     )
     project_id: Mapped[str | None] = mapped_column(

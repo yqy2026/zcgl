@@ -21,10 +21,10 @@ interface ImportStatusStatesProps {
 
 export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
   status,
-  fileName,
+  fileName: _fileName,
   error,
   onUploadNew,
-  onViewHistory
+  onViewHistory,
 }) => {
   if (status === 'completed') {
     return (
@@ -33,16 +33,12 @@ export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
         <Title level={4} style={{ color: COLORS.success }}>
           导入成功！
         </Title>
-        <Paragraph>
-          合同已成功导入到系统中。
-        </Paragraph>
+        <Paragraph>合同已成功导入到系统中。</Paragraph>
         <Space>
           <Button type="primary" onClick={onUploadNew}>
             导入新合同
           </Button>
-          <Button onClick={onViewHistory}>
-            查看历史记录
-          </Button>
+          <Button onClick={onViewHistory}>查看历史记录</Button>
         </Space>
       </div>
     );
@@ -55,16 +51,10 @@ export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
       <Title level={4} style={{ color: COLORS.error }}>
         处理失败
       </Title>
-      <Paragraph>
-        {error ?? '处理过程中发生错误'}
-      </Paragraph>
+      <Paragraph>{error ?? '处理过程中发生错误'}</Paragraph>
       <Space>
-        <Button onClick={onUploadNew}>
-          重新上传
-        </Button>
-        <Button onClick={onViewHistory}>
-          查看历史记录
-        </Button>
+        <Button onClick={onUploadNew}>重新上传</Button>
+        <Button onClick={onViewHistory}>查看历史记录</Button>
       </Space>
     </div>
   );

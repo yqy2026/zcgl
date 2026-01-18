@@ -6,16 +6,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-  Card,
-  Button,
-  Space,
-  Breadcrumb,
-  Typography,
-  Row,
-  Col,
-  Spin,
-} from 'antd';
+import { Card, Button, Space, Breadcrumb, Typography, Row, Col, Spin } from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -40,10 +31,7 @@ const { Title, Text } = Typography;
 /**
  * 调整租金条款日期到新合同期间
  */
-function adjustRentTermsDate(
-  originalTerms: any[],
-  newStartDate: Date
-): any[] {
+function adjustRentTermsDate(originalTerms: any[], newStartDate: Date): any[] {
   if (originalTerms == null || originalTerms.length === 0) return [];
 
   const originalStart = parseISO(originalTerms[0].start_date);
@@ -63,9 +51,10 @@ function adjustRentTermsDate(
     return {
       ...term,
       start_date: formatISO(addDays(newStartDate, termStartOffset), { representation: 'date' }),
-      end_date: index === originalTerms.length - 1
-        ? formatISO(newEndDate, { representation: 'date' })
-        : formatISO(addDays(newStartDate, termEndOffset), { representation: 'date' }),
+      end_date:
+        index === originalTerms.length - 1
+          ? formatISO(newEndDate, { representation: 'date' })
+          : formatISO(addDays(newStartDate, termEndOffset), { representation: 'date' }),
     };
   });
 }
@@ -93,10 +82,7 @@ const ContractRenewPage: React.FC = () => {
     const newStartDate = addDays(parseISO(originalContract.end_date), 1);
 
     // 调整租金条款日期
-    const adjustedRentTerms = adjustRentTermsDate(
-      originalContract.rent_terms ?? [],
-      newStartDate
-    );
+    const adjustedRentTerms = adjustRentTermsDate(originalContract.rent_terms ?? [], newStartDate);
 
     return {
       // 继承基本信息
@@ -129,9 +115,8 @@ const ContractRenewPage: React.FC = () => {
 
   // 续签 mutation
   const renewMutation = useMutation({
-    mutationFn: (data: RentContractCreate) =>
-      rentContractService.renewContract(id!, data, true),
-    onSuccess: (newContract) => {
+    mutationFn: (data: RentContractCreate) => rentContractService.renewContract(id!, data, true),
+    onSuccess: newContract => {
       setContractCreated(true);
       MessageManager.success('合同续签成功！');
 
@@ -142,10 +127,10 @@ const ContractRenewPage: React.FC = () => {
 
       pageLogger.info('合同续签成功', {
         originalContractId: id,
-        newContractId: newContract.id
+        newContractId: newContract.id,
       });
     },
-    onError: (error) => {
+    onError: error => {
       pageLogger.error('续签合同失败:', error as Error);
       MessageManager.error('续签合同失败，请检查网络连接');
     },
@@ -225,16 +210,14 @@ const ContractRenewPage: React.FC = () => {
                 合同续签
               </Title>
               <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
-                基于原合同 {originalContract.contract_number} 创建新合同，自动继承承租方、资产、租金条款等信息
+                基于原合同 {originalContract.contract_number}{' '}
+                创建新合同，自动继承承租方、资产、租金条款等信息
               </Text>
             </div>
           </Col>
           <Col>
             <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={handleCancel}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
                 返回原合同
               </Button>
             </Space>
@@ -244,10 +227,18 @@ const ContractRenewPage: React.FC = () => {
 
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card style={{ marginBottom: '16px', borderColor: COLORS.success, backgroundColor: 'var(--color-success-light, #f6ffed)' }}>
+        <Card
+          style={{
+            marginBottom: '16px',
+            borderColor: COLORS.success,
+            backgroundColor: 'var(--color-success-light, #f6ffed)',
+          }}
+        >
           <Row align="middle">
             <Col>
-              <CheckCircleOutlined style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }} />
+              <CheckCircleOutlined
+                style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }}
+              />
             </Col>
             <Col flex="1">
               <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
@@ -263,7 +254,9 @@ const ContractRenewPage: React.FC = () => {
 
       {/* 创建指南 */}
       {!contractCreated && (
-        <Card style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light, #e6f7ff)' }}>
+        <Card
+          style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light, #e6f7ff)' }}
+        >
           <Title level={5} style={{ color: COLORS.primary, marginBottom: '12px' }}>
             <CheckCircleOutlined style={{ marginRight: '6px' }} />
             续签说明
@@ -312,9 +305,10 @@ const ContractRenewPage: React.FC = () => {
           </Row>
           <div style={{ marginTop: '12px' }}>
             <Text type="secondary">
-              • 系统已自动预填原合同数据，请根据需要修改<br />
-              • 新合同开始日期默认为原合同结束日期+1天<br />
-              • 押金将自动从原合同转移到新合同
+              • 系统已自动预填原合同数据，请根据需要修改
+              <br />
+              • 新合同开始日期默认为原合同结束日期+1天
+              <br />• 押金将自动从原合同转移到新合同
             </Text>
           </div>
         </Card>

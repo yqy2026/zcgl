@@ -25,7 +25,7 @@ def check_security_issues() -> list[tuple[Path, int, str]]:
     # 其中 detail 包含 {str(e)} 或 {e}
     pattern = re.compile(
         r'except Exception as e:\s*\n?\s*raise HTTPException\(status_code=500, detail=f"[^"]*:\{str?\(e\)}"\)',
-        re.MULTILINE
+        re.MULTILINE,
     )
 
     backend_dir = Path(__file__).parent.parent / "src" / "api" / "v1"
@@ -33,10 +33,10 @@ def check_security_issues() -> list[tuple[Path, int, str]]:
     for file in backend_dir.rglob("*.py"):
         # 尝试用UTF-8读取，失败则尝试其他编码
         try:
-            content = file.read_text(encoding='utf-8')
+            content = file.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             try:
-                content = file.read_text(encoding='gbk')
+                content = file.read_text(encoding="gbk")
             except UnicodeDecodeError:
                 # 如果都失败，跳过这个文件
                 continue
@@ -44,7 +44,7 @@ def check_security_issues() -> list[tuple[Path, int, str]]:
         matches = pattern.finditer(content)
 
         for match in matches:
-            line_num = content[:match.start()].count('\n') + 1
+            line_num = content[: match.start()].count("\n") + 1
             matched_text = match.group(0)
             issues.append((file, line_num, matched_text))
 
@@ -63,8 +63,8 @@ def check_broad_exception_catches() -> list[tuple[Path, int, str]]:
     issues = []
     # 搜索 except Exception as e: 后面不跟 raise 的模式
     pattern = re.compile(
-        r'except Exception as e:\s*\n?\s*logger\.[a-z]+\([^)]*\)\s*\n?(?!raise)',
-        re.MULTILINE
+        r"except Exception as e:\s*\n?\s*logger\.[a-z]+\([^)]*\)\s*\n?(?!raise)",
+        re.MULTILINE,
     )
 
     backend_dir = Path(__file__).parent.parent / "src" / "services"
@@ -72,10 +72,10 @@ def check_broad_exception_catches() -> list[tuple[Path, int, str]]:
     for file in backend_dir.rglob("*.py"):
         # 尝试用UTF-8读取，失败则尝试其他编码
         try:
-            content = file.read_text(encoding='utf-8')
+            content = file.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             try:
-                content = file.read_text(encoding='gbk')
+                content = file.read_text(encoding="gbk")
             except UnicodeDecodeError:
                 # 如果都失败，跳过这个文件
                 continue
@@ -83,7 +83,7 @@ def check_broad_exception_catches() -> list[tuple[Path, int, str]]:
         matches = pattern.finditer(content)
 
         for match in matches:
-            line_num = content[:match.start()].count('\n') + 1
+            line_num = content[: match.start()].count("\n") + 1
             matched_text = match.group(0)
             issues.append((file, line_num, matched_text))
 
@@ -100,7 +100,7 @@ def print_report(issues: list[tuple[Path, int, str]], issue_type: str) -> None:
     for file, line_num, matched_text in issues[:10]:  # 只显示前10个
         print(f"  {file}:{line_num}")
         # 只显示匹配文本的前100个字符
-        preview = matched_text.replace('\n', '\\n')[:100]
+        preview = matched_text.replace("\n", "\\n")[:100]
         print(f"    {preview}...\n")
 
     if len(issues) > 10:

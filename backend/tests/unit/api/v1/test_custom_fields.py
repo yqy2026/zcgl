@@ -23,7 +23,7 @@ Testing Approach:
 - Test response schemas
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -127,9 +127,7 @@ class TestGetCustomFields:
 
         assert len(result) == 3
         assert result[0].field_name == "field_0"
-        mock_crud.get_multi_with_filters.assert_called_once_with(
-            db=mock_db, filters={}
-        )
+        mock_crud.get_multi_with_filters.assert_called_once_with(db=mock_db, filters={})
 
     @patch("src.api.v1.custom_fields.custom_field_crud")
     @pytest.mark.asyncio
@@ -162,7 +160,9 @@ class TestGetCustomFields:
 
     @patch("src.api.v1.custom_fields.custom_field_crud")
     @pytest.mark.asyncio
-    async def test_get_custom_fields_empty_list(self, mock_crud, mock_db, mock_current_user):
+    async def test_get_custom_fields_empty_list(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test getting custom fields with empty result"""
         from src.api.v1.custom_fields import get_custom_fields
 
@@ -849,9 +849,7 @@ class TestUpdateAssetCustomFieldValues:
 
         values_update = CustomFieldValueUpdate(values=[])
 
-        mock_service.update_asset_field_values.side_effect = Exception(
-            "Database error"
-        )
+        mock_service.update_asset_field_values.side_effect = Exception("Database error")
 
         with pytest.raises(HTTPException) as exc_info:
             await update_asset_custom_field_values(
@@ -882,8 +880,14 @@ class TestBatchSetCustomFieldValues:
         from src.api.v1.custom_fields import batch_set_custom_field_values
 
         updates = [
-            {"asset_id": "asset-1", "values": [{"field_name": "field1", "value": "value1"}]},
-            {"asset_id": "asset-2", "values": [{"field_name": "field2", "value": "value2"}]},
+            {
+                "asset_id": "asset-1",
+                "values": [{"field_name": "field1", "value": "value1"}],
+            },
+            {
+                "asset_id": "asset-2",
+                "values": [{"field_name": "field2", "value": "value2"}],
+            },
         ]
 
         mock_service.update_asset_field_values.return_value = [
@@ -910,8 +914,14 @@ class TestBatchSetCustomFieldValues:
         from src.api.v1.custom_fields import batch_set_custom_field_values
 
         updates = [
-            {"asset_id": "asset-1", "values": [{"field_name": "field1", "value": "value1"}]},
-            {"asset_id": "asset-2", "values": [{"field_name": "field2", "value": "value2"}]},
+            {
+                "asset_id": "asset-1",
+                "values": [{"field_name": "field1", "value": "value1"}],
+            },
+            {
+                "asset_id": "asset-2",
+                "values": [{"field_name": "field2", "value": "value2"}],
+            },
         ]
 
         # First succeeds, second fails
@@ -945,9 +955,17 @@ class TestBatchSetCustomFieldValues:
         from src.api.v1.custom_fields import batch_set_custom_field_values
 
         updates = [
-            {"asset_id": "asset-1", "values": [{"field_name": "field1", "value": "value1"}]},
-            {"values": [{"field_name": "field2", "value": "value2"}]},  # Missing asset_id
-            {"asset_id": "asset-3", "values": [{"field_name": "field3", "value": "value3"}]},
+            {
+                "asset_id": "asset-1",
+                "values": [{"field_name": "field1", "value": "value1"}],
+            },
+            {
+                "values": [{"field_name": "field2", "value": "value2"}]
+            },  # Missing asset_id
+            {
+                "asset_id": "asset-3",
+                "values": [{"field_name": "field3", "value": "value3"}],
+            },
         ]
 
         mock_service.update_asset_field_values.return_value = [

@@ -4,23 +4,23 @@
  * Monitors critical API endpoints and reports their health status.
  */
 
-import { enhancedApiClient } from '@/api/client'
+import { enhancedApiClient } from '@/api/client';
 
 export interface HealthCheckResult {
-  endpoint: string
-  name: string
-  status: 'healthy' | 'unhealthy' | 'unknown'
-  responseTime?: number
-  error?: string
-  lastChecked: Date
+  endpoint: string;
+  name: string;
+  status: 'healthy' | 'unhealthy' | 'unknown';
+  responseTime?: number;
+  error?: string;
+  lastChecked: Date;
 }
 
 interface HealthSummary {
-  total: number
-  healthy: number
-  unhealthy: number
-  unknown: number
-  healthPercentage: number
+  total: number;
+  healthy: number;
+  unhealthy: number;
+  unknown: number;
+  healthPercentage: number;
 }
 
 // Critical endpoints to monitor
@@ -30,37 +30,37 @@ const CRITICAL_ENDPOINTS = [
   { path: '/rent-contracts/contracts', name: 'Rent Contracts' },
   { path: '/auth/users/me', name: 'User Info' },
   { path: '/analytics/dashboard', name: 'Analytics Dashboard' },
-]
+];
 
 class APIHealthCheckService {
-  private results = new Map<string, HealthCheckResult>()
+  private results = new Map<string, HealthCheckResult>();
 
   /**
    * Check all critical endpoints
    */
   async checkCriticalEndpoints(): Promise<Map<string, HealthCheckResult>> {
-    const checks = CRITICAL_ENDPOINTS.map(async (endpoint) => {
-      const startTime = performance.now()
+    const checks = CRITICAL_ENDPOINTS.map(async endpoint => {
+      const startTime = performance.now();
 
       try {
-        const response = await enhancedApiClient.get(endpoint.path, {
+        await enhancedApiClient.get(endpoint.path, {
           // Short timeout for health checks
           timeout: 5000,
-        })
+        });
 
-        const responseTime = performance.now() - startTime
+        const responseTime = performance.now() - startTime;
         const result: HealthCheckResult = {
           endpoint: endpoint.name,
           name: endpoint.name,
           status: responseTime < 3000 ? 'healthy' : 'unhealthy',
           responseTime,
           lastChecked: new Date(),
-        }
+        };
 
-        this.results.set(endpoint.path, result)
-        return result
+        this.results.set(endpoint.path, result);
+        return result;
       } catch (error: unknown) {
-        const responseTime = performance.now() - startTime
+        const responseTime = performance.now() - startTime;
         const result: HealthCheckResult = {
           endpoint: endpoint.name,
           name: endpoint.name,
@@ -68,75 +68,75 @@ class APIHealthCheckService {
           responseTime,
           error: this.getErrorMessage(error),
           lastChecked: new Date(),
-        }
+        };
 
-        this.results.set(endpoint.path, result)
-        return result
+        this.results.set(endpoint.path, result);
+        return result;
       }
-    })
+    });
 
-    await Promise.all(checks)
-    return this.results
+    await Promise.all(checks);
+    return this.results;
   }
 
   /**
    * Get all health check results
    */
   getResults(): Map<string, HealthCheckResult> {
-    return this.results
+    return this.results;
   }
 
   /**
    * Get health summary statistics
    */
   getHealthSummary(): HealthSummary {
-    const results = Array.from(this.results.values())
+    const results = Array.from(this.results.values());
 
     const summary: HealthSummary = {
       total: results.length,
-      healthy: results.filter((r) => r.status === 'healthy').length,
-      unhealthy: results.filter((r) => r.status === 'unhealthy').length,
-      unknown: results.filter((r) => r.status === 'unknown').length,
+      healthy: results.filter(r => r.status === 'healthy').length,
+      unhealthy: results.filter(r => r.status === 'unhealthy').length,
+      unknown: results.filter(r => r.status === 'unknown').length,
       healthPercentage:
         results.length > 0
-          ? (results.filter((r) => r.status === 'healthy').length / results.length) * 100
+          ? (results.filter(r => r.status === 'healthy').length / results.length) * 100
           : 0,
-    }
+    };
 
-    return summary
+    return summary;
   }
 
   /**
    * Get a specific endpoint's health status
    */
   getEndpointStatus(path: string): HealthCheckResult | undefined {
-    return this.results.get(path)
+    return this.results.get(path);
   }
 
   /**
    * Check a single endpoint
    */
   async checkSingleEndpoint(path: string, name?: string): Promise<HealthCheckResult> {
-    const startTime = performance.now()
+    const startTime = performance.now();
 
     try {
       await enhancedApiClient.get(path, {
         timeout: 5000,
-      })
+      });
 
-      const responseTime = performance.now() - startTime
+      const responseTime = performance.now() - startTime;
       const result: HealthCheckResult = {
         endpoint: name ?? path,
         name: name ?? path,
         status: responseTime < 3000 ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: new Date(),
-      }
+      };
 
-      this.results.set(path, result)
-      return result
+      this.results.set(path, result);
+      return result;
     } catch (error: unknown) {
-      const responseTime = performance.now() - startTime
+      const responseTime = performance.now() - startTime;
       const result: HealthCheckResult = {
         endpoint: name ?? path,
         name: name ?? path,
@@ -144,10 +144,10 @@ class APIHealthCheckService {
         responseTime,
         error: this.getErrorMessage(error),
         lastChecked: new Date(),
-      }
+      };
 
-      this.results.set(path, result)
-      return result
+      this.results.set(path, result);
+      return result;
     }
   }
 
@@ -155,7 +155,7 @@ class APIHealthCheckService {
    * Clear all results
    */
   clearResults(): void {
-    this.results.clear()
+    this.results.clear();
   }
 
   /**
@@ -163,28 +163,28 @@ class APIHealthCheckService {
    */
   private getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
-      return error.message
+      return error.message;
     }
 
     if (typeof error === 'string') {
-      return error
+      return error;
     }
 
     if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response: { data?: { detail?: string }; status?: number } }
+      const err = error as { response: { data?: { detail?: string }; status?: number } };
       if (err.response?.data?.detail) {
-        return err.response.data.detail
+        return err.response.data.detail;
       }
       if (err.response?.status) {
-        return `HTTP ${err.response.status}`
+        return `HTTP ${err.response.status}`;
       }
     }
 
-    return 'Unknown error'
+    return 'Unknown error';
   }
 }
 
 // Export singleton instance
-export const apiHealthCheck = new APIHealthCheckService()
+export const apiHealthCheck = new APIHealthCheckService();
 
-export default apiHealthCheck
+export default apiHealthCheck;

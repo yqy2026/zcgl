@@ -9,24 +9,22 @@
 5. 状态报告
 """
 
-from unittest.mock import MagicMock, patch, call
-from datetime import date
-from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 
+from src.models.asset import Asset
 from src.services.asset.batch_service import (
     AssetBatchService,
     BatchOperationResult,
 )
-from src.models.asset import Asset
-
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db():
@@ -85,6 +83,7 @@ def invalid_asset_data():
 # ============================================================================
 # BatchOperationResult Tests
 # ============================================================================
+
 
 class TestBatchOperationResult:
     """测试 BatchOperationResult Pydantic 模型"""
@@ -176,6 +175,7 @@ class TestBatchOperationResult:
 # AssetBatchService Initialization Tests
 # ============================================================================
 
+
 class TestAssetBatchServiceInit:
     """测试 AssetBatchService 初始化"""
 
@@ -183,17 +183,19 @@ class TestAssetBatchServiceInit:
         """测试服务正确初始化"""
         assert batch_service.db == mock_db
         assert batch_service.validator is not None
-        assert hasattr(batch_service, 'validator')
+        assert hasattr(batch_service, "validator")
 
     def test_validator_instance(self, batch_service):
         """测试验证器实例类型"""
         from src.services.asset.validators import AssetBatchValidator
+
         assert isinstance(batch_service.validator, AssetBatchValidator)
 
 
 # ============================================================================
 # Batch Update Tests
 # ============================================================================
+
 
 class TestBatchUpdate:
     """测试批量更新功能"""
@@ -244,8 +246,7 @@ class TestBatchUpdate:
     ):
         """测试多个资产批量更新成功"""
         mock_assets = [
-            MagicMock(id=f"asset_{i}", property_name=f"物业{i}")
-            for i in range(1, 4)
+            MagicMock(id=f"asset_{i}", property_name=f"物业{i}") for i in range(1, 4)
         ]
         mock_asset_crud.get.side_effect = mock_assets
         mock_asset_crud.update.return_value = MagicMock()
@@ -290,7 +291,7 @@ class TestBatchUpdate:
     ):
         """测试部分成功部分失败的情况"""
         asset_1 = MagicMock(id="asset_1")
-        asset_2 = MagicMock(id="asset_2")
+        MagicMock(id="asset_2")
 
         mock_asset_crud.get.side_effect = [asset_1, None]
         mock_asset_crud.update.return_value = asset_1
@@ -364,7 +365,7 @@ class TestBatchUpdate:
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create.return_value = MagicMock()
 
-            result = batch_service.batch_update(
+            batch_service.batch_update(
                 asset_ids=["asset_1"],
                 updates={"usage_status": "出租", "tenant_name": "新租户"},
                 operator="admin_user",
@@ -421,15 +422,14 @@ class TestBatchUpdate:
 # Batch Update All Tests
 # ============================================================================
 
+
 class TestBatchUpdateAll:
     """测试更新所有资产功能"""
 
     @patch("src.services.asset.batch_service.asset_crud")
     def test_batch_update_all_flag(self, mock_asset_crud, batch_service, mock_db):
         """测试 update_all=True 标志"""
-        mock_assets = [
-            MagicMock(id=f"asset_{i}") for i in range(1, 4)
-        ]
+        mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, None)
         mock_asset_crud.get.side_effect = mock_assets
         mock_asset_crud.update.return_value = MagicMock()
@@ -447,9 +447,7 @@ class TestBatchUpdateAll:
             )
 
     @patch("src.services.asset.batch_service.asset_crud")
-    def test_batch_update_all_empty_database(
-        self, mock_asset_crud, batch_service
-    ):
+    def test_batch_update_all_empty_database(self, mock_asset_crud, batch_service):
         """测试空数据库时更新所有"""
         mock_asset_crud.get_multi_with_search.return_value = ([], None)
 
@@ -466,6 +464,7 @@ class TestBatchUpdateAll:
 # ============================================================================
 # Batch Delete Tests
 # ============================================================================
+
 
 class TestBatchDelete:
     """测试批量删除功能"""
@@ -503,9 +502,7 @@ class TestBatchDelete:
         self, mock_asset_crud, batch_service, mock_db
     ):
         """测试多个资产删除成功"""
-        mock_assets = [
-            MagicMock(id=f"asset_{i}") for i in range(1, 4)
-        ]
+        mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
         mock_asset_crud.get.side_effect = mock_assets
         mock_asset_crud.remove.return_value = None
 
@@ -570,6 +567,7 @@ class TestBatchDelete:
 # ============================================================================
 # Validate Asset Data Tests
 # ============================================================================
+
 
 class TestValidateAssetData:
     """测试资产数据验证功能"""
@@ -644,10 +642,7 @@ class TestValidateAssetData:
         )
 
         assert is_valid is False
-        assert any(
-            "已出租面积不能大于可出租面积" in e["error"]
-            for e in errors
-        )
+        assert any("已出租面积不能大于可出租面积" in e["error"] for e in errors)
 
     def test_validate_invalid_date_format(self, batch_service):
         """测试无效日期格式"""
@@ -701,16 +696,11 @@ class TestValidateAssetData:
 
         # 只验证数据格式，不验证必填字段
         is_valid, errors, warnings, validated_fields = (
-            batch_service.validate_asset_data(
-                data=data, validate_rules=["data_format"]
-            )
+            batch_service.validate_asset_data(data=data, validate_rules=["data_format"])
         )
 
         # 面积一致性应该被检测到
-        assert any(
-            "已出租面积不能大于可出租面积" in e["error"]
-            for e in errors
-        )
+        assert any("已出租面积不能大于可出租面积" in e["error"] for e in errors)
 
     def test_validate_with_enum_validation_service(self, batch_service):
         """测试带枚举验证服务的验证"""
@@ -727,8 +717,7 @@ class TestValidateAssetData:
 
         is_valid, errors, warnings, validated_fields = (
             batch_service.validate_asset_data(
-                data=data,
-                enum_validation_service=mock_enum_service
+                data=data, enum_validation_service=mock_enum_service
             )
         )
 
@@ -741,7 +730,7 @@ class TestValidateAssetData:
         mock_enum_service = MagicMock()
         mock_enum_service.validate_value.return_value = (
             False,
-            "Invalid ownership status value"
+            "Invalid ownership status value",
         )
 
         data = {
@@ -754,8 +743,7 @@ class TestValidateAssetData:
 
         is_valid, errors, warnings, validated_fields = (
             batch_service.validate_asset_data(
-                data=data,
-                enum_validation_service=mock_enum_service
+                data=data, enum_validation_service=mock_enum_service
             )
         )
 
@@ -766,6 +754,7 @@ class TestValidateAssetData:
 # ============================================================================
 # Helper Method Tests
 # ============================================================================
+
 
 class TestHelperMethods:
     """测试辅助方法"""
@@ -799,6 +788,7 @@ class TestHelperMethods:
 # Progress Tracking Tests
 # ============================================================================
 
+
 class TestProgressTracking:
     """测试进度跟踪功能"""
 
@@ -807,9 +797,7 @@ class TestProgressTracking:
         self, mock_asset_crud, batch_service, mock_db
     ):
         """测试批量更新时的进度跟踪"""
-        mock_assets = [
-            MagicMock(id=f"asset_{i}") for i in range(1, 6)
-        ]
+        mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 6)]
         mock_asset_crud.get.side_effect = mock_assets
         mock_asset_crud.update.return_value = MagicMock()
 
@@ -858,6 +846,7 @@ class TestProgressTracking:
 # Error Handling Tests
 # ============================================================================
 
+
 class TestErrorHandling:
     """测试错误处理机制"""
 
@@ -868,7 +857,9 @@ class TestErrorHandling:
         """测试全面的错误报告"""
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get.return_value = mock_asset
-        mock_asset_crud.update.side_effect = ValueError("Validation error: usage_status")
+        mock_asset_crud.update.side_effect = ValueError(
+            "Validation error: usage_status"
+        )
 
         result = batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -882,9 +873,7 @@ class TestErrorHandling:
         assert "field_context" in error
 
     @patch("src.services.asset.batch_service.asset_crud")
-    def test_multiple_different_errors(
-        self, mock_asset_crud, batch_service, mock_db
-    ):
+    def test_multiple_different_errors(self, mock_asset_crud, batch_service, mock_db):
         """测试多个不同的错误"""
         mock_asset_crud.get.side_effect = [
             MagicMock(id="asset_1"),
@@ -948,6 +937,7 @@ class TestErrorHandling:
 # Status Reporting Tests
 # ============================================================================
 
+
 class TestStatusReporting:
     """测试状态报告功能"""
 
@@ -977,9 +967,7 @@ class TestStatusReporting:
             assert "updated_assets" in status_dict
 
     @patch("src.services.asset.batch_service.asset_crud")
-    def test_comprehensive_status_report(
-        self, mock_asset_crud, batch_service, mock_db
-    ):
+    def test_comprehensive_status_report(self, mock_asset_crud, batch_service, mock_db):
         """测试全面的状态报告"""
         mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
         mock_asset_crud.get.side_effect = mock_assets
@@ -1006,6 +994,7 @@ class TestStatusReporting:
 # Integration Scenarios Tests
 # ============================================================================
 
+
 class TestIntegrationScenarios:
     """测试集成场景"""
 
@@ -1020,9 +1009,9 @@ class TestIntegrationScenarios:
 
         # 设置前95个成功，后5个失败
         mock_asset_crud.get.side_effect = mock_assets
-        mock_asset_crud.update.side_effect = [
-            MagicMock()
-        ] * 95 + [Exception("Update failed")] * 5
+        mock_asset_crud.update.side_effect = [MagicMock()] * 95 + [
+            Exception("Update failed")
+        ] * 5
 
         with patch("src.services.asset.batch_service.history_crud"):
             result = batch_service.batch_update(

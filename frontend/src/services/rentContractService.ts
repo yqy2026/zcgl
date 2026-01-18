@@ -58,6 +58,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
+      // eslint-disable-next-line no-console
       console.error('获取租金合同列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
@@ -240,6 +241,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
+      // eslint-disable-next-line no-console
       console.error('获取租金台账列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
@@ -621,6 +623,7 @@ class RentContractService {
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       // 返回空数组，避免UI崩溃
+      // eslint-disable-next-line no-console
       console.warn('获取押金变动记录失败:', enhancedError.message);
       return [];
     }
@@ -647,6 +650,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
+      // eslint-disable-next-line no-console
       console.warn('获取服务费台账失败:', enhancedError.message);
       return [];
     }

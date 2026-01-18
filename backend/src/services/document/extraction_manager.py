@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from .extractors.factory import ExtractorFactory
 
 if TYPE_CHECKING:
-    from .extractors.property_cert_adapter import PropertyCertAdapter
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,9 @@ class DocumentExtractionManager:
     """
 
     _contract_extractor: Any
-    _property_cert_extractor: Any  # PropertyCertAdapter | None (use Any to avoid TYPE_CHECKING issues)
+    _property_cert_extractor: (
+        Any  # PropertyCertAdapter | None (use Any to avoid TYPE_CHECKING issues)
+    )
     classifier: KeywordClassifier
 
     def __init__(self) -> None:
@@ -133,7 +135,7 @@ class DocumentExtractionManager:
         if self._property_cert_extractor is None:
             from .extractors.property_cert_adapter import PropertyCertAdapter
 
-            self._property_cert_extractor = PropertyCertAdapter()  # type: ignore[no-untyped-call]
+            self._property_cert_extractor = PropertyCertAdapter()
         return self._property_cert_extractor
 
     async def extract(

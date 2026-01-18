@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from src.core.exception_handler import (
-    ResourceNotFoundError,
     BusinessValidationError,
     DuplicateResourceError,
 )
@@ -66,8 +65,9 @@ class TestExceptionHelpers:
         assert "TestService - test_operation failed" in caplog.text
 
 
-
-@pytest.mark.skip(reason="API exception handling tests require actual API endpoints and authentication setup")
+@pytest.mark.skip(
+    reason="API exception handling tests require actual API endpoints and authentication setup"
+)
 class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
@@ -100,7 +100,9 @@ class TestAPIExceptionHandling:
             assert "message" in data["error"]
 
 
-@pytest.mark.skip(reason="Service exception handling tests need actual service implementation and db_session fixture")
+@pytest.mark.skip(
+    reason="Service exception handling tests need actual service implementation and db_session fixture"
+)
 class TestServiceExceptionHandling:
     """测试Service层异常处理"""
 

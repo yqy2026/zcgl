@@ -57,7 +57,9 @@ class TestSecretKeySecurity:
                 os.environ["SECRET_KEY"] = weak_key
                 with pytest.raises(ValueError) as exc_info:
                     Settings()
-                assert "弱密钥" in str(exc_info.value) or "生产环境" in str(exc_info.value)
+                assert "弱密钥" in str(exc_info.value) or "生产环境" in str(
+                    exc_info.value
+                )
         finally:
             if original_key:
                 os.environ["SECRET_KEY"] = original_key
@@ -133,6 +135,7 @@ class TestEnvironmentConfiguration:
         try:
             # 确保有有效的 SECRET_KEY
             import secrets
+
             strong_key = secrets.token_urlsafe(32)
             os.environ["SECRET_KEY"] = strong_key
 
@@ -153,6 +156,7 @@ class TestEnvironmentConfiguration:
 
         try:
             import secrets
+
             strong_key = secrets.token_urlsafe(32)
             os.environ["SECRET_KEY"] = strong_key
 

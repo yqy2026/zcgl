@@ -17,12 +17,15 @@ from httpx import HTTPStatusError, Request, Response
 from pydantic import BaseModel
 
 # Skip all tests in this module - vision API integration not complete
-pytestmark = pytest.mark.skip(reason="Vision API failure mode tests pending implementation")
+pytestmark = pytest.mark.skip(
+    reason="Vision API failure mode tests pending implementation"
+)
 
 
 # Mock VisionResponse class
 class VisionResponse(BaseModel):
     """Mock response from vision model"""
+
     content: str
     raw_response: Any = None
     usage: dict[str, Any] = {}
@@ -31,6 +34,7 @@ class VisionResponse(BaseModel):
 # ============================================================================
 # Zhipu Vision Service 失败模式测试
 # ============================================================================
+
 
 class TestZhipuVisionFailureModes:
     """智谱 vision 服务失败模式测试"""
@@ -43,19 +47,27 @@ class TestZhipuVisionFailureModes:
         adapter = GLMVisionAdapter()
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 # Mock timeout error
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=TimeoutError("Request timeout"))
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=TimeoutError("Request timeout")),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     # The adapter catches exceptions and returns a generic error
                     assert result["success"] is False
                     # Either the specific timeout error or generic batch failure
-                    assert "timeout" in result["error"].lower() or "failed" in result["error"].lower()
+                    assert (
+                        "timeout" in result["error"].lower()
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_malformed_json_response(self):
@@ -65,25 +77,33 @@ class TestZhipuVisionFailureModes:
         adapter = GLMVisionAdapter()
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 # Mock response with malformed JSON - return VisionResponse object
                 mock_response = VisionResponse(
                     content='{"contract_number": "CT001", "tenant_name": }',
                     raw_response=None,
-                    usage={}
+                    usage={},
                 )
                 with patch.object(
-                    adapter.vision_service, "extract_from_images",
-                    AsyncMock(return_value=mock_response)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(return_value=mock_response),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     # 应该处理 JSON 解析错误并返回友好错误
                     assert result["success"] is False
                     # Either JSON parse error or generic batch failure
-                    assert "json" in result["error"].lower() or "parse" in result["error"].lower() or "failed" in result["error"].lower()
+                    assert (
+                        "json" in result["error"].lower()
+                        or "parse" in result["error"].lower()
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_partial_batch_failure(self):
@@ -100,20 +120,23 @@ class TestZhipuVisionFailureModes:
             if call_count == 1:
                 # 第一个调用成功 - return VisionResponse object
                 return VisionResponse(
-                    content='{"contract_number": "CT001"}',
-                    raw_response=None,
-                    usage={}
+                    content='{"contract_number": "CT001"}', raw_response=None, usage={}
                 )
             else:
                 # 后续调用失败
                 raise Exception("API rate limit exceeded")
 
         # Mock pdf_to_images to return fake images (3 pages)
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png", "image2.png", "image3.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png", "image2.png", "image3.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=mock_extract)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=mock_extract),
                 ):
                     result = await adapter.extract("dummy.pdf", max_pages=3)
 
@@ -131,20 +154,31 @@ class TestZhipuVisionFailureModes:
         # Mock HTTP 429 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
         response = Response(429, request=request)
-        error = HTTPStatusError("Rate limit exceeded", request=request, response=response)
+        error = HTTPStatusError(
+            "Rate limit exceeded", request=request, response=response
+        )
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=error)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=error),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # Either rate limit error or generic batch failure
-                    assert "rate limit" in result["error"].lower() or "429" in result.get("error_code", "") or "failed" in result["error"].lower()
+                    assert (
+                        "rate limit" in result["error"].lower()
+                        or "429" in result.get("error_code", "")
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_http_401_auth_failure(self):
@@ -156,20 +190,31 @@ class TestZhipuVisionFailureModes:
         # Mock HTTP 401 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
         response = Response(401, request=request)
-        error = HTTPStatusError("Authentication failed", request=request, response=response)
+        error = HTTPStatusError(
+            "Authentication failed", request=request, response=response
+        )
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=error)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=error),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # 认证错误应该明确指出
-                    assert "auth" in result["error"].lower() or "401" in result.get("error_code", "") or "failed" in result["error"].lower()
+                    assert (
+                        "auth" in result["error"].lower()
+                        or "401" in result.get("error_code", "")
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_http_500_server_error(self):
@@ -181,20 +226,31 @@ class TestZhipuVisionFailureModes:
         # Mock HTTP 500 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
         response = Response(500, request=request)
-        error = HTTPStatusError("Internal server error", request=request, response=response)
+        error = HTTPStatusError(
+            "Internal server error", request=request, response=response
+        )
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=error)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=error),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # 服务器错误应该标记为可重试或显示 failed
-                    assert result.get("retryable", True) or "500" in result.get("error_code", "") or "failed" in result["error"].lower()
+                    assert (
+                        result.get("retryable", True)
+                        or "500" in result.get("error_code", "")
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_empty_response(self):
@@ -204,23 +260,28 @@ class TestZhipuVisionFailureModes:
         adapter = GLMVisionAdapter()
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 # Mock empty response - return VisionResponse object
-                mock_response = VisionResponse(
-                    content="",
-                    raw_response=None,
-                    usage={}
-                )
+                mock_response = VisionResponse(content="", raw_response=None, usage={})
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(return_value=mock_response)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(return_value=mock_response),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # Either empty error or generic batch failure
-                    assert "empty" in result["error"].lower() or "no content" in result["error"].lower() or "failed" in result["error"].lower()
+                    assert (
+                        "empty" in result["error"].lower()
+                        or "no content" in result["error"].lower()
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_confidence_threshold_filtering(self):
@@ -229,25 +290,32 @@ class TestZhipuVisionFailureModes:
 
         adapter = GLMVisionAdapter()
 
-        low_confidence_result = json.dumps({
-            "contract_number": "CT001",
-            "confidence": 0.3  # 低于默认阈值
-        })
+        low_confidence_result = json.dumps(
+            {
+                "contract_number": "CT001",
+                "confidence": 0.3,  # 低于默认阈值
+            }
+        )
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 # Return VisionResponse object
                 mock_response = VisionResponse(
-                    content=low_confidence_result,
-                    raw_response=None,
-                    usage={}
+                    content=low_confidence_result, raw_response=None, usage={}
                 )
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(return_value=mock_response)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(return_value=mock_response),
                 ):
-                    result = await adapter.extract("dummy.pdf", confidence_threshold=0.7)
+                    result = await adapter.extract(
+                        "dummy.pdf", confidence_threshold=0.7
+                    )
 
                     # 低置信度应该被处理（可能是警告而不是失败）
                     assert "confidence" in result or "extracted_fields" in result
@@ -256,6 +324,7 @@ class TestZhipuVisionFailureModes:
 # ============================================================================
 # Qwen Vision Service 失败模式测试
 # ============================================================================
+
 
 class TestQwenVisionFailureModes:
     """通义 Qwen vision 服务失败模式测试"""
@@ -268,17 +337,25 @@ class TestQwenVisionFailureModes:
         adapter = QwenVisionAdapter()
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=TimeoutError("Request timeout"))
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=TimeoutError("Request timeout")),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # Either timeout or generic batch failure
-                    assert "timeout" in result["error"].lower() or "failed" in result["error"].lower()
+                    assert (
+                        "timeout" in result["error"].lower()
+                        or "failed" in result["error"].lower()
+                    )
 
     @pytest.mark.asyncio
     async def test_malformed_json_response(self):
@@ -288,7 +365,7 @@ class TestQwenVisionFailureModes:
         adapter = QwenVisionAdapter()
 
         # 带有 markdown 代码块的响应
-        markdown_response = '''
+        markdown_response = """
 ```json
 {
     "contract_number": "CT001",
@@ -297,31 +374,37 @@ class TestQwenVisionFailureModes:
     "end_date": "2024-12-31"
 }
 ```
-'''
+"""
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 # Return VisionResponse object
                 mock_response = VisionResponse(
-                    content=markdown_response,
-                    raw_response=None,
-                    usage={}
+                    content=markdown_response, raw_response=None, usage={}
                 )
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(return_value=mock_response)
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(return_value=mock_response),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     # 应该能够从 markdown 中提取 JSON
                     # Note: The adapter should successfully parse the markdown JSON
-                    assert result["success"] is True or "failed" in result["error"].lower()
+                    assert (
+                        result["success"] is True or "failed" in result["error"].lower()
+                    )
 
 
 # ============================================================================
 # DeepSeek Vision Service 失败模式测试
 # ============================================================================
+
 
 class TestDeepSeekVisionFailureModes:
     """DeepSeek vision 服务失败模式测试"""
@@ -336,22 +419,31 @@ class TestDeepSeekVisionFailureModes:
         adapter = DeepSeekVisionAdapter()
 
         # Mock pdf_to_images to return fake images
-        with patch("src.services.document.pdf_to_images.pdf_to_images", return_value=["image1.png"]):
+        with patch(
+            "src.services.document.pdf_to_images.pdf_to_images",
+            return_value=["image1.png"],
+        ):
             # Mock vision_service.is_available property
-            with patch.object(type(adapter.vision_service), 'is_available', True):
+            with patch.object(type(adapter.vision_service), "is_available", True):
                 with patch.object(
-                    adapter.vision_service, "extract_from_images", AsyncMock(side_effect=TimeoutError("Request timeout"))
+                    adapter.vision_service,
+                    "extract_from_images",
+                    AsyncMock(side_effect=TimeoutError("Request timeout")),
                 ):
                     result = await adapter.extract("dummy.pdf")
 
                     assert result["success"] is False
                     # Either timeout or generic batch failure
-                    assert "timeout" in result["error"].lower() or "failed" in result["error"].lower()
+                    assert (
+                        "timeout" in result["error"].lower()
+                        or "failed" in result["error"].lower()
+                    )
 
 
 # ============================================================================
 # JSON 解析辅助函数测试
 # ============================================================================
+
 
 class TestJSONParsingStrategies:
     """测试各种 JSON 解析策略"""
@@ -368,7 +460,10 @@ class TestJSONParsingStrategies:
             ('```json\n{"key": "value"}\n```', {"key": "value"}),
             ('```\n{"key": "value"}\n```', {"key": "value"}),
             ('{"key": "value"}', {"key": "value"}),
-            ('Some text before ```json\n{"key": "value"}\n``` and after', {"key": "value"}),
+            (
+                'Some text before ```json\n{"key": "value"}\n``` and after',
+                {"key": "value"},
+            ),
         ]
 
         for content, expected in test_cases:
@@ -398,6 +493,7 @@ class TestJSONParsingStrategies:
 # ============================================================================
 # 网络错误恢复测试
 # ============================================================================
+
 
 class TestNetworkErrorRecovery:
     """测试网络错误恢复机制"""

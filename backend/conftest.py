@@ -56,7 +56,7 @@ def test_engine():
     # 清理临时文件
     try:
         os.unlink(db_path)
-    except:
+    except Exception:
         pass
 
 
@@ -64,10 +64,10 @@ def test_engine():
 def test_db(test_engine) -> Generator[Session, None, None]:
     """创建测试数据库会话"""
 
-    TestingSessionLocal = sessionmaker(
+    testing_session_local = sessionmaker(
         autocommit=False, autoflush=False, bind=test_engine
     )
-    db = TestingSessionLocal()
+    db = testing_session_local()
     try:
         yield db
     finally:

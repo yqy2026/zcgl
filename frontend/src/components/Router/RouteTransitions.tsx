@@ -3,17 +3,17 @@
  * 提供流畅的页面切换动画和过渡效果
  */
 
-import React, { useState, useEffect, ReactNode } from "react";
-import { useLocation, useNavigationType } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ConfigProvider, theme } from "antd";
+import React, { useState, useEffect, ReactNode } from 'react';
+import { useLocation, useNavigationType } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ConfigProvider, theme } from 'antd';
 
 // 动画类型
-type AnimationType = "fade" | "slide" | "scale" | "flip" | "none";
+type AnimationType = 'fade' | 'slide' | 'scale' | 'flip' | 'none';
 
 // 网络连接接口
 interface NetworkConnection {
-  effectiveType: "slow-2g" | "2g" | "3g" | "4g";
+  effectiveType: 'slow-2g' | '2g' | '3g' | '4g';
   downlink: number;
   rtt: number;
   saveData: boolean;
@@ -30,7 +30,7 @@ declare global {
 
 interface RouteTransitionProps {
   children: ReactNode;
-  animationType?: "fade" | "slide" | "scale" | "flip" | "none";
+  animationType?: 'fade' | 'slide' | 'scale' | 'flip' | 'none';
   duration?: number;
   easing?: string;
   custom?: unknown;
@@ -56,8 +56,8 @@ class RouteTransitionManager {
 
   private detectReducedMotion(): boolean {
     // 检测用户是否偏好减少动画
-    if (typeof window !== "undefined") {
-      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
     return false;
   }
@@ -66,7 +66,7 @@ class RouteTransitionManager {
     this.animationTypes = new Map();
 
     // 淡入淡出动画
-    this.animationTypes.set("fade", {
+    this.animationTypes.set('fade', {
       initial: {
         opacity: 0,
         scale: 0.98,
@@ -90,7 +90,7 @@ class RouteTransitionManager {
     });
 
     // 滑动动画
-    this.animationTypes.set("slide", {
+    this.animationTypes.set('slide', {
       initial: {
         x: 300,
         opacity: 0,
@@ -115,7 +115,7 @@ class RouteTransitionManager {
     });
 
     // 缩放动画
-    this.animationTypes.set("scale", {
+    this.animationTypes.set('scale', {
       initial: {
         scale: 0.8,
         opacity: 0,
@@ -140,7 +140,7 @@ class RouteTransitionManager {
     });
 
     // 翻转动画
-    this.animationTypes.set("flip", {
+    this.animationTypes.set('flip', {
       initial: {
         rotateY: -90,
         opacity: 0,
@@ -164,7 +164,7 @@ class RouteTransitionManager {
     });
 
     // 无动画
-    this.animationTypes.set("none", {
+    this.animationTypes.set('none', {
       initial: {},
       enter: {},
       exit: {},
@@ -173,10 +173,10 @@ class RouteTransitionManager {
 
   public getAnimationConfig(type: string): PageTransitionConfig {
     if (this.reducedMotion) {
-      return this.animationTypes.get("fade") ?? this.animationTypes.get("none")!;
+      return this.animationTypes.get('fade') ?? this.animationTypes.get('none')!;
     }
 
-    return this.animationTypes.get(type) ?? this.animationTypes.get("fade")!;
+    return this.animationTypes.get(type) ?? this.animationTypes.get('fade')!;
   }
 
   public setReducedMotion(reduced: boolean) {
@@ -194,7 +194,7 @@ const globalTransitionManager = new RouteTransitionManager();
 // 路由转场组件
 export const RouteTransition: React.FC<RouteTransitionProps> = ({
   children,
-  animationType = "fade",
+  animationType = 'fade',
   duration,
   easing: _easing,
   custom,
@@ -209,15 +209,15 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
 
   // 根据导航类型选择动画
   const getAnimationType = () => {
-    if (custom != null) return "fade";
+    if (custom != null) return 'fade';
 
     switch (navigationType) {
-      case "POP":
-        return "slide"; // 返回时使用滑动
-      case "PUSH":
+      case 'POP':
+        return 'slide'; // 返回时使用滑动
+      case 'PUSH':
         return animationType; // 前进时使用指定动画
-      case "REPLACE":
-        return "fade"; // 替换时使用淡入淡出
+      case 'REPLACE':
+        return 'fade'; // 替换时使用淡入淡出
       default:
         return animationType;
     }
@@ -245,9 +245,9 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
         animate={animationConfig.enter}
         exit={animationConfig.exit}
         style={{
-          position: "absolute",
-          width: "100%",
-          height: "100%",
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
           top: 0,
           left: 0,
         }}
@@ -268,10 +268,10 @@ export const PageTransitionContainer: React.FC<{
     <div
       className={className}
       style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        overflow: "hidden",
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
         ...style,
       }}
     >
@@ -283,9 +283,9 @@ export const PageTransitionContainer: React.FC<{
 // 布局转场组件
 export const LayoutTransition: React.FC<{
   children: ReactNode;
-  animation?: "fade" | "slide" | "scale";
+  animation?: 'fade' | 'slide' | 'scale';
   duration?: number;
-}> = ({ children, animation = "fade", duration = 200 }) => {
+}> = ({ children, animation = 'fade', duration = 200 }) => {
   const config = globalTransitionManager.getAnimationConfig(animation);
 
   return (
@@ -294,7 +294,7 @@ export const LayoutTransition: React.FC<{
       animate={config.enter}
       transition={{
         duration,
-        ease: "easeInOut",
+        ease: 'easeInOut',
       }}
     >
       {children}
@@ -329,7 +329,7 @@ export const useElementTransition = (isVisible: boolean) => {
       y: 0,
       transition: {
         duration: 200,
-        ease: "easeOut",
+        ease: 'easeOut',
       },
     },
   };
@@ -337,27 +337,27 @@ export const useElementTransition = (isVisible: boolean) => {
   return {
     shouldRender,
     variants,
-    initial: "hidden",
-    animate: shouldRender ? "visible" : "hidden",
-    exit: "hidden",
+    initial: 'hidden',
+    animate: shouldRender ? 'visible' : 'hidden',
+    exit: 'hidden',
   };
 };
 
 // 路由特定动画Hook
 export const useRouteAnimation = (route: string) => {
-  const [animationType, setAnimationType] = useState<"fade" | "slide" | "scale" | "flip">("fade");
+  const [animationType, setAnimationType] = useState<'fade' | 'slide' | 'scale' | 'flip'>('fade');
 
   useEffect(() => {
     // 根据路由类型选择合适的动画
     const routeAnimations: Record<string, typeof animationType> = {
-      "/dashboard": "scale",
-      "/assets": "slide",
-      "/rental": "fade",
-      "/system": "flip",
+      '/dashboard': 'scale',
+      '/assets': 'slide',
+      '/rental': 'fade',
+      '/system': 'flip',
     };
 
-    const defaultAnimation = Object.keys(routeAnimations).find((r) => route.startsWith(r));
-    setAnimationType(defaultAnimation != null ? routeAnimations[defaultAnimation] : "fade");
+    const defaultAnimation = Object.keys(routeAnimations).find(r => route.startsWith(r));
+    setAnimationType(defaultAnimation != null ? routeAnimations[defaultAnimation] : 'fade');
   }, [route]);
 
   return { animationType };
@@ -367,28 +367,31 @@ export const useRouteAnimation = (route: string) => {
 export const useSmartTransition = () => {
   const location = useLocation();
   const navigationType = useNavigationType();
-  const [preferredAnimation, setPreferredAnimation] = useState<"fade" | "slide" | "scale" | "flip" | "none">(
-    "fade",
-  );
+  const [preferredAnimation, setPreferredAnimation] = useState<
+    'fade' | 'slide' | 'scale' | 'flip' | 'none'
+  >('fade');
 
   useEffect(() => {
     // 根据用户行为学习偏好
-    const userPreferences = localStorage.getItem("preferred_route_animation");
-    if (userPreferences != null && ["fade", "slide", "scale", "flip", "none"].includes(userPreferences)) {
+    const userPreferences = localStorage.getItem('preferred_route_animation');
+    if (
+      userPreferences != null &&
+      ['fade', 'slide', 'scale', 'flip', 'none'].includes(userPreferences)
+    ) {
       setPreferredAnimation(userPreferences as AnimationType);
     }
   }, []);
 
   const getOptimalAnimation = () => {
     // 根据导航类型和路径深度选择最优动画
-    const pathDepth = location.pathname.split("/").length;
+    const pathDepth = location.pathname.split('/').length;
 
-    if (navigationType === "POP") {
-      return "slide"; // 返回导航适合滑动动画
+    if (navigationType === 'POP') {
+      return 'slide'; // 返回导航适合滑动动画
     }
 
     if (pathDepth > 3) {
-      return "fade"; // 深层路径适合简单动画
+      return 'fade'; // 深层路径适合简单动画
     }
 
     return preferredAnimation;
@@ -396,7 +399,7 @@ export const useSmartTransition = () => {
 
   const setAnimationPreference = (animation: typeof preferredAnimation) => {
     setPreferredAnimation(animation);
-    localStorage.setItem("preferred_route_animation", animation);
+    localStorage.setItem('preferred_route_animation', animation);
   };
 
   return {
@@ -410,22 +413,22 @@ export const OptimizedTransition: React.FC<{
   children: ReactNode;
   animationType?: string;
   disabled?: boolean;
-}> = ({ children, animationType = "fade", disabled = false }) => {
+}> = ({ children, animationType = 'fade', disabled = false }) => {
   const [isReduced, setIsReduced] = useState(false);
 
   useEffect(() => {
     // 监听性能变化
     const handlePerformanceChange = () => {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setIsReduced(mediaQuery.matches);
     };
 
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    mediaQuery.addEventListener("change", handlePerformanceChange);
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    mediaQuery.addEventListener('change', handlePerformanceChange);
     handlePerformanceChange();
 
     return () => {
-      mediaQuery.removeEventListener("change", handlePerformanceChange);
+      mediaQuery.removeEventListener('change', handlePerformanceChange);
     };
   }, []);
 
@@ -441,7 +444,7 @@ export const OptimizedTransition: React.FC<{
       animate={config.enter}
       exit={config.exit}
       style={{
-        willChange: "opacity, transform", // 提示浏览器优化
+        willChange: 'opacity, transform', // 提示浏览器优化
       }}
     >
       {children}
@@ -468,16 +471,16 @@ export const TransitionConfigProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   useEffect(() => {
     // 检测系统偏好
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setReducedMotion(prefersReducedMotion);
 
     // 检测设备性能
     const checkPerformance = () => {
       const connection =
         navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      if (connection !== undefined && connection !== null &&  connection.effectiveType) {
+      if (connection !== undefined && connection !== null && connection.effectiveType) {
         // 在慢速网络上禁用动画
-        const isSlowNetwork = ["slow-2g", "2g", "3g"].includes(connection.effectiveType);
+        const isSlowNetwork = ['slow-2g', '2g', '3g'].includes(connection.effectiveType);
         setAnimationsEnabled(!isSlowNetwork);
       }
     };
@@ -516,7 +519,7 @@ export const TransitionConfigProvider: React.FC<{ children: ReactNode }> = ({ ch
 export const useTransitionConfig = () => {
   const context = React.useContext(TransitionConfigContext);
   if (!context) {
-    throw new Error("useTransitionConfig must be used within TransitionConfigProvider");
+    throw new Error('useTransitionConfig must be used within TransitionConfigProvider');
   }
   return context;
 };
@@ -536,7 +539,7 @@ export const presetAnimations = {
     initial: { x: 100, opacity: 0 },
     animate: { x: 0, opacity: 1 },
     exit: { x: -100, opacity: 0 },
-    transition: { duration: 0.3, ease: "easeInOut" },
+    transition: { duration: 0.3, ease: 'easeInOut' },
   },
 
   // 缩放进入
@@ -544,7 +547,7 @@ export const presetAnimations = {
     initial: { scale: 0.8, opacity: 0 },
     animate: { scale: 1, opacity: 1 },
     exit: { scale: 1.1, opacity: 0 },
-    transition: { duration: 0.25, ease: "easeOut" },
+    transition: { duration: 0.25, ease: 'easeOut' },
   },
 
   // 弹跳进入
@@ -554,7 +557,7 @@ export const presetAnimations = {
       scale: 1,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: 'spring',
         stiffness: 300,
         damping: 20,
       },

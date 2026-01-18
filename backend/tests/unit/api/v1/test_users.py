@@ -27,8 +27,8 @@ Testing Approach:
 - Test permission checks
 """
 
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, status
@@ -100,7 +100,9 @@ class TestGetUsers:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_users_success(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_users_success(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test getting user list successfully"""
         from src.api.v1.auth_modules.users import get_users
 
@@ -146,7 +148,9 @@ class TestGetUsers:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_users_with_search(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_users_with_search(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test getting user list with search parameter"""
         from src.api.v1.auth_modules.users import get_users
 
@@ -177,7 +181,9 @@ class TestGetUsers:
             organization_id=None,
         )
 
-        result = await get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = await get_users(
+            params=params, db=mock_db, current_user=mock_admin_user
+        )
 
         assert result.total == 1
         mock_user_crud.get_multi_with_filters.assert_called_once_with(
@@ -192,7 +198,9 @@ class TestGetUsers:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_users_with_filters(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_users_with_filters(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test getting user list with role and status filters"""
         from src.api.v1.auth_modules.users import get_users
 
@@ -209,14 +217,18 @@ class TestGetUsers:
             organization_id="org-123",
         )
 
-        result = await get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = await get_users(
+            params=params, db=mock_db, current_user=mock_admin_user
+        )
 
         assert result.total == 0
         mock_user_crud.get_multi_with_filters.assert_called_once()
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_users_pagination(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_users_pagination(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test pagination of user list"""
         from src.api.v1.auth_modules.users import get_users
 
@@ -250,14 +262,22 @@ class TestGetUsers:
             organization_id=None,
         )
 
-        result = await get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = await get_users(
+            params=params, db=mock_db, current_user=mock_admin_user
+        )
 
         assert result.total == 25
         assert result.page == 2
         assert result.page_size == 10
         assert result.total_pages == 3  # (25 + 10 - 1) // 10 = 3
         mock_user_crud.get_multi_with_filters.assert_called_once_with(
-            db=mock_db, skip=10, limit=10, search=None, role=None, is_active=None, organization_id=None
+            db=mock_db,
+            skip=10,
+            limit=10,
+            search=None,
+            role=None,
+            is_active=None,
+            organization_id=None,
         )
 
 
@@ -271,7 +291,9 @@ class TestCreateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_create_user_success(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_create_user_success(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test creating user successfully"""
         from src.api.v1.auth_modules.users import create_user
         from src.schemas.auth import UserCreate
@@ -302,7 +324,9 @@ class TestCreateUser:
         mock_user_crud.create.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = await create_user(user_data=user_data, db=mock_db, current_user=mock_admin_user)
+        result = await create_user(
+            user_data=user_data, db=mock_db, current_user=mock_admin_user
+        )
 
         assert result.username == "newuser"
         assert result.email == "newuser@example.com"
@@ -310,7 +334,9 @@ class TestCreateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_create_user_duplicate_username(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_create_user_duplicate_username(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test creating user with duplicate username"""
         from src.api.v1.auth_modules.users import create_user
         from src.exceptions import BusinessLogicError
@@ -329,7 +355,9 @@ class TestCreateUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_user(user_data=user_data, db=mock_db, current_user=mock_admin_user)
+            await create_user(
+                user_data=user_data, db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "用户名已存在" in exc_info.value.detail
@@ -345,7 +373,9 @@ class TestGetUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_user_admin_access(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_user_admin_access(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test admin accessing any user"""
         from src.api.v1.auth_modules.users import get_user
 
@@ -367,14 +397,18 @@ class TestGetUser:
         mock_user_crud.get.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = await get_user(user_id="target-user-id", db=mock_db, current_user=mock_admin_user)
+        result = await get_user(
+            user_id="target-user-id", db=mock_db, current_user=mock_admin_user
+        )
 
         assert result.username == "targetuser"
         mock_user_crud.get.assert_called_once_with(mock_db, "target-user-id")
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_user_self_access(self, mock_user_crud_class, mock_db, mock_regular_user):
+    async def test_get_user_self_access(
+        self, mock_user_crud_class, mock_db, mock_regular_user
+    ):
         """Test user accessing their own information"""
         from src.api.v1.auth_modules.users import get_user
 
@@ -396,26 +430,34 @@ class TestGetUser:
         mock_user_crud.get.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = await get_user(user_id="user-id", db=mock_db, current_user=mock_regular_user)
+        result = await get_user(
+            user_id="user-id", db=mock_db, current_user=mock_regular_user
+        )
 
         assert result.username == "testuser"
         mock_user_crud.get.assert_called_once()
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_user_forbidden(self, mock_user_crud_class, mock_db, mock_regular_user):
+    async def test_get_user_forbidden(
+        self, mock_user_crud_class, mock_db, mock_regular_user
+    ):
         """Test user trying to access another user's information"""
         from src.api.v1.auth_modules.users import get_user
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_user(user_id="other-user-id", db=mock_db, current_user=mock_regular_user)
+            await get_user(
+                user_id="other-user-id", db=mock_db, current_user=mock_regular_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert "无权访问" in exc_info.value.detail
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test getting non-existent user"""
         from src.api.v1.auth_modules.users import get_user
 
@@ -424,7 +466,9 @@ class TestGetUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_user(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            await get_user(
+                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
         assert "用户不存在" in exc_info.value.detail
@@ -440,7 +484,9 @@ class TestUpdateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_update_user_admin_success(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_update_user_admin_success(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test admin updating user successfully"""
         from src.api.v1.auth_modules.users import update_user
         from src.schemas.auth import UserUpdate
@@ -470,7 +516,10 @@ class TestUpdateUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         result = await update_user(
-            user_id="target-user-id", user_data=user_data, db=mock_db, current_user=mock_admin_user
+            user_id="target-user-id",
+            user_data=user_data,
+            db=mock_db,
+            current_user=mock_admin_user,
         )
 
         assert result.full_name == "Updated Name"
@@ -479,7 +528,9 @@ class TestUpdateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_update_user_self_success(self, mock_user_crud_class, mock_db, mock_regular_user):
+    async def test_update_user_self_success(
+        self, mock_user_crud_class, mock_db, mock_regular_user
+    ):
         """Test user updating their own information"""
         from src.api.v1.auth_modules.users import update_user
         from src.schemas.auth import UserUpdate
@@ -506,14 +557,19 @@ class TestUpdateUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         result = await update_user(
-            user_id="user-id", user_data=user_data, db=mock_db, current_user=mock_regular_user
+            user_id="user-id",
+            user_data=user_data,
+            db=mock_db,
+            current_user=mock_regular_user,
         )
 
         assert result.full_name == "My Updated Name"
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_update_user_forbidden(self, mock_user_crud_class, mock_db, mock_regular_user):
+    async def test_update_user_forbidden(
+        self, mock_user_crud_class, mock_db, mock_regular_user
+    ):
         """Test user trying to update another user"""
         from src.api.v1.auth_modules.users import update_user
         from src.schemas.auth import UserUpdate
@@ -522,7 +578,10 @@ class TestUpdateUser:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_user(
-                user_id="other-user-id", user_data=user_data, db=mock_db, current_user=mock_regular_user
+                user_id="other-user-id",
+                user_data=user_data,
+                db=mock_db,
+                current_user=mock_regular_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -530,7 +589,9 @@ class TestUpdateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_update_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_update_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test updating non-existent user"""
         from src.api.v1.auth_modules.users import update_user
         from src.schemas.auth import UserUpdate
@@ -543,7 +604,10 @@ class TestUpdateUser:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_user(
-                user_id="nonexistent-id", user_data=user_data, db=mock_db, current_user=mock_admin_user
+                user_id="nonexistent-id",
+                user_data=user_data,
+                db=mock_db,
+                current_user=mock_admin_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -560,7 +624,9 @@ class TestChangePassword:
     @patch("src.api.v1.auth_modules.users.AuthService")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_change_password_success(self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user):
+    async def test_change_password_success(
+        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user
+    ):
         """Test changing password successfully"""
         from src.api.v1.auth_modules.users import change_password
         from src.schemas.auth import PasswordChangeRequest
@@ -581,7 +647,10 @@ class TestChangePassword:
         mock_user_crud_class.return_value = mock_user_crud
 
         result = await change_password(
-            user_id="user-id", password_data=password_data, db=mock_db, current_user=mock_regular_user
+            user_id="user-id",
+            password_data=password_data,
+            db=mock_db,
+            current_user=mock_regular_user,
         )
 
         assert result["message"] == "密码修改成功"
@@ -590,7 +659,9 @@ class TestChangePassword:
     @patch("src.api.v1.auth_modules.users.AuthService")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_change_password_admin_for_user(self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_admin_user):
+    async def test_change_password_admin_for_user(
+        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_admin_user
+    ):
         """Test admin changing password for another user"""
         from src.api.v1.auth_modules.users import change_password
         from src.schemas.auth import PasswordChangeRequest
@@ -611,7 +682,10 @@ class TestChangePassword:
         mock_user_crud_class.return_value = mock_user_crud
 
         result = await change_password(
-            user_id="target-user-id", password_data=password_data, db=mock_db, current_user=mock_admin_user
+            user_id="target-user-id",
+            password_data=password_data,
+            db=mock_db,
+            current_user=mock_admin_user,
         )
 
         assert result["message"] == "密码修改成功"
@@ -619,7 +693,9 @@ class TestChangePassword:
     @patch("src.api.v1.auth_modules.users.AuthService")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_change_password_forbidden(self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user):
+    async def test_change_password_forbidden(
+        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user
+    ):
         """Test user trying to change another user's password"""
         from src.api.v1.auth_modules.users import change_password
         from src.schemas.auth import PasswordChangeRequest
@@ -630,7 +706,10 @@ class TestChangePassword:
 
         with pytest.raises(HTTPException) as exc_info:
             await change_password(
-                user_id="other-user-id", password_data=password_data, db=mock_db, current_user=mock_regular_user
+                user_id="other-user-id",
+                password_data=password_data,
+                db=mock_db,
+                current_user=mock_regular_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -656,7 +735,10 @@ class TestChangePassword:
 
         with pytest.raises(HTTPException) as exc_info:
             await change_password(
-                user_id="nonexistent-id", password_data=password_data, db=mock_db, current_user=mock_admin_user
+                user_id="nonexistent-id",
+                password_data=password_data,
+                db=mock_db,
+                current_user=mock_admin_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -672,7 +754,9 @@ class TestDeactivateUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_deactivate_user_success(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_deactivate_user_success(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test deactivating user successfully"""
         from src.api.v1.auth_modules.users import deactivate_user
 
@@ -683,14 +767,18 @@ class TestDeactivateUser:
         mock_user_crud.delete.return_value = True
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = await deactivate_user(user_id="user-id", db=mock_db, current_user=mock_admin_user)
+        result = await deactivate_user(
+            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        )
 
         assert result["message"] == "用户已停用"
         mock_user_crud.delete.assert_called_once_with(mock_db, "user-id")
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_deactivate_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_deactivate_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test deactivating non-existent user"""
         from src.api.v1.auth_modules.users import deactivate_user
 
@@ -699,7 +787,9 @@ class TestDeactivateUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(HTTPException) as exc_info:
-            await deactivate_user(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            await deactivate_user(
+                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -714,7 +804,9 @@ class TestActivateUser:
 
     @patch("src.api.v1.auth_modules.users.AuthService")
     @pytest.mark.asyncio
-    async def test_activate_user_success(self, mock_auth_service_class, mock_db, mock_admin_user):
+    async def test_activate_user_success(
+        self, mock_auth_service_class, mock_db, mock_admin_user
+    ):
         """Test activating user successfully"""
         from src.api.v1.auth_modules.users import activate_user
 
@@ -722,14 +814,18 @@ class TestActivateUser:
         mock_auth_service.activate_user.return_value = True
         mock_auth_service_class.return_value = mock_auth_service
 
-        result = await activate_user(user_id="user-id", db=mock_db, current_user=mock_admin_user)
+        result = await activate_user(
+            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        )
 
         assert result["message"] == "用户已激活"
         mock_auth_service.activate_user.assert_called_once_with("user-id")
 
     @patch("src.api.v1.auth_modules.users.AuthService")
     @pytest.mark.asyncio
-    async def test_activate_user_not_found(self, mock_auth_service_class, mock_db, mock_admin_user):
+    async def test_activate_user_not_found(
+        self, mock_auth_service_class, mock_db, mock_admin_user
+    ):
         """Test activating non-existent user"""
         from src.api.v1.auth_modules.users import activate_user
 
@@ -738,7 +834,9 @@ class TestActivateUser:
         mock_auth_service_class.return_value = mock_auth_service
 
         with pytest.raises(HTTPException) as exc_info:
-            await activate_user(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            await activate_user(
+                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -754,7 +852,9 @@ class TestLockUser:
     @patch("src.api.v1.auth_modules.users.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_lock_user_success(self, mock_user_crud_class, mock_audit_crud_class, mock_db, mock_admin_user):
+    async def test_lock_user_success(
+        self, mock_user_crud_class, mock_audit_crud_class, mock_db, mock_admin_user
+    ):
         """Test locking user account successfully"""
         from src.api.v1.auth_modules.users import lock_user
 
@@ -768,7 +868,9 @@ class TestLockUser:
         mock_user_crud_class.return_value = mock_user_crud
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await lock_user(user_id="user-id", db=mock_db, current_user=mock_admin_user)
+        result = await lock_user(
+            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        )
 
         assert result["success"] is True
         assert "已锁定" in result["message"]
@@ -777,7 +879,9 @@ class TestLockUser:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_lock_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_lock_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test locking non-existent user"""
         from src.api.v1.auth_modules.users import lock_user
 
@@ -786,7 +890,9 @@ class TestLockUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(HTTPException) as exc_info:
-            await lock_user(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            await lock_user(
+                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -802,7 +908,9 @@ class TestUnlockUserAccount:
     @patch("src.api.v1.auth_modules.users.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_unlock_user_success(self, mock_user_crud_class, mock_audit_crud_class, mock_db, mock_admin_user):
+    async def test_unlock_user_success(
+        self, mock_user_crud_class, mock_audit_crud_class, mock_db, mock_admin_user
+    ):
         """Test unlocking user account successfully"""
         from src.api.v1.auth_modules.users import unlock_user_account
 
@@ -816,7 +924,9 @@ class TestUnlockUserAccount:
         mock_user_crud_class.return_value = mock_user_crud
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await unlock_user_account(user_id="user-id", db=mock_db, current_user=mock_admin_user)
+        result = await unlock_user_account(
+            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        )
 
         assert result["success"] is True
         assert "已解锁" in result["message"]
@@ -825,7 +935,9 @@ class TestUnlockUserAccount:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_unlock_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_unlock_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test unlocking non-existent user"""
         from src.api.v1.auth_modules.users import unlock_user_account
 
@@ -834,7 +946,9 @@ class TestUnlockUserAccount:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(HTTPException) as exc_info:
-            await unlock_user_account(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            await unlock_user_account(
+                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -851,11 +965,21 @@ class TestResetUserPassword:
     @patch("src.api.v1.auth_modules.users.AuthService")
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_reset_password_success(self, mock_user_crud_class, mock_auth_service_class, mock_audit_crud_class, mock_db, mock_admin_user):
+    async def test_reset_password_success(
+        self,
+        mock_user_crud_class,
+        mock_auth_service_class,
+        mock_audit_crud_class,
+        mock_db,
+        mock_admin_user,
+    ):
         """Test resetting user password successfully"""
         from src.api.v1.auth_modules.users import reset_user_password
 
-        password_data = {"new_password": "NewSecurePass123!", "reason": "User forgot password"}
+        password_data = {
+            "new_password": "NewSecurePass123!",
+            "reason": "User forgot password",
+        }
 
         mock_user = MagicMock()
         mock_user.username = "testuser"
@@ -872,7 +996,10 @@ class TestResetUserPassword:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await reset_user_password(
-            user_id="user-id", password_data=password_data, db=mock_db, current_user=mock_admin_user
+            user_id="user-id",
+            password_data=password_data,
+            db=mock_db,
+            current_user=mock_admin_user,
         )
 
         assert result["success"] is True
@@ -882,7 +1009,9 @@ class TestResetUserPassword:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_reset_password_user_not_found(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_reset_password_user_not_found(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test resetting password for non-existent user"""
         from src.api.v1.auth_modules.users import reset_user_password
 
@@ -894,7 +1023,10 @@ class TestResetUserPassword:
 
         with pytest.raises(HTTPException) as exc_info:
             await reset_user_password(
-                user_id="nonexistent-id", password_data=password_data, db=mock_db, current_user=mock_admin_user
+                user_id="nonexistent-id",
+                password_data=password_data,
+                db=mock_db,
+                current_user=mock_admin_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -966,7 +1098,9 @@ class TestUsersEdgeCases:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_get_users_empty_list(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_get_users_empty_list(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test getting users when no users exist"""
         from src.api.v1.auth_modules.users import get_users
 
@@ -993,7 +1127,9 @@ class TestUsersEdgeCases:
 
     @patch("src.api.v1.auth_modules.users.UserCRUD")
     @pytest.mark.asyncio
-    async def test_update_user_with_business_logic_error(self, mock_user_crud_class, mock_db, mock_admin_user):
+    async def test_update_user_with_business_logic_error(
+        self, mock_user_crud_class, mock_db, mock_admin_user
+    ):
         """Test updating user with business logic error from CRUD layer"""
         from src.api.v1.auth_modules.users import update_user
         from src.exceptions import BusinessLogicError
@@ -1010,7 +1146,10 @@ class TestUsersEdgeCases:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_user(
-                user_id="user-id", user_data=user_data, db=mock_db, current_user=mock_admin_user
+                user_id="user-id",
+                user_data=user_data,
+                db=mock_db,
+                current_user=mock_admin_user,
             )
 
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST

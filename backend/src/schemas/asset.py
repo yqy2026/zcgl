@@ -20,14 +20,29 @@ class AssetBase(BaseModel):
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
     ownership_entity: str = Field(
-        ..., min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="权属方"
+        ...,
+        min_length=1,
+        max_length=FieldLengthLimits.SHORT_TEXT_MAX,
+        description="权属方",
     )
-    ownership_category: str | None = Field(None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别")
-    project_name: str | None = Field(None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="项目名称")
+    ownership_category: str | None = Field(
+        None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
+    )
+    project_name: str | None = Field(
+        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="项目名称"
+    )
     property_name: str = Field(
-        ..., min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="物业名称"
+        ...,
+        min_length=1,
+        max_length=FieldLengthLimits.SHORT_TEXT_MAX,
+        description="物业名称",
     )
-    address: str = Field(..., min_length=1, max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, description="物业地址")
+    address: str = Field(
+        ...,
+        min_length=1,
+        max_length=FieldLengthLimits.MEDIUM_TEXT_MAX,
+        description="物业地址",
+    )
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
@@ -56,7 +71,9 @@ class AssetBase(BaseModel):
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
     # 租户相关字段
-    tenant_name: str | None = Field(None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称")
+    tenant_name: str | None = Field(
+        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称"
+    )
     tenant_type: str | None = Field(None, description="租户类型")
 
     # 合同相关字段
@@ -206,7 +223,9 @@ class AssetUpdate(BaseModel):
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
     # 租户相关字段
-    tenant_name: str | None = Field(None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称")
+    tenant_name: str | None = Field(
+        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称"
+    )
     tenant_type: str | None = Field(None, description="租户类型")
 
     # 合同相关字段

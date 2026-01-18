@@ -4,7 +4,7 @@ Enhanced Error Handler 单元测试
 测试 EnhancedPDFImportError 类的错误处理、重试机制和健康检查功能
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -91,7 +91,9 @@ class TestEnhancedPDFImportErrorInit:
 class TestHandleError:
     """测试 handle_error 方法"""
 
-    def test_handle_file_too_large_error(self, error_handler, sample_error, sample_context):
+    def test_handle_file_too_large_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理文件过大错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -123,7 +125,9 @@ class TestHandleError:
         assert result["retry_count"] == 1
         assert result["suggested_action"] == "转换文件格式为PDF"
 
-    def test_handle_corrupted_file_error(self, error_handler, sample_error, sample_context):
+    def test_handle_corrupted_file_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理损坏文件错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -136,7 +140,9 @@ class TestHandleError:
         assert result["error_type"] == "corrupted_file"
         assert result["suggested_action"] == "重新扫描文件或修复文件"
 
-    def test_handle_processing_timeout_error(self, error_handler, sample_error, sample_context):
+    def test_handle_processing_timeout_error(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理超时错误"""
         result = error_handler.handle_error(
             error=sample_error,
@@ -247,7 +253,9 @@ class TestHandleError:
         assert "status_code" in result
         assert result["status_code"] == 500
 
-    def test_handle_custom_error_type(self, error_handler, sample_error, sample_context):
+    def test_handle_custom_error_type(
+        self, error_handler, sample_error, sample_context
+    ):
         """测试处理自定义错误类型（未定义的）"""
         custom_error = ValueError("Custom error")
         result = error_handler.handle_error(
@@ -279,15 +287,13 @@ class TestHandleError:
         )
         assert result2["retry_count"] == 3
 
-    def test_error_with_different_exception_types(
-        self, error_handler, sample_context
-    ):
+    def test_error_with_different_exception_types(self, error_handler, sample_context):
         """测试不同异常类型的处理"""
         exceptions = [
             ValueError("Value error"),
             TypeError("Type error"),
             RuntimeError("Runtime error"),
-            IOError("IO error"),
+            OSError("IO error"),
             Exception("Generic exception"),
         ]
 
@@ -403,7 +409,6 @@ class TestMonitorProcessingHealth:
 
         # Import the function to get the actual import path
         import sys
-        from importlib import reload
 
         # Mock the module before importing
         sys.modules["src.services.providers.ocr_provider"] = MagicMock()
@@ -580,7 +585,7 @@ class TestErrorMessageFormatting:
 
     def test_file_too_large_includes_size_limit(self, error_handler):
         """测试文件过大错误包含大小限制"""
-        result = error_handler.handle_error(
+        error_handler.handle_error(
             error=ValueError("File too large"),
             context={},
             error_type="file_too_large",
@@ -697,9 +702,7 @@ class TestRetryLogic:
             assert result["retry_count"] > 0
             assert result["max_retries"] == 3
 
-    def test_retry_progression_across_multiple_calls(
-        self, error_handler, sample_error
-    ):
+    def test_retry_progression_across_multiple_calls(self, error_handler, sample_error):
         """测试多次调用的重试进程"""
         results = []
 
@@ -743,7 +746,7 @@ class TestIntegrationScenarios:
 
     def test_pdf_corrupted_scenario(self, error_handler):
         """测试PDF文件损坏的实际场景"""
-        corrupted_error = IOError("Invalid PDF structure")
+        corrupted_error = OSError("Invalid PDF structure")
         context = {
             "file_name": "corrupted.pdf",
             "file_size": 1024 * 1024,

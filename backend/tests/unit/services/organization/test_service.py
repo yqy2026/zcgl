@@ -149,8 +149,10 @@ class TestCreateOrganization:
         mock_db.flush.return_value = None
         mock_db.refresh.return_value = None
 
-        with patch.object(org_service, "_create_history", return_value=None) as mock_history:
-            result = org_service.create_organization(mock_db, obj_in=obj_in)
+        with patch.object(
+            org_service, "_create_history", return_value=None
+        ) as mock_history:
+            org_service.create_organization(mock_db, obj_in=obj_in)
             mock_history.assert_called_once()
 
 
@@ -176,7 +178,9 @@ class TestUpdateOrganization:
 
         mock_db.query.side_effect = query_side_effect
 
-        result = org_service.update_organization(mock_db, org_id="org_123", obj_in=obj_in)
+        result = org_service.update_organization(
+            mock_db, org_id="org_123", obj_in=obj_in
+        )
 
         assert result is not None
         mock_db.commit.assert_called()
@@ -195,7 +199,9 @@ class TestUpdateOrganization:
         mock_db.query.side_effect = query_side_effect
 
         with pytest.raises(ValueError, match="组织ID.*不存在"):
-            org_service.update_organization(mock_db, org_id="nonexistent", obj_in=obj_in)
+            org_service.update_organization(
+                mock_db, org_id="nonexistent", obj_in=obj_in
+            )
 
     def test_update_organization_parent_cycle(self, org_service, mock_db):
         """测试更新上级组织时检测循环引用"""
@@ -220,9 +226,13 @@ class TestUpdateOrganization:
 
         with patch.object(org_service, "_would_create_cycle", return_value=True):
             with pytest.raises(ValueError, match="不能将组织移动到其子组织下"):
-                org_service.update_organization(mock_db, org_id="org_123", obj_in=obj_in)
+                org_service.update_organization(
+                    mock_db, org_id="org_123", obj_in=obj_in
+                )
 
-    def test_update_organization_changes_level_and_path(self, org_service, mock_db, mock_parent):
+    def test_update_organization_changes_level_and_path(
+        self, org_service, mock_db, mock_parent
+    ):
         """测试更新上级组织时更新层级和路径"""
         obj_in = OrganizationUpdate(
             parent_id="parent_123",
@@ -249,14 +259,20 @@ class TestUpdateOrganization:
         mock_db.query.side_effect = query_side_effect
 
         with patch.object(org_service, "_would_create_cycle", return_value=False):
-            result = org_service.update_organization(mock_db, org_id="org_123", obj_in=obj_in)
+            result = org_service.update_organization(
+                mock_db, org_id="org_123", obj_in=obj_in
+            )
 
             # Level and path update happens through object.__setattr__ in the actual code
             # We just verify the method completed without error
             assert result is not None
 
-    @pytest.mark.skip(reason="Mock attribute tracking is complex. History creation is better tested via integration tests.")
-    def test_update_organization_creates_history(self, org_service, mock_db, mock_organization):
+    @pytest.mark.skip(
+        reason="Mock attribute tracking is complex. History creation is better tested via integration tests."
+    )
+    def test_update_organization_creates_history(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试更新时记录变更历史"""
         # Skipped: MagicMock doesn't properly track attribute changes
         # This functionality is better tested through integration tests
@@ -272,10 +288,13 @@ class TestDeleteOrganization:
     def test_delete_organization_success(self, org_service, mock_db, mock_organization):
         """测试成功删除"""
         with patch("src.crud.organization.organization.get_children", return_value=[]):
+
             def query_side_effect(model):
                 if model == Organization:
                     mock_query = MagicMock()
-                    mock_query.filter.return_value.first.return_value = mock_organization
+                    mock_query.filter.return_value.first.return_value = (
+                        mock_organization
+                    )
                     return mock_query
                 return MagicMock()
 
@@ -284,7 +303,9 @@ class TestDeleteOrganization:
             # Configure mock to track setattr calls
             mock_organization.is_deleted = False
 
-            result = org_service.delete_organization(mock_db, org_id="org_123", deleted_by="user_123")
+            result = org_service.delete_organization(
+                mock_db, org_id="org_123", deleted_by="user_123"
+            )
 
             assert result is True
             # After deletion, is_deleted should be True
@@ -293,6 +314,7 @@ class TestDeleteOrganization:
 
     def test_delete_organization_not_found(self, org_service, mock_db):
         """测试组织不存在"""
+
         def query_side_effect(model):
             if model == Organization:
                 mock_query = MagicMock()
@@ -306,7 +328,9 @@ class TestDeleteOrganization:
 
         assert result is False
 
-    def test_delete_organization_with_children_fails(self, org_service, mock_db, mock_organization):
+    def test_delete_organization_with_children_fails(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试有子组织时删除失败"""
         child = MagicMock(spec=Organization)
         child.id = "child_123"
@@ -315,7 +339,9 @@ class TestDeleteOrganization:
             if model == Organization:
                 mock_query = MagicMock()
                 mock_query.filter.return_value.first.return_value = mock_organization
-                mock_query.filter.return_value.all.return_value = [child]  # Has children
+                mock_query.filter.return_value.all.return_value = [
+                    child
+                ]  # Has children
                 return mock_query
             return MagicMock()
 
@@ -324,20 +350,27 @@ class TestDeleteOrganization:
         with pytest.raises(ValueError, match="不能删除有子组织的组织"):
             org_service.delete_organization(mock_db, org_id="org_123")
 
-    def test_delete_organization_creates_history(self, org_service, mock_db, mock_organization):
+    def test_delete_organization_creates_history(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试删除时记录历史"""
         with patch("src.crud.organization.organization.get_children", return_value=[]):
+
             def query_side_effect(model):
                 if model == Organization:
                     mock_query = MagicMock()
-                    mock_query.filter.return_value.first.return_value = mock_organization
+                    mock_query.filter.return_value.first.return_value = (
+                        mock_organization
+                    )
                     return mock_query
                 return MagicMock()
 
             mock_db.query.side_effect = query_side_effect
 
             with patch.object(org_service, "_create_history") as mock_history:
-                result = org_service.delete_organization(mock_db, org_id="org_123", deleted_by="user_123")
+                org_service.delete_organization(
+                    mock_db, org_id="org_123", deleted_by="user_123"
+                )
                 mock_history.assert_called_once()
 
 
@@ -409,7 +442,7 @@ class TestGetHistory:
         mock_filter = MagicMock()
         mock_order = MagicMock()
         mock_offset = MagicMock()
-        mock_limit = MagicMock()
+        MagicMock()
 
         mock_query.filter.return_value = mock_filter
         mock_filter.order_by.return_value = mock_order
@@ -418,7 +451,7 @@ class TestGetHistory:
 
         mock_db.query.return_value = mock_query
 
-        result = org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
+        org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
 
         mock_order.offset.assert_called_with(10)
         mock_offset.limit.assert_called_with(20)
@@ -449,6 +482,7 @@ class TestWouldCreateCycle:
 
     def test_direct_cycle(self, org_service, mock_db, mock_organization):
         """测试直接循环引用（自己作为自己的上级）"""
+
         def query_side_effect(model):
             if model == Organization:
                 mock_query = MagicMock()
@@ -462,7 +496,9 @@ class TestWouldCreateCycle:
 
         assert result is True
 
-    @pytest.mark.skip(reason="Complex cycle detection requires proper mock chain setup. Better tested via integration tests.")
+    @pytest.mark.skip(
+        reason="Complex cycle detection requires proper mock chain setup. Better tested via integration tests."
+    )
     def test_indirect_cycle(self, org_service, mock_db):
         """测试间接循环引用"""
         # Skipped: Indirect cycle detection requires complex mock setup
@@ -491,13 +527,18 @@ class TestUpdateChildrenPath:
             else:
                 return []  # No grandchildren
 
-        with patch("src.crud.organization.organization.get_children", side_effect=get_children_side_effect):
+        with patch(
+            "src.crud.organization.organization.get_children",
+            side_effect=get_children_side_effect,
+        ):
             org_service._update_children_path(mock_db, mock_organization)
 
             # Verify the method completed (commit was called)
             mock_db.commit.assert_called()
 
-    def test_update_children_path_recursive(self, org_service, mock_db, mock_organization):
+    def test_update_children_path_recursive(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试递归更新"""
         child = MagicMock(spec=Organization)
         child.id = "child_123"
@@ -518,7 +559,10 @@ class TestUpdateChildrenPath:
             else:
                 return []
 
-        with patch("src.crud.organization.organization.get_children", side_effect=get_children_side_effect):
+        with patch(
+            "src.crud.organization.organization.get_children",
+            side_effect=get_children_side_effect,
+        ):
             org_service._update_children_path(mock_db, mock_organization)
 
             # Should have called get_children 3 times (child, grandchild, empty)

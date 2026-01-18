@@ -24,11 +24,11 @@ Testing Approach:
 - Test edge cases
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 pytestmark = pytest.mark.api
 
@@ -68,7 +68,7 @@ def mock_ownership():
         data_status="正常",
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
-        project_relations_data=[]
+        project_relations_data=[],
     )
     return ownership
 
@@ -107,7 +107,6 @@ class TestGetOwnershipDropdownOptions:
     ):
         """Test getting dropdown options successfully"""
         from src.api.v1.ownership import get_ownership_dropdown_options
-        from src.models.asset import Ownership
 
         # Mock database query
         mock_query = MagicMock()
@@ -190,9 +189,7 @@ class TestGetOwnershipDropdownOptions:
         from src.api.v1.ownership import get_ownership_dropdown_options
 
         mock_query = MagicMock()
-        mock_query.filter.return_value.order_by.return_value.limit.return_value.all.return_value = (
-            []
-        )
+        mock_query.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
         mock_db.query.return_value = mock_query
 
         result = await get_ownership_dropdown_options(
@@ -284,7 +281,9 @@ class TestCreateOwnership:
 
         ownership_data = OwnershipCreate(name="New Company", short_name="New")
 
-        mock_service.create_ownership.side_effect = Exception("Database connection failed")
+        mock_service.create_ownership.side_effect = Exception(
+            "Database connection failed"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await create_ownership(
@@ -331,7 +330,9 @@ class TestUpdateOwnership:
 
     @patch("src.api.v1.ownership.ownership")
     @pytest.mark.asyncio
-    async def test_update_ownership_not_found(self, mock_crud, mock_db, mock_current_user):
+    async def test_update_ownership_not_found(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test updating non-existent ownership"""
         from src.api.v1.ownership import update_ownership
         from src.schemas.ownership import OwnershipUpdate
@@ -441,7 +442,9 @@ class TestUpdateOwnershipProjects:
 
     @patch("src.api.v1.ownership.ownership")
     @pytest.mark.asyncio
-    async def test_update_projects_not_found(self, mock_crud, mock_db, mock_current_user):
+    async def test_update_projects_not_found(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test updating projects for non-existent ownership"""
         from src.api.v1.ownership import update_ownership_projects
 
@@ -508,8 +511,12 @@ class TestDeleteOwnership:
         assert result.message == "权属方删除成功"
         assert result.id == "ownership-id-123"
         assert result.affected_assets == 0
-        mock_service.get_asset_count.assert_called_once_with(mock_db, "ownership-id-123")
-        mock_service.delete_ownership.assert_called_once_with(mock_db, id="ownership-id-123")
+        mock_service.get_asset_count.assert_called_once_with(
+            mock_db, "ownership-id-123"
+        )
+        mock_service.delete_ownership.assert_called_once_with(
+            mock_db, id="ownership-id-123"
+        )
 
     @patch("src.api.v1.ownership.ownership_service")
     @pytest.mark.asyncio
@@ -530,16 +537,22 @@ class TestDeleteOwnership:
 
     @patch("src.api.v1.ownership.ownership_service")
     @pytest.mark.asyncio
-    async def test_delete_ownership_not_found(self, mock_service, mock_db, mock_current_user):
+    async def test_delete_ownership_not_found(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test deleting non-existent ownership"""
         from src.api.v1.ownership import delete_ownership
 
         mock_service.get_asset_count.return_value = 0
-        mock_service.delete_ownership.side_effect = ValueError("权属方ID nonexistent-id 不存在")
+        mock_service.delete_ownership.side_effect = ValueError(
+            "权属方ID nonexistent-id 不存在"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_ownership(
-                db=mock_db, ownership_id="nonexistent-id", current_user=mock_current_user
+                db=mock_db,
+                ownership_id="nonexistent-id",
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -554,11 +567,15 @@ class TestDeleteOwnership:
         from src.api.v1.ownership import delete_ownership
 
         mock_service.get_asset_count.return_value = 3
-        mock_service.delete_ownership.side_effect = ValueError("该权属方还有 3 个关联资产，无法删除")
+        mock_service.delete_ownership.side_effect = ValueError(
+            "该权属方还有 3 个关联资产，无法删除"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_ownership(
-                db=mock_db, ownership_id="ownership-id-123", current_user=mock_current_user
+                db=mock_db,
+                ownership_id="ownership-id-123",
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -577,7 +594,9 @@ class TestDeleteOwnership:
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_ownership(
-                db=mock_db, ownership_id="ownership-id-123", current_user=mock_current_user
+                db=mock_db,
+                ownership_id="ownership-id-123",
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 500
@@ -810,7 +829,9 @@ class TestGetOwnershipStatistics:
             "recent_created": mock_ownership_list[:3],
         }
 
-        result = await get_ownership_statistics(db=mock_db, current_user=mock_current_user)
+        result = await get_ownership_statistics(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_count == 10
         assert result.active_count == 8
@@ -865,19 +886,27 @@ class TestToggleOwnershipStatus:
         )
 
         assert result.is_active is False
-        mock_service.toggle_status.assert_called_once_with(mock_db, id="ownership-id-123")
+        mock_service.toggle_status.assert_called_once_with(
+            mock_db, id="ownership-id-123"
+        )
 
     @patch("src.api.v1.ownership.ownership_service")
     @pytest.mark.asyncio
-    async def test_toggle_status_not_found(self, mock_service, mock_db, mock_current_user):
+    async def test_toggle_status_not_found(
+        self, mock_service, mock_db, mock_current_user
+    ):
         """Test toggling status for non-existent ownership"""
         from src.api.v1.ownership import toggle_ownership_status
 
-        mock_service.toggle_status.side_effect = ValueError("权属方ID nonexistent-id 不存在")
+        mock_service.toggle_status.side_effect = ValueError(
+            "权属方ID nonexistent-id 不存在"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await toggle_ownership_status(
-                db=mock_db, ownership_id="nonexistent-id", current_user=mock_current_user
+                db=mock_db,
+                ownership_id="nonexistent-id",
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -895,7 +924,9 @@ class TestToggleOwnershipStatus:
 
         with pytest.raises(HTTPException) as exc_info:
             await toggle_ownership_status(
-                db=mock_db, ownership_id="ownership-id-123", current_user=mock_current_user
+                db=mock_db,
+                ownership_id="ownership-id-123",
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 500
@@ -916,7 +947,6 @@ class TestGetOwnershipFinancialSummary:
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         """Test getting financial summary successfully"""
-        from unittest.mock import PropertyMock
         from src.api.v1.ownership import get_ownership_financial_summary
         from src.crud.ownership import ownership as real_ownership
 
@@ -968,7 +998,11 @@ class TestGetOwnershipFinancialSummary:
         assert result["financial_summary"]["total_arrears_amount"] == 20000.0
 
         # Restore original method
-        real_ownership.get = real_ownership.get.__wrapped__ if hasattr(real_ownership.get, '__wrapped__') else lambda db, **kwargs: None
+        real_ownership.get = (
+            real_ownership.get.__wrapped__
+            if hasattr(real_ownership.get, "__wrapped__")
+            else lambda db, **kwargs: None
+        )
 
     @pytest.mark.asyncio
     async def test_get_financial_summary_not_found(self, mock_db, mock_current_user):
@@ -981,7 +1015,9 @@ class TestGetOwnershipFinancialSummary:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_ownership_financial_summary(
-                ownership_id="nonexistent-id", db=mock_db, current_user=mock_current_user
+                ownership_id="nonexistent-id",
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -1070,14 +1106,11 @@ class TestOwnershipEdgeCases:
     @pytest.mark.asyncio
     async def test_create_ownership_with_invalid_code(self, mock_db, mock_current_user):
         """Test creating ownership with invalid code format"""
-        from src.api.v1.ownership import create_ownership
         from src.schemas.ownership import OwnershipCreate
 
         # This should fail validation before reaching the endpoint
         with pytest.raises(ValueError):
-            ownership_data = OwnershipCreate(
-                name="Test Ownership", code="INVALID_CODE"
-            )
+            OwnershipCreate(name="Test Ownership", code="INVALID_CODE")
 
     @patch("src.api.v1.ownership.ownership_service")
     @pytest.mark.asyncio

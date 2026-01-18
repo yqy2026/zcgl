@@ -18,6 +18,7 @@ from src.services.document.llm_contract_extractor import (
 # LLMContractExtractor 基础测试
 # ============================================================================
 
+
 class TestLLMContractExtractor:
     """LLMContractExtractor Facade 类测试"""
 
@@ -30,7 +31,7 @@ class TestLLMContractExtractor:
     def test_initialization(self, extractor):
         """测试提取器初始化 - 应该有适配器"""
         assert extractor.adapter is not None
-        assert hasattr(extractor.adapter, 'extract')
+        assert hasattr(extractor.adapter, "extract")
 
     def test_singleton(self):
         """测试单例模式"""
@@ -48,6 +49,7 @@ class TestLLMContractExtractor:
 
         # 重置 LLMContractExtractor 模块级单例
         import src.services.document.llm_contract_extractor as llm_module
+
         llm_module._llm_extractor = None
 
         extractor2 = get_llm_contract_extractor()
@@ -59,6 +61,7 @@ class TestLLMContractExtractor:
 # ============================================================================
 # extract_smart 方法测试
 # ============================================================================
+
 
 class TestExtractSmart:
     """extract_smart 方法测试"""
@@ -81,11 +84,13 @@ class TestExtractSmart:
     async def test_smart_chooses_vision_method(self, extractor, sample_pdf):
         """测试智能提取选择视觉方法"""
         # Mock adapter.extract() 方法
-        with patch.object(extractor.adapter, 'extract', new_callable=AsyncMock) as mock_extract:
+        with patch.object(
+            extractor.adapter, "extract", new_callable=AsyncMock
+        ) as mock_extract:
             mock_extract.return_value = {
                 "success": True,
                 "extraction_method": "vision",
-                "confidence": 0.95
+                "confidence": 0.95,
             }
 
             result = await extractor.extract_smart(sample_pdf)
@@ -97,7 +102,9 @@ class TestExtractSmart:
     @pytest.mark.asyncio
     async def test_smart_forces_vision_method(self, extractor, sample_pdf):
         """测试强制使用视觉方法"""
-        with patch.object(extractor.adapter, 'extract', new_callable=AsyncMock) as mock_extract:
+        with patch.object(
+            extractor.adapter, "extract", new_callable=AsyncMock
+        ) as mock_extract:
             mock_extract.return_value = {
                 "success": True,
                 "extraction_method": "vision",
@@ -111,7 +118,9 @@ class TestExtractSmart:
     @pytest.mark.asyncio
     async def test_smart_adapter_error_handling(self, extractor, sample_pdf):
         """测试适配器错误处理"""
-        with patch.object(extractor.adapter, 'extract', new_callable=AsyncMock) as mock_extract:
+        with patch.object(
+            extractor.adapter, "extract", new_callable=AsyncMock
+        ) as mock_extract:
             mock_extract.side_effect = Exception("Adapter error")
 
             result = await extractor.extract_smart(sample_pdf)
@@ -124,6 +133,7 @@ class TestExtractSmart:
 # 适配器选择测试
 # ============================================================================
 
+
 class TestAdapterFactory:
     """测试工厂模式创建提取器"""
 
@@ -132,8 +142,8 @@ class TestAdapterFactory:
         reset_extractor()
         extractor = LLMContractExtractor()
         # 验证适配器是有效的
-        assert hasattr(extractor.adapter, 'provider_name')
-        assert hasattr(extractor.adapter, 'api_key_env_name')
+        assert hasattr(extractor.adapter, "provider_name")
+        assert hasattr(extractor.adapter, "api_key_env_name")
 
     def test_adapter_is_singleton(self):
         """测试适配器使用工厂单例"""
@@ -164,6 +174,7 @@ class TestAdapterFactory:
 # 向后兼容性测试
 # ============================================================================
 
+
 class TestBackwardCompatibility:
     """测试向后兼容性"""
 
@@ -175,7 +186,7 @@ class TestBackwardCompatibility:
 
     def test_has_adapter_attribute(self, extractor):
         """测试有 adapter 属性（新架构）"""
-        assert hasattr(extractor, 'adapter')
+        assert hasattr(extractor, "adapter")
         assert extractor.adapter is not None
 
     @pytest.mark.asyncio
@@ -183,7 +194,9 @@ class TestBackwardCompatibility:
         """测试 extract_smart 是异步方法"""
         sample_path = "/fake/path.pdf"
 
-        with patch.object(extractor.adapter, 'extract', new_callable=AsyncMock) as mock_extract:
+        with patch.object(
+            extractor.adapter, "extract", new_callable=AsyncMock
+        ) as mock_extract:
             mock_extract.return_value = {"success": True}
 
             # 验证可以 await

@@ -12,9 +12,8 @@ import pytest
 from sqlalchemy.orm import Session
 
 from src.models.auth import User, UserSession
-from src.schemas.auth import TokenResponse, UserCreate, UserUpdate, UserSessionResponse
+from src.schemas.auth import TokenResponse, UserCreate, UserSessionResponse, UserUpdate
 from src.services.core.auth_service import AuthService
-
 
 # ============================================================================
 # Fixtures
@@ -223,9 +222,7 @@ class TestAuthServiceValidateRefreshToken:
 class TestAuthServiceCreateUser:
     """Tests for create_user delegation"""
 
-    def test_create_user_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_create_user_delegates_to_user_service(self, auth_service, mock_user):
         """Test that create_user delegates correctly"""
         user_data = UserCreate(
             username="newuser",
@@ -247,9 +244,7 @@ class TestAuthServiceCreateUser:
 class TestAuthServiceGetUserById:
     """Tests for get_user_by_id delegation"""
 
-    def test_get_user_by_id_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_get_user_by_id_delegates_to_user_service(self, auth_service, mock_user):
         """Test that get_user_by_id delegates correctly"""
         user_id = "test-user-123"
 
@@ -293,9 +288,7 @@ class TestAuthServiceGetUserByUsername:
 class TestAuthServiceGetUserByEmail:
     """Tests for get_user_by_email delegation"""
 
-    def test_get_user_by_email_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_get_user_by_email_delegates_to_user_service(self, auth_service, mock_user):
         """Test that get_user_by_email delegates correctly"""
         email = "test@example.com"
 
@@ -311,9 +304,7 @@ class TestAuthServiceGetUserByEmail:
 class TestAuthServiceUpdateUser:
     """Tests for update_user delegation"""
 
-    def test_update_user_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_update_user_delegates_to_user_service(self, auth_service, mock_user):
         """Test that update_user delegates correctly"""
         user_id = "test-user-123"
         user_data = UserUpdate(email="updated@example.com")
@@ -330,9 +321,7 @@ class TestAuthServiceUpdateUser:
 class TestAuthServiceDeactivateUser:
     """Tests for deactivate_user delegation"""
 
-    def test_deactivate_user_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_deactivate_user_delegates_to_user_service(self, auth_service, mock_user):
         """Test that deactivate_user delegates correctly"""
         user_id = "test-user-123"
 
@@ -348,9 +337,7 @@ class TestAuthServiceDeactivateUser:
 class TestAuthServiceActivateUser:
     """Tests for activate_user delegation"""
 
-    def test_activate_user_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_activate_user_delegates_to_user_service(self, auth_service, mock_user):
         """Test that activate_user delegates correctly"""
         user_id = "test-user-123"
 
@@ -366,9 +353,7 @@ class TestAuthServiceActivateUser:
 class TestAuthServiceUnlockUser:
     """Tests for unlock_user delegation"""
 
-    def test_unlock_user_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_unlock_user_delegates_to_user_service(self, auth_service, mock_user):
         """Test that unlock_user delegates correctly"""
         user_id = "test-user-123"
 
@@ -384,9 +369,7 @@ class TestAuthServiceUnlockUser:
 class TestAuthServiceChangePassword:
     """Tests for change_password delegation"""
 
-    def test_change_password_delegates_to_user_service(
-        self, auth_service, mock_user
-    ):
+    def test_change_password_delegates_to_user_service(self, auth_service, mock_user):
         """Test that change_password delegates correctly"""
         with patch.object(
             auth_service.user_service, "change_password", return_value=mock_user
@@ -459,9 +442,7 @@ class TestAuthServiceGetUserSessions:
             "get_user_sessions",
             return_value=mock_sessions,
         ) as mock_get:
-            with patch.object(
-                UserSessionResponse, "from_orm"
-            ) as mock_from_orm:
+            with patch.object(UserSessionResponse, "from_orm") as mock_from_orm:
                 mock_response = MagicMock()
                 mock_from_orm.return_value = mock_response
 
@@ -503,9 +484,7 @@ class TestAuthServiceRevokeSession:
 class TestAuthServiceRevokeAllUserSessions:
     """Tests for revoke_all_user_sessions delegation"""
 
-    def test_revoke_all_user_sessions_delegates_to_session_service(
-        self, auth_service
-    ):
+    def test_revoke_all_user_sessions_delegates_to_session_service(self, auth_service):
         """Test that revoke_all_user_sessions delegates correctly"""
         user_id = "test-user-123"
 
@@ -571,7 +550,9 @@ class TestAuthServiceValidatePasswordStrength:
     ):
         """Test that validate_password_strength delegates correctly"""
         with patch.object(
-            auth_service.password_service, "validate_password_strength", return_value=True
+            auth_service.password_service,
+            "validate_password_strength",
+            return_value=True,
         ) as mock_validate:
             result = auth_service.validate_password_strength("StrongPass123!")
 
@@ -581,7 +562,9 @@ class TestAuthServiceValidatePasswordStrength:
     def test_validate_password_strength_returns_false_for_weak(self, auth_service):
         """Test that weak password returns False"""
         with patch.object(
-            auth_service.password_service, "validate_password_strength", return_value=False
+            auth_service.password_service,
+            "validate_password_strength",
+            return_value=False,
         ) as mock_validate:
             result = auth_service.validate_password_strength("weak")
 
@@ -637,7 +620,9 @@ class TestAuthServiceIsPasswordExpired:
             assert result is False
             mock_check.assert_called_once_with(mock_user)
 
-    def test_is_password_expired_returns_true_when_expired(self, auth_service, mock_user):
+    def test_is_password_expired_returns_true_when_expired(
+        self, auth_service, mock_user
+    ):
         """Test that expired password returns True"""
         with patch.object(
             auth_service.password_service, "is_password_expired", return_value=True
@@ -801,7 +786,6 @@ class TestAuthServiceIntegration:
         """Test password change with history tracking"""
         old_password = "old_password"
         new_password = "NewPassword123!"
-        new_hash = "$2b$12$newhash"
 
         # Change password
         with patch.object(

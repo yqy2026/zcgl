@@ -199,9 +199,9 @@ class TestContractRenewalSuccess:
         )
 
         transfer_out = [
-            l
-            for l in original_ledgers
-            if l.transaction_type == DepositTransactionType.TRANSFER_OUT
+            ledger
+            for ledger in original_ledgers
+            if ledger.transaction_type == DepositTransactionType.TRANSFER_OUT
         ]
         assert len(transfer_out) == 1
         assert transfer_out[0].amount == Decimal("-20000")  # TRANSFER_OUT is negative
@@ -214,9 +214,9 @@ class TestContractRenewalSuccess:
         )
 
         transfer_in = [
-            l
-            for l in new_ledgers
-            if l.transaction_type == DepositTransactionType.TRANSFER_IN
+            ledger
+            for ledger in new_ledgers
+            if ledger.transaction_type == DepositTransactionType.TRANSFER_IN
         ]
         assert len(transfer_in) == 1
         assert transfer_in[0].amount == Decimal("20000")
@@ -318,14 +318,14 @@ class TestDepositTransfer:
         )
 
         transfer_in = [
-            l
-            for l in new_ledgers
-            if l.transaction_type == DepositTransactionType.TRANSFER_IN
+            ledger
+            for ledger in new_ledgers
+            if ledger.transaction_type == DepositTransactionType.TRANSFER_IN
         ]
         receipts = [
-            l
-            for l in new_ledgers
-            if l.transaction_type == DepositTransactionType.RECEIPT
+            ledger
+            for ledger in new_ledgers
+            if ledger.transaction_type == DepositTransactionType.RECEIPT
         ]
 
         assert len(transfer_in) == 1

@@ -65,7 +65,7 @@ async def test_qwen_extraction():
             img_bytes = pix.tobytes("png")
             img_base64 = base64.b64encode(img_bytes).decode("utf-8")
             images_base64.append(img_base64)
-            print(f"[INFO] Page {i+1}: {len(img_bytes)/1024:.1f} KB")
+            print(f"[INFO] Page {i + 1}: {len(img_bytes) / 1024:.1f} KB")
 
         doc.close()
     except Exception as e:
@@ -167,7 +167,7 @@ async def test_qwen_extraction():
                         print(
                             f"  {term.get('start_date')} ~ {term.get('end_date')}: ¥{term.get('monthly_rent')}/月"
                         )
-            except:
+            except Exception:
                 print(content)
 
     except Exception as e:

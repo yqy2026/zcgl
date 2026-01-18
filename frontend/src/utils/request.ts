@@ -2,110 +2,141 @@
  * API请求工具
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
-import { createLogger } from "./logger";
-import { MessageManager } from "./messageManager";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { createLogger } from './logger';
+import { MessageManager } from './messageManager';
 
 const logger = createLogger('Request');
+
+// Type definitions for error handling
+interface ApiErrorDetail {
+  msg: string;
+  type?: string;
+  loc?: Array<string | number>;
+}
+
+interface ApiErrorResponse {
+  detail?: string | ApiErrorDetail[];
+  errorId?: string;
+  timestamp?: string;
+}
+
+interface ExtendedAxiosError extends AxiosError {
+  errorId?: string;
+  timestamp?: string;
+}
 
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: process.env.VITE_API_BASE_URL ?? "/api",
+    baseURL: process.env.VITE_API_BASE_URL ?? '/api',
     timeout: 30000,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
   });
 
   // 请求拦截器
   instance.interceptors.request.use(
-    (config) => {
+    config => {
       // 兼容两种token键名：优先使用auth_token，回退到token
-      const token = localStorage.getItem("auth_token") ?? localStorage.getItem("token");
+      const token = localStorage.getItem('auth_token') ?? localStorage.getItem('token');
       if (token != null) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     },
-    (error) => {
+    error => {
       return Promise.reject(error);
-    },
+    }
   );
 
   // 响应拦截器
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      logger.debug("API响应成功", {
+      logger.debug('API响应成功', {
         url: response.config.url,
         method: response.config.method,
         status: response.status,
       });
       return response;
     },
-    (error) => {
+    (error: unknown) => {
       // 生成唯一的错误追踪ID
       const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const timestamp = new Date().toISOString();
 
-      logger.debug("API响应错误", {
-        errorId,
-        timestamp,
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.message,
-      });
+      // Type guard to check if error is an AxiosError
+      if (error instanceof axios.AxiosError) {
+        logger.debug('API响应错误', {
+          errorId,
+          timestamp,
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          message: error.message,
+        });
 
-      // 统一错误处理
-      if (error.response != null) {
-        const { status, data } = error.response;
+        // 统一错误处理
+        if (error.response != null) {
+          const { status, data } = error.response;
 
-        switch (status) {
-          case 400:
-            MessageManager.error(`请求参数错误 [${errorId}]`);
-            break;
-          case 401:
-            MessageManager.error(`未授权，请重新登录 [${errorId}]`);
-            // 可以在这里处理登录跳转
-            break;
-          case 403:
-            MessageManager.error(`权限不足 [${errorId}]`);
-            break;
-          case 404:
-            MessageManager.error(`资源不存在 [${errorId}]`);
-            break;
-          case 422:
-            // 处理验证错误
-            if (data.detail != null && Array.isArray(data.detail)) {
-              const errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(", ");
-              MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
-            } else {
-              MessageManager.error(`数据验证失败 [${errorId}]`);
-            }
-            break;
-          case 500:
-            MessageManager.error(`服务器内部错误 [${errorId}]`);
-            // 在开发环境，记录更详细的信息
-            if (import.meta.env.DEV) {
-              console.error(`[${errorId}] 服务器错误详情:`, data);
-            }
-            break;
-          default:
-            MessageManager.error(`请求失败 [${errorId}]`);
+          switch (status) {
+            case 400:
+              MessageManager.error(`请求参数错误 [${errorId}]`);
+              break;
+            case 401:
+              MessageManager.error(`未授权，请重新登录 [${errorId}]`);
+              // 可以在这里处理登录跳转
+              break;
+            case 403:
+              MessageManager.error(`权限不足 [${errorId}]`);
+              break;
+            case 404:
+              MessageManager.error(`资源不存在 [${errorId}]`);
+              break;
+            case 422:
+              // 处理验证错误
+              {
+                const errorData = data as ApiErrorResponse;
+                if (errorData.detail != null && Array.isArray(errorData.detail)) {
+                  const errorMsg = errorData.detail
+                    .map((err: ApiErrorDetail) => err.msg)
+                    .join(', ');
+                  MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
+                } else {
+                  MessageManager.error(`数据验证失败 [${errorId}]`);
+                }
+              }
+              break;
+            case 500:
+              MessageManager.error(`服务器内部错误 [${errorId}]`);
+              // 在开发环境，记录更详细的信息
+              if (import.meta.env.DEV) {
+                // eslint-disable-next-line no-console
+                console.error(`[${errorId}] 服务器错误详情:`, data);
+              }
+              break;
+            default:
+              MessageManager.error(`请求失败 [${errorId}]`);
+          }
+        } else if (error.request != null) {
+          MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
+        } else {
+          MessageManager.error(`请求配置错误 [${errorId}]`);
         }
-      } else if (error.request != null) {
-        MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
-      } else {
-        MessageManager.error(`请求配置错误 [${errorId}]`);
+
+        // 添加错误ID到error对象，便于后续追踪
+        const extendedError = error as ExtendedAxiosError;
+        extendedError.errorId = errorId;
+        extendedError.timestamp = timestamp;
+
+        return Promise.reject(extendedError);
       }
 
-      // 添加错误ID到error对象，便于后续追踪
-      error.errorId = errorId;
-      error.timestamp = timestamp;
-
+      // Handle non-Axios errors
       return Promise.reject(error);
-    },
+    }
   );
 
   return instance;
@@ -118,7 +149,7 @@ export const apiRequest = createApiInstance();
 export class ApiService {
   static async get<T = unknown>(
     url: string,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.get(url, config);
   }
@@ -126,7 +157,7 @@ export class ApiService {
   static async post<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.post(url, data, config);
   }
@@ -134,7 +165,7 @@ export class ApiService {
   static async put<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.put(url, data, config);
   }
@@ -142,14 +173,14 @@ export class ApiService {
   static async patch<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.patch(url, data, config);
   }
 
   static async delete<T = unknown>(
     url: string,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.delete(url, config);
   }
@@ -159,16 +190,16 @@ export class ApiService {
 export const uploadFile = async (
   url: string,
   file: File,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number) => void
 ): Promise<AxiosResponse> => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
 
   return apiRequest.post(url, formData, {
     headers: {
-      "Content-Type": "multipart/form-data",
+      'Content-Type': 'multipart/form-data',
     },
-    onUploadProgress: (progressEvent) => {
+    onUploadProgress: progressEvent => {
       if (onProgress != null && progressEvent.total != null) {
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(progress);
@@ -181,20 +212,20 @@ export const uploadFile = async (
 export const downloadFile = async (url: string, filename?: string): Promise<void> => {
   try {
     const response = await apiRequest.get(url, {
-      responseType: "blob",
+      responseType: 'blob',
     });
 
     const blob = new Blob([response.data]);
     const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = filename ?? "download";
+    link.download = filename ?? 'download';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
   } catch (error) {
-    MessageManager.error("文件下载失败");
+    MessageManager.error('文件下载失败');
     throw error;
   }
 };

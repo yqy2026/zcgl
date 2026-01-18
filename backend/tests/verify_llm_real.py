@@ -12,6 +12,7 @@ sys.path.append(src_path)
 # We will check if OS env vars are set, if not try to load from backend/.env
 try:
     from dotenv import load_dotenv
+
     env_path = os.path.join(os.path.dirname(__file__), "../.env")
     print(f"Loading env from {env_path}")
     load_dotenv(env_path)
@@ -67,10 +68,10 @@ async def verify_real_connection():
     try:
         result = await extractor.extract(sample_text)
 
-        if result['success']:
+        if result["success"]:
             print("\n✅ Extraction SUCCESS!")
             print("Extracted Data:")
-            print(json.dumps(result['extracted_fields'], indent=2, ensure_ascii=False))
+            print(json.dumps(result["extracted_fields"], indent=2, ensure_ascii=False))
             print(f"\nConfidence: {result.get('confidence')}")
         else:
             print("\n❌ Extraction FAILED.")
@@ -78,6 +79,7 @@ async def verify_real_connection():
 
     except Exception as e:
         print(f"\n❌ Exception during execution: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(verify_real_connection())

@@ -1,138 +1,144 @@
-import React, { createContext, useContext, useCallback, useRef, useState } from 'react'
-import { Spin, Skeleton, Progress, Typography, Card } from 'antd'
-import { LoadingOutlined } from '@ant-design/icons'
+import React, { createContext, useContext, useCallback, useRef, useState } from 'react';
+import { Spin, Skeleton, Progress, Typography, Card } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 
-const { Text } = Typography
+const { Text } = Typography;
 
 interface LoadingState {
-  isLoading: boolean
-  message?: string
-  progress?: number
-  type?: 'default' | 'upload' | 'processing' | 'data'
-  delay?: number
-  timestamp?: number
+  isLoading: boolean;
+  message?: string;
+  progress?: number;
+  type?: 'default' | 'upload' | 'processing' | 'data';
+  delay?: number;
+  timestamp?: number;
 }
 
 interface LoadingContextType {
-  showLoading: (state: LoadingState) => void
-  hideLoading: () => void
-  updateProgress: (progress: number) => void
-  getLoadingState: () => LoadingState | null
+  showLoading: (state: LoadingState) => void;
+  hideLoading: () => void;
+  updateProgress: (progress: number) => void;
+  getLoadingState: () => LoadingState | null;
 }
 
-const LoadingContext = createContext<LoadingContextType | null>(null)
+const LoadingContext = createContext<LoadingContextType | null>(null);
 
 export const useSmartLoading = () => {
-  const context = useContext(LoadingContext)
+  const context = useContext(LoadingContext);
   if (!context) {
-    throw new Error('useSmartLoading must be used within SmartLoadingProvider')
+    throw new Error('useSmartLoading must be used within SmartLoadingProvider');
   }
-  return context
-}
+  return context;
+};
 
 interface SmartLoadingManagerProps {
-  children: React.ReactNode
-  defaultDelay?: number
-  maxQueueSize?: number
+  children: React.ReactNode;
+  defaultDelay?: number;
+  maxQueueSize?: number;
 }
 
 export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
   children,
   defaultDelay = 300,
-  maxQueueSize = 10
+  maxQueueSize = 10,
 }) => {
-  const [loadingState, setLoadingState] = useState<LoadingState | null>(null)
-  const loadingQueue = useRef<LoadingState[]>([])
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [loadingState, setLoadingState] = useState<LoadingState | null>(null);
+  const loadingQueue = useRef<LoadingState[]>([]);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showLoading = useCallback((state: LoadingState) => {
-    // 添加到队列
-    loadingQueue.current.push({ ...state, timestamp: Date.now() })
+  const showLoading = useCallback(
+    (state: LoadingState) => {
+      // 添加到队列
+      loadingQueue.current.push({ ...state, timestamp: Date.now() });
 
-    // 限制队列大小
-    if (loadingQueue.current.length > (maxQueueSize ?? 10)) {
-      loadingQueue.current.shift() // 移除最旧的请求
-    }
-
-    // 延迟显示，避免闪烁
-    const delay = state.delay ?? defaultDelay
-    const timestamp = state.timestamp ?? Date.now()
-    const timeSinceRequest = Date.now() - timestamp
-
-    const showLoadingState = () => {
-      // 只显示最新状态
-      const latestState = loadingQueue.current[loadingQueue.current.length - 1]
-      if (latestState !== undefined && latestState !== null) {
-        setLoadingState(latestState)
-      }
-    }
-
-    if (timeSinceRequest >= delay) {
-      showLoadingState()
-    } else {
-      // 清除之前的定时器
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current)
+      // 限制队列大小
+      if (loadingQueue.current.length > (maxQueueSize ?? 10)) {
+        loadingQueue.current.shift(); // 移除最旧的请求
       }
 
-      // 设置新的定时器
-      const remainingDelay = delay - timeSinceRequest
-      loadingTimeoutRef.current = setTimeout(showLoadingState, remainingDelay)
-    }
-  }, [defaultDelay, maxQueueSize])
+      // 延迟显示，避免闪烁
+      const delay = state.delay ?? defaultDelay;
+      const timestamp = state.timestamp ?? Date.now();
+      const timeSinceRequest = Date.now() - timestamp;
+
+      const showLoadingState = () => {
+        // 只显示最新状态
+        const latestState = loadingQueue.current[loadingQueue.current.length - 1];
+        if (latestState !== undefined && latestState !== null) {
+          setLoadingState(latestState);
+        }
+      };
+
+      if (timeSinceRequest >= delay) {
+        showLoadingState();
+      } else {
+        // 清除之前的定时器
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+
+        // 设置新的定时器
+        const remainingDelay = delay - timeSinceRequest;
+        loadingTimeoutRef.current = setTimeout(showLoadingState, remainingDelay);
+      }
+    },
+    [defaultDelay, maxQueueSize]
+  );
 
   const hideLoading = useCallback(() => {
     // 清除定时器
     if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current)
+      clearTimeout(loadingTimeoutRef.current);
     }
 
     // 移除当前状态
     if (loadingQueue.current.length > 0) {
-      loadingQueue.current.pop()
+      loadingQueue.current.pop();
     }
 
     // 显示前一个状态（如果存在）
     if (loadingQueue.current.length > 0) {
-      const previousState = loadingQueue.current[loadingQueue.current.length - 1]
-      setLoadingState(previousState)
+      const previousState = loadingQueue.current[loadingQueue.current.length - 1];
+      setLoadingState(previousState);
     } else {
-      setLoadingState(null)
+      setLoadingState(null);
     }
-  }, [])
+  }, []);
 
-  const updateProgress = useCallback((progress: number) => {
-    if (loadingState !== undefined && loadingState !== null) {
-      setLoadingState({ ...loadingState, progress })
-    }
-  }, [loadingState])
+  const updateProgress = useCallback(
+    (progress: number) => {
+      if (loadingState !== undefined && loadingState !== null) {
+        setLoadingState({ ...loadingState, progress });
+      }
+    },
+    [loadingState]
+  );
 
   const getLoadingState = useCallback(() => {
-    return loadingState
-  }, [loadingState])
+    return loadingState;
+  }, [loadingState]);
 
   const contextValue: LoadingContextType = {
     showLoading,
     hideLoading,
     updateProgress,
-    getLoadingState
-  }
+    getLoadingState,
+  };
 
   return (
     <LoadingContext.Provider value={contextValue}>
       {children}
       <SmartLoadingOverlay state={loadingState} />
     </LoadingContext.Provider>
-  )
-}
+  );
+};
 
 interface SmartLoadingOverlayProps {
-  state: LoadingState | null
+  state: LoadingState | null;
 }
 
 const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
   if (!state) {
-    return null
+    return null;
   }
 
   const renderLoadingContent = () => {
@@ -140,10 +146,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
       case 'upload':
         return (
           <Card style={{ width: 300, textAlign: 'center' }}>
-            <Spin
-              indicator={<LoadingOutlined style={{ fontSize: 24 }} />}
-              tip={state.message}
-            />
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} />} tip={state.message} />
             <div style={{ marginTop: 16 }}>
               <Progress
                 percent={state.progress ?? 0}
@@ -160,7 +163,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
               </div>
             </div>
           </Card>
-        )
+        );
 
       case 'processing':
         return (
@@ -179,22 +182,24 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
               />
             </div>
           </Card>
-        )
+        );
 
       case 'data':
         return (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999
-          }}>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+          >
             <Card style={{ width: 200, textAlign: 'center' }}>
               <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} />} tip="数据处理中" />
               <div style={{ marginTop: 12 }}>
@@ -207,50 +212,50 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
               </div>
             </Card>
           </div>
-        )
+        );
 
       default:
         return (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999
-          }}>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+          >
             <Spin
               size="large"
               tip={state.message}
               indicator={<LoadingOutlined style={{ fontSize: 32 }} />}
             />
             <div style={{ marginTop: 16, marginLeft: 16 }}>
-              <Text style={{ color: 'white', fontSize: 16 }}>
-                {state.message ?? '加载中...'}
-              </Text>
+              <Text style={{ color: 'white', fontSize: 16 }}>{state.message ?? '加载中...'}</Text>
             </div>
           </div>
-        )
+        );
     }
-  }
+  };
 
-  return renderLoadingContent()
-}
+  return renderLoadingContent();
+};
 
 // 智能骨架屏组件
 interface SmartSkeletonProps {
-  loading: boolean
-  children: React.ReactNode
-  type?: 'default' | 'list' | 'card' | 'table'
-  rows?: number
-  avatar?: boolean
-  paragraph?: boolean
-  title?: boolean
-  active?: boolean
+  loading: boolean;
+  children: React.ReactNode;
+  type?: 'default' | 'list' | 'card' | 'table';
+  rows?: number;
+  avatar?: boolean;
+  paragraph?: boolean;
+  title?: boolean;
+  active?: boolean;
 }
 
 export const SmartSkeleton: React.FC<SmartSkeletonProps> = ({
@@ -261,10 +266,10 @@ export const SmartSkeleton: React.FC<SmartSkeletonProps> = ({
   avatar = false,
   paragraph = true,
   title = true,
-  active = true
+  active = true,
 }) => {
   if (!loading) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   const renderSkeleton = () => {
@@ -274,36 +279,23 @@ export const SmartSkeleton: React.FC<SmartSkeletonProps> = ({
           <div style={{ padding: '16px' }}>
             {Array.from({ length: rows }).map((_, index) => (
               <div key={index} style={{ marginBottom: 16 }}>
-                <Skeleton
-                  avatar={avatar}
-                  paragraph={{ rows: 1 }}
-                  title={title}
-                  active={active}
-                />
-                <Skeleton
-                  paragraph={{ rows: paragraph ? 2 : 1 }}
-                  active={active}
-                />
+                <Skeleton avatar={avatar} paragraph={{ rows: 1 }} title={title} active={active} />
+                <Skeleton paragraph={{ rows: paragraph ? 2 : 1 }} active={active} />
               </div>
             ))}
           </div>
-        )
+        );
 
       case 'card':
         return (
           <div style={{ padding: '16px' }}>
             {Array.from({ length: rows }).map((_, index) => (
               <Card key={index} style={{ marginBottom: 16 }}>
-                <Skeleton
-                  avatar={avatar}
-                  paragraph={{ rows: 2 }}
-                  title={title}
-                  active={active}
-                />
+                <Skeleton avatar={avatar} paragraph={{ rows: 2 }} title={title} active={active} />
               </Card>
             ))}
           </div>
-        )
+        );
 
       case 'table':
         return (
@@ -314,97 +306,86 @@ export const SmartSkeleton: React.FC<SmartSkeletonProps> = ({
               active={active}
               style={{ marginBottom: 16 }}
             />
-            <Skeleton
-              paragraph={{ rows: rows }}
-              active={active}
-            />
+            <Skeleton paragraph={{ rows: rows }} active={active} />
           </div>
-        )
+        );
 
       default:
         return (
           <div style={{ padding: '24px' }}>
-            <Skeleton
-              avatar={avatar}
-              paragraph={{ rows: rows }}
-              title={title}
-              active={active}
-            />
+            <Skeleton avatar={avatar} paragraph={{ rows: rows }} title={title} active={active} />
           </div>
-        )
+        );
     }
-  }
+  };
 
-  return (
-    <div style={{ minHeight: '200px' }}>
-      {renderSkeleton()}
-    </div>
-  )
-}
+  return <div style={{ minHeight: '200px' }}>{renderSkeleton()}</div>;
+};
 
 // 预加载组件
 interface PreloaderProps {
-  resource: string
-  onPreloadComplete?: () => void
-  fallback?: React.ReactNode
+  resource: string;
+  onPreloadComplete?: () => void;
+  fallback?: React.ReactNode;
 }
 
 export const SmartPreloader: React.FC<PreloaderProps> = ({
   resource,
   onPreloadComplete,
-  fallback = null
+  fallback = null,
 }) => {
-  const [isPreloaded, setIsPreloaded] = useState(false)
-  const [isPreloading, setIsPreloading] = useState(false)
+  const [isPreloaded, setIsPreloaded] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
 
   React.useEffect(() => {
     if (resource !== undefined && resource !== null && !isPreloaded && !isPreloading) {
-      setIsPreloading(true)
+      setIsPreloading(true);
 
       // 创建预加载链接
-      const link = document.createElement('link')
-      link.rel = 'preload'
-      link.href = resource
-      link.as = 'script'
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.href = resource;
+      link.as = 'script';
 
       link.onload = () => {
-        setIsPreloaded(true)
-        setIsPreloading(false)
-        onPreloadComplete?.()
-        document.head.removeChild(link)
-      }
+        setIsPreloaded(true);
+        setIsPreloading(false);
+        onPreloadComplete?.();
+        document.head.removeChild(link);
+      };
 
       link.onerror = () => {
-        setIsPreloading(false)
-        console.warn(`预加载失败: ${resource}`)
-        document.head.removeChild(link)
-      }
+        setIsPreloading(false);
+        // eslint-disable-next-line no-console
+        console.warn(`预加载失败: ${resource}`);
+        document.head.removeChild(link);
+      };
 
-      document.head.appendChild(link)
+      document.head.appendChild(link);
     }
-  }, [resource, isPreloaded, isPreloading])
+  }, [resource, isPreloaded, isPreloading]);
 
   if (fallback !== undefined && fallback !== null && !isPreloaded) {
-    return <>{fallback}</>
+    return <>{fallback}</>;
   }
 
-  return null
-}
+  return null;
+};
 
 // 智能进度跟踪器
 interface ProgressTrackerProps {
   steps: Array<{
-    title: string
-    description?: string
-    status: 'wait' | 'process' | 'finish' | 'error'
-    icon?: React.ReactNode
-  }>
-  current: number
-  size?: 'small' | 'default'
-  direction?: 'horizontal' | 'vertical'
-  _size?: 'small' | 'default'
-  _direction?: 'horizontal' | 'vertical'
-  showDetails?: boolean
+    title: string;
+    description?: string;
+    status: 'wait' | 'process' | 'finish' | 'error';
+    icon?: React.ReactNode;
+  }>;
+  current: number;
+  size?: 'small' | 'default';
+  direction?: 'horizontal' | 'vertical';
+  _size?: 'small' | 'default';
+  _direction?: 'horizontal' | 'vertical';
+  showDetails?: boolean;
 }
 
 export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
@@ -412,16 +393,18 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
   current,
   _size = 'default',
   _direction = 'horizontal',
-  showDetails = true
+  showDetails = true,
 }) => {
   return (
     <div style={{ padding: '16px' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: showDetails ? '16px' : '0'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: showDetails ? '16px' : '0',
+        }}
+      >
         <Text strong>
           总进度: {steps.filter(s => s.status === 'finish').length}/{steps.length}
         </Text>
@@ -438,45 +421,59 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
         }}
         strokeWidth={8}
         size="small"
-        format={(percent) => `${Math.round(percent ?? 0)}%`}
+        format={percent => `${Math.round(percent ?? 0)}%`}
       />
 
       <div style={{ marginTop: '16px' }}>
         {steps.map((step, index) => (
-          <div key={index} style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '12px',
-            opacity: step.status === 'wait' ? 0.6 : 1
-          }}>
-            <div style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              backgroundColor: step.status === 'finish' ? '#52c41a' :
-                step.status === 'process' ? '#1890ff' :
-                  step.status === 'error' ? '#ff4d4f' : '#d9d9d9',
+          <div
+            key={index}
+            style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: step.status === 'finish' ? 'white' : '#666',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              {step.status === 'finish' ? '✓' :
-                step.status === 'error' ? '!' :
-                  step.status === 'process' ? '⟳' : index + 1}
+              marginBottom: '12px',
+              opacity: step.status === 'wait' ? 0.6 : 1,
+            }}
+          >
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor:
+                  step.status === 'finish'
+                    ? '#52c41a'
+                    : step.status === 'process'
+                      ? '#1890ff'
+                      : step.status === 'error'
+                        ? '#ff4d4f'
+                        : '#d9d9d9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: step.status === 'finish' ? 'white' : '#666',
+                fontSize: '12px',
+                fontWeight: 'bold',
+              }}
+            >
+              {step.status === 'finish'
+                ? '✓'
+                : step.status === 'error'
+                  ? '!'
+                  : step.status === 'process'
+                    ? '⟳'
+                    : index + 1}
             </div>
             <div style={{ marginLeft: '12px' }}>
-              <div style={{ fontWeight: index === current ? 'bold' : 'normal' }}>
-                {step.title}
-              </div>
+              <div style={{ fontWeight: index === current ? 'bold' : 'normal' }}>{step.title}</div>
               {showDetails === true && (step.description ?? '') !== '' && (
-                <div style={{
-                  fontSize: '12px',
-                  color: '#666',
-                  marginTop: '4px'
-                }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginTop: '4px',
+                  }}
+                >
                   {step.description}
                 </div>
               )}
@@ -485,5 +482,5 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
         ))}
       </div>
     </div>
-  )
-}
+  );
+};

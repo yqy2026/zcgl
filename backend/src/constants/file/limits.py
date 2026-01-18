@@ -71,7 +71,10 @@ class FileLimits:
             return False, "Filename cannot be empty"
 
         if len(filename) > cls.MAX_FILENAME_LENGTH:
-            return False, f"Filename too long (max {cls.MAX_FILENAME_LENGTH} characters)"
+            return (
+                False,
+                f"Filename too long (max {cls.MAX_FILENAME_LENGTH} characters)",
+            )
 
         # Check for forbidden characters
         for char in filename:
@@ -112,4 +115,3 @@ class FileLimits:
 # Legacy compatibility aliases (deprecated, will be removed in v2.0)
 MAX_FILENAME = FileLimits.MAX_FILENAME_LENGTH
 MAX_FILEPATH = FileLimits.MAX_FILEPATH_LENGTH
-

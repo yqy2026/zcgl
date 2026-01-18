@@ -4,16 +4,14 @@
 
 import time
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.enums.status import TaskExecutionStatus
 from src.models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
-    SessionLog,
     SessionStatus,
 )
 from src.services.document.base import ErrorCode, ExtractionMethod, ExtractionResult
@@ -112,9 +110,7 @@ class TestUpdateProgress:
 
     def test_update_progress_with_status(self, tracker, mock_session):
         """测试带状态更新"""
-        result = tracker.update_progress(
-            progress=50, status=SessionStatus.PROCESSING
-        )
+        result = tracker.update_progress(progress=50, status=SessionStatus.PROCESSING)
 
         assert result is True
         assert mock_session.status == SessionStatus.PROCESSING
@@ -291,7 +287,9 @@ class TestHandleFailure:
         error = ValueError("Invalid value")
         context = {"page": 5, "field": "amount"}
 
-        tracker.handle_failure(error, step=ProcessingStep.INFO_EXTRACTION, context=context)
+        tracker.handle_failure(
+            error, step=ProcessingStep.INFO_EXTRACTION, context=context
+        )
 
         assert mock_session.status == SessionStatus.FAILED
 
@@ -322,7 +320,9 @@ class TestHandleFailure:
 class TestSaveResult:
     """测试保存结果"""
 
-    @pytest.mark.skip(reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string")
+    @pytest.mark.skip(
+        reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string"
+    )
     def test_save_result_success(self, tracker, mock_session):
         """测试保存成功结果"""
         result = ExtractionResult(
@@ -334,7 +334,7 @@ class TestSaveResult:
         )
 
         # Mock complete_step since it calls _create_log which has side effects
-        with patch.object(tracker, 'complete_step', return_value=True):
+        with patch.object(tracker, "complete_step", return_value=True):
             saved = tracker.save_result(result)
 
         assert saved is True
@@ -343,7 +343,9 @@ class TestSaveResult:
         # extraction_method is stored as string due to use_enum_values=True
         assert mock_session.processing_method == "llm_hybrid"
 
-    @pytest.mark.skip(reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string")
+    @pytest.mark.skip(
+        reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string"
+    )
     def test_save_result_failure(self, tracker, mock_session):
         """测试保存失败结果"""
         result = ExtractionResult(
@@ -356,7 +358,7 @@ class TestSaveResult:
         )
 
         # Mock fail_step since it calls _create_log which has side effects
-        with patch.object(tracker, 'fail_step', return_value=True):
+        with patch.object(tracker, "fail_step", return_value=True):
             saved = tracker.save_result(result)
 
         assert saved is True
@@ -458,9 +460,8 @@ class TestTrackProcessingStepDecorator:
     @pytest.mark.asyncio
     async def test_decorator_successful_result(self, mock_db):
         """测试成功结果装饰"""
-        @track_processing_step(
-            mock_db, "session_123", ProcessingStep.TEXT_EXTRACTION
-        )
+
+        @track_processing_step(mock_db, "session_123", ProcessingStep.TEXT_EXTRACTION)
         async def test_function():
             return ExtractionResult(
                 success=True,
@@ -469,10 +470,9 @@ class TestTrackProcessingStepDecorator:
                 extraction_method=ExtractionMethod.REGEX_PATTERN,
             )
 
-        with patch.object(
-            ProcessingTracker, "start_step", return_value=True
-        ), patch.object(
-            ProcessingTracker, "complete_step", return_value=True
+        with (
+            patch.object(ProcessingTracker, "start_step", return_value=True),
+            patch.object(ProcessingTracker, "complete_step", return_value=True),
         ):
             result = await test_function()
 
@@ -481,15 +481,12 @@ class TestTrackProcessingStepDecorator:
     @pytest.mark.asyncio
     async def test_decorator_exception(self, mock_db):
         """测试装饰器异常处理"""
-        @track_processing_step(
-            mock_db, "session_123", ProcessingStep.PDF_CONVERSION
-        )
+
+        @track_processing_step(mock_db, "session_123", ProcessingStep.PDF_CONVERSION)
         async def failing_function():
             raise ValueError("Test error")
 
-        with patch.object(
-            ProcessingTracker, "handle_failure"
-        ) as mock_handle:
+        with patch.object(ProcessingTracker, "handle_failure") as mock_handle:
             with pytest.raises(ValueError, match="Test error"):
                 await failing_function()
 
@@ -498,17 +495,17 @@ class TestTrackProcessingStepDecorator:
     @pytest.mark.asyncio
     async def test_decorator_non_extraction_result(self, mock_db):
         """测试装饰器处理非ExtractionResult结果"""
-        @track_processing_step(
-            mock_db, "session_123", ProcessingStep.TEXT_EXTRACTION
-        )
+
+        @track_processing_step(mock_db, "session_123", ProcessingStep.TEXT_EXTRACTION)
         async def test_function():
             return "string_result"  # Not an ExtractionResult
 
-        with patch.object(
-            ProcessingTracker, "start_step", return_value=True
-        ), patch.object(
-            ProcessingTracker, "complete_step", return_value=True
-        ) as mock_complete:
+        with (
+            patch.object(ProcessingTracker, "start_step", return_value=True),
+            patch.object(
+                ProcessingTracker, "complete_step", return_value=True
+            ) as mock_complete,
+        ):
             result = await test_function()
 
             assert result == "string_result"
@@ -550,7 +547,10 @@ class TestBatchStatusTrackerInit:
             mock_redis = MagicMock()
             mock_redis.ping.return_value = True
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 assert tracker._use_redis is True
@@ -562,7 +562,10 @@ class TestBatchStatusTrackerInit:
             mock_redis = MagicMock()
             mock_redis.ping.side_effect = Exception("Connection failed")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 assert tracker._use_redis is False
@@ -592,7 +595,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.hset.return_value = True
             mock_redis.expire.return_value = True
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.create_batch(
@@ -613,7 +619,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.hset.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.create_batch(
@@ -635,7 +644,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.hincrby.return_value = 5
             mock_redis.hset.return_value = True
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
                 tracker.create_batch(batch_id="batch_update_123", total=100)
 
@@ -656,7 +668,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.exists.return_value = False
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.update_progress(
@@ -673,7 +688,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.exists.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.update_progress(
@@ -691,7 +709,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.exists.return_value = True
             mock_redis.hset.return_value = True
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
                 tracker.create_batch(batch_id="batch_complete_123", total=100)
 
@@ -716,7 +737,10 @@ class TestBatchStatusTrackerRedis:
                 "status": "processing",
             }
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 status = tracker.get_status("batch_get_123")
@@ -733,7 +757,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.hgetall.return_value = {}
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 status = tracker.get_status("nonexistent_batch")
@@ -747,7 +774,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.hgetall.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 status = tracker.get_status("batch_error_123")
@@ -761,7 +791,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.delete.return_value = 1
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.delete_batch("batch_delete_123")
@@ -775,7 +808,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.delete.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 result = tracker.delete_batch("batch_error_123")
@@ -792,11 +828,22 @@ class TestBatchStatusTrackerRedis:
                 "batch:status:batch2",
             ]
             mock_redis.hgetall.side_effect = [
-                {"batch_id": "batch1", "status": "pending", "created_at": "2026-01-16T10:00:00"},
-                {"batch_id": "batch2", "status": "completed", "created_at": "2026-01-16T11:00:00"},
+                {
+                    "batch_id": "batch1",
+                    "status": "pending",
+                    "created_at": "2026-01-16T10:00:00",
+                },
+                {
+                    "batch_id": "batch2",
+                    "status": "completed",
+                    "created_at": "2026-01-16T11:00:00",
+                },
             ]
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 batches = tracker.list_batches()
@@ -813,11 +860,22 @@ class TestBatchStatusTrackerRedis:
                 "batch:status:batch2",
             ]
             mock_redis.hgetall.side_effect = [
-                {"batch_id": "batch1", "status": "pending", "created_at": "2026-01-16T10:00:00"},
-                {"batch_id": "batch2", "status": "completed", "created_at": "2026-01-16T11:00:00"},
+                {
+                    "batch_id": "batch1",
+                    "status": "pending",
+                    "created_at": "2026-01-16T10:00:00",
+                },
+                {
+                    "batch_id": "batch2",
+                    "status": "completed",
+                    "created_at": "2026-01-16T11:00:00",
+                },
             ]
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 batches = tracker.list_batches(status_filter="pending")
@@ -832,7 +890,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.scan_iter.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
                 # Create some batches in memory for fallback BEFORE Redis fails
                 tracker._fallback_store["memory_batch"] = {
@@ -865,7 +926,10 @@ class TestBatchStatusTrackerRedis:
             # Need to match TaskExecutionStatus enum values
             mock_redis.hget.side_effect = ["pending", "running", "completed"]
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 stats = tracker.get_stats()
@@ -882,7 +946,10 @@ class TestBatchStatusTrackerRedis:
             mock_redis.ping.return_value = True
             mock_redis.scan_iter.side_effect = Exception("Redis error")
 
-            with patch("src.services.document.processing_tracker.redis.Redis", return_value=mock_redis):
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
                 tracker = BatchStatusTracker(redis_host="localhost")
 
                 stats = tracker.get_stats()
@@ -953,9 +1020,7 @@ class TestBatchStatusTrackerOperations:
         with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", False):
             tracker = BatchStatusTracker()
 
-            result = tracker.update_progress(
-                batch_id="nonexistent_batch", processed=50
-            )
+            result = tracker.update_progress(batch_id="nonexistent_batch", processed=50)
 
             assert result is False
 

@@ -43,6 +43,12 @@ from .organization import (  # noqa: F401
     OrganizationHistory,
     Position,
 )
+from .property_certificate import (  # noqa: F401
+    CertificateType,
+    OwnerType,
+    PropertyCertificate,
+    PropertyOwner,
+)
 from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
@@ -117,6 +123,11 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationPriority",
+    # Property Certificate models
+    "CertificateType",
+    "OwnerType",
+    "PropertyCertificate",
+    "PropertyOwner",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

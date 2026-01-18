@@ -6,6 +6,8 @@
  * 2. Token兼容性 (优先级、回退、空值处理)
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('Request工具 - 错误处理增强', () => {
@@ -144,7 +146,7 @@ describe('Request工具 - 错误处理增强', () => {
   describe('错误状态码处理', () => {
     it('应该正确处理400错误', () => {
       const status = 400;
-      const expectedMessage = '请求参数错误';
+      const _expectedMessage = '请求参数错误';
 
       expect(status).toBeGreaterThanOrEqual(400);
       expect(status).toBeLessThan(500);

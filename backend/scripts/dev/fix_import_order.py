@@ -26,7 +26,9 @@ def fix_import_order(filepath: Path) -> bool:
     for i, line in enumerate(lines):
         stripped = line.strip()
         is_import = stripped.startswith("import ") or stripped.startswith("from ")
-        is_exception_def = re.match(r"^class\s+\w+Error\(|^class\s+\w*Exception\(", line)
+        is_exception_def = re.match(
+            r"^class\s+\w+Error\(|^class\s+\w*Exception\(", line
+        )
 
         if state == "start":
             if is_import:
@@ -62,7 +64,9 @@ def fix_import_order(filepath: Path) -> bool:
         elif state == "docstring":
             docstring.append(line)
             # 检查 docstring 是否结束
-            quote_count = sum(1 for l in docstring if ('"""' in l or "'''" in l))
+            quote_count = sum(
+                1 for line_str in docstring if ('"""' in line_str or "'''" in line_str)
+            )
             if quote_count >= 2:
                 # Docstring ended
                 if i + 1 < len(lines):

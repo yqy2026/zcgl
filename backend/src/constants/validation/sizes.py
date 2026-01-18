@@ -94,4 +94,3 @@ class FileSizeLimits:
 MAX_EXCEL_SIZE = FileSizeLimits.EXCEL_MAX_MB
 MAX_PDF_SIZE = FileSizeLimits.PDF_MAX_MB
 MAX_IMAGE_SIZE = FileSizeLimits.IMAGE_MAX_MB
-

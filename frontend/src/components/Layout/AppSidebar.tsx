@@ -195,21 +195,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
   };
 
   return (
-    <Sider
-      trigger={null}
-      collapsible
-      collapsed={collapsed}
-      width={240}
-      className={styles.sidebar}
-    >
+    <Sider trigger={null} collapsible collapsed={collapsed} width={240} className={styles.sidebar}>
       {/* Logo区域 */}
-      <div className={collapsed ? `${styles.sidebarLogo} ${styles.sidebarLogoCollapsed}` : styles.sidebarLogo}>
+      <div
+        className={
+          collapsed ? `${styles.sidebarLogo} ${styles.sidebarLogoCollapsed}` : styles.sidebarLogo
+        }
+      >
         <HomeOutlined className={styles.sidebarLogoIcon} />
-        {!collapsed && (
-          <span className={styles.sidebarLogoText}>
-            资产管理
-          </span>
-        )}
+        {!collapsed && <span className={styles.sidebarLogoText}>资产管理</span>}
       </div>
 
       {/* 菜单 */}

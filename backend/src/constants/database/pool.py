@@ -19,7 +19,9 @@ class DatabasePoolConfig:
     SIZE_DEFAULT: Final[int] = 20
     MAX_OVERFLOW: Final[int] = 30
     TIMEOUT_SECONDS: Final[int] = 30
-    RECYCLE_SECONDS: Final[int] = 3600  # 1 hour - recycle connections to prevent stale connections
+    RECYCLE_SECONDS: Final[int] = (
+        3600  # 1 hour - recycle connections to prevent stale connections
+    )
 
     # Pool behavior
     PRE_PING_ENABLED: Final[bool] = True  # Verify connections before use
@@ -31,7 +33,9 @@ class DatabasePoolConfig:
     SQLITE_WAL_AUTOCHECKPOINT: Final[int] = 1000  # PRAGMA wal_autocheckpoint
 
     # Query monitoring
-    SLOW_QUERY_THRESHOLD_MS: Final[float] = 100.0  # milliseconds - queries slower than this are logged
+    SLOW_QUERY_THRESHOLD_MS: Final[float] = (
+        100.0  # milliseconds - queries slower than this are logged
+    )
     ENABLE_QUERY_LOGGING: Final[bool] = False
 
     # Queue management

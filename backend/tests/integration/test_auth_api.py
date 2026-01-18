@@ -10,7 +10,10 @@ Auth API 集成测试 - 测试重构后的认证模块
 """
 
 import pytest
-pytestmark = pytest.mark.skip(reason="Integration API tests require real JWT authentication setup")
+
+pytestmark = pytest.mark.skip(
+    reason="Integration API tests require real JWT authentication setup"
+)
 from fastapi.testclient import TestClient
 
 
@@ -18,6 +21,7 @@ from fastapi.testclient import TestClient
 def client():
     """创建测试客户端"""
     from src.main import app
+
     return TestClient(app)
 
 
@@ -28,7 +32,7 @@ class TestAuthenticationEndpoints:
         """测试登录端点是否存在"""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "wrong_password"}
+            json={"username": "admin", "password": "wrong_password"},
         )
         # 应该返回 401 (密码错误) 或 422 (验证错误)，但不应该是 404
         assert response.status_code != 404
@@ -39,8 +43,7 @@ class TestAuthenticationEndpoints:
         # 注意：这需要数据库中有admin用户
         # 如果测试环境没有admin用户，这个测试会失败
         response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "Admin123!@#"}
+            "/api/v1/auth/login", json={"username": "admin", "password": "Admin123!@#"}
         )
         # 可能的响应: 200 (成功), 401 (密码错误), 404 (用户不存在)
         assert response.status_code in [200, 401, 404]
@@ -54,8 +57,7 @@ class TestAuthenticationEndpoints:
     def test_refresh_token_endpoint_exists(self, client):
         """测试刷新令牌端点是否存在"""
         response = client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": "invalid_token"}
+            "/api/v1/auth/refresh", json={"refresh_token": "invalid_token"}
         )
         # 应该返回 401 (无效令牌) 或 422 (验证错误)
         assert response.status_code in [401, 422]
@@ -91,8 +93,8 @@ class TestUserManagementEndpoints:
                 "email": "test@example.com",
                 "password": "Test123!@#",
                 "full_name": "Test User",
-                "role": "user"
-            }
+                "role": "user",
+            },
         )
         # 需要管理员权限
         assert response.status_code == 401
@@ -106,8 +108,7 @@ class TestUserManagementEndpoints:
     def test_update_user_exists(self, client):
         """测试更新用户端点是否存在"""
         response = client.put(
-            "/api/v1/auth/users/123",
-            json={"full_name": "Updated Name"}
+            "/api/v1/auth/users/123", json={"full_name": "Updated Name"}
         )
         # 需要认证
         assert response.status_code == 401
@@ -116,10 +117,7 @@ class TestUserManagementEndpoints:
         """测试修改密码端点是否存在"""
         response = client.post(
             "/api/v1/auth/users/123/change-password",
-            json={
-                "current_password": "old_password",
-                "new_password": "New123!@#"
-            }
+            json={"current_password": "old_password", "new_password": "New123!@#"},
         )
         # 需要认证
         assert response.status_code == 401
@@ -152,7 +150,7 @@ class TestUserManagementEndpoints:
         """测试重置密码端点是否存在"""
         response = client.post(
             "/api/v1/auth/users/123/reset-password",
-            json={"new_password": "Reset123!@#"}
+            json={"new_password": "Reset123!@#"},
         )
         # 需要管理员权限
         assert response.status_code == 401
@@ -211,7 +209,6 @@ class TestRouterStructure:
             ("POST", "/api/v1/auth/logout"),
             ("POST", "/api/v1/auth/refresh"),
             ("GET", "/api/v1/auth/me"),
-
             # User management routes
             ("GET", "/api/v1/auth/users"),
             ("GET", "/api/v1/auth/users/search"),
@@ -225,14 +222,11 @@ class TestRouterStructure:
             ("POST", "/api/v1/auth/users/123/unlock"),
             ("POST", "/api/v1/auth/users/123/reset-password"),
             ("GET", "/api/v1/auth/users/statistics/summary"),
-
             # Session management routes
             ("GET", "/api/v1/auth/sessions"),
             ("DELETE", "/api/v1/auth/sessions/123"),
-
             # Audit routes
             ("GET", "/api/v1/auth/audit/logs"),
-
             # Security routes
             ("GET", "/api/v1/auth/security/config"),
         ]
@@ -258,14 +252,16 @@ class TestRouterStructure:
         # 收集所有路由路径和方法
         route_signatures = []
         for route in router.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
+            if hasattr(route, "path") and hasattr(route, "methods"):
                 for method in route.methods:
                     # 创建路由签名（路径+方法）
                     signature = f"{method} {route.path}"
                     route_signatures.append(signature)
 
         # 检查是否有完全相同的路由签名
-        duplicates = [sig for sig in set(route_signatures) if route_signatures.count(sig) > 1]
+        duplicates = [
+            sig for sig in set(route_signatures) if route_signatures.count(sig) > 1
+        ]
 
         assert len(duplicates) == 0, f"Found duplicate routes: {duplicates}"
 
@@ -275,7 +271,9 @@ class TestRouterStructure:
 
         # 主路由器应该有多个子路由
         # 24个路由 = 7个认证 + 14个用户 + 2个会话 + 1个审计 + 1个安全
-        assert len(router.routes) >= 20, f"Expected at least 20 routes, got {len(router.routes)}"
+        assert len(router.routes) >= 20, (
+            f"Expected at least 20 routes, got {len(router.routes)}"
+        )
 
 
 class TestBackwardCompatibility:
@@ -291,7 +289,11 @@ class TestBackwardCompatibility:
         ]
 
         for url in old_urls:
-            response = client.get(url) if url.startswith("/api/v1/auth/sessions") else client.post(url, json={})
+            response = (
+                client.get(url)
+                if url.startswith("/api/v1/auth/sessions")
+                else client.post(url, json={})
+            )
             # 不应该返回404
             assert response.status_code != 404, f"Old URL {url} is broken"
 
@@ -302,6 +304,7 @@ class TestModuleImports:
     def test_auth_router_imports(self):
         """测试认证路由器可以正确导入"""
         from src.api.v1.auth import router
+
         assert router is not None
         assert len(router.routes) > 0
 

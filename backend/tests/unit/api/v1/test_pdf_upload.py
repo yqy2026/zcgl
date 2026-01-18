@@ -16,10 +16,7 @@ Testing Approach:
 """
 
 import io
-import tempfile
-from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
+from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import pytest
 from fastapi import HTTPException, UploadFile
@@ -181,7 +178,10 @@ class TestUploadPdfFile:
                     m_open.return_value.write = MagicMock()
 
                     # Mock the file_security import
-                    with patch("src.utils.file_security.generate_safe_filename", return_value="safe_test.pdf"):
+                    with patch(
+                        "src.utils.file_security.generate_safe_filename",
+                        return_value="safe_test.pdf",
+                    ):
                         result = await upload_pdf_file(
                             file=mock_pdf_file,
                             prefer_markitdown=False,
@@ -372,7 +372,11 @@ class TestUploadPdfFile:
 
     @pytest.mark.asyncio
     async def test_upload_pdf_with_processing_options(
-        self, mock_db, mock_pdf_file, mock_pdf_import_service, mock_optional_services_with_all
+        self,
+        mock_db,
+        mock_pdf_file,
+        mock_pdf_import_service,
+        mock_optional_services_with_all,
     ):
         """Test upload with different processing options"""
         from src.api.v1.pdf_upload import upload_pdf_file
@@ -422,7 +426,9 @@ class TestUploadPdfFile:
             mock_get_optional.return_value = mock_optional_services
 
             mock_service = MagicMock()
-            mock_service.process_pdf_file = AsyncMock(side_effect=Exception("Processing failed"))
+            mock_service.process_pdf_file = AsyncMock(
+                side_effect=Exception("Processing failed")
+            )
 
             with patch("src.api.v1.pdf_upload.PDFImportService") as mock_service_class:
                 mock_service_class.return_value = mock_service
@@ -463,7 +469,9 @@ class TestUploadPdfFile:
             mock_get_optional.return_value = mock_optional_services_with_all
 
             mock_service = MagicMock()
-            mock_service.process_pdf_file = AsyncMock(side_effect=Exception("Timeout error"))
+            mock_service.process_pdf_file = AsyncMock(
+                side_effect=Exception("Timeout error")
+            )
 
             with patch("src.api.v1.pdf_upload.PDFImportService") as mock_service_class:
                 mock_service_class.return_value = mock_service
@@ -559,7 +567,7 @@ class TestUploadPdfFile:
 
                     # Make open raise an exception
                     m_open = mock_open()
-                    m_open.return_value.__enter__.side_effect = IOError("Disk full")
+                    m_open.return_value.__enter__.side_effect = OSError("Disk full")
 
                     with pytest.raises(HTTPException) as exc_info:
                         await upload_pdf_file(
@@ -577,7 +585,11 @@ class TestUploadPdfFile:
 
     @pytest.mark.asyncio
     async def test_upload_pdf_validates_filename_extension(
-        self, mock_db, mock_pdf_file, mock_pdf_import_service, mock_optional_services_with_all
+        self,
+        mock_db,
+        mock_pdf_file,
+        mock_pdf_import_service,
+        mock_optional_services_with_all,
     ):
         """Test that PDF file with .pdf extension (case insensitive) is accepted"""
         from src.api.v1.pdf_upload import upload_pdf_file
@@ -635,7 +647,9 @@ class TestUploadAndExtractPdf:
             mock_get_optional.return_value = mock_optional_services_with_all
 
             # Mock PDFImportService
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
                 mock_import_service.upload_file = AsyncMock(
                     return_value={"file_path": "/tmp/test.pdf", "filename": "test.pdf"}
@@ -646,7 +660,12 @@ class TestUploadAndExtractPdf:
                 with patch.object(
                     mock_optional_services_with_all.pdf_processing_service,
                     "extract_text_from_pdf",
-                    AsyncMock(return_value={"success": True, "text": "Sample contract text content"}),
+                    AsyncMock(
+                        return_value={
+                            "success": True,
+                            "text": "Sample contract text content",
+                        }
+                    ),
                 ):
                     # Mock extract_contract_info
                     with patch(
@@ -672,7 +691,9 @@ class TestUploadAndExtractPdf:
         assert result.real_data_verified is True
 
     @pytest.mark.asyncio
-    async def test_upload_and_extract_invalid_content_type(self, mock_db, mock_non_pdf_file):
+    async def test_upload_and_extract_invalid_content_type(
+        self, mock_db, mock_non_pdf_file
+    ):
         """Test upload and extract with invalid content type"""
         from src.api.v1.pdf_upload import upload_and_extract_pdf_v1_compatible
 
@@ -695,7 +716,9 @@ class TestUploadAndExtractPdf:
         assert "只支持PDF文件上传" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_upload_and_extract_file_too_large(self, mock_db, mock_large_pdf_file):
+    async def test_upload_and_extract_file_too_large(
+        self, mock_db, mock_large_pdf_file
+    ):
         """Test upload and extract with file exceeding size limit"""
         from src.api.v1.pdf_upload import upload_and_extract_pdf_v1_compatible
 
@@ -751,7 +774,9 @@ class TestUploadAndExtractPdf:
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
                 mock_import_service.upload_file = AsyncMock(
                     return_value={"file_path": "/tmp/test.pdf", "filename": "test.pdf"}
@@ -761,7 +786,9 @@ class TestUploadAndExtractPdf:
                 with patch.object(
                     mock_optional_services_with_all.pdf_processing_service,
                     "extract_text_from_pdf",
-                    AsyncMock(return_value={"success": False, "error": "Extraction failed"}),
+                    AsyncMock(
+                        return_value={"success": False, "error": "Extraction failed"}
+                    ),
                 ):
                     result = await upload_and_extract_pdf_v1_compatible(
                         file=mock_pdf_file,
@@ -787,7 +814,9 @@ class TestUploadAndExtractPdf:
 
             sample_text = "Sample contract text content"
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
                 mock_import_service.upload_file = AsyncMock(
                     return_value={"file_path": "/tmp/test.pdf", "filename": "test.pdf"}
@@ -829,7 +858,9 @@ class TestUploadAndExtractPdf:
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
                 mock_import_service.upload_file = AsyncMock(
                     return_value={"file_path": "/tmp/test.pdf", "filename": "test.pdf"}
@@ -871,7 +902,9 @@ class TestUploadAndExtractPdf:
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
                 mock_import_service.upload_file = AsyncMock(
                     return_value={"file_path": "/tmp/test.pdf", "filename": "test.pdf"}
@@ -885,7 +918,10 @@ class TestUploadAndExtractPdf:
                 ):
                     with patch(
                         "src.services.document.contract_extractor.extract_contract_info",
-                        return_value={"success": False, "error": "Cannot extract fields"},
+                        return_value={
+                            "success": False,
+                            "error": "Cannot extract fields",
+                        },
                     ):
                         result = await upload_and_extract_pdf_v1_compatible(
                             file=mock_pdf_file,
@@ -909,9 +945,13 @@ class TestUploadAndExtractPdf:
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
-                mock_import_service.upload_file = AsyncMock(side_effect=Exception("Unexpected error"))
+                mock_import_service.upload_file = AsyncMock(
+                    side_effect=Exception("Unexpected error")
+                )
                 mock_import_service_class.return_value = mock_import_service
 
                 result = await upload_and_extract_pdf_v1_compatible(
@@ -939,7 +979,11 @@ class TestValidateExtractedFieldsV1:
         """Test validation with valid fields"""
         from src.api.v1.pdf_upload import _validate_extracted_fields_v1
 
-        fields = {"contract_number": "CONTRACT-001", "party_a": "Company A", "party_b": "Company B"}
+        fields = {
+            "contract_number": "CONTRACT-001",
+            "party_a": "Company A",
+            "party_b": "Company B",
+        }
 
         result = _validate_extracted_fields_v1(fields)
 
@@ -966,7 +1010,11 @@ class TestValidateExtractedFieldsV1:
         """Test validation with mixed valid and empty fields"""
         from src.api.v1.pdf_upload import _validate_extracted_fields_v1
 
-        fields = {"contract_number": "CONTRACT-001", "party_a": "", "party_b": "Company B"}
+        fields = {
+            "contract_number": "CONTRACT-001",
+            "party_a": "",
+            "party_b": "Company B",
+        }
 
         result = _validate_extracted_fields_v1(fields)
 
@@ -1035,14 +1083,20 @@ class TestEdgeCases:
 
     @pytest.mark.asyncio
     async def test_upload_pdf_with_custom_max_size(
-        self, mock_db, mock_pdf_file, mock_pdf_import_service, mock_optional_services_with_all
+        self,
+        mock_db,
+        mock_pdf_file,
+        mock_pdf_import_service,
+        mock_optional_services_with_all,
     ):
         """Test upload with custom max file size from enhanced handler"""
         from src.api.v1.pdf_upload import upload_pdf_file
 
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
-            mock_optional_services_with_all.enhanced_error_handler.max_file_size_mb = 100
+            mock_optional_services_with_all.enhanced_error_handler.max_file_size_mb = (
+                100
+            )
 
             with patch("src.api.v1.pdf_upload.PDFImportService") as mock_service_class:
                 mock_service_class.return_value = mock_pdf_import_service
@@ -1072,7 +1126,11 @@ class TestEdgeCases:
 
     @pytest.mark.asyncio
     async def test_upload_pdf_streaming_in_chunks(
-        self, mock_db, mock_pdf_file, mock_pdf_import_service, mock_optional_services_with_all
+        self,
+        mock_db,
+        mock_pdf_file,
+        mock_pdf_import_service,
+        mock_optional_services_with_all,
     ):
         """Test that file is read in chunks during upload"""
         from src.api.v1.pdf_upload import upload_pdf_file
@@ -1120,9 +1178,13 @@ class TestEdgeCases:
         with patch("src.api.v1.pdf_upload.get_optional_services") as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch("src.api.v1.pdf_upload.PDFImportService") as mock_import_service_class:
+            with patch(
+                "src.api.v1.pdf_upload.PDFImportService"
+            ) as mock_import_service_class:
                 mock_import_service = MagicMock()
-                mock_import_service.upload_file = AsyncMock(side_effect=TimeoutError("Processing timeout"))
+                mock_import_service.upload_file = AsyncMock(
+                    side_effect=TimeoutError("Processing timeout")
+                )
                 mock_import_service_class.return_value = mock_import_service
 
                 result = await upload_and_extract_pdf_v1_compatible(

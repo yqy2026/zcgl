@@ -285,7 +285,7 @@
   margin: 4px 8px;
 }
 
-.mobileMenuDrawer .ant-menu-submenu>.ant-menu-submenu-title {
+.mobileMenuDrawer .ant-menu-submenu > .ant-menu-submenu-title {
   border-radius: 6px;
 }
 

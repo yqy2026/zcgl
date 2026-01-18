@@ -27,7 +27,7 @@ Testing Approach:
 - Test response schemas
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -97,7 +97,9 @@ class TestGetOrganizations:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organizations_success(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organizations_success(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organization list successfully"""
         from src.api.v1.organization import get_organizations
 
@@ -122,32 +124,46 @@ class TestGetOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = mock_orgs
 
-        result = await get_organizations(skip=0, limit=100, db=mock_db, current_user=mock_current_user)
+        result = await get_organizations(
+            skip=0, limit=100, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 3
-        mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=0, limit=100)
+        mock_org_crud.get_multi_with_filters.assert_called_once_with(
+            mock_db, skip=0, limit=100
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organizations_with_pagination(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organizations_with_pagination(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organizations with pagination"""
         from src.api.v1.organization import get_organizations
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await get_organizations(skip=10, limit=50, db=mock_db, current_user=mock_current_user)
+        await get_organizations(
+            skip=10, limit=50, db=mock_db, current_user=mock_current_user
+        )
 
-        mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=10, limit=50)
+        mock_org_crud.get_multi_with_filters.assert_called_once_with(
+            mock_db, skip=10, limit=50
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organizations_empty_list(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organizations_empty_list(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organizations when none exist"""
         from src.api.v1.organization import get_organizations
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await get_organizations(skip=0, limit=100, db=mock_db, current_user=mock_current_user)
+        result = await get_organizations(
+            skip=0, limit=100, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 0
 
@@ -162,7 +178,9 @@ class TestGetOrganizationTree:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_tree_root(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_tree_root(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organization tree from root"""
         from src.api.v1.organization import get_organization_tree
 
@@ -203,7 +221,9 @@ class TestGetOrganizationTree:
             [],  # Call 6: get children of root-org-1 (second root has no children)
         ]
 
-        result = await get_organization_tree(parent_id=None, db=mock_db, current_user=mock_current_user)
+        result = await get_organization_tree(
+            parent_id=None, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 2
         assert result[0].id == "root-org-0"
@@ -212,7 +232,9 @@ class TestGetOrganizationTree:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_tree_with_parent(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_tree_with_parent(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organization tree for specific parent"""
         from src.api.v1.organization import get_organization_tree
 
@@ -224,7 +246,9 @@ class TestGetOrganizationTree:
 
         mock_org_crud.get_tree.return_value = [mock_org]
 
-        result = await get_organization_tree(parent_id="parent-org", db=mock_db, current_user=mock_current_user)
+        result = await get_organization_tree(
+            parent_id="parent-org", db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 1
         assert result[0].id == "parent-org"
@@ -232,13 +256,17 @@ class TestGetOrganizationTree:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_tree_empty(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_tree_empty(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organization tree with no organizations"""
         from src.api.v1.organization import get_organization_tree
 
         mock_org_crud.get_tree.return_value = []
 
-        result = await get_organization_tree(parent_id=None, db=mock_db, current_user=mock_current_user)
+        result = await get_organization_tree(
+            parent_id=None, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 0
 
@@ -253,7 +281,9 @@ class TestSearchOrganizations:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_search_organizations_success(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_search_organizations_success(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test searching organizations successfully"""
         from src.api.v1.organization import search_organizations
 
@@ -265,39 +295,59 @@ class TestSearchOrganizations:
         mock_org_crud.search.return_value = mock_orgs
 
         result = await search_organizations(
-            keyword="test", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+            keyword="test",
+            skip=0,
+            limit=100,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 2
-        mock_org_crud.search.assert_called_once_with(mock_db, keyword="test", skip=0, limit=100)
+        mock_org_crud.search.assert_called_once_with(
+            mock_db, keyword="test", skip=0, limit=100
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_search_organizations_no_results(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_search_organizations_no_results(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test searching organizations with no matches"""
         from src.api.v1.organization import search_organizations
 
         mock_org_crud.search.return_value = []
 
         result = await search_organizations(
-            keyword="nonexistent", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+            keyword="nonexistent",
+            skip=0,
+            limit=100,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 0
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_search_organizations_with_pagination(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_search_organizations_with_pagination(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test searching organizations with pagination"""
         from src.api.v1.organization import search_organizations
 
         mock_org_crud.search.return_value = []
 
-        result = await search_organizations(
-            keyword="test", skip=20, limit=50, db=mock_db, current_user=mock_current_user
+        await search_organizations(
+            keyword="test",
+            skip=20,
+            limit=50,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
-        mock_org_crud.search.assert_called_once_with(mock_db, keyword="test", skip=20, limit=50)
+        mock_org_crud.search.assert_called_once_with(
+            mock_db, keyword="test", skip=20, limit=50
+        )
 
 
 # ============================================================================
@@ -310,7 +360,9 @@ class TestGetOrganizationStatistics:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_get_organization_statistics_success(self, mock_org_service, mock_db, mock_current_user):
+    async def test_get_organization_statistics_success(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test getting organization statistics successfully"""
         from src.api.v1.organization import get_organization_statistics
 
@@ -324,7 +376,9 @@ class TestGetOrganizationStatistics:
 
         mock_org_service.get_statistics.return_value = mock_stats
 
-        result = await get_organization_statistics(db=mock_db, current_user=mock_current_user)
+        result = await get_organization_statistics(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 100
         assert result.active == 80
@@ -335,15 +389,25 @@ class TestGetOrganizationStatistics:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_get_organization_statistics_empty(self, mock_org_service, mock_db, mock_current_user):
+    async def test_get_organization_statistics_empty(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test getting organization statistics with no organizations"""
         from src.api.v1.organization import get_organization_statistics
 
-        mock_stats = {"total": 0, "active": 0, "inactive": 0, "by_type": {}, "by_level": {}}
+        mock_stats = {
+            "total": 0,
+            "active": 0,
+            "inactive": 0,
+            "by_type": {},
+            "by_level": {},
+        }
 
         mock_org_service.get_statistics.return_value = mock_stats
 
-        result = await get_organization_statistics(db=mock_db, current_user=mock_current_user)
+        result = await get_organization_statistics(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total == 0
         assert result.active == 0
@@ -360,13 +424,17 @@ class TestGetOrganization:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_success(self, mock_org_crud, mock_db, mock_current_user, mock_organization):
+    async def test_get_organization_success(
+        self, mock_org_crud, mock_db, mock_current_user, mock_organization
+    ):
         """Test getting organization details successfully"""
         from src.api.v1.organization import get_organization
 
         mock_org_crud.get.return_value = mock_organization
 
-        result = await get_organization(org_id="test-org-id", db=mock_db, current_user=mock_current_user)
+        result = await get_organization(
+            org_id="test-org-id", db=mock_db, current_user=mock_current_user
+        )
 
         assert result.id == "test-org-id"
         assert result.name == "Test Organization"
@@ -375,14 +443,18 @@ class TestGetOrganization:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_not_found(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_not_found(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting non-existent organization"""
         from src.api.v1.organization import get_organization
 
         mock_org_crud.get.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_organization(org_id="nonexistent-id", db=mock_db, current_user=mock_current_user)
+            await get_organization(
+                org_id="nonexistent-id", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
         assert "组织不存在" in exc_info.value.detail
@@ -398,7 +470,9 @@ class TestGetOrganizationChildren:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_children_direct(self, mock_org_crud, mock_db, mock_current_user, mock_organization):
+    async def test_get_organization_children_direct(
+        self, mock_org_crud, mock_db, mock_current_user, mock_organization
+    ):
         """Test getting direct children of organization"""
         from src.api.v1.organization import get_organization_children
 
@@ -413,27 +487,39 @@ class TestGetOrganizationChildren:
         mock_org_crud.get_children.return_value = mock_children
 
         result = await get_organization_children(
-            org_id="test-org-id", recursive=False, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            recursive=False,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 3
         mock_org_crud.get.assert_called_once_with(mock_db, id="test-org-id")
-        mock_org_crud.get_children.assert_called_once_with(mock_db, parent_id="test-org-id", recursive=False)
+        mock_org_crud.get_children.assert_called_once_with(
+            mock_db, parent_id="test-org-id", recursive=False
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_children_recursive(self, mock_org_crud, mock_db, mock_current_user, mock_organization):
+    async def test_get_organization_children_recursive(
+        self, mock_org_crud, mock_db, mock_current_user, mock_organization
+    ):
         """Test getting all descendants recursively"""
         from src.api.v1.organization import get_organization_children
 
         mock_org_crud.get.return_value = mock_organization
         mock_org_crud.get_children.return_value = []
 
-        result = await get_organization_children(
-            org_id="test-org-id", recursive=True, db=mock_db, current_user=mock_current_user
+        await get_organization_children(
+            org_id="test-org-id",
+            recursive=True,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
-        mock_org_crud.get_children.assert_called_once_with(mock_db, parent_id="test-org-id", recursive=True)
+        mock_org_crud.get_children.assert_called_once_with(
+            mock_db, parent_id="test-org-id", recursive=True
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
@@ -447,7 +533,10 @@ class TestGetOrganizationChildren:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_organization_children(
-                org_id="nonexistent-id", recursive=False, db=mock_db, current_user=mock_current_user
+                org_id="nonexistent-id",
+                recursive=False,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -464,7 +553,9 @@ class TestGetOrganizationPath:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_path_success(self, mock_org_crud, mock_db, mock_current_user, mock_organization):
+    async def test_get_organization_path_success(
+        self, mock_org_crud, mock_db, mock_current_user, mock_organization
+    ):
         """Test getting organization path to root successfully"""
         from src.api.v1.organization import get_organization_path
 
@@ -477,22 +568,30 @@ class TestGetOrganizationPath:
 
         mock_org_crud.get_path_to_root.return_value = mock_path
 
-        result = await get_organization_path(org_id="test-org-id", db=mock_db, current_user=mock_current_user)
+        result = await get_organization_path(
+            org_id="test-org-id", db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 3
         mock_org_crud.get.assert_called_once_with(mock_db, id="test-org-id")
-        mock_org_crud.get_path_to_root.assert_called_once_with(mock_db, org_id="test-org-id")
+        mock_org_crud.get_path_to_root.assert_called_once_with(
+            mock_db, org_id="test-org-id"
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_path_not_found(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_path_not_found(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting path for non-existent organization"""
         from src.api.v1.organization import get_organization_path
 
         mock_org_crud.get.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_organization_path(org_id="nonexistent-id", db=mock_db, current_user=mock_current_user)
+            await get_organization_path(
+                org_id="nonexistent-id", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
         assert "组织不存在" in exc_info.value.detail
@@ -510,7 +609,12 @@ class TestGetOrganizationHistory:
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
     async def test_get_organization_history_success(
-        self, mock_org_crud, mock_org_service, mock_db, mock_current_user, mock_organization
+        self,
+        mock_org_crud,
+        mock_org_service,
+        mock_db,
+        mock_current_user,
+        mock_organization,
     ):
         """Test getting organization history successfully"""
         from src.api.v1.organization import get_organization_history
@@ -532,16 +636,24 @@ class TestGetOrganizationHistory:
         mock_org_service.get_history.return_value = mock_history
 
         result = await get_organization_history(
-            org_id="test-org-id", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            skip=0,
+            limit=100,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 5
         mock_org_crud.get.assert_called_once_with(mock_db, id="test-org-id")
-        mock_org_service.get_history.assert_called_once_with(mock_db, org_id="test-org-id", skip=0, limit=100)
+        mock_org_service.get_history.assert_called_once_with(
+            mock_db, org_id="test-org-id", skip=0, limit=100
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_history_not_found(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_history_not_found(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting history for non-existent organization"""
         from src.api.v1.organization import get_organization_history
 
@@ -549,7 +661,11 @@ class TestGetOrganizationHistory:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_organization_history(
-                org_id="nonexistent-id", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+                org_id="nonexistent-id",
+                skip=0,
+                limit=100,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -559,7 +675,12 @@ class TestGetOrganizationHistory:
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
     async def test_get_organization_history_empty(
-        self, mock_org_crud, mock_org_service, mock_db, mock_current_user, mock_organization
+        self,
+        mock_org_crud,
+        mock_org_service,
+        mock_db,
+        mock_current_user,
+        mock_organization,
     ):
         """Test getting organization history with no history records"""
         from src.api.v1.organization import get_organization_history
@@ -568,7 +689,11 @@ class TestGetOrganizationHistory:
         mock_org_service.get_history.return_value = []
 
         result = await get_organization_history(
-            org_id="test-org-id", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            skip=0,
+            limit=100,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 0
@@ -584,7 +709,9 @@ class TestCreateOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_create_organization_success(self, mock_org_service, mock_db, mock_current_user, mock_organization):
+    async def test_create_organization_success(
+        self, mock_org_service, mock_db, mock_current_user, mock_organization
+    ):
         """Test creating organization successfully"""
         from src.api.v1.organization import create_organization
         from src.schemas.organization import OrganizationCreate
@@ -602,15 +729,21 @@ class TestCreateOrganization:
 
         mock_org_service.create_organization.return_value = mock_organization
 
-        result = await create_organization(organization=org_data, db=mock_db, current_user=mock_current_user)
+        result = await create_organization(
+            organization=org_data, db=mock_db, current_user=mock_current_user
+        )
 
         assert result.id == "test-org-id"
         assert result.name == "Test Organization"
-        mock_org_service.create_organization.assert_called_once_with(mock_db, obj_in=org_data)
+        mock_org_service.create_organization.assert_called_once_with(
+            mock_db, obj_in=org_data
+        )
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_create_organization_validation_error(self, mock_org_service, mock_db, mock_current_user):
+    async def test_create_organization_validation_error(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test creating organization with validation error"""
         from src.api.v1.organization import create_organization
         from src.schemas.organization import OrganizationCreate
@@ -629,7 +762,9 @@ class TestCreateOrganization:
         mock_org_service.create_organization.side_effect = ValueError("组织编码已存在")
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_organization(organization=org_data, db=mock_db, current_user=mock_current_user)
+            await create_organization(
+                organization=org_data, db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 400
         assert "组织编码已存在" in exc_info.value.detail
@@ -645,7 +780,9 @@ class TestUpdateOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_update_organization_success(self, mock_org_service, mock_db, mock_current_user, mock_organization):
+    async def test_update_organization_success(
+        self, mock_org_service, mock_db, mock_current_user, mock_organization
+    ):
         """Test updating organization successfully"""
         from src.api.v1.organization import update_organization
         from src.schemas.organization import OrganizationUpdate
@@ -655,7 +792,10 @@ class TestUpdateOrganization:
         mock_org_service.update_organization.return_value = mock_organization
 
         result = await update_organization(
-            org_id="test-org-id", organization=org_data, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            organization=org_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.id == "test-org-id"
@@ -665,18 +805,25 @@ class TestUpdateOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_update_organization_not_found(self, mock_org_service, mock_db, mock_current_user):
+    async def test_update_organization_not_found(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test updating non-existent organization"""
         from src.api.v1.organization import update_organization
         from src.schemas.organization import OrganizationUpdate
 
         org_data = OrganizationUpdate(name="Updated Name")
 
-        mock_org_service.update_organization.side_effect = ValueError("组织ID不存在: test-org-id")
+        mock_org_service.update_organization.side_effect = ValueError(
+            "组织ID不存在: test-org-id"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await update_organization(
-                org_id="test-org-id", organization=org_data, db=mock_db, current_user=mock_current_user
+                org_id="test-org-id",
+                organization=org_data,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -684,7 +831,9 @@ class TestUpdateOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_update_organization_validation_error(self, mock_org_service, mock_db, mock_current_user):
+    async def test_update_organization_validation_error(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test updating organization with validation error"""
         from src.api.v1.organization import update_organization
         from src.schemas.organization import OrganizationUpdate
@@ -695,7 +844,10 @@ class TestUpdateOrganization:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_organization(
-                org_id="test-org-id", organization=org_data, db=mock_db, current_user=mock_current_user
+                org_id="test-org-id",
+                organization=org_data,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -712,14 +864,19 @@ class TestDeleteOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_delete_organization_success(self, mock_org_service, mock_db, mock_current_user):
+    async def test_delete_organization_success(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test deleting organization successfully"""
         from src.api.v1.organization import delete_organization
 
         mock_org_service.delete_organization.return_value = True
 
         result = await delete_organization(
-            org_id="test-org-id", deleted_by="admin", db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            deleted_by="admin",
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["message"] == "组织删除成功"
@@ -729,7 +886,9 @@ class TestDeleteOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_delete_organization_not_found(self, mock_org_service, mock_db, mock_current_user):
+    async def test_delete_organization_not_found(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test deleting non-existent organization"""
         from src.api.v1.organization import delete_organization
 
@@ -737,7 +896,10 @@ class TestDeleteOrganization:
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_organization(
-                org_id="nonexistent-id", deleted_by="admin", db=mock_db, current_user=mock_current_user
+                org_id="nonexistent-id",
+                deleted_by="admin",
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -745,15 +907,22 @@ class TestDeleteOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_delete_organization_validation_error(self, mock_org_service, mock_db, mock_current_user):
+    async def test_delete_organization_validation_error(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test deleting organization with validation error"""
         from src.api.v1.organization import delete_organization
 
-        mock_org_service.delete_organization.side_effect = ValueError("组织下有子组织，无法删除")
+        mock_org_service.delete_organization.side_effect = ValueError(
+            "组织下有子组织，无法删除"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_organization(
-                org_id="test-org-id", deleted_by="admin", db=mock_db, current_user=mock_current_user
+                org_id="test-org-id",
+                deleted_by="admin",
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -770,7 +939,9 @@ class TestMoveOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_move_organization_success(self, mock_org_service, mock_db, mock_current_user, mock_organization):
+    async def test_move_organization_success(
+        self, mock_org_service, mock_db, mock_current_user, mock_organization
+    ):
         """Test moving organization successfully"""
         from src.api.v1.organization import move_organization
         from src.schemas.organization import OrganizationMoveRequest
@@ -782,7 +953,10 @@ class TestMoveOrganization:
         mock_org_service.update_organization.return_value = mock_organization
 
         result = await move_organization(
-            org_id="test-org-id", move_request=move_request, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            move_request=move_request,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["message"] == "组织移动成功"
@@ -791,7 +965,9 @@ class TestMoveOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_move_organization_not_found(self, mock_org_service, mock_db, mock_current_user):
+    async def test_move_organization_not_found(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test moving non-existent organization"""
         from src.api.v1.organization import move_organization
         from src.schemas.organization import OrganizationMoveRequest
@@ -800,11 +976,16 @@ class TestMoveOrganization:
             target_parent_id="new-parent-id", sort_order=1, updated_by="admin"
         )
 
-        mock_org_service.update_organization.side_effect = ValueError("组织ID不存在: test-org-id")
+        mock_org_service.update_organization.side_effect = ValueError(
+            "组织ID不存在: test-org-id"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await move_organization(
-                org_id="test-org-id", move_request=move_request, db=mock_db, current_user=mock_current_user
+                org_id="test-org-id",
+                move_request=move_request,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -812,7 +993,9 @@ class TestMoveOrganization:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_move_organization_validation_error(self, mock_org_service, mock_db, mock_current_user):
+    async def test_move_organization_validation_error(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test moving organization with validation error"""
         from src.api.v1.organization import move_organization
         from src.schemas.organization import OrganizationMoveRequest
@@ -821,11 +1004,16 @@ class TestMoveOrganization:
             target_parent_id="invalid-parent-id", sort_order=1, updated_by="admin"
         )
 
-        mock_org_service.update_organization.side_effect = ValueError("目标父组织不存在")
+        mock_org_service.update_organization.side_effect = ValueError(
+            "目标父组织不存在"
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             await move_organization(
-                org_id="test-org-id", move_request=move_request, db=mock_db, current_user=mock_current_user
+                org_id="test-org-id",
+                move_request=move_request,
+                db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 400
@@ -842,18 +1030,24 @@ class TestBatchOrganizationOperation:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_batch_delete_success(self, mock_org_service, mock_db, mock_current_user):
+    async def test_batch_delete_success(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test batch deleting organizations successfully"""
         from src.api.v1.organization import batch_organization_operation
         from src.schemas.organization import OrganizationBatchRequest
 
         batch_request = OrganizationBatchRequest(
-            organization_ids=["org-1", "org-2", "org-3"], action="delete", updated_by="admin"
+            organization_ids=["org-1", "org-2", "org-3"],
+            action="delete",
+            updated_by="admin",
         )
 
         mock_org_service.delete_organization.return_value = True
 
-        result = await batch_organization_operation(batch_request=batch_request, db=mock_db, current_user=mock_current_user)
+        result = await batch_organization_operation(
+            batch_request=batch_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert "批量操作完成" in result["message"]
         assert result["message"] == "批量操作完成，成功 3 个，失败 0 个"
@@ -862,19 +1056,29 @@ class TestBatchOrganizationOperation:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_batch_delete_partial_failure(self, mock_org_service, mock_db, mock_current_user):
+    async def test_batch_delete_partial_failure(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test batch deleting organizations with some failures"""
         from src.api.v1.organization import batch_organization_operation
         from src.schemas.organization import OrganizationBatchRequest
 
         batch_request = OrganizationBatchRequest(
-            organization_ids=["org-1", "org-2", "org-3"], action="delete", updated_by="admin"
+            organization_ids=["org-1", "org-2", "org-3"],
+            action="delete",
+            updated_by="admin",
         )
 
         # First succeeds, second fails (not found), third fails (validation error)
-        mock_org_service.delete_organization.side_effect = [True, False, ValueError("有子组织")]
+        mock_org_service.delete_organization.side_effect = [
+            True,
+            False,
+            ValueError("有子组织"),
+        ]
 
-        result = await batch_organization_operation(batch_request=batch_request, db=mock_db, current_user=mock_current_user)
+        result = await batch_organization_operation(
+            batch_request=batch_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result["results"]) == 1
         assert len(result["errors"]) == 2
@@ -882,7 +1086,9 @@ class TestBatchOrganizationOperation:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_batch_delete_all_failures(self, mock_org_service, mock_db, mock_current_user):
+    async def test_batch_delete_all_failures(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test batch deleting organizations with all failures"""
         from src.api.v1.organization import batch_organization_operation
         from src.schemas.organization import OrganizationBatchRequest
@@ -893,7 +1099,9 @@ class TestBatchOrganizationOperation:
 
         mock_org_service.delete_organization.return_value = False
 
-        result = await batch_organization_operation(batch_request=batch_request, db=mock_db, current_user=mock_current_user)
+        result = await batch_organization_operation(
+            batch_request=batch_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result["results"]) == 0
         assert len(result["errors"]) == 2
@@ -910,7 +1118,9 @@ class TestAdvancedSearchOrganizations:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_with_keyword(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_with_keyword(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search with keyword"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
@@ -926,14 +1136,20 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.search.return_value = mock_orgs
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        result = await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 2
-        mock_org_crud.search.assert_called_once_with(mock_db, keyword="test", skip=0, limit=100)
+        mock_org_crud.search.assert_called_once_with(
+            mock_db, keyword="test", skip=0, limit=100
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_with_level_filter(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_with_level_filter(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search with level filter"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
@@ -960,7 +1176,9 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = mock_orgs
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        result = await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
         # Should only return organizations with level 2
         assert len(result) == 3
@@ -969,12 +1187,16 @@ class TestAdvancedSearchOrganizations:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_with_parent_filter(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_with_parent_filter(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search with parent_id filter"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
 
-        search_request = OrganizationSearchRequest(parent_id="parent-123", skip=0, limit=100)
+        search_request = OrganizationSearchRequest(
+            parent_id="parent-123", skip=0, limit=100
+        )
 
         mock_orgs = []
         for i in range(2):
@@ -996,7 +1218,9 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = mock_orgs
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        result = await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
         # Should only return organizations with matching parent_id
         assert len(result) == 2
@@ -1005,12 +1229,16 @@ class TestAdvancedSearchOrganizations:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_with_multiple_filters(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_with_multiple_filters(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search with multiple filters"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
 
-        search_request = OrganizationSearchRequest(keyword="test", level=2, parent_id="parent-123", skip=0, limit=100)
+        search_request = OrganizationSearchRequest(
+            keyword="test", level=2, parent_id="parent-123", skip=0, limit=100
+        )
 
         mock_orgs = []
         for i in range(2):
@@ -1023,13 +1251,17 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.search.return_value = mock_orgs
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        result = await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 2
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_no_filters(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_no_filters(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search without any filters"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
@@ -1038,14 +1270,20 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        result = await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 0
-        mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=0, limit=100)
+        mock_org_crud.get_multi_with_filters.assert_called_once_with(
+            mock_db, skip=0, limit=100
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_advanced_search_with_pagination(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_advanced_search_with_pagination(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test advanced search with pagination"""
         from src.api.v1.organization import advanced_search_organizations
         from src.schemas.organization import OrganizationSearchRequest
@@ -1054,9 +1292,13 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        await advanced_search_organizations(
+            search_request=search_request, db=mock_db, current_user=mock_current_user
+        )
 
-        mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=10, limit=50)
+        mock_org_crud.get_multi_with_filters.assert_called_once_with(
+            mock_db, skip=10, limit=50
+        )
 
 
 # ============================================================================
@@ -1069,20 +1311,26 @@ class TestOrganizationEdgeCases:
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organizations_with_invalid_pagination(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organizations_with_invalid_pagination(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organizations with invalid pagination parameters"""
         from src.api.v1.organization import get_organizations
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
         # Test with maximum allowed values
-        result = await get_organizations(skip=1000, limit=1000, db=mock_db, current_user=mock_current_user)
+        result = await get_organizations(
+            skip=1000, limit=1000, db=mock_db, current_user=mock_current_user
+        )
 
         assert len(result) == 0
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_search_organizations_empty_keyword(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_search_organizations_empty_keyword(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test searching with empty string keyword (should fail validation)"""
         from src.api.v1.organization import search_organizations
 
@@ -1093,7 +1341,11 @@ class TestOrganizationEdgeCases:
         # This test documents the expected behavior - empty keyword should be caught by validation
         # but if it reaches the endpoint, it should return empty results
         result = await search_organizations(
-            keyword="test", skip=0, limit=100, db=mock_db, current_user=mock_current_user
+            keyword="test",
+            skip=0,
+            limit=100,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert len(result) == 0
@@ -1102,7 +1354,12 @@ class TestOrganizationEdgeCases:
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
     async def test_get_organization_history_with_pagination(
-        self, mock_org_crud, mock_org_service, mock_db, mock_current_user, mock_organization
+        self,
+        mock_org_crud,
+        mock_org_service,
+        mock_db,
+        mock_current_user,
+        mock_organization,
     ):
         """Test getting organization history with pagination"""
         from src.api.v1.organization import get_organization_history
@@ -1111,15 +1368,23 @@ class TestOrganizationEdgeCases:
         mock_org_service.get_history.return_value = []
 
         result = await get_organization_history(
-            org_id="test-org-id", skip=50, limit=200, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            skip=50,
+            limit=200,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
-        mock_org_service.get_history.assert_called_once_with(mock_db, org_id="test-org-id", skip=50, limit=200)
+        mock_org_service.get_history.assert_called_once_with(
+            mock_db, org_id="test-org-id", skip=50, limit=200
+        )
         assert len(result) == 0
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_create_organization_with_parent(self, mock_org_service, mock_db, mock_current_user, mock_organization):
+    async def test_create_organization_with_parent(
+        self, mock_org_service, mock_db, mock_current_user, mock_organization
+    ):
         """Test creating organization with parent"""
         from src.api.v1.organization import create_organization
         from src.schemas.organization import OrganizationCreate
@@ -1137,14 +1402,18 @@ class TestOrganizationEdgeCases:
 
         mock_org_service.create_organization.return_value = mock_organization
 
-        result = await create_organization(organization=org_data, db=mock_db, current_user=mock_current_user)
+        result = await create_organization(
+            organization=org_data, db=mock_db, current_user=mock_current_user
+        )
 
         assert result.id == "test-org-id"
         mock_org_service.create_organization.assert_called_once()
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_update_organization_partial_update(self, mock_org_service, mock_db, mock_current_user, mock_organization):
+    async def test_update_organization_partial_update(
+        self, mock_org_service, mock_db, mock_current_user, mock_organization
+    ):
         """Test updating organization with partial data"""
         from src.api.v1.organization import update_organization
         from src.schemas.organization import OrganizationUpdate
@@ -1155,7 +1424,10 @@ class TestOrganizationEdgeCases:
         mock_org_service.update_organization.return_value = mock_organization
 
         result = await update_organization(
-            org_id="test-org-id", organization=org_data, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            organization=org_data,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.id == "test-org-id"
@@ -1163,22 +1435,31 @@ class TestOrganizationEdgeCases:
 
     @patch("src.api.v1.organization.organization_service")
     @pytest.mark.asyncio
-    async def test_delete_organization_without_deleted_by(self, mock_org_service, mock_db, mock_current_user):
+    async def test_delete_organization_without_deleted_by(
+        self, mock_org_service, mock_db, mock_current_user
+    ):
         """Test deleting organization without specifying deleted_by"""
         from src.api.v1.organization import delete_organization
 
         mock_org_service.delete_organization.return_value = True
 
         result = await delete_organization(
-            org_id="test-org-id", deleted_by=None, db=mock_db, current_user=mock_current_user
+            org_id="test-org-id",
+            deleted_by=None,
+            db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["message"] == "组织删除成功"
-        mock_org_service.delete_organization.assert_called_once_with(mock_db, org_id="test-org-id", deleted_by=None)
+        mock_org_service.delete_organization.assert_called_once_with(
+            mock_db, org_id="test-org-id", deleted_by=None
+        )
 
     @patch("src.api.v1.organization.organization_crud")
     @pytest.mark.asyncio
-    async def test_get_organization_tree_with_deep_nesting(self, mock_org_crud, mock_db, mock_current_user):
+    async def test_get_organization_tree_with_deep_nesting(
+        self, mock_org_crud, mock_db, mock_current_user
+    ):
         """Test getting organization tree with multiple levels"""
         from src.api.v1.organization import get_organization_tree
 
@@ -1210,7 +1491,9 @@ class TestOrganizationEdgeCases:
             [],  # No more children
         ]
 
-        result = await get_organization_tree(parent_id=None, db=mock_db, current_user=mock_current_user)
+        result = await get_organization_tree(
+            parent_id=None, db=mock_db, current_user=mock_current_user
+        )
 
         # Should return root with nested children
         assert len(result) == 1

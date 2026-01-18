@@ -42,12 +42,12 @@ export const COLOR_MAP = {
   '#cccccc': 'var(--color-border-dark)',
 
   // Additional chart colors (mapped to semantic colors)
-  '#722ed1': 'var(--color-primary)',    // purple → primary
-  '#13c2c2': 'var(--color-success)',    // cyan → success
-  '#fa8c16': 'var(--color-warning)',    // dark orange → warning
-  '#eb2f96': 'var(--color-error)',      // pink → error
-  '#3f8600': 'var(--color-success)',    // dark green → success
-  '#8884d8': 'var(--color-secondary)',  // purple line → secondary
+  '#722ed1': 'var(--color-primary)', // purple → primary
+  '#13c2c2': 'var(--color-success)', // cyan → success
+  '#fa8c16': 'var(--color-warning)', // dark orange → warning
+  '#eb2f96': 'var(--color-error)', // pink → error
+  '#3f8600': 'var(--color-success)', // dark green → success
+  '#8884d8': 'var(--color-secondary)', // purple line → secondary
 } as const;
 
 // Helper function to get CSS variable from color value
@@ -57,9 +57,10 @@ export function toCssVar(color: string): string {
 
   // Warn in development if color not found in map
   if (!mappedColor && process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
     console.warn(
       `[ColorMap] Unknown color "${color}" not found in COLOR_MAP. ` +
-      `Using original value. Available colors: ${Object.keys(COLOR_MAP).join(', ')}`
+        `Using original value. Available colors: ${Object.keys(COLOR_MAP).join(', ')}`
     );
   }
 
@@ -67,9 +68,7 @@ export function toCssVar(color: string): string {
 }
 
 // Helper function to create style object with CSS variables
-export function createColorStyle(
-  colorKey: keyof typeof COLOR_MAP | string
-): { color: string } {
+export function createColorStyle(colorKey: keyof typeof COLOR_MAP | string): { color: string } {
   return {
     color: toCssVar(colorKey),
   };
@@ -144,35 +143,35 @@ export function getTrendColor(value: number, trendType?: 'up' | 'down'): string 
  * Replaces hardcoded hex values like ['#1890ff', '#52c41a', '#faad14', '#f5222d', ...]
  */
 export const CHART_COLORS = [
-  COLORS.primary,      // #1677ff - blue
-  COLORS.success,      // #52c41a - green
-  COLORS.warning,      // #faad14 - orange/gold
-  COLORS.error,        // #ff4d4f - red
-  COLORS.secondary,    // #0ea5e9 - cyan/sky
+  COLORS.primary, // #1677ff - blue
+  COLORS.success, // #52c41a - green
+  COLORS.warning, // #faad14 - orange/gold
+  COLORS.error, // #ff4d4f - red
+  COLORS.secondary, // #0ea5e9 - cyan/sky
   COLORS.primaryHover, // #4096ff - lighter blue
-  COLORS.warning,      // #fa8c16 - darker orange
-  COLORS.error,        // #f5222d - darker red (pink-ish)
-  COLORS.secondary,    // #13c2c2 - cyan
-  COLORS.success,      // Duplicate for palette length
+  COLORS.warning, // #fa8c16 - darker orange
+  COLORS.error, // #f5222d - darker red (pink-ish)
+  COLORS.secondary, // #13c2c2 - cyan
+  COLORS.success, // Duplicate for palette length
 ] as const;
 
 /**
  * Performance status colors for analytics
  */
 export const PERFORMANCE_COLORS = {
-  excellent: COLORS.success,    // #52c41a
-  good: COLORS.primary,         // #1677ff
-  average: COLORS.warning,      // #faad14
-  poor: COLORS.error,           // #ff4d4f
+  excellent: COLORS.success, // #52c41a
+  good: COLORS.primary, // #1677ff
+  average: COLORS.warning, // #faad14
+  poor: COLORS.error, // #ff4d4f
 } as const;
 
 /**
  * Chart label colors
  */
 export const CHART_LABEL_COLORS = {
-  light: '#ffffff',  // For dark backgrounds
+  light: '#ffffff', // For dark backgrounds
   medium: '#666666', // For light backgrounds
-  dark: '#1a1a1a',   // For high contrast
+  dark: '#1a1a1a', // For high contrast
 } as const;
 
 /**
@@ -181,13 +180,15 @@ export const CHART_LABEL_COLORS = {
  * @param status - 'success' | 'processing' | 'warning' | 'error'
  * @returns CSS variable color
  */
-export function getPerformanceColor(status: 'success' | 'processing' | 'warning' | 'error' | 'default'): string {
+export function getPerformanceColor(
+  status: 'success' | 'processing' | 'warning' | 'error' | 'default'
+): string {
   const colorMap = {
-    success: COLORS.success,    // #52c41a
+    success: COLORS.success, // #52c41a
     processing: COLORS.primary, // #1677ff
-    warning: COLORS.warning,    // #faad14
-    error: COLORS.error,        // #ff4d4f
-    default: COLORS.textPrimary,// #262626
+    warning: COLORS.warning, // #faad14
+    error: COLORS.error, // #ff4d4f
+    default: COLORS.textPrimary, // #262626
   };
   return colorMap[status] || colorMap.default;
 }

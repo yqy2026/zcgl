@@ -6,17 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  Card,
-  Button,
-  Space,
-  Breadcrumb,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Spin,
-} from 'antd';
+import { Card, Button, Space, Breadcrumb, Typography, Row, Col, Statistic, Spin } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
   HomeOutlined,
@@ -64,7 +54,7 @@ const ContractCreatePage: React.FC = () => {
   // 创建合同时的mutation
   const createMutation = useMutation({
     mutationFn: (data: RentContractCreate) => rentContractService.createContract(data),
-    onSuccess: (contract) => {
+    onSuccess: contract => {
       setContractCreated(true);
       _setCreatedContractId(contract.id);
       MessageManager.success('合同创建成功！');
@@ -74,7 +64,7 @@ const ContractCreatePage: React.FC = () => {
         navigate('/rental/contracts');
       }, 3000);
     },
-    onError: (error) => {
+    onError: error => {
       pageLogger.error('创建合同失败:', error as Error);
       MessageManager.error('创建合同失败，请检查网络连接');
     },
@@ -83,7 +73,7 @@ const ContractCreatePage: React.FC = () => {
   // 更新合同时的mutation
   const updateMutation = useMutation({
     mutationFn: (data: RentContractUpdate) => rentContractService.updateContract(id!, data),
-    onSuccess: (contract) => {
+    onSuccess: contract => {
       MessageManager.success('合同更新成功！');
 
       // 使相关查询缓存失效
@@ -95,7 +85,7 @@ const ContractCreatePage: React.FC = () => {
         navigate(`/rental/contracts/${contract.id}`);
       }, 1000);
     },
-    onError: (error) => {
+    onError: error => {
       pageLogger.error('更新合同失败:', error as Error);
       MessageManager.error('更新合同失败，请检查网络连接');
     },
@@ -180,9 +170,7 @@ const ContractCreatePage: React.FC = () => {
             />
             <div style={{ marginTop: '16px' }}>
               <Title level={3} style={{ margin: 0 }}>
-                <span style={{ marginRight: '8px', color: COLORS.primary }}>
-                  {pageIcon}
-                </span>
+                <span style={{ marginRight: '8px', color: COLORS.primary }}>{pageIcon}</span>
                 {pageTitle}
               </Title>
               <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
@@ -192,10 +180,7 @@ const ContractCreatePage: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={handleCancel}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
                 返回列表
               </Button>
             </Space>
@@ -205,18 +190,24 @@ const ContractCreatePage: React.FC = () => {
 
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card style={{ marginBottom: '16px', borderColor: COLORS.success, backgroundColor: 'var(--color-primary-light)' }}>
+        <Card
+          style={{
+            marginBottom: '16px',
+            borderColor: COLORS.success,
+            backgroundColor: 'var(--color-primary-light)',
+          }}
+        >
           <Row align="middle">
             <Col>
-              <InfoCircleOutlined style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }} />
+              <InfoCircleOutlined
+                style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }}
+              />
             </Col>
             <Col flex="1">
               <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
                 {successTitle}
               </Title>
-              <Text type="secondary">
-                {successMessage}
-              </Text>
+              <Text type="secondary">{successMessage}</Text>
             </Col>
           </Row>
         </Card>
@@ -265,9 +256,10 @@ const ContractCreatePage: React.FC = () => {
           </Row>
           <div style={{ marginTop: '12px' }}>
             <Text type="secondary">
-              • 请确保所有必填字段都已填写完整<br />
-              • 租金条款可以设置多个时间段的租金<br />
-              • 合同创建后将自动生成租金台账
+              • 请确保所有必填字段都已填写完整
+              <br />
+              • 租金条款可以设置多个时间段的租金
+              <br />• 合同创建后将自动生成租金台账
             </Text>
           </div>
         </Card>
@@ -288,11 +280,7 @@ const ContractCreatePage: React.FC = () => {
       {!contractCreated && (
         <Card style={{ marginTop: '16px', textAlign: 'center' }}>
           <Space size="large">
-            <Button
-              size="large"
-              icon={<ArrowLeftOutlined />}
-              onClick={handleCancel}
-            >
+            <Button size="large" icon={<ArrowLeftOutlined />} onClick={handleCancel}>
               {cancelButtonText}
             </Button>
             <Button

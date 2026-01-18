@@ -43,7 +43,9 @@ class TestExtractorFactory:
 
     def test_get_extractor_default(self):
         """测试获取默认提取器"""
-        with patch('src.services.document.extractors.factory.settings') as mock_settings:
+        with patch(
+            "src.services.document.extractors.factory.settings"
+        ) as mock_settings:
             mock_settings.LLM_PROVIDER = "glm"
 
             extractor = ExtractorFactory.get_extractor()
@@ -77,13 +79,16 @@ class TestExtractorFactory:
 
     def test_get_extractor_none_uses_config(self):
         """测试不指定提供商时使用配置"""
-        with patch('src.services.document.extractors.factory.settings') as mock_settings:
+        with patch(
+            "src.services.document.extractors.factory.settings"
+        ) as mock_settings:
             mock_settings.LLM_PROVIDER = "qwen"
 
             extractor = ExtractorFactory.get_extractor()
 
             # 应该创建 QwenAdapter
             from src.services.document.extractors.qwen_adapter import QwenAdapter
+
             assert isinstance(extractor, QwenAdapter)
 
     def test_list_providers(self):
@@ -105,7 +110,9 @@ class TestConvenienceFunctions:
 
     def test_get_llm_extractor(self):
         """测试 get_llm_extractor 函数"""
-        with patch('src.services.document.extractors.factory.settings') as mock_settings:
+        with patch(
+            "src.services.document.extractors.factory.settings"
+        ) as mock_settings:
             mock_settings.LLM_PROVIDER = "glm"
 
             extractor = get_llm_extractor()
@@ -133,22 +140,25 @@ class TestConvenienceFunctions:
 class TestProviderNormalization:
     """提供商标准化测试"""
 
-    @pytest.mark.parametrize("alias,expected", [
-        # GLM 别名
-        ("glm", LLMProvider.GLM),
-        ("glm-4v", LLMProvider.GLM),
-        ("zhipu", LLMProvider.GLM),
-        ("智谱", LLMProvider.GLM),
-        ("chatglm", LLMProvider.GLM),
-        # Qwen 别名
-        ("qwen", LLMProvider.QWEN),
-        ("qwen-vl-max", LLMProvider.QWEN),
-        ("dashscope", LLMProvider.QWEN),
-        ("通义", LLMProvider.QWEN),
-        # DeepSeek 别名
-        ("deepseek", LLMProvider.DEEPSEEK),
-        ("deepseek-vl", LLMProvider.DEEPSEEK),
-    ])
+    @pytest.mark.parametrize(
+        "alias,expected",
+        [
+            # GLM 别名
+            ("glm", LLMProvider.GLM),
+            ("glm-4v", LLMProvider.GLM),
+            ("zhipu", LLMProvider.GLM),
+            ("智谱", LLMProvider.GLM),
+            ("chatglm", LLMProvider.GLM),
+            # Qwen 别名
+            ("qwen", LLMProvider.QWEN),
+            ("qwen-vl-max", LLMProvider.QWEN),
+            ("dashscope", LLMProvider.QWEN),
+            ("通义", LLMProvider.QWEN),
+            # DeepSeek 别名
+            ("deepseek", LLMProvider.DEEPSEEK),
+            ("deepseek-vl", LLMProvider.DEEPSEEK),
+        ],
+    )
     def test_get_extractor_with_various_aliases(self, alias, expected):
         """测试使用各种别名获取提取器"""
         extractor = ExtractorFactory.get_extractor(alias)
@@ -158,7 +168,9 @@ class TestProviderNormalization:
 
     def test_case_insensitive_provider(self):
         """测试提供商名称大小写不敏感"""
-        with patch('src.services.document.extractors.factory.settings') as mock_settings:
+        with patch(
+            "src.services.document.extractors.factory.settings"
+        ) as mock_settings:
             mock_settings.LLM_PROVIDER = "GLM"
 
             extractor = ExtractorFactory.get_extractor()

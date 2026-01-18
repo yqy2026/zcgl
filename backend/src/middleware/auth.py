@@ -560,15 +560,15 @@ def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
 
     # 使用RBAC服务进行细粒度权限检查
     try:
-        from ..services.permission.rbac_service import RBACService
         from ..schemas.rbac import PermissionCheckRequest
+        from ..services.permission.rbac_service import RBACService
 
         rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
             resource="rent_contract",
             action="edit",
             resource_id=contract_id,
-            context=None
+            context=None,
         )
 
         result = rbac_service.check_permission(user.id, permission_request)

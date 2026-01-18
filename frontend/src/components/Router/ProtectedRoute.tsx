@@ -1,14 +1,14 @@
-import React from 'react'
-import { Route } from 'react-router-dom'
-import { SystemErrorBoundary } from '@/components/ErrorHandling'
-import { PermissionGuard } from '../System/PermissionGuard'
-import { RouteConfig } from '@/constants/routes'
+import React from 'react';
+import { Route } from 'react-router-dom';
+import { SystemErrorBoundary } from '@/components/ErrorHandling';
+import { PermissionGuard } from '../System/PermissionGuard';
+import { RouteConfig } from '@/constants/routes';
 
 interface ProtectedRouteProps extends Omit<RouteConfig, 'children'> {
-  component: React.ComponentType<any>
-  errorBoundary?: boolean
-  fallback?: React.ReactNode
-  exact?: boolean
+  component: React.ComponentType<any>;
+  errorBoundary?: boolean;
+  fallback?: React.ReactNode;
+  exact?: boolean;
 }
 
 /**
@@ -25,35 +25,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const renderElement = () => {
     // 如果没有权限要求，直接渲染组件
     if (permissions == null || permissions.length === 0) {
-      return <Component />
+      return <Component />;
     }
 
     // 有权限要求，使用权限守卫包装
     return (
-      <PermissionGuard
-        permissions={permissions}
-        fallback={fallback}
-        mode="any"
-      >
+      <PermissionGuard permissions={permissions} fallback={fallback} mode="any">
         <Component />
       </PermissionGuard>
-    )
-  }
+    );
+  };
 
   const wrappedElement = errorBoundary ? (
-    <SystemErrorBoundary>
-      {renderElement()}
-    </SystemErrorBoundary>
+    <SystemErrorBoundary>{renderElement()}</SystemErrorBoundary>
   ) : (
     renderElement()
-  )
+  );
 
-  return (
-    <Route
-      {...routeProps}
-      element={wrappedElement}
-    />
-  )
-}
+  return <Route {...routeProps} element={wrappedElement} />;
+};
 
-export default ProtectedRoute
+export default ProtectedRoute;

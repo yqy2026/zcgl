@@ -55,6 +55,7 @@ class NotificationService {
       return result.data!.count;
     } catch (error) {
       // 这里的错误可以忽略，返回0即可，避免影响主流程
+      // eslint-disable-next-line no-console
       console.warn('获取未读通知数量失败', error);
       return 0;
     }
@@ -109,12 +110,9 @@ class NotificationService {
    */
   async deleteNotification(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(
-        API_ENDPOINTS.NOTIFICATION.DELETE(id),
-        {
-          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
-        }
-      );
+      const result = await enhancedApiClient.delete<void>(API_ENDPOINTS.NOTIFICATION.DELETE(id), {
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
+      });
 
       if (!result.success) {
         throw new Error(`删除通知失败: ${result.error}`);

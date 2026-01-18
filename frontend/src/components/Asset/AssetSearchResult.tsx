@@ -1,26 +1,26 @@
-import React from 'react'
-import { List, Typography, Tag, Space, Button, Tooltip } from 'antd'
+import React from 'react';
+import { List, Typography, Tag, Space, Button, Tooltip } from 'antd';
 import {
   EyeOutlined,
   EditOutlined,
   EnvironmentOutlined,
   UserOutlined,
   HomeOutlined,
-} from '@ant-design/icons'
+} from '@ant-design/icons';
 
-import type { Asset, AssetSearchParams } from '@/types/asset'
-import { highlightText, extractSearchTerms } from '@/utils/highlight'
-import { formatArea, getStatusColor } from '@/utils/format'
-import { COLORS } from '@/styles/colorMap'
+import type { Asset, AssetSearchParams } from '@/types/asset';
+import { highlightText, extractSearchTerms } from '@/utils/highlight';
+import { formatArea, getStatusColor } from '@/utils/format';
+import { COLORS } from '@/styles/colorMap';
 
-const { Text, Paragraph } = Typography
+const { Text, Paragraph } = Typography;
 
 interface AssetSearchResultProps {
-  assets: Asset[]
-  searchParams: AssetSearchParams
-  loading?: boolean
-  onViewDetail: (asset: Asset) => void
-  onEdit: (asset: Asset) => void
+  assets: Asset[];
+  searchParams: AssetSearchParams;
+  loading?: boolean;
+  onViewDetail: (asset: Asset) => void;
+  onEdit: (asset: Asset) => void;
 }
 
 const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
@@ -31,35 +31,27 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
   onEdit,
 }) => {
   // 提取搜索关键词
-  const searchTerms = extractSearchTerms(searchParams.search ?? '')
+  const searchTerms = extractSearchTerms(searchParams.search ?? '');
 
   // 高亮文本的辅助函数
   const highlightSearchText = (text: string) => {
-    if (searchTerms.length === 0) return text
-    return highlightText(text, searchParams.search ?? '')
-  }
+    if (searchTerms.length === 0) return text;
+    return highlightText(text, searchParams.search ?? '');
+  };
 
   return (
     <List
       loading={loading}
       dataSource={assets}
-      renderItem={(asset) => (
+      renderItem={asset => (
         <List.Item
           key={asset.id}
           actions={[
             <Tooltip key="view" title="查看详情">
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => onViewDetail(asset)}
-              />
+              <Button type="text" icon={<EyeOutlined />} onClick={() => onViewDetail(asset)} />
             </Tooltip>,
             <Tooltip key="edit" title="编辑">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => onEdit(asset)}
-              />
+              <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(asset)} />
             </Tooltip>,
           ]}
         >
@@ -76,9 +68,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 <Tag color={getStatusColor(asset.property_nature, 'property')}>
                   {asset.property_nature}
                 </Tag>
-                <Tag color={getStatusColor(asset.usage_status, 'usage')}>
-                  {asset.usage_status}
-                </Tag>
+                <Tag color={getStatusColor(asset.usage_status, 'usage')}>{asset.usage_status}</Tag>
               </Space>
             }
             description={
@@ -87,9 +77,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 <div style={{ marginBottom: 8 }}>
                   <Space>
                     <EnvironmentOutlined style={{ color: '#8c8c8c' }} />
-                    <Text type="secondary">
-                      {highlightSearchText(asset.address)}
-                    </Text>
+                    <Text type="secondary">{highlightSearchText(asset.address)}</Text>
                   </Space>
                 </div>
 
@@ -120,25 +108,21 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                       </Text>
                     )}
                     {asset.rentable_area != null && (
-                      <Text type="secondary">
-                        可租面积: {formatArea(asset.rentable_area)}
-                      </Text>
+                      <Text type="secondary">可租面积: {formatArea(asset.rentable_area)}</Text>
                     )}
                     {asset.rented_area != null && (
-                      <Text type="secondary">
-                        已租面积: {formatArea(asset.rented_area)}
-                      </Text>
+                      <Text type="secondary">已租面积: {formatArea(asset.rented_area)}</Text>
                     )}
                     {asset.occupancy_rate != null && (
-                      <Text type="secondary">
-                        出租率: {asset.occupancy_rate}
-                      </Text>
+                      <Text type="secondary">出租率: {asset.occupancy_rate}</Text>
                     )}
                   </Space>
                 </div>
 
                 {/* 用途信息 */}
-                {(asset.certificated_usage != null || asset.actual_usage != null || asset.business_category != null) && (
+                {(asset.certificated_usage != null ||
+                  asset.actual_usage != null ||
+                  asset.business_category != null) && (
                   <div style={{ marginBottom: 8 }}>
                     <Space wrap>
                       {asset.certificated_usage != null && (
@@ -163,24 +147,16 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 {/* 租户信息 */}
                 {asset.tenant_name != null && (
                   <div style={{ marginBottom: 8 }}>
-                    <Text type="secondary">
-                      租户: {highlightSearchText(asset.tenant_name)}
-                    </Text>
+                    <Text type="secondary">租户: {highlightSearchText(asset.tenant_name)}</Text>
                   </div>
                 )}
 
                 {/* 特殊标记 */}
                 <div>
                   <Space>
-                    {asset.is_litigated != null && (
-                      <Tag color="red">涉诉</Tag>
-                    )}
-                    {asset.include_in_occupancy_rate != null && (
-                      <Tag color="green">计入出租率</Tag>
-                    )}
-                    {asset.wuyang_project_name != null && (
-                      <Tag color="blue">五羊项目</Tag>
-                    )}
+                    {asset.is_litigated != null && <Tag color="red">涉诉</Tag>}
+                    {asset.include_in_occupancy_rate != null && <Tag color="green">计入出租率</Tag>}
+                    {asset.wuyang_project_name != null && <Tag color="blue">五羊项目</Tag>}
                   </Space>
                 </div>
 
@@ -201,7 +177,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
         </List.Item>
       )}
     />
-  )
-}
+  );
+};
 
-export default AssetSearchResult
+export default AssetSearchResult;

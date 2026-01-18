@@ -32,7 +32,7 @@ import {
   CheckCircleOutlined,
   SearchOutlined,
   SyncOutlined,
-  StarFilled
+  StarFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -106,7 +106,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   sessionData,
   onConfirm,
   onCancel,
-  onFieldChange
+  onFieldChange,
 }) => {
   const [form] = Form.useForm();
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -142,8 +142,12 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
           confidence: calculateFieldConfidence(key, value, sessionData),
           validationStatus: getValidationStatus(key, value, validationSummary),
           validationMessage: getValidationMessage(key, validationSummary),
-          suggestedValue: getSuggestedValue(key, value, sessionData.matching_results as MatchingResults | undefined),
-          editMode: false
+          suggestedValue: getSuggestedValue(
+            key,
+            value,
+            sessionData.matching_results as MatchingResults | undefined
+          ),
+          editMode: false,
         });
       }
     });
@@ -151,7 +155,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     setFieldReviews(fields);
   };
 
-  const calculateFieldConfidence = (fieldName: string, value: unknown, sessionData: Record<string, unknown>): number => {
+  const calculateFieldConfidence = (
+    fieldName: string,
+    value: unknown,
+    sessionData: Record<string, unknown>
+  ): number => {
     // 基础置信度
     let confidence = (sessionData.confidence_score as number) ?? 0.8;
 
@@ -169,7 +177,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     return Math.min(confidence, 1.0);
   };
 
-  const getValidationStatus = (fieldName: string, value: unknown, validation: ValidationResults): 'valid' | 'warning' | 'error' => {
+  const getValidationStatus = (
+    fieldName: string,
+    value: unknown,
+    validation: ValidationResults
+  ): 'valid' | 'warning' | 'error' => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     if (!fieldValidation) return 'valid';
 
@@ -182,17 +194,32 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
   };
 
-  const getValidationMessage = (fieldName: string, validation: ValidationResults): string | undefined => {
+  const getValidationMessage = (
+    fieldName: string,
+    validation: ValidationResults
+  ): string | undefined => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     return fieldValidation?.errors?.[0];
   };
 
-  const getSuggestedValue = (fieldName: string, currentValue: unknown, matching: MatchingResults | undefined): unknown => {
+  const getSuggestedValue = (
+    fieldName: string,
+    currentValue: unknown,
+    matching: MatchingResults | undefined
+  ): unknown => {
     // 从匹配结果中获取建议值
-    if (fieldName === 'property_address' && matching?.matched_assets && matching.matched_assets.length > 0) {
+    if (
+      fieldName === 'property_address' &&
+      matching?.matched_assets &&
+      matching.matched_assets.length > 0
+    ) {
       return matching.matched_assets[0].address;
     }
-    if (fieldName === 'landlord_name' && matching?.matched_ownerships?.landlords && matching.matched_ownerships.landlords.length > 0) {
+    if (
+      fieldName === 'landlord_name' &&
+      matching?.matched_ownerships?.landlords &&
+      matching.matched_ownerships.landlords.length > 0
+    ) {
       return matching.matched_ownerships.landlords[0].ownership_name;
     }
     return currentValue;
@@ -221,20 +248,22 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     annual_rent: { label: '年租金', type: 'number', required: false, unit: '元' },
     payment_method: { label: '支付方式', type: 'text', required: false },
     payment_frequency: { label: '支付频率', type: 'select', required: false },
-    contract_date: { label: '签订日期', type: 'date', required: true }
+    contract_date: { label: '签订日期', type: 'date', required: true },
   });
 
   const handleFieldEdit = (fieldName: string) => {
     setEditingField(editingField === fieldName ? null : fieldName);
-    setFieldReviews(prev => prev.map(field =>
-      field.fieldName === fieldName ? { ...field, editMode: !field.editMode } : field
-    ));
+    setFieldReviews(prev =>
+      prev.map(field =>
+        field.fieldName === fieldName ? { ...field, editMode: !field.editMode } : field
+      )
+    );
   };
 
   const handleFieldChange = (fieldName: string, value: unknown) => {
-    setFieldReviews(prev => prev.map(field =>
-      field.fieldName === fieldName ? { ...field, value } : field
-    ));
+    setFieldReviews(prev =>
+      prev.map(field => (field.fieldName === fieldName ? { ...field, value } : field))
+    );
 
     if (onFieldChange !== undefined && onFieldChange !== null) {
       onFieldChange(fieldName, value);
@@ -254,7 +283,9 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     setSelectedAsset(assetId);
     // 更新字段值
     const matchingResults = sessionData.matching_results as MatchingResults | undefined;
-    const selectedAssetData = matchingResults?.matched_assets?.find((asset: AssetMatch) => asset.id === assetId);
+    const selectedAssetData = matchingResults?.matched_assets?.find(
+      (asset: AssetMatch) => asset.id === assetId
+    );
     if (selectedAssetData !== undefined && selectedAssetData !== null) {
       handleFieldChange('property_address', selectedAssetData.address);
     }
@@ -264,7 +295,9 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     if (type === 'landlord') {
       setSelectedOwnership(ownershipId);
       const matchingResults = sessionData.matching_results as MatchingResults | undefined;
-      const selectedOwnershipData = matchingResults?.matched_ownerships?.landlords?.find((ownership: OwnershipMatch) => ownership.id === ownershipId);
+      const selectedOwnershipData = matchingResults?.matched_ownerships?.landlords?.find(
+        (ownership: OwnershipMatch) => ownership.id === ownershipId
+      );
       if (selectedOwnershipData !== undefined && selectedOwnershipData !== null) {
         handleFieldChange('landlord_name', selectedOwnershipData.ownership_name);
       }
@@ -276,7 +309,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const confirmedData: Record<string, unknown> = {
       ...(sessionData.extracted_data as Record<string, unknown>),
       asset_id: selectedAsset,
-      ownership_id: selectedOwnership
+      ownership_id: selectedOwnership,
     };
 
     // 验证必填字段
@@ -297,7 +330,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const validFields = fieldReviews.filter(f => f.validationStatus === 'valid').length;
     const warningFields = fieldReviews.filter(f => f.validationStatus === 'warning').length;
     const errorFields = fieldReviews.filter(f => f.validationStatus === 'error').length;
-    const avgConfidence = totalFields > 0 ? fieldReviews.reduce((sum, f) => sum + f.confidence, 0) / totalFields : 0;
+    const avgConfidence =
+      totalFields > 0 ? fieldReviews.reduce((sum, f) => sum + f.confidence, 0) / totalFields : 0;
 
     return {
       total: totalFields,
@@ -305,7 +339,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       warnings: warningFields,
       errors: errorFields,
       avgConfidence: avgConfidence * 100,
-      completionRate: totalFields > 0 ? (validFields / totalFields) * 100 : 0
+      completionRate: totalFields > 0 ? (validFields / totalFields) * 100 : 0,
     };
   }, [fieldReviews]);
 
@@ -316,8 +350,12 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       case 'date':
         return (
           <DatePicker
-            value={field.value != null && typeof field.value === 'string' ? dayjs(field.value) : null}
-            onChange={(date) => handleFieldChange(field.fieldName, date != null ? date.format('YYYY-MM-DD') : null)}
+            value={
+              field.value != null && typeof field.value === 'string' ? dayjs(field.value) : null
+            }
+            onChange={date =>
+              handleFieldChange(field.fieldName, date != null ? date.format('YYYY-MM-DD') : null)
+            }
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
           />
@@ -326,7 +364,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
         return (
           <InputNumber
             value={typeof field.value === 'number' ? field.value : undefined}
-            onChange={(value) => handleFieldChange(field.fieldName, value)}
+            onChange={value => handleFieldChange(field.fieldName, value)}
             style={{ width: '100%' }}
             placeholder={`请输入${config.label}`}
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -338,7 +376,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
         return (
           <Select
             value={field.value as string | undefined}
-            onChange={(value) => handleFieldChange(field.fieldName, value)}
+            onChange={value => handleFieldChange(field.fieldName, value)}
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
           >
@@ -351,18 +389,20 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
         return (
           <Input
             value={typeof field.value === 'string' ? field.value : String(field.value ?? '')}
-            onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+            onChange={e => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={`请输入${config.label}`}
-            suffix={field.suggestedValue != null && field.suggestedValue !== field.value ? (
-              <Tooltip title="建议使用匹配的值">
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => handleFieldChange(field.fieldName, field.suggestedValue)}
-                />
-              </Tooltip>
-            ) : undefined}
+            suffix={
+              field.suggestedValue != null && field.suggestedValue !== field.value ? (
+                <Tooltip title="建议使用匹配的值">
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => handleFieldChange(field.fieldName, field.suggestedValue)}
+                  />
+                </Tooltip>
+              ) : undefined
+            }
           />
         );
     }
@@ -373,13 +413,13 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       title: '物业名称',
       dataIndex: 'property_name',
       key: 'property_name',
-      width: 200
+      width: 200,
     },
     {
       title: '地址',
       dataIndex: 'address',
       key: 'address',
-      width: 300
+      width: 300,
     },
     {
       title: '相似度',
@@ -393,28 +433,73 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
           status={similarity > 0.8 ? 'success' : similarity > 0.6 ? 'normal' : 'exception'}
           format={() => `${(similarity * 100).toFixed(1)}%`}
         />
-      )
+      ),
     },
     {
       title: '匹配置由',
       dataIndex: 'match_reason',
       key: 'match_reason',
-      width: 120
+      width: 120,
     },
     {
       title: '操作',
       key: 'action',
       width: 100,
-      render: (_: any, record: AssetMatch) => (
+      render: (_: unknown, record: AssetMatch) => (
+        <Button type="primary" size="small" onClick={() => handleAssetSelection(record.id)}>
+          选择
+        </Button>
+      ),
+    },
+  ];
+
+  const ownershipColumns = [
+    {
+      title: '权属方名称',
+      dataIndex: 'ownership_name',
+      key: 'ownership_name',
+      width: 200,
+    },
+    {
+      title: '信用代码',
+      dataIndex: 'credit_code',
+      key: 'credit_code',
+      width: 200,
+    },
+    {
+      title: '相似度',
+      dataIndex: 'similarity',
+      key: 'similarity',
+      width: 100,
+      render: (similarity: number) => (
+        <Progress
+          percent={similarity * 100}
+          size="small"
+          status={similarity > 0.8 ? 'success' : similarity > 0.6 ? 'normal' : 'exception'}
+          format={() => `${(similarity * 100).toFixed(1)}%`}
+        />
+      ),
+    },
+    {
+      title: '匹配置由',
+      dataIndex: 'match_reason',
+      key: 'match_reason',
+      width: 200,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: unknown, record: OwnershipMatch) => (
         <Button
           type="primary"
           size="small"
-          onClick={() => handleAssetSelection(record.id)}
+          onClick={() => handleOwnershipSelection(record.id, 'landlord')}
         >
           选择
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -458,11 +543,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
           <Card>
             <Space>
               <span>自动保存</span>
-              <Switch
-                checked={autoSaveEnabled}
-                onChange={setAutoSaveEnabled}
-                size="small"
-              />
+              <Switch checked={autoSaveEnabled} onChange={setAutoSaveEnabled} size="small" />
               <Button
                 type="text"
                 size="small"
@@ -477,55 +558,53 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       </Row>
 
       {/* 匹配结果 */}
-      {((sessionData as any).matching_results?.matched_assets?.length > 0 ||
-        (sessionData as any).matching_results?.matched_ownerships?.landlords?.length > 0) && (
-          <Card
-            title={
-              <Space>
-                <SearchOutlined />
-                <span>智能匹配结果</span>
-                <Badge count={(sessionData as any).matching_results?.matched_assets?.length ?? 0} />
-              </Space>
-            }
-            style={{ marginBottom: 24 }}
-          >
-            <Tabs defaultActiveKey="assets">
-              <TabPane tab="资产匹配" key="assets">
-                <Table
-                  columns={matchingResultsColumns}
-                  dataSource={(sessionData as any).matching_results?.matched_assets ?? []}
-                  rowKey="id"
-                  pagination={false}
-                  size="small"
-                />
-              </TabPane>
-              <TabPane tab="权属方匹配" key="ownerships">
-                <Table
-                  columns={[
-                    ...matchingResultsColumns.slice(0, -1) as any,
-                    {
-                      title: '操作',
-                      key: 'action',
-                      render: (_: any, record: OwnershipMatch) => (
-                        <Button
-                          type="primary"
-                          size="small"
-                          onClick={() => handleOwnershipSelection(record.id, 'landlord')}
-                        >
-                          选择
-                        </Button>
-                      )
-                    }
-                  ] as any}
-                  dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords ?? []}
-                  rowKey="id"
-                  pagination={false}
-                  size="small"
-                />
-              </TabPane>
-            </Tabs>
-          </Card>
-        )}
+      {((sessionData.matching_results as MatchingResults | undefined)?.matched_assets?.length ??
+        0) > 0 ||
+      ((sessionData.matching_results as MatchingResults | undefined)?.matched_ownerships?.landlords
+        ?.length ?? 0) > 0 ? (
+        <Card
+          title={
+            <Space>
+              <SearchOutlined />
+              <span>智能匹配结果</span>
+              <Badge
+                count={
+                  (sessionData.matching_results as MatchingResults | undefined)?.matched_assets
+                    ?.length ?? 0
+                }
+              />
+            </Space>
+          }
+          style={{ marginBottom: 24 }}
+        >
+          <Tabs defaultActiveKey="assets">
+            <TabPane tab="资产匹配" key="assets">
+              <Table
+                columns={matchingResultsColumns}
+                dataSource={
+                  (sessionData.matching_results as MatchingResults | undefined)?.matched_assets ??
+                  []
+                }
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            </TabPane>
+            <TabPane tab="权属方匹配" key="ownerships">
+              <Table
+                columns={ownershipColumns}
+                dataSource={
+                  (sessionData.matching_results as MatchingResults | undefined)?.matched_ownerships
+                    ?.landlords ?? []
+                }
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            </TabPane>
+          </Tabs>
+        </Card>
+      ) : null}
 
       {/* 字段编辑 */}
       <Card
@@ -539,16 +618,26 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            {fieldReviews.map((field) => (
+            {fieldReviews.map(field => (
               <Col span={12} key={field.fieldName} style={{ marginBottom: 16 }}>
                 <Form.Item
                   label={
                     <Space>
                       <span>{field.label}</span>
-                      <Tag color={field.validationStatus === 'valid' ? 'green' :
-                        field.validationStatus === 'warning' ? 'orange' : 'red'}>
-                        {field.validationStatus === 'valid' ? '有效' :
-                          field.validationStatus === 'warning' ? '警告' : '错误'}
+                      <Tag
+                        color={
+                          field.validationStatus === 'valid'
+                            ? 'green'
+                            : field.validationStatus === 'warning'
+                              ? 'orange'
+                              : 'red'
+                        }
+                      >
+                        {field.validationStatus === 'valid'
+                          ? '有效'
+                          : field.validationStatus === 'warning'
+                            ? '警告'
+                            : '错误'}
                       </Tag>
                       <Tooltip title={`置信度: ${(field.confidence * 100).toFixed(1)}%`}>
                         <Progress
@@ -561,8 +650,13 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                       </Tooltip>
                     </Space>
                   }
-                  validateStatus={field.validationStatus === 'error' ? 'error' :
-                    field.validationStatus === 'warning' ? 'warning' : undefined}
+                  validateStatus={
+                    field.validationStatus === 'error'
+                      ? 'error'
+                      : field.validationStatus === 'warning'
+                        ? 'warning'
+                        : undefined
+                  }
                   help={field.validationMessage}
                   extra={
                     <Button
@@ -578,14 +672,34 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                   {field.editMode ? (
                     renderFieldInput(field)
                   ) : (
-                    <div onClick={() => handleFieldEdit(field.fieldName)}>
-                      {(() => {
-                        const val = field.value
-                        if (val == null) return <Text type="secondary" italic>未提取</Text>
-                        if (typeof val === 'object' && Object.keys(val).length === 0) {
-                          return <Text type="secondary" italic>未提取</Text>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleFieldEdit(field.fieldName)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleFieldEdit(field.fieldName);
                         }
-                        return val as any
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {(() => {
+                        const val = field.value;
+                        if (val == null)
+                          return (
+                            <Text type="secondary" italic>
+                              未提取
+                            </Text>
+                          );
+                        if (typeof val === 'object' && Object.keys(val).length === 0) {
+                          return (
+                            <Text type="secondary" italic>
+                              未提取
+                            </Text>
+                          );
+                        }
+                        return String(val);
                       })()}
                     </div>
                   )}

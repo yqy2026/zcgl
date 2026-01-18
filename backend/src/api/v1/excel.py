@@ -281,9 +281,7 @@ async def preview_excel_advanced(
                 row_dict[col] = None
             else:
                 row_dict[col] = (
-                    str(value)
-                    if not isinstance(value, (str, int, float))
-                    else value
+                    str(value) if not isinstance(value, (str, int, float)) else value
                 )
         preview_data.append(row_dict)
 
@@ -374,9 +372,7 @@ async def preview_excel(
                 row_dict[col] = None
             else:
                 row_dict[col] = (
-                    str(value)
-                    if not isinstance(value, (str, int, float))
-                    else value
+                    str(value) if not isinstance(value, (str, int, float)) else value
                 )
         preview_data.append(row_dict)
 
@@ -406,7 +402,7 @@ async def import_excel(
     - **sheet_name**: Excel工作表名称，默认为"{STANDARD_SHEET_NAME}"
     """
     # 安全验证文件
-    validation_result = await security_middleware.validate_file_upload(
+    await security_middleware.validate_file_upload(
         file,
         allowed_types=[
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -872,9 +868,7 @@ async def get_excel_task_status(
     status_val = str(getattr(task, "status", ""))
     progress_val = int(getattr(task, "progress", 0)) or 0
     total_items_val = getattr(task, "total_items", None)
-    total_items_final = (
-        int(total_items_val) if total_items_val is not None else None
-    )
+    total_items_final = int(total_items_val) if total_items_val is not None else None
     processed_items_val = int(getattr(task, "processed_items", 0)) or 0
     error_message_val = getattr(task, "error_message", None)
     created_at_val = getattr(task, "created_at")
@@ -887,9 +881,7 @@ async def get_excel_task_status(
         progress=progress_val,
         total_items=total_items_final,
         processed_items=processed_items_val,
-        error_message=str(error_message_val)
-        if error_message_val is not None
-        else None,
+        error_message=str(error_message_val) if error_message_val is not None else None,
         created_at=created_at_val,
         started_at=started_at_val,
         completed_at=completed_at_val,
@@ -991,9 +983,7 @@ async def export_selected_assets(
 
     # 根据导出类型确定文件名
     filename = (
-        "selected_assets_export.xlsx"
-        if asset_ids
-        else "filtered_assets_export.xlsx"
+        "selected_assets_export.xlsx" if asset_ids else "filtered_assets_export.xlsx"
     )
 
     # 返回文件流（避免重复读取buffer）

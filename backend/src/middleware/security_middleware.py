@@ -456,7 +456,9 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
             "http://localhost:5173",
             "http://localhost:3000",
         ]
-        self.allowed_methods = allowed_methods or HTTPMethods.get_common_methods() + [HTTPMethods.OPTIONS]
+        self.allowed_methods = allowed_methods or HTTPMethods.get_common_methods() + [
+            HTTPMethods.OPTIONS
+        ]
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Any]
@@ -516,7 +518,8 @@ def setup_security_middleware(app: Any) -> None:
     """设置安全中间件"""
     config = {
         "allowed_origins": ["http://localhost:5173", "http://localhost:3000"],
-        "allowed_methods": HTTPMethods.get_common_methods() + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
+        "allowed_methods": HTTPMethods.get_common_methods()
+        + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
         "max_file_size": 100 * 1024 * 1024,  # 100MB
         "rate_limit": {
             "pdf_import": {"max_requests": 5, "time_window": 60},

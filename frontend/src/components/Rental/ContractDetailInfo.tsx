@@ -6,16 +6,7 @@
  */
 
 import React from 'react';
-import {
-  Card,
-  Descriptions,
-  Tag,
-  Table,
-  Row,
-  Col,
-  Statistic,
-  Divider,
-} from 'antd';
+import { Card, Descriptions, Tag, Table, Row, Col, Statistic, Divider } from 'antd';
 import {
   FileTextOutlined,
   UserOutlined,
@@ -113,9 +104,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       dataIndex: 'total_monthly_amount',
       key: 'total_monthly_amount',
       render: (amount: number) => (
-        <span style={{ color: '#1890ff', fontWeight: 'bold' }}>
-          ¥{amount.toLocaleString()}
-        </span>
+        <span style={{ color: '#1890ff', fontWeight: 'bold' }}>¥{amount.toLocaleString()}</span>
       ),
       align: 'right' as const,
     },
@@ -129,11 +118,17 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
 
   // 计算统计数据
   const calculateStats = () => {
-    const totalMonthlyRent = contract.rent_terms?.reduce(
-      (sum, term) => sum + (term.total_monthly_amount ?? term.monthly_rent + term.management_fee + term.other_fees),
-      0
-    ) ?? 0;
-    const avgMonthlyRent = (contract.rent_terms?.length ?? 0) > 0 ? totalMonthlyRent / (contract.rent_terms.length ?? 1) : 0;
+    const totalMonthlyRent =
+      contract.rent_terms?.reduce(
+        (sum, term) =>
+          sum +
+          (term.total_monthly_amount ?? term.monthly_rent + term.management_fee + term.other_fees),
+        0
+      ) ?? 0;
+    const avgMonthlyRent =
+      (contract.rent_terms?.length ?? 0) > 0
+        ? totalMonthlyRent / (contract.rent_terms.length ?? 1)
+        : 0;
     const assetCount = contract.assets?.length ?? 0;
 
     return {
@@ -213,18 +208,12 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               </span>
             }
           >
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
-              {contract.tenant_name}
-            </span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{contract.tenant_name}</span>
           </Descriptions.Item>
 
-          <Descriptions.Item label="联系人">
-            {contract.tenant_contact ?? '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label="联系人">{contract.tenant_contact ?? '-'}</Descriptions.Item>
 
-          <Descriptions.Item label="联系电话">
-            {contract.tenant_phone ?? '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label="联系电话">{contract.tenant_phone ?? '-'}</Descriptions.Item>
 
           <Descriptions.Item label="承租方地址" span={2}>
             {contract.tenant_address ?? '-'}
@@ -293,7 +282,11 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           <Col xs={24} sm={12} md={8} lg={6}>
             <Statistic
               title="付款周期"
-              value={PAYMENT_CYCLE_MAP[contract.payment_cycle || 'monthly'] || contract.payment_cycle || '按月'}
+              value={
+                PAYMENT_CYCLE_MAP[contract.payment_cycle || 'monthly'] ||
+                contract.payment_cycle ||
+                '按月'
+              }
               valueStyle={{ color: '#13c2c2' }}
             />
           </Col>
@@ -302,10 +295,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
 
       {/* V2字段：上游合同和服务费率 */}
       {(contract.upstream_contract_id != null || contract.service_fee_rate != null) && (
-        <Card
-          title="V2 委托运营信息"
-          style={{ marginBottom: 16 }}
-        >
+        <Card title="V2 委托运营信息" style={{ marginBottom: 16 }}>
           <Descriptions bordered column={{ xs: 1, sm: 2 }} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="上游合同ID">
               {contract.upstream_contract_id ?? '-'}
@@ -318,10 +308,16 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           </Descriptions>
 
           {/* 服务费台账表格 */}
-          {(serviceFeeLoading != null && serviceFeeLoading) || ((serviceFeeLedgers ?? []).length > 0) ? (
+          {(serviceFeeLoading != null && serviceFeeLoading) ||
+          (serviceFeeLedgers ?? []).length > 0 ? (
             <>
-              <Divider titlePlacement="start" style={{ margin: '12px 0' }}>服务费台账</Divider>
-              <ServiceFeeLedgerTable ledgers={serviceFeeLedgers ?? []} loading={serviceFeeLoading} />
+              <Divider titlePlacement="start" style={{ margin: '12px 0' }}>
+                服务费台账
+              </Divider>
+              <ServiceFeeLedgerTable
+                ledgers={serviceFeeLedgers ?? []}
+                loading={serviceFeeLoading}
+              />
             </>
           ) : null}
         </Card>
@@ -363,9 +359,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             ]}
           />
         ) : (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-            暂无关联资产
-          </div>
+          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无关联资产</div>
         )}
       </Card>
 
@@ -390,10 +384,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       </Card>
 
       {/* V2: 押金变动记录 */}
-      <DepositLedgerHistory
-        depositLedgers={depositLedgers}
-        loading={depositLoading}
-      />
+      <DepositLedgerHistory depositLedgers={depositLedgers} loading={depositLoading} />
 
       {/* 其他信息 */}
       {(contract.payment_terms != null || contract.contract_notes != null) && (
@@ -421,19 +412,14 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       )}
 
       {/* 元数据信息 */}
-      <Card
-        title="元数据"
-        style={{ marginTop: 16 }}
-      >
+      <Card title="元数据" style={{ marginTop: 16 }}>
         <Descriptions bordered column={{ xs: 1, sm: 2 }}>
           <Descriptions.Item label="数据状态">
             <Tag color={contract.data_status === '正常' ? 'green' : 'red'}>
               {contract.data_status}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="版本号">
-            v{contract.version}
-          </Descriptions.Item>
+          <Descriptions.Item label="版本号">v{contract.version}</Descriptions.Item>
           <Descriptions.Item label="创建时间">
             {new Date(contract.created_at).toLocaleString('zh-CN')}
           </Descriptions.Item>

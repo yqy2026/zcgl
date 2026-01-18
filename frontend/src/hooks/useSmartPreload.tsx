@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
-import { createLogger } from "@/utils/logger";
+import { useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import { createLogger } from '@/utils/logger';
 
 const preloadLogger = createLogger('SmartPreload');
 
@@ -37,8 +37,8 @@ interface PreloadConfig {
 const DEFAULT_CONFIG: PreloadConfig = {
   threshold: 200,
   maxConcurrent: 3,
-  enabledRoutes: ["/assets/list", "/rental/contracts", "/system/users", "/dashboard"],
-  priorityRoutes: ["/dashboard", "/assets/list"],
+  enabledRoutes: ['/assets/list', '/rental/contracts', '/system/users', '/dashboard'],
+  priorityRoutes: ['/dashboard', '/assets/list'],
 };
 
 // 用户行为跟踪
@@ -64,7 +64,7 @@ class SmartPreloadManager {
       lastActiveTime: Date.now(),
       hoveredRoutes: new Set(),
       visitedRoutes: new Set(),
-      currentRoute: "",
+      currentRoute: '',
       interactionCount: 0,
     };
     this.preloadQueue = [];
@@ -77,13 +77,13 @@ class SmartPreloadManager {
 
   private initializeObservers() {
     // 监听用户交互
-    if (typeof window !== "undefined") {
-      document.addEventListener("mousemove", this.handleMouseMove.bind(this));
-      document.addEventListener("click", this.handleClick.bind(this));
-      document.addEventListener("keydown", this.handleKeyDown.bind(this));
+    if (typeof window !== 'undefined') {
+      document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+      document.addEventListener('click', this.handleClick.bind(this));
+      document.addEventListener('keydown', this.handleKeyDown.bind(this));
 
       // 监听页面可见性变化
-      document.addEventListener("visibilitychange", this.handleVisibilityChange.bind(this));
+      document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
     }
   }
 
@@ -93,11 +93,11 @@ class SmartPreloadManager {
 
     // 检查鼠标是否悬停在可预加载的元素上
     const target = event.target as HTMLElement;
-    const routeElement = target.closest("[data-route]");
+    const routeElement = target.closest('[data-route]');
     if (routeElement != null) {
-      const route = routeElement.getAttribute("data-route");
+      const route = routeElement.getAttribute('data-route');
       if (route != null && this.config.enabledRoutes.includes(route)) {
-        this.schedulePreload(route, "hover");
+        this.schedulePreload(route, 'hover');
       }
     }
   };
@@ -106,11 +106,11 @@ class SmartPreloadManager {
     this.behavior.lastActiveTime = Date.now();
 
     const target = event.target as HTMLElement;
-    const linkElement = target.closest("a[href]");
+    const linkElement = target.closest('a[href]');
     if (linkElement != null) {
-      const href = linkElement.getAttribute("href");
+      const href = linkElement.getAttribute('href');
       if (href != null && this.config.enabledRoutes.includes(href)) {
-        this.schedulePreload(href, "click");
+        this.schedulePreload(href, 'click');
       }
     }
   };
@@ -130,16 +130,16 @@ class SmartPreloadManager {
     }
   };
 
-  private schedulePreload(route: string, trigger: "hover" | "click" | "predictive") {
+  private schedulePreload(route: string, trigger: 'hover' | 'click' | 'predictive') {
     if (this.activePreloads.has(route) || this.preloadCache.has(route)) {
       return;
     }
 
     // 根据触发方式设置不同的延迟
     let delay = this.config.threshold;
-    if (trigger === "hover") {
+    if (trigger === 'hover') {
       delay = 100; // 悬停时较快预加载
-    } else if (trigger === "click") {
+    } else if (trigger === 'click') {
       delay = 0; // 点击时立即预加载
     }
 
@@ -175,12 +175,12 @@ class SmartPreloadManager {
   private getPreloadFunction(route: string): PreloadFunction | null {
     // 预加载函数映射
     const preloadFunctions: Record<string, PreloadFunction> = {
-      "/dashboard": () => import("../pages/Dashboard/DashboardPage"),
-      "/assets/list": () => import("../pages/Assets/AssetListPage"),
-      "/assets/new": () => import("../pages/Assets/AssetCreatePage"),
-      "/rental/contracts": () => import("../pages/Rental/ContractListPage"),
-      "/system/users": () => import("../pages/System/UserManagementPage"),
-      "/system/roles": () => import("../pages/System/RoleManagementPage"),
+      '/dashboard': () => import('../pages/Dashboard/DashboardPage'),
+      '/assets/list': () => import('../pages/Assets/AssetListPage'),
+      '/assets/new': () => import('../pages/Assets/AssetCreatePage'),
+      '/rental/contracts': () => import('../pages/Rental/ContractListPage'),
+      '/system/users': () => import('../pages/System/UserManagementPage'),
+      '/system/roles': () => import('../pages/System/RoleManagementPage'),
     };
 
     return preloadFunctions[route] ?? null;
@@ -199,8 +199,8 @@ class SmartPreloadManager {
   // 预测性预加载
   private predictivePreload(currentRoute: string) {
     const predictions = this.getPredictedRoutes(currentRoute);
-    predictions.forEach((route) => {
-      this.schedulePreload(route, "predictive");
+    predictions.forEach(route => {
+      this.schedulePreload(route, 'predictive');
     });
   }
 
@@ -209,16 +209,16 @@ class SmartPreloadManager {
     const predictions: string[] = [];
 
     // 根据当前路由预测
-    if (currentRoute === "/dashboard") {
-      predictions.push("/assets/list", "/rental/contracts");
-    } else if (currentRoute === "/assets/list") {
-      predictions.push("/assets/new", "/assets/analytics");
-    } else if (currentRoute === "/rental/contracts") {
-      predictions.push("/rental/contracts/new");
+    if (currentRoute === '/dashboard') {
+      predictions.push('/assets/list', '/rental/contracts');
+    } else if (currentRoute === '/assets/list') {
+      predictions.push('/assets/new', '/assets/analytics');
+    } else if (currentRoute === '/rental/contracts') {
+      predictions.push('/rental/contracts/new');
     }
 
     // 优先返回高优先级路由
-    return predictions.filter((route) => this.config.priorityRoutes.includes(route));
+    return predictions.filter(route => this.config.priorityRoutes.includes(route));
   }
 
   // 公共API
@@ -246,11 +246,11 @@ class SmartPreloadManager {
 
   public destroy() {
     // 清理事件监听器
-    if (typeof window !== "undefined") {
-      document.removeEventListener("mousemove", this.handleMouseMove);
-      document.removeEventListener("click", this.handleClick);
-      document.removeEventListener("keydown", this.handleKeyDown);
-      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    if (typeof window !== 'undefined') {
+      document.removeEventListener('mousemove', this.handleMouseMove);
+      document.removeEventListener('click', this.handleClick);
+      document.removeEventListener('keydown', this.handleKeyDown);
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
 
     this.clearCache();
@@ -289,7 +289,7 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
   // 提供预加载函数
   const preloadRoute = useCallback((route: string) => {
     if (managerRef.current) {
-      (managerRef.current as any).schedulePreload(route, "predictive");
+      (managerRef.current as any).schedulePreload(route, 'predictive');
     }
   }, []);
 
@@ -312,7 +312,7 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
 // 预加载高阶组件
 export const withPreload = <T extends Record<string, unknown> = Record<string, unknown>>(
   Component: React.ComponentType<T>,
-  route: string,
+  route: string
 ) => {
   const PreloadWrapper = (props: T) => {
     const { preloadRoute } = useSmartPreload();
@@ -332,7 +332,7 @@ export const usePreloadDirective = (routes: string[]) => {
   const { preloadRoute } = useSmartPreload();
 
   useEffect(() => {
-    routes.forEach((route) => {
+    routes.forEach(route => {
       preloadRoute(route);
     });
   }, [preloadRoute, routes]);
@@ -342,9 +342,9 @@ export const usePreloadDirective = (routes: string[]) => {
 export const usePreloadDebug = () => {
   const { getStats, clearCache } = useSmartPreload();
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     // 暴露到全局对象用于调试
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       window.__PRELOAD_DEBUG__ = {
         getStats,
         clearCache,

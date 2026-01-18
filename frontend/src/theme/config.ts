@@ -1,5 +1,5 @@
-import { ThemeConfig } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import { ThemeConfig } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
 
 /**
  * Base theme configuration for the application
@@ -19,7 +19,8 @@ export const baseThemeConfig: ThemeConfig = {
     colorBgContainer: '#ffffff',
 
     // Typography
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+    fontFamily:
+      "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
     fontSize: 14,
     colorTextHeading: '#1e293b', // Slate 800
     colorText: '#334155', // Slate 700
@@ -32,7 +33,7 @@ export const baseThemeConfig: ThemeConfig = {
   components: {
     Layout: {
       headerBg: 'rgba(255, 255, 255, 0.8)', // Stronger glass base
-      siderBg: 'rgba(255, 255, 255, 0.8)',  // Stronger glass base
+      siderBg: 'rgba(255, 255, 255, 0.8)', // Stronger glass base
       triggerBg: '#fff',
     },
     Menu: {
@@ -44,7 +45,8 @@ export const baseThemeConfig: ThemeConfig = {
       itemHoverColor: '#1677ff',
     },
     Card: {
-      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)', // Soft, modern shadow
+      boxShadow:
+        '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)', // Soft, modern shadow
       headerFontSize: 16,
     },
     Table: {
@@ -62,11 +64,11 @@ export const baseThemeConfig: ThemeConfig = {
     Statistic: {
       titleFontSize: 14,
       contentFontSize: 24,
-    }
+    },
   },
-}
+};
 
 /**
  * Application locale configuration
  */
-export const appLocale = zhCN
+export const appLocale = zhCN;

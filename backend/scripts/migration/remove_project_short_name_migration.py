@@ -195,7 +195,7 @@ def migrate_database():
         try:
             cursor.execute("ROLLBACK")
             conn.close()
-        except:
+        except Exception:
             pass
         return False
 

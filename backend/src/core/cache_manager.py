@@ -136,7 +136,9 @@ class CacheManager:
         """
         self.backend = backend or MemoryCache()
         self.default_ttl = (
-            settings.CACHE_TTL if hasattr(settings, "CACHE_TTL") else CacheTTL.SHORT_SECONDS
+            settings.CACHE_TTL
+            if hasattr(settings, "CACHE_TTL")
+            else CacheTTL.SHORT_SECONDS
         )
         self.key_prefix = (
             settings.CACHE_KEY_PREFIX

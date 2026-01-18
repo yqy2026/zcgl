@@ -4,8 +4,6 @@
 测试 AssetBatchValidator 的数据验证逻辑
 """
 
-import pytest
-
 from src.services.asset.validators import AssetBatchValidator
 
 
@@ -295,9 +293,7 @@ class TestGetSuggestionWarnings:
         """测试缺少年收入时的建议"""
         data = {}
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
-        income_warnings = [
-            w for w in warnings if w["field"] == "annual_income"
-        ]
+        income_warnings = [w for w in warnings if w["field"] == "annual_income"]
         assert len(income_warnings) == 1
         assert "年收入" in income_warnings[0]["message"]
 
@@ -350,8 +346,8 @@ class TestValidateAll:
             "annual_expense": 0,
             "tenant_name": "测试租户",
         }
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data)
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data
         )
 
         assert is_valid is True
@@ -367,8 +363,8 @@ class TestValidateAll:
             "property_name": "测试物业",
             # 缺少其他必填字段
         }
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data)
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data
         )
 
         assert is_valid is False
@@ -385,8 +381,8 @@ class TestValidateAll:
             "usage_status": "在用",
             "land_area": "invalid",  # 无效数值
         }
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data)
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data
         )
 
         assert is_valid is False
@@ -404,14 +400,12 @@ class TestValidateAll:
             "rented_area": 150.0,  # 不一致
         }
         # 只验证面积一致性，不验证必填字段
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data, validate_rules=["data_format"])
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data, validate_rules=["data_format"]
         )
 
         # 面积一致性应该被验证
-        assert any(
-            "已出租面积不能大于可出租面积" in e["error"] for e in errors
-        )
+        assert any("已出租面积不能大于可出租面积" in e["error"] for e in errors)
 
     def test_validated_fields_list(self):
         """测试已验证字段列表"""
@@ -426,8 +420,8 @@ class TestValidateAll:
             "rentable_area": 100.0,
             "rented_area": 50.0,
         }
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data)
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data
         )
 
         # 应该包含所有通过验证的字段
@@ -441,8 +435,8 @@ class TestValidateAll:
     def test_empty_validate_rules(self):
         """测试空验证规则列表（会使用默认规则）"""
         data = {}
-        is_valid, errors, warnings, validated_fields = (
-            AssetBatchValidator.validate_all(data, validate_rules=[])
+        is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
+            data, validate_rules=[]
         )
 
         # Empty list triggers default validation rules

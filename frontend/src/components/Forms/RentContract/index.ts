@@ -9,13 +9,10 @@ export { default as FormActionsSection } from './FormActionsSection';
 export { default as RentTermModal } from './RentTermModal';
 
 // Context
-export {
-    RentContractFormProvider,
-    useRentContractFormContext,
-} from './RentContractFormContext';
+export { RentContractFormProvider, useRentContractFormContext } from './RentContractFormContext';
 export type {
-    RentContractFormContextValue,
-    RentContractInitialData,
-    RentTermData,
-    RentTermFormData,
+  RentContractFormContextValue,
+  RentContractInitialData,
+  RentTermData,
+  RentTermFormData,
 } from './RentContractFormContext';

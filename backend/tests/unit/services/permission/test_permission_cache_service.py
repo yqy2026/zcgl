@@ -5,7 +5,7 @@
 """
 
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -14,7 +14,6 @@ from src.services.permission.permission_cache_service import (
     get_permission_cache_service,
     set_permission_cache_service,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -218,9 +217,7 @@ class TestSetUserPermissions:
     @pytest.mark.asyncio
     async def test_cache_disabled(self, disabled_cache_service):
         """测试缓存禁用时返回False"""
-        result = await disabled_cache_service.set_user_permissions(
-            123, ["asset.view"]
-        )
+        result = await disabled_cache_service.set_user_permissions(123, ["asset.view"])
         assert result is False
 
     @pytest.mark.asyncio
@@ -383,9 +380,7 @@ class TestInvalidateRoleCache:
         result = await cache_service.invalidate_role_cache("role-1")
 
         assert result is True
-        mock_redis.delete.assert_called_once_with(
-            "permission:role:role-1:permissions"
-        )
+        mock_redis.delete.assert_called_once_with("permission:role:role-1:permissions")
 
     @pytest.mark.asyncio
     async def test_cache_disabled(self, disabled_cache_service):
@@ -416,7 +411,8 @@ class TestInvalidateAllPermissionCache:
         """测试成功清除所有权限缓存"""
         # 模拟SCAN返回结果，第一次返回一些键（cursor=0表示已完成）
         mock_redis.scan.return_value = (
-            0, [b"permission:user:1:permissions", b"permission:user:2:roles"]
+            0,
+            [b"permission:user:1:permissions", b"permission:user:2:roles"],
         )
         mock_redis.delete.return_value = 2
 

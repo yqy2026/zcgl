@@ -2,7 +2,7 @@
 测试租金合同服务
 """
 
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -11,10 +11,7 @@ from sqlalchemy.orm import Session
 
 from src.models.rent_contract import (
     ContractType,
-    DepositTransactionType,
     RentContract,
-    RentContractHistory,
-    RentDepositLedger,
     RentLedger,
     RentTerm,
     ServiceFeeLedger,
@@ -143,7 +140,9 @@ def mock_entrusted_contract():
 class TestCreateContract:
     """测试创建合同"""
 
-    def test_create_contract_basic(self, contract_service, mock_db, valid_contract_create_data):
+    def test_create_contract_basic(
+        self, contract_service, mock_db, valid_contract_create_data
+    ):
         """测试基本创建合同"""
         mock_query = MagicMock()
         mock_query.filter.return_value.all.return_value = []
@@ -155,8 +154,12 @@ class TestCreateContract:
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_asset]
 
         with patch.object(contract_service, "_create_history"):
-            with patch.object(contract_service, "_check_asset_rent_conflicts", return_value=[]):
-                result = contract_service.create_contract(mock_db, obj_in=valid_contract_create_data)
+            with patch.object(
+                contract_service, "_check_asset_rent_conflicts", return_value=[]
+            ):
+                result = contract_service.create_contract(
+                    mock_db, obj_in=valid_contract_create_data
+                )
 
                 assert result is not None
                 mock_db.add.assert_called()
@@ -187,9 +190,13 @@ class TestCreateContract:
         mock_query.filter.return_value.count.return_value = 0
         mock_db.query.return_value = mock_query
 
-        with patch.object(contract_service, "_generate_contract_number", return_value="ZJ20250101001"):
+        with patch.object(
+            contract_service, "_generate_contract_number", return_value="ZJ20250101001"
+        ):
             with patch.object(contract_service, "_create_history"):
-                with patch.object(contract_service, "_check_asset_rent_conflicts", return_value=[]):
+                with patch.object(
+                    contract_service, "_check_asset_rent_conflicts", return_value=[]
+                ):
                     result = contract_service.create_contract(mock_db, obj_in=obj_in)
 
                     assert result is not None
@@ -226,7 +233,9 @@ class TestCreateContract:
         mock_db.query.return_value = mock_query
 
         with patch.object(contract_service, "_create_history"):
-            with patch.object(contract_service, "_check_asset_rent_conflicts", return_value=[]):
+            with patch.object(
+                contract_service, "_check_asset_rent_conflicts", return_value=[]
+            ):
                 result = contract_service.create_contract(mock_db, obj_in=obj_in)
 
                 assert result is not None
@@ -256,18 +265,24 @@ class TestCreateContract:
         mock_query.filter.return_value.all.return_value = []
         mock_db.query.return_value = mock_query
 
-        conflicts = [{
-            "asset_name": "测试资产",
-            "contract_number": "CT2024001",
-            "contract_start_date": "2024-01-01",
-            "contract_end_date": "2025-06-30"
-        }]
+        conflicts = [
+            {
+                "asset_name": "测试资产",
+                "contract_number": "CT2024001",
+                "contract_start_date": "2024-01-01",
+                "contract_end_date": "2025-06-30",
+            }
+        ]
 
-        with patch.object(contract_service, "_check_asset_rent_conflicts", return_value=conflicts):
+        with patch.object(
+            contract_service, "_check_asset_rent_conflicts", return_value=conflicts
+        ):
             with pytest.raises(ValueError, match="资产租金冲突检测"):
                 contract_service.create_contract(mock_db, obj_in=obj_in)
 
-    def test_create_contract_calculates_total_monthly_amount(self, contract_service, mock_db):
+    def test_create_contract_calculates_total_monthly_amount(
+        self, contract_service, mock_db
+    ):
         """测试自动计算月总金额"""
         obj_in = RentContractCreate(
             contract_number="CT2025001",
@@ -295,7 +310,9 @@ class TestCreateContract:
         mock_db.query.return_value = mock_query
 
         with patch.object(contract_service, "_create_history"):
-            with patch.object(contract_service, "_check_asset_rent_conflicts", return_value=[]):
+            with patch.object(
+                contract_service, "_check_asset_rent_conflicts", return_value=[]
+            ):
                 result = contract_service.create_contract(mock_db, obj_in=obj_in)
 
                 assert result is not None
@@ -325,7 +342,9 @@ class TestUpdateContract:
             assert result is not None
             mock_db.commit.assert_called()
 
-    def test_update_contract_with_assets(self, contract_service, mock_db, mock_contract):
+    def test_update_contract_with_assets(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试更新资产关联"""
         obj_in = RentContractUpdate(
             asset_ids=["asset_456", "asset_789"],
@@ -375,7 +394,9 @@ class TestUpdateContract:
 class TestRenewContract:
     """测试合同续签"""
 
-    def test_renew_contract_basic(self, contract_service, mock_db, mock_contract, valid_contract_create_data):
+    def test_renew_contract_basic(
+        self, contract_service, mock_db, mock_contract, valid_contract_create_data
+    ):
         """测试基本续签"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -398,7 +419,9 @@ class TestRenewContract:
 
                 assert result is not None
 
-    def test_renew_contract_not_found(self, contract_service, mock_db, valid_contract_create_data):
+    def test_renew_contract_not_found(
+        self, contract_service, mock_db, valid_contract_create_data
+    ):
         """测试原合同不存在"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = None
@@ -411,7 +434,9 @@ class TestRenewContract:
                 new_contract_data=valid_contract_create_data,
             )
 
-    def test_renew_contract_invalid_status(self, contract_service, mock_db, mock_contract, valid_contract_create_data):
+    def test_renew_contract_invalid_status(
+        self, contract_service, mock_db, mock_contract, valid_contract_create_data
+    ):
         """测试原合同状态无效"""
         mock_contract.contract_status = "已终止"
 
@@ -426,7 +451,9 @@ class TestRenewContract:
                 new_contract_data=valid_contract_create_data,
             )
 
-    def test_renew_contract_with_deposit_transfer(self, contract_service, mock_db, mock_contract, valid_contract_create_data):
+    def test_renew_contract_with_deposit_transfer(
+        self, contract_service, mock_db, mock_contract, valid_contract_create_data
+    ):
         """测试押金转移"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -451,7 +478,9 @@ class TestRenewContract:
                 # Verify deposit ledger entries were added
                 assert mock_db.add.call_count >= 2  # transfer_out + transfer_in
 
-    def test_renew_contract_with_operator(self, contract_service, mock_db, mock_contract, valid_contract_create_data):
+    def test_renew_contract_with_operator(
+        self, contract_service, mock_db, mock_contract, valid_contract_create_data
+    ):
         """测试带操作员的续签"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -514,7 +543,9 @@ class TestTerminateContract:
                 termination_reason="测试",
             )
 
-    def test_terminate_contract_invalid_status(self, contract_service, mock_db, mock_contract):
+    def test_terminate_contract_invalid_status(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试无效状态"""
         mock_contract.contract_status = "已终止"
 
@@ -529,7 +560,9 @@ class TestTerminateContract:
                 termination_date=date(2025, 6, 30),
             )
 
-    def test_terminate_contract_with_deduction(self, contract_service, mock_db, mock_contract):
+    def test_terminate_contract_with_deduction(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试带抵扣的终止"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -546,7 +579,9 @@ class TestTerminateContract:
 
             assert result is not None
 
-    def test_terminate_contract_deduction_exceeds_deposit(self, contract_service, mock_db, mock_contract):
+    def test_terminate_contract_deduction_exceeds_deposit(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试抵扣金额超过押金"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -560,7 +595,9 @@ class TestTerminateContract:
                 deduction_amount=Decimal("10000"),  # Exceeds 5000 deposit
             )
 
-    def test_terminate_contract_no_refund(self, contract_service, mock_db, mock_contract):
+    def test_terminate_contract_no_refund(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试不退还押金"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -583,7 +620,9 @@ class TestTerminateContract:
 class TestGenerateMonthlyLedger:
     """测试生成月度台账"""
 
-    def test_generate_ledger_basic(self, contract_service, mock_db, mock_contract, mock_term):
+    def test_generate_ledger_basic(
+        self, contract_service, mock_db, mock_contract, mock_term
+    ):
         """测试基本生成台账"""
         request = GenerateLedgerRequest(
             contract_id="contract_123",
@@ -595,17 +634,29 @@ class TestGenerateMonthlyLedger:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with patch("src.services.rent_contract.service.rent_contract") as mock_rent_contract_crud:
+        with patch(
+            "src.services.rent_contract.service.rent_contract"
+        ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = mock_contract
 
-            with patch("src.services.rent_contract.service.rent_term") as mock_rent_term_crud:
+            with patch(
+                "src.services.rent_contract.service.rent_term"
+            ) as mock_rent_term_crud:
                 mock_rent_term_crud.get_by_contract.return_value = [mock_term]
 
-                with patch("src.services.rent_contract.service.rent_ledger") as mock_rent_ledger_crud:
+                with patch(
+                    "src.services.rent_contract.service.rent_ledger"
+                ) as mock_rent_ledger_crud:
                     mock_rent_ledger_crud.get_by_contract_and_month.return_value = None
 
-                    with patch.object(contract_service, "_get_rent_term_for_date", return_value=mock_term):
-                        result = contract_service.generate_monthly_ledger(mock_db, request=request)
+                    with patch.object(
+                        contract_service,
+                        "_get_rent_term_for_date",
+                        return_value=mock_term,
+                    ):
+                        result = contract_service.generate_monthly_ledger(
+                            mock_db, request=request
+                        )
 
                         assert result is not None
 
@@ -621,7 +672,9 @@ class TestGenerateMonthlyLedger:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with patch("src.services.rent_contract.service.rent_contract") as mock_rent_contract_crud:
+        with patch(
+            "src.services.rent_contract.service.rent_contract"
+        ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = None
 
             with pytest.raises(ValueError, match="合同不存在"):
@@ -639,16 +692,22 @@ class TestGenerateMonthlyLedger:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with patch("src.services.rent_contract.service.rent_contract") as mock_rent_contract_crud:
+        with patch(
+            "src.services.rent_contract.service.rent_contract"
+        ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = mock_contract
 
-            with patch("src.services.rent_contract.service.rent_term") as mock_rent_term_crud:
+            with patch(
+                "src.services.rent_contract.service.rent_term"
+            ) as mock_rent_term_crud:
                 mock_rent_term_crud.get_by_contract.return_value = []
 
                 with pytest.raises(ValueError, match="合同没有租金条款"):
                     contract_service.generate_monthly_ledger(mock_db, request=request)
 
-    def test_generate_ledger_skip_existing(self, contract_service, mock_db, mock_contract):
+    def test_generate_ledger_skip_existing(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试跳过已存在的台账"""
         request = GenerateLedgerRequest(
             contract_id="contract_123",
@@ -660,18 +719,28 @@ class TestGenerateMonthlyLedger:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with patch("src.services.rent_contract.service.rent_contract") as mock_rent_contract_crud:
+        with patch(
+            "src.services.rent_contract.service.rent_contract"
+        ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = mock_contract
 
-            with patch("src.services.rent_contract.service.rent_term") as mock_rent_term_crud:
+            with patch(
+                "src.services.rent_contract.service.rent_term"
+            ) as mock_rent_term_crud:
                 mock_rent_term_crud.get_by_contract.return_value = [mock_term]
 
-                with patch("src.services.rent_contract.service.rent_ledger") as mock_rent_ledger_crud:
+                with patch(
+                    "src.services.rent_contract.service.rent_ledger"
+                ) as mock_rent_ledger_crud:
                     # Existing ledger found
                     mock_existing_ledger = MagicMock()
-                    mock_rent_ledger_crud.get_by_contract_and_month.return_value = mock_existing_ledger
+                    mock_rent_ledger_crud.get_by_contract_and_month.return_value = (
+                        mock_existing_ledger
+                    )
 
-                    result = contract_service.generate_monthly_ledger(mock_db, request=request)
+                    result = contract_service.generate_monthly_ledger(
+                        mock_db, request=request
+                    )
 
                     # Should return empty list since ledger exists
                     assert result == []
@@ -763,9 +832,19 @@ class TestGetStatistics:
 
         query_params = RentStatisticsQuery()
 
-        with patch.object(contract_service, "_calculate_average_unit_price", return_value=Decimal("10.5")):
-            with patch.object(contract_service, "_calculate_renewal_rate", return_value=Decimal("75.5")):
-                result = contract_service.get_statistics(mock_db, query_params=query_params)
+        with patch.object(
+            contract_service,
+            "_calculate_average_unit_price",
+            return_value=Decimal("10.5"),
+        ):
+            with patch.object(
+                contract_service,
+                "_calculate_renewal_rate",
+                return_value=Decimal("75.5"),
+            ):
+                result = contract_service.get_statistics(
+                    mock_db, query_params=query_params
+                )
 
                 assert result is not None
                 assert "total_due" in result
@@ -791,9 +870,19 @@ class TestGetStatistics:
             ownership_ids=["own_1", "own_2"],
         )
 
-        with patch.object(contract_service, "_calculate_average_unit_price", return_value=Decimal("10.5")):
-            with patch.object(contract_service, "_calculate_renewal_rate", return_value=Decimal("75.5")):
-                result = contract_service.get_statistics(mock_db, query_params=query_params)
+        with patch.object(
+            contract_service,
+            "_calculate_average_unit_price",
+            return_value=Decimal("10.5"),
+        ):
+            with patch.object(
+                contract_service,
+                "_calculate_renewal_rate",
+                return_value=Decimal("75.5"),
+            ):
+                result = contract_service.get_statistics(
+                    mock_db, query_params=query_params
+                )
 
                 assert result is not None
 
@@ -854,7 +943,9 @@ class TestGetStatistics:
 class TestCalculateServiceFee:
     """测试服务费计算"""
 
-    def test_service_fee_entrusted_contract(self, contract_service, mock_db, mock_ledger, mock_entrusted_contract):
+    def test_service_fee_entrusted_contract(
+        self, contract_service, mock_db, mock_ledger, mock_entrusted_contract
+    ):
         """测试委托运营合同服务费计算"""
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_entrusted_contract
@@ -863,13 +954,17 @@ class TestCalculateServiceFee:
 
         mock_ledger.paid_amount = Decimal("1000")
 
-        result = contract_service._calculate_service_fee_for_ledger(mock_db, mock_ledger)
+        result = contract_service._calculate_service_fee_for_ledger(
+            mock_db, mock_ledger
+        )
 
         assert result is not None
         # Fee should be 1000 * 0.05 = 50
         assert result.fee_amount == Decimal("50.00")
 
-    def test_service_fee_non_entrusted_contract(self, contract_service, mock_db, mock_ledger, mock_contract):
+    def test_service_fee_non_entrusted_contract(
+        self, contract_service, mock_db, mock_ledger, mock_contract
+    ):
         """测试非委托运营合同"""
         mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
 
@@ -877,12 +972,16 @@ class TestCalculateServiceFee:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        result = contract_service._calculate_service_fee_for_ledger(mock_db, mock_ledger)
+        result = contract_service._calculate_service_fee_for_ledger(
+            mock_db, mock_ledger
+        )
 
         # Should return None for non-entrusted contracts
         assert result is None
 
-    def test_service_fee_no_rate(self, contract_service, mock_db, mock_ledger, mock_entrusted_contract):
+    def test_service_fee_no_rate(
+        self, contract_service, mock_db, mock_ledger, mock_entrusted_contract
+    ):
         """测试无服务费率"""
         mock_entrusted_contract.service_fee_rate = None
 
@@ -890,11 +989,15 @@ class TestCalculateServiceFee:
         mock_query.filter.return_value.first.return_value = mock_entrusted_contract
         mock_db.query.return_value = mock_query
 
-        result = contract_service._calculate_service_fee_for_ledger(mock_db, mock_ledger)
+        result = contract_service._calculate_service_fee_for_ledger(
+            mock_db, mock_ledger
+        )
 
         assert result is None
 
-    def test_service_fee_existing_record(self, contract_service, mock_db, mock_ledger, mock_entrusted_contract):
+    def test_service_fee_existing_record(
+        self, contract_service, mock_db, mock_ledger, mock_entrusted_contract
+    ):
         """测试更新已有服务费记录"""
         mock_query = MagicMock()
 
@@ -904,12 +1007,17 @@ class TestCalculateServiceFee:
         mock_existing_fee.paid_rent_amount = Decimal("1000")
 
         # Configure mock to return different values on different calls
-        mock_query.filter.return_value.first.side_effect = [mock_entrusted_contract, mock_existing_fee]
+        mock_query.filter.return_value.first.side_effect = [
+            mock_entrusted_contract,
+            mock_existing_fee,
+        ]
         mock_db.query.return_value = mock_query
 
         mock_ledger.paid_amount = Decimal("2000")
 
-        result = contract_service._calculate_service_fee_for_ledger(mock_db, mock_ledger)
+        result = contract_service._calculate_service_fee_for_ledger(
+            mock_db, mock_ledger
+        )
 
         assert result is not None
         # Should update existing record
@@ -922,7 +1030,9 @@ class TestCalculateServiceFee:
 class TestCalculateAverageUnitPrice:
     """测试平均单价计算"""
 
-    def test_calculate_average_unit_price_basic(self, contract_service, mock_db, mock_contract):
+    def test_calculate_average_unit_price_basic(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试基本计算"""
         mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
         mock_contract.monthly_rent_base = Decimal("5000")
@@ -954,7 +1064,9 @@ class TestCalculateAverageUnitPrice:
 
         assert result == Decimal("0")
 
-    def test_calculate_average_unit_price_zero_area(self, contract_service, mock_db, mock_contract):
+    def test_calculate_average_unit_price_zero_area(
+        self, contract_service, mock_db, mock_contract
+    ):
         """测试零面积"""
         mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
         mock_contract.monthly_rent_base = Decimal("5000")
@@ -1229,7 +1341,9 @@ class TestGetRentTermForDate:
 
         target_date = date(2026, 6, 15)
 
-        result = contract_service._get_rent_term_for_date([mock_term, term2], target_date)
+        result = contract_service._get_rent_term_for_date(
+            [mock_term, term2], target_date
+        )
 
         assert result is not None
         assert result == term2

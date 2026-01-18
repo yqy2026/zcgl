@@ -56,9 +56,7 @@ export interface DetailedValidationResult<T = unknown> extends ValidationResult<
  * @param data - 待验证的数据
  * @returns 类型守卫，如果验证通过则返回 true
  */
-export function isStandardApiResponse<T = unknown>(
-  data: unknown
-): data is StandardApiResponse<T> {
+export function isStandardApiResponse<T = unknown>(data: unknown): data is StandardApiResponse<T> {
   if (data == null || typeof data !== 'object') {
     return false;
   }
@@ -145,7 +143,11 @@ export function validateStandardResponse<T = unknown>(
   }
 
   // 检查 timestamp 字段（可选）
-  if ('timestamp' in obj && typeof obj.timestamp !== 'string' && typeof obj.timestamp !== 'undefined') {
+  if (
+    'timestamp' in obj &&
+    typeof obj.timestamp !== 'string' &&
+    typeof obj.timestamp !== 'undefined'
+  ) {
     result.typeErrors.push({
       field: 'timestamp',
       expected: 'string | undefined',
@@ -279,7 +281,12 @@ export function validatePaginatedResponse<T = unknown>(
     for (const field of requiredFields) {
       if (!(field in pagination)) {
         result.missingFields.push(`data.pagination.${field}`);
-      } else if (field === 'page' || field === 'pageSize' || field === 'total' || field === 'totalPages') {
+      } else if (
+        field === 'page' ||
+        field === 'pageSize' ||
+        field === 'total' ||
+        field === 'totalPages'
+      ) {
         if (typeof pagination[field] !== 'number') {
           result.typeErrors.push({
             field: `data.pagination.${field}`,
@@ -292,7 +299,14 @@ export function validatePaginatedResponse<T = unknown>(
 
     // 严格模式：检查额外字段
     if (strict) {
-      const allowedPaginationFields = ['page', 'pageSize', 'total', 'totalPages', 'hasNext', 'hasPrev'];
+      const allowedPaginationFields = [
+        'page',
+        'pageSize',
+        'total',
+        'totalPages',
+        'hasNext',
+        'hasPrev',
+      ];
       const extraFields = Object.keys(pagination).filter(
         key => !allowedPaginationFields.includes(key)
       );
@@ -424,7 +438,11 @@ export function validateErrorResponse(
       });
     }
 
-    if ('timestamp' in error && typeof error.timestamp !== 'string' && typeof error.timestamp !== 'undefined') {
+    if (
+      'timestamp' in error &&
+      typeof error.timestamp !== 'string' &&
+      typeof error.timestamp !== 'undefined'
+    ) {
       result.typeErrors.push({
         field: 'error.timestamp',
         expected: 'string | undefined',
@@ -521,9 +539,7 @@ export function assertApiResponse<T = unknown>(
   }
 
   if (validation.type !== expectedType) {
-    throw new Error(
-      `API 响应类型不匹配: 期望 '${expectedType}'，实际 '${validation.type}'`
-    );
+    throw new Error(`API 响应类型不匹配: 期望 '${expectedType}'，实际 '${validation.type}'`);
   }
 }
 

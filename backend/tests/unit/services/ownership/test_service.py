@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.asset import Asset, Ownership, Project, ProjectOwnershipRelation
+from src.models.asset import Asset, Ownership, Project
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
 
@@ -87,9 +87,9 @@ class TestGenerateOwnershipCode:
         """测试序列号递增"""
         # Mock existing codes
         mock_existing = MagicMock()
-        mock_existing.__getitem__ = lambda self, key: {
-            0: "OW2501002"
-        }.get(key, "OW2501002")
+        mock_existing.__getitem__ = lambda self, key: {0: "OW2501002"}.get(
+            key, "OW2501002"
+        )
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.all.return_value = [
@@ -107,9 +107,9 @@ class TestGenerateOwnershipCode:
         """测试编码冲突处理"""
         # First query returns existing codes
         mock_existing = MagicMock()
-        mock_existing.__getitem__ = lambda self, key: {
-            0: "OW2501001"
-        }.get(key, "OW2501001")
+        mock_existing.__getitem__ = lambda self, key: {0: "OW2501001"}.get(
+            key, "OW2501001"
+        )
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.all.return_value = [
@@ -128,7 +128,7 @@ class TestGenerateOwnershipCode:
 
         with patch(
             "src.crud.ownership.ownership.get_by_code",
-            side_effect=get_by_code_side_effect
+            side_effect=get_by_code_side_effect,
         ):
             code = ownership_service.generate_ownership_code(mock_db)
 
@@ -198,8 +198,7 @@ class TestCreateOwnership:
 
         # Mock get_by_name to return existing ownership
         with patch(
-            "src.crud.ownership.ownership.get_by_name",
-            return_value=MagicMock()
+            "src.crud.ownership.ownership.get_by_name", return_value=MagicMock()
         ):
             with pytest.raises(ValueError, match="权属方名称.*已存在"):
                 ownership_service.create_ownership(mock_db, obj_in=obj_in)
@@ -214,11 +213,9 @@ class TestCreateOwnership:
 
         with patch("src.crud.ownership.ownership.get_by_name", return_value=None):
             with patch.object(
-                ownership_service,
-                "generate_ownership_code",
-                return_value="OW2501001"
+                ownership_service, "generate_ownership_code", return_value="OW2501001"
             ):
-                result = ownership_service.create_ownership(mock_db, obj_in=obj_in)
+                ownership_service.create_ownership(mock_db, obj_in=obj_in)
 
                 # Verify code was set
                 mock_db.add.assert_called_once()
@@ -246,30 +243,30 @@ class TestUpdateOwnership:
             mock_db.commit.assert_called_once()
             mock_db.refresh.assert_called_once()
 
-    def test_update_ownership_name_conflict(self, ownership_service, mock_db, mock_ownership):
+    def test_update_ownership_name_conflict(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试名称冲突"""
         obj_in = OwnershipUpdate(name="已存在的名称")
 
         existing = MagicMock(spec=Ownership)
         existing.id = "other_123"
 
-        with patch(
-            "src.crud.ownership.ownership.get_by_name",
-            return_value=existing
-        ):
+        with patch("src.crud.ownership.ownership.get_by_name", return_value=existing):
             with pytest.raises(ValueError, match="权属方名称.*已存在"):
                 ownership_service.update_ownership(
                     mock_db, db_obj=mock_ownership, obj_in=obj_in
                 )
 
-    def test_update_ownership_same_name_allowed(self, ownership_service, mock_db, mock_ownership):
+    def test_update_ownership_same_name_allowed(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试更新为相同名称不报错"""
         obj_in = OwnershipUpdate(name="测试权属方")
 
         # get_by_name returns the same object
         with patch(
-            "src.crud.ownership.ownership.get_by_name",
-            return_value=mock_ownership
+            "src.crud.ownership.ownership.get_by_name", return_value=mock_ownership
         ):
             result = ownership_service.update_ownership(
                 mock_db, db_obj=mock_ownership, obj_in=obj_in
@@ -278,7 +275,9 @@ class TestUpdateOwnership:
             assert result is not None
             mock_db.commit.assert_called_once()
 
-    def test_update_ownership_sets_updated_at(self, ownership_service, mock_db, mock_ownership):
+    def test_update_ownership_sets_updated_at(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试设置更新时间"""
         obj_in = OwnershipUpdate(name="新名称")
 
@@ -290,7 +289,9 @@ class TestUpdateOwnership:
             # Verify updated_at was set
             assert hasattr(mock_ownership, "updated_at")
 
-    def test_update_ownership_partial_fields(self, ownership_service, mock_db, mock_ownership):
+    def test_update_ownership_partial_fields(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试部分字段更新"""
         obj_in = OwnershipUpdate(short_name="更新简称")
 
@@ -474,7 +475,9 @@ class TestUpdateRelatedProjects:
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
             with pytest.raises(ValueError, match="以下项目ID不存在"):
                 ownership_service.update_related_projects(
-                    mock_db, ownership_id="ownership_123", project_ids=["invalid_project"]
+                    mock_db,
+                    ownership_id="ownership_123",
+                    project_ids=["invalid_project"],
                 )
 
     def test_update_projects_multiple(self, ownership_service, mock_db):
@@ -494,7 +497,7 @@ class TestUpdateRelatedProjects:
             ownership_service.update_related_projects(
                 mock_db,
                 ownership_id="ownership_123",
-                project_ids=["project_1", "project_2"]
+                project_ids=["project_1", "project_2"],
             )
 
             # Verify commit was called
@@ -513,7 +516,9 @@ class TestGetProjectCount:
         mock_query.filter.return_value.count.return_value = 5
         mock_db.query.return_value = mock_query
 
-        result = ownership_service.get_project_count(mock_db, ownership_id="ownership_123")
+        result = ownership_service.get_project_count(
+            mock_db, ownership_id="ownership_123"
+        )
 
         assert result == 5
 
@@ -523,7 +528,9 @@ class TestGetProjectCount:
         mock_query.filter.return_value.count.return_value = 0
         mock_db.query.return_value = mock_query
 
-        result = ownership_service.get_project_count(mock_db, ownership_id="ownership_123")
+        result = ownership_service.get_project_count(
+            mock_db, ownership_id="ownership_123"
+        )
 
         assert result == 0
 
@@ -540,7 +547,9 @@ class TestGetAssetCount:
         mock_query.filter.return_value.count.return_value = 10
         mock_db.query.return_value = mock_query
 
-        result = ownership_service.get_asset_count(mock_db, ownership_id="ownership_123")
+        result = ownership_service.get_asset_count(
+            mock_db, ownership_id="ownership_123"
+        )
 
         assert result == 10
 
@@ -550,7 +559,9 @@ class TestGetAssetCount:
         mock_query.filter.return_value.count.return_value = 0
         mock_db.query.return_value = mock_query
 
-        result = ownership_service.get_asset_count(mock_db, ownership_id="ownership_123")
+        result = ownership_service.get_asset_count(
+            mock_db, ownership_id="ownership_123"
+        )
 
         assert result == 0
 
@@ -580,7 +591,9 @@ class TestDeleteOwnership:
             with pytest.raises(ValueError, match="权属方ID.*不存在"):
                 ownership_service.delete_ownership(mock_db, id="nonexistent")
 
-    def test_delete_ownership_with_assets_fails(self, ownership_service, mock_db, mock_ownership):
+    def test_delete_ownership_with_assets_fails(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试有关联资产时删除失败"""
         mock_query = MagicMock()
         mock_query.filter.return_value.count.return_value = 5  # Has assets
@@ -603,9 +616,7 @@ class TestToggleStatus:
 
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
             with patch("src.crud.ownership.ownership.get_by_name", return_value=None):
-                result = ownership_service.toggle_status(
-                    mock_db, id="ownership_123"
-                )
+                result = ownership_service.toggle_status(mock_db, id="ownership_123")
 
                 assert result is not None
 
@@ -615,9 +626,7 @@ class TestToggleStatus:
 
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
             with patch("src.crud.ownership.ownership.get_by_name", return_value=None):
-                result = ownership_service.toggle_status(
-                    mock_db, id="ownership_123"
-                )
+                result = ownership_service.toggle_status(mock_db, id="ownership_123")
 
                 assert result is not None
 
@@ -627,7 +636,9 @@ class TestToggleStatus:
             with pytest.raises(ValueError, match="权属方ID.*不存在"):
                 ownership_service.toggle_status(mock_db, id="nonexistent")
 
-    def test_toggle_status_with_custom_params(self, ownership_service, mock_db, mock_ownership):
+    def test_toggle_status_with_custom_params(
+        self, ownership_service, mock_db, mock_ownership
+    ):
         """测试使用自定义参数切换状态"""
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
             with patch("src.crud.ownership.ownership.get_by_name", return_value=None):
@@ -635,7 +646,7 @@ class TestToggleStatus:
                     mock_db,
                     id="ownership_123",
                     name="自定义名称",
-                    code="OW2501999"  # Valid format: [2 letter prefix][4 digit year/month][3 digit sequence]
+                    code="OW2501999",  # Valid format: [2 letter prefix][4 digit year/month][3 digit sequence]
                 )
 
                 assert result is not None

@@ -314,7 +314,9 @@ class TestUpdateAsset:
 
     def test_update_asset_success(self, service, mock_asset):
         """测试成功更新资产"""
-        update_data = {"notes": "更新备注"}  # Use non-name field to avoid duplicate check
+        update_data = {
+            "notes": "更新备注"
+        }  # Use non-name field to avoid duplicate check
         asset_in = AssetUpdate(**update_data)
 
         with patch(
@@ -527,9 +529,7 @@ class TestDeleteAsset:
             with patch("src.crud.asset.asset_crud.remove") as mock_remove:
                 service.delete_asset(TEST_ASSET_ID)
 
-                mock_remove.assert_called_once_with(
-                    db=service.db, id=TEST_ASSET_ID
-                )
+                mock_remove.assert_called_once_with(db=service.db, id=TEST_ASSET_ID)
 
     def test_delete_asset_not_found(self, service):
         """测试删除不存在的资产"""
@@ -549,9 +549,7 @@ class TestDeleteAsset:
             with patch("src.crud.asset.asset_crud.remove") as mock_remove:
                 service.delete_asset(TEST_ASSET_ID, current_user=mock_user)
 
-                mock_remove.assert_called_once_with(
-                    db=service.db, id=TEST_ASSET_ID
-                )
+                mock_remove.assert_called_once_with(db=service.db, id=TEST_ASSET_ID)
 
 
 # ============================================================================
@@ -636,9 +634,7 @@ class TestEdgeCases:
                 ):
                     # 模拟多次更新
                     for i in range(3):
-                        result = service.update_asset(
-                            f"asset_{i}", asset_in
-                        )
+                        result = service.update_asset(f"asset_{i}", asset_in)
                         assert result == mock_asset
 
     def test_get_assets_with_combined_filters(self, service):

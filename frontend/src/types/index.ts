@@ -168,12 +168,11 @@ export type {
   // ProjectFormData, // Does not exist
 } from './project';
 
-export type {
-  // 组织相关
-  // Organization, // Duplicate - exported from auth
-  // OrganizationListItem, // Does not exist
-  // OrganizationFormData, // Does not exist
-} from './organization';
+export type {} from // 组织相关
+// Organization, // Duplicate - exported from auth
+// OrganizationListItem, // Does not exist
+// OrganizationFormData, // Does not exist
+'./organization';
 
 export type {
   // 租赁合同相关
@@ -205,11 +204,10 @@ export type {
   DictionaryQueryParams,
 } from './dictionary';
 
-export type {
-  // 枚举字段相关
-  // EnumField, // Does not exist
-  // EnumFieldOption, // Does not exist
-} from './enumField';
+export type {} from // 枚举字段相关
+// EnumField, // Does not exist
+// EnumFieldOption, // Does not exist
+'./enumField';
 
 export type {
   // 分析相关
@@ -219,19 +217,17 @@ export type {
   // TrendData, // Does not exist
 } from './analytics';
 
-export type {
-  // PDF 导入相关
-  // EnhancedPdfImportResult, // Does not exist
-  // ParsedFieldData, // Does not exist
-  // FieldExtractionResult, // Does not exist
-} from './enhancedPdfImport';
+export type {} from // PDF 导入相关
+// EnhancedPdfImportResult, // Does not exist
+// ParsedFieldData, // Does not exist
+// FieldExtractionResult, // Does not exist
+'./enhancedPdfImport';
 
 // ==================== 类型守卫 ====================
 
-export type {
-  // 从 apiResponse.ts 导出类型守卫的函数签名
-  // 具体实现在 apiResponse.ts 中
-} from './apiResponse';
+export type {} from // 从 apiResponse.ts 导出类型守卫的函数签名
+// 具体实现在 apiResponse.ts 中
+'./apiResponse';
 
 // 重新导出类型守卫函数
 export {

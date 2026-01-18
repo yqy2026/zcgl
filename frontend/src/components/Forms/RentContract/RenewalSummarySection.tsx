@@ -7,7 +7,12 @@
 
 import React from 'react';
 import { Card, Descriptions, Typography, Space } from 'antd';
-import { FileTextOutlined, CalendarOutlined, DollarOutlined, HomeOutlined } from '@ant-design/icons';
+import {
+  FileTextOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  HomeOutlined,
+} from '@ant-design/icons';
 import { RentContract } from '../../../types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 
@@ -64,25 +69,46 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
           <Text>{getContractTypeLabel(contract.contract_type)}</Text>
         </Descriptions.Item>
 
-        <Descriptions.Item label={<Space><CalendarOutlined /> 原租期</Space>}>
+        <Descriptions.Item
+          label={
+            <Space>
+              <CalendarOutlined /> 原租期
+            </Space>
+          }
+        >
           <Space direction="vertical" size={0}>
-            <Text>{contract.start_date} ~ {contract.end_date}</Text>
+            <Text>
+              {contract.start_date} ~ {contract.end_date}
+            </Text>
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="合同状态">
           <Text type={statusInfo.color as any}>{statusInfo.text}</Text>
         </Descriptions.Item>
 
-        <Descriptions.Item label={<Space><DollarOutlined /> 押金金额</Space>}>
+        <Descriptions.Item
+          label={
+            <Space>
+              <DollarOutlined /> 押金金额
+            </Space>
+          }
+        >
           <Text strong style={{ color: COLORS.primary }}>
-            ¥{(typeof contract.total_deposit === 'number'
+            ¥
+            {(typeof contract.total_deposit === 'number'
               ? contract.total_deposit
-              : parseFloat(contract.total_deposit as string) ?? 0
+              : (parseFloat(contract.total_deposit as string) ?? 0)
             ).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
         </Descriptions.Item>
-        <Descriptions.Item label={<Space><HomeOutlined /> 关联资产</Space>}>
-          <Text>{(contract.assets?.length ?? 0)} 个资产</Text>
+        <Descriptions.Item
+          label={
+            <Space>
+              <HomeOutlined /> 关联资产
+            </Space>
+          }
+        >
+          <Text>{contract.assets?.length ?? 0} 个资产</Text>
         </Descriptions.Item>
 
         <Descriptions.Item label="承租方/委托方" span={2}>
@@ -99,10 +125,10 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
             <Space direction="vertical" size={0}>
               {contract.rent_terms.map((term, index) => (
                 <Text key={index}>
-                  条款{index + 1}: {term.start_date} ~ {term.end_date}
-                  , 月租 ¥{(typeof term.total_monthly_amount === 'number'
+                  条款{index + 1}: {term.start_date} ~ {term.end_date}, 月租 ¥
+                  {(typeof term.total_monthly_amount === 'number'
                     ? term.total_monthly_amount
-                    : parseFloat(term.total_monthly_amount as string) ?? 0
+                    : (parseFloat(term.total_monthly_amount as string) ?? 0)
                   ).toLocaleString('zh-CN')}
                 </Text>
               ))}

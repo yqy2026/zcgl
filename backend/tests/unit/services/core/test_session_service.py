@@ -73,7 +73,10 @@ class TestCreateUserSession:
         mock_query.filter.return_value.all.return_value = []  # No existing sessions
         mock_db.query.return_value = mock_query
 
-        with patch("src.services.core.session_service.UserSession", return_value=mock_user_session):
+        with patch(
+            "src.services.core.session_service.UserSession",
+            return_value=mock_user_session,
+        ):
             session = session_service.create_user_session(
                 user_id="user_123",
                 refresh_token="refresh_token_abc",
@@ -86,7 +89,9 @@ class TestCreateUserSession:
             mock_db.commit.assert_called_once()
             mock_db.refresh.assert_called_once()
 
-    def test_create_session_with_device_info_json_string(self, session_service, mock_db):
+    def test_create_session_with_device_info_json_string(
+        self, session_service, mock_db
+    ):
         """测试使用JSON字符串设备信息创建会话"""
         device_info = json.dumps({"device_id": "device_123", "platform": "iOS"})
 
@@ -171,7 +176,9 @@ class TestCreateUserSession:
             expected_expiry = fixed_now + timedelta(days=settings.SESSION_EXPIRE_DAYS)
             assert session.expires_at == expected_expiry
 
-    def test_create_session_with_invalid_json_device_info(self, session_service, mock_db):
+    def test_create_session_with_invalid_json_device_info(
+        self, session_service, mock_db
+    ):
         """测试使用无效JSON设备信息创建会话"""
         mock_query = MagicMock()
         mock_query.filter.return_value.all.return_value = []
@@ -187,7 +194,9 @@ class TestCreateUserSession:
         # Should not crash, device_info stored as string
         assert session.device_info == "invalid json {{"
 
-    def test_create_session_revokes_oldest_when_max_reached(self, session_service, mock_db):
+    def test_create_session_revokes_oldest_when_max_reached(
+        self, session_service, mock_db
+    ):
         """测试达到最大并发会话数时撤销最旧的会话"""
         # Create mock existing sessions
         old_session = MagicMock(spec=UserSession)
@@ -196,15 +205,17 @@ class TestCreateUserSession:
         old_session.is_active = True
 
         # Simulate MAX_CONCURRENT_SESSIONS existing
-        existing_sessions = [old_session] + [MagicMock(created_at=datetime.now(), is_active=True)
-                                              for _ in range(settings.MAX_CONCURRENT_SESSIONS - 1)]
+        existing_sessions = [old_session] + [
+            MagicMock(created_at=datetime.now(), is_active=True)
+            for _ in range(settings.MAX_CONCURRENT_SESSIONS - 1)
+        ]
 
         mock_query = MagicMock()
         mock_query.filter.return_value.all.return_value = existing_sessions
         mock_query.order_by.return_value.all.return_value = existing_sessions
         mock_db.query.return_value = mock_query
 
-        session = session_service.create_user_session(
+        session_service.create_user_session(
             user_id="user_123",
             refresh_token="refresh_token_abc",
         )
@@ -227,7 +238,9 @@ class TestGetUserSessions:
         ]
 
         mock_query = MagicMock()
-        mock_query.filter.return_value.order_by.return_value.all.return_value = mock_sessions
+        mock_query.filter.return_value.order_by.return_value.all.return_value = (
+            mock_sessions
+        )
         mock_db.query.return_value = mock_query
 
         sessions = session_service.get_user_sessions(user_id="user_123")
@@ -277,7 +290,7 @@ class TestRevokeSession:
         with patch("src.services.core.session_service.jwt.decode") as mock_decode:
             mock_decode.return_value = {
                 "jti": "jti_123",
-                "exp": int((datetime.now() + timedelta(days=7)).timestamp())
+                "exp": int((datetime.now() + timedelta(days=7)).timestamp()),
             }
 
             result = session_service.revoke_session(refresh_token="refresh_token_abc")
@@ -346,11 +359,10 @@ class TestRevokeSession:
         mock_db.query.return_value = mock_query
 
         with patch("src.services.core.session_service.jwt.decode") as mock_decode:
-            with patch("src.services.core.session_service.blacklist_manager") as mock_blacklist:
-                mock_decode.return_value = {
-                    "jti": "jti_123",
-                    "exp": 1234567890
-                }
+            with patch(
+                "src.services.core.session_service.blacklist_manager"
+            ) as mock_blacklist:
+                mock_decode.return_value = {"jti": "jti_123", "exp": 1234567890}
 
                 session_service.revoke_session(refresh_token="refresh_token_abc")
 
@@ -385,7 +397,9 @@ class TestRevokeAllUserSessions:
 
         assert result == 0
 
-    def test_revoke_all_sessions_filters_by_user_id_and_active(self, session_service, mock_db):
+    def test_revoke_all_sessions_filters_by_user_id_and_active(
+        self, session_service, mock_db
+    ):
         """测试按用户ID和活跃状态过滤"""
         mock_query = MagicMock()
         mock_query.filter.return_value.update.return_value = 3
@@ -395,7 +409,9 @@ class TestRevokeAllUserSessions:
 
         # Verify filter was called correctly
         mock_query.filter.assert_called()
-        mock_query.filter.return_value.update.assert_called_once_with({"is_active": False})
+        mock_query.filter.return_value.update.assert_called_once_with(
+            {"is_active": False}
+        )
 
 
 # ============================================================================

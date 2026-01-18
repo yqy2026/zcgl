@@ -19,7 +19,7 @@ interface SessionHistoryTabProps {
 
 export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
   sessionHistory,
-  onSwitchToUpload
+  onSwitchToUpload,
 }) => {
   if (sessionHistory.length === 0) {
     return (
@@ -29,9 +29,7 @@ export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
           <Title level={4} style={{ color: COLORS.textTertiary }}>
             暂无导入记录
           </Title>
-          <Paragraph>
-            开始上传PDF文件以创建导入记录。
-          </Paragraph>
+          <Paragraph>开始上传PDF文件以创建导入记录。</Paragraph>
           <Button type="primary" onClick={onSwitchToUpload}>
             开始导入
           </Button>
@@ -43,7 +41,7 @@ export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
   return (
     <Card title="导入历史记录">
       <div>
-        {sessionHistory.map((session) => (
+        {sessionHistory.map(session => (
           <Card
             key={session.sessionId}
             size="small"
@@ -51,31 +49,37 @@ export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
             title={
               <Space>
                 <Text>{session.fileInfo.name}</Text>
-                <Tag color={
-                  session.status === 'completed' ? 'green' :
-                    session.status === 'ready' ? 'blue' :
-                      session.status === 'failed' ? 'red' : 'orange'
-                }>
-                  {session.status === 'completed' ? '已完成' :
-                    session.status === 'ready' ? '待确认' :
-                      session.status === 'failed' ? '失败' : '其他'}
+                <Tag
+                  color={
+                    session.status === 'completed'
+                      ? 'green'
+                      : session.status === 'ready'
+                        ? 'blue'
+                        : session.status === 'failed'
+                          ? 'red'
+                          : 'orange'
+                  }
+                >
+                  {session.status === 'completed'
+                    ? '已完成'
+                    : session.status === 'ready'
+                      ? '待确认'
+                      : session.status === 'failed'
+                        ? '失败'
+                        : '其他'}
                 </Tag>
               </Space>
             }
             extra={
               <Space>
-                <Text type="secondary">
-                  进度: {session.progress}%
-                </Text>
+                <Text type="secondary">进度: {session.progress}%</Text>
                 <Button size="small" type="text">
                   查看详情
                 </Button>
               </Space>
             }
           >
-            <Text type="secondary">
-              会话ID: {session.sessionId}
-            </Text>
+            <Text type="secondary">会话ID: {session.sessionId}</Text>
           </Card>
         ))}
       </div>

@@ -25,10 +25,13 @@ try:
     OCR_PROVIDER_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: OCR提供者不可用 - {e}")
+
     def get_ocr_service():
         return None
+
     def set_ocr_service(x):
         return None
+
     OCR_PROVIDER_AVAILABLE = False
 
 try:
@@ -43,8 +46,10 @@ try:
     ROUTER_REGISTRY_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 路由注册器不可用 - {e}")
+
     def register_api_routes():
         return None
+
     route_registry = type(
         "MockRegistry",
         (),
@@ -91,8 +96,10 @@ try:
     SECURITY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 安全中间件不可用 - {e}")
+
     def setup_security_middleware(app):
         return None
+
     SECURITY_MIDDLEWARE_AVAILABLE = False
 
 # 设置日志

@@ -55,7 +55,11 @@ class DataStatusValues:
     @classmethod
     def get_ownership_statuses(cls) -> list[str]:
         """Get all ownership status values."""
-        return [cls.OWNERSHIP_CONFIRMED, cls.OWNERSHIP_UNCONFIRMED, cls.OWNERSHIP_PARTIAL]
+        return [
+            cls.OWNERSHIP_CONFIRMED,
+            cls.OWNERSHIP_UNCONFIRMED,
+            cls.OWNERSHIP_PARTIAL,
+        ]
 
 
 # Legacy compatibility aliases (deprecated, will be removed in v2.0)

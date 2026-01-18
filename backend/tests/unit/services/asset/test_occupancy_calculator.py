@@ -5,12 +5,11 @@ Occupancy Calculator 单元测试
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.asset import Asset
 from src.services.asset.occupancy_calculator import (
     OccupancyCalculationError,
     OccupancyRateCalculator,
@@ -79,9 +78,7 @@ class TestCalculateIndividualOccupancyRate:
 
     def test_fully_vacant(self):
         """测试全部空置 - 0%"""
-        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(
-            100.0, 0.0
-        )
+        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(100.0, 0.0)
         assert result == 0.0
 
     def test_rounding_down(self):
@@ -107,9 +104,7 @@ class TestCalculateIndividualOccupancyRate:
 
     def test_zero_rentable_area(self):
         """测试零可出租面积"""
-        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(
-            0.0, 50.0
-        )
+        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(0.0, 50.0)
         assert result == 0.0
 
     def test_negative_rentable_area(self):
@@ -121,9 +116,7 @@ class TestCalculateIndividualOccupancyRate:
 
     def test_zero_rented_area(self):
         """测试零已出租面积"""
-        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(
-            100.0, 0.0
-        )
+        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(100.0, 0.0)
         assert result == 0.0
 
     def test_negative_rented_area(self):
@@ -135,9 +128,7 @@ class TestCalculateIndividualOccupancyRate:
 
     def test_none_rentable_area(self):
         """测试None可出租面积"""
-        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(
-            None, 50.0
-        )
+        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(None, 50.0)
         assert result == 0.0
 
     def test_none_rented_area(self):
@@ -149,9 +140,7 @@ class TestCalculateIndividualOccupancyRate:
 
     def test_both_none(self):
         """测试两者都为None"""
-        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(
-            None, None
-        )
+        result = OccupancyRateCalculator.calculate_individual_occupancy_rate(None, None)
         assert result == 0.0
 
     def test_empty_string_rentable(self):
@@ -345,8 +334,18 @@ class TestCalculateOverallOccupancyRate:
         mock_session.query.return_value.first.return_value = mock_result
 
         assets = [
-            MockAsset(id="1", rentable_area=100.0, rented_area=50.0, include_in_occupancy_rate=True),
-            MockAsset(id="2", rentable_area=100.0, rented_area=100.0, include_in_occupancy_rate=False),
+            MockAsset(
+                id="1",
+                rentable_area=100.0,
+                rented_area=50.0,
+                include_in_occupancy_rate=True,
+            ),
+            MockAsset(
+                id="2",
+                rentable_area=100.0,
+                rented_area=100.0,
+                include_in_occupancy_rate=False,
+            ),
         ]
 
         result = OccupancyRateCalculator.calculate_overall_occupancy_rate(assets)
@@ -368,9 +367,15 @@ class TestCalculateOverallOccupancyRate:
         mock_session.query.return_value.first.return_value = mock_result
 
         assets = [
-            MockAsset(id="1", rentable_area=100.0, rented_area=50.0, data_status="正常"),
-            MockAsset(id="2", rentable_area=100.0, rented_area=100.0, data_status="正常数据"),
-            MockAsset(id="3", rentable_area=100.0, rented_area=0.0, data_status="已删除"),
+            MockAsset(
+                id="1", rentable_area=100.0, rented_area=50.0, data_status="正常"
+            ),
+            MockAsset(
+                id="2", rentable_area=100.0, rented_area=100.0, data_status="正常数据"
+            ),
+            MockAsset(
+                id="3", rentable_area=100.0, rented_area=0.0, data_status="已删除"
+            ),
         ]
 
         result = OccupancyRateCalculator.calculate_overall_occupancy_rate(assets)
@@ -425,7 +430,10 @@ class TestCalculateOverallOccupancyRate:
         )
         mock_session.query.return_value.first.return_value = mock_result
 
-        assets = [MockAsset(id=str(i), rentable_area=1000.0, rented_area=750.0) for i in range(1000)]
+        assets = [
+            MockAsset(id=str(i), rentable_area=1000.0, rented_area=750.0)
+            for i in range(1000)
+        ]
 
         result = OccupancyRateCalculator.calculate_overall_occupancy_rate(assets)
 

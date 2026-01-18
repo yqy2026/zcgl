@@ -5,7 +5,7 @@ Property Certificate Schema
 用于从产权证图像中提取结构化数据
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -89,3 +89,112 @@ PROPERTY_CERT_EXTRACTION_PROMPT = """
 4. 确保证件号码完整准确
 5. 只返回JSON，不要其他说明文字
 """
+
+
+class PropertyCertificateUploadResponse(BaseModel):
+    """产权证上传响应"""
+
+    session_id: str = Field(description="会话ID")
+    certificate_type: str = Field(default="property_cert", description="证书类型")
+    extracted_data: dict[str, Any] = Field(
+        default_factory=dict, description="提取的字段数据"
+    )
+    confidence_score: float = Field(ge=0.0, le=1.0, description="置信度分数")
+    asset_matches: list[dict[str, Any]] = Field(
+        default_factory=list, description="匹配的资产列表"
+    )
+    validation_errors: list[str] = Field(
+        default_factory=list, description="验证错误列表"
+    )
+    warnings: list[str] = Field(default_factory=list, description="警告列表")
+
+    class Config:
+        from_attributes = True
+
+
+class CertificateImportConfirm(BaseModel):
+    """产权证导入确认"""
+
+    session_id: str = Field(description="会话ID")
+    extracted_data: dict[str, Any] = Field(description="提取的字段数据")
+    asset_link_id: str | None = Field(default=None, description="关联的资产ID")
+    create_new_asset: bool = Field(default=False, description="是否创建新资产")
+    owners: list[dict[str, Any]] = Field(default_factory=list, description="权利人列表")
+
+    class Config:
+        from_attributes = True
+
+
+# CRUD Schemas
+class PropertyCertificateBase(BaseModel):
+    """产权证基础字段"""
+
+    certificate_number: str = Field(description="证书编号")
+    certificate_type: str = Field(description="证书类型")
+    registration_date: date | None = Field(default=None, description="登记日期")
+    property_address: str | None = Field(default=None, description="坐落地址")
+    property_type: str | None = Field(
+        default=None, description="用途（住宅/商业/工业/办公）"
+    )
+    building_area: str | None = Field(default=None, description="建筑面积（平方米）")
+    floor_info: str | None = Field(default=None, description="楼层信息")
+    land_area: str | None = Field(default=None, description="土地使用面积（平方米）")
+    land_use_type: str | None = Field(
+        default=None, description="土地使用权类型（出让/划拨）"
+    )
+    land_use_term_start: date | None = Field(default=None, description="土地使用期限起")
+    land_use_term_end: date | None = Field(default=None, description="土地使用期限止")
+    co_ownership: str | None = Field(default=None, description="共有情况")
+    restrictions: str | None = Field(default=None, description="权利限制情况")
+    remarks: str | None = Field(default=None, description="备注")
+
+
+class PropertyCertificateCreate(PropertyCertificateBase):
+    """创建产权证"""
+
+    extraction_confidence: float | None = Field(
+        default=None, description="LLM提取置信度"
+    )
+    extraction_source: str = Field(default="manual", description="数据来源")
+    verified: bool = Field(default=False, description="是否人工审核")
+
+
+class PropertyCertificateUpdate(BaseModel):
+    """更新产权证"""
+
+    certificate_number: str | None = Field(default=None, description="证书编号")
+    certificate_type: str | None = Field(default=None, description="证书类型")
+    registration_date: date | None = Field(default=None, description="登记日期")
+    property_address: str | None = Field(default=None, description="坐落地址")
+    property_type: str | None = Field(default=None, description="用途")
+    building_area: str | None = Field(default=None, description="建筑面积")
+    floor_info: str | None = Field(default=None, description="楼层信息")
+    land_area: str | None = Field(default=None, description="土地使用面积")
+    land_use_type: str | None = Field(default=None, description="土地使用权类型")
+    land_use_term_start: date | None = Field(default=None, description="土地使用期限起")
+    land_use_term_end: date | None = Field(default=None, description="土地使用期限止")
+    co_ownership: str | None = Field(default=None, description="共有情况")
+    restrictions: str | None = Field(default=None, description="权利限制情况")
+    remarks: str | None = Field(default=None, description="备注")
+    extraction_confidence: float | None = Field(
+        default=None, description="LLM提取置信度"
+    )
+    extraction_source: str | None = Field(default=None, description="数据来源")
+    verified: bool | None = Field(default=None, description="是否人工审核")
+
+
+class PropertyCertificateResponse(PropertyCertificateBase):
+    """产权证响应"""
+
+    id: str = Field(description="证书ID")
+    extraction_confidence: float | None = Field(
+        default=None, description="LLM提取置信度"
+    )
+    extraction_source: str = Field(description="数据来源")
+    verified: bool = Field(description="是否人工审核")
+    created_at: datetime = Field(description="创建时间")
+    updated_at: datetime = Field(description="更新时间")
+    created_by: str | None = Field(default=None, description="创建人ID")
+
+    class Config:
+        from_attributes = True

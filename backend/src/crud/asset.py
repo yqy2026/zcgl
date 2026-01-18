@@ -188,7 +188,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             non_searchable_fields={
                 "manager_name",  # 经理姓名
                 "project_phone",  # 项目电话
-            }
+            },
         )
 
     def create(

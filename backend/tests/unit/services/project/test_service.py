@@ -56,12 +56,16 @@ class TestCreateProject:
         )
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=None):
-            with patch("src.crud.project.project_crud.create", return_value=mock_project):
+            with patch(
+                "src.crud.project.project_crud.create", return_value=mock_project
+            ):
                 result = project_service.create_project(mock_db, obj_in=obj_in)
 
                 assert result is not None
 
-    def test_create_project_auto_generates_code(self, project_service, mock_db, mock_project):
+    def test_create_project_auto_generates_code(
+        self, project_service, mock_db, mock_project
+    ):
         """测试自动生成项目编码"""
         obj_in = ProjectCreate(
             name="新项目",
@@ -69,9 +73,13 @@ class TestCreateProject:
             project_status="规划中",
         )
 
-        with patch.object(project_service, "generate_project_code", return_value="PJ2501003"):
+        with patch.object(
+            project_service, "generate_project_code", return_value="PJ2501003"
+        ):
             with patch("src.crud.project.project_crud.get_by_code", return_value=None):
-                with patch("src.crud.project.project_crud.create", return_value=mock_project):
+                with patch(
+                    "src.crud.project.project_crud.create", return_value=mock_project
+                ):
                     result = project_service.create_project(mock_db, obj_in=obj_in)
 
                     assert result is not None
@@ -84,7 +92,9 @@ class TestCreateProject:
             project_status="规划中",
         )
 
-        with patch("src.crud.project.project_crud.get_by_code", return_value=mock_project):
+        with patch(
+            "src.crud.project.project_crud.get_by_code", return_value=mock_project
+        ):
             with pytest.raises(ValueError, match="项目编码.*已存在"):
                 project_service.create_project(mock_db, obj_in=obj_in)
 
@@ -97,8 +107,12 @@ class TestCreateProject:
         )
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=None):
-            with patch("src.crud.project.project_crud.create", return_value=mock_project):
-                result = project_service.create_project(mock_db, obj_in=obj_in, created_by="user_123")
+            with patch(
+                "src.crud.project.project_crud.create", return_value=mock_project
+            ):
+                result = project_service.create_project(
+                    mock_db, obj_in=obj_in, created_by="user_123"
+                )
 
                 assert result is not None
 
@@ -114,7 +128,9 @@ class TestUpdateProject:
         obj_in = ProjectUpdate(name="更新后的项目名称")
 
         with patch("src.crud.project.project_crud.get", return_value=mock_project):
-            with patch("src.crud.project.project_crud.update", return_value=mock_project):
+            with patch(
+                "src.crud.project.project_crud.update", return_value=mock_project
+            ):
                 result = project_service.update_project(
                     mock_db, project_id="project_123", obj_in=obj_in
                 )
@@ -136,9 +152,14 @@ class TestUpdateProject:
         obj_in = ProjectUpdate(project_status="进行中")
 
         with patch("src.crud.project.project_crud.get", return_value=mock_project):
-            with patch("src.crud.project.project_crud.update", return_value=mock_project):
+            with patch(
+                "src.crud.project.project_crud.update", return_value=mock_project
+            ):
                 result = project_service.update_project(
-                    mock_db, project_id="project_123", obj_in=obj_in, updated_by="user_123"
+                    mock_db,
+                    project_id="project_123",
+                    obj_in=obj_in,
+                    updated_by="user_123",
                 )
 
                 assert result is not None
@@ -150,7 +171,9 @@ class TestUpdateProject:
 class TestToggleStatus:
     """测试切换状态"""
 
-    def test_toggle_status_from_active_to_paused(self, project_service, mock_db, mock_project):
+    def test_toggle_status_from_active_to_paused(
+        self, project_service, mock_db, mock_project
+    ):
         """测试从激活状态切换到暂停"""
         mock_project.project_status = "进行中"
 
@@ -160,7 +183,9 @@ class TestToggleStatus:
             assert result is not None
             mock_db.commit.assert_called_once()
 
-    def test_toggle_status_from_paused_to_active(self, project_service, mock_db, mock_project):
+    def test_toggle_status_from_paused_to_active(
+        self, project_service, mock_db, mock_project
+    ):
         """测试从暂停状态切换到进行中"""
         mock_project.project_status = "暂停"
 
@@ -170,7 +195,9 @@ class TestToggleStatus:
             assert result is not None
             mock_db.commit.assert_called_once()
 
-    def test_toggle_status_from_planning_to_paused(self, project_service, mock_db, mock_project):
+    def test_toggle_status_from_planning_to_paused(
+        self, project_service, mock_db, mock_project
+    ):
         """测试从规划中切换到暂停"""
         mock_project.project_status = "规划中"
 
@@ -259,7 +286,9 @@ class TestGenerateProjectCode:
         mock_last_project.code = "PJ2501001"
 
         mock_query = MagicMock()
-        mock_query.filter.return_value.order_by.return_value.first.return_value = mock_last_project
+        mock_query.filter.return_value.order_by.return_value.first.return_value = (
+            mock_last_project
+        )
         mock_db.query.return_value = mock_query
 
         result = project_service.generate_project_code(mock_db)
@@ -307,7 +336,9 @@ class TestSearchProjects:
         )
 
         mock_items = [MagicMock(), MagicMock()]
-        with patch("src.crud.project.project_crud.search", return_value=(mock_items, 2)):
+        with patch(
+            "src.crud.project.project_crud.search", return_value=(mock_items, 2)
+        ):
             result = project_service.search_projects(mock_db, search_params)
 
             assert result is not None
@@ -325,7 +356,9 @@ class TestSearchProjects:
         )
 
         mock_items = [MagicMock()]
-        with patch("src.crud.project.project_crud.search", return_value=(mock_items, 25)):
+        with patch(
+            "src.crud.project.project_crud.search", return_value=(mock_items, 25)
+        ):
             result = project_service.search_projects(mock_db, search_params)
 
             assert result["page"] == 2

@@ -5,6 +5,7 @@ Verify Zhipu Vision Service Connection
 Tests the multimodal extraction with a real PDF contract.
 使用真实PDF合同测试多模态提取功能。
 """
+
 import asyncio
 import json
 import os
@@ -18,13 +19,16 @@ sys.path.insert(0, src_path)
 # Load environment variables
 try:
     from dotenv import load_dotenv
+
     env_path = os.path.join(os.path.dirname(__file__), "../.env")
     if os.path.exists(env_path):
         print(f"Loading env from {env_path}")
         load_dotenv(env_path)
     else:
         # Try config directory
-        env_path = os.path.join(os.path.dirname(__file__), "../config/backend.env.secure")
+        env_path = os.path.join(
+            os.path.dirname(__file__), "../config/backend.env.secure"
+        )
         if os.path.exists(env_path):
             print(f"Loading env from {env_path}")
             load_dotenv(env_path)
@@ -115,6 +119,7 @@ async def test_pdf_extraction(pdf_path: str):
     except Exception as e:
         print(f"\n❌ Exception during extraction: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -20,7 +20,7 @@ import type {
   OwnershipStatisticsResponse,
   OwnershipDeleteResponse,
   OwnershipSearchParams,
-  OwnershipDropdownOption
+  OwnershipDropdownOption,
 } from '@/types/ownership';
 
 export class OwnershipService {
@@ -38,7 +38,7 @@ export class OwnershipService {
         searchParams,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -58,14 +58,11 @@ export class OwnershipService {
    */
   async getOwnership(id: string): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.get<Ownership>(
-        `${this.baseUrl}/${id}`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Ownership>(`${this.baseUrl}/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取权属方详情失败: ${result.error}`);
@@ -85,21 +82,18 @@ export class OwnershipService {
     try {
       // 确保提供必需的分页参数
       const requestParams = {
-        page: (params?.page ?? 1),
-        size: (params?.size ?? 10),
+        page: params?.page ?? 1,
+        size: params?.size ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
       };
 
-      const result = await enhancedApiClient.get<OwnershipListResponse>(
-        this.baseUrl,
-        {
-          params: requestParams,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<OwnershipListResponse>(this.baseUrl, {
+        params: requestParams,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取权属方列表失败: ${result.error}`);
@@ -117,14 +111,10 @@ export class OwnershipService {
    */
   async createOwnership(data: OwnershipCreate): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.post<Ownership>(
-        this.baseUrl,
-        data,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.post<Ownership>(this.baseUrl, data, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`创建权属方失败: ${result.error}`);
@@ -142,14 +132,10 @@ export class OwnershipService {
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.put<Ownership>(
-        `${this.baseUrl}/${id}`,
-        data,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.put<Ownership>(`${this.baseUrl}/${id}`, data, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`更新权属方失败: ${result.error}`);
@@ -171,7 +157,7 @@ export class OwnershipService {
         `${this.baseUrl}/${id}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -198,7 +184,7 @@ export class OwnershipService {
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -223,7 +209,7 @@ export class OwnershipService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -248,7 +234,7 @@ export class OwnershipService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -275,9 +261,7 @@ export class OwnershipService {
   async validateOwnershipCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: code });
-      return !result.items.some(item =>
-        item.code === code && item.id !== excludeId
-      );
+      return !result.items.some(item => item.code === code && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       ownershipLogger.error('验证权属方编码失败:', undefined, { error: enhancedError.message });
@@ -291,9 +275,7 @@ export class OwnershipService {
   async validateOwnershipName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: name });
-      return !result.items.some(item =>
-        item.name === name && item.id !== excludeId
-      );
+      return !result.items.some(item => item.name === name && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       ownershipLogger.error('验证权属方名称失败:', undefined, { error: enhancedError.message });
@@ -331,7 +313,7 @@ export class OwnershipService {
       if ((ownership.asset_count ?? 0) > 0) {
         return {
           canDelete: false,
-          reason: `该权属方还有 ${ownership.asset_count} 个关联资产，无法删除`
+          reason: `该权属方还有 ${ownership.asset_count} 个关联资产，无法删除`,
         };
       }
 
@@ -351,7 +333,7 @@ export class OwnershipService {
       const options = await this.getOwnershipOptions();
       return options.map(option => ({
         value: option.id,
-        label: `${option.name} (${option.code})`
+        label: `${option.name} (${option.code})`,
       }));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -407,16 +389,16 @@ export class OwnershipService {
   /**
    * 权属方数据导出
    */
-  async exportOwnerships(format: 'excel' | 'csv' = 'excel', filters?: OwnershipSearchParams): Promise<Blob> {
+  async exportOwnerships(
+    format: 'excel' | 'csv' = 'excel',
+    filters?: OwnershipSearchParams
+  ): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        `${this.baseUrl}/export`,
-        {
-          params: { format, ...filters },
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+        params: { format, ...filters },
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出权属方数据失败: ${result.error}`);
@@ -447,17 +429,13 @@ export class OwnershipService {
         message: string;
         imported?: number;
         errors?: string[];
-      }>(
-        `${this.baseUrl}/import`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`导入权属方数据失败: ${result.error}`);

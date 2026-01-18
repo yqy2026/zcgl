@@ -85,12 +85,9 @@ export const useAppStore = create<AppState>()(
 
           // 自动移除通知
           if (notification.duration !== 0) {
-            setTimeout(
-              () => {
-                get().removeNotification(id);
-              },
-              notification.duration ?? 4500
-            );
+            setTimeout(() => {
+              get().removeNotification(id);
+            }, notification.duration ?? 4500);
           }
         },
 

@@ -352,7 +352,7 @@ def create_calculation_triggers(conn):
     for trigger in old_triggers:
         try:
             cursor.execute(f"DROP TRIGGER IF EXISTS {trigger}")
-        except:
+        except Exception:
             pass
 
     # 创建计算字段触发器 - INSERT

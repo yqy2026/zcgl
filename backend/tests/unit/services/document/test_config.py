@@ -10,7 +10,9 @@ from unittest.mock import patch
 import pytest
 
 # Skip all tests in this module - API mismatches with implementation
-pytestmark = pytest.mark.skip(reason="Config/extractor tests have API mismatches with implementation")
+pytestmark = pytest.mark.skip(
+    reason="Config/extractor tests have API mismatches with implementation"
+)
 
 from pydantic import ValidationError
 
@@ -114,13 +116,16 @@ class TestExtractionConfig:
 
     def test_from_env(self):
         """测试从环境变量加载配置"""
-        with patch.dict(os.environ, {
-            "EXTRACTION_CONFIDENCE_THRESHOLD": "0.8",
-            "EXTRACTION_MAX_RETRIES": "5",
-            "EXTRACTION_LLM_PROVIDER": "qwen",
-            "EXTRACTION_LLM_TIMEOUT": "60",
-            "EXTRACTION_OCR_ENABLED": "false",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "EXTRACTION_CONFIDENCE_THRESHOLD": "0.8",
+                "EXTRACTION_MAX_RETRIES": "5",
+                "EXTRACTION_LLM_PROVIDER": "qwen",
+                "EXTRACTION_LLM_TIMEOUT": "60",
+                "EXTRACTION_OCR_ENABLED": "false",
+            },
+        ):
             config = ExtractionConfig.from_env()
 
             assert config.confidence_threshold == 0.8
@@ -131,17 +136,23 @@ class TestExtractionConfig:
 
     def test_from_env_with_alias(self):
         """测试从环境变量加载时处理提供商别名"""
-        with patch.dict(os.environ, {
-            "EXTRACTION_LLM_PROVIDER": "glm-4v",  # 使用别名
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "EXTRACTION_LLM_PROVIDER": "glm-4v",  # 使用别名
+            },
+        ):
             config = ExtractionConfig.from_env()
             assert config.llm_provider == LLMProvider.GLM
 
     def test_from_env_invalid_provider_uses_default(self):
         """测试无效提供商时使用默认值"""
-        with patch.dict(os.environ, {
-            "EXTRACTION_LLM_PROVIDER": "invalid-provider",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "EXTRACTION_LLM_PROVIDER": "invalid-provider",
+            },
+        ):
             config = ExtractionConfig.from_env()
             assert config.llm_provider == LLMProvider.GLM  # 默认值
 
@@ -175,11 +186,14 @@ class TestPDFImportConfig:
 
     def test_from_env(self):
         """测试从环境变量加载完整配置"""
-        with patch.dict(os.environ, {
-            "OCR_LANG": "en",
-            "EXTRACTION_LLM_PROVIDER": "deepseek",
-            "DEBUG": "true",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "OCR_LANG": "en",
+                "EXTRACTION_LLM_PROVIDER": "deepseek",
+                "DEBUG": "true",
+            },
+        ):
             config = PDFImportConfig.from_env()
 
             assert config.ocr.language == "en"

@@ -19,7 +19,7 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None  # type: ignore
+    redis = None
 
 from ...enums.status import TaskExecutionStatus
 from ...models.pdf_import_session import (
@@ -803,7 +803,10 @@ class BatchStatusTracker:
                 failed_count = 0
                 for key in keys:
                     status = self._redis_client.hget(key, "status")
-                    if status == TaskExecutionStatus.PENDING.value or status == TaskExecutionStatus.RUNNING.value:
+                    if (
+                        status == TaskExecutionStatus.PENDING.value
+                        or status == TaskExecutionStatus.RUNNING.value
+                    ):
                         active_count += 1
                     elif status == TaskExecutionStatus.COMPLETED.value:
                         completed_count += 1

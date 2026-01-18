@@ -6,7 +6,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -90,9 +90,7 @@ class TestModelToDict:
     def test_model_with_datetime(self, mock_class_mapper):
         """测试包含 datetime 的模型"""
         now = datetime.now()
-        mock_mapper = MockMapper(
-            columns=[MockColumn("id"), MockColumn("created_at")]
-        )
+        mock_mapper = MockMapper(columns=[MockColumn("id"), MockColumn("created_at")])
         mock_class_mapper.return_value = mock_mapper
 
         model = MockModel({"id": 1, "created_at": now})
@@ -105,9 +103,7 @@ class TestModelToDict:
     def test_model_with_date(self, mock_class_mapper):
         """测试包含 date 的模型"""
         today = date.today()
-        mock_mapper = MockMapper(
-            columns=[MockColumn("id"), MockColumn("start_date")]
-        )
+        mock_mapper = MockMapper(columns=[MockColumn("id"), MockColumn("start_date")])
         mock_class_mapper.return_value = mock_mapper
 
         model = MockModel({"id": 1, "start_date": today})
@@ -119,9 +115,7 @@ class TestModelToDict:
     @patch("src.utils.model_utils.class_mapper")
     def test_model_with_decimal(self, mock_class_mapper):
         """测试包含 Decimal 的模型"""
-        mock_mapper = MockMapper(
-            columns=[MockColumn("id"), MockColumn("price")]
-        )
+        mock_mapper = MockMapper(columns=[MockColumn("id"), MockColumn("price")])
         mock_class_mapper.return_value = mock_mapper
 
         model = MockModel({"id": 1, "price": Decimal("99.99")})
@@ -167,9 +161,7 @@ class TestBatchToDict:
     @patch("src.utils.model_utils.class_mapper")
     def test_multiple_models(self, mock_class_mapper):
         """测试多个模型"""
-        mock_mapper = MockMapper(
-            columns=[MockColumn("id"), MockColumn("name")]
-        )
+        mock_mapper = MockMapper(columns=[MockColumn("id"), MockColumn("name")])
         mock_class_mapper.return_value = mock_mapper
 
         model1 = MockModel({"id": 1, "name": "First"})
@@ -184,9 +176,7 @@ class TestBatchToDict:
     @patch("src.utils.model_utils.class_mapper")
     def test_filters_none_models(self, mock_class_mapper):
         """测试过滤 None 模型"""
-        mock_mapper = MockMapper(
-            columns=[MockColumn("id"), MockColumn("name")]
-        )
+        mock_mapper = MockMapper(columns=[MockColumn("id"), MockColumn("name")])
         mock_class_mapper.return_value = mock_mapper
 
         model1 = MockModel({"id": 1, "name": "First"})

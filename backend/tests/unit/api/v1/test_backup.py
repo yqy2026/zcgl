@@ -24,7 +24,7 @@ Testing Approach:
 
 import os
 import tempfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -74,6 +74,7 @@ def temp_backup_dir():
     # Cleanup
     if os.path.exists(temp_dir):
         import shutil
+
         shutil.rmtree(temp_dir)
 
 
@@ -136,8 +137,7 @@ class TestCreateBackup:
 
         assert result["success"] is True
         mock_service.create_backup.assert_called_once_with(
-            backup_name=None,
-            db_path="test_database.db"
+            backup_name=None, db_path="test_database.db"
         )
 
     @patch("src.api.v1.backup.BackupService")
@@ -165,7 +165,9 @@ class TestCreateBackup:
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
-    async def test_create_backup_db_without_bind(self, mock_service_class, mock_db_without_bind):
+    async def test_create_backup_db_without_bind(
+        self, mock_service_class, mock_db_without_bind
+    ):
         """Test backup creation when db.bind is None"""
         from src.api.v1.backup import create_backup
 
@@ -179,7 +181,9 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name="backup_no_bind", db=mock_db_without_bind)
+        result = await create_backup(
+            backup_name="backup_no_bind", db=mock_db_without_bind
+        )
 
         # Verify db_path is None when bind is None
         call_args = mock_service.create_backup.call_args
@@ -188,7 +192,9 @@ class TestCreateBackup:
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
-    async def test_create_backup_non_sqlite_db(self, mock_service_class, mock_db_with_non_sqlite):
+    async def test_create_backup_non_sqlite_db(
+        self, mock_service_class, mock_db_with_non_sqlite
+    ):
         """Test backup creation with non-SQLite database"""
         from src.api.v1.backup import create_backup
 
@@ -202,7 +208,9 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name="pg_backup", db=mock_db_with_non_sqlite)
+        result = await create_backup(
+            backup_name="pg_backup", db=mock_db_with_non_sqlite
+        )
 
         # Verify db_path is None for non-SQLite databases
         call_args = mock_service.create_backup.call_args
@@ -394,9 +402,7 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         result = await restore_backup(
-            backup_name="test_backup",
-            confirm=True,
-            db=mock_db
+            backup_name="test_backup", confirm=True, db=mock_db
         )
 
         assert result["success"] is True
@@ -415,11 +421,7 @@ class TestRestoreBackup:
         from src.api.v1.backup import restore_backup
 
         with pytest.raises(HTTPException) as exc_info:
-            await restore_backup(
-                backup_name="test_backup",
-                confirm=False,
-                db=mock_db
-            )
+            await restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
 
         assert exc_info.value.status_code == 400
         assert "请确认恢复操作" in exc_info.value.detail
@@ -431,15 +433,13 @@ class TestRestoreBackup:
         from src.api.v1.backup import restore_backup
 
         mock_service = MagicMock()
-        mock_service.restore_backup.side_effect = FileNotFoundError("备份文件不存在: missing_backup")
+        mock_service.restore_backup.side_effect = FileNotFoundError(
+            "备份文件不存在: missing_backup"
+        )
         mock_service_class.return_value = mock_service
 
         with pytest.raises(HTTPException) as exc_info:
-            await restore_backup(
-                backup_name="missing_backup",
-                confirm=True,
-                db=mock_db
-            )
+            await restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 404
         assert "备份文件不存在" in exc_info.value.detail
@@ -451,22 +451,22 @@ class TestRestoreBackup:
         from src.api.v1.backup import restore_backup
 
         mock_service = MagicMock()
-        mock_service.restore_backup.side_effect = Exception("Restore failed: Database locked")
+        mock_service.restore_backup.side_effect = Exception(
+            "Restore failed: Database locked"
+        )
         mock_service_class.return_value = mock_service
 
         with pytest.raises(HTTPException) as exc_info:
-            await restore_backup(
-                backup_name="error_backup",
-                confirm=True,
-                db=mock_db
-            )
+            await restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 500
         assert "恢复数据备份失败" in exc_info.value.detail
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
-    async def test_restore_backup_db_without_bind(self, mock_service_class, mock_db_without_bind):
+    async def test_restore_backup_db_without_bind(
+        self, mock_service_class, mock_db_without_bind
+    ):
         """Test restore when db.bind is None"""
         from src.api.v1.backup import restore_backup
 
@@ -478,9 +478,7 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         result = await restore_backup(
-            backup_name="backup_no_bind",
-            confirm=True,
-            db=mock_db_without_bind
+            backup_name="backup_no_bind", confirm=True, db=mock_db_without_bind
         )
 
         # Verify db_path is None when bind is None
@@ -524,7 +522,9 @@ class TestDeleteBackup:
         from src.api.v1.backup import delete_backup
 
         mock_service = MagicMock()
-        mock_service.delete_backup.side_effect = FileNotFoundError("备份文件不存在: nonexistent")
+        mock_service.delete_backup.side_effect = FileNotFoundError(
+            "备份文件不存在: nonexistent"
+        )
         mock_service_class.return_value = mock_service
 
         with pytest.raises(HTTPException) as exc_info:
@@ -816,9 +816,7 @@ class TestBackupEdgeCases:
         mock_service_class.return_value = mock_service
 
         result = await restore_backup(
-            backup_name="test_backup",
-            confirm=True,
-            db=mock_db
+            backup_name="test_backup", confirm=True, db=mock_db
         )
 
         # Verify create_current_backup defaults to True
@@ -832,8 +830,8 @@ class TestBackupEdgeCases:
         """Test consistency across multiple backup operations"""
         from src.api.v1.backup import (
             create_backup,
-            list_backups,
             get_backup_stats,
+            list_backups,
             validate_backup,
         )
 
@@ -890,7 +888,7 @@ class TestBackupEdgeCases:
     @pytest.mark.asyncio
     async def test_concurrent_backup_operations(self, mock_service_class):
         """Test handling of concurrent backup operations"""
-        from src.api.v1.backup import list_backups, get_backup_stats
+        from src.api.v1.backup import get_backup_stats, list_backups
 
         mock_service = MagicMock()
 

@@ -4,33 +4,31 @@
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, call
-from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
 
 from src.crud.enum_field import (
     EnumFieldTypeCRUD,
-    EnumFieldValueCRUD,
     EnumFieldUsageCRUD,
+    EnumFieldValueCRUD,
     get_enum_field_type_crud,
-    get_enum_field_value_crud,
     get_enum_field_usage_crud,
+    get_enum_field_value_crud,
 )
 from src.models.enum_field import (
     EnumFieldType,
-    EnumFieldValue,
     EnumFieldUsage,
-    EnumFieldHistory,
+    EnumFieldValue,
 )
 from src.schemas.enum_field import (
     EnumFieldTypeCreate,
     EnumFieldTypeUpdate,
-    EnumFieldValueCreate,
-    EnumFieldValueUpdate,
     EnumFieldUsageCreate,
     EnumFieldUsageUpdate,
+    EnumFieldValueCreate,
+    EnumFieldValueUpdate,
 )
 
 
@@ -299,7 +297,9 @@ class TestEnumFieldTypeCRUD:
 
         assert len(results) == 1
 
-    def test_get_multi_enum_types_with_is_system_filter(self, mock_db, sample_enum_type):
+    def test_get_multi_enum_types_with_is_system_filter(
+        self, mock_db, sample_enum_type
+    ):
         """测试按是否系统内置筛选枚举类型"""
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -363,11 +363,10 @@ class TestEnumFieldTypeCRUD:
         mock_db.flush = MagicMock()
 
         # 模拟refresh后对象获得ID
-        created_type = EnumFieldType(
-            id="new_enum_type_123",
-            **sample_enum_type_create.model_dump()
+        EnumFieldType(id="new_enum_type_123", **sample_enum_type_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(
+            obj, "id", "new_enum_type_123"
         )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'new_enum_type_123')
 
         crud = EnumFieldTypeCRUD(mock_db)
         result = crud.create(sample_enum_type_create)
@@ -384,11 +383,10 @@ class TestEnumFieldTypeCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_type = EnumFieldType(
-            id="new_enum_type_123",
-            **sample_enum_type_create.model_dump()
+        EnumFieldType(id="new_enum_type_123", **sample_enum_type_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(
+            obj, "id", "new_enum_type_123"
         )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'new_enum_type_123')
 
         crud = EnumFieldTypeCRUD(mock_db)
         crud.create(sample_enum_type_create)
@@ -399,9 +397,7 @@ class TestEnumFieldTypeCRUD:
     def test_update_enum_type_success(self, mock_db, sample_enum_type):
         """测试成功更新枚举类型"""
         update_data = EnumFieldTypeUpdate(
-            name="更新后的资产类型",
-            description="更新后的描述",
-            updated_by="admin"
+            name="更新后的资产类型", description="更新后的描述", updated_by="admin"
         )
 
         mock_db.commit = MagicMock()
@@ -416,10 +412,7 @@ class TestEnumFieldTypeCRUD:
 
     def test_update_enum_type_with_history(self, mock_db, sample_enum_type):
         """测试更新枚举类型时记录变更历史"""
-        update_data = EnumFieldTypeUpdate(
-            name="新名称",
-            updated_by="admin"
-        )
+        update_data = EnumFieldTypeUpdate(name="新名称", updated_by="admin")
 
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
@@ -575,7 +568,11 @@ class TestEnumFieldTypeCRUD:
         mock_category_query = MagicMock()
         mock_category_query.filter.return_value = mock_category_query
         mock_category_query.group_by.return_value = mock_category_query
-        mock_category_query.all.return_value = [("asset", 5), ("contract", 3), (None, 2)]
+        mock_category_query.all.return_value = [
+            ("asset", 5),
+            ("contract", 3),
+            (None, 2),
+        ]
 
         query_call_count = [0]
 
@@ -596,8 +593,13 @@ class TestEnumFieldTypeCRUD:
         assert result["total_types"] == 10
         assert result["active_types"] == 8
         assert len(result["categories"]) == 3
-        assert any(cat["name"] == "asset" and cat["count"] == 5 for cat in result["categories"])
-        assert any(cat["name"] == "未分类" and cat["count"] == 2 for cat in result["categories"])
+        assert any(
+            cat["name"] == "asset" and cat["count"] == 5 for cat in result["categories"]
+        )
+        assert any(
+            cat["name"] == "未分类" and cat["count"] == 2
+            for cat in result["categories"]
+        )
 
 
 # ===================== EnumFieldValueCRUD Tests =====================
@@ -740,11 +742,10 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
-            id="new_enum_value_123",
-            **sample_enum_value_create.model_dump()
+        EnumFieldValue(id="new_enum_value_123", **sample_enum_value_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(
+            obj, "id", "new_enum_value_123"
         )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'new_enum_value_123')
 
         crud = EnumFieldValueCRUD(mock_db)
         result = crud.create(sample_enum_value_create)
@@ -784,14 +785,11 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
-            id="child_123",
-            **value_create.model_dump()
-        )
+        EnumFieldValue(id="child_123", **value_create.model_dump())
         mock_db.refresh.side_effect = lambda obj: (
-            setattr(obj, 'id', 'child_123') or
-            setattr(obj, 'level', 2) or
-            setattr(obj, 'path', 'parent_123/parent_123')
+            setattr(obj, "id", "child_123")
+            or setattr(obj, "level", 2)
+            or setattr(obj, "path", "parent_123/parent_123")
         )
 
         crud = EnumFieldValueCRUD(mock_db)
@@ -801,10 +799,7 @@ class TestEnumFieldValueCRUD:
 
     def test_update_enum_value_success(self, mock_db, sample_enum_value):
         """测试成功更新枚举值"""
-        update_data = EnumFieldValueUpdate(
-            label="更新后的标签",
-            updated_by="admin"
-        )
+        update_data = EnumFieldValueUpdate(label="更新后的标签", updated_by="admin")
 
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
@@ -834,8 +829,7 @@ class TestEnumFieldValueCRUD:
         mock_query.first.return_value = new_parent
 
         update_data = EnumFieldValueUpdate(
-            parent_id="new_parent_123",
-            updated_by="admin"
+            parent_id="new_parent_123", updated_by="admin"
         )
 
         mock_db.commit = MagicMock()
@@ -887,7 +881,9 @@ class TestEnumFieldValueCRUD:
 
         assert result is False
 
-    def test_delete_enum_value_with_children_raises_error(self, mock_db, sample_enum_value):
+    def test_delete_enum_value_with_children_raises_error(
+        self, mock_db, sample_enum_value
+    ):
         """测试删除包含子枚举值的值时抛出错误"""
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -919,11 +915,8 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
-            id="new_value_123",
-            **sample_enum_value_create.model_dump()
-        )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'new_value_123')
+        EnumFieldValue(id="new_value_123", **sample_enum_value_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", "new_value_123")
 
         values_data = [
             {
@@ -1030,11 +1023,8 @@ class TestEnumFieldUsageCRUD:
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
 
-        created_usage = EnumFieldUsage(
-            id="new_usage_123",
-            **usage_create.model_dump()
-        )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'new_usage_123')
+        EnumFieldUsage(id="new_usage_123", **usage_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", "new_usage_123")
 
         crud = EnumFieldUsageCRUD(mock_db)
         result = crud.create(usage_create)
@@ -1046,9 +1036,7 @@ class TestEnumFieldUsageCRUD:
     def test_update_usage_success(self, mock_db, sample_enum_usage):
         """测试成功更新使用记录"""
         update_data = EnumFieldUsageUpdate(
-            field_label="更新后的字段标签",
-            is_required=False,
-            updated_by="admin"
+            field_label="更新后的字段标签", is_required=False, updated_by="admin"
         )
 
         mock_db.commit = MagicMock()
@@ -1159,11 +1147,8 @@ class TestEdgeCases:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
-            id="standalone_123",
-            **value_create.model_dump()
-        )
-        mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'standalone_123')
+        EnumFieldValue(id="standalone_123", **value_create.model_dump())
+        mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", "standalone_123")
 
         crud = EnumFieldValueCRUD(mock_db)
         result = crud.create(value_create)

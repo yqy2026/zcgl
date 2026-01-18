@@ -105,8 +105,8 @@ export class ExcelService {
    */
   async importExcel(
     file: File,
-    sheetName = "物业总表",
-    onProgress?: (progress: number) => void,
+    sheetName = '物业总表',
+    onProgress?: (progress: number) => void
   ): Promise<ExcelImportResponse> {
     try {
       const formData = new FormData();
@@ -118,16 +118,18 @@ export class ExcelService {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
           },
-          onUploadProgress: onProgress ? (progressEvent) => {
-            if (progressEvent.total !== undefined && progressEvent.total > 0) {
-              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              onProgress(progress);
-            }
-          } : undefined,
+          onUploadProgress: onProgress
+            ? progressEvent => {
+                if (progressEvent.total !== undefined && progressEvent.total > 0) {
+                  const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                  onProgress(progress);
+                }
+              }
+            : undefined,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -152,7 +154,7 @@ export class ExcelService {
         {
           cache: false, // 需要实时状态
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -177,7 +179,7 @@ export class ExcelService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -202,7 +204,7 @@ export class ExcelService {
         {},
         {
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -220,14 +222,20 @@ export class ExcelService {
   /**
    * 重试失败的导入任务
    */
-  async retryImport(taskId: string): Promise<{ success: boolean; message: string; newTaskId?: string }> {
+  async retryImport(
+    taskId: string
+  ): Promise<{ success: boolean; message: string; newTaskId?: string }> {
     try {
-      const result = await enhancedApiClient.post<{ success: boolean; message: string; newTaskId?: string }>(
+      const result = await enhancedApiClient.post<{
+        success: boolean;
+        message: string;
+        newTaskId?: string;
+      }>(
         `${this.baseUrl}/import/retry/${taskId}`,
         {},
         {
           retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -254,7 +262,7 @@ export class ExcelService {
         request,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -279,7 +287,7 @@ export class ExcelService {
         {
           cache: false, // 需要实时状态
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -304,7 +312,7 @@ export class ExcelService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -329,7 +337,7 @@ export class ExcelService {
         {},
         {
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -349,14 +357,14 @@ export class ExcelService {
    */
   async downloadExportFile(filename: string, taskId?: string): Promise<void> {
     try {
-      const url = (taskId !== undefined && taskId !== '') ? `${this.baseUrl}/download/${filename}?task_id=${taskId}` : `${this.baseUrl}/download/${filename}`;
-      const result = await enhancedApiClient.get<Blob>(
-        url,
-        {
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const url =
+        taskId !== undefined && taskId !== ''
+          ? `${this.baseUrl}/download/${filename}?task_id=${taskId}`
+          : `${this.baseUrl}/download/${filename}`;
+      const result = await enhancedApiClient.get<Blob>(url, {
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`下载导出文件失败: ${result.error}`);
@@ -395,10 +403,10 @@ export class ExcelService {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
           },
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -413,7 +421,7 @@ export class ExcelService {
       return {
         valid: false,
         errors: [enhancedError.message],
-        warnings: []
+        warnings: [],
       };
     }
   }
@@ -421,16 +429,13 @@ export class ExcelService {
   /**
    * 下载Excel导入模板
    */
-  async downloadTemplate(templateName = "资产导入模板.xlsx"): Promise<void> {
+  async downloadTemplate(templateName = '资产导入模板.xlsx'): Promise<void> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        `${this.baseUrl}/import/template`,
-        {
-          params: { template_name: templateName },
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/import/template`, {
+        params: { template_name: templateName },
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`下载导入模板失败: ${result.error}`);
@@ -456,14 +461,11 @@ export class ExcelService {
    */
   async getAvailableTemplates(): Promise<ExcelTemplate[]> {
     try {
-      const result = await enhancedApiClient.get<ExcelTemplate[]>(
-        `${this.baseUrl}/templates`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<ExcelTemplate[]>(`${this.baseUrl}/templates`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取Excel模板列表失败: ${result.error}`);
@@ -490,7 +492,7 @@ export class ExcelService {
           params: { page, limit },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -513,7 +515,7 @@ export class ExcelService {
           params: { page, limit },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -528,7 +530,10 @@ export class ExcelService {
   /**
    * 获取所有历史记录
    */
-  async getAllHistory(page = 1, limit = 20): Promise<{
+  async getAllHistory(
+    page = 1,
+    limit = 20
+  ): Promise<{
     items: ImportExportHistory[];
     total: number;
     page: number;
@@ -540,15 +545,12 @@ export class ExcelService {
         total: number;
         page: number;
         pageSize: number;
-      }>(
-        `${this.baseUrl}/history`,
-        {
-          params: { page, limit },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/history`, {
+        params: { page, limit },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取历史记录失败: ${result.error}`);
@@ -568,14 +570,11 @@ export class ExcelService {
    */
   async getFieldMapping(): Promise<FieldMapping> {
     try {
-      const result = await enhancedApiClient.get<FieldMapping>(
-        `${this.baseUrl}/field-mapping`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<FieldMapping>(`${this.baseUrl}/field-mapping`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取字段映射失败: ${result.error}`);
@@ -599,7 +598,7 @@ export class ExcelService {
         { mapping },
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -617,14 +616,22 @@ export class ExcelService {
   /**
    * 重置字段映射为默认配置
    */
-  async resetFieldMapping(): Promise<{ success: boolean; message: string; defaultMapping: FieldMapping }> {
+  async resetFieldMapping(): Promise<{
+    success: boolean;
+    message: string;
+    defaultMapping: FieldMapping;
+  }> {
     try {
-      const result = await enhancedApiClient.post<{ success: boolean; message: string; defaultMapping: FieldMapping }>(
+      const result = await enhancedApiClient.post<{
+        success: boolean;
+        message: string;
+        defaultMapping: FieldMapping;
+      }>(
         `${this.baseUrl}/field-mapping/reset`,
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -646,14 +653,11 @@ export class ExcelService {
    */
   async getSupportedFormats(): Promise<SupportedFormats> {
     try {
-      const result = await enhancedApiClient.get<SupportedFormats>(
-        `${this.baseUrl}/formats`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<SupportedFormats>(`${this.baseUrl}/formats`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取支持格式失败: ${result.error}`);
@@ -671,8 +675,8 @@ export class ExcelService {
         mimeTypes: [
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'application/vnd.ms-excel',
-          'text/csv'
-        ]
+          'text/csv',
+        ],
       };
     }
   }
@@ -680,7 +684,10 @@ export class ExcelService {
   /**
    * 检查文件格式是否支持
    */
-  async isFormatSupported(filename: string, fileSize: number): Promise<{
+  async isFormatSupported(
+    filename: string,
+    fileSize: number
+  ): Promise<{
     supported: boolean;
     reason?: string;
     recommendedAction?: string;
@@ -695,7 +702,7 @@ export class ExcelService {
         { filename, file_size: fileSize },
         {
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -714,7 +721,7 @@ export class ExcelService {
         return {
           supported: false,
           reason: '不支持的文件格式',
-          recommendedAction: '请使用.xlsx、.xls或.csv格式的文件'
+          recommendedAction: '请使用.xlsx、.xls或.csv格式的文件',
         };
       }
 
@@ -722,7 +729,7 @@ export class ExcelService {
         return {
           supported: false,
           reason: '文件大小超过限制',
-          recommendedAction: '请压缩文件或减少数据量后重新上传'
+          recommendedAction: '请压缩文件或减少数据量后重新上传',
         };
       }
 
@@ -737,14 +744,11 @@ export class ExcelService {
    */
   async getExcelStatistics(): Promise<ExcelStatistics> {
     try {
-      const result = await enhancedApiClient.get<ExcelStatistics>(
-        `${this.baseUrl}/statistics`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<ExcelStatistics>(`${this.baseUrl}/statistics`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取Excel统计失败: ${result.error}`);
@@ -778,15 +782,12 @@ export class ExcelService {
         averageFileSize: number;
         performanceTrend: 'improving' | 'stable' | 'declining';
         recommendations: string[];
-      }>(
-        `${this.baseUrl}/analytics/import-performance`,
-        {
-          params: { time_range: timeRange },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/analytics/import-performance`, {
+        params: { time_range: timeRange },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取导入性能分析失败: ${result.error}`);
@@ -832,7 +833,7 @@ export class ExcelService {
     return {
       success: cancelledCount === totalTasks,
       cancelled,
-      failed
+      failed,
     };
   }
 
@@ -867,7 +868,7 @@ export class ExcelService {
     return {
       success: cancelledCount === totalTasks,
       cancelled,
-      failed
+      failed,
     };
   }
 
@@ -898,7 +899,7 @@ export class ExcelService {
     return {
       success: downloadedCount === totalFiles,
       downloaded,
-      failed
+      failed,
     };
   }
 
@@ -907,7 +908,10 @@ export class ExcelService {
   /**
    * 预览Excel文件内容
    */
-  async previewExcelFile(file: File, maxRows: number = 10): Promise<{
+  async previewExcelFile(
+    file: File,
+    maxRows: number = 10
+  ): Promise<{
     headers: string[];
     rows: string[][];
     totalRows: number;
@@ -923,17 +927,13 @@ export class ExcelService {
         rows: string[][];
         totalRows: number;
         sheetNames: string[];
-      }>(
-        `${this.baseUrl}/preview`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/preview`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`预览Excel文件失败: ${result.error}`);
@@ -966,7 +966,7 @@ export class ExcelService {
         { expired_days: expiredDays },
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -1000,14 +1000,11 @@ export class ExcelService {
         taskTimeout: number;
         cleanupInterval: number;
         enableAutoCleanup: boolean;
-      }>(
-        `${this.baseUrl}/configuration`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/configuration`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取系统配置失败: ${result.error}`);

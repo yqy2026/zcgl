@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from src.models.auth import User
 from src.models.notification import Notification, NotificationPriority, NotificationType
 from src.models.rent_contract import RentContract, RentLedger
-from src.services.notification.scheduler import NotificationSchedulerService, run_notification_tasks
+from src.services.notification.scheduler import (
+    NotificationSchedulerService,
+    run_notification_tasks,
+)
 
 
 # ============================================================================
@@ -140,7 +143,9 @@ class TestSendWecomNotification:
         with patch("src.services.notification.scheduler.wecom_service") as mock_wecom:
             mock_wecom.enabled = True
             scheduler_service.wecom_enabled = True
-            mock_wecom.send_notification = AsyncMock(side_effect=Exception("Network error"))
+            mock_wecom.send_notification = AsyncMock(
+                side_effect=Exception("Network error")
+            )
 
             result = await scheduler_service._send_wecom_notification(notification)
 
@@ -242,7 +247,9 @@ class TestCheckContractExpiry:
 
         mock_db.query.side_effect = query_side_effect
 
-        with patch.object(scheduler_service, "_create_and_send_notification") as mock_create:
+        with patch.object(
+            scheduler_service, "_create_and_send_notification"
+        ) as mock_create:
             result = scheduler_service.check_contract_expiry(days_ahead=30)
 
             assert result == 1
@@ -276,7 +283,7 @@ class TestCheckContractExpiry:
 
         mock_db.query.side_effect = query_side_effect
 
-        with patch.object(scheduler_service, "_create_and_send_notification") as mock_create:
+        with patch.object(scheduler_service, "_create_and_send_notification"):
             result = scheduler_service.check_contract_expiry(days_ahead=30)
 
             assert result == 1
@@ -602,7 +609,9 @@ class TestRunNotificationTasks:
             mock_gen = iter([mock_db])
             mock_get_db.return_value = mock_gen
 
-            with patch("src.services.notification.scheduler.NotificationSchedulerService") as mock_service_class:
+            with patch(
+                "src.services.notification.scheduler.NotificationSchedulerService"
+            ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.check_contract_expiry.return_value = 5
                 mock_service.check_payment_overdue.return_value = 3
@@ -624,7 +633,9 @@ class TestRunNotificationTasks:
             mock_gen = iter([mock_db])
             mock_get_db.return_value = mock_gen
 
-            with patch("src.services.notification.scheduler.NotificationSchedulerService") as mock_service_class:
+            with patch(
+                "src.services.notification.scheduler.NotificationSchedulerService"
+            ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.check_contract_expiry.side_effect = Exception("DB error")
                 mock_service_class.return_value = mock_service
@@ -704,7 +715,9 @@ class TestSchedulerEdgeCases:
         """测试台账应缴日期为datetime对象"""
         ledger = MagicMock(spec=RentLedger)
         # Set due_date as datetime instead of date
-        due_datetime = datetime.combine(date.today() - timedelta(days=5), datetime.min.time())
+        due_datetime = datetime.combine(
+            date.today() - timedelta(days=5), datetime.min.time()
+        )
         ledger.due_date = due_datetime
         ledger.data_status = "正常"
         ledger.payment_status = "未支付"

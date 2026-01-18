@@ -386,14 +386,12 @@ export const NOTIFICATION_API = {
   DELETE: (id: string) => `/notifications/${id}`,
 } as const;
 
-
 // A/B测试API
 export const AB_TESTING_API = {
   EVENTS: '/analytics/abtest-events',
   CONVERSIONS: '/analytics/abtest-conversions',
   CONFIGURATIONS: '/analytics/abtest-config',
 } as const;
-
 
 // ==================== API路径构建工具 ====================
 

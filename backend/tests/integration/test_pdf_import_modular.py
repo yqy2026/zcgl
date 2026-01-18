@@ -5,7 +5,10 @@ PDF导入API集成测试
 """
 
 import pytest
-pytestmark = pytest.mark.skip(reason="Integration API tests require real JWT authentication setup")
+
+pytestmark = pytest.mark.skip(
+    reason="Integration API tests require real JWT authentication setup"
+)
 from fastapi.testclient import TestClient
 
 from src.main import app
@@ -190,7 +193,9 @@ class TestPDFRoutesRegistration:
         for endpoint in required_endpoints:
             # 检查端点或其参数化版本是否存在
             matching_paths = [p for p in pdf_paths if endpoint.split("{")[0] in p]
-            assert len(matching_paths) > 0, f"Endpoint {endpoint} not found in registered paths"
+            assert len(matching_paths) > 0, (
+                f"Endpoint {endpoint} not found in registered paths"
+            )
 
         print(f"\n[INFO] Found {len(pdf_paths)} PDF-import endpoints:")
         for path in sorted(pdf_paths):

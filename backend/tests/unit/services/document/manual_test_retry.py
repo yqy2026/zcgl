@@ -9,7 +9,9 @@ NOTE: The retry.py module does not exist. Tests are skipped until implementation
 import pytest
 
 # Skip all tests in this module - retry module not implemented
-pytestmark = pytest.mark.skip(reason="retry module (src.services.document.retry) not found")
+pytestmark = pytest.mark.skip(
+    reason="retry module (src.services.document.retry) not found"
+)
 
 from unittest.mock import Mock
 
@@ -25,6 +27,7 @@ from src.services.document.retry import (
 # ============================================================================
 # retry_on_network_error 装饰器测试
 # ============================================================================
+
 
 class TestRetryOnNetworkError:
     """网络错误重试装饰器测试"""
@@ -115,6 +118,7 @@ class TestRetryOnNetworkError:
 # retry_on_api_error 装饰器测试
 # ============================================================================
 
+
 class TestRetryOnAPIError:
     """API 错误重试装饰器测试"""
 
@@ -132,9 +136,7 @@ class TestRetryOnAPIError:
                 response = Mock()
                 response.status_code = 500
                 raise httpx.HTTPStatusError(
-                    "Internal Server Error",
-                    request=Mock(),
-                    response=response
+                    "Internal Server Error", request=Mock(), response=response
                 )
 
             return {"success": True}
@@ -157,9 +159,7 @@ class TestRetryOnAPIError:
                 response = Mock()
                 response.status_code = 429
                 raise httpx.HTTPStatusError(
-                    "Too Many Requests",
-                    request=Mock(),
-                    response=response
+                    "Too Many Requests", request=Mock(), response=response
                 )
 
             return {"success": True}
@@ -179,11 +179,7 @@ class TestRetryOnAPIError:
 
             response = Mock()
             response.status_code = 404
-            raise httpx.HTTPStatusError(
-                "Not Found",
-                request=Mock(),
-                response=response
-            )
+            raise httpx.HTTPStatusError("Not Found", request=Mock(), response=response)
 
         with pytest.raises(httpx.HTTPStatusError):
             await mock_api_call()
@@ -196,6 +192,7 @@ class TestRetryOnAPIError:
 # ============================================================================
 # retry_on_vision_api 装饰器测试
 # ============================================================================
+
 
 class TestRetryOnVisionAPI:
     """视觉 API 重试装饰器测试"""
@@ -238,12 +235,14 @@ class TestRetryOnVisionAPI:
 # retry_async_call 函数测试
 # ============================================================================
 
+
 class TestRetryAsyncCall:
     """retry_async_call 函数测试"""
 
     @pytest.mark.asyncio
     async def test_successful_call(self):
         """测试成功调用"""
+
         async def mock_func(x, y):
             return x + y
 
@@ -269,6 +268,7 @@ class TestRetryAsyncCall:
     @pytest.mark.asyncio
     async def test_max_attempts_exceeded(self):
         """测试超过最大尝试次数"""
+
         async def mock_func():
             raise httpx.NetworkError("Network error")
 
@@ -287,9 +287,7 @@ class TestRetryAsyncCall:
                 response = Mock()
                 response.status_code = 503
                 raise httpx.HTTPStatusError(
-                    "Service Unavailable",
-                    request=Mock(),
-                    response=response
+                    "Service Unavailable", request=Mock(), response=response
                 )
             return {"success": True}
 
@@ -301,6 +299,7 @@ class TestRetryAsyncCall:
 # ============================================================================
 # RetryContext 测试
 # ============================================================================
+
 
 class TestRetryContext:
     """RetryContext 上下文管理器测试"""
@@ -330,7 +329,7 @@ class TestRetryContext:
             max_attempts=3,
             wait_min=0.01,
             wait_max=0.1,
-            retry_on=(httpx.TimeoutException,)
+            retry_on=(httpx.TimeoutException,),
         ) as retry:
             while retry.should_continue():
                 attempt_count += 1
@@ -351,9 +350,7 @@ class TestRetryContext:
 
         with pytest.raises(httpx.TimeoutException):
             async with RetryContext(
-                max_attempts=3,
-                wait_min=0.01,
-                retry_on=(httpx.TimeoutException,)
+                max_attempts=3, wait_min=0.01, retry_on=(httpx.TimeoutException,)
             ) as retry:
                 while retry.should_continue():
                     attempt_count += 1
@@ -371,8 +368,7 @@ class TestRetryContext:
 
         with pytest.raises(ValueError):
             async with RetryContext(
-                max_attempts=3,
-                retry_on=(httpx.TimeoutException,)
+                max_attempts=3, retry_on=(httpx.TimeoutException,)
             ) as retry:
                 while retry.should_continue():
                     attempt_count += 1
@@ -394,7 +390,7 @@ class TestRetryContext:
             max_attempts=3,
             wait_min=0.05,
             wait_max=1.0,
-            retry_on=(httpx.TimeoutException,)
+            retry_on=(httpx.TimeoutException,),
         ) as retry:
             while retry.should_continue():
                 start = time.time()
@@ -419,6 +415,7 @@ class TestRetryContext:
 # 集成测试示例
 # ============================================================================
 
+
 class TestRetryIntegration:
     """重试机制集成测试"""
 
@@ -435,9 +432,7 @@ class TestRetryIntegration:
                 response = Mock()
                 response.status_code = 503
                 raise httpx.HTTPStatusError(
-                    "Service Unavailable",
-                    request=Mock(),
-                    response=response
+                    "Service Unavailable", request=Mock(), response=response
                 )
             return {"data": "success"}
 

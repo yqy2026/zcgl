@@ -6,11 +6,10 @@ PDF 缓存层单元测试
 
 import asyncio
 import json
-import os
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -27,6 +26,7 @@ from src.services.document.cache import (
 # ============================================================================
 # PDFCache 测试
 # ============================================================================
+
 
 class TestPDFCache:
     """PDFCache 类测试"""
@@ -243,6 +243,7 @@ class TestPDFCache:
 # CachedExtractor 装饰器测试
 # ============================================================================
 
+
 class TestCachedExtractor:
     """CachedExtractor 装饰器测试"""
 
@@ -296,7 +297,7 @@ class TestCachedExtractor:
 
         decorator = CachedExtractor(
             cache=cache,
-            cache_key_func=lambda x: str(file1)  # 所有路径都映射到同一个文件
+            cache_key_func=lambda x: str(file1),  # 所有路径都映射到同一个文件
         )
 
         @decorator
@@ -316,6 +317,7 @@ class TestCachedExtractor:
 # ============================================================================
 # ExtractionCache 测试
 # ============================================================================
+
 
 class TestExtractionCache:
     """ExtractionCache 高级缓存测试"""
@@ -342,36 +344,28 @@ class TestExtractionCache:
     @pytest.fixture
     def high_confidence_result(self):
         """高置信度结果"""
-        return {
-            "success": True,
-            "confidence": 0.9,
-            "data": {"field": "value"}
-        }
+        return {"success": True, "confidence": 0.9, "data": {"field": "value"}}
 
     @pytest.fixture
     def low_confidence_result(self):
         """低置信度结果"""
-        return {
-            "success": True,
-            "confidence": 0.5,
-            "data": {"field": "value"}
-        }
+        return {"success": True, "confidence": 0.5, "data": {"field": "value"}}
 
     def test_conditional_cache_registration(self, extraction_cache):
         """测试条件缓存注册"""
         # 注册条件
         extraction_cache.register_conditional_cache(
-            "high_confidence_only",
-            lambda result: result.get("confidence", 0) > 0.8
+            "high_confidence_only", lambda result: result.get("confidence", 0) > 0.8
         )
 
         assert "high_confidence_only" in extraction_cache._conditional_caches
 
-    def test_get_with_condition_met(self, extraction_cache, sample_pdf_file, high_confidence_result):
+    def test_get_with_condition_met(
+        self, extraction_cache, sample_pdf_file, high_confidence_result
+    ):
         """测试条件满足时获取缓存"""
         extraction_cache.register_conditional_cache(
-            "high_confidence_only",
-            lambda result: result.get("confidence", 0) > 0.8
+            "high_confidence_only", lambda result: result.get("confidence", 0) > 0.8
         )
 
         # 设置高置信度缓存
@@ -382,11 +376,12 @@ class TestExtractionCache:
         assert cached is not None
         assert cached["result"]["confidence"] == 0.9
 
-    def test_get_with_condition_not_met(self, extraction_cache, sample_pdf_file, low_confidence_result):
+    def test_get_with_condition_not_met(
+        self, extraction_cache, sample_pdf_file, low_confidence_result
+    ):
         """测试条件不满足时返回 None"""
         extraction_cache.register_conditional_cache(
-            "high_confidence_only",
-            lambda result: result.get("confidence", 0) > 0.8
+            "high_confidence_only", lambda result: result.get("confidence", 0) > 0.8
         )
 
         # 设置低置信度缓存
@@ -453,6 +448,7 @@ class TestExtractionCache:
 # cached_extraction 装饰器测试
 # ============================================================================
 
+
 class TestCachedExtractionDecorator:
     """cached_extraction 装饰器测试"""
 
@@ -465,11 +461,7 @@ class TestCachedExtractionDecorator:
         async def extract_func(file_path: str):
             nonlocal call_count
             call_count += 1
-            return {
-                "success": True,
-                "data": {"field": "value"},
-                "confidence": 0.9
-            }
+            return {"success": True, "data": {"field": "value"}, "confidence": 0.9}
 
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"Test content")
@@ -493,28 +485,30 @@ class TestCachedExtractionDecorator:
         async def extract_func(file_path: str):
             nonlocal call_count
             call_count += 1
-            return {
-                "success": False,
-                "error": "Extraction failed"
-            }
+            return {"success": False, "error": "Extraction failed"}
 
         pdf_path = tmp_path / "test_failed.pdf"
         pdf_path.write_bytes(b"Unique content for failed test")
 
         # 第一次调用
         result1 = await extract_func(str(pdf_path))
-        assert call_count == 1, f"Expected 1 call after first extraction, got {call_count}"
+        assert call_count == 1, (
+            f"Expected 1 call after first extraction, got {call_count}"
+        )
         assert result1["success"] is False
 
         # 第二次调用 - 应重新执行（失败结果不缓存）
         result2 = await extract_func(str(pdf_path))
-        assert call_count == 2, f"Expected 2 calls after second extraction, got {call_count}"
+        assert call_count == 2, (
+            f"Expected 2 calls after second extraction, got {call_count}"
+        )
         assert result2["success"] is False
 
 
 # ============================================================================
 # 全局缓存函数测试
 # ============================================================================
+
 
 class TestGlobalCacheFunctions:
     """全局缓存函数测试"""
@@ -541,6 +535,7 @@ class TestGlobalCacheFunctions:
 # ============================================================================
 # PDFCache Error Handling Tests (Lines 121-164)
 # ============================================================================
+
 
 class TestPDFCacheErrorHandling:
     """PDFCache 错误处理测试"""
@@ -617,7 +612,9 @@ class TestPDFCacheErrorHandling:
     def test_cache_unexpected_error_raises_runtime_error(self, cache, sample_pdf_file):
         """测试未预期错误抛出 RuntimeError (Lines 155-164)"""
         # Mock get_file_hash to raise unexpected error
-        with patch.object(cache, "get_file_hash", side_effect=ValueError("Unexpected error")):
+        with patch.object(
+            cache, "get_file_hash", side_effect=ValueError("Unexpected error")
+        ):
             with pytest.raises(RuntimeError, match="Cache system malfunction"):
                 cache.get(sample_pdf_file)
 
@@ -625,6 +622,7 @@ class TestPDFCacheErrorHandling:
 # ============================================================================
 # PDFCache.set Error Handling Tests (Lines 205-246)
 # ============================================================================
+
 
 class TestPDFCacheSetErrorHandling:
     """PDFCache.set 错误处理测试"""
@@ -674,6 +672,7 @@ class TestPDFCacheSetErrorHandling:
 
     def test_cache_set_type_error_serialization(self, cache, sample_pdf_file):
         """测试序列化 TypeError (Lines 231-238)"""
+
         # 尝试缓存不可序列化的对象
         class UnserializableClass:
             pass
@@ -695,7 +694,9 @@ class TestPDFCacheSetErrorHandling:
     def test_cache_set_unexpected_error_raises(self, cache, sample_pdf_file):
         """测试未预期错误抛出 (Lines 239-246)"""
         # Mock get_file_hash to raise unexpected error
-        with patch.object(cache, "get_file_hash", side_effect=RuntimeError("Unexpected")):
+        with patch.object(
+            cache, "get_file_hash", side_effect=RuntimeError("Unexpected")
+        ):
             with pytest.raises(RuntimeError):
                 cache.set(sample_pdf_file, {"test": "data"})
 
@@ -703,6 +704,7 @@ class TestPDFCacheSetErrorHandling:
 # ============================================================================
 # PDFCache.invalidate Error Handling Tests (Lines 269-271)
 # ============================================================================
+
 
 class TestPDFCacheInvalidateErrors:
     """PDFCache.invalidate 错误处理测试"""
@@ -730,6 +732,7 @@ class TestPDFCacheInvalidateErrors:
 # PDFCache.clear Error Handling Tests (Lines 303-305)
 # ============================================================================
 
+
 class TestPDFCacheClearErrors:
     """PDFCache.clear 错误处理测试"""
 
@@ -756,6 +759,7 @@ class TestPDFCacheClearErrors:
 # AsyncDocumentCache Tests (Lines 368-657)
 # ============================================================================
 
+
 class TestAsyncDocumentCache:
     """AsyncDocumentCache 测试"""
 
@@ -768,7 +772,9 @@ class TestAsyncDocumentCache:
     @pytest.fixture
     def async_cache(self, temp_cache_dir):
         """创建异步缓存实例"""
-        return AsyncDocumentCache(cache_dir=temp_cache_dir, ttl_seconds=60, use_async=True)
+        return AsyncDocumentCache(
+            cache_dir=temp_cache_dir, ttl_seconds=60, use_async=True
+        )
 
     @pytest.fixture
     def sample_pdf_file(self, tmp_path):
@@ -788,9 +794,7 @@ class TestAsyncDocumentCache:
         """测试同步回退计算文件哈希 (Lines 407-408)"""
         # 创建禁用异步的缓存
         cache_no_async = AsyncDocumentCache(
-            cache_dir=temp_cache_dir,
-            ttl_seconds=60,
-            use_async=False
+            cache_dir=temp_cache_dir, ttl_seconds=60, use_async=False
         )
 
         pdf_file = Path(temp_cache_dir) / "test.pdf"
@@ -871,7 +875,9 @@ class TestAsyncDocumentCache:
         await async_cache.set("test_hash", {"data": "test"})
 
         # Mock stat to raise PermissionError
-        with patch("asyncio.to_thread", side_effect=PermissionError("Permission denied")):
+        with patch(
+            "asyncio.to_thread", side_effect=PermissionError("Permission denied")
+        ):
             with pytest.raises(PermissionError):
                 await async_cache.get("test_hash")
 
@@ -924,7 +930,9 @@ class TestAsyncDocumentCache:
     async def test_async_cache_set_disk_full_error(self, temp_cache_dir):
         """测试异步缓存磁盘空间不足 (Lines 543-553)"""
         # Create cache without async to test synchronous path
-        cache = AsyncDocumentCache(cache_dir=temp_cache_dir, ttl_seconds=60, use_async=False)
+        cache = AsyncDocumentCache(
+            cache_dir=temp_cache_dir, ttl_seconds=60, use_async=False
+        )
 
         # Mock to_thread to raise disk full error
         disk_full_error = OSError("No space left on device")
@@ -938,7 +946,9 @@ class TestAsyncDocumentCache:
     async def test_async_cache_set_permission_error(self, temp_cache_dir):
         """测试异步缓存权限错误 (Lines 554-563)"""
         # Create cache without async to test synchronous path
-        cache = AsyncDocumentCache(cache_dir=temp_cache_dir, ttl_seconds=60, use_async=False)
+        cache = AsyncDocumentCache(
+            cache_dir=temp_cache_dir, ttl_seconds=60, use_async=False
+        )
 
         # Mock to_thread to raise permission error
         perm_error = OSError("Permission denied")
@@ -951,6 +961,7 @@ class TestAsyncDocumentCache:
     @pytest.mark.asyncio
     async def test_async_cache_set_serialization_error(self, async_cache):
         """测试异步缓存序列化错误 (Lines 571-580)"""
+
         # 尝试缓存不可序列化的对象
         class UnserializableClass:
             pass
@@ -1055,7 +1066,9 @@ class TestAsyncDocumentCache:
     def test_async_cache_init_without_aiofiles(self, temp_cache_dir):
         """测试异步缓存初始化时 aiofiles 不可用 (Lines 384-387)"""
         with patch("src.services.document.cache.AIOFILES_AVAILABLE", False):
-            cache = AsyncDocumentCache(cache_dir=temp_cache_dir, ttl_seconds=60, use_async=True)
+            cache = AsyncDocumentCache(
+                cache_dir=temp_cache_dir, ttl_seconds=60, use_async=True
+            )
 
             # 应禁用异步并回退到同步
             assert cache._use_async is False
@@ -1064,6 +1077,7 @@ class TestAsyncDocumentCache:
 # ============================================================================
 # CachedExtractor Additional Tests (Line 717)
 # ============================================================================
+
 
 class TestCachedExtractorEdgeCases:
     """CachedExtractor 边缘情况测试"""
@@ -1106,6 +1120,7 @@ class TestCachedExtractorEdgeCases:
 # clear_all_caches Additional Tests (Line 876)
 # ============================================================================
 
+
 class TestClearAllCachesEdgeCases:
     """clear_all_caches 边缘情况测试"""
 
@@ -1113,6 +1128,7 @@ class TestClearAllCachesEdgeCases:
         """测试没有全局缓存时清理 (Line 876)"""
         # 重置全局缓存
         import src.services.document.cache as cache_module
+
         cache_module._default_cache = None
 
         # 清理应返回 0
@@ -1123,6 +1139,7 @@ class TestClearAllCachesEdgeCases:
 # ============================================================================
 # Additional PDFCache Edge Cases
 # ============================================================================
+
 
 class TestPDFCacheAdditionalEdgeCases:
     """PDFCache 额外边缘情况测试"""

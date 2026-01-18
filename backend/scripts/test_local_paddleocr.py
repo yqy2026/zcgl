@@ -36,10 +36,7 @@ def test_local_paddleocr(pdf_path: str) -> None:
 
     # Import service
     try:
-        from services.document.paddleocr_service import (
-            PaddleOCRService,
-            get_paddleocr_service,
-        )
+        from services.document.paddleocr_service import get_paddleocr_service
     except ImportError as e:
         print(f"[ERROR] Import error: {e}")
         print("   Please run this script from the backend directory")
