@@ -78,6 +78,28 @@ class IntersectionObserverMock {
 vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 
 // =============================================================================
+// Sentry Mock (Optional Dependency)
+//=============================================================================
+
+// Mock @sentry/react (optional dependency for error monitoring)
+vi.mock('@sentry/react', () => ({
+  default: {
+    init: vi.fn(),
+    captureException: vi.fn(),
+    captureMessage: vi.fn(),
+    configureScope: vi.fn(),
+    addBreadcrumb: vi.fn(),
+    setUser: vi.fn(),
+    setTag: vi.fn(),
+    startTransaction: vi.fn(),
+    finishTransaction: vi.fn(),
+  },
+  BrowserTracing: vi.fn(),
+  Replay: vi.fn(),
+  integrations: [],
+}));
+
+// =============================================================================
 // Ant Design Mock
 // =============================================================================
 
