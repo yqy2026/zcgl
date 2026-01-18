@@ -376,6 +376,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
 
       link.onerror = () => {
         setIsPreloading(false)
+        // eslint-disable-next-line no-console
         console.warn(`预加载失败: ${resource}`)
         document.head.removeChild(link)
       }

@@ -147,10 +147,12 @@ export const useMemoryLeakDetection = (componentName: string) => {
         // Component unmounted
 
         if (timersRef.current.size > 0) {
+          // eslint-disable-next-line no-console
           console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`)
         }
 
         if (listenersRef.current.size > 0) {
+          // eslint-disable-next-line no-console
           console.warn(`Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`)
         }
       }
@@ -193,6 +195,7 @@ export const useRenderPerformance = (componentName: string) => {
       const renderTime = now - lastRenderTimeRef.current
 
       if (process.env.NODE_ENV === 'development' && renderTime > 16) {
+        // eslint-disable-next-line no-console
         console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`)
       }
     }

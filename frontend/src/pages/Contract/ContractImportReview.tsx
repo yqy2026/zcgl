@@ -120,6 +120,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         MessageManager.error(response.error ?? '导入失败');
       }
     } catch (error: unknown) {
+      // eslint-disable-next-line no-console
       console.error('表单验证失败:', error);
       const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       MessageManager.error('请检查表单填写是否正确');
@@ -134,7 +135,6 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     if (score >= 0.7) return COLORS.warning;
     return COLORS.error;
   };
-
 
   // 基本信息表单
   const BasicInfoForm = () => (

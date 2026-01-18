@@ -209,7 +209,9 @@ async function exportToPDF(data: ExportableAnalyticsData, filename: string): Pro
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
+  // eslint-disable-next-line no-console
   console.warn('PDF export requires external library (jsPDF). Exported as text file instead.');
+  // eslint-disable-next-line no-console
   console.info('To enable PDF export, install jsPDF: pnpm add jspdf');
 }
 

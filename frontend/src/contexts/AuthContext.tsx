@@ -44,7 +44,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (token !== '' && storedUser !== '') {
 
-
       try {
         const parsedUser = JSON.parse(storedUser) as User
         setUser(parsedUser)
@@ -73,14 +72,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       logger.debug('AuthContext收到登录响应', (response as unknown) as Record<string, unknown>);
 
-
-
       if (Boolean(response.success) && Boolean(response.data)) {
         setUser(response.data.user)
         logger.debug('用户状态已更新', { user: response.data.user } as Record<string, unknown>);
         const successLog = typeof response.message === 'string' && response.message !== '' ? response.message : '登录成功';
         MessageManager.success(successLog)
-
 
       } else {
         throw new Error('登录响应格式错误')
@@ -146,8 +142,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return
         }
 
-
-
         // 调用刷新令牌API
         const response = await fetch(AUTH_API.REFRESH, {
           method: 'POST',
@@ -182,7 +176,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 解析当前JWT token的过期时间
       const currentToken = localStorage.getItem('token') ?? localStorage.getItem('auth_token') ?? ''
       if (currentToken === '') {
-
 
         return
       }

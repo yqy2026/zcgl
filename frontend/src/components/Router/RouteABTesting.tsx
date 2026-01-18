@@ -253,6 +253,7 @@ class ABTestManager {
           timestamp: new Date().toISOString()
         })
       }).catch(error => {
+        // eslint-disable-next-line no-console
         console.warn('A/B Test event reporting failed:', error)
       })
     }
@@ -274,6 +275,7 @@ class ABTestManager {
         })
       })
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('A/B Test conversion reporting failed:', error)
     }
   }

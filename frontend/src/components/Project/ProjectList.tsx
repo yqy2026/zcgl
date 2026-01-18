@@ -125,6 +125,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           pageSize: (response as any).data.size ?? prev.pageSize
         }));
       } else {
+        // eslint-disable-next-line no-console
         console.error('Unexpected response format:', response ?? 'undefined response');
         setProjects([]);
         setPagination(prev => ({
@@ -146,8 +147,10 @@ const ProjectList: React.FC<ProjectListProps> = ({
         status_distribution: {} as any // 如需要可基于项目数据计算
       } as any);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('获取项目列表失败:', error);
       const err = error as any;
+      // eslint-disable-next-line no-console
       console.error('Error details:', {
         message: err.message,
         status: err.response?.status,
@@ -172,6 +175,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         status_distribution: {} as any
       } as any);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('获取统计信息失败:', error);
       setStatistics(null);
     }
@@ -184,6 +188,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       const response = await ownershipService.getOwnershipOptions(true);
       setOwnerships(response);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('获取权属方列表失败:', error);
     } finally {
       setOwnershipsLoading(false);
@@ -214,6 +219,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           MessageManager.success('项目删除成功');
           fetchProjects();
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error('删除项目失败:', error);
           MessageManager.error('删除项目失败');
         }
@@ -228,6 +234,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       MessageManager.success('项目状态切换成功');
       fetchProjects();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('切换项目状态失败:', error);
       MessageManager.error('切换项目状态失败');
     }

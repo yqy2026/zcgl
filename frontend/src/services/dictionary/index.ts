@@ -523,7 +523,6 @@ class UnifiedDictionaryService {
       const enumData = await this.getEnumFieldData();
       let currentValue = null;
 
-
       for (const item of enumData) {
         const value = item.values.find(v => v.id === valueId);
         if (value !== undefined) {

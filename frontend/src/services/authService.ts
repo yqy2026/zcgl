@@ -58,8 +58,6 @@ export class AuthService {
         throw new Error('登录响应数据格式不正确');
       }
 
-
-
       const { user } = responseData;
 
       if (user === undefined) {
@@ -67,7 +65,6 @@ export class AuthService {
       }
 
       logger.debug('用户数据解析成功', { user });
-
 
       // 处理tokens（新格式）或token（旧格式）
       let accessToken: string;
@@ -116,7 +113,6 @@ export class AuthService {
         },
         message: responseData.message as string || '登录成功'
       };
-
 
     } catch (error) {
       // 使用统一的错误处理器
@@ -184,15 +180,11 @@ export class AuthService {
         localStorage.setItem('refreshToken', responseData.refresh_token);
       }
 
-
       return {
         success: true,
         data: responseData, // 这里responseData已经转换过类型了
         message: '令牌刷新成功'
       };
-
-
-
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -225,7 +217,6 @@ export class AuthService {
     }
   }
 
-
   // 检查本地认证状态
   static isAuthenticated(): boolean {
     const token = localStorage.getItem('auth_token') ?? ''
@@ -235,7 +226,6 @@ export class AuthService {
     if (token === '' || user === '') {
       return false
     }
-
 
     try {
       // 验证JWT Token
@@ -255,8 +245,6 @@ export class AuthService {
         return false
       }
 
-
-
       return true
     } catch {
 
@@ -274,7 +262,6 @@ export class AuthService {
       return null
     }
 
-
   }
 
   // 获取本地存储的权限信息
@@ -285,7 +272,6 @@ export class AuthService {
     } catch {
       return []
     }
-
 
   }
 
@@ -384,7 +370,6 @@ export class AuthService {
       }
 
       return (result.data as UserActivity[]) ?? [];
-
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

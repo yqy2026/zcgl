@@ -38,7 +38,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
 
-
   // 获取权属方列表
   useEffect(() => {
     const loadOwnerships = async () => {
@@ -93,7 +92,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     setSelectedOwnerships(newSelected);
   };
 
-
   // 表单提交
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
@@ -125,7 +123,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       setLoading(false);
     }
   };
-
 
   // 表单验证规则接口
   interface FormValidationRule {
@@ -160,7 +157,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         >
           <Input placeholder="请输入项目名称" maxLength={200} />
         </Form.Item>
-
 
         <Form.Item
           label="项目描述"

@@ -88,6 +88,7 @@ const createApiInstance = (): AxiosInstance => {
             MessageManager.error(`服务器内部错误 [${errorId}]`);
             // 在开发环境，记录更详细的信息
             if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
               console.error(`[${errorId}] 服务器错误详情:`, data);
             }
             break;

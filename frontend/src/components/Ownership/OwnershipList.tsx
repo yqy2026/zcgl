@@ -96,7 +96,6 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
     }
   };
 
-
   useEffect(() => {
     loadOwnerships();
     loadStatistics();

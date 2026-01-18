@@ -331,8 +331,6 @@ export const useAssetList = () => {
     exportMutation.mutate(filters);
   };
 
-
-
   return {
     assets: assetsQuery.data?.data || [],
     loading: assetsQuery.isLoading,

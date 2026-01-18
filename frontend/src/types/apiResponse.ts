@@ -76,7 +76,6 @@ export interface AuthResponse {
   permissions: string[];
 }
 
-
 /**
  * 资产列表响应
  */

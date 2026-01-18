@@ -150,6 +150,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         }
       }
     } catch (error: unknown) {
+      // eslint-disable-next-line no-console
       console.error('获取进度失败:', error);
       // 不立即调用onError，让轮询继续
       // 只有在连续多次失败时才停止

@@ -351,7 +351,6 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         </Card>
       )}
 
-
       {/* 备注信息 */}
       {asset.notes !== undefined && asset.notes !== '' && (
         <Card title="备注信息">

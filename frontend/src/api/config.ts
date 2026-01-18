@@ -21,11 +21,8 @@ const getEnvVar = (key: string, defaultValue: string): string => {
   return defaultValue;
 };
 
-
 // API基础URL配置 - 统一使用版本化路径
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api/v1';
-
-
 
 // ==================== API配置 ====================
 
@@ -288,7 +285,6 @@ export const apiRequest = async <T>(
       try {
         const errorData = (await response.json() as unknown) as Record<string, unknown>;
 
-
         const rawMessage = errorData.message as unknown;
         const rawDetail = errorData.detail as unknown;
 
@@ -300,9 +296,6 @@ export const apiRequest = async <T>(
       } catch {
         // 如果无法解析错误响应，使用默认错误消息
       }
-
-
-
 
       throw new ApiError(errorMessage, response.status, response);
     }

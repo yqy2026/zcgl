@@ -100,6 +100,7 @@ class Logger {
     warn(message: string, meta?: Record<string, unknown>): void {
         if (this.shouldLog('warn')) {
             // eslint-disable-next-line no-console
+            // eslint-disable-next-line no-console
             console.warn(...this.formatMessage('warn', message, meta));
         }
     }
@@ -112,6 +113,7 @@ class Logger {
                     ? { error, ...meta }
                     : meta;
 
+            // eslint-disable-next-line no-console
             // eslint-disable-next-line no-console
             console.error(...this.formatMessage('error', message, errorMeta));
         }

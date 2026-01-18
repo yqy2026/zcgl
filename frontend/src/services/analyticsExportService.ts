@@ -152,6 +152,7 @@ class AnalyticsExportService {
       XLSX.writeFile(workbook, finalFilename)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出Excel失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -234,6 +235,7 @@ class AnalyticsExportService {
       document.body.removeChild(link)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出CSV失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -264,6 +266,7 @@ class AnalyticsExportService {
       document.body.removeChild(link)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出PDF失败:', error)
       throw new Error('导出失败，请重试')
     }

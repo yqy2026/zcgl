@@ -103,6 +103,7 @@ async function initSentry(): Promise<void> {
     console.info('[ErrorMonitoring] Sentry initialized')
   } catch (error) {
     // Sentry not installed or failed to load
+    // eslint-disable-next-line no-console
     console.warn('[ErrorMonitoring] Sentry not available:', error instanceof Error ? error.message : String(error))
   }
 }
@@ -113,6 +114,7 @@ async function initSentry(): Promise<void> {
 function setupGlobalErrorHandlers(): void {
   // Catch unhandled promise rejections
   window.addEventListener('unhandledrejection', event => {
+    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Unhandled Promise Rejection:', event.reason)
     captureException(
       event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
@@ -122,6 +124,7 @@ function setupGlobalErrorHandlers(): void {
 
   // Catch uncaught errors
   window.addEventListener('error', event => {
+    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Uncaught Error:', event.error)
     captureException(
       event.error ?? new Error(event.message),
@@ -145,6 +148,7 @@ export function captureException(error: Error, context: ErrorContext = {}): void
 
   // Log to console in development
   if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring]', errorReport)
   }
 
@@ -224,6 +228,7 @@ export async function flushErrorQueue(): Promise<void> {
     })
     console.info(`[ErrorMonitoring] Sent ${errorsToSend.length} errors to server`)
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Failed to send errors:', error)
     // Re-queue for retry
     errorQueue.unshift(...errorsToSend)

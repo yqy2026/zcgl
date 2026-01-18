@@ -153,6 +153,7 @@ class RoutePerformanceMonitor {
       clsObserver.observe({ entryTypes: ['layout-shift'] })
       this.observers.push(clsObserver)
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Web Vitals observer initialization failed:', error)
     }
   }
@@ -171,6 +172,7 @@ class RoutePerformanceMonitor {
       resourceObserver.observe({ entryTypes: ['resource'] })
       this.observers.push(resourceObserver)
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Resource timing observer initialization failed:', error)
     }
   }
@@ -187,6 +189,7 @@ class RoutePerformanceMonitor {
       memoryObserver.observe({ entryTypes: ['measure'] })
       this.observers.push(memoryObserver)
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Memory observer initialization failed:', error)
     }
   }
@@ -374,6 +377,7 @@ class RoutePerformanceMonitor {
 
       // Route metrics reported
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('性能指标上报失败:', error)
     }
   }

@@ -59,7 +59,6 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     value: item.value,
   }))
 
-
   const config = {
     data: chartData,
     angleField: 'value',
@@ -284,7 +283,6 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       return (line !== undefined && typeof line.color === 'string' && line.color !== '') ? line.color : CHART_COLORS[0]
     },
 
-
     smooth: true,
     lineStyle: {
       lineWidth: (lines[0] !== undefined && typeof lines[0].strokeWidth === 'number') ? lines[0].strokeWidth : 2,
@@ -418,7 +416,6 @@ export const chartDataUtils = {
     }))
   },
 
-
   // 转换趋势数据
   toTrendData: (data: Array<{ date: string; occupancy_rate: number; total_rented_area?: number; total_rentable_area?: number }>): LineData[] => {
     return data.map(item => ({
@@ -440,7 +437,6 @@ export const chartDataUtils = {
     }))
   },
 
-
   // 转换面积维度柱状图数据
   toAreaBarData: (data: Array<{ name: string; total_area?: number; count?: number; average_area?: number }>): BarData[] => {
     return data.map(item => ({
@@ -451,7 +447,6 @@ export const chartDataUtils = {
       average_area: typeof item.average_area === 'number' ? item.average_area : 0
     }))
   },
-
 
   // 转换业态类别面积数据
   toBusinessCategoryAreaData: (data: Array<{ category: string; total_area?: number; area_percentage?: number; occupancy_rate?: number }>): BarData[] => {

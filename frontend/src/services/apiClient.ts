@@ -103,6 +103,7 @@ export class ApiClient {
 
           // 开发模式处理
           if (API_CONFIG.ENVIRONMENT === 'development') {
+            // eslint-disable-next-line no-console
             console.warn('开发模式：收到401响应，但使用mock token，跳过重定向')
             return Promise.reject(error)
           }

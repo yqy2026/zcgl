@@ -39,8 +39,6 @@ const DictionaryPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<SystemDictionary | null>(null)
   const [form] = Form.useForm<SystemDictionary>()
 
-
-
   // 新增状态
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -581,7 +579,6 @@ const DictionaryPage: React.FC = () => {
           <Form.Item name="sort_order" label="排序">
             <Input type="number" placeholder="排序，数值越小越靠前" />
           </Form.Item>
-
 
           {enumTypes.find(t => t.code === activeType) && (
             <div style={{

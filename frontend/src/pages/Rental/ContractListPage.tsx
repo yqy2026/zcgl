@@ -78,8 +78,6 @@ const ContractListPage: React.FC = () => {
 
   const format = useFormat();
 
-
-
   // 加载合同列表
   const loadContracts = React.useCallback(async (params?: RentContractQueryParams) => {
     setState((prev) => ({ ...prev, loading: true }));

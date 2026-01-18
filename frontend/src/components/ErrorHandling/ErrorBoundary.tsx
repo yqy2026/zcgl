@@ -87,6 +87,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       this.props.onError(error, errorInfo)
     }
 
+    // eslint-disable-next-line no-console
     console.error('错误边界捕获到错误:', error, errorInfo)
   }
 
@@ -124,10 +125,12 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       } else {
         // 开发环境打印到控制台
         console.group('错误报告')
+        // eslint-disable-next-line no-console
         console.error('错误:', errorReport)
         console.groupEnd()
       }
     } catch (reportingError) {
+      // eslint-disable-next-line no-console
       console.warn('错误报告发送失败:', reportingError)
     }
   }
@@ -349,6 +352,7 @@ export const useErrorHandler = () => {
   }, [])
 
   const captureError = React.useCallback((error: Error) => {
+    // eslint-disable-next-line no-console
     console.error('Error captured by useErrorHandler:', error)
     setError(error)
 
@@ -385,6 +389,7 @@ export const useErrorHandler = () => {
  */
 export const useRouterErrorBoundary = () => {
   const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
+    // eslint-disable-next-line no-console
     console.error('路由错误:', error)
 
     // 根据错误类型决定处理方式
@@ -411,6 +416,7 @@ export const AssetErrorBoundary: React.FC<{ children: ReactNode }> = ({ children
     <ErrorBoundary
       maxRetries={2}
       onError={(error) => {
+        // eslint-disable-next-line no-console
         console.error('资产管理模块错误:', error)
       }}
     >
@@ -424,6 +430,7 @@ export const SystemErrorBoundary: React.FC<{ children: ReactNode }> = ({ childre
     <ErrorBoundary
       maxRetries={1}
       onError={(error) => {
+        // eslint-disable-next-line no-console
         console.error('系统管理模块错误:', error)
       }}
     >

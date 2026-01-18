@@ -67,7 +67,6 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
     loadProjectOptions();
   }, [initialValues, form]);
 
-
   // 表单验证规则接口
   interface FormValidationRule {
     field?: string
@@ -90,7 +89,6 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
     return Promise.resolve();
   };
-
 
   // 提交表单
   const handleSubmit = async () => {
@@ -205,7 +203,6 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
             </Form.Item>
           </Col>
         </Row>
-
 
         {initialValues && (
           <Form.Item

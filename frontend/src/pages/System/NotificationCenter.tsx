@@ -62,6 +62,7 @@ const NotificationCenter: React.FC = () => {
                 total: response.total,
             });
         } catch {
+            // eslint-disable-next-line no-console
             console.error('加载通知失败');
             MessageManager.error('加载通知列表失败');
         } finally {

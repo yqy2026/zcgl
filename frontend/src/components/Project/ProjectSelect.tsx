@@ -81,7 +81,6 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     }
   }, [value, allProjects, displayValue]);
 
-
   // 处理选择
   const handleChange = (selectedValue: string, option: {
     value: string;
