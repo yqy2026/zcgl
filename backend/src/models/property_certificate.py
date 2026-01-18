@@ -1,14 +1,36 @@
 """Property Certificate Models - 产权证管理数据模型"""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Numeric, String, Table, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+# Certificate ↔ Owners association table
+property_certificate_owners = Table(
+    "property_certificate_owners",
+    Base.metadata,
+    Column("certificate_id", String, ForeignKey("property_certificates.id"), primary_key=True),
+    Column("owner_id", String, ForeignKey("property_owners.id"), primary_key=True),
+    Column("ownership_share", Numeric(5, 2), comment="拥有权比例（百分比）"),
+    Column("owner_category", String(50), comment="权利人类别（单独所有/共同共有/按份共有）"),
+    comment="产权证权利人关联表",
+)
+
+# Certificate ↔ Assets association table
+property_cert_assets = Table(
+    "property_cert_assets",
+    Base.metadata,
+    Column("certificate_id", String, ForeignKey("property_certificates.id"), primary_key=True),
+    Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
+    Column("link_type", String(50), comment="关联类型（primary/secondary/partial）"),
+    Column("notes", String(500), comment="关联备注"),
+    comment="产权证资产关联表",
+)
 
 
 class CertificateType(str, Enum):
@@ -69,4 +91,88 @@ class PropertyOwner(Base):  # type: ignore[valid-type, misc]
 
     # Relationships
     organization = relationship("Organization", back_populates="property_owners")
+    certificates = relationship(
+        "PropertyCertificate",
+        secondary="property_certificate_owners",
+        back_populates="owners",
+    )
+
+
+class PropertyCertificate(Base):  # type: ignore[valid-type, misc]
+    """产权证主表"""
+
+    __tablename__ = "property_certificates"
+
+    # Primary fields
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+
+    # Certificate identification
+    certificate_number: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True, comment="证书编号"
+    )
+    certificate_type: Mapped[CertificateType] = mapped_column(
+        SQLEnum(CertificateType), nullable=False, index=True, comment="证书类型"
+    )
+
+    # Extraction metadata
+    extraction_confidence: Mapped[float | None] = mapped_column(
+        default=None, comment="LLM提取置信度 (0-1)"
+    )
+    extraction_source: Mapped[str] = mapped_column(
+        String(20), default="manual", comment="数据来源：llm/manual"
+    )
+    verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="是否人工审核"
+    )
+
+    # Basic information
+    registration_date: Mapped[date | None] = mapped_column(Date, comment="登记日期")
+    property_address: Mapped[str | None] = mapped_column(
+        String(500), comment="坐落地址"
+    )
+    property_type: Mapped[str | None] = mapped_column(String(50), comment="用途（住宅/商业/工业/办公）")
+
+    # House information
+    building_area: Mapped[str | None] = mapped_column(
+        String(50), comment="建筑面积（平方米）"
+    )
+    floor_info: Mapped[str | None] = mapped_column(String(100), comment="楼层信息")
+
+    # Land information
+    land_area: Mapped[str | None] = mapped_column(
+        String(50), comment="土地使用面积（平方米）"
+    )
+    land_use_type: Mapped[str | None] = mapped_column(
+        String(50), comment="土地使用权类型（出让/划拨）"
+    )
+    land_use_term_start: Mapped[date | None] = mapped_column(Date, comment="土地使用期限起")
+    land_use_term_end: Mapped[date | None] = mapped_column(Date, comment="土地使用期限止")
+
+    # Other information
+    co_ownership: Mapped[str | None] = mapped_column(String(200), comment="共有情况")
+    restrictions: Mapped[str | None] = mapped_column(Text, comment="权利限制情况")
+    remarks: Mapped[str | None] = mapped_column(Text, comment="备注")
+
+    # Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+    )
+    created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")
+
+    # Relationships (many-to-many)
+    owners = relationship(
+        "PropertyOwner",
+        secondary="property_certificate_owners",
+        back_populates="certificates",
+    )
+    assets = relationship(
+        "Asset",
+        secondary="property_cert_assets",
+        back_populates="certificates",
+    )
 

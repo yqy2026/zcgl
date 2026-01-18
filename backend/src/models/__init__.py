@@ -10,6 +10,14 @@ from .asset import (  # noqa: F401
     Project,
     ProjectOwnershipRelation,
 )
+from .property_certificate import (  # noqa: F401
+    CertificateType,
+    OwnerType,
+    PropertyCertificate,
+    PropertyOwner,
+    property_cert_assets,
+    property_certificate_owners,
+)
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .collection import (  # noqa: F401
     CollectionMethod,
@@ -72,6 +80,13 @@ __all__ = [
     "Ownership",
     "Project",
     "ProjectOwnershipRelation",
+    # Property certificate models
+    "CertificateType",
+    "OwnerType",
+    "PropertyCertificate",
+    "PropertyOwner",
+    "property_cert_assets",
+    "property_certificate_owners",
     "Organization",
     "OrganizationHistory",
     "Position",
