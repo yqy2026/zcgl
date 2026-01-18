@@ -18,7 +18,9 @@ from .asset import SensitiveDataHandler
 from .base import CRUDBase
 
 
-class CRUDPropertyOwner(CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwnerUpdate]):
+class CRUDPropertyOwner(
+    CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwnerUpdate]
+):
     """权利人CRUD操作 - 支持敏感字段加密"""
 
     def __init__(self, model: type[PropertyOwner]) -> None:
@@ -32,7 +34,11 @@ class CRUDPropertyOwner(CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwn
         )
 
     def create(
-        self, db: Session, *, obj_in: PropertyOwnerCreate | dict[str, Any], **kwargs: Any
+        self,
+        db: Session,
+        *,
+        obj_in: PropertyOwnerCreate | dict[str, Any],
+        **kwargs: Any,
     ) -> PropertyOwner:
         """
         创建权利人 - 加密敏感字段
@@ -54,9 +60,7 @@ class CRUDPropertyOwner(CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwn
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
         return super().create(db=db, obj_in=encrypted_data, **kwargs)
 
-    def get(
-        self, db: Session, id: Any, use_cache: bool = True
-    ) -> PropertyOwner | None:
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> PropertyOwner | None:
         """
         获取权利人 - 解密敏感字段
 

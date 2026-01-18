@@ -71,6 +71,7 @@ except ImportError:
             VALIDATION_ERROR = "SYSTEM_SETTINGS_VALIDATION_ERROR"
             UNEXPECTED_ERROR = "SYSTEM_SETTINGS_UNEXPECTED_ERROR"
 
+
 try:
     from src.core.config import get_config
     from src.database import get_database_manager, get_db
@@ -346,8 +347,9 @@ def check_component_health() -> dict[str, dict[str, Any]]:
     try:
         # 实际测试缓存连接，而不是返回硬编码值
         try:
-            from src.utils.cache_manager import get_cache_manager
             import asyncio
+
+            from src.utils.cache_manager import get_cache_manager
 
             # 在同步上下文中运行异步函数
             loop = None
@@ -398,7 +400,9 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             }
         except Exception as cache_error:
             # 缓存测试失败 - 抛出异常
-            raise ConnectionError(f"Cache health check failed: {cache_error}") from cache_error
+            raise ConnectionError(
+                f"Cache health check failed: {cache_error}"
+            ) from cache_error
 
     except Exception as e:
         # 🔒 一致性修复: 像数据库一样抛出异常，而不是返回degraded状态

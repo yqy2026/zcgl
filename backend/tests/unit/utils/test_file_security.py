@@ -7,13 +7,11 @@
 import pytest
 
 from src.utils.file_security import (
-    DANGEROUS_EXTENSIONS,
-    ALLOWED_EXTENSIONS,
+    generate_safe_filename,
+    sanitize_file_content,
     secure_filename,
     validate_file_extension,
-    generate_safe_filename,
     validate_file_path,
-    sanitize_file_content,
 )
 
 
@@ -119,7 +117,9 @@ class TestDoubleExtensionAttack:
         ]
 
         for filename in safe_files:
-            is_safe = validate_file_extension(filename, [".pdf", ".jpg", ".png", ".csv"])
+            is_safe = validate_file_extension(
+                filename, [".pdf", ".jpg", ".png", ".csv"]
+            )
             assert is_safe, f"应该允许文件: {filename}"
 
     def test_dangerous_primary_extension_blocked(self):
@@ -156,14 +156,14 @@ class TestSecureFilenameEdgeCases:
     def test_special_characters_removed(self):
         """测试特殊字符被移除"""
         filenames_with_special_chars = [
-            'file<>name.pdf',
-            'file|name.pdf',
+            "file<>name.pdf",
+            "file|name.pdf",
             'file"name.pdf',
-            'file?name.pdf',
-            'file*name.pdf',
-            'file\tname.pdf',
-            'file\nname.pdf',
-            'file\x00name.pdf',
+            "file?name.pdf",
+            "file*name.pdf",
+            "file\tname.pdf",
+            "file\nname.pdf",
+            "file\x00name.pdf",
         ]
 
         for filename in filenames_with_special_chars:
@@ -200,9 +200,7 @@ class TestGenerateSafeFilenameSecurity:
     def test_prefix_sanitization(self):
         """测试prefix参数被安全化"""
         safe = generate_safe_filename(
-            "test.pdf",
-            prefix="../../../etc",
-            allowed_extensions=["pdf"]
+            "test.pdf", prefix="../../../etc", allowed_extensions=["pdf"]
         )
         # prefix中的路径遍历应该被移除
         assert "../" not in safe
@@ -210,9 +208,7 @@ class TestGenerateSafeFilenameSecurity:
     def test_suffix_sanitization(self):
         """测试suffix参数被安全化"""
         safe = generate_safe_filename(
-            "test.pdf",
-            suffix="..\\..\\windows",
-            allowed_extensions=["pdf"]
+            "test.pdf", suffix="..\\..\\windows", allowed_extensions=["pdf"]
         )
         # suffix中的路径遍历应该被移除
         assert ".." not in safe
@@ -225,10 +221,7 @@ class TestGenerateSafeFilenameSecurity:
     def test_disallowed_extension_raises_error(self):
         """测试不允许的扩展名抛出异常"""
         with pytest.raises(ValueError, match="不允许的文件扩展名"):
-            generate_safe_filename(
-                "malicious.exe",
-                allowed_extensions=["pdf"]
-            )
+            generate_safe_filename("malicious.exe", allowed_extensions=["pdf"])
 
     def test_uuid_uniqueness(self):
         """测试生成的文件名包含唯一ID"""
@@ -246,9 +239,7 @@ class TestGenerateSafeFilenameSecurity:
             # 模拟一个理论上可能绕过前面检查的情况
             # （实际上由于多重检查，这不应该发生）
             generate_safe_filename(
-                "../../../etc/passwd",
-                prefix="..",
-                allowed_extensions=["pdf"]
+                "../../../etc/passwd", prefix="..", allowed_extensions=["pdf"]
             )
 
 
@@ -360,12 +351,30 @@ class TestDangerousExtensionPatterns:
         """测试所有危险扩展名都被阻止"""
         # 测试一些常见的危险扩展名
         dangerous = [
-            "test.exe", "test.bat", "test.cmd", "test.com",
-            "test.pif", "test.scr", "test.vbs", "test.js",
-            "test.jar", "test.php", "test.asp", "test.aspx",
-            "test.jsp", "test.sh", "test.ps1", "test.py",
-            "test.rb", "test.pl", "test.msi", "test.deb",
-            "test.rpm", "test.dmg", "test.app", "test.appimage",
+            "test.exe",
+            "test.bat",
+            "test.cmd",
+            "test.com",
+            "test.pif",
+            "test.scr",
+            "test.vbs",
+            "test.js",
+            "test.jar",
+            "test.php",
+            "test.asp",
+            "test.aspx",
+            "test.jsp",
+            "test.sh",
+            "test.ps1",
+            "test.py",
+            "test.rb",
+            "test.pl",
+            "test.msi",
+            "test.deb",
+            "test.rpm",
+            "test.dmg",
+            "test.app",
+            "test.appimage",
         ]
 
         for filename in dangerous:
@@ -374,9 +383,18 @@ class TestDangerousExtensionPatterns:
     def test_safe_extensions_allowed(self):
         """测试安全扩展名被允许"""
         safe = [
-            "test.pdf", "test.jpg", "test.png", "test.gif",
-            "test.doc", "test.docx", "test.xls", "test.xlsx",
-            "test.txt", "test.csv", "test.json", "test.xml",
+            "test.pdf",
+            "test.jpg",
+            "test.png",
+            "test.gif",
+            "test.doc",
+            "test.docx",
+            "test.xls",
+            "test.xlsx",
+            "test.txt",
+            "test.csv",
+            "test.json",
+            "test.xml",
         ]
 
         for filename in safe:
@@ -396,17 +414,19 @@ class TestIntegrationScenarios:
         assert validate_file_extension(filename, allowed_extensions)
 
         # 2. 生成安全文件名
-        safe_filename = generate_safe_filename(filename, allowed_extensions=allowed_extensions)
+        safe_filename = generate_safe_filename(
+            filename, allowed_extensions=allowed_extensions
+        )
         assert safe_filename.endswith(".pdf")
         assert ".." not in safe_filename
 
     def test_malicious_file_upload_blocked(self):
         """测试恶意文件上传被阻止"""
         malicious_files = [
-            "../../../etc/passwd",      # 路径遍历
-            "virus.exe",                 # 危险扩展名
-            "payload.sh",                # 危险扩展名
-            "malicious.php.pdf",        # 双重扩展名（在generate_safe_filename中拒绝）
+            "../../../etc/passwd",  # 路径遍历
+            "virus.exe",  # 危险扩展名
+            "payload.sh",  # 危险扩展名
+            "malicious.php.pdf",  # 双重扩展名（在generate_safe_filename中拒绝）
         ]
 
         for filename in malicious_files:
@@ -421,9 +441,15 @@ class TestIntegrationScenarios:
                 # 步骤2: 生成安全文件名（如果扩展名验证通过）
                 if not blocked:
                     try:
-                        safe_filename = generate_safe_filename(filename, allowed_extensions=["pdf"])
+                        safe_filename = generate_safe_filename(
+                            filename, allowed_extensions=["pdf"]
+                        )
                         # 如果成功生成，检查安全文件名是否真的安全
-                        if ".." in safe_filename or "/" in safe_filename or "\\" in safe_filename:
+                        if (
+                            ".." in safe_filename
+                            or "/" in safe_filename
+                            or "\\" in safe_filename
+                        ):
                             blocked = True
                     except ValueError:
                         # generate_safe_filename 拒绝了文件（例如双重扩展名）
@@ -432,6 +458,6 @@ class TestIntegrationScenarios:
                 # 验证文件被阻止
                 assert blocked, f"恶意文件应该被拒绝: {filename}"
 
-            except (ValueError, AssertionError) as e:
+            except (ValueError, AssertionError):
                 # 预期的行为 - 文件被拒绝
                 assert True

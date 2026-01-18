@@ -14,9 +14,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
-from ...models.property_certificate import PropertyCertificate, PropertyOwner
+from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
-    PropertyCertificateCreate,
     PropertyOwnerCreate,
 )
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
@@ -116,7 +115,9 @@ class PropertyCertificateService:
             # 🔒 功能修复: 实现实际的数据库持久化
 
             # 1. 检查证书是否已存在
-            existing = property_certificate_crud.get_by_certificate_number(self.db, certificate_number)
+            existing = property_certificate_crud.get_by_certificate_number(
+                self.db, certificate_number
+            )
             if existing:
                 logger.warning(f"产权证已存在: {certificate_number}")
                 return existing
@@ -129,7 +130,9 @@ class PropertyCertificateService:
                 "extraction_source": "llm",
                 "verified": False,  # 需要人工审核
                 # 基本信息
-                "registration_date": self._parse_date(extraction_data.get("registration_date")),
+                "registration_date": self._parse_date(
+                    extraction_data.get("registration_date")
+                ),
                 "property_address": extraction_data.get("property_address"),
                 "property_type": extraction_data.get("property_type"),
                 # 房屋信息
@@ -138,8 +141,12 @@ class PropertyCertificateService:
                 # 土地信息
                 "land_area": extraction_data.get("land_area"),
                 "land_use_type": extraction_data.get("land_use_type"),
-                "land_use_term_start": self._parse_date(extraction_data.get("land_use_term_start")),
-                "land_use_term_end": self._parse_date(extraction_data.get("land_use_term_end")),
+                "land_use_term_start": self._parse_date(
+                    extraction_data.get("land_use_term_start")
+                ),
+                "land_use_term_end": self._parse_date(
+                    extraction_data.get("land_use_term_end")
+                ),
                 # 其他信息
                 "co_ownership": extraction_data.get("co_ownership"),
                 "restrictions": extraction_data.get("restrictions"),
@@ -177,7 +184,9 @@ class PropertyCertificateService:
             logger.error(f"数据验证失败: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"创建产权证失败: certificate_number={data.get('certificate_number')}, error={str(e)}")
+            logger.error(
+                f"创建产权证失败: certificate_number={data.get('certificate_number')}, error={str(e)}"
+            )
             raise
 
     def _parse_date(self, date_str: str | None) -> date | None:

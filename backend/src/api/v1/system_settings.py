@@ -140,7 +140,7 @@ def handle_audit_log_failure(
         else:
             raise OSError("审计日志文件写入验证失败")
 
-    except (OSError, IOError, PermissionError) as file_error:
+    except (OSError, PermissionError) as file_error:
         # 🔒 安全修复: 只捕获文件系统相关错误，而不是所有Exception
         fallback_errors["file_error"] = str(file_error)
 
@@ -152,6 +152,7 @@ def handle_audit_log_failure(
             # Unix-like系统: 使用syslog
             try:
                 import syslog
+
                 syslog.syslog(syslog.LOG_ERR, syslog_msg)
                 syslog_success = True
                 logger.warning(
@@ -206,7 +207,9 @@ def handle_audit_log_failure(
                     emergency_log_path = Path("audit_emergency.log")
 
                 with open(emergency_log_path, "a", encoding="utf-8") as f:
-                    f.write(f"{timestamp} | EMERGENCY AUDIT FAILURE | {action} | User:{current_user.id} | Error:{error}\n")
+                    f.write(
+                        f"{timestamp} | EMERGENCY AUDIT FAILURE | {action} | User:{current_user.id} | Error:{error}\n"
+                    )
                     f.flush()
                     os.fsync(f.fileno())
 
@@ -216,7 +219,7 @@ def handle_audit_log_failure(
                 error_msg = f"[EMERGENCY AUDIT LOG] {timestamp} | {action} | User:{current_user.id}"
                 print(error_msg, file=sys.stderr, flush=True)
 
-            except (OSError, IOError) as emergency_error:
+            except OSError as emergency_error:
                 # 🔒 安全修复: 只捕获文件系统错误（这是最后一个回退，可以接受特定异常）
                 fallback_errors["emergency_error"] = str(emergency_error)
 
