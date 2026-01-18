@@ -4,29 +4,33 @@ Seed Property Certificate Prompts
 初始化产权证提取Prompt模板
 """
 
-import json
 import sys
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
-
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables before importing database
 load_dotenv()
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 from src.database import get_session_factory
 
+from src.services.llm_prompt.prompt_manager import PromptManager
+from src.schemas.llm_prompt import PromptTemplateCreate
 
-def seed_prompts(db):
+
+def seed_prompts(db: Session) -> None:
     """创建产权证提取Prompt模板"""
 
-    now = datetime.now(timezone.utc)
-    prompts = [
+    manager = PromptManager()
+    created_count = 0
+    skipped_count = 0
+
+    # 4 prompt data definitions
+    prompts_data = [
         {
             "name": "property_cert_extraction_v1",
             "doc_type": "PROPERTY_CERT",
@@ -62,18 +66,8 @@ def seed_prompts(db):
 5. 只返回JSON，不要其他说明
 
 文件名：{file_name}""",
-            "version": "1.0.0",
-            "status": "active",
-            "tags": json.dumps(["optimized", "stable"]),
-            "few_shot_examples": None,
-            "avg_accuracy": 0.0,
-            "avg_confidence": 0.0,
-            "total_usage": 0,
-            "current_version_id": None,
-            "parent_id": None,
-            "created_by": None,
-            "created_at": now,
-            "updated_at": now,
+            "tags": ["optimized", "stable"],
+            "few_shot_examples": {},
         },
         {
             "name": "property_cert_house_extraction_v1",
@@ -103,18 +97,8 @@ def seed_prompts(db):
 5. 只返回JSON，不要其他说明
 
 文件名：{file_name}""",
-            "version": "1.0.0",
-            "status": "active",
-            "tags": json.dumps(["stable"]),
-            "few_shot_examples": None,
-            "avg_accuracy": 0.0,
-            "avg_confidence": 0.0,
-            "total_usage": 0,
-            "current_version_id": None,
-            "parent_id": None,
-            "created_by": None,
-            "created_at": now,
-            "updated_at": now,
+            "tags": ["stable"],
+            "few_shot_examples": {},
         },
         {
             "name": "property_cert_land_extraction_v1",
@@ -145,18 +129,8 @@ def seed_prompts(db):
 5. 只返回JSON，不要其他说明
 
 文件名：{file_name}""",
-            "version": "1.0.0",
-            "status": "active",
-            "tags": json.dumps(["stable"]),
-            "few_shot_examples": None,
-            "avg_accuracy": 0.0,
-            "avg_confidence": 0.0,
-            "total_usage": 0,
-            "current_version_id": None,
-            "parent_id": None,
-            "created_by": None,
-            "created_at": now,
-            "updated_at": now,
+            "tags": ["stable"],
+            "few_shot_examples": {},
         },
         {
             "name": "property_cert_other_extraction_v1",
@@ -183,45 +157,48 @@ def seed_prompts(db):
 4. 只返回JSON，不要其他说明
 
 文件名：{file_name}""",
-            "version": "1.0.0",
-            "status": "active",
-            "tags": json.dumps(["fallback"]),
-            "few_shot_examples": None,
-            "avg_accuracy": 0.0,
-            "avg_confidence": 0.0,
-            "total_usage": 0,
-            "current_version_id": None,
-            "parent_id": None,
-            "created_by": None,
-            "created_at": now,
-            "updated_at": now,
+            "tags": ["fallback"],
+            "few_shot_examples": {},
         },
     ]
 
-    # Insert prompts using raw SQL
-    for prompt_data in prompts:
-        prompt_id = str(uuid.uuid4())
-        sql_data = {k: v for k, v in prompt_data.items() if k != 'metadata'}
-        query = text("""
-            INSERT INTO prompt_templates (
-                id, name, doc_type, provider, description,
-                system_prompt, user_prompt_template, few_shot_examples,
-                version, status, tags, avg_accuracy, avg_confidence,
-                total_usage, current_version_id, parent_id, created_by,
-                created_at, updated_at
-            ) VALUES (
-                :id, :name, :doc_type, :provider, :description,
-                :system_prompt, :user_prompt_template, :few_shot_examples,
-                :version, :status, :tags, :avg_accuracy, :avg_confidence,
-                :total_usage, :current_version_id, :parent_id, :created_by,
-                :created_at, :updated_at
-            )
-        """)
-        db.execute(query, {**sql_data, "id": prompt_id})
-        print(f"Created prompt: {prompt_data['name']}")
+    for prompt_data in prompts_data:
+        try:
+            # Check for existing prompt using raw SQL (avoiding ORM relationship issues)
+            existing = db.execute(
+                text("SELECT id FROM prompt_templates WHERE name = :name"),
+                {"name": prompt_data["name"]}
+            ).fetchone()
 
-    db.commit()
-    print(f"\nSeeded {len(prompts)} property certificate prompts")
+            if existing:
+                print(f"[SKIP] Prompt already exists: {prompt_data['name']}")
+                skipped_count += 1
+                continue
+
+            # Use PromptManager to create prompt and version
+            schema = PromptTemplateCreate(**prompt_data)
+            template = manager.create_prompt(db, schema, user_id="system")
+
+            # Activate the prompt (manager creates it as DRAFT)
+            manager.activate_prompt(db, template.id)
+
+            print(f"[OK] Created and activated prompt: {prompt_data['name']}")
+            created_count += 1
+        except ValueError as e:
+            error_msg = str(e)
+            if "已存在" in error_msg or "already exists" in error_msg:
+                print(f"[SKIP] Prompt already exists: {prompt_data['name']}")
+                skipped_count += 1
+            else:
+                print(f"[ERROR] Error creating {prompt_data['name']}: {e}")
+                raise
+        except Exception as e:
+            print(f"[ERROR] Unexpected error creating {prompt_data['name']}: {e}")
+            raise
+
+    print(f"\n[OK] Seeded {created_count} property certificate prompts")
+    if skipped_count > 0:
+        print(f"[INFO] Skipped {skipped_count} already existing prompts")
 
 
 if __name__ == "__main__":
@@ -230,7 +207,7 @@ if __name__ == "__main__":
     try:
         seed_prompts(db)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
         db.rollback()
