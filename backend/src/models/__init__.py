@@ -43,6 +43,12 @@ from .organization import (  # noqa: F401
     OrganizationHistory,
     Position,
 )
+from .property_certificate import (  # noqa: F401
+    CertificateType,
+    OwnerType,
+    PropertyCertificate,
+    PropertyOwner,
+)
 from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
@@ -62,12 +68,6 @@ from .rent_contract import (  # noqa: F401
     RentTerm,
     ServiceFeeLedger,
     rent_contract_assets,
-)
-from .property_certificate import (  # noqa: F401
-    CertificateType,
-    OwnerType,
-    PropertyCertificate,
-    PropertyOwner,
 )
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 

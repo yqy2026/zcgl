@@ -5,12 +5,11 @@ Prompt管理服务
 
 import logging
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from ...models.llm_prompt import PromptTemplate, PromptVersion, PromptStatus
+from ...models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
 
 logger = logging.getLogger(__name__)
@@ -23,8 +22,8 @@ class PromptManager:
         self,
         db: Session,
         doc_type: str,
-        provider: Optional[str] = None
-    ) -> Optional[PromptTemplate]:
+        provider: str | None = None
+    ) -> PromptTemplate | None:
         """
         获取当前活跃的Prompt
 
@@ -57,7 +56,7 @@ class PromptManager:
         self,
         db: Session,
         data: PromptTemplateCreate,
-        user_id: Optional[str] = None
+        user_id: str | None = None
     ) -> PromptTemplate:
         """
         创建新Prompt模板
@@ -123,7 +122,7 @@ class PromptManager:
         db: Session,
         template_id: str,
         data: PromptTemplateUpdate,
-        user_id: Optional[str] = None
+        user_id: str | None = None
     ) -> PromptTemplate:
         """
         更新Prompt(自动创建新版本)
@@ -223,7 +222,7 @@ class PromptManager:
         db: Session,
         template_id: str,
         version_id: str,
-        user_id: Optional[str] = None
+        user_id: str | None = None
     ) -> PromptTemplate:
         """
         回滚到指定版本

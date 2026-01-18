@@ -3,17 +3,21 @@
 基于用户反馈数据自动优化Prompt模板
 """
 
-import asyncio
 import logging
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from ...models.llm_prompt import PromptTemplate, PromptVersion, ExtractionFeedback, PromptStatus
+from ...models.llm_prompt import (
+    ExtractionFeedback,
+    PromptStatus,
+    PromptTemplate,
+    PromptVersion,
+)
 from .prompt_manager import PromptManager
 
 logger = logging.getLogger(__name__)
@@ -146,7 +150,6 @@ class AutoOptimizer:
             updated_system_prompt += f"\n\n⚠️ 重要:\n{chr(10).join(new_rules)}"
 
         # 5. 创建新版本
-        from ...schemas.llm_prompt import PromptTemplateUpdate
         new_version = self.prompt_manager._increment_version(template.version)
 
         version_record = PromptVersion(

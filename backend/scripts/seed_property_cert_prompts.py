@@ -6,6 +6,7 @@ Seed Property Certificate Prompts
 
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables before importing database
@@ -16,10 +17,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from src.database import get_session_factory
 
-from src.services.llm_prompt.prompt_manager import PromptManager
+from src.database import get_session_factory
 from src.schemas.llm_prompt import PromptTemplateCreate
+from src.services.llm_prompt.prompt_manager import PromptManager
 
 
 def seed_prompts(db: Session) -> None:

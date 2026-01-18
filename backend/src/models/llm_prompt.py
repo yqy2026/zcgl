@@ -8,7 +8,17 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -96,7 +106,7 @@ class PromptTemplate(Base):
     )
 
     # 关系
-    versions = relationship("PromptVersion", back_populates="template", foreign_keys=[current_version_id])
+    versions = relationship("PromptVersion", back_populates="template", foreign_keys="PromptVersion.template_id")
     feedbacks = relationship("ExtractionFeedback", back_populates="template")
     metrics = relationship("PromptMetrics", back_populates="template")
 
@@ -161,7 +171,7 @@ class PromptVersion(Base):
     )
 
     # 关系
-    template = relationship("PromptVersion", back_populates="versions")
+    template = relationship("PromptTemplate", back_populates="versions", foreign_keys=[template_id])
     feedbacks = relationship("ExtractionFeedback", back_populates="version")
     metrics = relationship("PromptMetrics", back_populates="version")
 
@@ -218,8 +228,8 @@ class ExtractionFeedback(Base):
     )
 
     # 关系
-    template = relationship("ExtractionFeedback", back_populates="feedbacks")
-    version = relationship("ExtractionFeedback", back_populates="feedbacks")
+    template = relationship("PromptTemplate", back_populates="feedbacks")
+    version = relationship("PromptVersion", back_populates="feedbacks")
 
 
 class PromptMetrics(Base):
@@ -267,5 +277,5 @@ class PromptMetrics(Base):
     )
 
     # 关系
-    template = relationship("PromptMetrics", back_populates="metrics")
-    version = relationship("PromptMetrics", back_populates="metrics")
+    template = relationship("PromptTemplate", back_populates="metrics")
+    version = relationship("PromptVersion", back_populates="metrics")

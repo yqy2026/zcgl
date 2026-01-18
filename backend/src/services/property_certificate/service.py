@@ -8,13 +8,10 @@ Property Certificate Service
 """
 
 import logging
-import os
-import tempfile
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ...database import get_db
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
 
 logger = logging.getLogger(__name__)

@@ -3,12 +3,14 @@ Property Certificate CRUD Operations
 产权证CRUD操作
 """
 
-from typing import Any
 
 from sqlalchemy.orm import Session
 
 from ..models.property_certificate import PropertyCertificate
-from ..schemas.property_certificate import PropertyCertificateCreate, PropertyCertificateUpdate
+from ..schemas.property_certificate import (
+    PropertyCertificateCreate,
+    PropertyCertificateUpdate,
+)
 from .base import CRUDBase
 
 

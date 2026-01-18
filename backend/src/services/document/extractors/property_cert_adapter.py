@@ -6,9 +6,14 @@ Property Certificate Extractor Adapter
 """
 
 import logging
+from pathlib import Path
 from typing import Any
 
-from ...core.qwen_vision_service import get_qwen_vision_service
+from sqlalchemy.orm import Session
+
+from ....core.qwen_vision_service import get_qwen_vision_service
+from ....models.llm_prompt import PromptTemplate
+from ....services.llm_prompt.prompt_manager import PromptManager
 from .base import BaseVisionAdapter
 
 logger = logging.getLogger(__name__)
@@ -55,9 +60,98 @@ class PropertyCertAdapter(BaseVisionAdapter):
 4. 找不到的字段填 null
 5. 只返回JSON，不要其他说明{pages_hint}"""
 
-    def __init__(self):
+    def __init__(self, db: Session | None = None):
+        super().__init__()
         self._vision_service = get_qwen_vision_service()
+        if db:
+            self.prompt_manager = PromptManager()
+        else:
+            self.prompt_manager = None
+            logger.warning("PropertyCertAdapter initialized without PromptManager - will require explicit prompt")
+
         logger.info("PropertyCertAdapter initialized with Qwen Vision")
+
+    async def extract(
+        self,
+        file_path: str,
+        prompt: PromptTemplate | None = None,
+        certificate_type: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """
+        提取产权证信息
+
+        Args:
+            file_path: 文件路径
+            prompt: 可选的Prompt模板（如果提供，直接使用）
+            certificate_type: 产权证类型 (real_estate, land, etc.)
+            **kwargs: 其他参数传递给基类的extract方法
+
+        Returns:
+            提取结果字典
+        """
+        # If explicit prompt provided, validate it
+        if prompt:
+            if not isinstance(prompt, PromptTemplate):
+                raise ValueError("prompt must be a PromptTemplate instance")
+            logger.info(f"Using provided prompt: {prompt.name} (v{prompt.version})")
+        # Otherwise, get from database via PromptManager
+        else:
+            if not self.prompt_manager:
+                raise ValueError(
+                    "PromptManager not initialized - pass db to constructor or provide explicit prompt"
+                )
+            # Need db session for PromptManager
+            db = kwargs.get("db")
+            if not db:
+                raise ValueError(
+                    "db session required for PromptManager - pass via kwargs or constructor"
+                )
+
+            prompt = self.prompt_manager.get_active_prompt(
+                db=db,
+                doc_type="PROPERTY_CERT",
+                provider="qwen"  # PropertyCertAdapter uses Qwen
+            )
+
+            if not prompt:
+                raise ValueError(
+                    f"No active prompt found for PROPERTY_CERT with provider qwen. "
+                    f"Please ensure prompts are initialized (certificate_type={certificate_type})"
+                )
+
+            logger.info(f"Retrieved prompt from database: {prompt.name} (v{prompt.version})")
+
+        # Format user prompt with file name
+        file_name = Path(file_path).name
+        user_prompt = prompt.user_prompt_template.format(file_name=file_name)
+
+        # Log the extraction
+        logger.info(
+            f"Extracting from {file_name} using prompt {prompt.name} "
+            f"(certificate_type={certificate_type or 'real_estate'})"
+        )
+
+        # Override the base class method to use our custom prompts
+        # We need to temporarily override the EXTRACTION_PROMPT_TEMPLATE
+        original_template = self.EXTRACTION_PROMPT_TEMPLATE
+        self.EXTRACTION_PROMPT_TEMPLATE = user_prompt
+
+        try:
+            # Call parent's extract method
+            result = await super().extract(file_path, **kwargs)
+            # Add prompt metadata to result
+            if result.get("success"):
+                result["prompt_used"] = {
+                    "id": prompt.id,
+                    "name": prompt.name,
+                    "version": prompt.version,
+                    "certificate_type": certificate_type or "real_estate"
+                }
+            return result
+        finally:
+            # Restore original template
+            self.EXTRACTION_PROMPT_TEMPLATE = original_template
 
     @property
     def vision_service(self) -> Any:

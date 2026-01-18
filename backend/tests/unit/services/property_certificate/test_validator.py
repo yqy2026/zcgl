@@ -1,6 +1,5 @@
-import pytest
-from src.services.property_certificate.validator import PropertyCertificateValidator, ValidationResult
 from src.models.property_certificate import CertificateType
+from src.services.property_certificate.validator import PropertyCertificateValidator
 
 
 def test_validate_real_estate_cert_success():

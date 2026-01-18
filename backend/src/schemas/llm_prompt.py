@@ -4,10 +4,9 @@ LLM Prompt管理的Pydantic Schema
 """
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Prompt模板相关Schema
@@ -19,11 +18,11 @@ class PromptTemplateBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Prompt名称")
     doc_type: str = Field(..., description="文档类型: CONTRACT, PROPERTY_CERT等")
     provider: str = Field(..., description="LLM提供商: qwen, hunyuan, deepseek, glm")
-    description: Optional[str] = Field(None, max_length=500, description="Prompt描述")
+    description: str | None = Field(None, max_length=500, description="Prompt描述")
     system_prompt: str = Field(..., min_length=1, description="系统提示词")
     user_prompt_template: str = Field(..., min_length=1, description="用户提示词模板")
-    few_shot_examples: Optional[dict[str, Any]] = Field(default={}, description="Few-shot示例")
-    tags: Optional[list[str]] = Field(default=[], description="标签列表")
+    few_shot_examples: dict[str, Any] | None = Field(default={}, description="Few-shot示例")
+    tags: list[str] | None = Field(default=[], description="标签列表")
 
 
 class PromptTemplateCreate(PromptTemplateBase):
@@ -33,13 +32,13 @@ class PromptTemplateCreate(PromptTemplateBase):
 
 class PromptTemplateUpdate(BaseModel):
     """更新Prompt模板"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-    system_prompt: Optional[str] = Field(None, min_length=1)
-    user_prompt_template: Optional[str] = Field(None, min_length=1)
-    few_shot_examples: Optional[dict[str, Any]] = None
-    tags: Optional[list[str]] = None
-    change_description: Optional[str] = Field(None, max_length=500, description="变更说明")
+    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = Field(None, max_length=500)
+    system_prompt: str | None = Field(None, min_length=1)
+    user_prompt_template: str | None = Field(None, min_length=1)
+    few_shot_examples: dict[str, Any] | None = None
+    tags: list[str] | None = None
+    change_description: str | None = Field(None, max_length=500, description="变更说明")
 
 
 class PromptTemplateResponse(PromptTemplateBase):
@@ -50,10 +49,10 @@ class PromptTemplateResponse(PromptTemplateBase):
     avg_accuracy: float
     avg_confidence: float
     total_usage: int
-    current_version_id: Optional[str]
+    current_version_id: str | None
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[str]
+    created_by: str | None
 
     class Config:
         from_attributes = True
@@ -83,11 +82,11 @@ class PromptVersionResponse(BaseModel):
     change_description: str
     change_type: str
     auto_generated: bool
-    accuracy: Optional[float]
-    confidence: Optional[float]
+    accuracy: float | None
+    confidence: float | None
     usage_count: int
     created_at: datetime
-    created_by: Optional[str]
+    created_by: str | None
 
     class Config:
         from_attributes = True
@@ -107,10 +106,10 @@ class PromptVersionHistory(BaseModel):
 class ExtractionFeedbackCreate(BaseModel):
     """创建提取反馈"""
     template_id: str
-    version_id: Optional[str]
+    version_id: str | None
     doc_type: str
     file_path: str
-    session_id: Optional[str]
+    session_id: str | None
     field_name: str
     original_value: str
     corrected_value: str
@@ -122,7 +121,7 @@ class ExtractionFeedbackResponse(BaseModel):
     """提取反馈响应"""
     id: str
     template_id: str
-    version_id: Optional[str]
+    version_id: str | None
     doc_type: str
     field_name: str
     original_value: str
@@ -144,7 +143,7 @@ class PromptMetricsResponse(BaseModel):
     """Prompt性能指标响应"""
     id: str
     template_id: str
-    version_id: Optional[str]
+    version_id: str | None
     date: date
     total_extractions: int
     successful_extractions: int

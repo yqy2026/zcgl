@@ -5,6 +5,7 @@ Property Certificate Validator
 
 from dataclasses import dataclass
 from datetime import date
+
 from src.models.property_certificate import CertificateType
 
 

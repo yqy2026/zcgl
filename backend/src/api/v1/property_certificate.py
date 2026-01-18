@@ -4,16 +4,14 @@ Property Certificate API Endpoints
 """
 
 import logging
-import os
 import uuid
 from pathlib import Path
-from typing import List
 
-from fastapi import HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
+from ...core.router_registry import route_registry
 from ...database import get_db
 from ...middleware.auth import require_permission
 from ...schemas.property_certificate import (
@@ -25,8 +23,6 @@ from ...schemas.property_certificate import (
 )
 from ...services.property_certificate.service import PropertyCertificateService
 from ...utils.file_security import generate_safe_filename, validate_file_extension
-from ...core.router_registry import route_registry
-from fastapi import APIRouter, Depends, File, UploadFile
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +179,7 @@ async def confirm_import(data: CertificateImportConfirm, db: Session = Depends(g
         )
 
 
-@router.get("/", response_model=List[PropertyCertificateResponse])
+@router.get("/", response_model=list[PropertyCertificateResponse])
 @require_permission("property_certificate", "read")
 def list_certificates(
     skip: int = 0,
