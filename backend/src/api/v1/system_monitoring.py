@@ -371,21 +371,21 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             test_value = "test"
 
             # 尝试写入测试值
-            cache_mgr.backend.set(test_key, test_value, ttl=1)
+            cache_mgr.backend.set(test_key, test_value, ttl=1)  # type: ignore[attr-defined]
 
             # 尝试读取测试值
-            result = cache_mgr.backend.get(test_key)
+            result = cache_mgr.backend.get(test_key)  # type: ignore[attr-defined]
 
             if result != test_value:
                 raise ConnectionError("Cache write/read failed")
 
             # 清理测试键
-            cache_mgr.backend.delete(test_key)
+            cache_mgr.backend.delete(test_key)  # type: ignore[attr-defined]
 
             # 缓存工作正常
             components["cache"] = {
                 "status": "healthy",
-                "backend": cache_mgr.backend.__class__.__name__,
+                "backend": cache_mgr.backend.__class__.__name__,  # type: ignore[attr-defined]
                 "last_check": datetime.now().isoformat(),
             }
 
