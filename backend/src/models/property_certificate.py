@@ -100,7 +100,7 @@ class PropertyOwner(Base):  # type: ignore[valid-type, misc]
     )
 
     # Relationships
-    organization = relationship("Organization", back_populates="property_owners")
+    organization = relationship("Organization")
     certificates = relationship(
         "PropertyCertificate",
         secondary="property_certificate_owners",
