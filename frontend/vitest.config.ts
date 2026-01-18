@@ -96,7 +96,7 @@ export default defineConfig({
 
         perFile: false, // 不对单个文件强制要求
         autoUpdate: true, // 自动更新配置
-        if: os.env.CI !== undefined, // 仅在CI中强制执行（本地开发使用增量模式）
+        if: process.env.CI !== undefined, // 仅在CI中强制执行（本地开发使用增量模式）
       },
 
       // 收集选项
