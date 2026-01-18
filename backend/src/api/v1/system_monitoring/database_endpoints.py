@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 
 from ....constants.errors.error_ids import ErrorIDs
 from ....core.api_errors import internal_error, service_unavailable

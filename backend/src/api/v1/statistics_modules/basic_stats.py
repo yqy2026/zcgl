@@ -23,11 +23,9 @@ from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.statistics import (
-    AreaSummaryResponse,
     BasicStatisticsResponse,
     ChartDataItem,
     DashboardDataResponse,
-    DistributionResponse,
 )
 from ....utils.cache_manager import cache_statistics, get_cache_manager
 from ....utils.numeric import to_float
@@ -174,7 +172,7 @@ async def get_dashboard_data(
     assets, _ = asset_crud.get_multi_with_search(db=db, skip=0, limit=10000)
     total_assets = len(assets)
 
-    # 计算占用率
+    # 计算占用率（暂时未使用，endpoint需要重构）
     total_rentable_area = 0.0
     total_rented_area = 0.0
 
@@ -183,12 +181,6 @@ async def get_dashboard_data(
             total_rentable_area += to_float(getattr(asset, "rentable_area"))
         if getattr(asset, "rented_area", None):
             total_rented_area += to_float(getattr(asset, "rented_area"))
-
-    occupancy_rate = (
-        (total_rented_area / total_rentable_area * 100)
-        if total_rentable_area > 0
-        else 0.0
-    )
 
     # 按确权状态分布
     ownership_distribution = [
@@ -215,33 +207,14 @@ async def get_dashboard_data(
             (item.value / total_assets * 100) if total_assets > 0 else 0.0
         )
 
-    # 构建基础统计数据
-    # 注意：BasicStatisticsResponse的schema与原有实现不匹配
-    # 这是一个临时解决方案，需要重构整个endpoint
-    basic_stats_data = BasicStatisticsResponse(
-        total_assets=total_assets,
-        ownership_status={},
-        property_nature={},
-        usage_status={},
-        generated_at=datetime.now(),
-        filters_applied={},
-    )
-
-    # 构建面积汇总
-    area_summary_data = AreaSummaryResponse(
-        total_area=round(total_rentable_area, 2),
-        rentable_area=round(total_rentable_area, 2),
-        rented_area=round(total_rented_area, 2),
-        unrented_area=round(total_rentable_area - total_rented_area, 2),
-        occupancy_rate=round(occupancy_rate, 2),
-    )
-
     # TODO: 实现财务汇总和出租率统计
     # 这需要从其他服务获取数据
+    # 注意：BasicStatisticsResponse的schema与原有实现不匹配
+    # 需要重构整个endpoint以匹配正确的schema
     from ....core.api_errors import service_unavailable
 
     raise service_unavailable(
-        "仪表板数据的财务汇总和详细出租率统计尚未实现"
+        "仪表板数据的财务汇总和详细出租率统计尚未实现，需要重构schema"
     )
     # 临时返回不完整数据 - 最终需要实现完整的仪表板数据聚合
     # return DashboardDataResponse(
