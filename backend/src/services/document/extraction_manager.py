@@ -133,7 +133,7 @@ class DocumentExtractionManager:
         if self._property_cert_extractor is None:
             from .extractors.property_cert_adapter import PropertyCertAdapter
 
-            self._property_cert_extractor = PropertyCertAdapter()  # type: ignore[no-untyped-call]
+            self._property_cert_extractor = PropertyCertAdapter()
         return self._property_cert_extractor
 
     async def extract(
