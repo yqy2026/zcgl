@@ -11,9 +11,9 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ...core.qwen_vision_service import get_qwen_vision_service
 from ....models.llm_prompt import PromptTemplate
 from ....services.llm_prompt.prompt_manager import PromptManager
+from ...core.qwen_vision_service import get_qwen_vision_service
 from .base import BaseVisionAdapter
 
 logger = logging.getLogger(__name__)
