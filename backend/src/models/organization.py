@@ -72,6 +72,7 @@ class Organization(Base):  # type: ignore[valid-type, misc]
         "Position", back_populates="organization", cascade="all, delete-orphan"
     )
     employees = relationship("Employee", back_populates="organization")
+    property_owners = relationship("PropertyOwner", back_populates="organization")
 
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name={self.name})>"  # pragma: no cover
