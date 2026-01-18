@@ -4,10 +4,10 @@
 测试安全头、请求验证、文件上传安全等中间件功能。
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch, AsyncMock
-from fastapi import Response
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request, Response
 
 
 class TestSecurityHeadersMiddleware:
@@ -16,8 +16,9 @@ class TestSecurityHeadersMiddleware:
     @pytest.mark.asyncio
     async def test_security_headers_present(self):
         """测试所有安全头都存在"""
-        from src.middleware.security_middleware import SecurityHeadersMiddleware
         from fastapi import Response
+
+        from src.middleware.security_middleware import SecurityHeadersMiddleware
 
         middleware = SecurityHeadersMiddleware(app=None)
 
@@ -71,7 +72,6 @@ class TestRequestValidationMiddleware:
     async def test_suspicious_user_agent_logged(self):
         """测试可疑User-Agent被记录"""
         from src.middleware.security_middleware import RequestValidationMiddleware
-        from src.constants.errors.error_ids import ErrorIDs
 
         middleware = RequestValidationMiddleware(app=None)
 
@@ -194,9 +194,9 @@ class TestSecurityMiddlewareIntegration:
     async def test_all_security_middlewares_chain(self):
         """测试所有安全中间件按顺序执行"""
         from src.middleware.security_middleware import (
-            SecurityHeadersMiddleware,
-            RequestValidationMiddleware,
             FileUploadSecurityMiddleware,
+            RequestValidationMiddleware,
+            SecurityHeadersMiddleware,
         )
 
         # 创建中间件链
@@ -259,7 +259,6 @@ class TestSecurityLogging:
     async def test_error_ids_in_logs(self):
         """测试日志包含正确的ErrorID"""
         from src.middleware.security_middleware import RequestValidationMiddleware
-        from src.constants.errors.error_ids import ErrorIDs
 
         middleware = RequestValidationMiddleware(app=None)
 
@@ -280,8 +279,8 @@ class TestSecurityLogging:
             if mock_logger.warning.called:
                 call_args = mock_logger.warning.call_args
                 if call_args and len(call_args) > 1:
-                    extra = call_args[1].get("extra", {}) if len(call_args) > 1 else {}
                     # 应该包含某种形式的error_id或安全标记
+                    pass  # Variables can be unused in this check
 
 
 class TestSecurityMiddlewareConfiguration:

@@ -101,6 +101,7 @@ line-length = 88
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E402", "E501"]
+per-file-ignores = {"alembic/env.py" = ["F401"]}
 
 [tool.ruff.format]
 quote-style = "double"

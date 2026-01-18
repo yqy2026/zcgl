@@ -2,11 +2,12 @@ import os
 import sys
 from logging.config import fileConfig
 
-from alembic import context
-from sqlalchemy import engine_from_config, pool
-
 # Load environment variables from .env file
 from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
+
 load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -14,9 +15,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # 错误处理包装 - 捕获模型导入错误
 try:
     from src.database import Base
+
     logger = None
 
     # Import all models so Alembic can detect them
+    # noqa: F401 - Models are imported for side effects (Alembic metadata)
     from src.models import (
         asset,
         auth,
@@ -34,7 +37,7 @@ try:
     )
 
 except ImportError as e:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("CRITICAL: 无法导入模型进行数据库迁移")
     print(f"错误: {e}")
     print("\n可能的解决方案:")
@@ -42,13 +45,13 @@ except ImportError as e:
     print("2. 检查src/models/目录是否存在所有模型文件")
     print("3. 检查数据库依赖是否已安装 (psycopg2等)")
     print("4. 查看 docs/POSTGRESQL_MIGRATION.md 获取帮助")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     sys.exit(1)
 
 except Exception as e:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Alembic初始化失败: {e}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     sys.exit(1)
 
 # this is the Alembic Config object, which provides

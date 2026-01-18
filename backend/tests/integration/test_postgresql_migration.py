@@ -8,21 +8,20 @@ PostgreSQL数据库迁移集成测试
 """
 
 import os
+
 import pytest
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 
 from src.database import (
     DatabaseManager,
-    get_database_url,
     get_database_manager,
+    get_database_url,
 )
-
 
 # Skip all tests in this module if not using PostgreSQL
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL", "").startswith("postgresql://"),
-    reason="PostgreSQL tests require DATABASE_URL to be set to postgresql://"
+    reason="PostgreSQL tests require DATABASE_URL to be set to postgresql://",
 )
 
 
@@ -36,14 +35,17 @@ class TestPostgreSQLConnection:
         database_url = get_database_url()
 
         # 验证是PostgreSQL URL
-        assert database_url.startswith("postgresql://"), \
+        assert database_url.startswith("postgresql://"), (
             f"DATABASE_URL should start with postgresql://, got: {database_url[:20]}"
+        )
 
         # 验证URL包含必需组件
-        assert "localhost" in database_url or "127.0.0.1" in database_url, \
+        assert "localhost" in database_url or "127.0.0.1" in database_url, (
             "DATABASE_URL should contain localhost or 127.0.0.1"
-        assert "zcgl_db" in database_url or "test" in database_url, \
+        )
+        assert "zcgl_db" in database_url or "test" in database_url, (
             "DATABASE_URL should contain database name"
+        )
 
     def test_database_manager_initialization(self):
         """测试DatabaseManager初始化"""
@@ -78,15 +80,18 @@ class TestPostgreSQLConnection:
 
         with mgr.get_session() as session:
             # 查询所有表
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = 'public'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                )
+            )
             table_count = result.scalar()
 
             # 应该有至少40个表
-            assert table_count >= 40, \
+            assert table_count >= 40, (
                 f"Expected at least 40 tables, found {table_count}"
+            )
 
             # 验证关键表存在
             key_tables = [
@@ -98,10 +103,13 @@ class TestPostgreSQLConnection:
             ]
 
             for table in key_tables:
-                result = session.execute(text(
-                    "SELECT COUNT(*) FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = :table_name"
-                ), {"table_name": table})
+                result = session.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.tables "
+                        "WHERE table_schema = 'public' AND table_name = :table_name"
+                    ),
+                    {"table_name": table},
+                )
                 count = result.scalar()
                 assert count == 1, f"Key table '{table}' not found"
 
@@ -160,8 +168,10 @@ class TestPostgreSQLConnectionPool:
         assert engine is not None
         # 检查pool类型
         from sqlalchemy.pool import QueuePool
-        assert isinstance(engine.pool, QueuePool), \
+
+        assert isinstance(engine.pool, QueuePool), (
             f"Expected QueuePool, got {type(engine.pool)}"
+        )
 
     def test_connection_pool_metrics(self):
         """测试连接池指标"""
@@ -186,10 +196,12 @@ class TestPostgreSQLTransactionHandling:
 
         with mgr.get_session() as session:
             # 执行查询
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = 'public'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                )
+            )
             count = result.scalar()
             assert count >= 40
 
@@ -219,11 +231,13 @@ class TestPostgreSQLDataTypes:
 
         with mgr.get_session() as session:
             # PostgreSQL支持JSON类型
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.columns "
-                "WHERE data_type IN ('json', 'jsonb') "
-                "AND table_schema = 'public'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE data_type IN ('json', 'jsonb') "
+                    "AND table_schema = 'public'"
+                )
+            )
             json_columns = result.scalar()
 
             # 应该有JSON类型的列
@@ -235,11 +249,13 @@ class TestPostgreSQLDataTypes:
 
         with mgr.get_session() as session:
             # PostgreSQL原生支持BOOLEAN
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.columns "
-                "WHERE data_type = 'boolean' "
-                "AND table_schema = 'public'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE data_type = 'boolean' "
+                    "AND table_schema = 'public'"
+                )
+            )
             bool_columns = result.scalar()
 
             # 应该有BOOLEAN类型的列
@@ -339,8 +355,9 @@ class TestPostgreSQLPerformance:
         elapsed_time = time.time() - start_time
 
         # 10个简单查询应该在2秒内完成
-        assert elapsed_time < 2.0, \
+        assert elapsed_time < 2.0, (
             f"Query performance is slow: {elapsed_time:.2f}s for 10 queries"
+        )
 
     def test_connection_reuse(self):
         """测试连接复用"""
@@ -372,11 +389,13 @@ class TestPostgreSQLMigrationCompleteness:
 
         with mgr.get_session() as session:
             # 查询所有表
-            result = session.execute(text(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'public' "
-                "ORDER BY table_name"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public' "
+                    "ORDER BY table_name"
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
 
             # 验证关键表存在
@@ -399,8 +418,9 @@ class TestPostgreSQLMigrationCompleteness:
             ]
 
             for table in required_tables:
-                assert table in tables, \
+                assert table in tables, (
                     f"Required table '{table}' not found in database"
+                )
 
     def test_alembic_version_table(self):
         """测试Alembic版本表存在"""
@@ -408,10 +428,12 @@ class TestPostgreSQLMigrationCompleteness:
 
         with mgr.get_session() as session:
             # 检查alembic_version表
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = 'public' AND table_name = 'alembic_version'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'alembic_version'"
+                )
+            )
             count = result.scalar()
 
             assert count == 1, "alembic_version table should exist"
@@ -422,13 +444,16 @@ class TestPostgreSQLMigrationCompleteness:
 
         with mgr.get_session() as session:
             # 查询外键约束
-            result = session.execute(text(
-                "SELECT COUNT(*) FROM information_schema.table_constraints "
-                "WHERE constraint_schema = 'public' "
-                "AND constraint_type = 'FOREIGN KEY'"
-            ))
+            result = session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.table_constraints "
+                    "WHERE constraint_schema = 'public' "
+                    "AND constraint_type = 'FOREIGN KEY'"
+                )
+            )
             fk_count = result.scalar()
 
             # 应该有外键约束
-            assert fk_count >= 10, \
+            assert fk_count >= 10, (
                 f"Expected at least 10 foreign key constraints, found {fk_count}"
+            )

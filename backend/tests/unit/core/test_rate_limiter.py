@@ -4,9 +4,7 @@
 测试自适应速率限制功能，包括请求计数、速率限制恢复、可疑请求检测等。
 """
 
-import pytest
 import time
-from unittest.mock import patch, MagicMock
 
 from src.core.security import RateLimiter
 
@@ -16,20 +14,18 @@ class TestRateLimiterBasics:
 
     def test_rate_limit_decrements_with_requests(self):
         """测试速率限制计数器随请求递减"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
         # 前100个请求应该被允许
         for i in range(100):
-            assert limiter.check_rate_limit("127.0.0.1"), f"请求 {i+1} 应该被允许"
+            assert limiter.check_rate_limit("127.0.0.1"), f"请求 {i + 1} 应该被允许"
 
         # 第101个请求应该被拒绝
         assert not limiter.check_rate_limit("127.0.0.1")
 
     def test_rate_limit_resets_over_time(self):
         """测试速率限制随时间重置"""
-        from src.core.security import RateLimiter
 
         # 使用1秒窗口以便快速测试
         limiter = RateLimiter()
@@ -49,7 +45,6 @@ class TestRateLimiterBasics:
 
     def test_different_ips_independent_limits(self):
         """测试不同IP有独立的速率限制"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -64,13 +59,11 @@ class TestRateLimiterBasics:
             assert limiter.check_rate_limit("192.168.1.2")
 
 
-
 class TestRateLimiterEdgeCases:
     """测试速率限制器边缘情况"""
 
     def test_concurrent_requests_handling(self):
         """测试并发请求处理"""
-        from src.core.security import RateLimiter
         import threading
 
         limiter = RateLimiter()
@@ -98,7 +91,6 @@ class TestRateLimiterEdgeCases:
 
     def test_ipv4_and_ipv6_treated_separately(self):
         """测试IPv4和IPv6地址被分别处理"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -114,7 +106,6 @@ class TestRateLimiterEdgeCases:
 
     def test_very_long_window(self):
         """测试长时间窗口"""
-        from src.core.security import RateLimiter
 
         # 1小时窗口
         limiter = RateLimiter(max_requests=1000, window_seconds=3600)
@@ -127,7 +118,6 @@ class TestRateLimiterEdgeCases:
 
     def test_zero_requests_allowed(self):
         """测试零请求配额"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -137,7 +127,6 @@ class TestRateLimiterEdgeCases:
 
     def test_very_small_window(self):
         """测试非常小的时间窗口"""
-        from src.core.security import RateLimiter
 
         # 0.1秒窗口
         limiter = RateLimiter()
@@ -160,7 +149,6 @@ class TestRateLimiterMemoryManagement:
 
     def test_old_entries_cleaned_up(self):
         """测试旧条目被清理"""
-        from src.core.security import RateLimiter
 
         # 使用短窗口和清理间隔
         limiter = RateLimiter()
@@ -181,7 +169,6 @@ class TestRateLimiterMemoryManagement:
 
     def test_max_entries_limit(self):
         """测试最大条目数限制"""
-        from src.core.security import RateLimiter
 
         # 设置最大条目数
         limiter = RateLimiter(max_requests=10, window_seconds=60, max_entries=100)
@@ -200,7 +187,6 @@ class TestRateLimiterErrorHandling:
 
     def test_invalid_ip_address(self):
         """测试无效IP地址处理"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -215,7 +201,6 @@ class TestRateLimiterErrorHandling:
 
     def test_negative_parameters(self):
         """测试负参数处理"""
-        from src.core.security import RateLimiter
 
         # 负参数应该被拒绝或转换为正值
         try:
@@ -229,12 +214,11 @@ class TestRateLimiterErrorHandling:
 
     def test_very_large_parameters(self):
         """测试非常大的参数"""
-        from src.core.security import RateLimiter
 
         # 应该能够处理合理的最大值
         limiter = RateLimiter(
             max_requests=1_000_000,  # 100万请求
-            window_seconds=86400,     # 24小时
+            window_seconds=86400,  # 24小时
         )
 
         assert limiter.max_requests == 1_000_000
@@ -246,7 +230,6 @@ class TestRateLimiterStatistics:
 
     def test_get_remaining_requests(self):
         """测试获取剩余请求数"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -264,7 +247,6 @@ class TestRateLimiterStatistics:
 
     def test_get_rate_limit_status(self):
         """测试获取速率限制状态"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
@@ -284,7 +266,6 @@ class TestRateLimiterIntegrationScenarios:
 
     def test_api_endpoint_rate_limiting(self):
         """测试API端点速率限制场景"""
-        from src.core.security import RateLimiter
 
         # 模拟不同的API端点有不同的限制
         public_api = RateLimiter()
@@ -303,11 +284,10 @@ class TestRateLimiterIntegrationScenarios:
 
     def test_ddos_protection_scenario(self):
         """测试DDoS防护场景"""
-        from src.core.security import RateLimiter
 
         limiter = RateLimiter()
 
-        attacker_ips = ["192.168.1.{}".format(i) for i in range(10)]
+        attacker_ips = [f"192.168.1.{i}" for i in range(10)]
 
         # 每个攻击者发送大量请求
         for ip in attacker_ips:
@@ -325,7 +305,6 @@ class TestRateLimiterIntegrationScenarios:
 
     def test_burst_traffic_handling(self):
         """测试突发流量处理"""
-        from src.core.security import RateLimiter
 
         # 使用突发友好配置
         limiter = RateLimiter()

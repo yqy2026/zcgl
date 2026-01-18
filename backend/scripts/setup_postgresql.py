@@ -2,9 +2,11 @@
 PostgreSQL数据库设置脚本
 创建zcgl_db和zcgl_test数据库
 """
+
+import sys
+
 import psycopg
 from psycopg import sql
-import sys
 
 # PostgreSQL连接配置
 DB_CONFIG = {
@@ -12,8 +14,9 @@ DB_CONFIG = {
     "port": 5432,
     "user": "postgres",
     "password": "asdf",
-    "dbname": "postgres"  # 连接到默认数据库
+    "dbname": "postgres",  # 连接到默认数据库
 }
+
 
 def create_database(db_name: str) -> bool:
     """创建数据库（如果不存在）"""
@@ -36,9 +39,7 @@ def create_database(db_name: str) -> bool:
         else:
             # 创建数据库
             cursor.execute(
-                sql.SQL("CREATE DATABASE {}").format(
-                    sql.Identifier(db_name)
-                )
+                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name))
             )
             print(f"[OK] Successfully created database '{db_name}'")
 
@@ -49,6 +50,7 @@ def create_database(db_name: str) -> bool:
     except Exception as e:
         print(f"[FAIL] Failed to create database '{db_name}': {e}")
         return False
+
 
 def verify_connection(db_name: str) -> bool:
     """验证数据库连接"""
@@ -70,6 +72,7 @@ def verify_connection(db_name: str) -> bool:
     except Exception as e:
         print(f"[FAIL] Failed to connect to database '{db_name}': {e}")
         return False
+
 
 if __name__ == "__main__":
     print("=" * 60)
