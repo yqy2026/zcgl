@@ -139,17 +139,18 @@ def get_occupancy_rate_by_category(
     for category_name, category_stats in category_results.items():
         category_occupancy.append(
             CategoryOccupancyRateResponse(
-                category_name=category_name,
+                category=category_name,
                 occupancy_rate=category_stats.get("overall_rate", 0.0),
-                total_rentable_area=category_stats.get("total_rentable_area", 0.0),
-                total_rented_area=category_stats.get("total_rented_area", 0.0),
+                rentable_area=category_stats.get("total_rentable_area", 0.0),
+                rented_area=category_stats.get("total_rented_area", 0.0),
+                asset_count=category_stats.get("asset_count", 0),
             )
         )
 
     return CategoryOccupancyRateListResponse(
         category_field=category_field,
-        category_occupancy=category_occupancy,
-        calculated_at=datetime.now(),
+        categories=category_occupancy,
+        generated_at=datetime.now(),
     )
 
 

@@ -153,7 +153,7 @@ def handle_audit_log_failure(
             try:
                 import syslog
 
-                syslog.syslog(syslog.LOG_ERR, syslog_msg)
+                syslog.syslog(syslog.LOG_ERR, syslog_msg)  # type: ignore[attr-defined]
                 syslog_success = True
                 logger.warning(
                     "审计日志已写入syslog",

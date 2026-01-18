@@ -2,45 +2,41 @@
 数据库监控端点模块
 """
 
-from collections.abc import Generator
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from ....constants.errors.error_ids import ErrorIDs
 from ....core.api_errors import internal_error, service_unavailable
+from ....middleware.auth import require_permission
 from .health import get_database_manager
 from .models import DatabaseHealthMetrics, DatabaseOptimizationReport
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ....models.auth import User
 
-# 回退导入
+# 关键依赖导入 - 使用快速失败策略
 try:
-    from ....database import get_db
-    from ....middleware.auth import require_permission
     from ....models.auth import User
-except ImportError:
-
-    def get_db() -> Generator[Session, None, None]:
-        yield Session()
-
-    class RBACPermissionChecker:
-        def __init__(self, resource: str, action: str, resource_id: str | None = None):
-            self.resource = resource
-            self.action = action
-
-        def __call__(self, *args: Any, **kwargs: Any) -> Any:
-            return None
-
-    def require_permission(
-        resource: str, action: str, resource_id: str | None = None
-    ) -> RBACPermissionChecker:
-        return RBACPermissionChecker(resource, action, resource_id)
-
-    class User:  # type: ignore[no-redef]
-        pass
+except ImportError as e:
+    logger.critical(
+        "无法导入数据库监控关键依赖",
+        extra={
+            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
+            "import_error": str(e),
+            "module": "system_monitoring.database_endpoints",
+        },
+    )
+    raise RuntimeError(
+        "数据库监控模块缺少必要依赖，无法启动。\n"
+        "请运行: poetry install 或 pip install -e .\n"
+        f"导入错误详情: {e}"
+    )
 
 
 router = APIRouter()

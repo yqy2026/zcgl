@@ -91,7 +91,7 @@ class OptionalServices:
                 enhanced_error_handler,
             )
 
-            self.enhanced_error_handler = enhanced_error_handler
+            self.enhanced_error_handler = enhanced_error_handler  # type: ignore[assignment]
         except ImportError:
             pass
 

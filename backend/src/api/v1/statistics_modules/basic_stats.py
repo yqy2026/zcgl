@@ -23,6 +23,7 @@ from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.statistics import (
+    AreaSummaryResponse,
     BasicStatisticsResponse,
     ChartDataItem,
     DashboardDataResponse,
@@ -190,48 +191,67 @@ async def get_dashboard_data(
     )
 
     # 按确权状态分布
-    ownership_distribution: list[ChartDataItem] = []
-    confirmed_count = sum(
-        1 for a in assets if getattr(a, "ownership_status", None) == "已确权"
-    )
-    unconfirmed_count = sum(
-        1 for a in assets if getattr(a, "ownership_status", None) == "未确权"
-    )
-    partial_count = sum(
-        1 for a in assets if getattr(a, "ownership_status", None) == "部分确权"
-    )
-
     ownership_distribution = [
         ChartDataItem(
             name="已确权",
-            value=confirmed_count,
-            percentage=(confirmed_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "已确权"),
+            percentage=0.0,  # 计算在下面
         ),
         ChartDataItem(
             name="未确权",
-            value=unconfirmed_count,
-            percentage=(unconfirmed_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "未确权"),
+            percentage=0.0,
         ),
         ChartDataItem(
             name="部分确权",
-            value=partial_count,
-            percentage=(partial_count / total_assets * 100) if total_assets > 0 else 0,
+            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "部分确权"),
+            percentage=0.0,
         ),
     ]
 
-    return DashboardDataResponse(
+    # 计算百分比
+    for item in ownership_distribution:
+        item.percentage = (
+            (item.value / total_assets * 100) if total_assets > 0 else 0.0
+        )
+
+    # 构建基础统计数据
+    # 注意：BasicStatisticsResponse的schema与原有实现不匹配
+    # 这是一个临时解决方案，需要重构整个endpoint
+    basic_stats_data = BasicStatisticsResponse(
         total_assets=total_assets,
-        occupancy_rate=round(occupancy_rate, 2),
-        total_area=round(total_rentable_area, 2),
-        ownership_distribution=DistributionResponse(
-            categories=ownership_distribution,
-            total=total_assets,
-        ),
+        ownership_status={},
+        property_nature={},
+        usage_status={},
+        generated_at=datetime.now(),
+        filters_applied={},
     )
+
+    # 构建面积汇总
+    area_summary_data = AreaSummaryResponse(
+        total_area=round(total_rentable_area, 2),
+        rentable_area=round(total_rentable_area, 2),
+        rented_area=round(total_rented_area, 2),
+        unrented_area=round(total_rentable_area - total_rented_area, 2),
+        occupancy_rate=round(occupancy_rate, 2),
+    )
+
+    # TODO: 实现财务汇总和出租率统计
+    # 这需要从其他服务获取数据
+    from ....core.api_errors import service_unavailable
+
+    raise service_unavailable(
+        "仪表板数据的财务汇总和详细出租率统计尚未实现"
+    )
+    # 临时返回不完整数据 - 最终需要实现完整的仪表板数据聚合
+    # return DashboardDataResponse(
+    #     basic_stats=basic_stats_data,
+    #     area_summary=area_summary_data,
+    #     financial_summary=...,  # 需要实现
+    #     occupancy_stats=...,  # 需要实现
+    #     category_occupancy=[],
+    #     generated_at=datetime.now(),
+    # )
 
 
 @router.get("/comprehensive", summary="获取综合统计")
@@ -335,14 +355,21 @@ async def get_cache_info() -> dict[str, Any]:
         缓存信息
     """
     cache_mgr = await get_cache_manager()
-    cache_keys = await cache_mgr.get_keys_by_pattern("statistics:*")
+    # CacheManager 不支持列出所有键，这是 Redis 特有的功能
+    # 返回缓存管理器信息作为替代
+    backend_type = (
+        cache_mgr.backend.__class__.__name__ if hasattr(cache_mgr, "backend") else "Unknown"
+    )
+    backend_info = {
+        "backend_type": backend_type,
+        "namespace": "statistics",
+    }
 
     return {
         "success": True,
+        "message": "统计缓存正在使用",
         "data": {
-            "cache_key_count": len(cache_keys),
-            "cache_keys": cache_keys[:10],  # 只返回前10个
-            "total_keys": len(cache_keys),
+            "cache_backend": backend_info,
+            "note": "当前缓存后端不支持列出所有缓存键",
         },
-        "message": "缓存信息获取成功",
     }
