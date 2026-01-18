@@ -285,6 +285,10 @@ temp/
 *.orig
 *.rej
 
+# Git worktrees (isolated development workspaces)
+.worktrees/
+worktrees/
+
 # Windows special
 nul
 *.nul
