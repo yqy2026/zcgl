@@ -30,6 +30,7 @@ import type {
   PromptTemplateCreate,
   PromptTemplateUpdate,
 } from '@/types/llmPrompt';
+import { DocType, LLMProvider } from '@/types/llmPrompt';
 import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
 
@@ -131,11 +132,11 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       if (mode === 'create') {
         const createData: PromptTemplateCreate = {
           name: values.name,
-          doc_type: values.doc_type,
-          provider: values.provider,
-          description: values.description,
-          system_prompt: values.system_prompt,
-          user_prompt_template: values.user_prompt_template,
+          doc_type: (values.doc_type ?? DocType.CONTRACT) as DocType,
+          provider: (values.provider ?? LLMProvider.QWEN) as LLMProvider,
+          description: values.description ?? '',
+          system_prompt: values.system_prompt ?? '',
+          user_prompt_template: values.user_prompt_template ?? '',
           few_shot_examples: fewShotExamples,
           tags: values.tags ?? [],
         };

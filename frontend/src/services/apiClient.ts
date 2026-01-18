@@ -116,7 +116,9 @@ export class ApiClient {
           try {
             await this.refreshToken()
             // 重新发送原请求
-            return this.instance(originalRequest)
+            if (originalRequest != null) {
+              return this.instance(originalRequest as any)
+            }
           } catch (refreshError) {
             // 刷新失败，重定向到登录页
             this.handleAuthFailure()

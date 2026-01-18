@@ -21,8 +21,8 @@ import {
   Button,
 } from 'antd';
 import {
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   CheckCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -446,8 +446,8 @@ const PromptDashboard: React.FC = () => {
                   color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning
                 }}
                 prefix={
-                  accuracyTrend === 'up' ? <TrendingUpOutlined /> :
-                  accuracyTrend === 'down' ? <TrendingDownOutlined /> : null
+                  accuracyTrend === 'up' ? <RiseOutlined /> :
+                  accuracyTrend === 'down' ? <FallOutlined /> : null
                 }
               />
             </Card>
@@ -462,8 +462,8 @@ const PromptDashboard: React.FC = () => {
                   color: statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning
                 }}
                 prefix={
-                  confidenceTrend === 'up' ? <TrendingUpOutlined /> :
-                  confidenceTrend === 'down' ? <TrendingDownOutlined /> : null
+                  confidenceTrend === 'up' ? <RiseOutlined /> :
+                  confidenceTrend === 'down' ? <FallOutlined /> : null
                 }
               />
             </Card>

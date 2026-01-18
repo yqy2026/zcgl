@@ -417,6 +417,55 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
   ];
 
+  const ownershipColumns = [
+    {
+      title: '权属方名称',
+      dataIndex: 'ownership_name',
+      key: 'ownership_name',
+      width: 200
+    },
+    {
+      title: '信用代码',
+      dataIndex: 'credit_code',
+      key: 'credit_code',
+      width: 200
+    },
+    {
+      title: '相似度',
+      dataIndex: 'similarity',
+      key: 'similarity',
+      width: 100,
+      render: (similarity: number) => (
+        <Progress
+          percent={similarity * 100}
+          size="small"
+          status={similarity > 0.8 ? 'success' : similarity > 0.6 ? 'normal' : 'exception'}
+          format={() => `${(similarity * 100).toFixed(1)}%`}
+        />
+      )
+    },
+    {
+      title: '匹配置由',
+      dataIndex: 'match_reason',
+      key: 'match_reason',
+      width: 200
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: unknown, record: OwnershipMatch) => (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => handleOwnershipSelection(record.id, 'landlord')}
+        >
+          选择
+        </Button>
+      )
+    }
+  ];
+
   return (
     <div className="enhanced-contract-review">
       {/* 统计信息 */}
@@ -501,22 +550,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               </TabPane>
               <TabPane tab="权属方匹配" key="ownerships">
                 <Table
-                  columns={[
-                    ...matchingResultsColumns.slice(0, -1),
-                    {
-                      title: '操作',
-                      key: 'action',
-                      render: (_: unknown, record: OwnershipMatch) => (
-                        <Button
-                          type="primary"
-                          size="small"
-                          onClick={() => handleOwnershipSelection(record.id, 'landlord')}
-                        >
-                          选择
-                        </Button>
-                      )
-                    }
-                  ]}
+                  columns={ownershipColumns}
                   dataSource={(sessionData.matching_results as MatchingResults | undefined)?.matched_ownerships?.landlords ?? []}
                   rowKey="id"
                   pagination={false}

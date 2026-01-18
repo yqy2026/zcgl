@@ -100,5 +100,6 @@ export interface ProjectDropdownOption {
   id: string;
   name: string;
   code: string;
+  short_name?: string;
   is_active: boolean;
 }

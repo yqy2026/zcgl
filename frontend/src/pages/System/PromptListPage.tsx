@@ -38,6 +38,7 @@ import {
   DocType,
   LLMProvider,
   PromptQueryParams,
+  PromptStatistics,
 } from '@/types/llmPrompt';
 import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
@@ -412,7 +413,7 @@ const PromptListPage: React.FC = () => {
             <Card>
               <Statistic
                 title="活跃 Prompt"
-                value={state.statistics.status_distribution.find((s) => s.status === PromptStatus.ACTIVE)?.count ?? 0}
+                value={state.statistics.status_distribution.find((s: { status: PromptStatus; count: number }) => s.status === PromptStatus.ACTIVE)?.count ?? 0}
                 prefix={<CheckCircleOutlined />}
                 valueStyle={{ color: COLORS.success }}
               />

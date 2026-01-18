@@ -22,6 +22,16 @@ const logger = createLogger('LLMPromptService');
 const API_BASE = '/api/v1/llm-prompts';
 
 /**
+ * 辅助函数：从ExtractResult中提取数据，如果数据为空则抛出错误
+ */
+function extractData<T>(result: { data?: T }, errorMessage: string): T {
+  if (result.data == null) {
+    throw new Error(errorMessage);
+  }
+  return result.data;
+}
+
+/**
  * LLM Prompt 管理服务
  */
 export class LLMPromptService {
@@ -34,7 +44,7 @@ export class LLMPromptService {
         API_BASE,
         { params }
       );
-      return response.data;
+      return extractData(response, '获取 Prompt 列表失败: 响应数据为空');
     } catch (error) {
       logger.error('获取 Prompt 列表失败', error);
       throw error;
@@ -49,7 +59,7 @@ export class LLMPromptService {
       const response = await enhancedApiClient.get<PromptTemplate>(
         `${API_BASE}/${id}`
       );
-      return response.data;
+      return extractData(response, `获取 Prompt 详情失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 详情失败: ${id}`, error);
       throw error;
@@ -65,8 +75,9 @@ export class LLMPromptService {
         API_BASE,
         data
       );
-      logger.info(`创建 Prompt 成功: ${response.data.name}`);
-      return response.data;
+      const result = extractData(response, '创建 Prompt 失败: 响应数据为空');
+      logger.info(`创建 Prompt 成功: ${result.name}`);
+      return result;
     } catch (error) {
       logger.error('创建 Prompt 失败', error);
       throw error;
@@ -85,8 +96,9 @@ export class LLMPromptService {
         `${API_BASE}/${id}`,
         data
       );
-      logger.info(`更新 Prompt 成功: ${response.data.name} -> v${response.data.version}`);
-      return response.data;
+      const result = extractData(response, `更新 Prompt 失败: ${id}`);
+      logger.info(`更新 Prompt 成功: ${result.name} -> v${result.version}`);
+      return result;
     } catch (error) {
       logger.error(`更新 Prompt 失败: ${id}`, error);
       throw error;
@@ -102,8 +114,9 @@ export class LLMPromptService {
         `${API_BASE}/${id}/activate`,
         {}
       );
-      logger.info(`激活 Prompt 成功: ${response.data.name}`);
-      return response.data;
+      const result = extractData(response, `激活 Prompt 失败: ${id}`);
+      logger.info(`激活 Prompt 成功: ${result.name}`);
+      return result;
     } catch (error) {
       logger.error(`激活 Prompt 失败: ${id}`, error);
       throw error;
@@ -122,8 +135,9 @@ export class LLMPromptService {
         `${API_BASE}/${id}/rollback`,
         request
       );
-      logger.info(`回滚 Prompt 成功: ${response.data.name} -> v${response.data.version}`);
-      return response.data;
+      const result = extractData(response, `回滚 Prompt 失败: ${id}`);
+      logger.info(`回滚 Prompt 成功: ${result.name} -> v${result.version}`);
+      return result;
     } catch (error) {
       logger.error(`回滚 Prompt 失败: ${id}`, error);
       throw error;
@@ -138,7 +152,7 @@ export class LLMPromptService {
       const response = await enhancedApiClient.get<PromptVersion[]>(
         `${API_BASE}/${id}/versions`
       );
-      return response.data;
+      return extractData(response, `获取 Prompt 版本历史失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 版本历史失败: ${id}`, error);
       throw error;
@@ -153,7 +167,7 @@ export class LLMPromptService {
       const response = await enhancedApiClient.get<PromptStatistics>(
         `${API_BASE}/statistics/overview`
       );
-      return response.data;
+      return extractData(response, '获取统计概览失败: 响应数据为空');
     } catch (error) {
       logger.error('获取统计概览失败', error);
       throw error;
@@ -169,8 +183,9 @@ export class LLMPromptService {
         `${API_BASE}/feedback`,
         data
       );
-      logger.info(`提交反馈成功: ${response.data.feedback_id}`);
-      return response.data;
+      const result = extractData(response, '提交反馈失败: 响应数据为空');
+      logger.info(`提交反馈成功: ${result.feedback_id}`);
+      return result;
     } catch (error) {
       logger.error('提交反馈失败', error);
       throw error;
@@ -199,7 +214,7 @@ export class LLMPromptService {
         limit: 1,
       });
 
-      return response.data.items[0] ?? null;
+      return response.items[0] ?? null;
     } catch (error) {
       logger.error(`获取活跃 Prompt 失败: ${docType}, ${provider}`, error);
       return null;
@@ -231,10 +246,11 @@ export class LLMPromptService {
           },
         }
       );
+      const result = extractData(response, `测试 Prompt 失败: ${id}`);
 
       return {
-        success: response.data.success,
-        result: response.data.result,
+        success: result.success,
+        result: result.result,
       };
     } catch (error) {
       logger.error(`测试 Prompt 失败: ${id}`, error);
