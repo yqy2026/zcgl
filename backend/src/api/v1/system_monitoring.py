@@ -29,13 +29,58 @@ if TYPE_CHECKING:
     from src.database import DatabaseManager
     from src.models.auth import User
 
+import logging
+
+try:
+    from src.constants.errors.error_ids import ErrorIDs
+except ImportError:
+    # 独立运行时的回退方案 - 提供完整的ErrorIDs mock
+    class ErrorIDs:  # type: ignore[no-redef]
+        class Database:
+            HEALTH_CHECK_FAILED = "DB_HEALTH_CHECK_FAILED"
+            HEALTH_CHECK_UNKNOWN_ERROR = "DB_HEALTH_CHECK_UNKNOWN_ERROR"
+            SESSION_ERROR = "DB_SESSION_ERROR"
+            ROLLBACK_FAILED = "DB_ROLLBACK_FAILED"
+
+        class Cache:
+            HEALTH_CHECK_FAILED = "CACHE_HEALTH_CHECK_FAILED"
+            CONNECTION_FAILED = "CACHE_CONNECTION_FAILED"
+            MISS = "CACHE_MISS"
+            INVALIDATION_FAILED = "CACHE_INVALIDATION_FAILED"
+
+        class Filesystem:
+            HEALTH_CHECK_FAILED = "FILESYSTEM_HEALTH_CHECK_FAILED"
+            DISK_FULL = "FILESYSTEM_DISK_FULL"
+            PERMISSION_DENIED = "FILESYSTEM_PERMISSION_DENIED"
+            IO_ERROR = "FILESYSTEM_IO_ERROR"
+
+        class System:
+            MEMORY_CHECK_FAILED = "SYSTEM_MEMORY_CHECK_FAILED"
+            CPU_OVERLOAD = "SYSTEM_CPU_OVERLOAD"
+            RESOURCE_EXHAUSTED = "SYSTEM_RESOURCE_EXHAUSTED"
+
+        class AuditLog:
+            CREATION_FAILED = "AUDIT_LOG_CREATION_FAILED"
+            FALLBACK_TO_FILE = "AUDIT_LOG_FALLBACK_TO_FILE"
+            FALLBACK_TO_SYSLOG = "AUDIT_LOG_FALLBACK_TO_SYSLOG"
+            FALLBACK_TO_WIN_EVENTLOG = "AUDIT_LOG_FALLBACK_TO_WIN_EVENTLOG"
+            ALL_FALLBACKS_FAILED = "AUDIT_LOG_ALL_FALLBACKS_FAILED"
+            STATUS_UNKNOWN = "AUDIT_LOG_STATUS_UNKNOWN"
+
+        class SystemSettings:
+            VALIDATION_ERROR = "SYSTEM_SETTINGS_VALIDATION_ERROR"
+            UNEXPECTED_ERROR = "SYSTEM_SETTINGS_UNEXPECTED_ERROR"
+
 try:
     from src.core.config import get_config
     from src.database import get_database_manager, get_db
     from src.middleware.auth import get_current_user, require_permission
     from src.models.auth import User
+
+    logger = logging.getLogger(__name__)
 except ImportError:
-    # 独立运行时的回退方案
+    # 独立运行时的回退方案（其他模块）
+    logger = logging.getLogger(__name__)
 
     def get_db() -> Generator[Session, None, None]:
         yield Session()
@@ -297,22 +342,78 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             "details": "数据库连接正常（基本检查）",
         }
 
-    # 缓存健康检查
+    # 🔒 安全修复: 缓存健康检查 - 失败时抛出异常
     try:
-        components["cache"] = {
-            "status": "healthy",
-            "hit_rate": 85.3,
-            "memory_usage": "45%",
-            "last_check": datetime.now().isoformat(),
-        }
-    except Exception as e:
-        components["cache"] = {
-            "status": "degraded",
-            "error": str(e),
-            "last_check": datetime.now().isoformat(),
-        }
+        # 实际测试缓存连接，而不是返回硬编码值
+        try:
+            from src.utils.cache_manager import get_cache_manager
+            import asyncio
 
-    # 文件系统健康检查
+            # 在同步上下文中运行异步函数
+            loop = None
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    loop = None
+            except RuntimeError:
+                loop = None
+
+            if loop is None:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            cache_mgr = loop.run_until_complete(get_cache_manager())
+
+            # 执行实际的缓存测试
+            test_key = "_health_check_test"
+            test_value = "test"
+
+            # 尝试写入测试值
+            cache_mgr.backend.set(test_key, test_value, ttl=1)
+
+            # 尝试读取测试值
+            result = cache_mgr.backend.get(test_key)
+
+            if result != test_value:
+                raise ConnectionError("Cache write/read failed")
+
+            # 清理测试键
+            cache_mgr.backend.delete(test_key)
+
+            # 缓存工作正常
+            components["cache"] = {
+                "status": "healthy",
+                "backend": cache_mgr.backend.__class__.__name__,
+                "last_check": datetime.now().isoformat(),
+            }
+
+        except ImportError:
+            # 缓存模块不可用 - 将缓存标记为degraded而不是抛出异常
+            # 因为缓存可能不是关键组件
+            components["cache"] = {
+                "status": "degraded",
+                "backend": "not_available",
+                "last_check": datetime.now().isoformat(),
+                "details": "Cache module not available",
+            }
+        except Exception as cache_error:
+            # 缓存测试失败 - 抛出异常
+            raise ConnectionError(f"Cache health check failed: {cache_error}") from cache_error
+
+    except Exception as e:
+        # 🔒 一致性修复: 像数据库一样抛出异常，而不是返回degraded状态
+        logger.critical(
+            "缓存健康检查失败",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Cache.HEALTH_CHECK_FAILED,
+                "component": "cache",
+                "error_type": type(e).__name__,
+            },
+        )
+        raise  # ✅ 让异常传播到顶层处理，触发503响应
+
+    # 🔒 安全修复: 文件系统健康检查 - 失败时抛出异常
     try:
         disk = psutil.disk_usage("/")
         components["filesystem"] = {
@@ -322,13 +423,19 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             "last_check": datetime.now().isoformat(),
         }
     except Exception as e:
-        components["filesystem"] = {
-            "status": "unhealthy",
-            "error": str(e),
-            "last_check": datetime.now().isoformat(),
-        }
+        # 🔒 一致性修复: 像数据库一样抛出异常，而不是返回unhealthy状态
+        logger.critical(
+            "文件系统健康检查失败",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Filesystem.HEALTH_CHECK_FAILED,
+                "component": "filesystem",
+                "error_type": type(e).__name__,
+            },
+        )
+        raise  # ✅ 让异常传播到顶层处理，触发503响应
 
-    # 内存健康检查
+    # 🔒 安全修复: 内存健康检查 - 失败时抛出异常
     try:
         memory = psutil.virtual_memory()
         components["memory"] = {
@@ -338,11 +445,17 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             "last_check": datetime.now().isoformat(),
         }
     except Exception as e:
-        components["memory"] = {
-            "status": "unhealthy",
-            "error": str(e),
-            "last_check": datetime.now().isoformat(),
-        }
+        # 🔒 一致性修复: 像数据库一样抛出异常，而不是返回unhealthy状态
+        logger.critical(
+            "内存健康检查失败",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.System.MEMORY_CHECK_FAILED,
+                "component": "memory",
+                "error_type": type(e).__name__,
+            },
+        )
+        raise  # ✅ 让异常传播到顶层处理，触发503响应
 
     return components
 

@@ -98,46 +98,162 @@ def handle_audit_log_failure(
         # 优先级: High | 预估时间: 2-3 hours
         pass
 
-    # 3. 回退: 写入文件审计日志
-    # ✅ 修复: 将timestamp移到try块外部，避免NameError
+    # 3. 🔒 安全增强: 多层回退机制写入文件审计日志
     timestamp = datetime.now().isoformat()
+    audit_log_written = False
+
+    # 🔒 安全修复: 使用错误跟踪字典而不是 fragile in locals() 检查
+    fallback_errors = {
+        "primary_error": str(error),
+        "file_error": None,
+        "syslog_error": None,
+        "windows_eventlog_error": None,
+        "emergency_error": None,
+    }
+
+    # 3.1 尝试写入回退文件（带验证和fsync）
     try:
+        import os
         from pathlib import Path
 
         audit_log_path = Path("logs/audit_log_fallback.txt")
         audit_log_path.parent.mkdir(exist_ok=True)
 
+        # 🔒 安全修复: 写入 + flush + fsync 确保数据落盘
         with open(audit_log_path, "a", encoding="utf-8") as f:
             f.write(f"{timestamp} | {action} | {current_user.id} | ERROR: {error}\n")
-    except Exception as fallback_error:
-        # ✅ 修复: 捕获所有异常，不仅仅是文件系统错误
-        # 最后手段: 记录到系统日志
-        import sys
+            f.flush()
+            os.fsync(f.fileno())  # 强制写入磁盘
 
-        error_msg = (
-            f"[AUDIT LOG FALLBACK FAILED] {timestamp} | {action} | {current_user.id} | "
-            f"PRIMARY: {error} | FALLBACK: {fallback_error}"
-        )
-        print(error_msg, file=sys.stderr)
+        # 🔒 安全修复: 验证文件写入成功
+        if audit_log_path.exists() and audit_log_path.stat().st_size > 0:
+            audit_log_written = True
+            logger.warning(
+                "审计日志已写入回退文件",
+                extra={
+                    "error_id": ErrorIDs.AuditLog.FALLBACK_TO_FILE,
+                    "user_id": str(current_user.id),
+                    "action": action,
+                    "fallback_path": str(audit_log_path),
+                },
+            )
+        else:
+            raise OSError("审计日志文件写入验证失败")
 
-        # ✅ 同时使用logger确保被记录
+    except (OSError, IOError, PermissionError) as file_error:
+        # 🔒 安全修复: 只捕获文件系统相关错误，而不是所有Exception
+        fallback_errors["file_error"] = str(file_error)
+
+        # 3.2 尝试使用syslog (Unix) 或 Event Log (Windows)
+        syslog_success = False
+        try:
+            syslog_msg = f"[AUDIT FAILURE] {timestamp} | {action} | User:{current_user.id} | Error:{error}"
+
+            # Unix-like系统: 使用syslog
+            try:
+                import syslog
+                syslog.syslog(syslog.LOG_ERR, syslog_msg)
+                syslog_success = True
+                logger.warning(
+                    "审计日志已写入syslog",
+                    extra={
+                        "error_id": ErrorIDs.AuditLog.FALLBACK_TO_SYSLOG,
+                        "user_id": str(current_user.id),
+                        "action": action,
+                    },
+                )
+            except (ImportError, AttributeError):
+                # Windows系统: 尝试事件日志
+                try:
+                    import win32con
+                    import win32evtlog
+
+                    win32evtlog.ReportEvent(
+                        "Application",
+                        1,  # Event ID
+                        win32con.EVENTLOG_ERROR_TYPE,
+                        0,  # Category
+                        syslog_msg,
+                    )
+                    syslog_success = True
+                    logger.warning(
+                        "审计日志已写入Windows事件日志",
+                        extra={
+                            "error_id": ErrorIDs.AuditLog.FALLBACK_TO_WIN_EVENTLOG,
+                            "user_id": str(current_user.id),
+                            "action": action,
+                        },
+                    )
+                except (ImportError, AttributeError, OSError) as win_error:
+                    # 🔒 安全修复: 只捕获Windows事件日志相关的错误
+                    fallback_errors["windows_eventlog_error"] = str(win_error)
+
+            if syslog_success:
+                audit_log_written = True
+
+        except (OSError, ConnectionError) as syslog_error:
+            # 🔒 安全修复: 只捕获syslog/网络/OS相关错误
+            fallback_errors["syslog_error"] = str(syslog_error)
+
+            # 3.3 尝试写入已知位置（/tmp 或当前目录）: 尝试写入已知位置（/tmp 或当前目录）
+            try:
+                import os
+                import sys
+
+                emergency_log_path = Path("/tmp/audit_emergency.log")
+                if not emergency_log_path.exists():
+                    # 尝试当前目录作为最后的回退
+                    emergency_log_path = Path("audit_emergency.log")
+
+                with open(emergency_log_path, "a", encoding="utf-8") as f:
+                    f.write(f"{timestamp} | EMERGENCY AUDIT FAILURE | {action} | User:{current_user.id} | Error:{error}\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                audit_log_written = True
+
+                # 同时输出到stderr（如果可能）
+                error_msg = f"[EMERGENCY AUDIT LOG] {timestamp} | {action} | User:{current_user.id}"
+                print(error_msg, file=sys.stderr, flush=True)
+
+            except (OSError, IOError) as emergency_error:
+                # 🔒 安全修复: 只捕获文件系统错误（这是最后一个回退，可以接受特定异常）
+                fallback_errors["emergency_error"] = str(emergency_error)
+
+                # 3.4 所有回退都失败 - 这是致命错误
+                logger.critical(
+                    "审计日志所有回退机制全部失败 - 审计系统完全故障",
+                    exc_info=True,
+                    extra={
+                        "error_id": ErrorIDs.AuditLog.ALL_FALLBACKS_FAILED,
+                        "fallback_errors": fallback_errors,
+                        "user_id": str(current_user.id),
+                        "action": action,
+                        "severity": "CRITICAL",
+                        "security_impact": "Complete audit trail loss - SYSTEM SHOULD HALT",
+                    },
+                )
+
+                # 🔒 安全修复: 审计失败是致命错误 - 不允许继续操作
+                raise RuntimeError(
+                    f"审计日志系统完全故障 - 主错误: {error}, "
+                    f"文件回退失败: {fallback_errors['file_error']}, "
+                    f"syslog回退失败: {fallback_errors['syslog_error']}, "
+                    f"Windows事件日志失败: {fallback_errors['windows_eventlog_error']}, "
+                    f"紧急回退失败: {fallback_errors['emergency_error']}"
+                ) from error
+
+    # 如果审计日志写入成功，至少记录一个警告
+    if not audit_log_written:
+        # 这应该不会发生，但以防万一
         logger.critical(
-            "审计日志主路径和备用路径全部失败 - 安全违规未记录",
-            exc_info=True,
+            "审计日志状态未知 - 可能丢失",
             extra={
-                "error_id": ErrorIDs.AuditLog.FALLBACK_FILE_WRITE_FAILED,
-                "primary_error": str(error),
-                "fallback_error": str(fallback_error),
+                "error_id": ErrorIDs.AuditLog.STATUS_UNKNOWN,
                 "user_id": str(current_user.id),
                 "action": action,
-                "severity": "CRITICAL",
-                "security_impact": "Complete audit trail loss",
             },
         )
-        # ✅ 修复: 重新抛出异常，避免完全静默失败
-        raise RuntimeError(
-            f"审计日志完全失败 - 主要错误: {error}, 回退错误: {fallback_error}"
-        ) from fallback_error
 
 
 def create_audit_log_with_fallback(
