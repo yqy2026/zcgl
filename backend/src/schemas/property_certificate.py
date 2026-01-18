@@ -198,3 +198,45 @@ class PropertyCertificateResponse(PropertyCertificateBase):
 
     class Config:
         from_attributes = True
+
+
+# PropertyOwner Schemas
+class PropertyOwnerBase(BaseModel):
+    """权利人基础字段"""
+
+    owner_type: str = Field(default="个人", description="权利人类型（个人/单位）")
+    name: str = Field(description="权利人姓名/单位名称")
+    id_type: str | None = Field(default=None, description="证件类型")
+    id_number: str | None = Field(default=None, description="证件号码（加密存储）")
+    phone: str | None = Field(default=None, description="联系电话（加密存储）")
+    address: str | None = Field(default=None, description="地址")
+    organization_id: str | None = Field(default=None, description="关联单位ID")
+
+
+class PropertyOwnerCreate(PropertyOwnerBase):
+    """创建权利人"""
+
+    pass
+
+
+class PropertyOwnerUpdate(BaseModel):
+    """更新权利人"""
+
+    owner_type: str | None = Field(default=None, description="权利人类型")
+    name: str | None = Field(default=None, description="权利人姓名/单位名称")
+    id_type: str | None = Field(default=None, description="证件类型")
+    id_number: str | None = Field(default=None, description="证件号码")
+    phone: str | None = Field(default=None, description="联系电话")
+    address: str | None = Field(default=None, description="地址")
+    organization_id: str | None = Field(default=None, description="关联单位ID")
+
+
+class PropertyOwnerResponse(PropertyOwnerBase):
+    """权利人响应"""
+
+    id: str = Field(description="权利人ID")
+    created_at: datetime = Field(description="创建时间")
+    updated_at: datetime = Field(description="更新时间")
+
+    class Config:
+        from_attributes = True
