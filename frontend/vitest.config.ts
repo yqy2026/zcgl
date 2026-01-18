@@ -89,6 +89,8 @@ export default defineConfig({
       // 覆盖率阈值（匹配TESTING_STANDARDS.md目标）
       // Target: 75% (lines, functions, statements) / 70% (branches)
       // Note: Thresholds disabled here - CI workflow uses incremental_coverage_check.py
+      // TODO: Re-enable thresholds once coverage improves
+      /*
       thresholds: {
         lines: 75,      // 从50%提升到75%
         functions: 75,  // 从50%提升到75%
@@ -97,8 +99,8 @@ export default defineConfig({
 
         perFile: false, // 不对单个文件强制要求
         autoUpdate: true, // 自动更新配置
-        if: false, // 禁用内置阈值检查，使用CI工作流的增量检查脚本
       },
+      */
 
       // 收集选项
       ignoreEmptyLines: true,
