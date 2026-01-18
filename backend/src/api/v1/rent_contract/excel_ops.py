@@ -2,6 +2,7 @@
 合同Excel导入导出模块
 """
 
+import logging
 import os
 import tempfile
 from datetime import date
@@ -10,9 +11,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
 
-from ....core.api_errors import internal_error, service_unavailable
+from ....constants.errors.error_ids import ErrorIDs
+from ....core.api_errors import UnifiedError, internal_error, service_unavailable
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -21,7 +25,24 @@ try:
     from ....services.document.rent_contract_excel import rent_contract_excel_service
 
     EXCEL_SERVICE_AVAILABLE = True
-except (ImportError, SyntaxError):
+except ImportError as e:
+    logger.error(
+        "无法导入rent_contract_excel_service，可能缺少依赖",
+        extra={
+            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
+            "import_error": str(e),
+        },
+    )
+    rent_contract_excel_service = None
+    EXCEL_SERVICE_AVAILABLE = False
+except SyntaxError as e:
+    logger.critical(
+        "rent_contract_excel_service存在语法错误",
+        extra={
+            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
+            "syntax_error": str(e),
+        },
+    )
     rent_contract_excel_service = None
     EXCEL_SERVICE_AVAILABLE = False
 
@@ -46,9 +67,19 @@ def download_excel_template(
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename=result["file_name"],
         )
+    except UnifiedError:
+        # 让我们的自定义错误传播
+        raise
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
-            raise
+        logger.error(
+            "下载模板时发生未预期错误",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Excel.TEMPLATE_DOWNLOAD_ERROR,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
         raise internal_error(f"下载模板失败: {str(e)}")
 
 
@@ -87,9 +118,19 @@ def import_contracts_from_excel(
 
         return cast(dict[str, Any], result)
 
+    except UnifiedError:
+        # 让我们的自定义错误传播
+        raise
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
-            raise
+        logger.error(
+            "导入合同时发生未预期错误",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Excel.IMPORT_FAILED,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
         raise internal_error(f"导入失败: {str(e)}")
 
 
@@ -126,7 +167,17 @@ def export_contracts_to_excel(
             filename=result["file_name"],
         )
 
+    except UnifiedError:
+        # 让我们的自定义错误传播
+        raise
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
-            raise
+        logger.error(
+            "导出合同时发生未预期错误",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Excel.EXPORT_FAILED,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
         raise internal_error(f"导出失败: {str(e)}")
