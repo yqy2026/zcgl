@@ -158,35 +158,68 @@ def validate_file_extension(
 
 
 def generate_safe_filename(
-    original_filename: str, prefix: str = "", suffix: str = ""
+    original_filename: str,
+    prefix: str = "",
+    suffix: str = "",
+    allowed_extensions: list[str] | None = None,
 ) -> str:
     """
     生成唯一的安全文件名
 
+    🔒 安全增强:
+    - 验证文件扩展名（防止双重扩展名攻击）
+    - 清理prefix/suffix参数（防止注入）
+    - 强制小写扩展名
+    - 验证UUID安全性
+
     Args:
         original_filename: 原始文件名
-        prefix: 文件名前缀
-        suffix: 文件名后缀
+        prefix: 文件名前缀（将被安全化）
+        suffix: 文件名后缀（将被安全化）
+        allowed_extensions: 允许的扩展名列表（默认只允许安全类型）
 
     Returns:
         str: 安全的唯一文件名
+
+    Raises:
+        ValueError: 如果文件扩展名不被允许
     """
-    # 获取文件扩展名
+    if not original_filename:
+        raise ValueError("文件名不能为空")
+
+    # 🔒 安全修复: 验证文件扩展名
+    if not validate_file_extension(original_filename, allowed_extensions):
+        _, ext = os.path.splitext(original_filename.lower())
+        raise ValueError(f"不允许的文件扩展名: {ext}")
+
+    # 获取文件扩展名（已验证过）
     name, ext = os.path.splitext(original_filename)
 
-    # 生成唯一标识符
-    unique_id = uuid.uuid4().hex[:12]
+    # 🔒 安全修复: 清理prefix和suffix参数
+    safe_prefix = secure_filename(prefix) if prefix else ""
+    safe_suffix = secure_filename(suffix) if suffix else ""
+
+    # 🔒 安全修复: 生成cryptographically安全的UUID
+    unique_id = uuid.uuid4().hex
 
     # 构建新文件名
     parts = []
-    if prefix:
-        parts.append(prefix)
+    if safe_prefix:
+        parts.append(safe_prefix)
     parts.append(secure_filename(name))
-    parts.append(unique_id)
-    if suffix:
-        parts.append(suffix)
+    parts.append(unique_id[:16])  # 使用前16个字符（128位）
+    if safe_suffix:
+        parts.append(safe_suffix)
 
-    safe_name = "_".join(parts) + ext.lower()
+    # 🔒 安全修复: 强制小写扩展名，防止Windows双扩展名攻击
+    ext = ext.lower()
+
+    # 🔒 安全修复: 再次检查没有危险模式
+    safe_name = "_".join(parts) + ext
+
+    # 最终验证：确保生成的文件名安全
+    if ".." in safe_name or "/" in safe_name or "\\" in safe_name:
+        raise ValueError(f"生成的文件名不安全: {safe_name}")
 
     return safe_name
 

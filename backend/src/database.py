@@ -361,7 +361,17 @@ class DatabaseManager:
             yield session
         except Exception as e:
             session.rollback()
-            logger.error(f"数据库会话异常: {e}")
+            # 🔒 安全修复: 添加完整的错误上下文信息
+            logger.critical(
+                "数据库会话异常",
+                exc_info=True,  # 包含完整的堆栈跟踪
+                extra={
+                    "error_id": ErrorIDs.Database.SESSION_ERROR,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "session_id": id(session),
+                },
+            )
             raise
         finally:
             session.close()
@@ -638,7 +648,17 @@ def get_db() -> Generator[Session, None, None]:
         yield session
     except Exception as e:  # pragma: no cover
         session.rollback()  # pragma: no cover
-        logger.error(f"数据库会话异常: {e}")  # pragma: no cover
+        # 🔒 安全修复: 添加完整的错误上下文信息
+        logger.critical(
+            "数据库会话异常",
+            exc_info=True,  # 包含完整的堆栈跟踪
+            extra={
+                "error_id": ErrorIDs.Database.SESSION_ERROR,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "session_id": id(session),
+            },
+        )
         raise  # pragma: no cover
     finally:
         session.close()

@@ -78,9 +78,11 @@ async def upload_certificate(
             detail=f"文件大小超过限制 ({max_size // (1024 * 1024)}MB)",
         )
 
-    # Generate safe filename
+    # 🔒 安全修复: 生成安全文件名，只允许PDF文件
     file_id = str(uuid.uuid4())
-    safe_filename = generate_safe_filename(file.filename, file_id)
+    safe_filename = generate_safe_filename(
+        file.filename, file_id, allowed_extensions=["pdf"]
+    )
 
     # Create temp directory
     temp_dir = Path("temp_uploads")

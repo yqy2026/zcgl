@@ -54,6 +54,10 @@ class ErrorIDs:
         HEALTH_CHECK_FAILED: Final[str] = "DB_HEALTH_CHECK_FAILED"
         HEALTH_CHECK_UNKNOWN_ERROR: Final[str] = "DB_HEALTH_CHECK_UNKNOWN_ERROR"
 
+        # Session errors
+        SESSION_ERROR: Final[str] = "DB_SESSION_ERROR"
+        ROLLBACK_FAILED: Final[str] = "DB_ROLLBACK_FAILED"
+
         # Configuration errors
         MISSING_DATABASE_URL: Final[str] = "MISSING_DATABASE_URL"
         MISSING_DATABASE_URL_DEV: Final[str] = "MISSING_DATABASE_URL_DEV"
@@ -78,6 +82,13 @@ class ErrorIDs:
         DB_WRITE_FAILED: Final[str] = "AUDIT_LOG_DB_WRITE_FAILED"
         VALIDATION_FAILED: Final[str] = "AUDIT_LOG_VALIDATION_FAILED"
         SERIALIZATION_FAILED: Final[str] = "AUDIT_LOG_SERIALIZATION_FAILED"
+
+        # 🔒 安全修复: 添加审计日志回退机制错误ID
+        FALLBACK_TO_FILE: Final[str] = "AUDIT_LOG_FALLBACK_TO_FILE"
+        FALLBACK_TO_SYSLOG: Final[str] = "AUDIT_LOG_FALLBACK_TO_SYSLOG"
+        FALLBACK_TO_WIN_EVENTLOG: Final[str] = "AUDIT_LOG_FALLBACK_TO_WIN_EVENTLOG"
+        ALL_FALLBACKS_FAILED: Final[str] = "AUDIT_LOG_ALL_FALLBACKS_FAILED"
+        STATUS_UNKNOWN: Final[str] = "AUDIT_LOG_STATUS_UNKNOWN"
 
     # ========================================================================
     # System Settings Error IDs
@@ -145,6 +156,41 @@ class ErrorIDs:
         UPGRADE_FAILED: Final[str] = "MIGRATION_UPGRADE_FAILED"
         DOWNGRADE_FAILED: Final[str] = "MIGRATION_DOWNGRADE_FAILED"
         VERSION_CONFLICT: Final[str] = "MIGRATION_VERSION_CONFLICT"
+
+    # ========================================================================
+    # Cache Error IDs
+    # ========================================================================
+
+    class Cache:
+        """Cache-related error IDs"""
+
+        HEALTH_CHECK_FAILED: Final[str] = "CACHE_HEALTH_CHECK_FAILED"
+        CONNECTION_FAILED: Final[str] = "CACHE_CONNECTION_FAILED"
+        MISS: Final[str] = "CACHE_MISS"
+        INVALIDATION_FAILED: Final[str] = "CACHE_INVALIDATION_FAILED"
+
+    # ========================================================================
+    # Filesystem Error IDs
+    # ========================================================================
+
+    class Filesystem:
+        """Filesystem-related error IDs"""
+
+        HEALTH_CHECK_FAILED: Final[str] = "FILESYSTEM_HEALTH_CHECK_FAILED"
+        DISK_FULL: Final[str] = "FILESYSTEM_DISK_FULL"
+        PERMISSION_DENIED: Final[str] = "FILESYSTEM_PERMISSION_DENIED"
+        IO_ERROR: Final[str] = "FILESYSTEM_IO_ERROR"
+
+    # ========================================================================
+    # System Error IDs
+    # ========================================================================
+
+    class System:
+        """System-related error IDs"""
+
+        MEMORY_CHECK_FAILED: Final[str] = "SYSTEM_MEMORY_CHECK_FAILED"
+        CPU_OVERLOAD: Final[str] = "SYSTEM_CPU_OVERLOAD"
+        RESOURCE_EXHAUSTED: Final[str] = "SYSTEM_RESOURCE_EXHAUSTED"
 
     # ========================================================================
     # Security Error IDs
