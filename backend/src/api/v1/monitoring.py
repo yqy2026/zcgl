@@ -11,11 +11,10 @@ from datetime import datetime
 
 import psutil
 from fastapi import APIRouter, Depends
-
-from ...core.api_errors import internal_error
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error
 from ...database import get_db
 from ...decorators.permission import permission_required
 from ...middleware.auth import get_current_user

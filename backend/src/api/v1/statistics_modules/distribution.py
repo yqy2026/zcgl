@@ -83,9 +83,7 @@ async def get_ownership_distribution(
         ChartDataItem(
             name="部分确权",
             value=partial_count,
-            percentage=(partial_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(partial_count / total_assets * 100) if total_assets > 0 else 0,
         ),
     ]
 
@@ -187,16 +185,12 @@ async def get_usage_status_distribution(
         ChartDataItem(
             name="出租",
             value=rented_count,
-            percentage=(rented_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(rented_count / total_assets * 100) if total_assets > 0 else 0,
         ),
         ChartDataItem(
             name="空置",
             value=vacant_count,
-            percentage=(vacant_count / total_assets * 100)
-            if total_assets > 0
-            else 0,
+            percentage=(vacant_count / total_assets * 100) if total_assets > 0 else 0,
         ),
         ChartDataItem(
             name="自用",

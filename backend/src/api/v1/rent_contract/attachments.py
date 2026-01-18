@@ -8,11 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
-
-from ....core.api_errors import bad_request, internal_error, not_found
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import bad_request, internal_error, not_found
 from ....crud.rent_contract import rent_contract
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -158,7 +157,9 @@ async def download_contract_attachment(
     )
 
     if not attachment:
-        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
+        raise not_found(
+            "附件不存在", resource_type="attachment", resource_id=attachment_id
+        )
 
     file_path = Path(attachment.file_path)
     if not file_path.exists():
@@ -197,7 +198,9 @@ async def delete_contract_attachment(
     )
 
     if not attachment:
-        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
+        raise not_found(
+            "附件不存在", resource_type="attachment", resource_id=attachment_id
+        )
 
     file_path = Path(attachment.file_path)
     if file_path.exists():

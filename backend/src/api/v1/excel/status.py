@@ -5,13 +5,11 @@ Excel任务状态模块
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ....core.api_errors import not_found
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import not_found
 from ....crud.task import task_crud
 from ....database import get_db
-from ....enums.task import TaskStatus
 from ....schemas.excel_advanced import ExcelStatusResponse
 
 router = APIRouter()
@@ -37,9 +35,7 @@ async def get_excel_task_status(
     status_val = str(getattr(task, "status", ""))
     progress_val = int(getattr(task, "progress", 0)) or 0
     total_items_val = getattr(task, "total_items", None)
-    total_items_final = (
-        int(total_items_val) if total_items_val is not None else None
-    )
+    total_items_final = int(total_items_val) if total_items_val is not None else None
     processed_items_val = int(getattr(task, "processed_items", 0)) or 0
     error_message_val = getattr(task, "error_message", None)
     created_at_val = getattr(task, "created_at")
@@ -52,9 +48,7 @@ async def get_excel_task_status(
         progress=progress_val,
         total_items=total_items_final,
         processed_items=processed_items_val,
-        error_message=str(error_message_val)
-        if error_message_val is not None
-        else None,
+        error_message=str(error_message_val) if error_message_val is not None else None,
         created_at=created_at_val,
         started_at=started_at_val,
         completed_at=completed_at_val,

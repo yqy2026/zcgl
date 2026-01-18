@@ -8,10 +8,10 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from ....core.api_errors import bad_request, forbidden, internal_error, not_found
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

@@ -12,8 +12,8 @@
     1 - 发现安全问题，无法部署
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
@@ -21,8 +21,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.core.config import settings
-from src.core.jwt_security import validate_current_jwt_config, jwt_security
 from src.core.encryption import EncryptionKeyManager
+from src.core.jwt_security import jwt_security, validate_current_jwt_config
 
 
 class ProductionConfigValidator:
@@ -94,16 +94,27 @@ class ProductionConfigValidator:
                     f"SECRET_KEY 长度不足: {len(secret_key)} 字符 (最少需要 32 字符)"
                 )
             else:
-                self.passed_checks.append(f"✓ SECRET_KEY 长度符合要求 ({len(secret_key)} 字符)")
+                self.passed_checks.append(
+                    f"✓ SECRET_KEY 长度符合要求 ({len(secret_key)} 字符)"
+                )
 
             # 检查弱密钥模式
             weak_patterns = [
-                "EMERGENCY", "REPLACE-WITH", "dev-secret-key",
-                "your-secret-key", "secret-key", "test-key",
-                "example", "default", "changeme", "change-this"
+                "EMERGENCY",
+                "REPLACE-WITH",
+                "dev-secret-key",
+                "your-secret-key",
+                "secret-key",
+                "test-key",
+                "example",
+                "default",
+                "changeme",
+                "change-this",
             ]
 
-            found_patterns = [p for p in weak_patterns if p.lower() in secret_key.lower()]
+            found_patterns = [
+                p for p in weak_patterns if p.lower() in secret_key.lower()
+            ]
             if found_patterns:
                 self.issues.append(
                     f"SECRET_KEY 包含弱密钥模式: {', '.join(found_patterns)}"
@@ -145,7 +156,9 @@ class ProductionConfigValidator:
                     f"访问令牌有效期过长: {access_token_minutes} 分钟 (建议不超过 120 分钟)"
                 )
             else:
-                self.passed_checks.append(f"✓ 访问令牌有效期合理 ({access_token_minutes} 分钟)")
+                self.passed_checks.append(
+                    f"✓ 访问令牌有效期合理 ({access_token_minutes} 分钟)"
+                )
 
         except Exception as e:
             self.issues.append(f"JWT 配置验证失败: {e}")
@@ -193,9 +206,7 @@ class ProductionConfigValidator:
     def _check_debug_mode(self):
         """检查调试模式"""
         if settings.DEBUG:
-            self.issues.append(
-                "DEBUG 模式已启用！生产环境必须设置 DEBUG=false"
-            )
+            self.issues.append("DEBUG 模式已启用！生产环境必须设置 DEBUG=false")
         else:
             self.passed_checks.append("✓ DEBUG 模式已禁用")
 
@@ -249,7 +260,7 @@ class ProductionConfigValidator:
         # 总结
         print("=" * 70)
         if self.issues:
-            print("❌ 验证失败！发现 {} 个严重问题。".format(len(self.issues)))
+            print(f"❌ 验证失败！发现 {len(self.issues)} 个严重问题。")
             print("   请修复上述问题后再部署到生产环境。")
         else:
             print("✅ 验证通过！配置符合生产环境要求。")
@@ -271,6 +282,7 @@ def main():
     except Exception as e:
         print(f"验证过程中发生错误: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

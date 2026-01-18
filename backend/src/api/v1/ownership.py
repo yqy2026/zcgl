@@ -5,10 +5,9 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.ownership import ownership
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -89,7 +88,9 @@ async def update_ownership(
     """更新权属方信息"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
-        raise not_found("权属方不存在", resource_type="ownership", resource_id=ownership_id)
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     try:
         updated_ownership = ownership_service.update_ownership(
@@ -113,7 +114,9 @@ async def update_ownership_projects(
     """更新权属方的关联项目"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
-        raise not_found("权属方不存在", resource_type="ownership", resource_id=ownership_id)
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     try:
         # 更新关联项目
@@ -296,7 +299,9 @@ async def get_ownership_financial_summary(
     # 验证权属方是否存在
     ownership_obj = ownership.get(db, id=ownership_id)
     if not ownership_obj:
-        raise not_found("权属方不存在", resource_type="ownership", resource_id=ownership_id)
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     # 查询该权属方下所有合同的台账
     subquery = (

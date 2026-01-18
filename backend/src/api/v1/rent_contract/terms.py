@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
-
-from ....core.api_errors import not_found
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import not_found
 from ....crud.rent_contract import rent_contract, rent_term
 from ....database import get_db
 from ....middleware.auth import get_current_active_user

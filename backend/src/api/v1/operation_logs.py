@@ -6,12 +6,11 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
-
-from ...core.api_errors import bad_request, internal_error, not_found
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.operation_log import OperationLogCRUD
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_admin
@@ -106,13 +105,13 @@ async def get_operation_logs(
             try:
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
-                    raise bad_request("开始日期格式错误，应为YYYY-MM-DD")
+                raise bad_request("开始日期格式错误，应为YYYY-MM-DD")
 
         if end_date:
             try:
                 end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
             except ValueError:
-                    raise bad_request("结束日期格式错误，应为YYYY-MM-DD")
+                raise bad_request("结束日期格式错误，应为YYYY-MM-DD")
 
         logs, total = log_crud.get_multi(
             db=db,
@@ -154,7 +153,9 @@ async def get_operation_log(
         log = log_crud.get(db, log_id)
 
         if not log:
-            raise not_found("日志不存在", resource_type="operation_log", resource_id=log_id)
+            raise not_found(
+                "日志不存在", resource_type="operation_log", resource_id=log_id
+            )
 
         return OperationLogResponse.model_validate(log)
     except Exception as e:

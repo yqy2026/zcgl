@@ -7,11 +7,10 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
-
-from ...core.api_errors import internal_error
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error
 from ...core.route_guards import debug_only
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -191,9 +190,7 @@ async def get_asset_statistics(
         error_detail = traceback.format_exc()
         logger.error(f"资产统计查询失败: {str(e)}")
         logger.error(f"详细错误信息: {error_detail}")
-        raise internal_error(
-            f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
-        )
+        raise internal_error(f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。")
 
 
 @router.get("/area-summary", summary="获取资产面积统计摘要")

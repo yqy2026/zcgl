@@ -8,11 +8,10 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...middleware.auth import PermissionChecker
 from ...middleware.error_recovery_middleware import api_error_recovery
 from ...models.auth import User

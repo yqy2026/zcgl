@@ -10,15 +10,14 @@ import logging
 import time
 from collections import defaultdict
 
-from fastapi import Request, Response, status
+from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from ..core.api_errors import forbidden, bad_request
-
 from ..constants.errors.messages import ErrorMessages
 from ..constants.http.methods import HTTPMethods
+from ..core.api_errors import bad_request, forbidden
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter

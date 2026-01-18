@@ -47,7 +47,6 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
             raise bad_request("请求过于频繁，请稍后再试")
 
-
         # 记录请求
         await self._record_request(path)
 

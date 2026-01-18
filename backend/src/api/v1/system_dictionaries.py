@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.system_dictionary import system_dictionary_crud
 from ...database import get_db
 from ...schemas.asset import (
@@ -74,7 +73,11 @@ async def get_system_dictionary(
             db=db, id=dictionary_id
         )
         if not dictionary:
-            raise not_found(f"字典 {dictionary_id} 不存在", resource_type="system_dictionary", resource_id=dictionary_id)
+            raise not_found(
+                f"字典 {dictionary_id} 不存在",
+                resource_type="system_dictionary",
+                resource_id=dictionary_id,
+            )
         return dictionary
 
     except Exception as e:
@@ -155,7 +158,9 @@ async def delete_system_dictionary(
         return {"message": f"字典 {dictionary_id} 已成功删除"}
 
     except ValueError as e:
-        raise not_found(str(e), resource_type="system_dictionary", resource_id=dictionary_id)
+        raise not_found(
+            str(e), resource_type="system_dictionary", resource_id=dictionary_id
+        )
     except Exception as e:
         if "UnifiedError" in type(e).__name__:
             raise

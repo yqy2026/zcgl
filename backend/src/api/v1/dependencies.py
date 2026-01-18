@@ -1,18 +1,21 @@
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 
 class PDFProcessingServiceProtocol(Protocol):
     """Protocol for PDF processing service"""
+
     async def process(self, file_path: str) -> dict[str, object]: ...
 
 
 class PDFSessionServiceProtocol(Protocol):
     """Protocol for PDF session service"""
+
     def get_session(self, session_id: str) -> object: ...
 
 
 class ErrorHandlerProtocol(Protocol):
     """Protocol for enhanced error handler"""
+
     def handle(self, error: Exception) -> dict[str, object]: ...
 
 

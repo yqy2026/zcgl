@@ -24,12 +24,11 @@ import logging
 from typing import Any
 
 from ..core.api_errors import bad_request
-
 from ..crud.field_whitelist import get_whitelist_for_model
 from ..models.asset import Asset
-from ..models.rent_contract import RentContract
-from ..models.organization import Organization
 from ..models.contact import Contact
+from ..models.organization import Organization
+from ..models.rent_contract import RentContract
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +75,7 @@ class FieldValidator:
 
     @staticmethod
     def validate_filter_fields(
-        model_name: str,
-        fields: list[str],
-        raise_on_invalid: bool = True
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
     ) -> tuple[list[str], list[str]]:
         """
         验证过滤字段是否在白名单中
@@ -117,7 +114,7 @@ class FieldValidator:
                 details={
                     "error": "Invalid filter fields",
                     "invalid_fields": invalid_fields,
-                }
+                },
             )
 
         if invalid_fields:
@@ -129,9 +126,7 @@ class FieldValidator:
 
     @staticmethod
     def validate_search_fields(
-        model_name: str,
-        fields: list[str],
-        raise_on_invalid: bool = True
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
     ) -> tuple[list[str], list[str]]:
         """
         验证搜索字段是否在白名单中
@@ -166,16 +161,14 @@ class FieldValidator:
                 details={
                     "error": "Invalid search fields",
                     "invalid_fields": invalid_fields,
-                }
+                },
             )
 
         return valid_fields, invalid_fields
 
     @staticmethod
     def validate_sort_field(
-        model_name: str,
-        field: str,
-        raise_on_invalid: bool = True
+        model_name: str, field: str, raise_on_invalid: bool = True
     ) -> bool:
         """
         验证排序字段是否在白名单中
@@ -206,16 +199,14 @@ class FieldValidator:
                 field=field,
                 details={
                     "error": "Invalid sort field",
-                }
+                },
             )
 
         return is_valid
 
     @staticmethod
     def validate_group_by_field(
-        model_name: str,
-        field: str,
-        raise_on_invalid: bool = True
+        model_name: str, field: str, raise_on_invalid: bool = True
     ) -> bool:
         """
         验证 group_by 字段是否在白名单中
@@ -245,21 +236,17 @@ class FieldValidator:
                 f"for model {model_name}"
             )
             raise bad_request(
-                f"不允许按字段分组: {field}。"
-                "请检查 API 文档了解允许的分组字段。",
+                f"不允许按字段分组: {field}。请检查 API 文档了解允许的分组字段。",
                 field=field,
                 details={
                     "error": "Invalid group_by field",
-                }
+                },
             )
 
         return is_valid
 
     @staticmethod
-    def get_allowed_fields(
-        model_name: str,
-        operation: str = "filter"
-    ) -> set[str]:
+    def get_allowed_fields(model_name: str, operation: str = "filter") -> set[str]:
         """
         获取模型允许的字段列表
 
@@ -287,9 +274,7 @@ class FieldValidator:
 
     @staticmethod
     def sanitize_filters(
-        model_name: str,
-        filters: dict[str, Any],
-        strict: bool = False
+        model_name: str, filters: dict[str, Any], strict: bool = False
     ) -> dict[str, Any]:
         """
         清理过滤器字典，移除不允许的字段
@@ -309,9 +294,7 @@ class FieldValidator:
             return {}
 
         valid_fields, invalid_fields = FieldValidator.validate_filter_fields(
-            model_name,
-            list(filters.keys()),
-            raise_on_invalid=strict
+            model_name, list(filters.keys()), raise_on_invalid=strict
         )
 
         # Return only valid fields
@@ -329,6 +312,7 @@ class FieldValidator:
 # ============================================================================
 # Convenience Functions
 # ============================================================================
+
 
 def validate_asset_filters(fields: list[str]) -> None:
     """快捷方法: 验证 Asset 过滤字段"""

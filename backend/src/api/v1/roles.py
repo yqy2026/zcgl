@@ -7,11 +7,10 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.rbac import permission_crud, role_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_admin

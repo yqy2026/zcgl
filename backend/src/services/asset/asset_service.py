@@ -3,7 +3,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ...core.api_errors import validation_error
-
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...models.asset import Asset

@@ -13,7 +13,7 @@ Analytics Service - 综合分析服务
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ...models.auth import User
@@ -274,7 +274,7 @@ class AnalyticsService:
             分布数据
         """
         # Security: Whitelist of allowed distribution fields to prevent arbitrary field access
-        ALLOWED_DISTRIBUTION_FIELDS = {
+        allowed_distribution_fields = {
             "property_nature",
             "business_category",
             "usage_status",
@@ -285,11 +285,12 @@ class AnalyticsService:
             "project_name",
         }
 
-        if distribution_type not in ALLOWED_DISTRIBUTION_FIELDS:
+        if distribution_type not in allowed_distribution_fields:
             from ...core.api_errors import bad_request
+
             raise bad_request(
                 f"无效的分布类型: {distribution_type}",
-                details=f"允许的类型: {', '.join(sorted(ALLOWED_DISTRIBUTION_FIELDS))}"
+                details=f"允许的类型: {', '.join(sorted(allowed_distribution_fields))}",
             )
 
         query = self.db.query(Asset)

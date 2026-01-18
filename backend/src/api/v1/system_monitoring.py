@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING
 
 import psutil
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import internal_error, not_found, service_unavailable
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
+
+from ...core.api_errors import internal_error, not_found, service_unavailable
 
 if TYPE_CHECKING:
     from src.database import DatabaseManager
@@ -755,7 +755,9 @@ async def resolve_alert(
             alert.resolved = True
             return {"message": f"告警 {alert_id} 已标记为解决", "success": True}
 
-    raise not_found(f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id)
+    raise not_found(
+        f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id
+    )
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
@@ -1125,7 +1127,9 @@ async def get_encryption_status(
             "Asset": ["project_phone"],
         }
 
-        total_protected_fields = sum(len(fields) for fields in protected_fields.values())
+        total_protected_fields = sum(
+            len(fields) for fields in protected_fields.values()
+        )
 
         response = {
             "encryption_enabled": encryption_enabled,

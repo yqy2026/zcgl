@@ -24,11 +24,10 @@ except ImportError:
     magic = None
     MAGIC_AVAILABLE = False
     logger.warning("python-magic模块不可用，文件类型检测功能将受限")
-from fastapi import Depends, Request, UploadFile, status
+from fastapi import Depends, Request, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..core.api_errors import forbidden, bad_request
-
+from ..core.api_errors import bad_request, forbidden
 from ..core.config import get_config
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor

@@ -7,10 +7,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ....core.api_errors import internal_error, service_unavailable
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import internal_error, service_unavailable
 from .health import get_database_manager
 from .models import DatabaseHealthMetrics, DatabaseOptimizationReport
 
@@ -23,6 +22,7 @@ try:
     from ....middleware.auth import require_permission
     from ....models.auth import User
 except ImportError:
+
     def get_db() -> Generator[Session, None, None]:
         yield Session()
 
@@ -41,6 +41,7 @@ except ImportError:
 
     class User:  # type: ignore[no-redef]
         pass
+
 
 router = APIRouter()
 
@@ -95,7 +96,9 @@ async def get_database_health_metrics(
             slow_queries=metrics.slow_queries,
             avg_response_time=metrics.avg_response_time,
             pool_hit_rate=pool_status.get("pool_hit_rate", 0),
-            database_size_mb=health_check["checks"].get("database_size", {}).get("size_mb", 0),
+            database_size_mb=health_check["checks"]
+            .get("database_size", {})
+            .get("size_mb", 0),
             health_score=health_score,
         )
 

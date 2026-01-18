@@ -17,11 +17,10 @@ from fastapi import (
     Response,
     UploadFile,
 )
-
-from ...core.api_errors import bad_request, forbidden, internal_error, not_found
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, forbidden, internal_error, not_found
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
@@ -77,12 +76,18 @@ def create_contract(
             asset = asset_crud.get(db, id=asset_id)
             if not asset:
                 raise not_found(
-                    f"关联的资产不存在: {asset_id}", resource_type="asset", resource_id=asset_id
+                    f"关联的资产不存在: {asset_id}",
+                    resource_type="asset",
+                    resource_id=asset_id,
                 )
 
     ownership_obj = ownership.get(db, id=contract_in.ownership_id)
     if not ownership_obj:
-        raise not_found("关联的权属方不存在", resource_type="ownership", resource_id=contract_in.ownership_id)
+        raise not_found(
+            "关联的权属方不存在",
+            resource_type="ownership",
+            resource_id=contract_in.ownership_id,
+        )
 
     try:
         contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)
@@ -553,9 +558,7 @@ def update_rent_ledger(
     if ledger_in.payment_status is not None:
         valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
         if ledger_in.payment_status not in valid_statuses:
-            raise bad_request(
-                f"支付状态必须是: {', '.join(valid_statuses)}"
-            )
+            raise bad_request(f"支付状态必须是: {', '.join(valid_statuses)}")
 
     try:
         updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
@@ -1046,7 +1049,9 @@ async def download_contract_attachment(
     )
 
     if not attachment:
-        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
+        raise not_found(
+            "附件不存在", resource_type="attachment", resource_id=attachment_id
+        )
 
     # 验证文件是否存在
     file_path = Path(attachment.file_path)
@@ -1089,7 +1094,9 @@ async def delete_contract_attachment(
     )
 
     if not attachment:
-        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
+        raise not_found(
+            "附件不存在", resource_type="attachment", resource_id=attachment_id
+        )
 
     # 删除物理文件
     file_path = Path(attachment.file_path)

@@ -4,11 +4,10 @@
 包含: 会话查询、会话撤销
 """
 
-from fastapi import APIRouter, Depends, status
-
-from ....core.api_errors import internal_error, not_found
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import internal_error, not_found
 from ....crud.auth import UserSessionCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user

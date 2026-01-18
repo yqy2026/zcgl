@@ -51,12 +51,11 @@ from fastapi import (
     Query,
     UploadFile,
 )
-
-from ...core.api_errors import bad_request, not_found
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...config.excel_config import STANDARD_SHEET_NAME
+from ...core.api_errors import bad_request, not_found
 from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
 from ...core.route_guards import debug_only
@@ -184,7 +183,11 @@ async def get_default_excel_config(
         db=db, config_type=config_type, task_type=task_type
     )
     if not config:
-        raise not_found("未找到默认配置", resource_type="excel_config", resource_id=f"{config_type}_{task_type}")
+        raise not_found(
+            "未找到默认配置",
+            resource_type="excel_config",
+            resource_id=f"{config_type}_{task_type}",
+        )
     return config
 
 
@@ -199,7 +202,9 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
     return config
 
 
@@ -217,7 +222,9 @@ async def update_excel_config(
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
 
     updated_config = excel_task_config_crud.update(
         db=db, db_obj=config, obj_in=config_in
@@ -862,7 +869,9 @@ async def download_export_file(
     file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
     if not file_path or not os.path.exists(file_path):
-        raise not_found("导出文件不存在", resource_type="file", resource_id=str(file_path))
+        raise not_found(
+            "导出文件不存在", resource_type="file", resource_id=str(file_path)
+        )
 
     # 返回文件流
     def file_iter() -> Generator[bytes, None, None]:

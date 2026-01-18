@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error, not_found
 from ...crud.contact import contact_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user

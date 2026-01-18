@@ -6,10 +6,9 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import not_found
 from ...core.router_registry import route_registry
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -176,7 +175,9 @@ async def get_collection_record(
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
     if not record:
-        raise not_found("催缴记录不存在", resource_type="collection_record", resource_id=record_id)
+        raise not_found(
+            "催缴记录不存在", resource_type="collection_record", resource_id=record_id
+        )
 
     return record
 
@@ -193,7 +194,11 @@ async def create_collection_record(
     # 验证台账和合同存在
     ledger = db.query(RentLedger).filter(RentLedger.id == record_data.ledger_id).first()
     if not ledger:
-        raise not_found("租金台账不存在", resource_type="rent_ledger", resource_id=record_data.ledger_id)
+        raise not_found(
+            "租金台账不存在",
+            resource_type="rent_ledger",
+            resource_id=record_data.ledger_id,
+        )
 
     # 设置操作人
     if not record_data.operator:
@@ -225,7 +230,9 @@ async def update_collection_record(
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
     if not record:
-        raise not_found("催缴记录不存在", resource_type="collection_record", resource_id=record_id)
+        raise not_found(
+            "催缴记录不存在", resource_type="collection_record", resource_id=record_id
+        )
 
     # 更新字段
     update_dict = update_data.model_dump(exclude_unset=True)
@@ -248,7 +255,9 @@ async def delete_collection_record(
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
     if not record:
-        raise not_found("催缴记录不存在", resource_type="collection_record", resource_id=record_id)
+        raise not_found(
+            "催缴记录不存在", resource_type="collection_record", resource_id=record_id
+        )
 
     db.delete(record)
     db.commit()

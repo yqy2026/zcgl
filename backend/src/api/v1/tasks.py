@@ -2,10 +2,9 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.task import excel_task_config_crud, task_crud
 from ...database import get_db
 from ...enums.task import TaskStatus
@@ -352,7 +351,9 @@ async def get_excel_config(
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
     result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
     return result
 
@@ -372,7 +373,9 @@ async def update_excel_config(
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
 
     try:
         updated_config = excel_task_config_crud.update(
@@ -397,7 +400,9 @@ async def delete_excel_config(
         # Use soft deletion by setting is_active=False
         config = excel_task_config_crud.get(db=db, id=config_id)
         if not config:
-            raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
+            raise not_found(
+                "配置不存在", resource_type="excel_config", resource_id=config_id
+            )
 
         excel_task_config_crud.update(db=db, db_obj=config, obj_in={"is_active": False})
         return {"message": "Excel配置删除成功"}

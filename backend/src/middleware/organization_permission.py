@@ -6,11 +6,10 @@
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import Depends, status
+from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from ..core.api_errors import bad_request, forbidden
-
 from ..database import get_db
 from ..models.auth import User
 from ..services.organization_permission_service import OrganizationPermissionService

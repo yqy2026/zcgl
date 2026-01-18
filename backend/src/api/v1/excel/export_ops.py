@@ -16,12 +16,11 @@ from fastapi import (
     Depends,
     Query,
 )
-
-from ....core.api_errors import bad_request, not_found
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ....config.excel_config import STANDARD_SHEET_NAME
+from ....core.api_errors import bad_request, not_found
 from ....crud.task import task_crud
 from ....database import get_db
 from ....enums.task import TaskStatus, TaskType
@@ -116,9 +115,7 @@ async def export_selected_assets(
 
     # 根据导出类型确定文件名
     filename = (
-        "selected_assets_export.xlsx"
-        if asset_ids
-        else "filtered_assets_export.xlsx"
+        "selected_assets_export.xlsx" if asset_ids else "filtered_assets_export.xlsx"
     )
 
     # 返回文件流（避免重复读取buffer）
@@ -291,7 +288,9 @@ async def download_export_file(
     file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
     if not file_path or not os.path.exists(file_path):
-        raise not_found("导出文件不存在", resource_type="file", resource_id=str(file_path))
+        raise not_found(
+            "导出文件不存在", resource_type="file", resource_id=str(file_path)
+        )
 
     # 返回文件流
     def file_iter() -> Generator[bytes, None, None]:

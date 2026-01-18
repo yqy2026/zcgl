@@ -89,9 +89,7 @@ class TestFieldFilteringValidation:
             "tenant_name": "李四",  # Blocked
         }
 
-        sanitized = FieldValidator.sanitize_filters(
-            "Asset", filters, strict=False
-        )
+        sanitized = FieldValidator.sanitize_filters("Asset", filters, strict=False)
 
         assert "property_name" in sanitized
         assert "ownership_status" in sanitized
@@ -243,12 +241,14 @@ class TestEncryptionMonitoring:
 class TestSecurityIntegration:
     """Integration tests for security features"""
 
-    def test_statistics_endpoint_blocks_unauthorized_group_by(self, client, auth_headers):
+    def test_statistics_endpoint_blocks_unauthorized_group_by(
+        self, client, auth_headers
+    ):
         """Test that /statistics/asset-distribution blocks unauthorized group_by"""
         # Try to group by blocked field
         response = client.get(
             "/api/v1/statistics/asset-distribution?group_by=manager_name",
-            headers=auth_headers
+            headers=auth_headers,
         )
 
         assert response.status_code == 400
@@ -259,17 +259,18 @@ class TestSecurityIntegration:
         # Try to group by allowed field
         response = client.get(
             "/api/v1/statistics/asset-distribution?group_by=ownership_status",
-            headers=auth_headers
+            headers=auth_headers,
         )
 
         # Should succeed (or fail for other reasons, not field validation)
-        assert response.status_code != 400 or "不允许按字段分组" not in str(response.json())
+        assert response.status_code != 400 or "不允许按字段分组" not in str(
+            response.json()
+        )
 
     def test_encryption_status_endpoint(self, client, admin_auth_headers):
         """Test encryption status endpoint"""
         response = client.get(
-            "/api/v1/monitoring/encryption-status",
-            headers=admin_auth_headers
+            "/api/v1/monitoring/encryption-status", headers=admin_auth_headers
         )
 
         assert response.status_code == 200

@@ -10,7 +10,6 @@ from .auth import router as auth_router
 from .backup import router as backup_router
 from .contact import router as contact_router
 from .custom_fields import router as custom_fields_router
-
 from .dictionaries import router as dictionaries_router
 from .enum_field import router as enum_field_router
 

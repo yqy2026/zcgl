@@ -6,12 +6,11 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
-
-from ...core.api_errors import forbidden, not_found
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import forbidden, not_found
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
@@ -164,7 +163,9 @@ async def mark_notification_as_read(
     )
 
     if not notification:
-        raise not_found("通知不存在", resource_type="notification", resource_id=notification_id)
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
+        )
 
     notification.mark_as_read()
     db.commit()
@@ -209,7 +210,9 @@ async def delete_notification(
     )
 
     if not notification:
-        raise not_found("通知不存在", resource_type="notification", resource_id=notification_id)
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
+        )
 
     db.delete(notification)
     db.commit()

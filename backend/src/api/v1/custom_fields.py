@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.custom_field import custom_field_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -81,7 +80,11 @@ async def get_custom_field(
 
         field: AssetCustomField | None = custom_field_crud.get(db=db, id=field_id)
         if not field:
-            raise not_found(f"字段 {field_id} 不存在", resource_type="custom_field", resource_id=field_id)
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
+            )
         return field
 
     except Exception as e:
@@ -189,7 +192,11 @@ async def validate_custom_field_value(
         # 获取字段配置
         field = custom_field_crud.get(db=db, id=field_id)
         if not field:
-            raise not_found(f"字段 {field_id} 不存在", resource_type="custom_field", resource_id=field_id)
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
+            )
 
         # 验证字段值 (使用Service)
         is_valid, error_message = custom_field_service.validate_field_value(
@@ -252,9 +259,7 @@ async def get_asset_custom_field_values(
         return {"asset_id": asset_id, "values": values}
 
     except Exception as e:
-        raise internal_error(
-            f"获取资产自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"获取资产自定义字段值失败: {str(e)}")
 
 
 @router.put("/assets/{asset_id}/values", summary="更新资产自定义字段值")
@@ -279,9 +284,7 @@ async def update_asset_custom_field_values(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        raise internal_error(
-            f"更新资产自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"更新资产自定义字段值失败: {str(e)}")
 
 
 @router.post("/assets/batch-values", summary="批量设置自定义字段值")
@@ -320,6 +323,4 @@ async def batch_set_custom_field_values(
         return {"results": results}
 
     except Exception as e:
-        raise internal_error(
-            f"批量设置自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"批量设置自定义字段值失败: {str(e)}")

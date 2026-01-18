@@ -6,11 +6,10 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ....core.api_errors import bad_request, internal_error, not_found, validation_error
 from sqlalchemy.orm import Session
 
-from ....crud.rent_contract import rent_contract, rent_ledger
+from ....core.api_errors import bad_request, internal_error, not_found, validation_error
+from ....crud.rent_contract import rent_ledger
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -100,7 +99,9 @@ def generate_monthly_ledger(
     """
     try:
         ledgers = rent_contract_service.generate_monthly_ledger(db=db, request=request)
-        ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
+        ledger_responses = [
+            RentLedgerResponse.model_validate(ledger) for ledger in ledgers
+        ]
         return {
             "message": f"成功生成 {len(ledger_responses)} 条台账记录",
             "ledgers": ledger_responses,
@@ -182,7 +183,9 @@ def batch_update_rent_ledger(
     """
     try:
         ledgers = rent_contract_service.batch_update_payment(db=db, request=request)
-        ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
+        ledger_responses = [
+            RentLedgerResponse.model_validate(ledger) for ledger in ledgers
+        ]
         return {
             "message": f"成功更新 {len(ledgers)} 条台账记录",
             "ledgers": ledger_responses,

@@ -5,11 +5,10 @@
 import contextlib
 import os
 from datetime import datetime, timedelta
-from typing import Any
 
 import psutil
-from ....core.api_errors import internal_error
 
+from ....core.api_errors import internal_error
 from .models import ApplicationMetrics, PerformanceAlert, SystemMetrics
 
 # 全局变量存储指标历史数据

@@ -8,10 +8,9 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-
-from ....core.api_errors import internal_error, service_unavailable
 from fastapi.responses import FileResponse
 
+from ....core.api_errors import internal_error, service_unavailable
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 
@@ -20,6 +19,7 @@ router = APIRouter()
 # 尝试导入Excel服务
 try:
     from ....services.document.rent_contract_excel import rent_contract_excel_service
+
     EXCEL_SERVICE_AVAILABLE = True
 except (ImportError, SyntaxError):
     rent_contract_excel_service = None
@@ -35,7 +35,7 @@ def download_excel_template(
     """
     if not EXCEL_SERVICE_AVAILABLE:
         raise service_unavailable("Excel服务不可用")
-    
+
     try:
         result = rent_contract_excel_service.download_contract_template()
         if not result["success"]:
@@ -65,7 +65,7 @@ def import_contracts_from_excel(
     """
     if not EXCEL_SERVICE_AVAILABLE:
         raise service_unavailable("Excel服务不可用")
-    
+
     from typing import cast
 
     try:
@@ -107,7 +107,7 @@ def export_contracts_to_excel(
     """
     if not EXCEL_SERVICE_AVAILABLE:
         raise service_unavailable("Excel服务不可用")
-    
+
     try:
         result = rent_contract_excel_service.export_contracts_to_excel(
             contract_ids=contract_ids,

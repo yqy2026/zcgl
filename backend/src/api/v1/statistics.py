@@ -20,6 +20,7 @@
 """
 
 import logging
+
 from fastapi import APIRouter
 
 # 配置日志
@@ -37,11 +38,11 @@ router = APIRouter(tags=["统计分析"])
 # - trend_stats.py (1 endpoint): 趋势分析
 # - basic_stats.py (6 endpoints): 基础统计和缓存管理
 from .statistics_modules import (
+    area_stats_router,
     basic_stats_router,
     distribution_router,
     financial_stats_router,
     occupancy_stats_router,
-    area_stats_router,
     trend_stats_router,
 )
 
@@ -54,4 +55,3 @@ router.include_router(occupancy_stats_router)
 router.include_router(area_stats_router)
 router.include_router(financial_stats_router)
 router.include_router(trend_stats_router)
-

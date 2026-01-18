@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import bad_request, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, not_found
 from ...crud.organization import organization as organization_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -216,7 +215,9 @@ async def delete_organization(
             db, org_id=org_id, deleted_by=deleted_by
         )
         if not success:
-            raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
+            raise not_found(
+                "组织不存在", resource_type="organization", resource_id=org_id
+            )
         return {"message": "组织删除成功"}
     except ValueError as e:
         raise bad_request(str(e))

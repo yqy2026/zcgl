@@ -17,8 +17,8 @@ import logging
 from fastapi import APIRouter
 
 from . import (
-    pdf_quality_routes,
     pdf_performance_routes,
+    pdf_quality_routes,
     pdf_sessions,
     pdf_system,
     pdf_upload,

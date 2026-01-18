@@ -2,13 +2,13 @@
 租金合同CRUD操作模块
 """
 
+from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends
-
-from ....core.api_errors import bad_request, forbidden, internal_error, not_found
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import bad_request, forbidden, internal_error, not_found
 from ....crud.asset import asset_crud
 from ....crud.ownership import ownership
 from ....crud.rent_contract import rent_contract
@@ -22,8 +22,6 @@ from ....schemas.rent_contract import (
     RentContractUpdate,
 )
 from ....services.rent_contract import rent_contract_service
-from datetime import date
-from fastapi import Query
 
 router = APIRouter()
 
@@ -51,7 +49,11 @@ def create_contract(
 
     ownership_obj = ownership.get(db, id=contract_in.ownership_id)
     if not ownership_obj:
-        raise not_found("关联的权属方不存在", resource_type="ownership", resource_id=str(contract_in.ownership_id))
+        raise not_found(
+            "关联的权属方不存在",
+            resource_type="ownership",
+            resource_id=str(contract_in.ownership_id),
+        )
 
     try:
         contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)

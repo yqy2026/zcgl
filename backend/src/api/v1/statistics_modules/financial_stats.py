@@ -78,15 +78,11 @@ def get_financial_summary(
     for asset in assets:
         # 累计可出租面积
         if getattr(asset, "rentable_area", None):
-            summary["total_rentable_area"] += to_float(
-                getattr(asset, "rentable_area")
-            )
+            summary["total_rentable_area"] += to_float(getattr(asset, "rentable_area"))
 
         # 累计年收入
         if getattr(asset, "annual_income", None):
-            summary["total_annual_income"] += to_float(
-                getattr(asset, "annual_income")
-            )
+            summary["total_annual_income"] += to_float(getattr(asset, "annual_income"))
             summary["assets_with_income_data"] += 1
 
         # 累计年支出
@@ -101,9 +97,7 @@ def get_financial_summary(
 
         # 累计月租金
         if getattr(asset, "monthly_rent", None):
-            summary["total_monthly_rent"] += to_float(
-                getattr(asset, "monthly_rent")
-            )
+            summary["total_monthly_rent"] += to_float(getattr(asset, "monthly_rent"))
             summary["assets_with_rent_data"] += 1
 
         # 累计押金

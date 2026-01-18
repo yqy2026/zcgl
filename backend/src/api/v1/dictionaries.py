@@ -8,12 +8,11 @@ from typing import Any
 import logging
 
 from fastapi import APIRouter, Body, Depends, Path, Query
-
-from ...core.api_errors import bad_request, conflict, internal_error, not_found
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import conflict, internal_error, not_found
 from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ...database import get_db
 from ...models.asset import SystemDictionary

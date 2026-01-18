@@ -14,10 +14,9 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ....core.api_errors import bad_request
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import bad_request
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -122,9 +121,7 @@ def get_occupancy_rate_by_category(
     ]
 
     if category_field not in valid_fields:
-        raise bad_request(
-            f"无效的分类字段。支持的字段: {', '.join(valid_fields)}"
-        )
+        raise bad_request(f"无效的分类字段。支持的字段: {', '.join(valid_fields)}")
 
     # 构建筛选条件
     filters: dict[str, Any] = {}

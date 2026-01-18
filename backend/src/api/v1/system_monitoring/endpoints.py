@@ -7,10 +7,9 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ....core.api_errors import internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import internal_error, not_found
 from .collectors import (
     check_performance_alerts,
     collect_application_metrics,
@@ -31,6 +30,7 @@ try:
     from ....middleware.auth import require_permission
     from ....models.auth import User
 except ImportError:
+
     def get_db() -> Generator[Session, None, None]:
         yield Session()
 
@@ -49,6 +49,7 @@ except ImportError:
 
     class User:  # type: ignore[no-redef]
         pass
+
 
 router = APIRouter()
 
@@ -139,7 +140,9 @@ async def resolve_alert(
             alert.resolved = True
             return {"message": f"告警 {alert_id} 已标记为解决", "success": True}
 
-    raise not_found(f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id)
+    raise not_found(
+        f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id
+    )
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
@@ -151,7 +154,9 @@ async def get_monitoring_dashboard(
     app_metrics = collect_application_metrics()
     health_status = await get_health_status(current_user)
 
-    recent_alerts = sorted(get_active_alerts(), key=lambda x: x.timestamp, reverse=True)[:10]
+    recent_alerts = sorted(
+        get_active_alerts(), key=lambda x: x.timestamp, reverse=True
+    )[:10]
     recent_system_metrics = get_metrics_history()[-12:]
     recent_app_metrics = get_application_metrics_history()[-12:]
 
@@ -166,8 +171,12 @@ async def get_monitoring_dashboard(
         },
         "summary": {
             "total_alerts": len(get_active_alerts()),
-            "critical_alerts": len([a for a in get_active_alerts() if a.level == "critical"]),
-            "warning_alerts": len([a for a in get_active_alerts() if a.level == "warning"]),
+            "critical_alerts": len(
+                [a for a in get_active_alerts() if a.level == "critical"]
+            ),
+            "warning_alerts": len(
+                [a for a in get_active_alerts() if a.level == "warning"]
+            ),
             "health_score": health_status.overall_score,
             "last_updated": datetime.now().isoformat(),
         },
@@ -210,7 +219,9 @@ async def get_encryption_status(
             "Asset": ["project_phone"],
         }
 
-        total_protected_fields = sum(len(fields) for fields in protected_fields.values())
+        total_protected_fields = sum(
+            len(fields) for fields in protected_fields.values()
+        )
 
         response = {
             "encryption_enabled": encryption_enabled,

@@ -12,6 +12,7 @@ def get_database_manager() -> Any:
     """获取数据库管理器"""
     try:
         from ....database import get_database_manager as _get_db_manager
+
         return _get_db_manager()
     except ImportError:
         return None

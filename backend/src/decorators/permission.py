@@ -3,11 +3,10 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from fastapi import Depends, status
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..core.api_errors import unauthorized, forbidden, internal_error
-
+from ..core.api_errors import forbidden, internal_error, unauthorized
 from ..database import get_db
 from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user

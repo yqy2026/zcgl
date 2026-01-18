@@ -22,7 +22,6 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from ...core.api_errors import internal_error
-
 from ...core.performance import PerformanceMonitor
 from ...core.route_guards import debug_only
 from ...schemas.pdf_import import SystemCapabilities, SystemInfoResponse

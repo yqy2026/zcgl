@@ -6,10 +6,9 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Response
-
-from ....core.api_errors import internal_error
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User

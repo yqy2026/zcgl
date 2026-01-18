@@ -69,9 +69,7 @@ async def get_trend_data(
         # 模拟最近6个月的收入趋势
         base_income = 1000000
         for i in range(6):
-            month_income = (
-                base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
-            )
+            month_income = base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
             time_series.append(
                 TimeSeriesDataPoint(
                     date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),

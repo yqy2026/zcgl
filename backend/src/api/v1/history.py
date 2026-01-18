@@ -5,10 +5,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
-
-from ...core.api_errors import internal_error, not_found
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error, not_found
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
@@ -89,7 +88,11 @@ async def get_history_detail(
     try:
         history_record = history_crud.get(db=db, id=history_id)
         if not history_record:
-            raise not_found(f"历史记录 {history_id} 不存在", resource_type="history", resource_id=history_id)
+            raise not_found(
+                f"历史记录 {history_id} 不存在",
+                resource_type="history",
+                resource_id=history_id,
+            )
 
         return history_record
 
@@ -111,7 +114,11 @@ async def delete_history(
     try:
         history_record = history_crud.get(db=db, id=history_id)
         if not history_record:
-            raise not_found(f"历史记录 {history_id} 不存在", resource_type="history", resource_id=history_id)
+            raise not_found(
+                f"历史记录 {history_id} 不存在",
+                resource_type="history",
+                resource_id=history_id,
+            )
 
         history_crud.remove(db=db, id=history_id)
         return {"message": f"历史记录 {history_id} 已成功删除"}

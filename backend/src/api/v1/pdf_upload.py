@@ -28,10 +28,9 @@ from fastapi import (
     Form,
     UploadFile,
 )
-
-from ...core.api_errors import bad_request, internal_error
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
@@ -283,9 +282,7 @@ async def upload_and_extract_pdf_v1_compatible(
     max_size = 50 * 1024 * 1024  # 50MB
     file_content = await file.read()
     if len(file_content) > max_size:
-        raise bad_request(
-            f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-        )
+        raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
 
     if pdf_processing_service is None:
         return ExtractionResponse(

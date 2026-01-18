@@ -6,12 +6,13 @@ from typing import Any
 
 import logging
 
-from fastapi import Depends, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from ..core.api_errors import unauthorized, forbidden, bad_request
+
+from ..core.api_errors import bad_request, forbidden, unauthorized
 from ..core.config import settings
 from ..database import get_db
 from ..models.auth import User, UserRole

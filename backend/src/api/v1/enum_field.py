@@ -5,12 +5,11 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
-
-from ...core.api_errors import bad_request, conflict, not_found
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ...constants.strings.empty import EMPTY_STRING
+from ...core.api_errors import bad_request, conflict, not_found
 from ...core.route_guards import debug_only
 from ...crud.enum_field import (
     get_enum_field_type_crud,
@@ -135,7 +134,9 @@ async def get_enum_field_type(
     crud = get_enum_field_type_crud(db)
     enum_type = crud.get(type_id)
     if not enum_type:
-        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+        raise not_found(
+            "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+        )
     return enum_type
 
 
@@ -167,7 +168,9 @@ async def update_enum_field_type(
 
     db_enum_type = crud.get(type_id)
     if not db_enum_type:
-        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+        raise not_found(
+            "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+        )
 
     # 如果更新了编码，检查是否重复
     if enum_type.code and enum_type.code != db_enum_type.code:
@@ -194,7 +197,9 @@ async def delete_enum_field_type(
     try:
         success = crud.delete(type_id, deleted_by=deleted_by)
         if not success:
-            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+            raise not_found(
+                "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+            )
         return {"message": "枚举类型删除成功"}
     except ValueError as e:
         raise bad_request(str(e))
@@ -262,7 +267,9 @@ async def get_enum_field_value(
     crud = get_enum_field_value_crud(db)
     enum_value = crud.get(value_id)
     if not enum_value:
-        raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+        raise not_found(
+            "枚举值不存在", resource_type="enum_value", resource_id=value_id
+        )
     return enum_value
 
 
@@ -277,7 +284,9 @@ async def create_enum_field_value(
     type_crud = get_enum_field_type_crud(db)
     enum_type = type_crud.get(type_id)
     if not enum_type:
-        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+        raise not_found(
+            "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+        )
 
     # 检查值是否已存在
     existing = crud.get_by_type_and_value(type_id, enum_value.value)
@@ -302,7 +311,9 @@ async def update_enum_field_value(
 
     db_enum_value = crud.get(value_id)
     if not db_enum_value:
-        raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+        raise not_found(
+            "枚举值不存在", resource_type="enum_value", resource_id=value_id
+        )
 
     # 如果更新了值，检查是否重复
     if enum_value.value and enum_value.value != db_enum_value.value:
@@ -331,7 +342,9 @@ async def delete_enum_field_value(
     try:
         success = crud.delete(value_id, deleted_by=deleted_by)
         if not success:
-            raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+            raise not_found(
+                "枚举值不存在", resource_type="enum_value", resource_id=value_id
+            )
         return {"message": "枚举值删除成功"}
     except ValueError as e:
         raise bad_request(str(e))
@@ -350,7 +363,9 @@ async def batch_create_enum_field_values(
     type_crud = get_enum_field_type_crud(db)
     enum_type = type_crud.get(type_id)
     if not enum_type:
-        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+        raise not_found(
+            "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+        )
 
     try:
         created_values = crud.batch_create(
@@ -405,7 +420,9 @@ async def update_enum_field_usage(
 
     db_usage = crud.get(usage_id)
     if not db_usage:
-        raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
+        raise not_found(
+            "使用记录不存在", resource_type="enum_usage", resource_id=usage_id
+        )
 
     updated_usage = crud.update(db_usage, usage)
     return updated_usage
@@ -420,7 +437,9 @@ async def delete_enum_field_usage(
 
     success = crud.delete(usage_id)
     if not success:
-        raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
+        raise not_found(
+            "使用记录不存在", resource_type="enum_usage", resource_id=usage_id
+        )
     return {"message": "使用记录删除成功"}
 
 

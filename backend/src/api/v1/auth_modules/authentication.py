@@ -8,11 +8,11 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request, status
-
-from ....core.api_errors import bad_request, internal_error, unauthorized
+from fastapi import APIRouter, Depends, Request
 from jose import jwt
 from sqlalchemy.orm import Session
+
+from ....core.api_errors import bad_request, internal_error, unauthorized
 
 logger = logging.getLogger(__name__)
 

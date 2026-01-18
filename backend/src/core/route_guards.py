@@ -8,8 +8,6 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import status
-
 from .api_errors import not_found
 
 

@@ -7,11 +7,10 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import bad_request, internal_error, not_found
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...database import get_db
 from ...services.backup import BackupService
 
@@ -110,9 +109,7 @@ async def download_backup(backup_name: str) -> FileResponse:
         backup_info = service.get_backup(backup_name)
 
         if not backup_info:
-            raise not_found(
-                f"备份文件不存在: {backup_name}", resource_type="backup"
-            )
+            raise not_found(f"备份文件不存在: {backup_name}", resource_type="backup")
 
         backup_path = backup_info["file_path"]
         backup_filename = backup_info["filename"]

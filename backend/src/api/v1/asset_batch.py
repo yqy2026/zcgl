@@ -7,10 +7,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-
-from ...core.api_errors import bad_request, internal_error
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error
 from ...crud.asset import asset_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_permission

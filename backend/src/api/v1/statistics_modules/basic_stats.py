@@ -28,7 +28,6 @@ from ....schemas.statistics import (
     DashboardDataResponse,
     DistributionResponse,
 )
-from ....services.analytics import AreaService, OccupancyService
 from ....utils.cache_manager import cache_statistics, get_cache_manager
 from ....utils.numeric import to_float
 
@@ -206,7 +205,9 @@ async def get_dashboard_data(
         ChartDataItem(
             name="已确权",
             value=confirmed_count,
-            percentage=(confirmed_count / total_assets * 100) if total_assets > 0 else 0,
+            percentage=(confirmed_count / total_assets * 100)
+            if total_assets > 0
+            else 0,
         ),
         ChartDataItem(
             name="未确权",
@@ -263,7 +264,9 @@ async def get_comprehensive_statistics(
     # 计算各类统计
     total_assets = len(assets)
     total_land_area = sum(
-        to_float(getattr(a, "land_area")) for a in assets if getattr(a, "land_area", None)
+        to_float(getattr(a, "land_area"))
+        for a in assets
+        if getattr(a, "land_area", None)
     )
     total_rentable_area = sum(
         to_float(getattr(a, "rentable_area"))
