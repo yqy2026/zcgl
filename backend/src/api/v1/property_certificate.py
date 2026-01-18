@@ -366,7 +366,7 @@ def delete_certificate(
 
         property_certificate_crud.remove(db, id=certificate_id)
         logger.info(f"Deleted certificate {certificate_id}")
-        return {"status": "deleted", "certificate_id": certificate_id}
+        return {"status": "deleted"}
     except HTTPException:
         raise
     except Exception as e:
