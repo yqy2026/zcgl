@@ -43,7 +43,7 @@ cd backend && alembic upgrade head
 ## 核心架构
 
 ```
-React UI → EnhancedApiClient → FastAPI (/api/v1/*) → Service → CRUD → SQLAlchemy
+React UI → ApiClient → FastAPI (/api/v1/*) → Service → CRUD → SQLAlchemy
 ```
 
 **关键规则**:

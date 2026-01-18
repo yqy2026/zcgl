@@ -119,13 +119,55 @@ async def process(data):
 
 ## Environment Configuration
 
+### 📁 Configuration Files
+
+| File | Purpose | Example |
+|------|---------|---------|
+| `backend/.env` | Backend environment variables | `backend/.env.example` |
+| `frontend/.env` | Frontend environment variables | `frontend/.env.example` |
+
+### 🚀 First-Time Setup
+
 ```bash
-# backend/.env
-ENVIRONMENT=development          # production, testing, staging
-DEPENDENCY_POLICY=strict         # graceful, optional
+# 1. Backend - Copy and configure
+cp backend/.env.example backend/.env
+# Edit backend/.env and set SECRET_KEY (32+ characters required)
+
+# 2. Frontend - Copy and configure (optional, uses defaults)
+cp frontend/.env.example frontend/.env
+# Edit if needed, defaults work for local development
+
+# 3. Generate secure SECRET_KEY
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-See `backend/src/core/environment.py`
+### ⚙️ Key Configuration Variables
+
+**Backend (`backend/.env`)**:
+```bash
+# Essential
+SECRET_KEY=<32+_character_random_string>  # REQUIRED
+DATABASE_URL=sqlite:///./database/data/land_property.db
+
+# LLM Provider (choose one)
+LLM_PROVIDER="glm-4v"                    # or "qwen-vl-max", "deepseek-vl"
+ZHIPU_API_KEY="your-api-key"             # for GLM-4V
+
+# Environment
+ENVIRONMENT=development                   # production, testing, staging
+DEBUG=true                               # false in production
+```
+
+**Frontend (`frontend/.env`)**:
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8002/api/v1
+VITE_APP_TITLE=经营性资产管理系统
+```
+
+> [!WARNING]
+> **Production**: Set `SECRET_KEY` to a strong random value. Never commit `.env` files to git.
+
+See `backend/src/core/environment.py` for environment detection logic.
 
 ---
 
