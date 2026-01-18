@@ -1,44 +1,49 @@
-import React from 'react'
-import { Pie, Column, Line } from '@ant-design/plots'
-import { Card, Empty, Spin } from 'antd'
-import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap'
+import React from 'react';
+import { Pie, Column, Line } from '@ant-design/plots';
+import { Card, Empty, Spin } from 'antd';
+import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap';
 
 // 基础图表组件属性
 interface BaseChartProps {
-  title: string
-  loading?: boolean
-  height?: number
-  className?: string
+  title: string;
+  loading?: boolean;
+  height?: number;
+  className?: string;
 }
 
 // 饼图数据接口
 interface PieData {
-  type: string
-  value: number
-  count?: number
-  percentage?: number
+  type: string;
+  value: number;
+  count?: number;
+  percentage?: number;
 }
 
 // 柱状图数据接口
 interface BarData {
-  name: string
-  value: number
-  [key: string]: unknown
+  name: string;
+  value: number;
+  [key: string]: string | number;
 }
 
 // 折线图数据接口
 interface LineData {
-  date: string
-  [key: string]: unknown
+  date: string;
+  [key: string]: string | number;
+}
+
+// 通用图表数据类型
+interface ChartDatum {
+  [key: string]: string | number | undefined;
 }
 
 // 饼图组件
 interface PieChartProps extends BaseChartProps {
-  data: PieData[]
-  showLegend?: boolean
-  showTooltip?: boolean
-  innerRadius?: number
-  outerRadius?: number
+  data: PieData[];
+  showLegend?: boolean;
+  showTooltip?: boolean;
+  innerRadius?: number;
+  outerRadius?: number;
 }
 
 export const AnalyticsPieChart: React.FC<PieChartProps> = ({
@@ -53,13 +58,12 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   className
 }) => {
   // Transform data from {name, value} to {type, value} for @ant-design/plots
-  const chartData = data.map(item => ({
-    type: (item as unknown as Record<string, unknown>).name as string || item.type,
-
+  const chartData: Array<{ type: string; value: number }> = data.map(item => ({
+    type: ('name' in item ? (item as { name: string; value: number }).name : item.type),
     value: item.value,
-  }))
+  }));
 
-  const config = {
+  const config: Record<string, unknown> = {
     data: chartData,
     angleField: 'value',
     colorField: 'type',
@@ -75,19 +79,17 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
         fill: CHART_LABEL_COLORS.light,
       },
     },
-
     legend: showLegend ? {
       layout: 'horizontal' as const,
       position: 'bottom' as const,
     } : false,
     tooltip: showTooltip ? {
-      formatter: (datum: Record<string, unknown>) => ({
-        name: datum.type as string,
-        value: formatAreaValue(datum.value as number),
+      formatter: (datum: ChartDatum) => ({
+        name: String(datum.type ?? ''),
+        value: formatAreaValue(Number(datum.value ?? 0)),
       }),
     } : false,
-
-  }
+  };
 
   if (loading !== undefined && loading !== null) {
     return (
@@ -96,7 +98,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
           <Spin size="large" />
         </div>
       </Card>
-    )
+    );
   }
 
   if (data.length === 0) {

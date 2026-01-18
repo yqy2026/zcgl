@@ -6,45 +6,47 @@
  */
 
 interface ErrorContext {
-  component?: string
-  action?: string
-  route?: string
-  userId?: string
-  [key: string]: unknown
+  component?: string;
+  action?: string;
+  route?: string;
+  userId?: string;
+  [key: string]: unknown;
 }
 
 interface ErrorReport {
-  message: string
-  stack?: string
-  context: ErrorContext
-  timestamp: string
-  userAgent: string
-  url: string
+  message: string;
+  stack?: string;
+  context: ErrorContext;
+  timestamp: string;
+  userAgent: string;
+  url: string;
 }
 
 // Error queue for offline/batch reporting
-let errorQueue: ErrorReport[] = []
-let isInitialized = false
+let errorQueue: ErrorReport[] = [];
+let isInitialized = false;
 
 /**
  * Initialize error monitoring service
  */
 export function initErrorMonitoring(): void {
   if (isInitialized) {
-    return
+    return;
   }
 
   // Initialize Sentry if DSN is configured
-  if (import.meta.env.VITE_SENTRY_DSN && process.env.NODE_ENV === 'production') {
-    initSentry()
+  const sentryDSN = import.meta.env.VITE_SENTRY_DSN;
+  if (sentryDSN != null && sentryDSN !== '' && process.env.NODE_ENV === 'production') {
+    initSentry();
   } else {
-    console.info('[ErrorMonitoring] Running in development mode - logging to console')
+    // eslint-disable-next-line no-console
+    console.info('[ErrorMonitoring] Running in development mode - logging to console');
   }
 
-  isInitialized = true
+  isInitialized = true;
 
   // Set up global error handlers
-  setupGlobalErrorHandlers()
+  setupGlobalErrorHandlers();
 }
 
 /**
@@ -53,58 +55,61 @@ export function initErrorMonitoring(): void {
 async function initSentry(): Promise<void> {
   // Dynamic import for optional Sentry dependency
   try {
-    const SentryModule = await import('@sentry/react')
-    const Sentry = SentryModule.default || SentryModule
+    const SentryModule = await import('@sentry/react');
+    const Sentry = SentryModule.default ?? SentryModule;
 
     // Type-safe access to Sentry integrations
-    const BrowserTracing = (SentryModule as { BrowserTracing?: unknown }).BrowserTracing
-    const Replay = (SentryModule as { Replay?: unknown }).Replay
+    const BrowserTracing = (SentryModule as { BrowserTracing?: unknown }).BrowserTracing;
+    const Replay = (SentryModule as { Replay?: unknown }).Replay;
 
-    const integrations: unknown[] = []
-    if (BrowserTracing) {
-      integrations.push(new (BrowserTracing as new () => unknown)())
+    const integrations: unknown[] = [];
+    if (BrowserTracing != null) {
+      integrations.push(new (BrowserTracing as new () => unknown)());
     }
-    if (Replay) {
-      integrations.push(new (Replay as new () => unknown)())
+    if (Replay != null) {
+      integrations.push(new (Replay as new () => unknown)());
     }
 
-    Sentry.init({
+    const sentryConfig = {
       dsn: import.meta.env.VITE_SENTRY_DSN,
       environment: import.meta.env.MODE,
-      release: import.meta.env.VITE_APP_VERSION || '1.0.0',
+      release: import.meta.env.VITE_APP_VERSION ?? '1.0.0',
       integrations: integrations as [],
       tracesSampleRate: 0.1, // 10% of transactions for tracing
       replaysSessionSampleRate: 0.1, // 10% of sessions for replay
       replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors for replay
       beforeSend(event: unknown) {
         // Filter sensitive information
-        if (event && typeof event === 'object' && 'request' in event) {
-          const req = event as { request: { cookies?: unknown; headers?: { authorization?: unknown } } }
-          if (req.request) {
-            delete req.request.cookies
-            if (req.request.headers) {
-              delete req.request.headers.authorization
+        if (event != null && typeof event === 'object' && 'request' in event) {
+          const req = event as { request: { cookies?: unknown; headers?: { authorization?: unknown } } };
+          if (req.request != null) {
+            delete req.request.cookies;
+            if (req.request.headers != null) {
+              delete req.request.headers.authorization;
             }
           }
         }
-        return event
+        return event;
       },
       beforeBreadcrumb(breadcrumb: unknown) {
         // Filter sensitive breadcrumbs
-        if (breadcrumb && typeof breadcrumb === 'object' && 'category' in breadcrumb) {
-          const bc = breadcrumb as { category: string }
+        if (breadcrumb != null && typeof breadcrumb === 'object' && 'category' in breadcrumb) {
+          const bc = breadcrumb as { category: string };
           if (bc.category === 'xhr' || bc.category === 'fetch') {
-            return null // Don't log API calls
+            return null; // Don't log API calls
           }
         }
-        return breadcrumb
+        return breadcrumb;
       },
-    })
-    console.info('[ErrorMonitoring] Sentry initialized')
+    };
+
+    Sentry.init(sentryConfig);
+    // eslint-disable-next-line no-console
+    console.info('[ErrorMonitoring] Sentry initialized');
   } catch (error) {
     // Sentry not installed or failed to load
     // eslint-disable-next-line no-console
-    console.warn('[ErrorMonitoring] Sentry not available:', error instanceof Error ? error.message : String(error))
+    console.warn('[ErrorMonitoring] Sentry not available:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -144,26 +149,26 @@ export function captureException(error: Error, context: ErrorContext = {}): void
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
     url: window.location.href,
-  }
+  };
 
   // Log to console in development
   if (process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
-    console.error('[ErrorMonitoring]', errorReport)
+    console.error('[ErrorMonitoring]', errorReport);
   }
 
   // Send to Sentry if available
-  if (window.Sentry) {
+  if (window.Sentry != null) {
     window.Sentry.captureException(error, {
       contexts: {
         custom: context,
       },
-    })
+    });
   } else {
     // Queue for batch reporting
-    errorQueue.push(errorReport)
+    errorQueue.push(errorReport);
     if (errorQueue.length >= 10) {
-      flushErrorQueue()
+      flushErrorQueue();
     }
   }
 }
@@ -172,15 +177,16 @@ export function captureException(error: Error, context: ErrorContext = {}): void
  * Capture a message (non-error event)
  */
 export function captureMessage(message: string, level: 'info' | 'warning' = 'info', context: ErrorContext = {}): void {
-  if (window.Sentry) {
+  if (window.Sentry != null) {
     window.Sentry.captureMessage(message, {
       level,
       contexts: {
         custom: context,
       },
-    })
+    });
   } else {
-    console.info(`[ErrorMonitoring] [${level.toUpperCase()}]`, message, context)
+    // eslint-disable-next-line no-console
+    console.info(`[ErrorMonitoring] [${level.toUpperCase()}]`, message, context);
   }
 }
 
@@ -188,12 +194,12 @@ export function captureMessage(message: string, level: 'info' | 'warning' = 'inf
  * Set user context for error tracking
  */
 export function setUserContext(userId: string, email?: string, username?: string): void {
-  if (window.Sentry) {
+  if (window.Sentry != null) {
     window.Sentry.setUser({
       id: userId,
       email,
       username,
-    })
+    });
   }
 }
 
@@ -201,8 +207,8 @@ export function setUserContext(userId: string, email?: string, username?: string
  * Clear user context
  */
 export function clearUserContext(): void {
-  if (window.Sentry) {
-    window.Sentry.setUser(null)
+  if (window.Sentry != null) {
+    window.Sentry.setUser(null);
   }
 }
 
@@ -211,11 +217,11 @@ export function clearUserContext(): void {
  */
 export async function flushErrorQueue(): Promise<void> {
   if (errorQueue.length === 0) {
-    return
+    return;
   }
 
-  const errorsToSend = [...errorQueue]
-  errorQueue = []
+  const errorsToSend = [...errorQueue];
+  errorQueue = [];
 
   try {
     // Send to custom error reporting endpoint
@@ -225,13 +231,14 @@ export async function flushErrorQueue(): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ errors: errorsToSend }),
-    })
-    console.info(`[ErrorMonitoring] Sent ${errorsToSend.length} errors to server`)
+    });
+    // eslint-disable-next-line no-console
+    console.info(`[ErrorMonitoring] Sent ${errorsToSend.length} errors to server`);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('[ErrorMonitoring] Failed to send errors:', error)
+    console.error('[ErrorMonitoring] Failed to send errors:', error);
     // Re-queue for retry
-    errorQueue.unshift(...errorsToSend)
+    errorQueue.unshift(...errorsToSend);
   }
 }
 
@@ -239,18 +246,18 @@ export async function flushErrorQueue(): Promise<void> {
  * Get error queue size
  */
 export function getErrorQueueSize(): number {
-  return errorQueue.length
+  return errorQueue.length;
 }
 
 // Type declarations for Sentry
 declare global {
   interface Window {
     Sentry?: {
-      captureException(error: Error, context?: unknown): void
-      captureMessage(message: string, context?: unknown): void
-      setUser(user: null | { id: string; email?: string; username?: string }): void
-      init(config: unknown): void
-    }
+      captureException(error: Error, context?: unknown): void;
+      captureMessage(message: string, context?: unknown): void;
+      setUser(user: null | { id: string; email?: string; username?: string }): void;
+      init(config: unknown): void;
+    };
   }
 }
 
@@ -262,4 +269,4 @@ export default {
   clearUserContext,
   flushErrorQueue,
   getErrorQueueSize,
-}
+};

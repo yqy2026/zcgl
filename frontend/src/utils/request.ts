@@ -2,11 +2,29 @@
  * API请求工具
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { createLogger } from "./logger";
 import { MessageManager } from "./messageManager";
 
 const logger = createLogger('Request');
+
+// Type definitions for error handling
+interface ApiErrorDetail {
+  msg: string;
+  type?: string;
+  loc?: Array<string | number>;
+}
+
+interface ApiErrorResponse {
+  detail?: string | ApiErrorDetail[];
+  errorId?: string;
+  timestamp?: string;
+}
+
+interface ExtendedAxiosError extends AxiosError {
+  errorId?: string;
+  timestamp?: string;
+}
 
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
@@ -43,68 +61,78 @@ const createApiInstance = (): AxiosInstance => {
       });
       return response;
     },
-    (error) => {
+    (error: unknown) => {
       // 生成唯一的错误追踪ID
       const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const timestamp = new Date().toISOString();
 
-      logger.debug("API响应错误", {
-        errorId,
-        timestamp,
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.message,
-      });
+      // Type guard to check if error is an AxiosError
+      if (error instanceof axios.AxiosError) {
+        logger.debug("API响应错误", {
+          errorId,
+          timestamp,
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          message: error.message,
+        });
 
-      // 统一错误处理
-      if (error.response != null) {
-        const { status, data } = error.response;
+        // 统一错误处理
+        if (error.response != null) {
+          const { status, data } = error.response;
 
-        switch (status) {
-          case 400:
-            MessageManager.error(`请求参数错误 [${errorId}]`);
-            break;
-          case 401:
-            MessageManager.error(`未授权，请重新登录 [${errorId}]`);
-            // 可以在这里处理登录跳转
-            break;
-          case 403:
-            MessageManager.error(`权限不足 [${errorId}]`);
-            break;
-          case 404:
-            MessageManager.error(`资源不存在 [${errorId}]`);
-            break;
-          case 422:
-            // 处理验证错误
-            if (data.detail != null && Array.isArray(data.detail)) {
-              const errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(", ");
-              MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
-            } else {
-              MessageManager.error(`数据验证失败 [${errorId}]`);
-            }
-            break;
-          case 500:
-            MessageManager.error(`服务器内部错误 [${errorId}]`);
-            // 在开发环境，记录更详细的信息
-            if (import.meta.env.DEV) {
-              // eslint-disable-next-line no-console
-              console.error(`[${errorId}] 服务器错误详情:`, data);
-            }
-            break;
-          default:
-            MessageManager.error(`请求失败 [${errorId}]`);
+          switch (status) {
+            case 400:
+              MessageManager.error(`请求参数错误 [${errorId}]`);
+              break;
+            case 401:
+              MessageManager.error(`未授权，请重新登录 [${errorId}]`);
+              // 可以在这里处理登录跳转
+              break;
+            case 403:
+              MessageManager.error(`权限不足 [${errorId}]`);
+              break;
+            case 404:
+              MessageManager.error(`资源不存在 [${errorId}]`);
+              break;
+            case 422:
+              // 处理验证错误
+              {
+                const errorData = data as ApiErrorResponse;
+              if (errorData.detail != null && Array.isArray(errorData.detail)) {
+                const errorMsg = errorData.detail.map((err: ApiErrorDetail) => err.msg).join(", ");
+                MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
+              } else {
+                MessageManager.error(`数据验证失败 [${errorId}]`);
+              }
+              }
+              break;
+            case 500:
+              MessageManager.error(`服务器内部错误 [${errorId}]`);
+              // 在开发环境，记录更详细的信息
+              if (import.meta.env.DEV) {
+                // eslint-disable-next-line no-console
+                console.error(`[${errorId}] 服务器错误详情:`, data);
+              }
+              break;
+            default:
+              MessageManager.error(`请求失败 [${errorId}]`);
+          }
+        } else if (error.request != null) {
+          MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
+        } else {
+          MessageManager.error(`请求配置错误 [${errorId}]`);
         }
-      } else if (error.request != null) {
-        MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
-      } else {
-        MessageManager.error(`请求配置错误 [${errorId}]`);
+
+        // 添加错误ID到error对象，便于后续追踪
+        const extendedError = error as ExtendedAxiosError;
+        extendedError.errorId = errorId;
+        extendedError.timestamp = timestamp;
+
+        return Promise.reject(extendedError);
       }
 
-      // 添加错误ID到error对象，便于后续追踪
-      error.errorId = errorId;
-      error.timestamp = timestamp;
-
+      // Handle non-Axios errors
       return Promise.reject(error);
     },
   );

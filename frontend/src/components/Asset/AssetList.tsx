@@ -421,7 +421,7 @@ const AssetList: React.FC<AssetListProps> = ({
         pageSizeOptions: ["10", "20", "50", "100"],
         size: "middle",
       }}
-      onChange={onTableChange as any}
+      onChange={onTableChange as (pagination: unknown, filters: unknown, sorter: unknown) => void}
       size="middle"
       bordered
       sticky={{ offsetHeader: 64 }}

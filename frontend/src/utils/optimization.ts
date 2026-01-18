@@ -121,26 +121,26 @@ export const useLazyImage = (src: string, options?: IntersectionObserverInit) =>
 
 // 内存泄漏检测
 export const useMemoryLeakDetection = (componentName: string) => {
-  const mountTimeRef = useRef<number | undefined>(undefined)
-  const timersRef = useRef<Set<NodeJS.Timeout>>(new Set())
-  const intervalsRef = useRef<Set<NodeJS.Timeout>>(new Set())
-  const listenersRef = useRef<Map<string, EventListener>>(new Map())
+  const mountTimeRef = useRef<number | undefined>(undefined);
+  const timersRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const intervalsRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const listenersRef = useRef<Map<string, EventListener>>(new Map());
 
   useEffect(() => {
-    mountTimeRef.current = Date.now()
+    mountTimeRef.current = Date.now();
 
     return () => {
-      const unmountTime = Date.now()
-      const _lifeTime = unmountTime - (mountTimeRef.current ?? 0)
+      const unmountTime = Date.now();
+      const _lifeTime = unmountTime - (mountTimeRef.current ?? 0);
 
       // 清理定时器
-      timersRef.current.forEach(timer => clearTimeout(timer))
-      intervalsRef.current.forEach(interval => clearInterval(interval))
+      timersRef.current.forEach(timer => clearTimeout(timer));
+      intervalsRef.current.forEach(interval => clearInterval(interval));
 
       // 清理事件监听器
       listenersRef.current.forEach((listener, event) => {
-        window.removeEventListener(event, listener)
-      })
+        window.removeEventListener(event, listener);
+      });
 
       // 在开发环境下记录组件生命周期
       if (process.env.NODE_ENV === 'development') {
@@ -148,17 +148,17 @@ export const useMemoryLeakDetection = (componentName: string) => {
 
         if (timersRef.current.size > 0) {
           // eslint-disable-next-line no-console
-          console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`)
+          console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`);
         }
 
         if (listenersRef.current.size > 0) {
           // eslint-disable-next-line no-console
-          console.warn(`Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`)
+          console.warn(`Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`);
         }
       }
-    }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   const addTimer = useCallback((timer: NodeJS.Timeout) => {
     timersRef.current.add(timer)
@@ -216,29 +216,30 @@ export const useRenderPerformance = (componentName: string) => {
 }
 
 // 缓存Hook
-export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = []) => {
-  const cache = useRef<Map<string, T>>(new Map())
+export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = []): T => {
+  const cache = useRef<Map<string, T>>(new Map());
 
   return useMemo(() => {
-    const cacheKey = `${key}_${JSON.stringify(deps)}`
+    const cacheKey = `${key}_${JSON.stringify(deps)}`;
 
     if (cache.current.has(cacheKey)) {
-      return cache.current.get(cacheKey)!
+      return cache.current.get(cacheKey)!;
     }
 
-    const value = factory()
-    cache.current.set(cacheKey, value)
+    const value = factory();
+    cache.current.set(cacheKey, value);
 
     // 限制缓存大小
     if (cache.current.size > 100) {
-      const firstKey = cache.current.keys().next().value
+      const firstKey = cache.current.keys().next().value;
       if (firstKey != null) {
-        cache.current.delete(firstKey)
+        cache.current.delete(firstKey);
       }
     }
 
-    return value
-  }, deps)
+    return value;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, factory, ...deps]);
 }
 
 // 批量更新Hook

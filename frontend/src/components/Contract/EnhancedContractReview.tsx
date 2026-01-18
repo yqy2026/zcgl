@@ -405,7 +405,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       title: '操作',
       key: 'action',
       width: 100,
-      render: (_: any, record: AssetMatch) => (
+      render: (_: unknown, record: AssetMatch) => (
         <Button
           type="primary"
           size="small"
@@ -477,14 +477,14 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       </Row>
 
       {/* 匹配结果 */}
-      {((sessionData as any).matching_results?.matched_assets?.length > 0 ||
-        (sessionData as any).matching_results?.matched_ownerships?.landlords?.length > 0) && (
+      {((sessionData as MatchingResults).matching_results?.matched_assets?.length > 0 ||
+        (sessionData as MatchingResults).matching_results?.matched_ownerships?.landlords?.length > 0) && (
           <Card
             title={
               <Space>
                 <SearchOutlined />
                 <span>智能匹配结果</span>
-                <Badge count={(sessionData as any).matching_results?.matched_assets?.length ?? 0} />
+                <Badge count={(sessionData as MatchingResults).matching_results?.matched_assets?.length ?? 0} />
               </Space>
             }
             style={{ marginBottom: 24 }}
@@ -493,7 +493,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               <TabPane tab="资产匹配" key="assets">
                 <Table
                   columns={matchingResultsColumns}
-                  dataSource={(sessionData as any).matching_results?.matched_assets ?? []}
+                  dataSource={(sessionData as MatchingResults).matching_results?.matched_assets ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -502,11 +502,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               <TabPane tab="权属方匹配" key="ownerships">
                 <Table
                   columns={[
-                    ...matchingResultsColumns.slice(0, -1) as any,
+                    ...matchingResultsColumns.slice(0, -1),
                     {
                       title: '操作',
                       key: 'action',
-                      render: (_: any, record: OwnershipMatch) => (
+                      render: (_: unknown, record: OwnershipMatch) => (
                         <Button
                           type="primary"
                           size="small"
@@ -516,8 +516,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                         </Button>
                       )
                     }
-                  ] as any}
-                  dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords ?? []}
+                  ]}
+                  dataSource={(sessionData as MatchingResults).matching_results?.matched_ownerships?.landlords ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -596,7 +596,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                         if (typeof val === 'object' && Object.keys(val).length === 0) {
                           return <Text type="secondary" italic>未提取</Text>
                         }
-                        return val as any
+                        return String(val);
                       })()}
                     </div>
                   )}
