@@ -7,6 +7,7 @@ import logging
 import os
 import uuid
 from pathlib import Path
+from typing import List
 
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
@@ -15,7 +16,13 @@ from starlette.requests import Request
 
 from ...database import get_db
 from ...middleware.auth import require_permission
-from ...schemas.property_certificate import CertificateImportConfirm, PropertyCertificateUploadResponse
+from ...schemas.property_certificate import (
+    CertificateImportConfirm,
+    PropertyCertificateCreate,
+    PropertyCertificateResponse,
+    PropertyCertificateUpdate,
+    PropertyCertificateUploadResponse,
+)
 from ...services.property_certificate.service import PropertyCertificateService
 from ...utils.file_security import generate_safe_filename, validate_file_extension
 from ...core.router_registry import route_registry
@@ -173,6 +180,200 @@ async def confirm_import(data: CertificateImportConfirm, db: Session = Depends(g
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"导入产权证失败: {str(e)}",
+        )
+
+
+@router.get("/", response_model=List[PropertyCertificateResponse])
+@require_permission("property_certificate", "read")
+def list_certificates(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    """
+    获取产权证列表
+
+    Args:
+        skip: 跳过记录数
+        limit: 返回记录数限制
+        db: 数据库会话
+
+    Returns:
+        List[PropertyCertificateResponse]: 产权证列表
+    """
+    from ...crud.property_certificate import property_certificate_crud
+
+    try:
+        certificates = property_certificate_crud.get_multi(db, skip=skip, limit=limit)
+        logger.debug(f"Retrieved {len(certificates)} certificates (skip={skip}, limit={limit})")
+        return certificates
+    except Exception as e:
+        logger.error(f"Error listing certificates: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取产权证列表失败: {str(e)}",
+        )
+
+
+@router.get("/{certificate_id}", response_model=PropertyCertificateResponse)
+@require_permission("property_certificate", "read")
+def get_certificate(
+    certificate_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    获取产权证详情
+
+    Args:
+        certificate_id: 产权证ID
+        db: 数据库会话
+
+    Returns:
+        PropertyCertificateResponse: 产权证详情
+
+    Raises:
+        HTTPException: 产权证不存在
+    """
+    from ...crud.property_certificate import property_certificate_crud
+
+    try:
+        cert = property_certificate_crud.get(db, certificate_id)
+        if not cert:
+            logger.warning(f"Certificate not found: {certificate_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="产权证不存在",
+            )
+        logger.debug(f"Retrieved certificate {certificate_id}")
+        return cert
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting certificate {certificate_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取产权证失败: {str(e)}",
+        )
+
+
+@router.post("/", response_model=PropertyCertificateResponse)
+@require_permission("property_certificate", "create")
+def create_certificate(
+    certificate: PropertyCertificateCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    手动创建产权证
+
+    Args:
+        certificate: 产权证创建数据
+        db: 数据库会话
+
+    Returns:
+        PropertyCertificateResponse: 创建的产权证
+
+    Raises:
+        HTTPException: 创建失败
+    """
+    from ...crud.property_certificate import property_certificate_crud
+
+    try:
+        result = property_certificate_crud.create(db, obj_in=certificate)
+        logger.info(f"Created certificate {result.id} (number: {certificate.certificate_number})")
+        return result
+    except Exception as e:
+        logger.error(f"Error creating certificate: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建产权证失败: {str(e)}",
+        )
+
+
+@router.put("/{certificate_id}", response_model=PropertyCertificateResponse)
+@require_permission("property_certificate", "update")
+def update_certificate(
+    certificate_id: str,
+    certificate: PropertyCertificateUpdate,
+    db: Session = Depends(get_db),
+):
+    """
+    更新产权证
+
+    Args:
+        certificate_id: 产权证ID
+        certificate: 更新数据
+        db: 数据库会话
+
+    Returns:
+        PropertyCertificateResponse: 更新后的产权证
+
+    Raises:
+        HTTPException: 产权证不存在或更新失败
+    """
+    from ...crud.property_certificate import property_certificate_crud
+
+    try:
+        cert = property_certificate_crud.get(db, certificate_id)
+        if not cert:
+            logger.warning(f"Certificate not found for update: {certificate_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="产权证不存在",
+            )
+
+        result = property_certificate_crud.update(db, db_obj=cert, obj_in=certificate)
+        logger.info(f"Updated certificate {certificate_id}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating certificate {certificate_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新产权证失败: {str(e)}",
+        )
+
+
+@router.delete("/{certificate_id}")
+@require_permission("property_certificate", "delete")
+def delete_certificate(
+    certificate_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    删除产权证
+
+    Args:
+        certificate_id: 产权证ID
+        db: 数据库会话
+
+    Returns:
+        dict: 删除结果
+
+    Raises:
+        HTTPException: 产权证不存在或删除失败
+    """
+    from ...crud.property_certificate import property_certificate_crud
+
+    try:
+        cert = property_certificate_crud.get(db, certificate_id)
+        if not cert:
+            logger.warning(f"Certificate not found for deletion: {certificate_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="产权证不存在",
+            )
+
+        property_certificate_crud.remove(db, id=certificate_id)
+        logger.info(f"Deleted certificate {certificate_id}")
+        return {"status": "deleted", "certificate_id": certificate_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting certificate {certificate_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除产权证失败: {str(e)}",
         )
 
 
