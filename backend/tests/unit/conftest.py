@@ -12,9 +12,9 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def client(monkeypatch):
     """Create a test client for unit tests with authentication bypassed"""
+    from src.database import get_db
     from src.main import app
     from src.middleware.auth import get_current_active_user, require_permission
-    from src.database import get_db
 
     # Mock authenticated user
     mock_user = MagicMock()

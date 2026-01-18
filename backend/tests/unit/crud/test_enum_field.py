@@ -4,33 +4,31 @@
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, call
-from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
 
 from src.crud.enum_field import (
     EnumFieldTypeCRUD,
-    EnumFieldValueCRUD,
     EnumFieldUsageCRUD,
+    EnumFieldValueCRUD,
     get_enum_field_type_crud,
-    get_enum_field_value_crud,
     get_enum_field_usage_crud,
+    get_enum_field_value_crud,
 )
 from src.models.enum_field import (
     EnumFieldType,
-    EnumFieldValue,
     EnumFieldUsage,
-    EnumFieldHistory,
+    EnumFieldValue,
 )
 from src.schemas.enum_field import (
     EnumFieldTypeCreate,
     EnumFieldTypeUpdate,
-    EnumFieldValueCreate,
-    EnumFieldValueUpdate,
     EnumFieldUsageCreate,
     EnumFieldUsageUpdate,
+    EnumFieldValueCreate,
+    EnumFieldValueUpdate,
 )
 
 
@@ -363,7 +361,7 @@ class TestEnumFieldTypeCRUD:
         mock_db.flush = MagicMock()
 
         # 模拟refresh后对象获得ID
-        created_type = EnumFieldType(
+        EnumFieldType(
             id="new_enum_type_123",
             **sample_enum_type_create.model_dump()
         )
@@ -384,7 +382,7 @@ class TestEnumFieldTypeCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_type = EnumFieldType(
+        EnumFieldType(
             id="new_enum_type_123",
             **sample_enum_type_create.model_dump()
         )
@@ -740,7 +738,7 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
+        EnumFieldValue(
             id="new_enum_value_123",
             **sample_enum_value_create.model_dump()
         )
@@ -784,7 +782,7 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
+        EnumFieldValue(
             id="child_123",
             **value_create.model_dump()
         )
@@ -919,7 +917,7 @@ class TestEnumFieldValueCRUD:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
+        EnumFieldValue(
             id="new_value_123",
             **sample_enum_value_create.model_dump()
         )
@@ -1030,7 +1028,7 @@ class TestEnumFieldUsageCRUD:
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
 
-        created_usage = EnumFieldUsage(
+        EnumFieldUsage(
             id="new_usage_123",
             **usage_create.model_dump()
         )
@@ -1159,7 +1157,7 @@ class TestEdgeCases:
         mock_db.refresh = MagicMock()
         mock_db.flush = MagicMock()
 
-        created_value = EnumFieldValue(
+        EnumFieldValue(
             id="standalone_123",
             **value_create.model_dump()
         )

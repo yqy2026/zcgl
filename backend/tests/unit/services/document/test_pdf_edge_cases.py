@@ -146,7 +146,6 @@ class TestPDFToImagesEdgeCases:
         )
 
         # Use absolute path to fixtures
-        partial_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\empty.pdf"  # Use existing empty.pdf
 
         # 模拟部分转换失败
         # Create a temporary file to avoid the PDF not found error
@@ -255,7 +254,6 @@ class TestTemporaryFileCleanup:
         from src.services.document.pdf_to_images import pdf_to_images
 
         # Use absolute path to fixtures
-        abort_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\empty.pdf"  # Use existing empty.pdf
 
         # 模拟异常终止
         # Create a temporary file to avoid the PDF not found error
@@ -466,15 +464,15 @@ class TestFileValidation:
     def test_exactly_50mb_file_boundary(self):
         """测试恰好 50MB 的文件边界"""
         # 模拟文件大小检查
-        MAX_SIZE = 50 * 1024 * 1024  # 50MB
+        max_size = 50 * 1024 * 1024  # 50MB
 
-        exactly_50mb = MAX_SIZE
-        just_over = MAX_SIZE + 1
-        just_under = MAX_SIZE - 1
+        exactly_50mb = max_size
+        just_over = max_size + 1
+        just_under = max_size - 1
 
-        assert exactly_50mb <= MAX_SIZE
-        assert just_over > MAX_SIZE
-        assert just_under <= MAX_SIZE
+        assert exactly_50mb <= max_size
+        assert just_over > max_size
+        assert just_under <= max_size
 
     @pytest.mark.unit
     def test_fake_pdf_extension(self):

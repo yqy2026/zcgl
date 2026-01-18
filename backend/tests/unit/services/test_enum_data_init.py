@@ -8,7 +8,7 @@ Tests cover:
 - Database operation mocking
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
@@ -203,7 +203,7 @@ class TestInitEnumData:
         mock_db.query.return_value = mock_query
 
         # Execute without specifying created_by
-        result = init_enum_data(mock_db)
+        init_enum_data(mock_db)
 
         # Verify commit was called (function completed successfully)
         mock_db.commit.assert_called_once()
@@ -223,7 +223,7 @@ class TestInitEnumData:
         mock_db.add.side_effect = capture_add
 
         # Execute with custom created_by
-        result = init_enum_data(mock_db, created_by="custom_user")
+        init_enum_data(mock_db, created_by="custom_user")
 
         # Verify created_by was set on added objects
         enum_type = added_objects[0]
@@ -281,7 +281,7 @@ class TestInitEnumData:
         mock_db.add.side_effect = capture_add
 
         # Execute
-        result = init_enum_data(mock_db)
+        init_enum_data(mock_db)
 
         # Verify sort_order is set on enum values
         for value in added_values:
@@ -376,7 +376,7 @@ class TestAddLegacyEnumValues:
         mock_db.query.side_effect = [mock_type_query, mock_value_query]
 
         # Execute without specifying created_by
-        result = add_legacy_enum_values(mock_db)
+        add_legacy_enum_values(mock_db)
 
         # Verify commit was called
         mock_db.commit.assert_called_once()
@@ -400,7 +400,7 @@ class TestAddLegacyEnumValues:
         mock_db.add.side_effect = capture_add
 
         # Execute with custom created_by
-        result = add_legacy_enum_values(mock_db, created_by="legacy_user")
+        add_legacy_enum_values(mock_db, created_by="legacy_user")
 
         # Verify created_by was set
         if added_objects:
@@ -454,7 +454,7 @@ class TestAddLegacyEnumValues:
         mock_db.add.side_effect = capture_add
 
         # Execute
-        result = add_legacy_enum_values(mock_db)
+        add_legacy_enum_values(mock_db)
 
         # Verify sort_order is set to 99 for legacy values
         for value in added_values:
@@ -467,7 +467,6 @@ class TestIntegration:
 
     def test_standard_enums_constant_completeness(self):
         """Test that STANDARD_ENUMS contains all required fields."""
-        required_fields = {"name", "category", "description", "values"}
 
         for enum_code, config in STANDARD_ENUMS.items():
             # Check that all required fields are present

@@ -7,7 +7,6 @@ Tests all major methods and code paths to achieve 80%+ coverage.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from src.models.asset import AssetCustomField
@@ -111,7 +110,7 @@ class TestUpdateCustomField:
                 ) as mock_update:
                     mock_update.return_value = sample_field
 
-                    result = service.update_custom_field(
+                    service.update_custom_field(
                         mock_db, id=TEST_FIELD_ID, obj_in=obj_in
                     )
 
@@ -170,7 +169,7 @@ class TestUpdateCustomField:
                 ) as mock_update:
                     mock_update.return_value = sample_field
 
-                    result = service.update_custom_field(
+                    service.update_custom_field(
                         mock_db, id=TEST_FIELD_ID, obj_in=obj_in
                     )
 
@@ -842,7 +841,7 @@ class TestUpdateSortOrders:
             {"id": TEST_FIELD_ID, "sort_order": 4},  # Valid - update same field
         ]
 
-        field2 = AssetCustomField(id="field_2", field_name="field2", sort_order=0)
+        AssetCustomField(id="field_2", field_name="field2", sort_order=0)
 
         with patch(
             "src.services.custom_field.service.custom_field_crud.get",

@@ -19,11 +19,10 @@ from src.schemas.auth import TokenResponse
 from src.services.core.authentication_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
-    AuthenticationService,
     REFRESH_TOKEN_EXPIRE_DAYS,
     SECRET_KEY,
+    AuthenticationService,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -542,7 +541,7 @@ class TestValidateRefreshToken:
                 "verify_iss": False
             }
         )
-        jti = payload["jti"]
+        payload["jti"]
 
         # Mock token as revoked
         with patch.object(
@@ -750,7 +749,7 @@ class TestEdgeCases:
     def test_validate_token_with_missing_jti(self, auth_service):
         """Test validation handles missing JTI gracefully"""
         # Create a token without jti
-        from datetime import datetime, timedelta, UTC
+        from datetime import UTC, datetime, timedelta
 
         now = datetime.now(UTC)
         payload = {

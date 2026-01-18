@@ -24,11 +24,11 @@ Testing Approach:
 - Test edge cases
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 pytestmark = pytest.mark.api
 
@@ -107,7 +107,6 @@ class TestGetOwnershipDropdownOptions:
     ):
         """Test getting dropdown options successfully"""
         from src.api.v1.ownership import get_ownership_dropdown_options
-        from src.models.asset import Ownership
 
         # Mock database query
         mock_query = MagicMock()
@@ -916,7 +915,6 @@ class TestGetOwnershipFinancialSummary:
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         """Test getting financial summary successfully"""
-        from unittest.mock import PropertyMock
         from src.api.v1.ownership import get_ownership_financial_summary
         from src.crud.ownership import ownership as real_ownership
 
@@ -1070,12 +1068,11 @@ class TestOwnershipEdgeCases:
     @pytest.mark.asyncio
     async def test_create_ownership_with_invalid_code(self, mock_db, mock_current_user):
         """Test creating ownership with invalid code format"""
-        from src.api.v1.ownership import create_ownership
         from src.schemas.ownership import OwnershipCreate
 
         # This should fail validation before reaching the endpoint
         with pytest.raises(ValueError):
-            ownership_data = OwnershipCreate(
+            OwnershipCreate(
                 name="Test Ownership", code="INVALID_CODE"
             )
 

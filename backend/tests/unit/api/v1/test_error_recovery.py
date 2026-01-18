@@ -316,7 +316,10 @@ class TestUpdateRecoveryStrategy:
     @pytest.mark.asyncio
     async def test_update_strategy_success(self, mock_error_recovery_engine, mock_current_user):
         """Test updating strategy successfully"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         with patch("src.api.v1.error_recovery.error_recovery_engine", mock_error_recovery_engine):
             strategy_update = RecoveryStrategyUpdate(max_attempts=5, base_delay=2.0)
@@ -333,7 +336,10 @@ class TestUpdateRecoveryStrategy:
     @pytest.mark.asyncio
     async def test_update_strategy_multiple_fields(self, mock_error_recovery_engine, mock_current_user):
         """Test updating multiple strategy fields"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         with patch("src.api.v1.error_recovery.error_recovery_engine", mock_error_recovery_engine):
             strategy_update = RecoveryStrategyUpdate(
@@ -355,7 +361,10 @@ class TestUpdateRecoveryStrategy:
     @pytest.mark.asyncio
     async def test_update_strategy_invalid_category(self, mock_error_recovery_engine, mock_current_user):
         """Test updating strategy with invalid category"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         with patch("src.api.v1.error_recovery.error_recovery_engine", mock_error_recovery_engine):
             strategy_update = RecoveryStrategyUpdate(max_attempts=5)
@@ -371,7 +380,10 @@ class TestUpdateRecoveryStrategy:
     @pytest.mark.asyncio
     async def test_update_strategy_partial_update(self, mock_error_recovery_engine, mock_current_user):
         """Test updating strategy with partial fields"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         with patch("src.api.v1.error_recovery.error_recovery_engine", mock_error_recovery_engine):
             # Only update max_attempts, other fields should remain unchanged
@@ -390,7 +402,10 @@ class TestUpdateRecoveryStrategy:
     @pytest.mark.asyncio
     async def test_update_strategy_not_found(self, mock_error_recovery_engine, mock_current_user):
         """Test updating strategy when strategy doesn't exist"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         # Remove the database strategy
         from src.services.error_recovery_service import ErrorCategory
@@ -897,8 +912,9 @@ class TestGetErrorRecoveryHealth:
     @pytest.mark.asyncio
     async def test_health_healthy(self, mock_engine):
         """Test health endpoint when system is healthy (90%+ success rate)"""
-        from src.api.v1.error_recovery import get_error_recovery_health
         from fastapi.responses import JSONResponse
+
+        from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -925,8 +941,9 @@ class TestGetErrorRecoveryHealth:
     @pytest.mark.asyncio
     async def test_health_degraded(self, mock_engine):
         """Test health endpoint when system is degraded (70-90% success rate)"""
-        from src.api.v1.error_recovery import get_error_recovery_health
         from fastapi.responses import JSONResponse
+
+        from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -953,8 +970,9 @@ class TestGetErrorRecoveryHealth:
     @pytest.mark.asyncio
     async def test_health_unhealthy(self, mock_engine):
         """Test health endpoint when system is unhealthy (<70% success rate)"""
-        from src.api.v1.error_recovery import get_error_recovery_health
         from fastapi.responses import JSONResponse
+
+        from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -981,8 +999,9 @@ class TestGetErrorRecoveryHealth:
     @pytest.mark.asyncio
     async def test_health_error(self, mock_engine):
         """Test health endpoint when engine raises exception"""
-        from src.api.v1.error_recovery import get_error_recovery_health
         from fastapi.responses import JSONResponse
+
+        from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.side_effect = Exception("Health check error")
 
@@ -998,8 +1017,9 @@ class TestGetErrorRecoveryHealth:
     @pytest.mark.asyncio
     async def test_health_active_circuit_breakers(self, mock_engine):
         """Test health endpoint counts active circuit breakers"""
-        from src.api.v1.error_recovery import get_error_recovery_health
         from fastapi.responses import JSONResponse
+
+        from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -1035,8 +1055,11 @@ class TestErrorRecoveryEdgeCases:
     @pytest.mark.asyncio
     async def test_all_error_categories_valid(self, mock_current_user):
         """Test that all error categories are valid"""
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
         from src.services.error_recovery_service import ErrorCategory
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
 
         mock_engine = MagicMock()
 
@@ -1068,7 +1091,10 @@ class TestErrorRecoveryEdgeCases:
     @pytest.mark.asyncio
     async def test_strategy_validation_bounds(self, mock_error_recovery_engine, mock_current_user):
         """Test strategy update with boundary values"""
-        from src.api.v1.error_recovery import update_recovery_strategy, RecoveryStrategyUpdate
+        from src.api.v1.error_recovery import (
+            RecoveryStrategyUpdate,
+            update_recovery_strategy,
+        )
 
         with patch("src.api.v1.error_recovery.error_recovery_engine", mock_error_recovery_engine):
             # Test minimum and maximum allowed values

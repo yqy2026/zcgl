@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from src.models.auth import User
 from src.models.notification import Notification, NotificationPriority, NotificationType
 from src.models.rent_contract import RentContract, RentLedger
-from src.services.notification.scheduler import NotificationSchedulerService, run_notification_tasks
+from src.services.notification.scheduler import (
+    NotificationSchedulerService,
+    run_notification_tasks,
+)
 
 
 # ============================================================================
@@ -276,7 +279,7 @@ class TestCheckContractExpiry:
 
         mock_db.query.side_effect = query_side_effect
 
-        with patch.object(scheduler_service, "_create_and_send_notification") as mock_create:
+        with patch.object(scheduler_service, "_create_and_send_notification"):
             result = scheduler_service.check_contract_expiry(days_ahead=30)
 
             assert result == 1

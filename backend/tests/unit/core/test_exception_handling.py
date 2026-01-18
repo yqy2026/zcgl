@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from src.core.exception_handler import (
-    ResourceNotFoundError,
     BusinessValidationError,
     DuplicateResourceError,
 )

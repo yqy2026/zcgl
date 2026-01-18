@@ -4,11 +4,12 @@
 """
 
 import logging
+
 from sqlalchemy.exc import IntegrityError
+
 from src.core.exception_handler import (
     BusinessValidationError,
     DuplicateResourceError,
-    ResourceNotFoundError,
 )
 
 logger = logging.getLogger(__name__)

@@ -85,7 +85,7 @@ class SimpleQualityMonitor:
 
                     errors = json.loads(result.stdout)
                     error_count = len(errors)
-                except:
+                except Exception:
                     error_count = result.stdout.count("\n")
             else:
                 error_count = 0

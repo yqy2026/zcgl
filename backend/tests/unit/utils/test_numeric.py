@@ -4,7 +4,6 @@
 测试 src.utils.numeric 模块的工具函数
 """
 
-import pytest
 from decimal import Decimal
 
 from src.utils.numeric import (

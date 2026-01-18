@@ -12,9 +12,8 @@ import pytest
 from sqlalchemy.orm import Session
 
 from src.models.auth import User, UserSession
-from src.schemas.auth import TokenResponse, UserCreate, UserUpdate, UserSessionResponse
+from src.schemas.auth import TokenResponse, UserCreate, UserSessionResponse, UserUpdate
 from src.services.core.auth_service import AuthService
-
 
 # ============================================================================
 # Fixtures
@@ -801,7 +800,6 @@ class TestAuthServiceIntegration:
         """Test password change with history tracking"""
         old_password = "old_password"
         new_password = "NewPassword123!"
-        new_hash = "$2b$12$newhash"
 
         # Change password
         with patch.object(

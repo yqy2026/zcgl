@@ -14,7 +14,7 @@ Total: 43 comprehensive tests
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -22,7 +22,6 @@ from src.exceptions import BusinessLogicError
 from src.models.auth import User, UserRole
 from src.schemas.auth import UserCreate, UserUpdate
 from src.services.core.user_management_service import UserManagementService
-
 
 # ===================== Fixtures =====================
 
@@ -191,7 +190,7 @@ class TestUserCreation:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value.first.return_value = None
 
-        result = user_management_service.create_user(sample_user_create)
+        user_management_service.create_user(sample_user_create)
 
         # Verify database operations
         mock_db.add.assert_called_once()
@@ -291,7 +290,7 @@ class TestUserCreation:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value.first.return_value = None
 
-        result = user_management_service.create_user(sample_user_create)
+        user_management_service.create_user(sample_user_create)
 
         # Verify all fields were set
         mock_db.add.assert_called_once()
@@ -320,7 +319,7 @@ class TestUserCreation:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value.first.return_value = None
 
-        result = user_management_service.create_user(user_data)
+        user_management_service.create_user(user_data)
 
         # Verify user created with None for optional fields
         mock_db.add.assert_called_once()
@@ -456,7 +455,7 @@ class TestUserUpdate:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value.first.side_effect = [sample_user, None, None]
 
-        result = user_management_service.update_user("user_123", update_data)
+        user_management_service.update_user("user_123", update_data)
 
         assert sample_user.updated_at is not None
 
@@ -835,7 +834,7 @@ class TestEdgeCases:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value.first.return_value = None
 
-        result = user_management_service.create_user(user_data)
+        user_management_service.create_user(user_data)
 
         mock_db.add.assert_called_once()
         added_user = mock_db.add.call_args[0][0]

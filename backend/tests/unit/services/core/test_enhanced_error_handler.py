@@ -4,7 +4,7 @@ Enhanced Error Handler 单元测试
 测试 EnhancedPDFImportError 类的错误处理、重试机制和健康检查功能
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -287,7 +287,7 @@ class TestHandleError:
             ValueError("Value error"),
             TypeError("Type error"),
             RuntimeError("Runtime error"),
-            IOError("IO error"),
+            OSError("IO error"),
             Exception("Generic exception"),
         ]
 
@@ -403,7 +403,6 @@ class TestMonitorProcessingHealth:
 
         # Import the function to get the actual import path
         import sys
-        from importlib import reload
 
         # Mock the module before importing
         sys.modules["src.services.providers.ocr_provider"] = MagicMock()
@@ -580,7 +579,7 @@ class TestErrorMessageFormatting:
 
     def test_file_too_large_includes_size_limit(self, error_handler):
         """测试文件过大错误包含大小限制"""
-        result = error_handler.handle_error(
+        error_handler.handle_error(
             error=ValueError("File too large"),
             context={},
             error_type="file_too_large",
@@ -743,7 +742,7 @@ class TestIntegrationScenarios:
 
     def test_pdf_corrupted_scenario(self, error_handler):
         """测试PDF文件损坏的实际场景"""
-        corrupted_error = IOError("Invalid PDF structure")
+        corrupted_error = OSError("Invalid PDF structure")
         context = {
             "file_name": "corrupted.pdf",
             "file_size": 1024 * 1024,

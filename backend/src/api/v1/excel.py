@@ -406,7 +406,7 @@ async def import_excel(
     - **sheet_name**: Excel工作表名称，默认为"{STANDARD_SHEET_NAME}"
     """
     # 安全验证文件
-    validation_result = await security_middleware.validate_file_upload(
+    await security_middleware.validate_file_upload(
         file,
         allowed_types=[
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

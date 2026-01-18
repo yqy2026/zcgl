@@ -23,8 +23,8 @@ Endpoints Tested:
 17. GET /api/v1/tasks/cleanup - Cleanup old tasks
 """
 
-from datetime import datetime, UTC, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException

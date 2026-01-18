@@ -4,7 +4,7 @@ Targeting 70%+ coverage for backend/src/crud/auth.py
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
@@ -823,7 +823,7 @@ class TestAuthCRUDEdgeCases:
         """Test updating user with empty update data"""
         empty_update = UserUpdate()
 
-        result = user_crud.update(mock_db, sample_user, empty_update)
+        user_crud.update(mock_db, sample_user, empty_update)
 
         # Should still trigger update of updated_at
         mock_db.commit.assert_called_once()

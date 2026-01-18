@@ -4,7 +4,6 @@
 测试 AssetBatchValidator 的数据验证逻辑
 """
 
-import pytest
 
 from src.services.asset.validators import AssetBatchValidator
 

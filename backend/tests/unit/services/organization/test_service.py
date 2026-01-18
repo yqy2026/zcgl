@@ -150,7 +150,7 @@ class TestCreateOrganization:
         mock_db.refresh.return_value = None
 
         with patch.object(org_service, "_create_history", return_value=None) as mock_history:
-            result = org_service.create_organization(mock_db, obj_in=obj_in)
+            org_service.create_organization(mock_db, obj_in=obj_in)
             mock_history.assert_called_once()
 
 
@@ -337,7 +337,7 @@ class TestDeleteOrganization:
             mock_db.query.side_effect = query_side_effect
 
             with patch.object(org_service, "_create_history") as mock_history:
-                result = org_service.delete_organization(mock_db, org_id="org_123", deleted_by="user_123")
+                org_service.delete_organization(mock_db, org_id="org_123", deleted_by="user_123")
                 mock_history.assert_called_once()
 
 
@@ -409,7 +409,7 @@ class TestGetHistory:
         mock_filter = MagicMock()
         mock_order = MagicMock()
         mock_offset = MagicMock()
-        mock_limit = MagicMock()
+        MagicMock()
 
         mock_query.filter.return_value = mock_filter
         mock_filter.order_by.return_value = mock_order
@@ -418,7 +418,7 @@ class TestGetHistory:
 
         mock_db.query.return_value = mock_query
 
-        result = org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
+        org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
 
         mock_order.offset.assert_called_with(10)
         mock_offset.limit.assert_called_with(20)

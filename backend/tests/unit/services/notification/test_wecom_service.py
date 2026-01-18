@@ -6,8 +6,8 @@ WeCom Service 单元测试
 
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 import httpx
+import pytest
 
 from src.services.notification.wecom_service import WecomService, wecom_service
 
@@ -467,14 +467,12 @@ class TestSingletonInstance:
 
     def test_wecom_service_singleton_exists(self):
         """测试wecom_service单例存在"""
-        from src.services.notification.wecom_service import wecom_service
 
         assert wecom_service is not None
         assert isinstance(wecom_service, WecomService)
 
     def test_singleton_is_reusable(self):
         """测试单例可重用"""
-        from src.services.notification.wecom_service import wecom_service
 
         # 多次导入应该返回同一个实例
         from src.services.notification import wecom_service as wecom_service2

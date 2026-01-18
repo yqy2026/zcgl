@@ -27,7 +27,7 @@ Endpoints Tested:
 21. GET /api/v1/enum-fields/values/{value_id}/history - Get enum field value history
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -989,7 +989,6 @@ class TestGetEnumFieldTypeHistory:
     async def test_get_enum_field_type_history_success(self, mock_db, mock_enum_history):
         """Test getting enum field type history successfully"""
         from src.api.v1.enum_field import get_enum_field_type_history
-        from src.models.enum_field import EnumFieldHistory
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
@@ -1006,7 +1005,6 @@ class TestGetEnumFieldTypeHistory:
     async def test_get_enum_field_type_history_empty(self, mock_db):
         """Test getting enum field type history with empty result"""
         from src.api.v1.enum_field import get_enum_field_type_history
-        from src.models.enum_field import EnumFieldHistory
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
@@ -1029,7 +1027,6 @@ class TestGetEnumFieldValueHistory:
     async def test_get_enum_field_value_history_success(self, mock_db, mock_enum_history):
         """Test getting enum field value history successfully"""
         from src.api.v1.enum_field import get_enum_field_value_history
-        from src.models.enum_field import EnumFieldHistory
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
@@ -1046,7 +1043,6 @@ class TestGetEnumFieldValueHistory:
     async def test_get_enum_field_value_history_empty(self, mock_db):
         """Test getting enum field value history with empty result"""
         from src.api.v1.enum_field import get_enum_field_value_history
-        from src.models.enum_field import EnumFieldHistory
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []

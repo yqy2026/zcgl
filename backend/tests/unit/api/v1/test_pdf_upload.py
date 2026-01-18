@@ -16,10 +16,7 @@ Testing Approach:
 """
 
 import io
-import tempfile
-from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
+from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import pytest
 from fastapi import HTTPException, UploadFile
@@ -559,7 +556,7 @@ class TestUploadPdfFile:
 
                     # Make open raise an exception
                     m_open = mock_open()
-                    m_open.return_value.__enter__.side_effect = IOError("Disk full")
+                    m_open.return_value.__enter__.side_effect = OSError("Disk full")
 
                     with pytest.raises(HTTPException) as exc_info:
                         await upload_pdf_file(

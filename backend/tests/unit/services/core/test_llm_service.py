@@ -13,23 +13,21 @@ Tests cover:
 Target: 70%+ coverage for llm_service.py
 """
 
-import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
 
 from src.services.core.llm_service import (
-    LLMResponse,
-    LLMServiceInterface,
     BaseOpenAILLM,
-    LLMServiceFactory,
+    LLMResponse,
     LLMService,
-    get_llm_service,
+    LLMServiceFactory,
+    LLMServiceInterface,
     create_llm_service,
+    get_llm_service,
 )
 from src.services.document.config import LLMProvider
-
 
 # ============================================================================
 # Test Fixtures
@@ -346,7 +344,7 @@ class TestBaseOpenAILLM:
 
         # Make context manager fail with timeout
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
             mock_client_class.side_effect = httpx.ReadTimeout("Request timeout")
 
             service = BaseOpenAILLM(
@@ -368,7 +366,7 @@ class TestBaseOpenAILLM:
         """Test chat_completion handles network errors properly."""
         # Simplified test that verifies exception handling works
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
 
             # Make context manager itself fail
             mock_client_class.side_effect = httpx.ConnectError("Connection refused")
@@ -388,7 +386,7 @@ class TestBaseOpenAILLM:
         """Test chat_completion handles timeout errors properly."""
         # Simplified test that verifies timeout handling
         with patch("httpx.AsyncClient") as mock_client_class:
-            mock_client = AsyncMock()
+            AsyncMock()
 
             # Make context manager fail with timeout
             mock_client_class.side_effect = httpx.ReadTimeout("Request timeout")

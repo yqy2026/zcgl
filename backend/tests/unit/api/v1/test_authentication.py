@@ -22,7 +22,7 @@ Testing Approach:
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, status
@@ -413,7 +413,7 @@ class TestLogout:
     ):
         """Test logout successfully blacklists token"""
         from src.api.v1.auth_modules.authentication import logout
-        from src.middleware.auth import SECRET_KEY, ALGORITHM
+        from src.middleware.auth import ALGORITHM, SECRET_KEY
 
         mock_request.headers = {
             "Authorization": "Bearer valid_token",
@@ -847,7 +847,7 @@ class TestDebugAuth:
 
         from src.api.v1.auth_modules.authentication import debug_auth
 
-        mock_auth_service = MagicMock()
+        MagicMock()
         mock_auth_service_class.side_effect = Exception("Service init failed")
 
         result = await debug_auth(db=mock_db)

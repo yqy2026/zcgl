@@ -2,11 +2,12 @@ import os
 import sys
 from logging.config import fileConfig
 
-from alembic import context
-from sqlalchemy import engine_from_config, pool
-
 # Load environment variables from .env file
 from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
+
 load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -17,7 +18,7 @@ try:
     logger = None
 
     # Import all models so Alembic can detect them
-    from src.models import (
+    from src.models import (  # noqa: F401
         asset,
         auth,
         collection,

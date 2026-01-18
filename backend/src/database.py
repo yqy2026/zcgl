@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
 from src.constants.database.pool import DatabasePoolConfig
+from src.constants.errors.error_ids import ErrorIDs
 
 try:
     from .database_security import enhance_database_security
@@ -166,25 +167,60 @@ class DatabaseManager:
             return self.engine
 
         except OperationalError as e:
+            # ✅ 改进错误消息 - 解析错误字符串以提供具体提示
+            error_str = str(e).lower()
+
+            # 根据错误类型提供具体建议
+            if "connection refused" in error_str:
+                hint = "PostgreSQL服务未运行或端口配置错误"
+                suggestion = "请检查: 1) PostgreSQL服务是否启动 2) DATABASE_URL中的端口是否正确"
+            elif "authentication failed" in error_str or "password" in error_str:
+                hint = "数据库密码错误或用户不存在"
+                suggestion = "请检查: 1) DATABASE_URL中的用户名和密码 2) 数据库用户是否存在 3) 用户密码是否正确"
+            elif "database" in error_str and "does not exist" in error_str:
+                hint = "数据库不存在"
+                suggestion = "请先创建数据库: python scripts/setup_postgresql.py 或 createdb命令"
+            elif "timeout" in error_str:
+                hint = "连接超时"
+                suggestion = "请检查: 1) 网络连接 2) 防火墙设置 3) PostgreSQL服务器负载"
+            elif "no such host" in error_str or "could not translate host name" in error_str:
+                hint = "主机名无法解析"
+                suggestion = "请检查DATABASE_URL中的主机名是否正确，DNS是否可解析"
+            else:
+                hint = "数据库连接失败"
+                suggestion = "请检查PostgreSQL是否运行，且DATABASE_URL配置正确"
+
+            # 解析DATABASE_URL以获取安全信息（不含密码）
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(database_url)
+                safe_url = f"postgresql://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            except Exception:
+                safe_url = database_url.split("@")[-1] if "@" in database_url else database_url
+
             logger.critical(
                 "无法连接到PostgreSQL数据库",
                 extra={
-                    "error_id": "DB_CONNECTION_FAILED",
-                    "database": database_url.split("@")[-1] if "@" in database_url else database_url,
-                    "error_details": str(e)
+                    "error_id": ErrorIDs.Database.CONNECTION_FAILED,
+                    "database": safe_url,
+                    "error_details": str(e),
+                    "hint": hint
                 }
             )
             raise RuntimeError(
-                f"数据库连接失败: 请检查PostgreSQL是否运行，且DATABASE_URL配置正确。\n"
-                f"错误详情: {e}\n"
-                f"提示: 请确保数据库已创建，且用户权限正确。\n"
-                f"帮助文档: docs/POSTGRESQL_MIGRATION.md"
+                f"数据库连接失败\n"
+                f"  连接目标: {safe_url}\n"
+                f"  错误原因: {hint}\n"
+                f"  原始错误: {e}\n"
+                f"  解决建议:\n"
+                f"    {suggestion}\n"
+                f"  帮助文档: docs/POSTGRESQL_MIGRATION.md"
             ) from e
 
         except (ValueError, AttributeError) as e:
             logger.critical(
                 "DATABASE_URL配置错误",
-                extra={"error_id": "DB_URL_MALFORMED", "error_details": str(e)}
+                extra={"error_id": ErrorIDs.Database.URL_MALFORMED, "error_details": str(e)}
             )
             raise ValueError(
                 f"DATABASE_URL格式错误: {database_url}\n"
@@ -351,15 +387,18 @@ class DatabaseManager:
                     "error": "数据库连接失败",
                     "error_details": str(e),
                 }
-            logger.error(
+            logger.critical(
                 f"数据库健康检查失败 - 连接错误: {e}",
                 extra={
-                    "error_id": "DB_HEALTH_CHECK_FAILED",
+                    "error_id": ErrorIDs.Database.HEALTH_CHECK_FAILED,
                     "error_type": "OperationalError",
-                    "severity": "ERROR"
+                    "severity": "CRITICAL"
                 }
             )
-            # ❌ 移除 raise - 让调用者检查healthy字段
+            # ✅ 重新抛出异常以确保失败时的可见性
+            # 注意：这是breaking change恢复。如果需要返回healthy=False，
+            # 调用者应该捕获这个异常并返回适当的HTTP状态码
+            raise
 
         except Exception as e:
             health_status["healthy"] = False
@@ -370,12 +409,13 @@ class DatabaseManager:
                     "error": "未知数据库错误",
                     "error_details": str(e),
                 }
-            logger.error(
+            logger.critical(
                 f"数据库健康检查失败 - 未知错误: {e}",
                 exc_info=True,
-                extra={"error_id": "DB_HEALTH_CHECK_UNKNOWN_ERROR", "severity": "ERROR"}
+                extra={"error_id": ErrorIDs.Database.HEALTH_CHECK_UNKNOWN_ERROR, "severity": "CRITICAL"}
             )
-            # ❌ 移除 raise - 让调用者检查healthy字段
+            # ✅ 重新抛出异常以确保失败时的可见性
+            raise
 
         return health_status
 
@@ -391,7 +431,7 @@ def get_database_url() -> str:
         if environment == "production":
             logger.critical(
                 "生产环境必须设置DATABASE_URL环境变量",
-                extra={"error_id": "MISSING_DATABASE_URL"}
+                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL}
             )
             raise ValueError(
                 "生产环境必须设置DATABASE_URL环境变量！\n"
@@ -399,13 +439,42 @@ def get_database_url() -> str:
                 "DATABASE_URL=postgresql://user:password@host:port/database\n"
                 "帮助文档: docs/POSTGRESQL_MIGRATION.md"
             )
+        elif environment in ["development", "testing"]:
+            # ✅ 修复: 开发环境需要显式启用SQLite回退
+            # 避免意外的配置错误被静默掩盖
+            use_sqlite_fallback = os.getenv("ALLOW_SQLITE_FALLBACK", "false").lower() == "true"
+
+            if use_sqlite_fallback:
+                logger.warning(
+                    "未设置DATABASE_URL，使用SQLite后备数据库（已通过ALLOW_SQLITE_FALLBACK显式启用）",
+                    extra={
+                        "error_id": ErrorIDs.Database.SQLITE_FALLBACK_EXPLICIT,
+                        "fallback_enabled": "true"
+                    }
+                )
+                return "sqlite:///./data/land_property.db"
+            else:
+                # ✅ 快速失败: 不允许静默使用错误的数据库
+                logger.critical(
+                    "开发环境未设置DATABASE_URL",
+                    extra={
+                        "error_id": ErrorIDs.Database.MISSING_DATABASE_URL_DEV,
+                        "hint": "请设置DATABASE_URL或设置ALLOW_SQLITE_FALLBACK=true"
+                    }
+                )
+                raise ValueError(
+                    "开发环境必须设置DATABASE_URL环境变量！\n"
+                    "如需使用SQLite后备，请设置 ALLOW_SQLITE_FALLBACK=true\n"
+                    "推荐: DATABASE_URL=postgresql://user:pass@localhost:5432/zcgl_db\n"
+                    "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+                )
         else:
-            # 开发环境: 使用SQLite并警告
-            logger.warning(
-                "未设置DATABASE_URL，使用默认SQLite数据库（仅用于开发）",
-                extra={"error_id": "USING_DEFAULT_SQLITE"}
+            # staging等其他环境
+            logger.critical(
+                f"环境 '{environment}' 必须设置DATABASE_URL",
+                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL_STAGING}
             )
-            return "sqlite:///./data/land_property.db"
+            raise ValueError(f"环境 '{environment}' 必须设置DATABASE_URL环境变量！")
 
     # 验证PostgreSQL URL格式
     if database_url.startswith("postgresql://"):
@@ -446,7 +515,7 @@ def get_database_url() -> str:
         if environment == "production":
             logger.critical(
                 "生产环境禁止使用SQLite数据库",
-                extra={"error_id": "SQLITE_IN_PRODUCTION"}
+                extra={"error_id": ErrorIDs.Database.SQLITE_IN_PRODUCTION}
             )
             raise ValueError(
                 "生产环境必须使用PostgreSQL数据库！\n"

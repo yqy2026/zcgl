@@ -43,7 +43,7 @@ class APIHealthCheckService {
       const startTime = performance.now()
 
       try {
-        const response = await enhancedApiClient.get(endpoint.path, {
+        await enhancedApiClient.get(endpoint.path, {
           // Short timeout for health checks
           timeout: 5000,
         })

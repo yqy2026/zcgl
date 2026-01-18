@@ -6,7 +6,7 @@ This test module covers all endpoints in the rent_contract router to achieve 70%
 
 from datetime import date, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -870,8 +870,9 @@ class TestExcelOperations:
     @patch("src.api.v1.rent_contract.rent_contract_excel_service")
     def test_download_excel_template_success(self, mock_excel_service, mock_current_user):
         """Test successful Excel template download"""
-        from src.api.v1.rent_contract import download_excel_template
         from fastapi.responses import FileResponse
+
+        from src.api.v1.rent_contract import download_excel_template
 
         mock_excel_service.download_contract_template.return_value = {
             "success": True,
@@ -887,8 +888,9 @@ class TestExcelOperations:
     @patch("src.api.v1.rent_contract.rent_contract_excel_service")
     def test_export_contracts_to_excel_success(self, mock_excel_service, mock_current_user):
         """Test successful Excel export"""
-        from src.api.v1.rent_contract import export_contracts_to_excel
         from fastapi.responses import FileResponse
+
+        from src.api.v1.rent_contract import export_contracts_to_excel
 
         mock_excel_service.export_contracts_to_excel.return_value = {
             "success": True,

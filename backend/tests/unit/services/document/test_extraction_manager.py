@@ -7,8 +7,7 @@ Tests for DocumentExtractionManager and KeywordClassifier
 测试文档提取管理器和关键词分类器
 """
 
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -20,7 +19,6 @@ from src.services.document.extraction_manager import (
     get_extraction_manager,
     reset_extraction_manager,
 )
-
 
 # ============================================================================
 # KeywordClassifier Tests
@@ -74,7 +72,6 @@ class TestKeywordClassifier:
         """Classification should be case-insensitive for ASCII, Chinese is case-less"""
         # Chinese characters don't have case, so all these should classify the same
         text_normal = "租赁合同 甲方 乙方 月租金"
-        text_spaced = "租 赁 合 同 甲 方 乙 方"
 
         assert KeywordClassifier.classify(text_normal) == DocumentType.CONTRACT
         # Note: Chinese with spaces between chars might not match keywords properly

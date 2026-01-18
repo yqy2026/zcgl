@@ -4,7 +4,6 @@
 测试 AssetCalculator 和 OccupancyRateCalculator 的纯计算逻辑
 """
 
-import pytest
 from src.services.asset.asset_calculator import (
     AssetCalculator,
     OccupancyRateCalculator,

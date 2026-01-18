@@ -232,7 +232,7 @@ async def test_zhipu_extraction():
                         print(
                             f"  {term.get('start_date')} ~ {term.get('end_date')}: ¥{term.get('monthly_rent')}/月"
                         )
-            except:
+            except Exception:
                 print(content)
 
     except Exception as e:

@@ -3,17 +3,18 @@
 """
 
 import asyncio
-import time
-import uuid
-from datetime import UTC, date
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import date
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
-from src.models.rent_contract import ContractType, PaymentCycle, RentContract
+from src.models.pdf_import_session import (
+    PDFImportSession,
+    ProcessingStep,
+    SessionStatus,
+)
+from src.models.rent_contract import ContractType, PaymentCycle
 from src.services.document.pdf_import_service import PDFImportService
 
 

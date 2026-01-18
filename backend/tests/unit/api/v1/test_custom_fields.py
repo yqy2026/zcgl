@@ -23,7 +23,7 @@ Testing Approach:
 - Test response schemas
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest

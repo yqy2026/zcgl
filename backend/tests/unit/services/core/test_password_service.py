@@ -5,10 +5,7 @@
 """
 
 import json
-from datetime import datetime, timedelta
-from unittest.mock import Mock
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from src.services.core.password_service import PasswordService
 
@@ -385,9 +382,8 @@ class TestIsPasswordExpired:
         """测试时区感知的 datetime"""
         service = PasswordService()
         # 带 timezone 的 datetime（虽然 SQLite 通常存储 naive datetime）
-        from datetime import timezone
 
-        tz_aware_date = datetime.now(timezone.utc).replace(tzinfo=None)
+        tz_aware_date = datetime.now(UTC).replace(tzinfo=None)
         user = MockUser(password_last_changed=tz_aware_date)
 
         # 应该不崩溃并返回布尔值

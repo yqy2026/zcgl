@@ -14,7 +14,7 @@ def create_minimal_pdf(filepath, content=b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog
 def create_zero_byte_pdf(filepath):
     """Create an empty PDF file"""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, 'wb') as f:
+    with open(filepath, 'wb'):
         pass  # Empty file
     print(f"Created: {filepath}")
 

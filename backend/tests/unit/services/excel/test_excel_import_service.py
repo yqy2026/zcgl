@@ -3,16 +3,14 @@
 """
 
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 from sqlalchemy.orm import Session
 
 from src.core.exception_handler import BusinessValidationError
-from src.schemas.asset import AssetUpdate
-from src.services.excel.excel_import_service import ExcelImportService, FIELD_MAPPING
+from src.services.excel.excel_import_service import FIELD_MAPPING, ExcelImportService
 
 
 @pytest.fixture

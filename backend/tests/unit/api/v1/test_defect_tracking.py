@@ -78,7 +78,7 @@ class TestCreateDefect:
     @pytest.mark.asyncio
     async def test_create_defect_success(self, mock_get_conn):
         """Test successful defect creation"""
-        from src.api.v1.defect_tracking import create_defect, DefectReport
+        from src.api.v1.defect_tracking import DefectReport, create_defect
 
         sample_data = {
             "title": "Login button not responding",
@@ -111,8 +111,9 @@ class TestCreateDefect:
     @pytest.mark.asyncio
     async def test_create_defect_database_error(self, mock_get_conn):
         """Test defect creation with database error"""
-        from src.api.v1.defect_tracking import create_defect, DefectReport
         from sqlite3 import IntegrityError
+
+        from src.api.v1.defect_tracking import DefectReport, create_defect
 
         sample_data = {
             "title": "Test",
@@ -173,7 +174,7 @@ class TestGetDefects:
     @pytest.mark.asyncio
     async def test_get_defects_with_filters(self, mock_get_conn):
         """Test getting defects with status filter"""
-        from src.api.v1.defect_tracking import get_defects, DefectStatus
+        from src.api.v1.defect_tracking import DefectStatus, get_defects
 
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
@@ -332,7 +333,7 @@ class TestUpdateDefect:
 
         updates = {"status": "resolved"}
 
-        result = await update_defect("DEF-20260116-ABC12345", updates)
+        await update_defect("DEF-20260116-ABC12345", updates)
 
         assert mock_conn.cursor.execute.call_count >= 2
         mock_conn.commit.assert_called_once()
@@ -596,7 +597,10 @@ class TestCreatePreventionMeasure:
     @pytest.mark.asyncio
     async def test_create_prevention_success(self, mock_get_conn):
         """Test successful prevention measure creation"""
-        from src.api.v1.defect_tracking import create_prevention_measure, DefectPrevention
+        from src.api.v1.defect_tracking import (
+            DefectPrevention,
+            create_prevention_measure,
+        )
 
         sample_data = {
             "prevention_id": "PREV-20260116-XYZ12345",
@@ -637,8 +641,12 @@ class TestCreatePreventionMeasure:
     @pytest.mark.asyncio
     async def test_create_prevention_database_error(self, mock_get_conn):
         """Test prevention creation with database error"""
-        from src.api.v1.defect_tracking import create_prevention_measure, DefectPrevention
         from sqlite3 import DatabaseError
+
+        from src.api.v1.defect_tracking import (
+            DefectPrevention,
+            create_prevention_measure,
+        )
 
         sample_data = {
             "prevention_id": "PREV-001",
@@ -692,7 +700,7 @@ class TestGetPreventionMeasures:
     @pytest.mark.asyncio
     async def test_get_prevention_measures_with_filters(self, mock_get_conn):
         """Test getting prevention measures with filters"""
-        from src.api.v1.defect_tracking import get_prevention_measures, DefectCategory
+        from src.api.v1.defect_tracking import DefectCategory, get_prevention_measures
 
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
@@ -767,7 +775,10 @@ class TestHelperFunctions:
     @pytest.mark.asyncio
     async def test_module_helper_functions(self, mock_get_conn):
         """Test module-level helper functions"""
-        from src.api.v1.defect_tracking import _get_module_severity, _generate_defect_recommendations
+        from src.api.v1.defect_tracking import (
+            _generate_defect_recommendations,
+            _get_module_severity,
+        )
 
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
@@ -812,7 +823,12 @@ class TestDefectTrackingEdgeCases:
     @pytest.mark.asyncio
     async def test_get_defects_with_all_filters(self, mock_get_conn):
         """Test getting defects with all possible filters"""
-        from src.api.v1.defect_tracking import get_defects, DefectStatus, DefectSeverity, DefectCategory
+        from src.api.v1.defect_tracking import (
+            DefectCategory,
+            DefectSeverity,
+            DefectStatus,
+            get_defects,
+        )
 
         mock_conn = create_mock_connection()
         mock_get_conn.return_value = mock_conn
@@ -837,10 +853,10 @@ class TestDefectTrackingEdgeCases:
     async def test_enums_values(self):
         """Test that all enum values are correct"""
         from src.api.v1.defect_tracking import (
-            DefectSeverity,
-            DefectPriority,
-            DefectStatus,
             DefectCategory,
+            DefectPriority,
+            DefectSeverity,
+            DefectStatus,
         )
 
         assert DefectSeverity.LOW == "low"

@@ -5,7 +5,7 @@ Excel Template Service 单元测试
 """
 
 import io
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
@@ -311,7 +311,6 @@ class TestErrorHandling:
     def test_excel_writer_error_handling(self, excel_service):
         """测试ExcelWriter错误处理"""
         import pandas as pd
-        import pandas.io.excel._openpyxl as openpyxl_writer
 
         # Mock ExcelWriter to raise an error
         original_writer = pd.ExcelWriter

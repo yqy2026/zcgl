@@ -11,8 +11,6 @@ NOTE: Tests for extract() method are skipped because pdf_to_images module
 is not yet implemented (as noted in test_pdf_edge_cases.py).
 """
 
-import asyncio
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,7 +19,6 @@ from src.services.document.extractors.base import (
     BaseVisionAdapter,
     ContractExtractorInterface,
 )
-
 
 # ============================================================================
 # Test Fixtures
@@ -509,12 +506,12 @@ class TestBaseVisionAdapterExtractWithRetry:
         adapter = ConcreteAdapter(is_available=True)
 
         # Create a custom ReadTimeout error
-        class ReadTimeout(Exception):
+        class ReadTimeoutError(Exception):
             pass
 
         mock_response = MagicMock()
         adapter.vision_service.extract_from_images.side_effect = [
-            ReadTimeout("Read timeout"),
+            ReadTimeoutError("Read timeout"),
             mock_response,
         ]
 
@@ -532,12 +529,12 @@ class TestBaseVisionAdapterExtractWithRetry:
         adapter = ConcreteAdapter(is_available=True)
 
         # Create a custom ConnectTimeout error
-        class ConnectTimeout(Exception):
+        class ConnectTimeoutError(Exception):
             pass
 
         mock_response = MagicMock()
         adapter.vision_service.extract_from_images.side_effect = [
-            ConnectTimeout("Connection timeout"),
+            ConnectTimeoutError("Connection timeout"),
             mock_response,
         ]
 

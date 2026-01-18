@@ -2,13 +2,9 @@
 测试 PDF 处理公共工具模块
 """
 
-import json
 from datetime import datetime
 
-import pytest
-
 from src.services.document.utils import (
-    DATE_FORMATS,
     clean_text,
     compact_list,
     extract_json_from_response,
@@ -23,7 +19,6 @@ from src.services.document.utils import (
     safe_parse_json,
     to_bool,
     to_float,
-    to_int,
     to_int,
     truncate_for_log,
     validate_date_range,

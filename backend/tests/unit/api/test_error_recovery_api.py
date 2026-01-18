@@ -15,10 +15,9 @@ This test module covers error recovery management endpoints:
 NOTE: These endpoints are not yet implemented. Tests are skipped until implementation.
 """
 
-import pytest
-
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 # Skip all tests in this module - endpoints not implemented yet

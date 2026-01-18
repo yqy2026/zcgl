@@ -146,7 +146,7 @@ def create_audit_log_with_fallback(
     action: str,
     resource_type: str,
     request: Request,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     创建审计日志，带统一错误处理

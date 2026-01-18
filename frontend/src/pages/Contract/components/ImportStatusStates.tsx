@@ -21,7 +21,7 @@ interface ImportStatusStatesProps {
 
 export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
   status,
-  fileName,
+  fileName: _fileName,
   error,
   onUploadNew,
   onViewHistory

@@ -105,7 +105,7 @@ async def upload_pdf_file(
     from src.utils.file_security import generate_safe_filename
 
     file_id = str(uuid.uuid4())
-    safe_filename = generate_safe_filename(file.filename, file_id)
+    safe_filename = generate_safe_filename(file.filename or "upload", file_id)
     temp_file_path = temp_dir / safe_filename
 
     # 使用流式保存，同时验证文件大小

@@ -5,12 +5,11 @@ Occupancy Calculator 单元测试
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.asset import Asset
 from src.services.asset.occupancy_calculator import (
     OccupancyCalculationError,
     OccupancyRateCalculator,

@@ -243,7 +243,7 @@ class BasicQualityChecker:
                     content = f.read()
                     if '"""' in content or "'''" in content:
                         docstring_count += 1
-            except:
+            except Exception:
                 pass
 
         score = 0

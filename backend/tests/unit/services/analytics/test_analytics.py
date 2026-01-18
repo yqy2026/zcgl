@@ -15,16 +15,13 @@ Coverage:
 - Performance with large datasets
 """
 
-from collections import defaultdict
-from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
 from src.services.analytics.analytics_service import AnalyticsService
 from src.services.analytics.area_service import AreaCalculationError, AreaService
-
 
 # =============================================================================
 # Fixtures

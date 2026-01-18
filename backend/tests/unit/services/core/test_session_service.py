@@ -204,7 +204,7 @@ class TestCreateUserSession:
         mock_query.order_by.return_value.all.return_value = existing_sessions
         mock_db.query.return_value = mock_query
 
-        session = session_service.create_user_session(
+        session_service.create_user_session(
             user_id="user_123",
             refresh_token="refresh_token_abc",
         )

@@ -24,7 +24,7 @@ Testing Approach:
 
 import os
 import tempfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -832,8 +832,8 @@ class TestBackupEdgeCases:
         """Test consistency across multiple backup operations"""
         from src.api.v1.backup import (
             create_backup,
-            list_backups,
             get_backup_stats,
+            list_backups,
             validate_backup,
         )
 
@@ -890,7 +890,7 @@ class TestBackupEdgeCases:
     @pytest.mark.asyncio
     async def test_concurrent_backup_operations(self, mock_service_class):
         """Test handling of concurrent backup operations"""
-        from src.api.v1.backup import list_backups, get_backup_stats
+        from src.api.v1.backup import get_backup_stats, list_backups
 
         mock_service = MagicMock()
 

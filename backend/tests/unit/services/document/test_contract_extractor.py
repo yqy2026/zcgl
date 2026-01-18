@@ -13,17 +13,15 @@ Total: 42 comprehensive tests
 """
 
 import logging
-from unittest.mock import Mock, patch
 
 import pytest
 
 from src.services.document.contract_extractor import (
-    ExtractionMethod,
-    extract_contract_info,
     ContractExtractor,
     ExtractedField,
+    ExtractionMethod,
+    extract_contract_info,
 )
-
 
 # ============================================================================
 # 测试数据集
@@ -823,7 +821,7 @@ class TestEdgeCasesAndIntegration:
         extractor = ContractExtractor()
 
         with caplog.at_level(logging.INFO):
-            result = extractor.extract_contract_info(VALID_CONTRACT_TEXT)
+            extractor.extract_contract_info(VALID_CONTRACT_TEXT)
 
         # 验证有日志输出
         assert len(caplog.records) > 0

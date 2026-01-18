@@ -2,7 +2,7 @@
 测试租金合同服务
 """
 
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -11,10 +11,7 @@ from sqlalchemy.orm import Session
 
 from src.models.rent_contract import (
     ContractType,
-    DepositTransactionType,
     RentContract,
-    RentContractHistory,
-    RentDepositLedger,
     RentLedger,
     RentTerm,
     ServiceFeeLedger,

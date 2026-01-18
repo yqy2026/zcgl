@@ -13,6 +13,7 @@ This test module covers batch operations for assets:
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication and database mocking setup")
 from fastapi.testclient import TestClient
 

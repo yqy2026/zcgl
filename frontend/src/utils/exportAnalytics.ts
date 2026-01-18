@@ -5,8 +5,6 @@
  * Uses native browser APIs for CSV export and provides PDF placeholder.
  */
 
-import type { AnalyticsResponse } from '@/types/analytics';
-
 // Simplified analytics data interface for export
 interface ExportableAnalyticsData {
   area_summary: {

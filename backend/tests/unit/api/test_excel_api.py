@@ -14,6 +14,7 @@ from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 pytestmark = pytest.mark.skip(reason="Unit API tests require proper authentication setup")
 from fastapi.testclient import TestClient
 
@@ -109,7 +110,7 @@ class TestExcelImportAsync:
     @patch("src.api.v1.excel.ExcelImportService")
     def test_async_import_creates_background_task(self, mock_import_service, client):
         """Test that async import creates a background task"""
-        with patch("src.api.v1.excel.BackgroundTasks") as mock_bg:
+        with patch("src.api.v1.excel.BackgroundTasks"):
             file_content = b"fake excel content"
             files = {
                 "file": ("test.xlsx", file_content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

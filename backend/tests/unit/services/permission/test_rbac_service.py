@@ -6,23 +6,20 @@ RBAC服务单元测试
 
 import json
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from src.exceptions import BusinessLogicError
-from src.models.rbac import Permission, Role, UserRoleAssignment, role_permissions
+from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
     PermissionCheckRequest,
-    PermissionCheckResponse,
     PermissionCreate,
     RoleCreate,
     RoleUpdate,
-    UserPermissionSummary,
     UserRoleAssignmentCreate,
 )
 from src.services.permission.rbac_service import RBACService
-
 
 # ============================================================================
 # Fixtures

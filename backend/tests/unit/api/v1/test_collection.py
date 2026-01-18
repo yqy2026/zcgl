@@ -20,9 +20,9 @@ Testing Approach:
 - Test edge cases (empty results, pagination, filters)
 """
 
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -442,7 +442,7 @@ class TestCreateCollectionRecord:
 
         mock_db.query.side_effect = mock_query
 
-        result = await create_collection_record(
+        await create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -485,7 +485,7 @@ class TestCreateCollectionRecord:
 
         mock_db.query.side_effect = mock_query
 
-        result = await create_collection_record(
+        await create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -559,7 +559,7 @@ class TestCreateCollectionRecord:
 
         mock_db.query.side_effect = mock_query
 
-        result = await create_collection_record(
+        await create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -593,7 +593,7 @@ class TestUpdateCollectionRecord:
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
 
-        result = await update_collection_record(
+        await update_collection_record(
             record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -612,7 +612,7 @@ class TestUpdateCollectionRecord:
         mock_db.query.return_value = mock_query
         mock_db.commit.return_value = None
 
-        result = await update_collection_record(
+        await update_collection_record(
             record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -652,7 +652,7 @@ class TestUpdateCollectionRecord:
         mock_db.query.return_value = mock_query
         mock_db.commit.return_value = None
 
-        result = await update_collection_record(
+        await update_collection_record(
             record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -674,7 +674,7 @@ class TestUpdateCollectionRecord:
         mock_db.query.return_value = mock_query
         mock_db.commit.return_value = None
 
-        result = await update_collection_record(
+        await update_collection_record(
             record_id="record-123", update_data=update_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -801,7 +801,7 @@ class TestCollectionEdgeCases:
 
         mock_db.query.side_effect = mock_query
 
-        result = await create_collection_record(
+        await create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 

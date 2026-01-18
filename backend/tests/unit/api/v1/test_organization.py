@@ -27,7 +27,7 @@ Testing Approach:
 - Test response schemas
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -135,7 +135,7 @@ class TestGetOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await get_organizations(skip=10, limit=50, db=mock_db, current_user=mock_current_user)
+        await get_organizations(skip=10, limit=50, db=mock_db, current_user=mock_current_user)
 
         mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=10, limit=50)
 
@@ -293,7 +293,7 @@ class TestSearchOrganizations:
 
         mock_org_crud.search.return_value = []
 
-        result = await search_organizations(
+        await search_organizations(
             keyword="test", skip=20, limit=50, db=mock_db, current_user=mock_current_user
         )
 
@@ -429,7 +429,7 @@ class TestGetOrganizationChildren:
         mock_org_crud.get.return_value = mock_organization
         mock_org_crud.get_children.return_value = []
 
-        result = await get_organization_children(
+        await get_organization_children(
             org_id="test-org-id", recursive=True, db=mock_db, current_user=mock_current_user
         )
 
@@ -1054,7 +1054,7 @@ class TestAdvancedSearchOrganizations:
 
         mock_org_crud.get_multi_with_filters.return_value = []
 
-        result = await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
+        await advanced_search_organizations(search_request=search_request, db=mock_db, current_user=mock_current_user)
 
         mock_org_crud.get_multi_with_filters.assert_called_once_with(mock_db, skip=10, limit=50)
 

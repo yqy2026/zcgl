@@ -5,7 +5,6 @@ PostgreSQL并发访问集成测试
 """
 
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
@@ -43,7 +42,7 @@ class TestPostgreSQLConcurrency:
         """测试连接池在负载下的行为"""
         mgr = get_database_manager()
 
-        initial_metrics = mgr.get_metrics()
+        mgr.get_metrics()
 
         def execute_query():
             with mgr.get_session() as session:
@@ -63,8 +62,8 @@ class TestPostgreSQLConcurrency:
 
     def test_concurrent_transaction_isolation(self):
         """测试并发事务隔离"""
-        from src.models.asset import Asset
         from src.crud.asset import asset_crud
+        from src.models.asset import Asset
 
         mgr = get_database_manager()
 

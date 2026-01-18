@@ -327,7 +327,7 @@ class TestQueryBuilderIntegration:
 
         # Should log info
         with caplog.at_level(logging.INFO):
-            qb = QueryBuilder(UnregisteredModel)
+            QueryBuilder(UnregisteredModel)
 
         # Check info was logged
         assert any(

@@ -6,11 +6,10 @@ PDF 缓存层单元测试
 
 import asyncio
 import json
-import os
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 

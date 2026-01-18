@@ -18,13 +18,11 @@ Testing Approach:
 """
 
 import io
-import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import pytest
 from fastapi import HTTPException, UploadFile
-from fastapi.responses import FileResponse
 
 pytestmark = pytest.mark.api
 
@@ -77,7 +75,7 @@ def mock_pdf_file():
     file = MagicMock(spec=UploadFile)
     file.filename = "test_document.pdf"
     file.content_type = "application/pdf"
-    content = io.BytesIO(b"%PDF-1.4 fake pdf content")
+    io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file = io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file.seek = Mock(return_value=None)
     file.file.tell = Mock(return_value=100)
@@ -448,7 +446,7 @@ class TestUploadAssetAttachments:
 
         # Mock open to raise IOError
         m_open = mock_open()
-        m_open.side_effect = IOError("Disk full")
+        m_open.side_effect = OSError("Disk full")
 
         with patch("builtins.open", m_open):
             result = await upload_asset_attachments(

@@ -5,7 +5,6 @@
 """
 
 import base64
-from unittest.mock import patch
 
 import pytest
 
@@ -14,7 +13,6 @@ from src.core.encryption import (
     FieldEncryptor,
     generate_encryption_key,
 )
-
 
 # ============================================================================
 # EncryptionKeyManager 测试
@@ -68,7 +66,6 @@ class TestEncryptionKeyManager:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
@@ -95,7 +92,6 @@ class TestEncryptionKeyManager:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', key_b64)
@@ -119,7 +115,6 @@ class TestEncryptionKeyManager:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "not-valid-base64:1")
@@ -145,7 +140,6 @@ class TestEncryptionKeyManager:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', key_b64)
@@ -168,7 +162,6 @@ class TestEncryptionKeyManager:
 
         # Import modules fresh - settings will read from environment (which is now deleted)
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "")
@@ -195,7 +188,6 @@ class TestEncryptionKeyManager:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
@@ -257,7 +249,6 @@ class TestFieldEncryptor:
 
         # Import fresh and patch settings directly
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
@@ -283,7 +274,6 @@ class TestFieldEncryptor:
 
         # Import modules fresh - settings will read from environment (which is now deleted)
         from src.core import config
-        from src.core.encryption import EncryptionKeyManager
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "")

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from .extractors.factory import ExtractorFactory
 
 if TYPE_CHECKING:
-    from .extractors.property_cert_adapter import PropertyCertAdapter
+    pass
 
 logger = logging.getLogger(__name__)
 

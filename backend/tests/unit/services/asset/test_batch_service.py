@@ -9,20 +9,17 @@
 5. 状态报告
 """
 
-from unittest.mock import MagicMock, patch, call
-from datetime import date
-from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 
+from src.models.asset import Asset
 from src.services.asset.batch_service import (
     AssetBatchService,
     BatchOperationResult,
 )
-from src.models.asset import Asset
-
 
 # ============================================================================
 # Fixtures
@@ -290,7 +287,7 @@ class TestBatchUpdate:
     ):
         """测试部分成功部分失败的情况"""
         asset_1 = MagicMock(id="asset_1")
-        asset_2 = MagicMock(id="asset_2")
+        MagicMock(id="asset_2")
 
         mock_asset_crud.get.side_effect = [asset_1, None]
         mock_asset_crud.update.return_value = asset_1
@@ -364,7 +361,7 @@ class TestBatchUpdate:
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create.return_value = MagicMock()
 
-            result = batch_service.batch_update(
+            batch_service.batch_update(
                 asset_ids=["asset_1"],
                 updates={"usage_status": "出租", "tenant_name": "新租户"},
                 operator="admin_user",

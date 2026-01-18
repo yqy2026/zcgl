@@ -4,16 +4,14 @@
 
 import time
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.enums.status import TaskExecutionStatus
 from src.models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
-    SessionLog,
     SessionStatus,
 )
 from src.services.document.base import ErrorCode, ExtractionMethod, ExtractionResult

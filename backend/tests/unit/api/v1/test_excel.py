@@ -213,7 +213,11 @@ class TestCreateExcelConfig:
     async def test_create_config_with_all_fields(self, mock_crud, mock_db, mock_current_user):
         """Test configuration creation with all optional fields"""
         from src.api.v1.excel import create_excel_config
-        from src.schemas.excel_advanced import ExcelConfigCreate, ExcelFieldMapping, ExcelValidationRule
+        from src.schemas.excel_advanced import (
+            ExcelConfigCreate,
+            ExcelFieldMapping,
+            ExcelValidationRule,
+        )
 
         config_in = ExcelConfigCreate(
             config_name="full_config",

@@ -133,13 +133,13 @@ def db_session(engine, db_tables):
     This ensures test isolation - changes made in one test
     don't affect other tests.
     """
-    TestSessionLocal = sessionmaker(
+    test_session_local = sessionmaker(
         autocommit=False,
         autoflush=False,
         bind=engine
     )
 
-    session = TestSessionLocal()
+    session = test_session_local()
 
     # Begin a transaction for this test
     connection = engine.connect()
@@ -213,8 +213,8 @@ def client(db_session):
     our test database session instead of the real database.
     """
     from fastapi.testclient import TestClient
-    from src.database import get_db
 
+    from src.database import get_db
     from src.main import app
 
     # Override the database dependency

@@ -68,14 +68,14 @@ def hide_env_file():
     if os.path.exists(env_path):
         # Rename .env to .env.backup
         shutil.move(env_path, backup_path)
-        print(f"[*] Temporarily hid .env file for tests (backed up as .env.backup)")
+        print("[*] Temporarily hid .env file for tests (backed up as .env.backup)")
 
     yield
 
     # Restore .env file after all tests complete
     if os.path.exists(backup_path):
         shutil.move(backup_path, env_path)
-        print(f"[*] Restored .env file after tests")
+        print("[*] Restored .env file after tests")
 
 
 @pytest.fixture(scope="session", autouse=True)

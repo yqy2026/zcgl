@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.asset import Asset, Ownership, Project, ProjectOwnershipRelation
+from src.models.asset import Asset, Ownership, Project
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
 
@@ -218,7 +218,7 @@ class TestCreateOwnership:
                 "generate_ownership_code",
                 return_value="OW2501001"
             ):
-                result = ownership_service.create_ownership(mock_db, obj_in=obj_in)
+                ownership_service.create_ownership(mock_db, obj_in=obj_in)
 
                 # Verify code was set
                 mock_db.add.assert_called_once()

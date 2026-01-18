@@ -5,7 +5,7 @@
 """
 
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -14,7 +14,6 @@ from src.services.permission.permission_cache_service import (
     get_permission_cache_service,
     set_permission_cache_service,
 )
-
 
 # ============================================================================
 # Fixtures

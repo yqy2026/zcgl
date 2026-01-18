@@ -50,7 +50,7 @@ class OccupancyRateCalculator:
     @staticmethod
     def calculate_overall_occupancy_rate(
         assets: list[Asset] | None = None,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         计算整体出租率

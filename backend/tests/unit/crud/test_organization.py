@@ -109,7 +109,7 @@ class TestCRUDOrganizationCreate:
             # 验证敏感数据被加密
             mock_parent_create.assert_called_once()
             call_args = mock_parent_create.call_args
-            encrypted_data = call_args.kwargs.get("obj_in")
+            call_args.kwargs.get("obj_in")
 
             # 验证调用包含了db参数
             assert call_args.kwargs.get("db") == mock_db
@@ -242,7 +242,7 @@ class TestCRUDOrganizationGetMulti:
         """测试获取多个组织时返回空列表"""
         with patch.object(
             crud_instance.__class__.__bases__[0], "get_multi", return_value=[]
-        ) as mock_parent_get_multi:
+        ):
             with patch.object(
                 crud_instance.sensitive_data_handler, "decrypt_data"
             ) as mock_decrypt:
@@ -272,7 +272,7 @@ class TestCRUDOrganizationUpdate:
         with patch.object(
             crud_instance.__class__.__bases__[0], "update", return_value=sample_organization
         ) as mock_parent_update:
-            result = crud_instance.update(
+            crud_instance.update(
                 mock_db, db_obj=sample_organization, obj_in=obj_in
             )
 
@@ -286,7 +286,7 @@ class TestCRUDOrganizationUpdate:
         with patch.object(
             crud_instance.__class__.__bases__[0], "update", return_value=sample_organization
         ) as mock_parent_update:
-            result = crud_instance.update(
+            crud_instance.update(
                 mock_db, db_obj=sample_organization, obj_in=update_data
             )
 
@@ -377,8 +377,8 @@ class TestGetMultiWithFilters:
 
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
-            result = crud_instance.get_multi_with_filters(mock_db, skip=0, limit=10)
+        ):
+            crud_instance.get_multi_with_filters(mock_db, skip=0, limit=10)
 
             # 验证查询构建
             mock_query.filter.assert_called()
@@ -435,7 +435,7 @@ class TestGetMultiWithFilters:
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
         ) as mock_decrypt:
-            result = crud_instance.get_multi_with_filters(mock_db, skip=0, limit=10)
+            crud_instance.get_multi_with_filters(mock_db, skip=0, limit=10)
 
             # 验证解密被调用
             mock_decrypt.assert_called_once()
@@ -519,8 +519,8 @@ class TestGetTree:
 
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
-            result = crud_instance.get_tree(mock_db, parent_id=None)
+        ):
+            crud_instance.get_tree(mock_db, parent_id=None)
 
             # 验证查询执行
             mock_query.filter.assert_called()
@@ -553,7 +553,7 @@ class TestGetTree:
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
         ) as mock_decrypt:
-            result = crud_instance.get_tree(mock_db)
+            crud_instance.get_tree(mock_db)
 
             # 验证解密被调用
             mock_decrypt.assert_called_once()
@@ -593,8 +593,8 @@ class TestGetChildren:
 
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
-            result = crud_instance.get_children(mock_db, parent_id="org_123", recursive=False)
+        ):
+            crud_instance.get_children(mock_db, parent_id="org_123", recursive=False)
 
             # 验证查询执行
             mock_query.filter.assert_called()
@@ -615,7 +615,7 @@ class TestGetChildren:
 
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
+        ):
             result = crud_instance.get_children(mock_db, parent_id="org_123", recursive=True)
 
             # 验证返回子组织
@@ -638,7 +638,7 @@ class TestGetChildren:
 
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
+        ):
             result = crud_instance.get_children(mock_db, parent_id="org_123", recursive=True)
 
             # 验证返回多个层级
@@ -657,7 +657,7 @@ class TestGetChildren:
         with patch.object(
             crud_instance.sensitive_data_handler, "decrypt_data"
         ) as mock_decrypt:
-            result = crud_instance.get_children(
+            crud_instance.get_children(
                 mock_db, parent_id="org_123", recursive=False
             )
 
@@ -713,7 +713,7 @@ class TestGetPathToRoot:
         # Mock get to return different orgs
         with patch.object(
             crud_instance, "get", side_effect=[child, parent]
-        ) as mock_get:
+        ):
             result = crud_instance.get_path_to_root(mock_db, org_id="child_123")
 
             # 验证路径包含父组织
@@ -729,7 +729,7 @@ class TestGetPathToRoot:
 
         with patch.object(
             crud_instance, "get", side_effect=[grandchild, child, parent]
-        ) as mock_get:
+        ):
             result = crud_instance.get_path_to_root(mock_db, org_id="grandchild_123")
 
             # 验证路径包含所有层级
@@ -744,7 +744,7 @@ class TestGetPathToRoot:
 
         with patch.object(
             crud_instance, "get", side_effect=[child, None]
-        ) as mock_get:
+        ):
             result = crud_instance.get_path_to_root(mock_db, org_id="child_123")
 
             # 验证路径只包含到找到的最后一级
@@ -761,7 +761,7 @@ class TestSearch:
         with patch.object(
             crud_instance, "get_multi_with_filters", return_value=[]
         ) as mock_filters:
-            result = crud_instance.search(mock_db, keyword="test", skip=0, limit=10)
+            crud_instance.search(mock_db, keyword="test", skip=0, limit=10)
 
             # 验证调用get_multi_with_filters (positional argument for db)
             mock_filters.assert_called_once_with(
@@ -787,14 +787,12 @@ class TestOrganizationInstance:
 
     def test_organization_instance_exists(self):
         """测试全局organization实例存在"""
-        from src.crud.organization import organization
 
         assert organization is not None
         assert isinstance(organization, CRUDOrganization)
 
     def test_organization_instance_has_sensitive_data_handler(self):
         """测试organization实例有敏感数据处理器"""
-        from src.crud.organization import organization
 
         assert hasattr(organization, "sensitive_data_handler")
         assert organization.sensitive_data_handler is not None

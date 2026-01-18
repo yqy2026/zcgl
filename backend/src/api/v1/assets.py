@@ -27,7 +27,6 @@ from typing import Any
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Path,
     Query,
     Response,
@@ -37,8 +36,6 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 from ...constants.datetime.fields import DateTimeFields
 from ...constants.pagination.limits import PaginationLimits
-from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
-from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import audit_action, get_current_active_user, require_permission

@@ -2,9 +2,8 @@
 测试 BackupService (备份服务)
 """
 
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -513,7 +512,7 @@ class TestCleanupOldBackups:
             backup_service.create_backup(backup_name=f"backup{i}")
 
         # 清理，保留 3 个
-        result = backup_service.cleanup_old_backups(keep_count=3)
+        backup_service.cleanup_old_backups(keep_count=3)
 
         remaining = backup_service.list_backups()
 
@@ -750,7 +749,6 @@ class TestEdgeCases:
 
     def test_concurrent_backup_creation(self, backup_service):
         """测试并发创建备份（快速连续）"""
-        import time
 
         results = []
         for i in range(10):
