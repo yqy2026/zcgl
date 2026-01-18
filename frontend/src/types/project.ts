@@ -6,6 +6,7 @@ export interface Project {
   id: string;
   name: string;
   code: string;
+  short_name?: string; // 项目简称
   description?: string;
   is_active: boolean;
   data_status: string;

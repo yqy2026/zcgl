@@ -69,7 +69,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
     const project = allProjects.find(p => p.id === value);
     if (project != null) {
-      const displayName = (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name;
+      const displayName = project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
       setDisplayValue(displayName);
     } else {
       // 如果在allProjects中找不到项目，不要覆盖现有的显示值
@@ -115,7 +115,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     // 更新显示值
-    const displayName = (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name;
+    const displayName = project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
     setDisplayValue(displayName);
 
     // 调用父组件的onChange
@@ -156,17 +156,17 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           optionLabelProp="label"
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
           options={filteredProjects.map(project => ({
-            label: (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name,
-            value: (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name,
+            label: project.short_name != null ? `${project.name} (${project.short_name})` : project.name,
+            value: project.short_name != null ? `${project.name} (${project.short_name})` : project.name,
             // 存储真实的项目ID用于内部处理
             realValue: project.id,
             // 保留完整信息用于下拉显示
             title: (
               <Space>
                 <span>{project.name}</span>
-                {(project as any).short_name != null && (
+                {project.short_name != null && (
                   <span style={{ color: '#999', fontSize: '12px' }}>
-                    ({(project as any).short_name})
+                    ({project.short_name})
                   </span>
                 )}
                 <span style={{ color: '#666', fontSize: '12px' }}>

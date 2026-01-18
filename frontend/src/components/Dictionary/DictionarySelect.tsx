@@ -81,7 +81,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     <Select
       {...props}
       loading={loading}
-      placeholder={placeholder ?? `请选择${dictType.replace('_', '')}`}
+      placeholder={placeholder ?? `请选择${dictType.replace('_', '')}` as string}
       notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
       options={options}
       filterOption={(input, option) => {

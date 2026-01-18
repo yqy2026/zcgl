@@ -78,12 +78,12 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text, record) => {
+      render: (text: string | undefined, record: Asset) => {
         const projectName = record.project_name ?? text
         const isId = typeof projectName === 'string' && projectName.length === 36
 
-        let displayText = projectName
-        if (isId !== undefined && isId !== null) {
+        let displayText: string = projectName ?? '未配置项目'
+        if (isId) {
           displayText = '未配置项目'
         }
 
@@ -122,7 +122,7 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => (
+      render: (text: string) => (
         <Tooltip title={text}>
           {text}
         </Tooltip>
@@ -136,7 +136,7 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => (
+      render: (text: string) => (
         <Tooltip title={text}>
           {text}
         </Tooltip>

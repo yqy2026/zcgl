@@ -199,7 +199,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
 
   return (
     <Select
-      {...selectProps}
+      {...selectProps as SelectProps}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
@@ -208,7 +208,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       filterOption={false} // 禁用默认过滤，使用自定义搜索
       onSearch={handleSearch}
       popupRender={dropdownRender}
-      tagRender={tagRender as any}
+      tagRender={tagRender as React.ComponentProps<typeof Select>['tagRender']}
     >
       {renderOptions()}
     </Select>

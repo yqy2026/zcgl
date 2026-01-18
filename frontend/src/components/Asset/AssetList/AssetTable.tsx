@@ -72,13 +72,13 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text, record) => {
+      render: (text: string | undefined, record: Asset) => {
         // 如果是项目ID格式，尝试显示关联的项目名称
         const projectName = record.project_name ?? text;
         const isId = typeof projectName === "string" && projectName.length === 36; // UUID格式
 
-        let displayText = projectName;
-        if (isId !== undefined && isId !== null) {
+        let displayText: string = projectName ?? "未配置项目";
+        if (isId) {
           // 如果是ID格式，显示"未配置项目"
           displayText = "未配置项目";
         }
@@ -112,7 +112,7 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+      render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
       title: "权属类别",
@@ -128,9 +128,9 @@ const getColumns = (
         { text: "民政托管企业", value: "2" },
         { text: "其他", value: "3" },
       ],
-      render: (text, _record) => {
+      render: (text: string | undefined, _record: Asset) => {
         // 权属类别映射
-        let displayText = text;
+        let displayText: string = text ?? "其他";
         if (typeof text === "string") {
           // 权属类别字典映射
           const categoryMap: Record<string, string> = {
@@ -155,7 +155,7 @@ const getColumns = (
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+      render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
       title: "土地面积",

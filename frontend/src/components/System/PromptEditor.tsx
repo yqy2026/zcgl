@@ -38,6 +38,19 @@ const { TextArea } = Input;
 const { Option } = Select;
 const { Text, Paragraph } = Typography;
 
+// Form values interface
+interface PromptFormValues {
+  name: string;
+  doc_type?: string;
+  provider?: string;
+  description?: string;
+  system_prompt?: string;
+  user_prompt_template?: string;
+  few_shot_examples?: string;
+  tags?: string[];
+  change_description?: string;
+}
+
 interface PromptEditorProps {
   visible: boolean;
   prompt?: PromptTemplate | null;
@@ -100,13 +113,15 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   // 提交表单
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as PromptFormValues;
       setLoading(true);
 
       // 解析 few_shot_examples
-      let fewShotExamples: Record<string, any> = {};
+      let fewShotExamples: Record<string, unknown> = {};
       try {
-        fewShotExamples = JSON.parse(values.few_shot_examples || '{}');
+        if (values.few_shot_examples && values.few_shot_examples.trim() !== '') {
+          fewShotExamples = JSON.parse(values.few_shot_examples) as Record<string, unknown>;
+        }
       } catch {
         message.error('Few-shot 示例 JSON 格式不正确');
         setLoading(false);
@@ -122,7 +137,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           system_prompt: values.system_prompt,
           user_prompt_template: values.user_prompt_template,
           few_shot_examples: fewShotExamples,
-          tags: values.tags || [],
+          tags: values.tags ?? [],
         };
 
         await llmPromptService.createPrompt(createData);
@@ -134,7 +149,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           system_prompt: values.system_prompt,
           user_prompt_template: values.user_prompt_template,
           few_shot_examples: fewShotExamples,
-          tags: values.tags,
+          tags: values.tags ?? [],
           change_description: values.change_description,
         };
 

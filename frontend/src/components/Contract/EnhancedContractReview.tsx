@@ -477,14 +477,14 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       </Row>
 
       {/* 匹配结果 */}
-      {((sessionData as MatchingResults).matching_results?.matched_assets?.length > 0 ||
-        (sessionData as MatchingResults).matching_results?.matched_ownerships?.landlords?.length > 0) && (
+      {((sessionData.matching_results as MatchingResults | undefined)?.matched_assets?.length ?? 0) > 0 ||
+        ((sessionData.matching_results as MatchingResults | undefined)?.matched_ownerships?.landlords?.length ?? 0) > 0 ? (
           <Card
             title={
               <Space>
                 <SearchOutlined />
                 <span>智能匹配结果</span>
-                <Badge count={(sessionData as MatchingResults).matching_results?.matched_assets?.length ?? 0} />
+                <Badge count={(sessionData.matching_results as MatchingResults | undefined)?.matched_assets?.length ?? 0} />
               </Space>
             }
             style={{ marginBottom: 24 }}
@@ -493,7 +493,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               <TabPane tab="资产匹配" key="assets">
                 <Table
                   columns={matchingResultsColumns}
-                  dataSource={(sessionData as MatchingResults).matching_results?.matched_assets ?? []}
+                  dataSource={(sessionData.matching_results as MatchingResults | undefined)?.matched_assets ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -517,7 +517,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                       )
                     }
                   ]}
-                  dataSource={(sessionData as MatchingResults).matching_results?.matched_ownerships?.landlords ?? []}
+                  dataSource={(sessionData.matching_results as MatchingResults | undefined)?.matched_ownerships?.landlords ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -525,7 +525,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               </TabPane>
             </Tabs>
           </Card>
-        )}
+        ) : null}
 
       {/* 字段编辑 */}
       <Card
