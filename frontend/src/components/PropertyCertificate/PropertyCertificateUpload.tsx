@@ -17,14 +17,14 @@ interface PropertyCertificateUploadProps {
 
 export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps> = ({
   onSuccess,
-  loading = false
+  loading = false,
 }) => {
   const [uploading, setUploading] = useState(false);
 
   const uploadProps: UploadProps = {
     name: 'file',
     accept: '.pdf,.jpg,.jpeg,.png',
-    beforeUpload: (file) => {
+    beforeUpload: file => {
       const isValidType = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type);
       if (!isValidType) {
         message.error('只支持 PDF、JPG、PNG 格式');
@@ -35,7 +35,7 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
       }
       return isValidType && isValidSize;
     },
-    customRequest: async (options) => {
+    customRequest: async options => {
       const { file, onSuccess: uploadSuccess, onError } = options;
       setUploading(true);
       try {
@@ -55,7 +55,7 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
         setUploading(false);
       }
     },
-    showUploadList: false
+    showUploadList: false,
   };
 
   return (
@@ -73,9 +73,7 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-          <p className="ant-upload-hint">
-            支持单个文件上传。系统将使用 AI 自动识别产权证信息。
-          </p>
+          <p className="ant-upload-hint">支持单个文件上传。系统将使用 AI 自动识别产权证信息。</p>
         </Upload.Dragger>
 
         {(uploading || loading) && (

@@ -8,13 +8,13 @@ export enum CertificateType {
   REAL_ESTATE = 'real_estate',
   HOUSE_OWNERSHIP = 'house_ownership',
   LAND_USE = 'land_use',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum OwnerType {
   INDIVIDUAL = 'individual',
   ORGANIZATION = 'organization',
-  JOINT = 'joint'
+  JOINT = 'joint',
 }
 
 // Property Certificate

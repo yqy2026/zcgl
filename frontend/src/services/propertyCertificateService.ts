@@ -9,7 +9,7 @@ import type {
   PropertyCertificateCreate,
   PropertyCertificateUpdate,
   CertificateExtractionResult,
-  CertificateImportConfirm
+  CertificateImportConfirm,
 } from '@/types/propertyCertificate';
 
 export const propertyCertificateService = {
@@ -24,7 +24,7 @@ export const propertyCertificateService = {
       '/property-certificates/upload',
       formData,
       {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       }
     );
     if (result.data == null) {
@@ -36,7 +36,9 @@ export const propertyCertificateService = {
   /**
    * Confirm import and create certificate
    */
-  async confirmImport(confirmData: CertificateImportConfirm): Promise<{ certificate_id: string; status: string }> {
+  async confirmImport(
+    confirmData: CertificateImportConfirm
+  ): Promise<{ certificate_id: string; status: string }> {
     const result = await enhancedApiClient.post<{ certificate_id: string; status: string }>(
       '/property-certificates/confirm-import',
       confirmData
@@ -50,11 +52,13 @@ export const propertyCertificateService = {
   /**
    * List certificates
    */
-  async listCertificates(params?: { skip?: number; limit?: number }): Promise<PropertyCertificate[]> {
-    const result = await enhancedApiClient.get<PropertyCertificate[]>(
-      '/property-certificates/',
-      { params }
-    );
+  async listCertificates(params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<PropertyCertificate[]> {
+    const result = await enhancedApiClient.get<PropertyCertificate[]>('/property-certificates/', {
+      params,
+    });
     return result.data ?? [];
   },
 
@@ -62,9 +66,7 @@ export const propertyCertificateService = {
    * Get certificate by ID
    */
   async getCertificate(id: string): Promise<PropertyCertificate> {
-    const result = await enhancedApiClient.get<PropertyCertificate>(
-      `/property-certificates/${id}`
-    );
+    const result = await enhancedApiClient.get<PropertyCertificate>(`/property-certificates/${id}`);
     if (result.data == null) {
       throw new Error('Certificate not found');
     }
@@ -88,7 +90,10 @@ export const propertyCertificateService = {
   /**
    * Update certificate
    */
-  async updateCertificate(id: string, certificate: PropertyCertificateUpdate): Promise<PropertyCertificate> {
+  async updateCertificate(
+    id: string,
+    certificate: PropertyCertificateUpdate
+  ): Promise<PropertyCertificate> {
     const result = await enhancedApiClient.put<PropertyCertificate>(
       `/property-certificates/${id}`,
       certificate
@@ -103,10 +108,12 @@ export const propertyCertificateService = {
    * Delete certificate
    */
   async deleteCertificate(id: string): Promise<{ status: string }> {
-    const result = await enhancedApiClient.delete<{ status: string }>(`/property-certificates/${id}`);
+    const result = await enhancedApiClient.delete<{ status: string }>(
+      `/property-certificates/${id}`
+    );
     if (result.data == null) {
       throw new Error('Failed to delete certificate');
     }
     return result.data;
-  }
+  },
 };
