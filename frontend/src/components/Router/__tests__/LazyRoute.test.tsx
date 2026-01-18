@@ -4,6 +4,7 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect } from 'vitest'
 import { } from '@testing-library/react'
 import React from 'react'

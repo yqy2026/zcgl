@@ -4,6 +4,7 @@
  * 采用实用主义策略 - 测试组件结构和导出
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import {
