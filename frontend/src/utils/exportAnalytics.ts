@@ -22,8 +22,17 @@ interface ExportableAnalyticsData {
   ownership_status_distribution?: Array<{ status: string; count: number; percentage?: number }>;
   usage_status_distribution?: Array<{ status: string; count: number; percentage?: number }>;
   occupancy_distribution?: Array<{ range: string; count: number; percentage?: number }>;
-  business_category_distribution?: Array<{ category: string; occupancy_rate: number; count?: number }>;
-  occupancy_trend?: Array<{ date: string; occupancy_rate: number; total_rented_area?: number; total_rentable_area?: number }>;
+  business_category_distribution?: Array<{
+    category: string;
+    occupancy_rate: number;
+    count?: number;
+  }>;
+  occupancy_trend?: Array<{
+    date: string;
+    occupancy_rate: number;
+    total_rented_area?: number;
+    total_rentable_area?: number;
+  }>;
 }
 
 /**

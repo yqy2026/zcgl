@@ -60,16 +60,17 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
   // 实时计算应退押金
   const refundableAmount = useMemo(() => {
     // 确保 total_deposit 是数字类型
-    const deposit = typeof contract.total_deposit === 'number'
-      ? contract.total_deposit
-      : parseFloat(contract.total_deposit as string) ?? 0;
-    const deduction = form.getFieldValue('deduction_amount') as number ?? 0;
+    const deposit =
+      typeof contract.total_deposit === 'number'
+        ? contract.total_deposit
+        : (parseFloat(contract.total_deposit as string) ?? 0);
+    const deduction = (form.getFieldValue('deduction_amount') as number) ?? 0;
     return Math.max(0, deposit - deduction);
   }, [contract.total_deposit, form]);
 
   // 实时获取抵扣金额用于显示
   const deductionAmount = useMemo(() => {
-    return (form.getFieldValue('deduction_amount') as number ?? 0);
+    return (form.getFieldValue('deduction_amount') as number) ?? 0;
   }, [form]);
 
   // 初始化表单
@@ -192,9 +193,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
           message="原合同信息"
           description={
             <Descriptions column={2} size="small" style={{ marginTop: 8 }}>
-              <Descriptions.Item label="合同编号">
-                {contract.contract_number}
-              </Descriptions.Item>
+              <Descriptions.Item label="合同编号">{contract.contract_number}</Descriptions.Item>
               <Descriptions.Item label="合同类型">
                 {getContractTypeLabel(contract.contract_type)}
               </Descriptions.Item>
@@ -202,9 +201,11 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
                 {contract.start_date} ~ {contract.end_date}
               </Descriptions.Item>
               <Descriptions.Item label="押金余额">
-                ¥{(typeof contract.total_deposit === 'number'
+                ¥
+                {(typeof contract.total_deposit === 'number'
                   ? contract.total_deposit
-                  : parseFloat(contract.total_deposit as string) ?? 0).toFixed(2)}
+                  : (parseFloat(contract.total_deposit as string) ?? 0)
+                ).toFixed(2)}
               </Descriptions.Item>
             </Descriptions>
           }
@@ -213,11 +214,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
         />
 
         {/* 终止表单 */}
-        <Form
-          form={form}
-          layout="vertical"
-          autoComplete="off"
-        >
+        <Form form={form} layout="vertical" autoComplete="off">
           <Form.Item
             label="终止日期"
             name="termination_date"
@@ -227,7 +224,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
             <DatePicker
               style={{ width: '100%' }}
               placeholder="请选择终止日期"
-              disabledDate={(current) => {
+              disabledDate={current => {
                 // 禁用早于合同开始日期的日期
                 const contractStart = dayjs(contract.start_date);
                 return current != null && current.isBefore(contractStart, 'day');
@@ -251,9 +248,11 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
           >
             <InputNumber
               min={0}
-              max={typeof contract.total_deposit === 'number'
-                ? contract.total_deposit
-                : parseFloat(contract.total_deposit as string) ?? 0}
+              max={
+                typeof contract.total_deposit === 'number'
+                  ? contract.total_deposit
+                  : (parseFloat(contract.total_deposit as string) ?? 0)
+              }
               precision={2}
               style={{ width: '100%' }}
               placeholder="违约金、欠租等抵扣金额"
@@ -268,9 +267,12 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
               message={
                 <>
                   应退押金: <strong>¥{refundableAmount.toFixed(2)}</strong>
-                  &nbsp;(押金¥{(typeof contract.total_deposit === 'number'
+                  &nbsp;(押金¥
+                  {(typeof contract.total_deposit === 'number'
                     ? contract.total_deposit
-                    : parseFloat(contract.total_deposit as string) ?? 0).toFixed(2)} - 抵扣¥{deductionAmount.toFixed(2)})
+                    : (parseFloat(contract.total_deposit as string) ?? 0)
+                  ).toFixed(2)}{' '}
+                  - 抵扣¥{deductionAmount.toFixed(2)})
                 </>
               }
               style={{ marginBottom: 16 }}
@@ -316,9 +318,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
             <div style={{ marginTop: 8 }}>
               <p>您即将终止以下合同：</p>
               <Descriptions column={1} size="small" bordered style={{ marginTop: 8 }}>
-                <Descriptions.Item label="合同编号">
-                  {contract.contract_number}
-                </Descriptions.Item>
+                <Descriptions.Item label="合同编号">{contract.contract_number}</Descriptions.Item>
                 <Descriptions.Item label="合同类型">
                   {getContractTypeLabel(contract.contract_type)}
                 </Descriptions.Item>
@@ -332,9 +332,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
                   {form.getFieldValue('refund_deposit') === true ? (
                     <>
                       应退: <strong>¥{refundableAmount.toFixed(2)}</strong>
-                      {deductionAmount > 0 && (
-                        <> (抵扣¥{deductionAmount.toFixed(2)})</>
-                      )}
+                      {deductionAmount > 0 && <> (抵扣¥{deductionAmount.toFixed(2)})</>}
                     </>
                   ) : (
                     '不退还'

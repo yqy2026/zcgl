@@ -44,27 +44,27 @@ export const protectedRoutes = [
     element: React.lazy(() => import('../pages/Rental/ContractListPage')),
   },
   {
-    path: '/rental/contracts/new',           // 具体路由 - 创建合同
+    path: '/rental/contracts/new', // 具体路由 - 创建合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {
-    path: '/rental/contracts/create',        // 具体路由 - 创建合同（备用）
+    path: '/rental/contracts/create', // 具体路由 - 创建合同（备用）
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {
-    path: '/rental/contracts/pdf-import',    // 具体路由 - PDF导入
+    path: '/rental/contracts/pdf-import', // 具体路由 - PDF导入
     element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
   },
   {
-    path: '/rental/contracts/:id/renew',     // 具体路由 - 续签合同（必须在 :id/edit 之前）
+    path: '/rental/contracts/:id/renew', // 具体路由 - 续签合同（必须在 :id/edit 之前）
     element: React.lazy(() => import('../pages/Rental/ContractRenewPage')),
   },
   {
-    path: '/rental/contracts/:id',           // 动态路由 - 合同详情页
+    path: '/rental/contracts/:id', // 动态路由 - 合同详情页
     element: React.lazy(() => import('../pages/Rental/ContractDetailPage')),
   },
   {
-    path: '/rental/contracts/:id/edit',      // 动态路由 - 编辑合同
+    path: '/rental/contracts/:id/edit', // 动态路由 - 编辑合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {

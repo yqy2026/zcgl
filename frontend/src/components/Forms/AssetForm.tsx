@@ -130,18 +130,22 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     if (initialData !== undefined && initialData !== null) {
       const formData = {
         ...initialData,
-        contract_start_date: initialData.contract_start_date != null
-          ? dayjs(String(initialData.contract_start_date))
-          : undefined,
-        contract_end_date: initialData.contract_end_date != null
-          ? dayjs(String(initialData.contract_end_date))
-          : undefined,
-        operation_agreement_start_date: initialData.operation_agreement_start_date != null
-          ? dayjs(String(initialData.operation_agreement_start_date))
-          : undefined,
-        operation_agreement_end_date: initialData.operation_agreement_end_date != null
-          ? dayjs(String(initialData.operation_agreement_end_date))
-          : undefined,
+        contract_start_date:
+          initialData.contract_start_date != null
+            ? dayjs(String(initialData.contract_start_date))
+            : undefined,
+        contract_end_date:
+          initialData.contract_end_date != null
+            ? dayjs(String(initialData.contract_end_date))
+            : undefined,
+        operation_agreement_start_date:
+          initialData.operation_agreement_start_date != null
+            ? dayjs(String(initialData.operation_agreement_start_date))
+            : undefined,
+        operation_agreement_end_date:
+          initialData.operation_agreement_end_date != null
+            ? dayjs(String(initialData.operation_agreement_end_date))
+            : undefined,
       };
       form.setFieldsValue(formData);
 
@@ -162,13 +166,15 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
       if (initialData.terminal_contract_files != null) {
         const fileNames = String(initialData.terminal_contract_files).split(',').filter(Boolean);
-        const initialTerminalFileList: UploadFile[] = fileNames.map((name: string, index: number) => ({
-          uid: `terminal-${index}`,
-          name: name,
-          status: 'done' as const,
-          url: `/assets/terminal-contracts/${name}`,
-          size: 0,
-        }));
+        const initialTerminalFileList: UploadFile[] = fileNames.map(
+          (name: string, index: number) => ({
+            uid: `terminal-${index}`,
+            name: name,
+            status: 'done' as const,
+            url: `/assets/terminal-contracts/${name}`,
+            size: 0,
+          })
+        );
         setTerminalContractFileList(initialTerminalFileList);
       }
     }
@@ -177,7 +183,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   // Load rent contracts when asset ID changes
   useEffect(() => {
     const assetId = String(initialData?.id ?? form.getFieldValue('id'));
-    if (assetId !== undefined && assetId !== null &&  assetId !== 'undefined') {
+    if (assetId !== undefined && assetId !== null && assetId !== 'undefined') {
       loadRentContracts(assetId);
     }
   }, [initialData?.id, form, loadRentContracts]);
@@ -196,7 +202,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       'usage_status',
     ];
 
-    const filledFields = requiredFields.filter((field) => allValues[field] != null);
+    const filledFields = requiredFields.filter(field => allValues[field] != null);
     const rate = (filledFields.length / requiredFields.length) * 100;
     setCompletionRate(rate);
 
@@ -230,8 +236,8 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         contract_end_date: formatDate(values.contract_end_date),
         operation_agreement_start_date: formatDate(values.operation_agreement_start_date),
         operation_agreement_end_date: formatDate(values.operation_agreement_end_date),
-        operation_agreement_attachments: fileList.map((file) => file.name).join(','),
-        terminal_contract_files: terminalContractFileList.map((file) => file.name).join(','),
+        operation_agreement_attachments: fileList.map(file => file.name).join(','),
+        terminal_contract_files: terminalContractFileList.map(file => file.name).join(','),
       };
 
       if (onSubmit !== undefined && onSubmit !== null) {

@@ -3,28 +3,28 @@
  * 测试资产管理相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest';
 
 // =============================================================================
 // 类型定义
 // =============================================================================
 
 interface _Asset {
-  id: string
-  ownershipEntity: string
-  propertyName: string
-  address: string
-  ownershipStatus: string
-  propertyNature: string
-  usageStatus: string
-  landArea?: number
-  actualPropertyArea?: number
-  rentableArea?: number
-  rentedArea?: number
-  unrentedArea?: number
-  occupancyRate?: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  ownershipEntity: string;
+  propertyName: string;
+  address: string;
+  ownershipStatus: string;
+  propertyNature: string;
+  usageStatus: string;
+  landArea?: number;
+  actualPropertyArea?: number;
+  rentableArea?: number;
+  rentedArea?: number;
+  unrentedArea?: number;
+  occupancyRate?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // =============================================================================
@@ -47,7 +47,7 @@ vi.mock('@/services/assetService', () => ({
     searchAssets: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     validateAsset: vi.fn(() => Promise.resolve({ valid: true })),
   },
-}))
+}));
 
 // =============================================================================
 // useAssets Hook 测试
@@ -55,67 +55,67 @@ vi.mock('@/services/assetService', () => ({
 
 describe('useAssets - Hook验证', () => {
   it('应该导出useAssets hook', async () => {
-    const { useAssets } = await import('../useAssets')
-    expect(typeof useAssets).toBe('function')
-  })
+    const { useAssets } = await import('../useAssets');
+    expect(typeof useAssets).toBe('function');
+  });
 
   it('应该导出useAsset hook', async () => {
-    const { useAsset } = await import('../useAssets')
-    expect(typeof useAsset).toBe('function')
-  })
+    const { useAsset } = await import('../useAssets');
+    expect(typeof useAsset).toBe('function');
+  });
 
   it('应该导出useCreateAsset hook', async () => {
-    const { useCreateAsset } = await import('../useAssets')
-    expect(typeof useCreateAsset).toBe('function')
-  })
+    const { useCreateAsset } = await import('../useAssets');
+    expect(typeof useCreateAsset).toBe('function');
+  });
 
   it('应该导出useUpdateAsset hook', async () => {
-    const { useUpdateAsset } = await import('../useAssets')
-    expect(typeof useUpdateAsset).toBe('function')
-  })
+    const { useUpdateAsset } = await import('../useAssets');
+    expect(typeof useUpdateAsset).toBe('function');
+  });
 
   it('应该导出useDeleteAsset hook', async () => {
-    const { useDeleteAsset } = await import('../useAssets')
-    expect(typeof useDeleteAsset).toBe('function')
-  })
+    const { useDeleteAsset } = await import('../useAssets');
+    expect(typeof useDeleteAsset).toBe('function');
+  });
 
   it('应该导出useBatchDeleteAssets hook', async () => {
-    const { useBatchDeleteAssets } = await import('../useAssets')
-    expect(typeof useBatchDeleteAssets).toBe('function')
-  })
+    const { useBatchDeleteAssets } = await import('../useAssets');
+    expect(typeof useBatchDeleteAssets).toBe('function');
+  });
 
   it('应该导出useAssetHistory hook', async () => {
-    const { useAssetHistory } = await import('../useAssets')
-    expect(typeof useAssetHistory).toBe('function')
-  })
+    const { useAssetHistory } = await import('../useAssets');
+    expect(typeof useAssetHistory).toBe('function');
+  });
 
   it('应该导出useAssetStats hook', async () => {
-    const { useAssetStats } = await import('../useAssets')
-    expect(typeof useAssetStats).toBe('function')
-  })
+    const { useAssetStats } = await import('../useAssets');
+    expect(typeof useAssetStats).toBe('function');
+  });
 
   it('应该导出useOwnershipEntities hook', async () => {
-    const { useOwnershipEntities } = await import('../useAssets')
-    expect(typeof useOwnershipEntities).toBe('function')
-  })
+    const { useOwnershipEntities } = await import('../useAssets');
+    expect(typeof useOwnershipEntities).toBe('function');
+  });
 
   it('应该导出useManagementEntities hook', async () => {
-    const { useManagementEntities } = await import('../useAssets')
-    expect(typeof useManagementEntities).toBe('function')
-  })
+    const { useManagementEntities } = await import('../useAssets');
+    expect(typeof useManagementEntities).toBe('function');
+  });
 
   it('应该导出useBusinessCategories hook', async () => {
-    const { useBusinessCategories } = await import('../useAssets')
-    expect(typeof useBusinessCategories).toBe('function')
-  })
+    const { useBusinessCategories } = await import('../useAssets');
+    expect(typeof useBusinessCategories).toBe('function');
+  });
 
   it('应该导出useAssetSearch hook', async () => {
-    const { useAssetSearch } = await import('../useAssets')
-    expect(typeof useAssetSearch).toBe('function')
-  })
+    const { useAssetSearch } = await import('../useAssets');
+    expect(typeof useAssetSearch).toBe('function');
+  });
 
   it('应该导出useValidateAsset hook', async () => {
-    const { useValidateAsset } = await import('../useAssets')
-    expect(typeof useValidateAsset).toBe('function')
-  })
-})
+    const { useValidateAsset } = await import('../useAssets');
+    expect(typeof useValidateAsset).toBe('function');
+  });
+});

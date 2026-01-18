@@ -32,19 +32,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   const [open, setOpen] = useState(false);
 
   // 获取通知列表
-  const {
-    data: notificationsData,
-    isLoading,
-  } = useQuery({
+  const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['notifications', 'list'],
     queryFn: () => notificationService.getNotifications({ limit: 10 }),
     refetchInterval: 60000, // 每分钟刷新一次
   });
 
   // 获取未读数量
-  const {
-    data: unreadCountData,
-  } = useQuery({
+  const { data: unreadCountData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationService.getUnreadCount(),
     refetchInterval: 30000, // 每30秒刷新一次
@@ -94,12 +89,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   // 获取通知类型标签颜色
   const getNotificationTypeColor = (type: string) => {
     const colorMap: Record<string, string> = {
-      'contract_expiring': 'orange',
-      'contract_expired': 'red',
-      'payment_overdue': 'red',
-      'payment_due': 'orange',
-      'approval_pending': 'blue',
-      'system_notice': 'default',
+      contract_expiring: 'orange',
+      contract_expired: 'red',
+      payment_overdue: 'red',
+      payment_due: 'orange',
+      approval_pending: 'blue',
+      system_notice: 'default',
     };
     return colorMap[type] || 'default';
   };
@@ -107,12 +102,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   // 获取通知类型文本
   const getNotificationTypeText = (type: string) => {
     const textMap: Record<string, string> = {
-      'contract_expiring': '合同即将到期',
-      'contract_expired': '合同已到期',
-      'payment_overdue': '付款逾期',
-      'payment_due': '付款到期提醒',
-      'approval_pending': '审批待办',
-      'system_notice': '系统通知',
+      contract_expiring: '合同即将到期',
+      contract_expired: '合同已到期',
+      payment_overdue: '付款逾期',
+      payment_due: '付款到期提醒',
+      approval_pending: '审批待办',
+      system_notice: '系统通知',
     };
     return textMap[type] || '通知';
   };
@@ -124,12 +119,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text strong>消息通知</Text>
           {unreadCount > 0 && (
-            <Button
-              type="link"
-              size="small"
-              onClick={handleMarkAllAsRead}
-              style={{ padding: 0 }}
-            >
+            <Button type="link" size="small" onClick={handleMarkAllAsRead} style={{ padding: 0 }}>
               全部已读
             </Button>
           )}
@@ -142,10 +132,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
         </div>
       ) : notifications.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center' }}>
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="暂无通知"
-          />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无通知" />
         </div>
       ) : (
         <List
@@ -167,7 +154,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
               <div style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {!notification.is_read && <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#52c41a' }} />}
+                    {!notification.is_read && (
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          backgroundColor: '#52c41a',
+                        }}
+                      />
+                    )}
                     <Tag color={getNotificationTypeColor(notification.type)}>
                       {getNotificationTypeText(notification.type)}
                     </Tag>
@@ -178,7 +174,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
                         type="text"
                         size="small"
                         icon={<CheckOutlined />}
-                        onClick={(e) => handleMarkAsRead(notification.id, e)}
+                        onClick={e => handleMarkAsRead(notification.id, e)}
                         style={{ padding: '0 4px' }}
                       />
                     )}
@@ -187,13 +183,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
                       size="small"
                       danger
                       icon={<DeleteOutlined />}
-                      onClick={(e) => handleDelete(notification.id, e)}
+                      onClick={e => handleDelete(notification.id, e)}
                       style={{ padding: '0 4px' }}
                     />
                   </div>
                 </div>
                 <div style={{ marginBottom: 4 }}>
-                  <Text strong={notification.priority === 'high' || notification.priority === 'urgent'}>
+                  <Text
+                    strong={notification.priority === 'high' || notification.priority === 'urgent'}
+                  >
                     {notification.title}
                   </Text>
                 </div>
@@ -238,7 +236,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       <Badge count={unreadCount} overflowCount={99}>
         <BellOutlined
           style={{ fontSize: 18, cursor: 'pointer' }}
-          onClick={(e) => {
+          onClick={e => {
             e.preventDefault();
             setOpen(!open);
             onClick?.();

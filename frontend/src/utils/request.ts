@@ -2,9 +2,9 @@
  * API请求工具
  */
 
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
-import { createLogger } from "./logger";
-import { MessageManager } from "./messageManager";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { createLogger } from './logger';
+import { MessageManager } from './messageManager';
 
 const logger = createLogger('Request');
 
@@ -29,32 +29,32 @@ interface ExtendedAxiosError extends AxiosError {
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: process.env.VITE_API_BASE_URL ?? "/api",
+    baseURL: process.env.VITE_API_BASE_URL ?? '/api',
     timeout: 30000,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
   });
 
   // 请求拦截器
   instance.interceptors.request.use(
-    (config) => {
+    config => {
       // 兼容两种token键名：优先使用auth_token，回退到token
-      const token = localStorage.getItem("auth_token") ?? localStorage.getItem("token");
+      const token = localStorage.getItem('auth_token') ?? localStorage.getItem('token');
       if (token != null) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     },
-    (error) => {
+    error => {
       return Promise.reject(error);
-    },
+    }
   );
 
   // 响应拦截器
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      logger.debug("API响应成功", {
+      logger.debug('API响应成功', {
         url: response.config.url,
         method: response.config.method,
         status: response.status,
@@ -68,7 +68,7 @@ const createApiInstance = (): AxiosInstance => {
 
       // Type guard to check if error is an AxiosError
       if (error instanceof axios.AxiosError) {
-        logger.debug("API响应错误", {
+        logger.debug('API响应错误', {
           errorId,
           timestamp,
           url: error.config?.url,
@@ -99,12 +99,14 @@ const createApiInstance = (): AxiosInstance => {
               // 处理验证错误
               {
                 const errorData = data as ApiErrorResponse;
-              if (errorData.detail != null && Array.isArray(errorData.detail)) {
-                const errorMsg = errorData.detail.map((err: ApiErrorDetail) => err.msg).join(", ");
-                MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
-              } else {
-                MessageManager.error(`数据验证失败 [${errorId}]`);
-              }
+                if (errorData.detail != null && Array.isArray(errorData.detail)) {
+                  const errorMsg = errorData.detail
+                    .map((err: ApiErrorDetail) => err.msg)
+                    .join(', ');
+                  MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
+                } else {
+                  MessageManager.error(`数据验证失败 [${errorId}]`);
+                }
               }
               break;
             case 500:
@@ -134,7 +136,7 @@ const createApiInstance = (): AxiosInstance => {
 
       // Handle non-Axios errors
       return Promise.reject(error);
-    },
+    }
   );
 
   return instance;
@@ -147,7 +149,7 @@ export const apiRequest = createApiInstance();
 export class ApiService {
   static async get<T = unknown>(
     url: string,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.get(url, config);
   }
@@ -155,7 +157,7 @@ export class ApiService {
   static async post<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.post(url, data, config);
   }
@@ -163,7 +165,7 @@ export class ApiService {
   static async put<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.put(url, data, config);
   }
@@ -171,14 +173,14 @@ export class ApiService {
   static async patch<T = unknown>(
     url: string,
     data?: Record<string, unknown>,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.patch(url, data, config);
   }
 
   static async delete<T = unknown>(
     url: string,
-    config?: AxiosRequestConfig,
+    config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T>> {
     return apiRequest.delete(url, config);
   }
@@ -188,16 +190,16 @@ export class ApiService {
 export const uploadFile = async (
   url: string,
   file: File,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number) => void
 ): Promise<AxiosResponse> => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
 
   return apiRequest.post(url, formData, {
     headers: {
-      "Content-Type": "multipart/form-data",
+      'Content-Type': 'multipart/form-data',
     },
-    onUploadProgress: (progressEvent) => {
+    onUploadProgress: progressEvent => {
       if (onProgress != null && progressEvent.total != null) {
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(progress);
@@ -210,20 +212,20 @@ export const uploadFile = async (
 export const downloadFile = async (url: string, filename?: string): Promise<void> => {
   try {
     const response = await apiRequest.get(url, {
-      responseType: "blob",
+      responseType: 'blob',
     });
 
     const blob = new Blob([response.data]);
     const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = filename ?? "download";
+    link.download = filename ?? 'download';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
   } catch (error) {
-    MessageManager.error("文件下载失败");
+    MessageManager.error('文件下载失败');
     throw error;
   }
 };

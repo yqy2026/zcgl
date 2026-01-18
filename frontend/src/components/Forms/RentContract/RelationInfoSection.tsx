@@ -9,61 +9,65 @@ const { Option } = Select;
  * Fields: asset, ownership
  */
 const RelationInfoSection: React.FC = () => {
-    const { assets, ownerships, loadingAssets, loadingOwnerships } = useRentContractFormContext();
+  const { assets, ownerships, loadingAssets, loadingOwnerships } = useRentContractFormContext();
 
-    return (
-        <Card title="关联信息" size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={16}>
-                <Col span={12}>
-                    <Form.Item
-                        label="关联资产"
-                        name="asset_ids"
-                        rules={[{ required: true, message: '请选择关联资产' }]}
-                    >
-                        <Select
-                            mode="multiple"
-                            showSearch
-                            placeholder="选择资产（可多选）"
-                            loading={loadingAssets}
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
-                            }
-                        >
-                            {(assets.length > 0 ? assets : []).map(asset => (
-                                <Option key={asset.id} value={asset.id}>
-                                    {asset.property_name} - {asset.address}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                </Col>
-                <Col span={12}>
-                    <Form.Item
-                        label="权属方"
-                        name="ownership_id"
-                        rules={[{ required: true, message: '请选择权属方' }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="选择权属方"
-                            loading={loadingOwnerships}
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
-                            }
-                        >
-                            {(ownerships.length > 0 ? ownerships : []).map(ownership => (
-                                <Option key={ownership.id} value={ownership.id}>
-                                    {ownership.name}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                </Col>
-            </Row>
-        </Card>
-    );
+  return (
+    <Card title="关联信息" size="small" style={{ marginBottom: 16 }}>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item
+            label="关联资产"
+            name="asset_ids"
+            rules={[{ required: true, message: '请选择关联资产' }]}
+          >
+            <Select
+              mode="multiple"
+              showSearch
+              placeholder="选择资产（可多选）"
+              loading={loadingAssets}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                String(option?.children || '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+            >
+              {(assets.length > 0 ? assets : []).map(asset => (
+                <Option key={asset.id} value={asset.id}>
+                  {asset.property_name} - {asset.address}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            label="权属方"
+            name="ownership_id"
+            rules={[{ required: true, message: '请选择权属方' }]}
+          >
+            <Select
+              showSearch
+              placeholder="选择权属方"
+              loading={loadingOwnerships}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                String(option?.children || '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+            >
+              {(ownerships.length > 0 ? ownerships : []).map(ownership => (
+                <Option key={ownership.id} value={ownership.id}>
+                  {ownership.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+    </Card>
+  );
 };
 
 export default RelationInfoSection;

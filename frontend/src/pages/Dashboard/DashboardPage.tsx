@@ -1,5 +1,5 @@
-import React from 'react'
-import { Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd'
+import React from 'react';
+import { Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd';
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -8,73 +8,73 @@ import {
   AreaChartOutlined,
   BarChartOutlined,
   PieChartOutlined,
-} from '@ant-design/icons'
-import { useAnalytics } from '../../hooks/useAnalytics'
-import DataTrendCard from '../../components/Dashboard/DataTrendCard'
-import QuickInsights from '../../components/Dashboard/QuickInsights'
-import styles from './DashboardPage.module.css'
+} from '@ant-design/icons';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import DataTrendCard from '../../components/Dashboard/DataTrendCard';
+import QuickInsights from '../../components/Dashboard/QuickInsights';
+import styles from './DashboardPage.module.css';
 
-const { Title, Text } = Typography
+const { Title, Text } = Typography;
 
 const DashboardPage: React.FC = () => {
-  const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   // 使用统一的Analytics hook，避免重复请求
-  const { data: analyticsData, isLoading, error, refetch } = useAnalytics()
+  const { data: analyticsData, isLoading, error, refetch } = useAnalytics();
 
   // 从综合分析数据中提取面积汇总信息
-  const areaSummary = analyticsData?.data?.area_summary
+  const areaSummary = analyticsData?.data?.area_summary;
 
   // 计算模拟趋势数据（实际项目中应该从API获取历史数据）
   const mockTrends = React.useMemo(() => {
-    if (areaSummary == null) return null
+    if (areaSummary == null) return null;
 
-    const occupancyRate = areaSummary.occupancy_rate ?? 0
-    const previousRate = Math.max(85, occupancyRate - (Math.random() * 10 - 5))
-    const trendValue = ((occupancyRate - previousRate) / previousRate) * 100
+    const occupancyRate = areaSummary.occupancy_rate ?? 0;
+    const previousRate = Math.max(85, occupancyRate - (Math.random() * 10 - 5));
+    const trendValue = ((occupancyRate - previousRate) / previousRate) * 100;
 
     return {
       assets: {
         value: trendValue,
         period: '较上月',
-        isPositive: trendValue >= 0
+        isPositive: trendValue >= 0,
       },
       area: {
         value: -2.1,
         period: '较上月',
-        isPositive: false
+        isPositive: false,
       },
       occupancy: {
         value: 3.2,
         period: '较上月',
-        isPositive: true
-      }
-    }
-  }, [areaSummary])
+        isPositive: true,
+      },
+    };
+  }, [areaSummary]);
 
   const handleRefresh = () => {
-    refetch()
-  }
+    refetch();
+  };
 
   const handleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
+    setIsFullscreen(!isFullscreen);
     if (!isFullscreen) {
       // 进入全屏
       if (document.documentElement.requestFullscreen != null) {
-        document.documentElement.requestFullscreen()
+        document.documentElement.requestFullscreen();
       }
     } else {
       // 退出全屏
       if (document.exitFullscreen != null) {
-        document.exitFullscreen()
+        document.exitFullscreen();
       }
     }
-  }
+  };
 
   const handleExport = () => {
     // 实现导出功能
     // Exporting dashboard data
-  }
+  };
 
   if (error) {
     return (
@@ -89,16 +89,18 @@ const DashboardPage: React.FC = () => {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  const insightsData = areaSummary ? {
-    totalAssets: areaSummary.total_assets,
-    totalArea: areaSummary.total_area,
-    occupancyRate: areaSummary.occupancy_rate,
-    totalRentedArea: areaSummary.total_rented_area,
-    totalUnrentedArea: areaSummary.total_unrented_area
-  } : undefined
+  const insightsData = areaSummary
+    ? {
+        totalAssets: areaSummary.total_assets,
+        totalArea: areaSummary.total_area,
+        occupancyRate: areaSummary.occupancy_rate,
+        totalRentedArea: areaSummary.total_rented_area,
+        totalUnrentedArea: areaSummary.total_unrented_area,
+      }
+    : undefined;
 
   return (
     <div className={`${styles.dashboardContainer} ${isFullscreen ? styles.fullscreen : ''}`}>
@@ -193,7 +195,13 @@ const DashboardPage: React.FC = () => {
               precision={1}
               trend={mockTrends?.occupancy}
               icon={<PieChartOutlined />}
-              color={(areaSummary?.occupancy_rate ?? 0) >= 95 ? 'success' : (areaSummary?.occupancy_rate ?? 0) >= 85 ? 'warning' : 'error'}
+              color={
+                (areaSummary?.occupancy_rate ?? 0) >= 95
+                  ? 'success'
+                  : (areaSummary?.occupancy_rate ?? 0) >= 85
+                    ? 'warning'
+                    : 'error'
+              }
               loading={isLoading}
             />
           </Col>
@@ -265,9 +273,7 @@ const DashboardPage: React.FC = () => {
                 <Row gutter={16}>
                   <Col span={12}>
                     <div className={styles.statItem}>
-                      <div className={styles.statValue}>
-                        {areaSummary?.total_assets ?? 0}
-                      </div>
+                      <div className={styles.statValue}>{areaSummary?.total_assets ?? 0}</div>
                       <div className={styles.statLabel}>管理资产总数</div>
                     </div>
                   </Col>
@@ -302,7 +308,7 @@ const DashboardPage: React.FC = () => {
         </Row>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default DashboardPage
+export default DashboardPage;

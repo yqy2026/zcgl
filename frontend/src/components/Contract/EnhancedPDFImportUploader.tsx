@@ -7,11 +7,7 @@
 
 import React from 'react';
 import { Card, Space, Button, Tooltip, Badge } from 'antd';
-import {
-  CloudUploadOutlined,
-  SettingOutlined,
-  EyeOutlined
-} from '@ant-design/icons';
+import { CloudUploadOutlined, SettingOutlined, EyeOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 
 import {
@@ -23,7 +19,7 @@ import {
   SystemInfoDisplay,
   UploadStatsPanel,
   ActionButtons,
-  PreviewModal
+  PreviewModal,
 } from './PDFImport';
 
 interface EnhancedPDFImportUploaderProps {
@@ -42,7 +38,7 @@ const EnhancedPDFImportUploaderInner: React.FC<{ className?: string }> = ({ clas
     currentSession,
     showAdvancedOptions,
     setShowAdvancedOptions,
-    setShowPreviewModal
+    setShowPreviewModal,
   } = usePDFImportContext();
 
   return (
@@ -52,12 +48,7 @@ const EnhancedPDFImportUploaderInner: React.FC<{ className?: string }> = ({ clas
           <Space>
             <CloudUploadOutlined />
             <span>智能PDF导入</span>
-            {systemInfo && (
-              <Badge
-                count="AI增强"
-                style={{ backgroundColor: '#52c41a' }}
-              />
-            )}
+            {systemInfo && <Badge count="AI增强" style={{ backgroundColor: '#52c41a' }} />}
           </Space>
         }
         extra={
@@ -115,7 +106,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
   onUploadSuccess,
   onUploadError,
   maxSize = 50,
-  className
+  className,
 }) => {
   return (
     <PDFImportProvider

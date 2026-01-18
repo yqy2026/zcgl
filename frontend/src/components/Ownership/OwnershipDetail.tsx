@@ -109,8 +109,8 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
           <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
           <Descriptions.Item label="权属方简称">
             {ownership.short_name !== null &&
-              ownership.short_name !== undefined &&
-              ownership.short_name !== ''
+            ownership.short_name !== undefined &&
+            ownership.short_name !== ''
               ? ownership.short_name
               : '-'}
           </Descriptions.Item>

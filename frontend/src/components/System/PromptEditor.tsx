@@ -20,16 +20,9 @@ import {
   Alert,
   Tabs,
 } from 'antd';
-import {
-  SaveOutlined,
-  EyeOutlined,
-} from '@ant-design/icons';
+import { SaveOutlined, EyeOutlined } from '@ant-design/icons';
 
-import type {
-  PromptTemplate,
-  PromptTemplateCreate,
-  PromptTemplateUpdate,
-} from '@/types/llmPrompt';
+import type { PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate } from '@/types/llmPrompt';
 import { DocType, LLMProvider } from '@/types/llmPrompt';
 import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
@@ -105,7 +98,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
 
   // 实时预览更新
   const handleFieldChange = (field: 'system_prompt' | 'user_prompt_template', value: string) => {
-    setPreviewData((prev) => ({
+    setPreviewData(prev => ({
       ...prev,
       [field]: value,
     }));
@@ -114,7 +107,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   // 提交表单
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields() as PromptFormValues;
+      const values = (await form.validateFields()) as PromptFormValues;
       setLoading(true);
 
       // 解析 few_shot_examples
@@ -239,12 +232,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           </Row>
 
           <Form.Item label="描述" name="description">
-            <TextArea
-              rows={2}
-              placeholder="简要描述此 Prompt 的用途"
-              maxLength={500}
-              showCount
-            />
+            <TextArea rows={2} placeholder="简要描述此 Prompt 的用途" maxLength={500} showCount />
           </Form.Item>
 
           <Form.Item
@@ -256,7 +244,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             <TextArea
               rows={6}
               placeholder="例如: 你是一位专业的合同信息提取专家..."
-              onChange={(e) => handleFieldChange('system_prompt', e.target.value)}
+              onChange={e => handleFieldChange('system_prompt', e.target.value)}
             />
           </Form.Item>
 
@@ -269,7 +257,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             <TextArea
               rows={10}
               placeholder="例如: 请分析这份合同图片，提取以下信息..."
-              onChange={(e) => handleFieldChange('user_prompt_template', e.target.value)}
+              onChange={e => handleFieldChange('user_prompt_template', e.target.value)}
             />
           </Form.Item>
 
@@ -353,7 +341,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             <Paragraph>
               <Text strong>示例：</Text>
               <br />
-              <Text code>你是一位专业的合同信息提取专家，擅长从中国房地产租赁合同中准确提取结构化信息。</Text>
+              <Text code>
+                你是一位专业的合同信息提取专家，擅长从中国房地产租赁合同中准确提取结构化信息。
+              </Text>
             </Paragraph>
           </Card>
 
@@ -371,15 +361,13 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
 
           <Card title="什么是 Few-shot 示例?" size="small" style={{ marginBottom: 16 }}>
             <Paragraph>
-              Few-shot 示例通过提供<strong>输入-输出示例</strong>，帮助 AI 理解期望的格式和质量标准。
-              这对于复杂的提取任务特别有效。
+              Few-shot 示例通过提供<strong>输入-输出示例</strong>，帮助 AI
+              理解期望的格式和质量标准。 这对于复杂的提取任务特别有效。
             </Paragraph>
             <Paragraph>
               <Text strong>示例：</Text>
               <br />
-              <Text>
-                示例输入包含合同图片，示例输出包含提取到的合同号 HT-2024-001
-              </Text>
+              <Text>示例输入包含合同图片，示例输出包含提取到的合同号 HT-2024-001</Text>
             </Paragraph>
           </Card>
 
@@ -407,9 +395,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       title={
         <Space>
           {mode === 'create' ? '新建 Prompt' : '编辑 Prompt'}
-          {mode === 'edit' && prompt && (
-            <Tag color="blue">v{prompt.version}</Tag>
-          )}
+          {mode === 'edit' && prompt && <Tag color="blue">v{prompt.version}</Tag>}
         </Space>
       }
       open={visible}
@@ -419,11 +405,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
         <Button key="cancel" onClick={onCancel}>
           取消
         </Button>,
-        <Button
-          key="preview"
-          icon={<EyeOutlined />}
-          onClick={() => setActiveTab('preview')}
-        >
+        <Button key="preview" icon={<EyeOutlined />} onClick={() => setActiveTab('preview')}>
           预览
         </Button>,
         <Button

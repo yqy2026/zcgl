@@ -3,15 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Space,
-  Card,
-  Select,
-  Tag
-} from 'antd';
+import { Form, Input, Button, Space, Card, Select, Tag } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 
 import { ownershipService } from '@/services/ownershipService';
@@ -29,11 +21,7 @@ interface ProjectFormProps {
   onCancel: () => void;
 }
 
-const ProjectForm: React.FC<ProjectFormProps> = ({
-  project,
-  onSuccess,
-  onCancel
-}) => {
+const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
@@ -59,15 +47,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       // 设置基本信息
       form.setFieldsValue({
         name: project.name,
-        description: project.description ?? ''
+        description: project.description ?? '',
       });
 
       // 设置权属方关联
       if (project.ownership_relations && project.ownership_relations.length > 0) {
         const ownershipIds = project.ownership_relations.map(rel => rel.ownership_id);
-        const selected = ownerships.filter(ownership =>
-          ownershipIds.includes(ownership.id)
-        );
+        const selected = ownerships.filter(ownership => ownershipIds.includes(ownership.id));
         setSelectedOwnerships(selected);
       } else {
         setSelectedOwnerships([]);
@@ -99,12 +85,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       // 构建简化的ownership_relations数据
       const ownership_relations = selectedOwnerships.map(ownership => ({
         ownership_id: ownership.id,
-        relation_type: '关联'
+        relation_type: '关联',
       }));
 
       const submitData = {
         ...values,
-        ownership_relations
+        ownership_relations,
       };
 
       if (project !== undefined && project !== null) {
@@ -127,10 +113,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
   // 表单验证规则接口
   interface FormValidationRule {
-    field?: string
-    fullField?: string
-    type?: string
-    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+    field?: string;
+    fullField?: string;
+    type?: string;
+    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>;
   }
 
   // 验证项目名称
@@ -142,32 +128,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      autoComplete="off"
-    >
+    <Form form={form} layout="vertical" onFinish={handleSubmit} autoComplete="off">
       <Card title="项目信息" size="small">
         <Form.Item
           label="项目名称"
           name="name"
-          rules={[
-            { required: true, validator: validateProjectName as any }
-          ]}
+          rules={[{ required: true, validator: validateProjectName as any }]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />
         </Form.Item>
 
-        <Form.Item
-          label="项目描述"
-          name="description"
-        >
-          <TextArea
-            placeholder="请输入项目描述"
-            rows={3}
-            maxLength={1000}
-          />
+        <Form.Item label="项目描述" name="description">
+          <TextArea placeholder="请输入项目描述" rows={3} maxLength={1000} />
         </Form.Item>
       </Card>
 
@@ -181,7 +153,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             filterOption={(input, option) =>
               (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
             }
-            onSelect={(value) => {
+            onSelect={value => {
               const ownership = ownerships.find(o => o.id === value);
               if (ownership !== undefined && ownership !== null) {
                 addOwnership(ownership);
@@ -217,14 +189,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             </div>
           </div>
         )}
-
       </Card>
 
       <div style={{ marginTop: 16 }}>
         <Space style={{ float: 'right' }}>
-          <Button onClick={onCancel}>
-            取消
-          </Button>
+          <Button onClick={onCancel}>取消</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
             {project ? '更新' : '创建'}
           </Button>

@@ -20,12 +20,7 @@ import {
   Space,
   Button,
 } from 'antd';
-import {
-  RiseOutlined,
-  FallOutlined,
-  CheckCircleOutlined,
-  ReloadOutlined,
-} from '@ant-design/icons';
+import { RiseOutlined, FallOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
@@ -113,7 +108,7 @@ const PromptDashboard: React.FC = () => {
         {
           date: dayjs().subtract(5, 'days').format('YYYY-MM-DD'),
           accuracy: 0.84,
-          confidence: 0.80,
+          confidence: 0.8,
           extraction_count: 52,
           corrected_count: 8,
         },
@@ -156,10 +151,10 @@ const PromptDashboard: React.FC = () => {
 
       const mockFieldErrorRates: FieldErrorRate[] = [
         { field_name: 'contract_number', error_count: 15, total_count: 350, error_rate: 0.043 },
-        { field_name: 'sign_date', error_count: 28, total_count: 350, error_rate: 0.080 },
+        { field_name: 'sign_date', error_count: 28, total_count: 350, error_rate: 0.08 },
         { field_name: 'landlord_name', error_count: 12, total_count: 350, error_rate: 0.034 },
         { field_name: 'tenant_name', error_count: 18, total_count: 350, error_rate: 0.051 },
-        { field_name: 'monthly_rent', error_count: 35, total_count: 350, error_rate: 0.100 },
+        { field_name: 'monthly_rent', error_count: 35, total_count: 350, error_rate: 0.1 },
         { field_name: 'lease_start_date', error_count: 22, total_count: 350, error_rate: 0.063 },
         { field_name: 'lease_end_date', error_count: 25, total_count: 350, error_rate: 0.071 },
       ];
@@ -255,10 +250,12 @@ const PromptDashboard: React.FC = () => {
       key: 'error_rate',
       align: 'right',
       render: (rate: number) => (
-        <span style={{
-          color: rate > 0.08 ? COLORS.error : rate > 0.05 ? COLORS.warning : COLORS.success,
-          fontWeight: 'bold'
-        }}>
+        <span
+          style={{
+            color: rate > 0.08 ? COLORS.error : rate > 0.05 ? COLORS.warning : COLORS.success,
+            fontWeight: 'bold',
+          }}
+        >
           {(rate * 100).toFixed(1)}%
         </span>
       ),
@@ -270,7 +267,13 @@ const PromptDashboard: React.FC = () => {
         <Progress
           percent={record.error_rate * 100}
           size="small"
-          strokeColor={record.error_rate > 0.08 ? COLORS.error : record.error_rate > 0.05 ? COLORS.warning : COLORS.success}
+          strokeColor={
+            record.error_rate > 0.08
+              ? COLORS.error
+              : record.error_rate > 0.05
+                ? COLORS.warning
+                : COLORS.success
+          }
         />
       ),
     },
@@ -297,8 +300,16 @@ const PromptDashboard: React.FC = () => {
             message={
               <Space>
                 <span>
-                  <Tag color={s.priority === 'high' ? 'red' : s.priority === 'medium' ? 'orange' : 'green'}>
-                    {s.priority === 'high' ? '高优先级' : s.priority === 'medium' ? '中优先级' : '低优先级'}
+                  <Tag
+                    color={
+                      s.priority === 'high' ? 'red' : s.priority === 'medium' ? 'orange' : 'green'
+                    }
+                  >
+                    {s.priority === 'high'
+                      ? '高优先级'
+                      : s.priority === 'medium'
+                        ? '中优先级'
+                        : '低优先级'}
                   </Tag>
                   <strong>{s.field_name}</strong>
                 </span>
@@ -307,10 +318,12 @@ const PromptDashboard: React.FC = () => {
             description={
               <div>
                 <p style={{ margin: '8px 0' }}>
-                  <strong>问题：</strong>{s.issue}
+                  <strong>问题：</strong>
+                  {s.issue}
                 </p>
                 <p style={{ margin: '8px 0' }}>
-                  <strong>建议：</strong>{s.suggestion}
+                  <strong>建议：</strong>
+                  {s.suggestion}
                 </p>
               </div>
             }
@@ -331,7 +344,7 @@ const PromptDashboard: React.FC = () => {
     return (
       <div style={{ padding: 20 }}>
         <Row gutter={16}>
-          {performanceData.map((day) => (
+          {performanceData.map(day => (
             <Col span={3} key={day.date}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
@@ -339,20 +352,34 @@ const PromptDashboard: React.FC = () => {
                 </div>
                 <div style={{ marginBottom: 4 }}>
                   <div style={{ fontSize: 10, color: '#999' }}>准确率</div>
-                  <div style={{
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    color: day.accuracy >= 0.85 ? COLORS.success : day.accuracy >= 0.75 ? COLORS.warning : COLORS.error
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      color:
+                        day.accuracy >= 0.85
+                          ? COLORS.success
+                          : day.accuracy >= 0.75
+                            ? COLORS.warning
+                            : COLORS.error,
+                    }}
+                  >
                     {(day.accuracy * 100).toFixed(0)}%
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: '#999' }}>置信度</div>
-                  <div style={{
-                    fontSize: 14,
-                    color: day.confidence >= 0.8 ? COLORS.success : day.confidence >= 0.7 ? COLORS.warning : COLORS.error
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color:
+                        day.confidence >= 0.8
+                          ? COLORS.success
+                          : day.confidence >= 0.7
+                            ? COLORS.warning
+                            : COLORS.error,
+                    }}
+                  >
                     {(day.confidence * 100).toFixed(0)}%
                   </div>
                 </div>
@@ -390,7 +417,7 @@ const PromptDashboard: React.FC = () => {
             <Space>
               <RangePicker
                 value={dateRange}
-                onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+                onChange={dates => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
               />
               <Select
                 style={{ width: 300 }}
@@ -428,11 +455,7 @@ const PromptDashboard: React.FC = () => {
                 title="活跃 Prompt"
                 value={statistics.status_distribution.find(s => s.status === 'ACTIVE')?.count ?? 0}
                 valueStyle={{ color: COLORS.success }}
-                suffix={
-                  <span style={{ fontSize: 14 }}>
-                    / {statistics.total_prompts}
-                  </span>
-                }
+                suffix={<span style={{ fontSize: 14 }}>/ {statistics.total_prompts}</span>}
               />
             </Card>
           </Col>
@@ -443,11 +466,14 @@ const PromptDashboard: React.FC = () => {
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
                 valueStyle={{
-                  color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning
+                  color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
                 }}
                 prefix={
-                  accuracyTrend === 'up' ? <RiseOutlined /> :
-                  accuracyTrend === 'down' ? <FallOutlined /> : null
+                  accuracyTrend === 'up' ? (
+                    <RiseOutlined />
+                  ) : accuracyTrend === 'down' ? (
+                    <FallOutlined />
+                  ) : null
                 }
               />
             </Card>
@@ -459,11 +485,14 @@ const PromptDashboard: React.FC = () => {
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
                 valueStyle={{
-                  color: statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning
+                  color: statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
                 }}
                 prefix={
-                  confidenceTrend === 'up' ? <RiseOutlined /> :
-                  confidenceTrend === 'down' ? <FallOutlined /> : null
+                  confidenceTrend === 'up' ? (
+                    <RiseOutlined />
+                  ) : confidenceTrend === 'down' ? (
+                    <FallOutlined />
+                  ) : null
                 }
               />
             </Card>
@@ -488,10 +517,7 @@ const PromptDashboard: React.FC = () => {
             >
               <Row gutter={16}>
                 <Col span={6}>
-                  <Statistic
-                    title="使用次数"
-                    value={selectedPrompt.total_usage}
-                  />
+                  <Statistic title="使用次数" value={selectedPrompt.total_usage} />
                 </Col>
                 <Col span={6}>
                   <Statistic
@@ -499,8 +525,12 @@ const PromptDashboard: React.FC = () => {
                     value={(selectedPrompt.avg_accuracy * 100).toFixed(1)}
                     suffix="%"
                     valueStyle={{
-                      color: selectedPrompt.avg_accuracy >= 0.85 ? COLORS.success :
-                             selectedPrompt.avg_accuracy >= 0.75 ? COLORS.warning : COLORS.error
+                      color:
+                        selectedPrompt.avg_accuracy >= 0.85
+                          ? COLORS.success
+                          : selectedPrompt.avg_accuracy >= 0.75
+                            ? COLORS.warning
+                            : COLORS.error,
                     }}
                   />
                 </Col>
@@ -510,16 +540,17 @@ const PromptDashboard: React.FC = () => {
                     value={(selectedPrompt.avg_confidence * 100).toFixed(1)}
                     suffix="%"
                     valueStyle={{
-                      color: selectedPrompt.avg_confidence >= 0.8 ? COLORS.success :
-                             selectedPrompt.avg_confidence >= 0.7 ? COLORS.warning : COLORS.error
+                      color:
+                        selectedPrompt.avg_confidence >= 0.8
+                          ? COLORS.success
+                          : selectedPrompt.avg_confidence >= 0.7
+                            ? COLORS.warning
+                            : COLORS.error,
                     }}
                   />
                 </Col>
                 <Col span={6}>
-                  <Statistic
-                    title="提供商"
-                    value={selectedPrompt.provider.toUpperCase()}
-                  />
+                  <Statistic title="提供商" value={selectedPrompt.provider.toUpperCase()} />
                 </Col>
               </Row>
             </Card>
@@ -530,9 +561,7 @@ const PromptDashboard: React.FC = () => {
       {/* 性能趋势图 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={24}>
-          <Card title="近7天性能趋势">
-            {renderPerformanceChart()}
-          </Card>
+          <Card title="近7天性能趋势">{renderPerformanceChart()}</Card>
         </Col>
       </Row>
 
@@ -554,9 +583,7 @@ const PromptDashboard: React.FC = () => {
       {/* 优化建议 */}
       <Row gutter={16}>
         <Col span={24}>
-          <Card title="优化建议">
-            {renderSuggestions()}
-          </Card>
+          <Card title="优化建议">{renderSuggestions()}</Card>
         </Col>
       </Row>
     </div>

@@ -17,7 +17,7 @@ import {
   Badge,
   Input,
   Select,
-  Switch
+  Switch,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -27,7 +27,7 @@ import {
   EyeOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -68,10 +68,7 @@ interface ProjectListProps {
   mode?: 'list' | 'select';
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({
-  onSelectProject,
-  mode = 'list'
-}) => {
+const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [statistics, setStatistics] = useState<ProjectStatisticsResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,7 +86,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
-    total: 0
+    total: 0,
   });
 
   // 获取项目列表
@@ -98,7 +95,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
     try {
       const params: ProjectQueryParams = {
         page: pagination.current,
-        size: pagination.pageSize
+        size: pagination.pageSize,
       };
 
       if (searchKeyword !== undefined && searchKeyword !== null) {
@@ -124,9 +121,13 @@ const ProjectList: React.FC<ProjectListProps> = ({
           ...prev,
           total: response.total ?? 0,
           current: response.page ?? prev.current,
-          pageSize: response.size ?? prev.pageSize
+          pageSize: response.size ?? prev.pageSize,
         }));
-      } else if (response != null && 'data' in (response as Record<string, unknown>) && ((response as Record<string, unknown>).data as Record<string, unknown>)?.items != null) {
+      } else if (
+        response != null &&
+        'data' in (response as Record<string, unknown>) &&
+        ((response as Record<string, unknown>).data as Record<string, unknown>)?.items != null
+      ) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
         const nestedResponse = response as NestedProjectListResponse;
         setProjects(nestedResponse.data.items ?? []);
@@ -134,7 +135,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           ...prev,
           total: nestedResponse.data.total ?? nestedResponse.data.total_count ?? 0,
           current: nestedResponse.data.page ?? prev.current,
-          pageSize: nestedResponse.data.size ?? prev.pageSize
+          pageSize: nestedResponse.data.size ?? prev.pageSize,
         }));
       } else {
         // eslint-disable-next-line no-console
@@ -142,12 +143,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
         setProjects([]);
         setPagination(prev => ({
           ...prev,
-          total: 0
+          total: 0,
         }));
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items ?? (('data' in (response as unknown as Record<string, unknown>) ? ((response as unknown as Record<string, unknown>).data as Record<string, unknown>)?.items as Project[] ?? [] : []));
+      const loadedProjects =
+        response?.items ??
+        ('data' in (response as unknown as Record<string, unknown>)
+          ? ((((response as unknown as Record<string, unknown>).data as Record<string, unknown>)
+              ?.items as Project[]) ?? [])
+          : []);
       const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
@@ -164,7 +170,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       console.error('Error details:', {
         message: err.message,
         status: err.response?.status,
-        data: err.response?.data
+        data: err.response?.data,
       });
       MessageManager.error(`获取项目列表失败: ${err.message ?? '未知错误'}`);
     } finally {
@@ -205,10 +211,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
 
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([
-        fetchProjects(),
-        fetchOwnerships()
-      ]);
+      await Promise.all([fetchProjects(), fetchOwnerships()]);
     };
     loadData();
   }, [pagination.current, pagination.pageSize, searchKeyword, isActiveFilter, ownershipFilter]);
@@ -231,7 +234,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           console.error('删除项目失败:', error);
           MessageManager.error('删除项目失败');
         }
-      }
+      },
     });
   };
 
@@ -287,13 +290,13 @@ const ProjectList: React.FC<ProjectListProps> = ({
         >
           {text}
         </Button>
-      )
+      ),
     },
     {
       title: '项目编码',
       dataIndex: 'code',
       key: 'code',
-      width: 120
+      width: 120,
     },
     {
       title: '权属方',
@@ -326,21 +329,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
         }
 
         return '-';
-      }
+      },
     },
     {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
       width: 200,
-      render: (text: string) => text ?? '-'
+      render: (text: string) => text ?? '-',
     },
     {
       title: '关联资产',
       dataIndex: 'asset_count',
       key: 'asset_count',
       width: 100,
-      render: (count: number) => count ?? 0
+      render: (count: number) => count ?? 0,
     },
     {
       title: '状态',
@@ -348,11 +351,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
       key: 'is_active',
       width: 80,
       render: (isActive: boolean, _record: Project) => (
-        <Badge
-          status={isActive ? 'success' : 'error'}
-          text={isActive ? '启用' : '禁用'}
-        />
-      )
+        <Badge status={isActive ? 'success' : 'error'} text={isActive ? '启用' : '禁用'} />
+      ),
     },
     {
       title: '数据状态',
@@ -373,7 +373,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             break;
         }
         return <Tag color={color}>{text ?? '-'}</Tag>;
-      }
+      },
     },
     {
       title: '操作',
@@ -382,29 +382,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
       render: (_, record: Project) => (
         <Space size="small">
           {mode === 'select' && (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handleSelect(record)}
-            >
+            <Button type="primary" size="small" onClick={() => handleSelect(record)}>
               选择
             </Button>
           )}
           {mode === 'list' && (
             <>
               <Tooltip title="查看详情">
-                <Button
-                  type="text"
-                  icon={<EyeOutlined />}
-                  onClick={() => handleView(record)}
-                />
+                <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(record)}
-                />
+                <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
               </Tooltip>
               <Tooltip title="删除">
                 <Button
@@ -424,8 +412,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
             unCheckedChildren="禁用"
           />
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -481,7 +469,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               allowClear
               enterButton={<SearchOutlined />}
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={e => setSearchKeyword(e.target.value)}
               onSearch={fetchProjects}
             />
           </Col>
@@ -491,7 +479,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               allowClear
               style={{ width: '100%' }}
               value={isActiveFilter === null ? undefined : isActiveFilter}
-              onChange={(value) => setIsActiveFilter(value === undefined ? null : value)}
+              onChange={value => setIsActiveFilter(value === undefined ? null : value)}
             >
               <Option value={true}>启用</Option>
               <Option value={false}>禁用</Option>
@@ -503,11 +491,13 @@ const ProjectList: React.FC<ProjectListProps> = ({
               allowClear
               style={{ width: '100%' }}
               value={ownershipFilter || undefined}
-              onChange={(value) => setOwnershipFilter(value || '')}
+              onChange={value => setOwnershipFilter(value || '')}
               loading={ownershipsLoading}
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             >
               {ownerships.map(ownership => (
@@ -519,28 +509,23 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </Col>
           <Col xs={24} sm={12} md={6} lg={4}>
             <Space>
-              <Button onClick={() => {
-                setSearchKeyword('');
-                setIsActiveFilter(null);
-                setOwnershipFilter('');
-              }}>
+              <Button
+                onClick={() => {
+                  setSearchKeyword('');
+                  setIsActiveFilter(null);
+                  setOwnershipFilter('');
+                }}
+              >
                 重置
               </Button>
             </Space>
           </Col>
           <Col xs={24} sm={12} md={6} lg={4}>
             <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
                 新建项目
               </Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={fetchProjects}
-              >
+              <Button icon={<ReloadOutlined />} onClick={fetchProjects}>
                 刷新
               </Button>
             </Space>
@@ -566,9 +551,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
               setPagination(prev => ({
                 ...prev,
                 current: page,
-                pageSize: pageSize || prev.pageSize
+                pageSize: pageSize || prev.pageSize,
               }));
-            }
+            },
           }}
           scroll={{ x: 800 }}
         />

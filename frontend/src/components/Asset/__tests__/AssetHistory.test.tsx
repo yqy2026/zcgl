@@ -19,8 +19,8 @@
  * - 图标显示
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 
 // Mock antd 组件
 vi.mock('antd', () => ({
@@ -59,7 +59,7 @@ vi.mock('antd', () => ({
       data-testid="date-picker"
       data-value={value}
       data-placeholder={placeholder}
-      onChange={(e) => onChange && onChange(e.target.value)}
+      onChange={e => onChange && onChange(e.target.value)}
     />
   ),
   RangePicker: ({ value, onChange, placeholder }: any) => (
@@ -67,33 +67,23 @@ vi.mock('antd', () => ({
       <input
         data-value-start={value?.[0]}
         data-placeholder={placeholder?.[0]}
-        onChange={(e) => onChange && onChange([e.target.value, value?.[1]])}
+        onChange={e => onChange && onChange([e.target.value, value?.[1]])}
       />
       <input
         data-value-end={value?.[1]}
         data-placeholder={placeholder?.[1]}
-        onChange={(e) => onChange && onChange([value?.[0], e.target.value])}
+        onChange={e => onChange && onChange([value?.[0], e.target.value])}
       />
     </div>
   ),
   Button: ({ children, onClick, icon, type, danger }: any) => (
-    <button
-      data-testid="button"
-      data-type={type}
-      data-danger={danger}
-      onClick={onClick}
-    >
+    <button data-testid="button" data-type={type} data-danger={danger} onClick={onClick}>
       {icon}
       {children}
     </button>
   ),
   Modal: ({ children, open, onOk, onCancel, title, width }: any) => (
-    <div
-      data-testid="modal"
-      data-open={open}
-      data-title={title}
-      data-width={width}
-    >
+    <div data-testid="modal" data-open={open} data-title={title} data-width={width}>
       {open && (
         <>
           <div className="modal-title">{title}</div>
@@ -109,9 +99,7 @@ vi.mock('antd', () => ({
       {children}
     </span>
   ),
-  Empty: ({ description }: any) => (
-    <div data-testid="empty">{description}</div>
-  ),
+  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
   Spin: ({ children, spinning, tip }: any) => (
     <div data-testid="spin" data-spinning={spinning} data-tip={tip}>
       {spinning ? <div>加载中...</div> : children}
@@ -134,12 +122,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Descriptions: ({ children, column, bordered, size, items }: any) => (
-    <div
-      data-testid="descriptions"
-      data-column={column}
-      data-bordered={bordered}
-      data-size={size}
-    >
+    <div data-testid="descriptions" data-column={column} data-bordered={bordered} data-size={size}>
       {items &&
         items.map((item: any, index: number) => (
           <div key={index} data-label={item.label}>
@@ -155,7 +138,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-}))
+}));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
@@ -166,7 +149,7 @@ vi.mock('@ant-design/icons', () => ({
   CloseOutlined: () => <span data-testid="icon-close" />,
   FileTextOutlined: () => <span data-testid="icon-filetext" />,
   UserOutlined: () => <span data-testid="icon-user" />,
-}))
+}));
 
 // Mock @tanstack/react-query
 vi.mock('@tanstack/react-query', () => ({
@@ -177,7 +160,7 @@ vi.mock('@tanstack/react-query', () => ({
     error: null,
     refetch: vi.fn(),
   })),
-}))
+}));
 
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
@@ -185,18 +168,18 @@ vi.mock('@/utils/format', () => ({
   formatDate: (_date: string, _format?: string) => '2024-01-01',
   getChangeTypeLabel: (_type: string) => 'type',
   getChangeTypeColor: (_type: string) => 'blue',
-}))
+}));
 
 // Mock services
 vi.mock('@/services', () => ({
   getAssetHistory: vi.fn(() => []),
   getAssetHistoryDetail: vi.fn(() => ({})),
-}))
+}));
 
 describe('AssetHistory 组件测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   const _mockHistoryData = [
     {
@@ -225,7 +208,7 @@ describe('AssetHistory 组件测试', () => {
       ip_address: '192.168.1.2',
       user_agent: 'Mozilla/5.0',
     },
-  ]
+  ];
 
   const _mockDetailData = {
     id: '1',
@@ -253,334 +236,334 @@ describe('AssetHistory 组件测试', () => {
         new_value: '测试地址',
       },
     ],
-  }
+  };
 
   // Helper function to create component element
   const createElement = async (props: any = { assetId: 'asset-1' }) => {
-    const module = await import('../AssetHistory')
-    const Component = module.default
-    return React.createElement(Component, props)
-  }
+    const module = await import('../AssetHistory');
+    const Component = module.default;
+    return React.createElement(Component, props);
+  };
 
   describe('组件导入与导出', () => {
     it('应该成功导入默认导出', async () => {
-      const module = await import('../AssetHistory')
-      expect(module.default).toBeDefined()
-    })
+      const module = await import('../AssetHistory');
+      expect(module.default).toBeDefined();
+    });
 
     it('应该是React组件', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('基本属性测试', () => {
     it('应该接收 assetId 属性', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该接受 className 属性', async () => {
-      const element = await createElement({ assetId: 'asset-1', className: 'custom-class' })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ assetId: 'asset-1', className: 'custom-class' });
+      expect(element).toBeTruthy();
+    });
 
     it('应该接受 style 属性', async () => {
-      const element = await createElement({ assetId: 'asset-1', style: { marginTop: 16 } })
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement({ assetId: 'asset-1', style: { marginTop: 16 } });
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('数据加载', () => {
     it('应该调用 useQuery 获取历史记录', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
+      const element = await createElement();
+      expect(element).toBeTruthy();
       // useQuery 在组件内部被调用来获取历史记录
-    })
+    });
 
     it('应该传递正确的查询参数', async () => {
-      const element = await createElement({ assetId: 'test-asset-123' })
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement({ assetId: 'test-asset-123' });
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('Timeline 组件渲染', () => {
     it('应该渲染 Timeline 组件', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用 mode="left"', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示历史记录项', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('筛选功能', () => {
     it('应该有变更类型筛选器', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该有日期范围筛选器', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该支持清除筛选', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('变更类型选项应该包含: 全部、创建、更新、删除', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('分页功能', () => {
     it('应该显示分页组件', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该有默认页大小', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该支持改变页大小', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('详情弹窗', () => {
     it('点击查看详情应该打开弹窗', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('弹窗应该显示变更详情', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('弹窗应该有关闭按钮', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('弹窗应该有确定和取消按钮', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('字段变更显示', () => {
     it('应该显示变更的字段列表', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示旧值和新值对比', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('创建操作应该只显示新值', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('删除操作应该只显示旧值', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用 Descriptions 组件显示详情', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('空状态处理', () => {
     it('没有历史记录时应该显示空状态', async () => {
-      const { useQuery } = await import('@tanstack/react-query')
+      const { useQuery } = await import('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValue({
         data: [],
         isLoading: false,
         isError: false,
         error: null,
         refetch: vi.fn(),
-      } as any)
+      } as any);
 
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('空状态应该有提示信息', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('加载状态', () => {
     it('加载时应该显示 Spin 组件', async () => {
-      const { useQuery } = await import('@tanstack/react-query')
+      const { useQuery } = await import('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValue({
         data: undefined,
         isLoading: true,
         isError: false,
         error: null,
         refetch: vi.fn(),
-      } as any)
+      } as any);
 
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('加载时应该有提示文本', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('错误状态', () => {
     it('错误时应该显示 Alert 组件', async () => {
-      const { useQuery } = await import('@tanstack/react-query')
+      const { useQuery } = await import('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValue({
         data: undefined,
         isLoading: false,
         isError: true,
         error: new Error('加载失败'),
         refetch: vi.fn(),
-      } as any)
+      } as any);
 
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('错误时应该显示错误信息', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('错误时应该有重试按钮', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('时间信息格式化', () => {
     it('应该显示变更时间', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用格式化函数处理时间', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('用户信息显示', () => {
     it('应该显示操作人姓名', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示 IP 地址', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('变更类型标签', () => {
     it('应该显示变更类型标签', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('创建操作应该使用绿色标签', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('更新操作应该使用蓝色标签', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('删除操作应该使用红色标签', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('图标显示', () => {
     it('应该显示 ClockCircleOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('筛选按钮应该显示 FilterOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('刷新按钮应该显示 ReloadOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('查看详情按钮应该显示 EyeOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('卡片标题和额外操作', () => {
     it('应该显示卡片标题', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示刷新按钮', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('刷新按钮应该触发数据重新加载', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('详情弹窗内容', () => {
     it('应该显示变更ID', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示变更时间', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示操作人信息', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示 IP 地址和 User Agent', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
-})
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
+});

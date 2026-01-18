@@ -82,7 +82,7 @@ const PromptListPage: React.FC = () => {
 
   // 加载 Prompt 列表
   const loadPrompts = useCallback(async () => {
-    setState((prev) => ({ ...prev, loading: true }));
+    setState(prev => ({ ...prev, loading: true }));
     try {
       const response = await llmPromptService.getPrompts({
         page: state.pagination.current,
@@ -92,7 +92,7 @@ const PromptListPage: React.FC = () => {
 
       const prompts = Array.isArray(response.items) ? response.items : [];
 
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         loading: false,
         prompts: prompts,
@@ -104,7 +104,7 @@ const PromptListPage: React.FC = () => {
     } catch (error) {
       logger.error('加载 Prompt 列表失败', error);
       message.error('加载 Prompt 列表失败');
-      setState((prev) => ({ ...prev, loading: false }));
+      setState(prev => ({ ...prev, loading: false }));
     }
   }, [state.pagination.current, state.pagination.pageSize, state.filters]);
 
@@ -112,7 +112,7 @@ const PromptListPage: React.FC = () => {
   const loadStatistics = useCallback(async () => {
     try {
       const stats = await llmPromptService.getStatistics();
-      setState((prev) => ({ ...prev, statistics: stats }));
+      setState(prev => ({ ...prev, statistics: stats }));
     } catch (error) {
       logger.error('加载统计数据失败', error);
     }
@@ -158,7 +158,7 @@ const PromptListPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {versions.map((version) => (
+                  {versions.map(version => (
                     <tr key={version.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '8px' }}>
                         <Tag color="blue">{version.version}</Tag>
@@ -168,11 +168,7 @@ const PromptListPage: React.FC = () => {
                         {dayjs(version.created_at).format('YYYY-MM-DD HH:mm')}
                       </td>
                       <td style={{ padding: '8px' }}>
-                        {version.auto_generated ? (
-                          <Tag color="purple">自动</Tag>
-                        ) : (
-                          <Tag>手动</Tag>
-                        )}
+                        {version.auto_generated ? <Tag color="purple">自动</Tag> : <Tag>手动</Tag>}
                       </td>
                     </tr>
                   ))}
@@ -190,7 +186,7 @@ const PromptListPage: React.FC = () => {
 
   // 打开新建编辑器
   const handleCreate = () => {
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       editorVisible: true,
       editorMode: 'create',
@@ -200,7 +196,7 @@ const PromptListPage: React.FC = () => {
 
   // 打开编辑编辑器
   const handleEdit = (prompt: PromptTemplate) => {
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       editorVisible: true,
       editorMode: 'edit',
@@ -210,7 +206,7 @@ const PromptListPage: React.FC = () => {
 
   // 关闭编辑器
   const handleEditorCancel = () => {
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       editorVisible: false,
       selectedPrompt: null,
@@ -219,7 +215,7 @@ const PromptListPage: React.FC = () => {
 
   // 编辑器成功回调
   const handleEditorSuccess = () => {
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       editorVisible: false,
       selectedPrompt: null,
@@ -238,9 +234,7 @@ const PromptListPage: React.FC = () => {
       render: (text: string, record: PromptTemplate) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#999' }}>
-            v{record.version}
-          </div>
+          <div style={{ fontSize: '12px', color: '#999' }}>v{record.version}</div>
         </div>
       ),
     },
@@ -280,12 +274,21 @@ const PromptListPage: React.FC = () => {
       key: 'status',
       width: 80,
       render: (status: PromptStatus) => {
-        const config: Record<PromptStatus, { text: string; color: string; icon: React.ReactNode }> = {
-          [PromptStatus.ACTIVE]: { text: '活跃', color: 'success', icon: <CheckCircleOutlined /> },
-          [PromptStatus.DRAFT]: { text: '草稿', color: 'default', icon: null },
-          [PromptStatus.ARCHIVED]: { text: '已归档', color: 'default', icon: null },
+        const config: Record<PromptStatus, { text: string; color: string; icon: React.ReactNode }> =
+          {
+            [PromptStatus.ACTIVE]: {
+              text: '活跃',
+              color: 'success',
+              icon: <CheckCircleOutlined />,
+            },
+            [PromptStatus.DRAFT]: { text: '草稿', color: 'default', icon: null },
+            [PromptStatus.ARCHIVED]: { text: '已归档', color: 'default', icon: null },
+          };
+        const { text, color, icon } = config[status] ?? {
+          text: status,
+          color: 'default',
+          icon: null,
         };
-        const { text, color, icon } = config[status] ?? { text: status, color: 'default', icon: null };
         return (
           <Tag icon={icon} color={color}>
             {text}
@@ -300,7 +303,12 @@ const PromptListPage: React.FC = () => {
       width: 120,
       render: (value: number) => (
         <div>
-          <div style={{ fontWeight: value >= 90 ? 'bold' : 'normal', color: value >= 90 ? COLORS.success : value >= 70 ? COLORS.warning : COLORS.error }}>
+          <div
+            style={{
+              fontWeight: value >= 90 ? 'bold' : 'normal',
+              color: value >= 90 ? COLORS.success : value >= 70 ? COLORS.warning : COLORS.error,
+            }}
+          >
             {(value * 100).toFixed(1)}%
           </div>
         </div>
@@ -313,7 +321,11 @@ const PromptListPage: React.FC = () => {
       width: 120,
       render: (value: number) => (
         <div>
-          <div style={{ color: value >= 0.8 ? COLORS.success : value >= 0.6 ? COLORS.warning : COLORS.error }}>
+          <div
+            style={{
+              color: value >= 0.8 ? COLORS.success : value >= 0.6 ? COLORS.warning : COLORS.error,
+            }}
+          >
             {(value * 100).toFixed(1)}%
           </div>
         </div>
@@ -357,11 +369,7 @@ const PromptListPage: React.FC = () => {
             />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
         </Space>
       ),
@@ -369,8 +377,8 @@ const PromptListPage: React.FC = () => {
   ];
 
   // 处理表格变化
-  const handleTableChange: TableProps<PromptTemplate>['onChange'] = (pagination) => {
-    setState((prev) => ({
+  const handleTableChange: TableProps<PromptTemplate>['onChange'] = pagination => {
+    setState(prev => ({
       ...prev,
       pagination: {
         ...prev.pagination,
@@ -382,7 +390,7 @@ const PromptListPage: React.FC = () => {
 
   // 处理筛选变化
   const handleFilterChange = (key: keyof PromptQueryParams, value: any) => {
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       filters: {
         ...prev.filters,
@@ -413,7 +421,11 @@ const PromptListPage: React.FC = () => {
             <Card>
               <Statistic
                 title="活跃 Prompt"
-                value={state.statistics.status_distribution.find((s: { status: PromptStatus; count: number }) => s.status === PromptStatus.ACTIVE)?.count ?? 0}
+                value={
+                  state.statistics.status_distribution.find(
+                    (s: { status: PromptStatus; count: number }) => s.status === PromptStatus.ACTIVE
+                  )?.count ?? 0
+                }
                 prefix={<CheckCircleOutlined />}
                 valueStyle={{ color: COLORS.success }}
               />
@@ -425,7 +437,10 @@ const PromptListPage: React.FC = () => {
                 title="平均准确率"
                 value={(state.statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{ color: state.statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning }}
+                valueStyle={{
+                  color:
+                    state.statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
+                }}
               />
             </Card>
           </Col>
@@ -435,7 +450,12 @@ const PromptListPage: React.FC = () => {
                 title="平均置信度"
                 value={(state.statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{ color: state.statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning }}
+                valueStyle={{
+                  color:
+                    state.statistics.overall_avg_confidence >= 0.8
+                      ? COLORS.success
+                      : COLORS.warning,
+                }}
               />
             </Card>
           </Col>
@@ -469,7 +489,7 @@ const PromptListPage: React.FC = () => {
             allowClear
             style={{ width: 150 }}
             value={state.filters.doc_type}
-            onChange={(value) => handleFilterChange('doc_type', value)}
+            onChange={value => handleFilterChange('doc_type', value)}
           >
             <Option value={DocType.CONTRACT}>租赁合同</Option>
             <Option value={DocType.PROPERTY_CERT}>产权证</Option>
@@ -480,7 +500,7 @@ const PromptListPage: React.FC = () => {
             allowClear
             style={{ width: 150 }}
             value={state.filters.provider}
-            onChange={(value) => handleFilterChange('provider', value)}
+            onChange={value => handleFilterChange('provider', value)}
           >
             <Option value={LLMProvider.QWEN}>Qwen</Option>
             <Option value={LLMProvider.HUNYUAN}>混元</Option>
@@ -493,7 +513,7 @@ const PromptListPage: React.FC = () => {
             allowClear
             style={{ width: 120 }}
             value={state.filters.status}
-            onChange={(value) => handleFilterChange('status', value)}
+            onChange={value => handleFilterChange('status', value)}
           >
             <Option value={PromptStatus.ACTIVE}>活跃</Option>
             <Option value={PromptStatus.DRAFT}>草稿</Option>

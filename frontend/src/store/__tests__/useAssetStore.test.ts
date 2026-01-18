@@ -6,10 +6,10 @@
  * 此 store 仅管理 UI 状态。
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { useAssetStore } from '../useAssetStore'
-import type { Asset } from '../../types/asset'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useAssetStore } from '../useAssetStore';
+import type { Asset } from '../../types/asset';
 
 // =============================================================================
 // Mock数据
@@ -34,7 +34,7 @@ const mockAsset = {
   is_litigated: false,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-} as unknown as Asset
+} as unknown as Asset;
 
 // =============================================================================
 // 基础功能测试
@@ -42,28 +42,28 @@ const mockAsset = {
 
 describe('useAssetStore - 初始化状态', () => {
   beforeEach(() => {
-    useAssetStore.getState().reset()
-  })
+    useAssetStore.getState().reset();
+  });
 
   it('应该有正确的初始状态', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
-    expect(result.current.selectedAsset).toBeNull()
-    expect(result.current.selectedIds).toEqual([])
-    expect(result.current.viewMode).toBe('table')
-  })
+    expect(result.current.selectedAsset).toBeNull();
+    expect(result.current.selectedIds).toEqual([]);
+    expect(result.current.viewMode).toBe('table');
+  });
 
   it('searchParams应该有正确的初始值', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     expect(result.current.searchParams).toEqual({
       page: 1,
       limit: 20,
       sort_field: 'created_at',
       sort_order: 'desc',
-    })
-  })
-})
+    });
+  });
+});
 
 // =============================================================================
 // 选择功能测试
@@ -71,91 +71,91 @@ describe('useAssetStore - 初始化状态', () => {
 
 describe('useAssetStore - 选择功能', () => {
   beforeEach(() => {
-    useAssetStore.getState().reset()
-  })
+    useAssetStore.getState().reset();
+  });
 
   describe('setSelectedAsset', () => {
     it('应该设置选中的资产', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.setSelectedAsset(mockAsset)
-      })
+        result.current.setSelectedAsset(mockAsset);
+      });
 
-      expect(result.current.selectedAsset).toEqual(mockAsset)
-      expect(result.current.selectedAsset?.id).toBe('asset-001')
-    })
+      expect(result.current.selectedAsset).toEqual(mockAsset);
+      expect(result.current.selectedAsset?.id).toBe('asset-001');
+    });
 
     it('应该支持取消选择', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.setSelectedAsset(mockAsset)
-      })
+        result.current.setSelectedAsset(mockAsset);
+      });
 
-      expect(result.current.selectedAsset).not.toBeNull()
+      expect(result.current.selectedAsset).not.toBeNull();
 
       act(() => {
-        result.current.setSelectedAsset(null)
-      })
+        result.current.setSelectedAsset(null);
+      });
 
-      expect(result.current.selectedAsset).toBeNull()
-    })
-  })
+      expect(result.current.selectedAsset).toBeNull();
+    });
+  });
 
   describe('setSelectedIds', () => {
     it('应该设置选中的ID列表', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.setSelectedIds(['asset-001', 'asset-002'])
-      })
+        result.current.setSelectedIds(['asset-001', 'asset-002']);
+      });
 
-      expect(result.current.selectedIds).toEqual(['asset-001', 'asset-002'])
-    })
+      expect(result.current.selectedIds).toEqual(['asset-001', 'asset-002']);
+    });
 
     it('应该支持清空选择', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.setSelectedIds(['asset-001'])
-      })
+        result.current.setSelectedIds(['asset-001']);
+      });
 
       act(() => {
-        result.current.setSelectedIds([])
-      })
+        result.current.setSelectedIds([]);
+      });
 
-      expect(result.current.selectedIds).toEqual([])
-    })
-  })
+      expect(result.current.selectedIds).toEqual([]);
+    });
+  });
 
   describe('toggleSelectedId', () => {
     it('应该添加未选中的ID', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.toggleSelectedId('asset-001')
-      })
+        result.current.toggleSelectedId('asset-001');
+      });
 
-      expect(result.current.selectedIds).toContain('asset-001')
-    })
+      expect(result.current.selectedIds).toContain('asset-001');
+    });
 
     it('应该移除已选中的ID', () => {
-      const { result } = renderHook(() => useAssetStore())
+      const { result } = renderHook(() => useAssetStore());
 
       act(() => {
-        result.current.setSelectedIds(['asset-001', 'asset-002'])
-      })
+        result.current.setSelectedIds(['asset-001', 'asset-002']);
+      });
 
       act(() => {
-        result.current.toggleSelectedId('asset-001')
-      })
+        result.current.toggleSelectedId('asset-001');
+      });
 
-      expect(result.current.selectedIds).not.toContain('asset-001')
-      expect(result.current.selectedIds).toContain('asset-002')
-    })
-  })
-})
+      expect(result.current.selectedIds).not.toContain('asset-001');
+      expect(result.current.selectedIds).toContain('asset-002');
+    });
+  });
+});
 
 // =============================================================================
 // 搜索参数测试
@@ -163,49 +163,49 @@ describe('useAssetStore - 选择功能', () => {
 
 describe('useAssetStore - 搜索参数', () => {
   beforeEach(() => {
-    useAssetStore.getState().reset()
-  })
+    useAssetStore.getState().reset();
+  });
 
   it('应该设置搜索参数', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     act(() => {
       result.current.setSearchParams({
         page: 2,
-        limit: 50
-      })
-    })
+        limit: 50,
+      });
+    });
 
-    expect(result.current.searchParams.page).toBe(2)
-    expect(result.current.searchParams.limit).toBe(50)
-  })
+    expect(result.current.searchParams.page).toBe(2);
+    expect(result.current.searchParams.limit).toBe(50);
+  });
 
   it('应该合并现有参数', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     act(() => {
-      result.current.setSearchParams({ page: 3 })
-    })
+      result.current.setSearchParams({ page: 3 });
+    });
 
-    expect(result.current.searchParams.page).toBe(3)
-    expect(result.current.searchParams.limit).toBe(20) // 保持原值
-    expect(result.current.searchParams.sort_field).toBe('created_at') // 保持原值
-  })
+    expect(result.current.searchParams.page).toBe(3);
+    expect(result.current.searchParams.limit).toBe(20); // 保持原值
+    expect(result.current.searchParams.sort_field).toBe('created_at'); // 保持原值
+  });
 
   it('应该支持更新排序参数', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     act(() => {
       result.current.setSearchParams({
         sort_field: 'property_name',
-        sort_order: 'asc'
-      })
-    })
+        sort_order: 'asc',
+      });
+    });
 
-    expect(result.current.searchParams.sort_field).toBe('property_name')
-    expect(result.current.searchParams.sort_order).toBe('asc')
-  })
-})
+    expect(result.current.searchParams.sort_field).toBe('property_name');
+    expect(result.current.searchParams.sort_order).toBe('asc');
+  });
+});
 
 // =============================================================================
 // 视图模式测试
@@ -213,33 +213,33 @@ describe('useAssetStore - 搜索参数', () => {
 
 describe('useAssetStore - 视图模式', () => {
   beforeEach(() => {
-    useAssetStore.getState().reset()
-  })
+    useAssetStore.getState().reset();
+  });
 
   it('应该切换到卡片视图', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     act(() => {
-      result.current.setViewMode('card')
-    })
+      result.current.setViewMode('card');
+    });
 
-    expect(result.current.viewMode).toBe('card')
-  })
+    expect(result.current.viewMode).toBe('card');
+  });
 
   it('应该切换回表格视图', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     act(() => {
-      result.current.setViewMode('card')
-    })
+      result.current.setViewMode('card');
+    });
 
     act(() => {
-      result.current.setViewMode('table')
-    })
+      result.current.setViewMode('table');
+    });
 
-    expect(result.current.viewMode).toBe('table')
-  })
-})
+    expect(result.current.viewMode).toBe('table');
+  });
+});
 
 // =============================================================================
 // 重置功能测试
@@ -247,35 +247,35 @@ describe('useAssetStore - 视图模式', () => {
 
 describe('useAssetStore - 重置功能', () => {
   it('reset应该重置所有状态到初始值', () => {
-    const { result } = renderHook(() => useAssetStore())
+    const { result } = renderHook(() => useAssetStore());
 
     // 修改各种状态
     act(() => {
-      result.current.setSelectedAsset(mockAsset)
-      result.current.setSelectedIds(['asset-001', 'asset-002'])
-      result.current.setViewMode('card')
-      result.current.setSearchParams({ page: 5, limit: 50 })
-    })
+      result.current.setSelectedAsset(mockAsset);
+      result.current.setSelectedIds(['asset-001', 'asset-002']);
+      result.current.setViewMode('card');
+      result.current.setSearchParams({ page: 5, limit: 50 });
+    });
 
     // 验证状态已修改
-    expect(result.current.selectedAsset).not.toBeNull()
-    expect(result.current.selectedIds).toHaveLength(2)
-    expect(result.current.viewMode).toBe('card')
+    expect(result.current.selectedAsset).not.toBeNull();
+    expect(result.current.selectedIds).toHaveLength(2);
+    expect(result.current.viewMode).toBe('card');
 
     // 重置
     act(() => {
-      result.current.reset()
-    })
+      result.current.reset();
+    });
 
     // 验证所有状态回到初始值
-    expect(result.current.selectedAsset).toBeNull()
-    expect(result.current.selectedIds).toEqual([])
-    expect(result.current.viewMode).toBe('table')
+    expect(result.current.selectedAsset).toBeNull();
+    expect(result.current.selectedIds).toEqual([]);
+    expect(result.current.viewMode).toBe('table');
     expect(result.current.searchParams).toEqual({
       page: 1,
       limit: 20,
       sort_field: 'created_at',
       sort_order: 'desc',
-    })
-  })
-})
+    });
+  });
+});

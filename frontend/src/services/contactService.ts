@@ -153,10 +153,7 @@ class ContactService {
    * 更新联系人
    */
   async updateContact(id: string, data: ContactUpdate): Promise<Contact> {
-    const response = await enhancedApiClient.put<Contact>(
-      `${this.basePath}/${id}`,
-      data
-    );
+    const response = await enhancedApiClient.put<Contact>(`${this.basePath}/${id}`, data);
     return response.data!;
   }
 

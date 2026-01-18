@@ -81,7 +81,9 @@ async function initSentry(): Promise<void> {
       beforeSend(event: unknown) {
         // Filter sensitive information
         if (event != null && typeof event === 'object' && 'request' in event) {
-          const req = event as { request: { cookies?: unknown; headers?: { authorization?: unknown } } };
+          const req = event as {
+            request: { cookies?: unknown; headers?: { authorization?: unknown } };
+          };
           if (req.request != null) {
             delete req.request.cookies;
             if (req.request.headers != null) {
@@ -109,7 +111,10 @@ async function initSentry(): Promise<void> {
   } catch (error) {
     // Sentry not installed or failed to load
     // eslint-disable-next-line no-console
-    console.warn('[ErrorMonitoring] Sentry not available:', error instanceof Error ? error.message : String(error));
+    console.warn(
+      '[ErrorMonitoring] Sentry not available:',
+      error instanceof Error ? error.message : String(error)
+    );
   }
 }
 
@@ -120,22 +125,19 @@ function setupGlobalErrorHandlers(): void {
   // Catch unhandled promise rejections
   window.addEventListener('unhandledrejection', event => {
     // eslint-disable-next-line no-console
-    console.error('[ErrorMonitoring] Unhandled Promise Rejection:', event.reason)
+    console.error('[ErrorMonitoring] Unhandled Promise Rejection:', event.reason);
     captureException(
       event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
       { type: 'unhandledrejection' }
-    )
-  })
+    );
+  });
 
   // Catch uncaught errors
   window.addEventListener('error', event => {
     // eslint-disable-next-line no-console
-    console.error('[ErrorMonitoring] Uncaught Error:', event.error)
-    captureException(
-      event.error ?? new Error(event.message),
-      { type: 'uncaughterror' }
-    )
-  })
+    console.error('[ErrorMonitoring] Uncaught Error:', event.error);
+    captureException(event.error ?? new Error(event.message), { type: 'uncaughterror' });
+  });
 }
 
 /**
@@ -176,7 +178,11 @@ export function captureException(error: Error, context: ErrorContext = {}): void
 /**
  * Capture a message (non-error event)
  */
-export function captureMessage(message: string, level: 'info' | 'warning' = 'info', context: ErrorContext = {}): void {
+export function captureMessage(
+  message: string,
+  level: 'info' | 'warning' = 'info',
+  context: ErrorContext = {}
+): void {
   if (window.Sentry != null) {
     window.Sentry.captureMessage(message, {
       level,

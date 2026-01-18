@@ -107,10 +107,7 @@ export function isEmpty(value: unknown): boolean {
 /**
  * 检查对象是否具有指定属性
  */
-export function hasProperty<K extends string>(
-  obj: unknown,
-  key: K
-): obj is Record<K, unknown> {
+export function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
   return isObject(obj) && key in obj;
 }
 
@@ -139,7 +136,7 @@ export function isPropertyOfType<T>(
  * 检查是否为有效的 ID（字符串或数字）
  */
 export function isValidId(value: unknown): value is string | number {
-  return isString(value) && value.length > 0 || isNumber(value) && value > 0;
+  return (isString(value) && value.length > 0) || (isNumber(value) && value > 0);
 }
 
 /**
@@ -192,21 +189,19 @@ import { StandardApiResponse, PaginatedApiResponse, ErrorResponse } from './apiR
 export function isSuccessResponse<T = unknown>(
   response: unknown
 ): response is StandardApiResponse<T> & { success: true; data: T } {
-  return isObject(response) &&
-         response.success === true &&
-         'data' in response;
+  return isObject(response) && response.success === true && 'data' in response;
 }
 
 /**
  * 检查是否为标准 API 错误响应
  */
-export function isErrorResponse(
-  response: unknown
-): response is ErrorResponse {
-  return isObject(response) &&
-         response.success === false &&
-         'error' in response &&
-         isObject(response.error);
+export function isErrorResponse(response: unknown): response is ErrorResponse {
+  return (
+    isObject(response) &&
+    response.success === false &&
+    'error' in response &&
+    isObject(response.error)
+  );
 }
 
 /**
@@ -217,11 +212,13 @@ export function isPaginatedResponse<T = unknown>(
 ): response is PaginatedApiResponse<T> {
   if (!isSuccessResponse(response)) return false;
   const data = response.data;
-  return isObject(data) &&
-         'items' in data &&
-         'pagination' in data &&
-         isArray(data.items) &&
-         isObject(data.pagination);
+  return (
+    isObject(data) &&
+    'items' in data &&
+    'pagination' in data &&
+    isArray(data.items) &&
+    isObject(data.pagination)
+  );
 }
 
 /**
@@ -236,7 +233,11 @@ export function getErrorMessage(error: unknown): string {
 
   if (hasProperty(error, 'error')) {
     if (isString(error.error)) return error.error;
-    if (isObject(error.error) && hasProperty(error.error, 'message') && isString(error.error.message)) {
+    if (
+      isObject(error.error) &&
+      hasProperty(error.error, 'message') &&
+      isString(error.error.message)
+    ) {
       return error.error.message;
     }
   }
@@ -293,13 +294,10 @@ export function isValidFormData(data: unknown): data is Record<string, unknown> 
 /**
  * 检查是否有验证错误
  */
-export function hasValidationErrors(
-  errors: unknown
-): errors is Record<string, string[]> {
-  return isObject(errors) &&
-         Object.values(errors).some(
-           value => isArray(value) && value.every(isString)
-         );
+export function hasValidationErrors(errors: unknown): errors is Record<string, string[]> {
+  return (
+    isObject(errors) && Object.values(errors).some(value => isArray(value) && value.every(isString))
+  );
 }
 
 /**
@@ -383,10 +381,7 @@ export function assertNotNullish<T>(
 /**
  * 断言条件为真
  */
-export function assertTrue(
-  condition: boolean,
-  message?: string
-): asserts condition is true {
+export function assertTrue(condition: boolean, message?: string): asserts condition is true {
   if (!condition) {
     throw new Error(message ?? 'Assertion failed: condition is not true');
   }

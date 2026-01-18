@@ -6,5 +6,9 @@ export { default as FilterHistorySection } from './FilterHistorySection';
 export { default as FilterActionsSection } from './FilterActionsSection';
 
 // Context
-export { AnalyticsFiltersProvider, useAnalyticsFiltersContext, FILTER_PRESETS } from './FiltersContext';
+export {
+  AnalyticsFiltersProvider,
+  useAnalyticsFiltersContext,
+  FILTER_PRESETS,
+} from './FiltersContext';
 export type { AnalyticsFiltersContextValue } from './FiltersContext';

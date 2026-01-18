@@ -8,7 +8,12 @@ import { Ownership } from './ownership';
 // V2 枚举类型
 export type ContractType = 'lease_upstream' | 'lease_downstream' | 'entrusted';
 export type PaymentCycle = 'monthly' | 'quarterly' | 'semi_annual' | 'annual';
-export type DepositTransactionType = 'receipt' | 'refund' | 'deduction' | 'transfer_out' | 'transfer_in';
+export type DepositTransactionType =
+  | 'receipt'
+  | 'refund'
+  | 'deduction'
+  | 'transfer_out'
+  | 'transfer_in';
 
 // 基础类型
 export interface RentTerm {

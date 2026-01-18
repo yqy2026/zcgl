@@ -110,12 +110,9 @@ class NotificationService {
    */
   async deleteNotification(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(
-        API_ENDPOINTS.NOTIFICATION.DELETE(id),
-        {
-          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
-        }
-      );
+      const result = await enhancedApiClient.delete<void>(API_ENDPOINTS.NOTIFICATION.DELETE(id), {
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
+      });
 
       if (!result.success) {
         throw new Error(`删除通知失败: ${result.error}`);

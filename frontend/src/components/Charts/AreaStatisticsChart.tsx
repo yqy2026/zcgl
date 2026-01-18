@@ -1,15 +1,11 @@
-import React from 'react'
-import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Progress, Tag } from 'antd'
-import {
-  BuildOutlined,
-  HomeOutlined,
-  ShopOutlined,
-} from '@ant-design/icons'
-import { useQuery } from '@tanstack/react-query'
-import { Column, DualAxes } from '@ant-design/plots'
+import React from 'react';
+import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Progress, Tag } from 'antd';
+import { BuildOutlined, HomeOutlined, ShopOutlined } from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
+import { Column, DualAxes } from '@ant-design/plots';
 
-import { assetService } from '@/services/assetService'
-import type { AssetSearchParams } from '@/types/asset'
+import { assetService } from '@/services/assetService';
+import type { AssetSearchParams } from '@/types/asset';
 import type {
   ChartDataPoint,
   DualAxesDataPoint,
@@ -17,66 +13,63 @@ import type {
   TooltipFormatterResult,
   TooltipCustomContentProps,
   ChartColorFunction,
-} from '@/types/charts'
+} from '@/types/charts';
 
 // Local interface matching the actual API response structure
 interface AreaStatisticsData {
   total_statistics: {
-    total_land_area: number
-    total_property_area: number
-    total_rentable_area: number
-    total_rented_area: number
-    total_vacant_area: number
-    total_non_commercial_area: number
-  }
+    total_land_area: number;
+    total_property_area: number;
+    total_rentable_area: number;
+    total_rented_area: number;
+    total_vacant_area: number;
+    total_non_commercial_area: number;
+  };
   by_property_nature: Array<{
-    property_nature: string
-    land_area: number
-    property_area: number
-    rentable_area: number
-    rented_area: number
-    vacant_area: number
-    non_commercial_area: number
-  }>
+    property_nature: string;
+    land_area: number;
+    property_area: number;
+    rentable_area: number;
+    rented_area: number;
+    vacant_area: number;
+    non_commercial_area: number;
+  }>;
   by_ownership_entity: Array<{
-    ownership_entity: string
-    total_area: number
-    rentable_area: number
-    rented_area: number
-    occupancy_rate: number
-  }>
+    ownership_entity: string;
+    total_area: number;
+    rentable_area: number;
+    rented_area: number;
+    occupancy_rate: number;
+  }>;
   by_usage_status: Array<{
-    usage_status: string
-    total_area: number
-    asset_count: number
-    average_area: number
-  }>
+    usage_status: string;
+    total_area: number;
+    asset_count: number;
+    average_area: number;
+  }>;
   area_ranges: Array<{
-    range: string
-    count: number
-    total_area: number
-    percentage: number
-  }>
+    range: string;
+    count: number;
+    total_area: number;
+    percentage: number;
+  }>;
   top_assets_by_area: Array<{
-    property_name: string
-    property_area: number
-    rentable_area: number
-    rented_area: number
-    occupancy_rate: number
-  }>
+    property_name: string;
+    property_area: number;
+    rentable_area: number;
+    rented_area: number;
+    occupancy_rate: number;
+  }>;
 }
 
-const { Text } = Typography
+const { Text } = Typography;
 
 interface AreaStatisticsChartProps {
-  filters?: AssetSearchParams
-  height?: number
+  filters?: AssetSearchParams;
+  height?: number;
 }
 
-const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
-  filters,
-  height = 400,
-}) => {
+const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, height = 400 }) => {
   // 获取面积统计数据
   const { data, isLoading, error } = useQuery<AreaStatisticsData>({
     queryKey: ['area-statistics', filters],
@@ -85,15 +78,16 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       return result as unknown as AreaStatisticsData;
     },
     refetchInterval: 5 * 60 * 1000, // 5分钟刷新一次
-  })
+  });
 
   // 物业性质面积对比图表配置 - 为@ant-design/plots转换数据格式
-  const propertyNatureChartData = data?.by_property_nature?.flatMap(item => [
-    { property_nature: item.property_nature, type: '土地面积', value: item.land_area },
-    { property_nature: item.property_nature, type: '房产面积', value: item.property_area },
-    { property_nature: item.property_nature, type: '可租面积', value: item.rentable_area },
-    { property_nature: item.property_nature, type: '已租面积', value: item.rented_area },
-  ]) ?? []
+  const propertyNatureChartData =
+    data?.by_property_nature?.flatMap(item => [
+      { property_nature: item.property_nature, type: '土地面积', value: item.land_area },
+      { property_nature: item.property_nature, type: '房产面积', value: item.property_area },
+      { property_nature: item.property_nature, type: '可租面积', value: item.rentable_area },
+      { property_nature: item.property_nature, type: '已租面积', value: item.rented_area },
+    ]) ?? [];
 
   const propertyNatureChartConfig = {
     data: propertyNatureChartData,
@@ -101,12 +95,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     yField: 'value' as const,
     seriesField: 'type' as const,
     color: (({ type }: ChartDataPoint): string => {
-      const typeStr = type as string
-      if (typeStr === '土地面积') return '#1890ff'
-      if (typeStr === '房产面积') return '#52c41a'
-      if (typeStr === '可租面积') return '#faad14'
-      if (typeStr === '已租面积') return '#722ed1'
-      return '#1890ff'
+      const typeStr = type as string;
+      if (typeStr === '土地面积') return '#1890ff';
+      if (typeStr === '房产面积') return '#52c41a';
+      if (typeStr === '可租面积') return '#faad14';
+      if (typeStr === '已租面积') return '#722ed1';
+      return '#1890ff';
     }) as ChartColorFunction,
     columnStyle: {
       fillOpacity: 0.6,
@@ -133,17 +127,21 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         duration: 1000,
       },
     },
-  }
+  };
 
   // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
-  const ownershipEntityData = data?.by_ownership_entity?.slice(0, 10).map((item): DualAxesDataPoint => ({
-    entity: item.ownership_entity.length > 8
-      ? item.ownership_entity.substring(0, 8) + '...'
-      : item.ownership_entity,
-    total_area: item.total_area,
-    occupancy_rate: item.occupancy_rate,
-    full_name: item.ownership_entity,
-  })) ?? []
+  const ownershipEntityData =
+    data?.by_ownership_entity?.slice(0, 10).map(
+      (item): DualAxesDataPoint => ({
+        entity:
+          item.ownership_entity.length > 8
+            ? item.ownership_entity.substring(0, 8) + '...'
+            : item.ownership_entity,
+        total_area: item.total_area,
+        occupancy_rate: item.occupancy_rate,
+        full_name: item.ownership_entity,
+      })
+    ) ?? [];
 
   const ownershipEntityChartConfig = {
     data: [ownershipEntityData, ownershipEntityData],
@@ -189,16 +187,16 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           return {
             name: '总面积',
             value: `${(datum.total_area as number | undefined)?.toLocaleString()} ㎡`,
-          }
+          };
         }
         return {
           name: '出租率',
           value: `${(datum.occupancy_rate as number | undefined)?.toFixed(2)}%`,
-        }
+        };
       },
       customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as DualAxesDataPoint | undefined
-        if (datum == null) return null
+        const datum = data?.[0]?.data as DualAxesDataPoint | undefined;
+        if (datum == null) return null;
         return (
           <div style={{ padding: '8px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
@@ -207,7 +205,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
           </div>
-        )
+        );
       },
     },
     xAxis: {
@@ -218,16 +216,19 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         minRotation: 0,
       },
     },
-  }
+  };
 
   // 面积区间分布图表配置
   const areaRangeChartConfig = {
-    data: data?.area_ranges?.map((item): AreaRangeDataPoint => ({
-      range: item.range,
-      count: item.count,
-      total_area: item.total_area,
-      percentage: item.percentage,
-    })) ?? [],
+    data:
+      data?.area_ranges?.map(
+        (item): AreaRangeDataPoint => ({
+          range: item.range,
+          count: item.count,
+          total_area: item.total_area,
+          percentage: item.percentage,
+        })
+      ) ?? [],
     xField: 'range' as const,
     yField: 'count' as const,
     color: '#52c41a',
@@ -250,8 +251,8 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         value: `${datum.count as number} 个`,
       }),
       customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as AreaRangeDataPoint | undefined
-        if (datum == null) return null
+        const datum = data?.[0]?.data as AreaRangeDataPoint | undefined;
+        if (datum == null) return null;
         return (
           <div style={{ padding: '8px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.range}</div>
@@ -259,7 +260,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             <div>占比: {datum.percentage?.toFixed(1)}%</div>
           </div>
-        )
+        );
       },
     },
     yAxis: {
@@ -279,7 +280,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         duration: 1000,
       },
     },
-  }
+  };
 
   if (error !== undefined && error !== null) {
     return (
@@ -289,7 +290,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         type="error"
         showIcon
       />
-    )
+    );
   }
 
   return (
@@ -302,70 +303,70 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
               title="总土地面积"
               value={data?.total_statistics?.total_land_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<BuildOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
-        
+
         <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
               title="总房产面积"
               value={data?.total_statistics?.total_property_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<HomeOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
-        
+
         <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
               title="可租面积"
               value={data?.total_statistics?.total_rentable_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<ShopOutlined />}
               valueStyle={{ color: '#faad14' }}
             />
           </Card>
         </Col>
-        
+
         <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
               title="已租面积"
               value={data?.total_statistics?.total_rented_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#722ed1' }}
             />
           </Card>
         </Col>
-        
+
         <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
               title="空置面积"
               value={data?.total_statistics?.total_vacant_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#ff4d4f' }}
             />
           </Card>
         </Col>
-        
+
         <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
               title="非经营面积"
               value={data?.total_statistics?.total_non_commercial_area ?? 0}
               suffix="㎡"
-              formatter={(value) => `${Number(value).toLocaleString()}`}
+              formatter={value => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#8c8c8c' }}
             />
           </Card>
@@ -408,17 +409,36 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="使用状态面积统计" size="small">
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.by_usage_status?.map((item, index) => (
-                <div key={index} style={{ 
-                  padding: '12px 0',
-                  borderBottom: index < (data.by_usage_status?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div
+                  key={index}
+                  style={{
+                    padding: '12px 0',
+                    borderBottom:
+                      index < (data.by_usage_status?.length ?? 0) - 1
+                        ? '1px solid #f0f0f0'
+                        : 'none',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 8,
+                    }}
+                  >
                     <Space>
-                      <Tag color={
-                        item.usage_status === '出租' ? 'green' :
-                        item.usage_status === '闲置' ? 'red' :
-                        item.usage_status === '自用' ? 'blue' : 'default'
-                      }>
+                      <Tag
+                        color={
+                          item.usage_status === '出租'
+                            ? 'green'
+                            : item.usage_status === '闲置'
+                              ? 'red'
+                              : item.usage_status === '自用'
+                                ? 'blue'
+                                : 'default'
+                        }
+                      >
                         {item.usage_status}
                       </Tag>
                       <Text strong>{item.asset_count} 个资产</Text>
@@ -442,11 +462,24 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="面积最大资产（前10名）" size="small">
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.top_assets_by_area?.map((asset, index) => (
-                <div key={index} style={{ 
-                  padding: '12px 0',
-                  borderBottom: index < (data.top_assets_by_area?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div
+                  key={index}
+                  style={{
+                    padding: '12px 0',
+                    borderBottom:
+                      index < (data.top_assets_by_area?.length ?? 0) - 1
+                        ? '1px solid #f0f0f0'
+                        : 'none',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: 8,
+                    }}
+                  >
                     <div style={{ flex: 1 }}>
                       <Text strong>{asset.property_name}</Text>
                       <br />
@@ -464,16 +497,19 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
                       </Text>
                     </div>
                   </div>
-                  
+
                   {asset.rentable_area && asset.rentable_area > 0 && (
                     <Progress
                       percent={asset.occupancy_rate ?? 0}
                       size="small"
                       strokeColor={
-                        (asset.occupancy_rate ?? 0) >= 80 ? '#52c41a' :
-                        (asset.occupancy_rate ?? 0) >= 60 ? '#faad14' : '#ff4d4f'
+                        (asset.occupancy_rate ?? 0) >= 80
+                          ? '#52c41a'
+                          : (asset.occupancy_rate ?? 0) >= 60
+                            ? '#faad14'
+                            : '#ff4d4f'
                       }
-                      format={(percent) => `${percent?.toFixed(1)}%`}
+                      format={percent => `${percent?.toFixed(1)}%`}
                     />
                   )}
                 </div>
@@ -483,7 +519,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         </Col>
       </Row>
     </div>
-  )
-}
+  );
+};
 
-export default AreaStatisticsChart
+export default AreaStatisticsChart;

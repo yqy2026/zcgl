@@ -1,7 +1,7 @@
-import React from 'react'
-import { Layout, Button, Avatar, Dropdown, Modal, Space, Tooltip, Typography } from 'antd'
-import { MessageManager } from '@/utils/messageManager'
-import type { MenuProps } from 'antd'
+import React from 'react';
+import { Layout, Button, Avatar, Dropdown, Modal, Space, Tooltip, Typography } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
+import type { MenuProps } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -11,36 +11,36 @@ import {
   QuestionCircleOutlined,
   ExclamationCircleOutlined,
   GlobalOutlined,
-} from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
-import { AuthService } from '../../services/authService'
-import { NotificationCenter } from '../Notification'
+} from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { AuthService } from '../../services/authService';
+import { NotificationCenter } from '../Notification';
 
-import styles from './Layout.module.css'
+import styles from './Layout.module.css';
 
-const { Header } = Layout
+const { Header } = Layout;
 
 interface AppHeaderProps {
-  collapsed: boolean
-  onToggleCollapsed: () => void
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) => {
-  const navigate = useNavigate()
-  const user = AuthService.getLocalUser()
+  const navigate = useNavigate();
+  const user = AuthService.getLocalUser();
 
   // 处理退出登录
   const handleLogout = async () => {
     try {
-      await AuthService.logout()
-      navigate('/login')
+      await AuthService.logout();
+      navigate('/login');
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('退出登录失败:', error)
+      console.error('退出登录失败:', error);
       // 即使API失败，也要跳转到登录页面
-      navigate('/login')
+      navigate('/login');
     }
-  }
+  };
 
   // 处理退出登录确认对话框
   const handleLogoutConfirm = () => {
@@ -51,9 +51,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       okText: '确认退出',
       cancelText: '取消',
       okType: 'danger',
-      onOk: handleLogout
-    })
-  }
+      onOk: handleLogout,
+    });
+  };
 
   // 用户菜单
   const userMenuItems: MenuProps['items'] = [
@@ -81,26 +81,26 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       label: '退出登录',
       danger: true,
     },
-  ]
+  ];
 
   // 通知菜单已移除，使用 NotificationCenter 组件替代
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     switch (key) {
       case 'profile':
-        navigate('/profile')
-        break
+        navigate('/profile');
+        break;
       case 'settings':
-        MessageManager.info('系统设置功能开发中')
-        break
+        MessageManager.info('系统设置功能开发中');
+        break;
       case 'help':
-        MessageManager.info('帮助中心功能开发中')
-        break
+        MessageManager.info('帮助中心功能开发中');
+        break;
       case 'logout':
-        handleLogoutConfirm()
-        break
+        handleLogoutConfirm();
+        break;
     }
-  }
+  };
 
   return (
     <Header className={styles.header}>
@@ -153,17 +153,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           trigger={['click']}
         >
           <div className={styles.userInfo}>
-            <Avatar
-              size="small"
-              icon={<UserOutlined />}
-              style={{ backgroundColor: '#1677ff' }}
-            />
-            <Typography.Text strong style={{ color: '#1e293b' }}>{user?.full_name ?? user?.username ?? '用户'}</Typography.Text>
+            <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
+            <Typography.Text strong style={{ color: '#1e293b' }}>
+              {user?.full_name ?? user?.username ?? '用户'}
+            </Typography.Text>
           </div>
         </Dropdown>
       </Space>
     </Header>
-  )
-}
+  );
+};
 
-export default AppHeader
+export default AppHeader;

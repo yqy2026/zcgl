@@ -1,13 +1,13 @@
-import { enhancedApiClient } from '@/api/client'
-import { STATISTICS_API } from '@/constants/api'
-import type { AssetSearchParams } from '../types/asset'
-import type { AnalyticsData, AnalyticsResponse } from '../types/analytics'
-import { createLogger } from '../utils/logger'
+import { enhancedApiClient } from '@/api/client';
+import { STATISTICS_API } from '@/constants/api';
+import type { AssetSearchParams } from '../types/asset';
+import type { AnalyticsData, AnalyticsResponse } from '../types/analytics';
+import { createLogger } from '../utils/logger';
 
-const serviceLogger = createLogger('analyticsService')
+const serviceLogger = createLogger('analyticsService');
 
 // Re-export the types for compatibility
-export type { AnalyticsData, AnalyticsResponse }
+export type { AnalyticsData, AnalyticsResponse };
 
 // ==================== 类型定义 ====================
 
@@ -70,13 +70,13 @@ interface RawBusinessCategoryItem {
 }
 
 export class AnalyticsService {
-  private api = enhancedApiClient
+  private api = enhancedApiClient;
 
   async getComprehensiveAnalytics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>('/analytics/comprehensive', {
-        params: filters
-      })
+        params: filters,
+      });
 
       // ApiClient returns ExtractResult<AnalyticsResponse>
       if (response.success && response.data) {
@@ -94,16 +94,20 @@ export class AnalyticsService {
           message: '数据获取成功',
           data: adaptedData,
           cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
-          performance_info: { calculation_time: 0, asset_count: adaptedData.area_summary?.total_assets ?? 0, cache_enabled: true }
+          performance_info: {
+            calculation_time: 0,
+            asset_count: adaptedData.area_summary?.total_assets ?? 0,
+            cache_enabled: true,
+          },
         };
       }
 
       // 如果response.data为空，返回模拟数据
-      return this.getMockAnalyticsData()
+      return this.getMockAnalyticsData();
     } catch (error) {
-      serviceLogger.error('Analytics API Error:', error as Error)
+      serviceLogger.error('Analytics API Error:', error as Error);
       // 返回模拟数据而不是抛出错误
-      return this.getMockAnalyticsData()
+      return this.getMockAnalyticsData();
     }
   }
 
@@ -111,7 +115,10 @@ export class AnalyticsService {
    * 将后端API返回的数据适配为前端期望的 AnalyticsData 格式
    */
   private adaptApiDataToAnalyticsData(apiData: RawApiData): AnalyticsData {
-    serviceLogger.debug('Adapting API data to AnalyticsData format:', apiData as Record<string, unknown>);
+    serviceLogger.debug(
+      'Adapting API data to AnalyticsData format:',
+      apiData as Record<string, unknown>
+    );
 
     // 从 API 数据中提取 area_summary
     const rawAreaSummary = apiData.area_summary ?? apiData.data?.area_summary ?? {};
@@ -144,36 +151,48 @@ export class AnalyticsService {
 
     // 提取分布数据（如果不存在则使用空数组）
     const property_nature_distribution = (apiData.property_nature_distribution ??
-                                         apiData.data?.property_nature_distribution ?? []) as AnalyticsData['property_nature_distribution'];
+      apiData.data?.property_nature_distribution ??
+      []) as AnalyticsData['property_nature_distribution'];
     const ownership_status_distribution = (apiData.ownership_status_distribution ??
-                                          apiData.data?.ownership_status_distribution ?? []) as AnalyticsData['ownership_status_distribution'];
+      apiData.data?.ownership_status_distribution ??
+      []) as AnalyticsData['ownership_status_distribution'];
     const usage_status_distribution = (apiData.usage_status_distribution ??
-                                       apiData.data?.usage_status_distribution ?? []) as AnalyticsData['usage_status_distribution'];
+      apiData.data?.usage_status_distribution ??
+      []) as AnalyticsData['usage_status_distribution'];
 
     // BusinessCategoryDistribution 需要 percentage 字段
-    const rawBusinessCategories = apiData.business_category_distribution ??
-                                   apiData.data?.business_category_distribution ?? [];
-    const business_category_distribution = rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
-      ...item,
-      percentage: item.percentage ?? 0, // 确保有 percentage 字段
-    })) as unknown as AnalyticsData['business_category_distribution'];
+    const rawBusinessCategories =
+      apiData.business_category_distribution ?? apiData.data?.business_category_distribution ?? [];
+    const business_category_distribution = rawBusinessCategories.map(
+      (item: RawBusinessCategoryItem) => ({
+        ...item,
+        percentage: item.percentage ?? 0, // 确保有 percentage 字段
+      })
+    ) as unknown as AnalyticsData['business_category_distribution'];
 
     // 提取趋势数据
-    const occupancy_trend = (apiData.occupancy_trend ?? apiData.data?.occupancy_trend ?? []) as AnalyticsData['occupancy_trend'];
+    const occupancy_trend = (apiData.occupancy_trend ??
+      apiData.data?.occupancy_trend ??
+      []) as AnalyticsData['occupancy_trend'];
 
     // 提取面积分布数据
     const property_nature_area_distribution = (apiData.property_nature_area_distribution ??
-                                                apiData.data?.property_nature_area_distribution ?? []) as AnalyticsData['property_nature_area_distribution'];
+      apiData.data?.property_nature_area_distribution ??
+      []) as AnalyticsData['property_nature_area_distribution'];
     const ownership_status_area_distribution = (apiData.ownership_status_area_distribution ??
-                                                 apiData.data?.ownership_status_area_distribution ?? []) as AnalyticsData['ownership_status_area_distribution'];
+      apiData.data?.ownership_status_area_distribution ??
+      []) as AnalyticsData['ownership_status_area_distribution'];
     const usage_status_area_distribution = (apiData.usage_status_area_distribution ??
-                                              apiData.data?.usage_status_area_distribution ?? []) as AnalyticsData['usage_status_area_distribution'];
+      apiData.data?.usage_status_area_distribution ??
+      []) as AnalyticsData['usage_status_area_distribution'];
     const business_category_area_distribution = (apiData.business_category_area_distribution ??
-                                                   apiData.data?.business_category_area_distribution ?? []) as AnalyticsData['business_category_area_distribution'];
+      apiData.data?.business_category_area_distribution ??
+      []) as AnalyticsData['business_category_area_distribution'];
 
     // 提取出租率分布
     const occupancy_distribution = (apiData.occupancy_distribution ??
-                                    apiData.data?.occupancy_distribution ?? []) as AnalyticsData['occupancy_distribution'];
+      apiData.data?.occupancy_distribution ??
+      []) as AnalyticsData['occupancy_distribution'];
 
     const adaptedData: AnalyticsData = {
       area_summary,
@@ -190,51 +209,54 @@ export class AnalyticsService {
       occupancy_distribution,
     };
 
-    serviceLogger.debug('Adapted AnalyticsData:', adaptedData as unknown as Record<string, unknown>);
+    serviceLogger.debug(
+      'Adapted AnalyticsData:',
+      adaptedData as unknown as Record<string, unknown>
+    );
     return adaptedData;
   }
 
   async getBasicStatistics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.OVERVIEW, {
-        params: filters
-      })
+        params: filters,
+      });
 
       if (response.success && response.data) {
-        return response.data
+        return response.data;
       }
-      throw new Error(response.error ?? 'Failed to fetch basic statistics')
+      throw new Error(response.error ?? 'Failed to fetch basic statistics');
     } catch (error) {
-      serviceLogger.error('Basic statistics API Error:', error as Error)
-      throw error
+      serviceLogger.error('Basic statistics API Error:', error as Error);
+      throw error;
     }
   }
 
   async getAreaSummary(): Promise<AnalyticsResponse> {
     try {
-      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY)
+      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY);
 
       if (response.success && response.data) {
-        return response.data
+        return response.data;
       }
-      throw new Error(response.error ?? 'Failed to fetch area summary')
+      throw new Error(response.error ?? 'Failed to fetch area summary');
     } catch (error) {
-      serviceLogger.error('Area summary API Error:', error as Error)
-      throw error
+      serviceLogger.error('Area summary API Error:', error as Error);
+      throw error;
     }
   }
 
   async getFinancialSummary(): Promise<AnalyticsResponse> {
     try {
-      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY)
+      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY);
 
       if (response.success && response.data) {
-        return response.data
+        return response.data;
       }
-      return this.getMockAnalyticsData()
+      return this.getMockAnalyticsData();
     } catch (error) {
-      serviceLogger.error('Financial summary API Error:', error as Error)
-      return this.getMockAnalyticsData()
+      serviceLogger.error('Financial summary API Error:', error as Error);
+      return this.getMockAnalyticsData();
     }
   }
 
@@ -274,8 +296,8 @@ export class AnalyticsService {
       },
       cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
       performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-    }
+    };
   }
 }
 
-export const analyticsService = new AnalyticsService()
+export const analyticsService = new AnalyticsService();

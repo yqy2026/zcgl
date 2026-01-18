@@ -25,7 +25,7 @@ import {
   FileTextOutlined,
   RobotOutlined,
   FireOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd/es/upload';
 import type { RcFile } from 'antd/es/upload/interface';
@@ -35,7 +35,7 @@ import EnhancedContractReview from '../../components/Contract/EnhancedContractRe
 import type {
   ProcessingOptions,
   EnhancedSessionProgress,
-  EnhancedSystemCapabilities
+  EnhancedSystemCapabilities,
 } from '../../types/enhancedPdfImport';
 import { createLogger } from '../../utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -50,7 +50,9 @@ const EnhancedPDFImportPage: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentStatus, _setCurrentStatus] = useState<EnhancedSessionProgress | null>(null);
-  const [systemCapabilities, setSystemCapabilities] = useState<EnhancedSystemCapabilities | null>(null);
+  const [systemCapabilities, setSystemCapabilities] = useState<EnhancedSystemCapabilities | null>(
+    null
+  );
   const [fileList, _setFileList] = useState<RcFile[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [processingOptions, _setProcessingOptions] = useState<ProcessingOptions>({
@@ -61,7 +63,7 @@ const EnhancedPDFImportPage: React.FC = () => {
     confidence_threshold: 0.7,
     use_template_learning: true,
     enable_multi_engine_fusion: true,
-    enable_semantic_validation: true
+    enable_semantic_validation: true,
   });
   const [showResults, setShowResults] = useState(false);
   const [uploadProgress, _setUploadProgress] = useState(0);
@@ -143,10 +145,13 @@ const EnhancedPDFImportPage: React.FC = () => {
         description={
           <div>
             此页面（实验版）已废弃，所有增强功能已集成至标准的
-            <Button type="link" href="/contract/import">PDF合同导入</Button>
+            <Button type="link" href="/contract/import">
+              PDF合同导入
+            </Button>
             页面。
             <br />
-            This page is deprecated. Please use the standard PDF Import page which now supports Smart Mode.
+            This page is deprecated. Please use the standard PDF Import page which now supports
+            Smart Mode.
           </div>
         }
         type="warning"
@@ -158,10 +163,12 @@ const EnhancedPDFImportPage: React.FC = () => {
         {/* Deprecated Content Below */}
         {systemCapabilities && (
           <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
-          <FireOutlined style={{ color: COLORS.error, marginRight: 8 }} />
-          增强版PDF智能导入
-          <Tag color="blue" style={{ marginLeft: 8 }}>中文合同专用</Tag>
-        </Title>
+            <FireOutlined style={{ color: COLORS.error, marginRight: 8 }} />
+            增强版PDF智能导入
+            <Tag color="blue" style={{ marginLeft: 8 }}>
+              中文合同专用
+            </Tag>
+          </Title>
         )}
 
         {/* 系统能力状态 */}
@@ -172,15 +179,9 @@ const EnhancedPDFImportPage: React.FC = () => {
                 <Text>增强功能状态: </Text>
                 <Badge
                   status={systemCapabilities.enhanced_extraction ? 'success' : 'warning'}
-                  text={
-                    systemCapabilities.enhanced_extraction
-                      ? '完全可用'
-                      : '部分功能受限'
-                  }
+                  text={systemCapabilities.enhanced_extraction ? '完全可用' : '部分功能受限'}
                 />
-                <Text style={{ marginLeft: 8 }}>
-                  共7个优化模块可用
-                </Text>
+                <Text style={{ marginLeft: 8 }}>共7个优化模块可用</Text>
               </Space>
             }
             type={systemCapabilities.enhanced_extraction ? 'success' : 'warning'}
@@ -196,28 +197,60 @@ const EnhancedPDFImportPage: React.FC = () => {
               <Row gutter={[16, 16]}>
                 <Col span={6}>
                   <Space direction="vertical" size="small">
-                    {renderFeatureTag((systemCapabilities?.chinese_optimized ?? false) ? true : false, '中文OCR优化', 'blue')}
-                    {renderFeatureTag((systemCapabilities?.table_detection ?? false) ? true : false, '表格分析', 'green')}
-                    {renderFeatureTag((systemCapabilities?.seal_detection ?? false) ? true : false, '印章检测', 'purple')}
+                    {renderFeatureTag(
+                      (systemCapabilities?.chinese_optimized ?? false) ? true : false,
+                      '中文OCR优化',
+                      'blue'
+                    )}
+                    {renderFeatureTag(
+                      (systemCapabilities?.table_detection ?? false) ? true : false,
+                      '表格分析',
+                      'green'
+                    )}
+                    {renderFeatureTag(
+                      (systemCapabilities?.seal_detection ?? false) ? true : false,
+                      '印章检测',
+                      'purple'
+                    )}
                   </Space>
                 </Col>
                 <Col span={6}>
                   <Space direction="vertical" size="small">
-                    {renderFeatureTag((systemCapabilities?.multi_engine_support ?? false) ? true : false, '多引擎融合', 'orange')}
-                    {renderFeatureTag((systemCapabilities?.semantic_validation ?? false) ? true : false, '语义验证', 'red')}
-                    {renderFeatureTag((systemCapabilities?.template_learning ?? false) ? true : false, '模板学习', 'cyan')}
+                    {renderFeatureTag(
+                      (systemCapabilities?.multi_engine_support ?? false) ? true : false,
+                      '多引擎融合',
+                      'orange'
+                    )}
+                    {renderFeatureTag(
+                      (systemCapabilities?.semantic_validation ?? false) ? true : false,
+                      '语义验证',
+                      'red'
+                    )}
+                    {renderFeatureTag(
+                      (systemCapabilities?.template_learning ?? false) ? true : false,
+                      '模板学习',
+                      'cyan'
+                    )}
                   </Space>
                 </Col>
                 <Col span={6}>
                   <Space direction="vertical" size="small">
-                    {renderFeatureTag((systemCapabilities?.real_time_validation ?? false) ? true : false, '实时验证', 'magenta')}
+                    {renderFeatureTag(
+                      (systemCapabilities?.real_time_validation ?? false) ? true : false,
+                      '实时验证',
+                      'magenta'
+                    )}
                     {renderFeatureTag(true, '智能匹配', 'default')}
                     {renderFeatureTag(true, '质量评估', 'default')}
                   </Space>
                 </Col>
                 <Col span={6}>
                   <Space direction="vertical" size="small">
-                    {renderFeatureTag((systemCapabilities?.chinese_optimized ?? false) ? true : false, '深度学习', 'geekblue')}
+                    {renderFeatureTag(
+                      (systemCapabilities?.chinese_optimized ?? false) ? true : false,
+                      '深度学习',
+                      'geekblue'
+                    )}
                     {renderFeatureTag(true, '自适应算法', 'purple')}
                     {renderFeatureTag(true, '用户体验优化', 'gold')}
                   </Space>
@@ -236,9 +269,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                   <InboxOutlined />
                 </p>
                 <p className="ant-upload-text">点击或拖拽PDF文件到此处上传</p>
-                <p className="ant-upload-hint">
-                  支持中文合同扫描件，推荐使用高质量扫描
-                </p>
+                <p className="ant-upload-hint">支持中文合同扫描件，推荐使用高质量扫描</p>
               </Dragger>
 
               {fileList.length > 0 && (
@@ -269,9 +300,18 @@ const EnhancedPDFImportPage: React.FC = () => {
                   <div style={{ marginTop: 16 }}>
                     <Text strong>当前配置:</Text>
                     <div style={{ marginTop: 8 }}>
-                      <div>中文优化: {(processingOptions.enable_chinese_optimization ?? false) ? '启用' : '禁用'}</div>
-                      <div>多引擎: {(processingOptions.enable_multi_engine_fusion ?? false) ? '启用' : '禁用'}</div>
-                      <div>语义验证: {(processingOptions.enable_semantic_validation ?? false) ? '启用' : '禁用'}</div>
+                      <div>
+                        中文优化:{' '}
+                        {(processingOptions.enable_chinese_optimization ?? false) ? '启用' : '禁用'}
+                      </div>
+                      <div>
+                        多引擎:{' '}
+                        {(processingOptions.enable_multi_engine_fusion ?? false) ? '启用' : '禁用'}
+                      </div>
+                      <div>
+                        语义验证:{' '}
+                        {(processingOptions.enable_semantic_validation ?? false) ? '启用' : '禁用'}
+                      </div>
                     </div>
                   </div>
                 </Space>
@@ -294,12 +334,12 @@ const EnhancedPDFImportPage: React.FC = () => {
         {renderProcessingOptions()}
 
         {/* 处理状态 */}
-        {processing && (sessionId != null) && (
+        {processing && sessionId != null && (
           <Card title="处理状态" style={{ marginTop: 24 }}>
             <EnhancedProcessingStatus
               sessionId={sessionId}
               currentStatus={currentStatus ?? undefined}
-              onError={(error) => MessageManager.error('处理状态错误: ' + error)}
+              onError={error => MessageManager.error('处理状态错误: ' + error)}
               showDetails={true}
             />
           </Card>
@@ -326,24 +366,31 @@ const EnhancedPDFImportPage: React.FC = () => {
                   <Col span={6}>
                     <Statistic
                       title="总体置信度"
-                      value={currentStatus.enhanced_status?.semantic_validation?.overall_confidence != null ?
-                        (currentStatus.enhanced_status.semantic_validation.overall_confidence * 100).toFixed(1) : 0}
+                      value={
+                        currentStatus.enhanced_status?.semantic_validation?.overall_confidence !=
+                        null
+                          ? (
+                              currentStatus.enhanced_status.semantic_validation.overall_confidence *
+                              100
+                            ).toFixed(1)
+                          : 0
+                      }
                       suffix="%"
                       precision={1}
                     />
                   </Col>
                   <Col span={6}>
-                    <Statistic
-                      title="处理时间"
-                      value={'60-90秒'}
-                    />
+                    <Statistic title="处理时间" value={'60-90秒'} />
                   </Col>
                   <Col span={6}>
                     <Statistic
                       title="状态"
                       value={currentStatus.status === 'ready_for_review' ? '完成' : '处理中'}
                       valueStyle={{
-                        color: currentStatus.status === 'ready_for_review' ? COLORS.success : COLORS.primary
+                        color:
+                          currentStatus.status === 'ready_for_review'
+                            ? COLORS.success
+                            : COLORS.primary,
                       }}
                     />
                   </Col>
@@ -392,8 +439,8 @@ const EnhancedPDFImportPage: React.FC = () => {
           showIcon
         />
       </div>
-      </div>
-      );
+    </div>
+  );
 };
 
-      export default EnhancedPDFImportPage;
+export default EnhancedPDFImportPage;

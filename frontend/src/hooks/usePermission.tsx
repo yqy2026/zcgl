@@ -1,63 +1,63 @@
-import { useState, useEffect, useCallback } from 'react'
-import { MessageManager } from '@/utils/messageManager'
-import { createLogger } from '@/utils/logger'
+import { useState, useEffect, useCallback } from 'react';
+import { MessageManager } from '@/utils/messageManager';
+import { createLogger } from '@/utils/logger';
 
-const permLogger = createLogger('usePermission')
+const permLogger = createLogger('usePermission');
 
 export interface Permission {
-  resource: string
-  action: string
-  granted: boolean
+  resource: string;
+  action: string;
+  granted: boolean;
 }
 
 export interface UserRole {
-  id: string
-  name: string
-  code: string
-  permissions: string[]
+  id: string;
+  name: string;
+  code: string;
+  permissions: string[];
 }
 
 export interface UserPermissions {
-  userId: string
-  username: string
-  roles: UserRole[]
-  permissions: string[]
-  organizationId: string
+  userId: string;
+  username: string;
+  roles: UserRole[];
+  permissions: string[];
+  organizationId: string;
 }
 
 interface StoredUser {
-  id: string
-  username: string
-  roles?: UserRole[]
-  permissions?: string[]
-  organization_id: string
+  id: string;
+  username: string;
+  roles?: UserRole[];
+  permissions?: string[];
+  organization_id: string;
 }
 
 export interface MenuItem {
-  key: string
-  label: string
-  icon?: React.ReactNode
-  path?: string
-  permission?: Permission
-  children?: MenuItem[]
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  path?: string;
+  permission?: Permission;
+  children?: MenuItem[];
 }
 
 const usePermission = () => {
-  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // 加载用户权限信息
   const loadUserPermissions = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       // 从localStorage或API获取当前用户信息
-      const storedUser = localStorage.getItem('currentUser')
+      const storedUser = localStorage.getItem('currentUser');
       if (storedUser == null) {
-        setUserPermissions(null)
-        return
+        setUserPermissions(null);
+        return;
       }
 
-      const currentUser = JSON.parse(storedUser) as StoredUser
+      const currentUser = JSON.parse(storedUser) as StoredUser;
 
       // 获取用户详细权限信息
       const userPermissionsData: UserPermissions = {
@@ -65,103 +65,123 @@ const usePermission = () => {
         username: currentUser.username,
         roles: currentUser.roles ?? [],
         permissions: currentUser.permissions ?? [],
-        organizationId: currentUser.organization_id
-      }
+        organizationId: currentUser.organization_id,
+      };
 
-      setUserPermissions(userPermissionsData)
+      setUserPermissions(userPermissionsData);
     } catch (error) {
-      permLogger.error('加载用户权限失败:', error as Error)
-      MessageManager.error('加载权限信息失败')
+      permLogger.error('加载用户权限失败:', error as Error);
+      MessageManager.error('加载权限信息失败');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   // 检查是否有特定权限
-  const hasPermission = useCallback((resource: string, action: string): boolean => {
-    if (!userPermissions) return false
+  const hasPermission = useCallback(
+    (resource: string, action: string): boolean => {
+      if (!userPermissions) return false;
 
-    // 管理员拥有所有权限
-    if (userPermissions.roles.some(role => role.code === 'admin')) {
-      return true
-    }
+      // 管理员拥有所有权限
+      if (userPermissions.roles.some(role => role.code === 'admin')) {
+        return true;
+      }
 
-    const permissionKey = `${resource}:${action}`
-    return userPermissions.permissions.includes(permissionKey)
-  }, [userPermissions])
+      const permissionKey = `${resource}:${action}`;
+      return userPermissions.permissions.includes(permissionKey);
+    },
+    [userPermissions]
+  );
 
   // 检查是否有任意一个权限
-  const hasAnyPermission = useCallback((permissions: Array<{ resource: string; action: string }>): boolean => {
-    return permissions.some(permission => hasPermission(permission.resource, permission.action))
-  }, [hasPermission])
+  const hasAnyPermission = useCallback(
+    (permissions: Array<{ resource: string; action: string }>): boolean => {
+      return permissions.some(permission => hasPermission(permission.resource, permission.action));
+    },
+    [hasPermission]
+  );
 
   // 检查是否有所有权限
-  const hasAllPermissions = useCallback((permissions: Array<{ resource: string; action: string }>): boolean => {
-    return permissions.every(permission => hasPermission(permission.resource, permission.action))
-  }, [hasPermission])
+  const hasAllPermissions = useCallback(
+    (permissions: Array<{ resource: string; action: string }>): boolean => {
+      return permissions.every(permission => hasPermission(permission.resource, permission.action));
+    },
+    [hasPermission]
+  );
 
   // 检查角色
-  const hasRole = useCallback((roleCode: string): boolean => {
-    if (!userPermissions) return false
-    return userPermissions.roles.some(role => role.code === roleCode)
-  }, [userPermissions])
+  const hasRole = useCallback(
+    (roleCode: string): boolean => {
+      if (!userPermissions) return false;
+      return userPermissions.roles.some(role => role.code === roleCode);
+    },
+    [userPermissions]
+  );
 
   // 检查是否是管理员
   const isAdmin = useCallback((): boolean => {
-    return hasRole('admin')
-  }, [hasRole])
+    return hasRole('admin');
+  }, [hasRole]);
 
   // 检查是否有组织访问权限
-  const canAccessOrganization = useCallback((organizationId: string): boolean => {
-    if (!userPermissions) return false
+  const canAccessOrganization = useCallback(
+    (organizationId: string): boolean => {
+      if (!userPermissions) return false;
 
-    // 管理员可以访问所有组织
-    if (isAdmin()) return true
+      // 管理员可以访问所有组织
+      if (isAdmin()) return true;
 
-    // 检查是否是同一组织的用户
-    return userPermissions.organizationId === organizationId
-  }, [userPermissions, isAdmin])
+      // 检查是否是同一组织的用户
+      return userPermissions.organizationId === organizationId;
+    },
+    [userPermissions, isAdmin]
+  );
 
   // 权限装饰器 - 用于包装组件
-  const requirePermission = useCallback((
-    resource: string,
-    action: string,
-    fallback?: React.ReactNode
-  ) => {
-    if (hasPermission(resource, action)) {
-      return null
-    }
-    return fallback ?? <div>Access Denied</div>
-  }, [hasPermission])
+  const requirePermission = useCallback(
+    (resource: string, action: string, fallback?: React.ReactNode) => {
+      if (hasPermission(resource, action)) {
+        return null;
+      }
+      return fallback ?? <div>Access Denied</div>;
+    },
+    [hasPermission]
+  );
 
   // 页面权限检查
-  const checkPageAccess = useCallback((pagePermissions: Array<{ resource: string; action: string }>): boolean => {
-    // 如果没有配置权限要求，则允许访问
-    if (pagePermissions == null || pagePermissions.length === 0) {
-      return true
-    }
+  const checkPageAccess = useCallback(
+    (pagePermissions: Array<{ resource: string; action: string }>): boolean => {
+      // 如果没有配置权限要求，则允许访问
+      if (pagePermissions == null || pagePermissions.length === 0) {
+        return true;
+      }
 
-    return hasAnyPermission(pagePermissions)
-  }, [hasAnyPermission])
+      return hasAnyPermission(pagePermissions);
+    },
+    [hasAnyPermission]
+  );
 
   // 获取可访问的菜单项
-  const getAccessibleMenuItems = useCallback((menuItems: MenuItem[]) => {
-    if (userPermissions == null) return []
+  const getAccessibleMenuItems = useCallback(
+    (menuItems: MenuItem[]) => {
+      if (userPermissions == null) return [];
 
-    return menuItems.filter(item => {
-      if (item.permission == null) return true
-      return hasPermission(item.permission.resource, item.permission.action)
-    })
-  }, [userPermissions, hasPermission])
+      return menuItems.filter(item => {
+        if (item.permission == null) return true;
+        return hasPermission(item.permission.resource, item.permission.action);
+      });
+    },
+    [userPermissions, hasPermission]
+  );
 
   // 刷新权限信息
   const refreshPermissions = useCallback(async () => {
-    await loadUserPermissions()
-  }, [loadUserPermissions])
+    await loadUserPermissions();
+  }, [loadUserPermissions]);
 
   useEffect(() => {
-    loadUserPermissions()
-  }, [loadUserPermissions])
+    loadUserPermissions();
+  }, [loadUserPermissions]);
 
   return {
     userPermissions,
@@ -175,11 +195,11 @@ const usePermission = () => {
     requirePermission,
     checkPageAccess,
     getAccessibleMenuItems,
-    refreshPermissions
-  }
-}
+    refreshPermissions,
+  };
+};
 
-export default usePermission
+export default usePermission;
 
 // 权限常量定义
 export const PERMISSIONS = {
@@ -221,8 +241,8 @@ export const PERMISSIONS = {
   SYSTEM_SETTINGS: { resource: 'system', action: 'settings' },
   SYSTEM_LOGS: { resource: 'system', action: 'logs' },
   SYSTEM_BACKUP: { resource: 'system', action: 'backup' },
-  SYSTEM_DICTIONARY: { resource: 'system', action: 'dictionary' }
-} as const
+  SYSTEM_DICTIONARY: { resource: 'system', action: 'dictionary' },
+} as const;
 
 // 页面权限配置
 export const PAGE_PERMISSIONS = {
@@ -235,5 +255,5 @@ export const PAGE_PERMISSIONS = {
   '/assets/new': [PERMISSIONS.ASSET_CREATE],
   '/assets/import': [PERMISSIONS.ASSET_IMPORT],
   '/rental': [PERMISSIONS.RENTAL_VIEW],
-  '/rental/contracts/new': [PERMISSIONS.RENTAL_CREATE]
-}
+  '/rental/contracts/new': [PERMISSIONS.RENTAL_CREATE],
+};

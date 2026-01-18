@@ -13,7 +13,7 @@ import { pdfImportService } from '@/services/pdfImportService';
 import type {
   CompleteResult,
   ConfirmedContractData,
-  ConfirmImportResponse
+  ConfirmImportResponse,
 } from '@/services/pdfImportService';
 import type { ProcessingSession } from '@/types/enhancedPdfImport';
 import { MessageManager } from '@/utils/messageManager';
@@ -49,7 +49,9 @@ export const usePDFImportSession = () => {
       if (response.success === true) {
         // 转换为历史记录格式
         const history = response.active_sessions
-          .filter(session => ['ready_for_review', 'failed', 'cancelled', 'completed'].includes(session.status))
+          .filter(session =>
+            ['ready_for_review', 'failed', 'cancelled', 'completed'].includes(session.status)
+          )
           .map(session => ({
             sessionId: session.session_id,
             fileInfo: {
@@ -57,7 +59,7 @@ export const usePDFImportSession = () => {
               name: session.file_name,
               status: 'done',
               size: 0,
-              type: 'application/pdf'
+              type: 'application/pdf',
             } as UploadFile,
             status: ((): 'ready' | 'completed' | 'failed' | 'processing' => {
               switch (session.status) {
@@ -72,7 +74,7 @@ export const usePDFImportSession = () => {
                   return 'processing';
               }
             })(),
-            progress: session.progress
+            progress: session.progress,
           }));
         setSessionHistory(history);
       }
@@ -89,14 +91,14 @@ export const usePDFImportSession = () => {
       sessionId,
       fileInfo,
       status: 'processing',
-      progress: 0
+      progress: 0,
     };
 
     setCurrentSession(newSession);
 
     // 强制重新渲染
     setTimeout(() => {
-      setCurrentSession(prev => prev != null ? { ...prev } : null);
+      setCurrentSession(prev => (prev != null ? { ...prev } : null));
     }, 100);
   }, []);
 
@@ -104,9 +106,8 @@ export const usePDFImportSession = () => {
    * 文件上传失败处理
    */
   const handleUploadError = useCallback((error: unknown) => {
-    const errorMsg = typeof error === 'string'
-      ? error
-      : (error instanceof Error ? error.message : '上传失败');
+    const errorMsg =
+      typeof error === 'string' ? error : error instanceof Error ? error.message : '上传失败';
     MessageManager.error(errorMsg);
     setCurrentSession(null);
   }, []);
@@ -120,7 +121,7 @@ export const usePDFImportSession = () => {
         ...currentSessionRef.current,
         status: 'ready',
         progress: 100,
-        result
+        result,
       });
     }
   }, []);
@@ -133,7 +134,7 @@ export const usePDFImportSession = () => {
       setCurrentSession({
         ...currentSessionRef.current,
         status: 'failed',
-        error
+        error,
       });
     }
     MessageManager.error(error);
@@ -142,38 +143,41 @@ export const usePDFImportSession = () => {
   /**
    * 确认导入处理
    */
-  const handleConfirmImport = useCallback(async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
-    if (currentSessionRef.current == null) {
-      throw new Error('No active session');
-    }
-
-    try {
-      const response = await pdfImportService.confirmImport(
-        currentSessionRef.current.sessionId,
-        data
-      );
-
-      if (response.success === true) {
-        // 更新会话状态
-        setCurrentSession({
-          ...currentSessionRef.current,
-          status: 'completed'
-        });
-
-        // 添加到历史记录
-        setSessionHistory(prev => [currentSessionRef.current!, ...prev]);
-
-        // 显示成功通知
-        MessageManager.success('合同导入成功!');
+  const handleConfirmImport = useCallback(
+    async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
+      if (currentSessionRef.current == null) {
+        throw new Error('No active session');
       }
 
-      return response;
-    } catch (error: unknown) {
-      const errorMsg = (error as ApiError).message ?? '合同导入过程中发生错误';
-      MessageManager.error(errorMsg);
-      throw error;
-    }
-  }, []);
+      try {
+        const response = await pdfImportService.confirmImport(
+          currentSessionRef.current.sessionId,
+          data
+        );
+
+        if (response.success === true) {
+          // 更新会话状态
+          setCurrentSession({
+            ...currentSessionRef.current,
+            status: 'completed',
+          });
+
+          // 添加到历史记录
+          setSessionHistory(prev => [currentSessionRef.current!, ...prev]);
+
+          // 显示成功通知
+          MessageManager.success('合同导入成功!');
+        }
+
+        return response;
+      } catch (error: unknown) {
+        const errorMsg = (error as ApiError).message ?? '合同导入过程中发生错误';
+        MessageManager.error(errorMsg);
+        throw error;
+      }
+    },
+    []
+  );
 
   /**
    * 取消处理
@@ -234,6 +238,6 @@ export const usePDFImportSession = () => {
     handleConfirmImport,
     handleCancel,
     handleReload,
-    handleBackToUpload
+    handleBackToUpload,
   };
 };

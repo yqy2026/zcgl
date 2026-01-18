@@ -6,16 +6,16 @@
  * Prompt 状态枚举
  */
 export enum PromptStatus {
-  DRAFT = 'DRAFT',           // 草稿
-  ACTIVE = 'ACTIVE',         // 活跃
-  ARCHIVED = 'ARCHIVED',     // 已归档
+  DRAFT = 'DRAFT', // 草稿
+  ACTIVE = 'ACTIVE', // 活跃
+  ARCHIVED = 'ARCHIVED', // 已归档
 }
 
 /**
  * 文档类型枚举
  */
 export enum DocType {
-  CONTRACT = 'CONTRACT',           // 租赁合同
+  CONTRACT = 'CONTRACT', // 租赁合同
   PROPERTY_CERT = 'PROPERTY_CERT', // 产权证
 }
 
@@ -23,10 +23,10 @@ export enum DocType {
  * LLM 提供商枚举
  */
 export enum LLMProvider {
-  QWEN = 'qwen',           // 阿里通义千问
-  HUNYUAN = 'hunyuan',     // 腾讯混元
-  DEEPSEEK = 'deepseek',   // DeepSeek
-  GLM = 'glm',             // 智谱 GLM
+  QWEN = 'qwen', // 阿里通义千问
+  HUNYUAN = 'hunyuan', // 腾讯混元
+  DEEPSEEK = 'deepseek', // DeepSeek
+  GLM = 'glm', // 智谱 GLM
 }
 
 /**

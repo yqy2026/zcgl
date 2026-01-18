@@ -14,7 +14,7 @@ import {
   Modal,
   Form,
   InputNumber,
-  Tabs
+  Tabs,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -24,7 +24,7 @@ import {
   FallOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { Line, Column } from '@ant-design/plots';
 import { COLORS } from '@/styles/colorMap';
@@ -75,15 +75,15 @@ interface CoverageThreshold {
 
 // 图表数据类型定义
 interface ChartDatum {
-  覆盖率: number
-  [key: string]: number | string
+  覆盖率: number;
+  [key: string]: number | string;
 }
 
 interface _CoverageTrendDatum {
-  date: string
-  total_coverage: number
-  backend_coverage?: number
-  frontend_coverage?: number
+  date: string;
+  total_coverage: number;
+  backend_coverage?: number;
+  frontend_coverage?: number;
 }
 
 interface QualityGateResult {
@@ -139,7 +139,9 @@ const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
   return response.json();
 };
 
-const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<CoverageThreshold> => {
+const updateCoverageThresholds = async (
+  thresholds: CoverageThreshold
+): Promise<CoverageThreshold> => {
   const response = await fetch('/api/test-coverage/thresholds', {
     method: 'PUT',
     headers: {
@@ -169,7 +171,11 @@ const TestCoverageDashboard: React.FC = () => {
   const queryClient = useQueryClient();
 
   // 获取覆盖率报告
-  const { data: coverageReport, isLoading: reportLoading, refetch: refetchReport } = useQuery({
+  const {
+    data: coverageReport,
+    isLoading: reportLoading,
+    refetch: refetchReport,
+  } = useQuery({
     queryKey: ['coverage-report'],
     queryFn: fetchCoverageReport,
     refetchInterval: 60000, // 每分钟刷新一次
@@ -203,12 +209,12 @@ const TestCoverageDashboard: React.FC = () => {
   // 更新阈值配置
   const updateThresholdsMutation = useMutation({
     mutationFn: updateCoverageThresholds,
-    onSuccess: (data) => {
+    onSuccess: data => {
       MessageManager.success('阈值配置更新成功');
       setThresholdModalVisible(false);
       queryClient.setQueryData(['coverage-thresholds'], data);
     },
-    onError: (error) => {
+    onError: error => {
       MessageManager.error(`更新阈值失败: ${error.message}`);
     },
   });
@@ -237,14 +243,14 @@ const TestCoverageDashboard: React.FC = () => {
       key: 'coverage_percentage',
       width: 120,
       sorter: (a, b) => a.coverage_percentage - b.coverage_percentage,
-      render: (value) => {
+      render: value => {
         const color = value >= 80 ? COLORS.success : value >= 60 ? COLORS.warning : COLORS.error;
         return (
           <Progress
             percent={value}
             size="small"
             strokeColor={color}
-            format={(percent) => `${percent?.toFixed(1)}%`}
+            format={percent => `${percent?.toFixed(1)}%`}
           />
         );
       },
@@ -293,18 +299,19 @@ const TestCoverageDashboard: React.FC = () => {
       dataIndex: 'last_updated',
       key: 'last_updated',
       width: 150,
-      render: (value) => dayjs(value).format('YYYY-MM-DD HH:mm:ss'),
+      render: value => dayjs(value).format('YYYY-MM-DD HH:mm:ss'),
     },
   ];
 
   // 覆盖率趋势图表配置
   const trendConfig = {
-    data: coverageTrend?.map(item => ({
-      date: dayjs(item.date).format('MM-DD'),
-      后端覆盖率: item.backend_coverage,
-      前端覆盖率: item.frontend_coverage,
-      总体覆盖率: item.total_coverage,
-    })) || [],
+    data:
+      coverageTrend?.map(item => ({
+        date: dayjs(item.date).format('MM-DD'),
+        后端覆盖率: item.backend_coverage,
+        前端覆盖率: item.frontend_coverage,
+        总体覆盖率: item.total_coverage,
+      })) || [],
     xField: 'date',
     yField: 'value',
     seriesField: 'type',
@@ -324,14 +331,22 @@ const TestCoverageDashboard: React.FC = () => {
 
   // 模块覆盖率柱状图配置
   const moduleCoverageConfig = {
-    data: moduleCoverage?.slice(0, 10).map(item => ({
-      module: item.module_name.length > 15 ? item.module_name.substring(0, 15) + '...' : item.module_name,
-      覆盖率: item.coverage_percentage,
-    })) || [],
+    data:
+      moduleCoverage?.slice(0, 10).map(item => ({
+        module:
+          item.module_name.length > 15
+            ? item.module_name.substring(0, 15) + '...'
+            : item.module_name,
+        覆盖率: item.coverage_percentage,
+      })) || [],
     xField: 'module',
     yField: '覆盖率',
     color: (datum: ChartDatum) => {
-      return datum.覆盖率 >= 80 ? COLORS.success : datum.覆盖率 >= 60 ? COLORS.warning : COLORS.error;
+      return datum.覆盖率 >= 80
+        ? COLORS.success
+        : datum.覆盖率 >= 60
+          ? COLORS.warning
+          : COLORS.error;
     },
     label: {
       position: 'middle',
@@ -349,7 +364,14 @@ const TestCoverageDashboard: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       {/* 页面标题和操作按钮 */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 24,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h1>测试覆盖率监控</h1>
         <Space>
           <Button
@@ -382,7 +404,8 @@ const TestCoverageDashboard: React.FC = () => {
               : '❌ 质量门禁失败 - 存在不达标的覆盖率指标'
           }
           description={
-            !qualityGate.passed && qualityGate.failed_checks.length > 0 && (
+            !qualityGate.passed &&
+            qualityGate.failed_checks.length > 0 && (
               <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
                 {qualityGate.failed_checks.map((check, index) => (
                   <li key={index}>{check}</li>
@@ -404,9 +427,18 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? COLORS.success : COLORS.error,
+                color:
+                  (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75)
+                    ? COLORS.success
+                    : COLORS.error,
               }}
-              prefix={(coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? <RiseOutlined /> : <FallOutlined />}
+              prefix={
+                (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? (
+                  <RiseOutlined />
+                ) : (
+                  <FallOutlined />
+                )
+              }
             />
             {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
@@ -423,9 +455,18 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? COLORS.success : COLORS.error,
+                color:
+                  (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80)
+                    ? COLORS.success
+                    : COLORS.error,
               }}
-              prefix={(coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={
+                (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? (
+                  <CheckCircleOutlined />
+                ) : (
+                  <CloseCircleOutlined />
+                )
+              }
             />
             {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
@@ -442,9 +483,19 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70) ? COLORS.success : COLORS.error,
+                color:
+                  (coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70)
+                    ? COLORS.success
+                    : COLORS.error,
               }}
-              prefix={(coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={
+                (coverageReport?.frontend_coverage ?? 0) >=
+                (thresholds?.frontend_threshold ?? 70) ? (
+                  <CheckCircleOutlined />
+                ) : (
+                  <CloseCircleOutlined />
+                )
+              }
             />
             {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
@@ -482,11 +533,8 @@ const TestCoverageDashboard: React.FC = () => {
                   <Space>
                     <span>时间范围:</span>
                     <DatePicker.RangePicker
-                      defaultValue={[
-                        dayjs().subtract(trendDays, 'day'),
-                        dayjs(),
-                      ]}
-                      onChange={(dates) => {
+                      defaultValue={[dayjs().subtract(trendDays, 'day'), dayjs()]}
+                      onChange={dates => {
                         if (dates && dates[0] && dates[1]) {
                           const days = dates[1].diff(dates[0], 'day');
                           setTrendDays(days);
@@ -513,7 +561,7 @@ const TestCoverageDashboard: React.FC = () => {
                     pageSize: 10,
                     showSizeChanger: true,
                     showQuickJumper: true,
-                    showTotal: (total) => `共 ${total} 个模块`,
+                    showTotal: total => `共 ${total} 个模块`,
                   }}
                   scroll={{ x: 800 }}
                 />
@@ -554,13 +602,7 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber
-              min={0}
-              max={100}
-              precision={1}
-              style={{ width: '100%' }}
-              addonAfter="%"
-            />
+            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
           </Form.Item>
           <Form.Item
             label="前端覆盖率阈值 (%)"
@@ -570,13 +612,7 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber
-              min={0}
-              max={100}
-              precision={1}
-              style={{ width: '100%' }}
-              addonAfter="%"
-            />
+            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
           </Form.Item>
           <Form.Item
             label="总体覆盖率阈值 (%)"
@@ -586,13 +622,7 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber
-              min={0}
-              max={100}
-              precision={1}
-              style={{ width: '100%' }}
-              addonAfter="%"
-            />
+            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
           </Form.Item>
         </Form>
       </Modal>

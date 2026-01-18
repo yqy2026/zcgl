@@ -8,14 +8,10 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   InternalAxiosRequestConfig,
-  AxiosError
+  AxiosError,
 } from 'axios';
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
-import {
-  EnhancedApiClientConfig,
-  RetryConfig,
-  ExtractResult
-} from '../types/apiResponse';
+import { EnhancedApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
 import { createLogger } from '../utils/logger';
 
 const apiLogger = createLogger('API');
@@ -54,7 +50,7 @@ class MemoryCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     });
   }
 
@@ -104,7 +100,10 @@ class RetryManager {
       return await requestFn();
     } catch (error) {
       // 检查是否应该重试
-      if (attempt < config.maxAttempts && (!config.retryCondition || config.retryCondition(error))) {
+      if (
+        attempt < config.maxAttempts &&
+        (!config.retryCondition || config.retryCondition(error))
+      ) {
         // 计算延迟时间（指数退避）
         const delay = config.delay * Math.pow(config.backoffMultiplier, attempt - 1);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -138,19 +137,19 @@ export class EnhancedApiClient {
         dataField: 'data',
         errorFields: ['error', 'message'],
         strict: false,
-        ...config.responseDetection
+        ...config.responseDetection,
       },
       defaultRetryConfig: {
         maxAttempts: 3,
         delay: 1000,
         backoffMultiplier: 2,
-        ...config.defaultRetryConfig
+        ...config.defaultRetryConfig,
       },
       defaultCacheConfig: {
         enabled: false,
         ttl: 5 * 60 * 1000, // 5分钟
         maxSize: 100,
-        ...config.defaultCacheConfig
+        ...config.defaultCacheConfig,
       },
       enableAutoRetry: config.enableAutoRetry ?? false,
       enableCaching: config.enableCaching ?? false,
@@ -159,7 +158,7 @@ export class EnhancedApiClient {
       globalErrorHandler: config.globalErrorHandler,
       requestInterceptors: config.requestInterceptors || [],
       responseInterceptors: config.responseInterceptors || [],
-      ...config
+      ...config,
     };
 
     // 初始化axios实例
@@ -167,8 +166,8 @@ export class EnhancedApiClient {
       baseURL: this.config.baseURL,
       timeout: this.config.timeout,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     // 初始化缓存
@@ -188,131 +187,142 @@ export class EnhancedApiClient {
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         // 添加认证token
-        const token = localStorage.getItem('auth_token')
+        const token = localStorage.getItem('auth_token');
         if (token != null && config.headers != null) {
-          config.headers.set('Authorization', `Bearer ${token}`)
+          config.headers.set('Authorization', `Bearer ${token}`);
         }
 
         // 添加请求ID
         if (config.headers != null) {
-          config.headers.set('X-Request-ID', this.generateRequestId())
+          config.headers.set('X-Request-ID', this.generateRequestId());
         }
 
         // 添加时间戳防止缓存
         if (config.method === 'get') {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          const params = ((config.params as unknown) || {}) as Record<string, unknown>
+          const params = ((config.params as unknown) || {}) as Record<string, unknown>;
           config.params = {
             ...params,
-            _t: Date.now()
-          }
+            _t: Date.now(),
+          };
         }
 
         // 执行自定义请求拦截器
         if (this.config.requestInterceptors) {
           for (const interceptor of this.config.requestInterceptors) {
-            config = interceptor(config)
+            config = interceptor(config);
           }
         }
 
         if (this.config.enableLogging === true) {
           apiLogger.debug(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
             params: config.params,
-            data: config.data
-          })
+            data: config.data,
+          });
         }
 
-        return config
+        return config;
       },
-      (error) => {
-        apiLogger.error('❌ Request Error:', error)
-        return Promise.reject(error)
+      error => {
+        apiLogger.error('❌ Request Error:', error);
+        return Promise.reject(error);
       }
-    )
+    );
 
     // 响应拦截器
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
         if (this.config.enableLogging === true) {
-          apiLogger.debug(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-            status: response.status,
-            data: response.data
-          })
+          apiLogger.debug(
+            `✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
+            {
+              status: response.status,
+              data: response.data,
+            }
+          );
         }
 
         // 执行自定义响应拦截器
         if (this.config.responseInterceptors) {
-          let finalResponse = response
+          let finalResponse = response;
           for (const interceptor of this.config.responseInterceptors) {
-            finalResponse = interceptor(finalResponse)
+            finalResponse = interceptor(finalResponse);
           }
-          return finalResponse
+          return finalResponse;
         }
 
-        return response
+        return response;
       },
       async (error: unknown) => {
-        const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>
-        const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined
+        const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>;
+        const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined;
 
         // 处理401错误 - 自动刷新token
-        if (axiosError.response?.status === 401 && originalRequest != null && originalRequest._retry !== true) {
-          apiLogger.warn('🔑 Token过期，尝试刷新...')
+        if (
+          axiosError.response?.status === 401 &&
+          originalRequest != null &&
+          originalRequest._retry !== true
+        ) {
+          apiLogger.warn('🔑 Token过期，尝试刷新...');
 
           try {
             // 动态导入AuthService避免循环依赖
-            const { AuthService } = await import('../services/authService')
+            const { AuthService } = await import('../services/authService');
 
             // 尝试刷新token
-            await AuthService.refreshToken()
+            await AuthService.refreshToken();
 
-            apiLogger.info('✅ Token刷新成功，重试原始请求')
+            apiLogger.info('✅ Token刷新成功，重试原始请求');
 
             // 标记请求已重试过，避免无限循环
-            originalRequest._retry = true
+            originalRequest._retry = true;
 
             // 更新请求头中的token
-            const newToken = localStorage.getItem('auth_token')
+            const newToken = localStorage.getItem('auth_token');
             if (newToken != null && originalRequest.headers != null) {
-              originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
+              originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
             }
 
             // 重试原始请求
-            return await this.instance(originalRequest)
+            return await this.instance(originalRequest);
           } catch (refreshError) {
-            apiLogger.error('❌ Token刷新失败，执行登出', { refreshError })
+            apiLogger.error('❌ Token刷新失败，执行登出', { refreshError });
 
             // 刷新失败，清除认证数据
-            localStorage.removeItem('auth_token')
-            localStorage.removeItem('refreshToken')
-            localStorage.removeItem('user')
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
 
             // 跳转到登录页
             if (typeof window !== 'undefined') {
-              window.location.href = '/login'
+              window.location.href = '/login';
             }
 
-            return Promise.reject(refreshError)
+            return Promise.reject(refreshError);
           }
         }
 
-        const enhancedError = ApiErrorHandler.handleError(error)
+        const enhancedError = ApiErrorHandler.handleError(error);
 
         if (this.config.enableLogging === true) {
-          apiLogger.error(`❌ API Error: ${enhancedError.type} - ${enhancedError.message}`, undefined, {
-            config: axiosError.config,
-            response: axiosError.response
-          })
+          apiLogger.error(
+            `❌ API Error: ${enhancedError.type} - ${enhancedError.message}`,
+            undefined,
+            {
+              config: axiosError.config,
+              response: axiosError.response,
+            }
+          );
         }
 
         // 执行全局错误处理器
         if (this.config.globalErrorHandler) {
-          this.config.globalErrorHandler(enhancedError)
+          this.config.globalErrorHandler(enhancedError);
         }
 
-        return Promise.reject(enhancedError)
+        return Promise.reject(enhancedError);
       }
-    )
+    );
   }
 
   // ==================== 核心HTTP方法 ====================
@@ -337,55 +347,58 @@ export class EnhancedApiClient {
 
     // 检查缓存
     if (cache === true) {
-      const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params)
-      const cachedData = this.cache.get(cacheKey)
+      const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params);
+      const cachedData = this.cache.get(cacheKey);
       if (cachedData !== null && cachedData !== undefined) {
         if (this.config.enableLogging === true) {
-          apiLogger.debug(`📦 Cache Hit: ${url}`)
+          apiLogger.debug(`📦 Cache Hit: ${url}`);
         }
         return {
           success: true,
           data: cachedData as T,
-          rawResponse: {} as AxiosResponse
-        }
+          rawResponse: {} as AxiosResponse,
+        };
       }
     }
 
     // 执行请求
     const executeRequest = async (): Promise<AxiosResponse> => {
-      const response = await this.instance.get(url, axiosConfig)
+      const response = await this.instance.get(url, axiosConfig);
 
       // 存储到缓存
       if (cache === true && response.data !== undefined && response.data !== null) {
-        const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params)
-        this.cache.set(cacheKey, response.data, this.config.defaultCacheConfig!.ttl)
+        const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params);
+        this.cache.set(cacheKey, response.data, this.config.defaultCacheConfig!.ttl);
       }
 
-      return response
-    }
+      return response;
+    };
 
     // 处理重试
-    let response: AxiosResponse
+    let response: AxiosResponse;
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
+      response = await RetryManager.executeWithRetry(
+        executeRequest,
+        this.config.defaultRetryConfig!
+      );
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry)
+      response = await RetryManager.executeWithRetry(executeRequest, retry);
     } else {
-      response = await executeRequest()
+      response = await executeRequest();
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation
-      })
+        enableTypeValidation: this.config.enableTypeValidation,
+      });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response
+      rawResponse: response,
     };
   }
 
@@ -411,27 +424,30 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse
+    let response: AxiosResponse;
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
+      response = await RetryManager.executeWithRetry(
+        executeRequest,
+        this.config.defaultRetryConfig!
+      );
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry)
+      response = await RetryManager.executeWithRetry(executeRequest, retry);
     } else {
-      response = await executeRequest()
+      response = await executeRequest();
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation
+        enableTypeValidation: this.config.enableTypeValidation,
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response
+      rawResponse: response,
     };
   }
 
@@ -457,27 +473,30 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse
+    let response: AxiosResponse;
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
+      response = await RetryManager.executeWithRetry(
+        executeRequest,
+        this.config.defaultRetryConfig!
+      );
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry)
+      response = await RetryManager.executeWithRetry(executeRequest, retry);
     } else {
-      response = await executeRequest()
+      response = await executeRequest();
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation
+        enableTypeValidation: this.config.enableTypeValidation,
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response
+      rawResponse: response,
     };
   }
 
@@ -502,27 +521,30 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse
+    let response: AxiosResponse;
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
+      response = await RetryManager.executeWithRetry(
+        executeRequest,
+        this.config.defaultRetryConfig!
+      );
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry)
+      response = await RetryManager.executeWithRetry(executeRequest, retry);
     } else {
-      response = await executeRequest()
+      response = await executeRequest();
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation
+        enableTypeValidation: this.config.enableTypeValidation,
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response
+      rawResponse: response,
     };
   }
 
@@ -557,7 +579,7 @@ export class EnhancedApiClient {
       config?: AxiosRequestConfig;
     }>
   ): Promise<ExtractResult<T>[]> {
-    const promises = requests.map(async (request) => {
+    const promises = requests.map(async request => {
       switch (request.method) {
         case 'GET':
           return await this.get<T>(request.url, request.config);
@@ -647,8 +669,8 @@ export const enhancedApiClient = new EnhancedApiClient({
   defaultRetryConfig: {
     maxAttempts: 3,
     delay: 1000,
-    backoffMultiplier: 2
-  }
+    backoffMultiplier: 2,
+  },
 });
 
 export default EnhancedApiClient;

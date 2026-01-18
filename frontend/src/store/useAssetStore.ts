@@ -1,6 +1,6 @@
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
-import type { Asset, AssetSearchParams } from '@/types/asset'
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+import type { Asset, AssetSearchParams } from '@/types/asset';
 
 /**
  * Asset UI State Store
@@ -14,24 +14,24 @@ import type { Asset, AssetSearchParams } from '@/types/asset'
  */
 interface AssetUIState {
   // 选择状态
-  selectedAsset: Asset | null
-  selectedIds: string[]
+  selectedAsset: Asset | null;
+  selectedIds: string[];
 
   // 搜索/筛选参数
-  searchParams: AssetSearchParams
+  searchParams: AssetSearchParams;
 
   // 视图模式
-  viewMode: 'table' | 'card'
+  viewMode: 'table' | 'card';
 
   // Actions
-  setSelectedAsset: (asset: Asset | null) => void
-  setSelectedIds: (ids: string[]) => void
-  toggleSelectedId: (id: string) => void
-  setSearchParams: (params: Partial<AssetSearchParams>) => void
-  setViewMode: (mode: 'table' | 'card') => void
+  setSelectedAsset: (asset: Asset | null) => void;
+  setSelectedIds: (ids: string[]) => void;
+  toggleSelectedId: (id: string) => void;
+  setSearchParams: (params: Partial<AssetSearchParams>) => void;
+  setViewMode: (mode: 'table' | 'card') => void;
 
   // 重置状态
-  reset: () => void
+  reset: () => void;
 }
 
 const initialState = {
@@ -44,30 +44,30 @@ const initialState = {
     sort_order: 'desc' as const,
   },
   viewMode: 'table' as const,
-}
+};
 
 export const useAssetStore = create<AssetUIState>()(
   devtools(
-    (set) => ({
+    set => ({
       ...initialState,
 
-      setSelectedAsset: (asset) => set({ selectedAsset: asset }),
+      setSelectedAsset: asset => set({ selectedAsset: asset }),
 
-      setSelectedIds: (ids) => set({ selectedIds: ids }),
+      setSelectedIds: ids => set({ selectedIds: ids }),
 
-      toggleSelectedId: (id) =>
-        set((state) => ({
+      toggleSelectedId: id =>
+        set(state => ({
           selectedIds: state.selectedIds.includes(id)
-            ? state.selectedIds.filter((i) => i !== id)
-            : [...state.selectedIds, id]
+            ? state.selectedIds.filter(i => i !== id)
+            : [...state.selectedIds, id],
         })),
 
-      setSearchParams: (params) =>
-        set((state) => ({
-          searchParams: { ...state.searchParams, ...params }
+      setSearchParams: params =>
+        set(state => ({
+          searchParams: { ...state.searchParams, ...params },
         })),
 
-      setViewMode: (mode) => set({ viewMode: mode }),
+      setViewMode: mode => set({ viewMode: mode }),
 
       reset: () => set(initialState),
     }),
@@ -75,4 +75,4 @@ export const useAssetStore = create<AssetUIState>()(
       name: 'asset-ui-store',
     }
   )
-)
+);

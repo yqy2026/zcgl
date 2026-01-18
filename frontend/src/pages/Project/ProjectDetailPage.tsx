@@ -81,11 +81,7 @@ const ProjectDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <Button
-          type="link"
-          onClick={() => navigate(`/assets/${record.id}`)}
-          style={{ padding: 0 }}
-        >
+        <Button type="link" onClick={() => navigate(`/assets/${record.id}`)} style={{ padding: 0 }}>
           {text}
         </Button>
       ),
@@ -96,10 +92,10 @@ const ProjectDetailPage: React.FC = () => {
       key: 'usage_status',
       render: (status: string) => {
         const colorMap: Record<string, string> = {
-          '已出租': 'green',
-          '空置': 'orange',
-          '自用': 'blue',
-          '维修中': 'red',
+          已出租: 'green',
+          空置: 'orange',
+          自用: 'blue',
+          维修中: 'red',
         };
         return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
       },
@@ -129,18 +125,10 @@ const ProjectDetailPage: React.FC = () => {
   // 计算统计数据
   const assets = assetsData?.items || [];
   const totalAssets = assets.length;
-  const totalRentableArea = assets.reduce(
-    (sum, a) => sum + (a.rentable_area ?? 0),
-    0
-  );
-  const totalRentedArea = assets.reduce(
-    (sum, a) => sum + (a.rented_area ?? 0),
-    0
-  );
+  const totalRentableArea = assets.reduce((sum, a) => sum + (a.rentable_area ?? 0), 0);
+  const totalRentedArea = assets.reduce((sum, a) => sum + (a.rented_area ?? 0), 0);
   const occupancyRate =
-    totalRentableArea > 0
-      ? ((totalRentedArea / totalRentableArea) * 100).toFixed(1)
-      : '0';
+    totalRentableArea > 0 ? ((totalRentedArea / totalRentableArea) * 100).toFixed(1) : '0';
 
   // 加载状态
   if (projectLoading) {
@@ -170,12 +158,7 @@ const ProjectDetailPage: React.FC = () => {
   if (!project) {
     return (
       <div style={{ padding: '24px' }}>
-        <Alert
-          message="项目不存在"
-          description="未找到指定的项目信息"
-          type="warning"
-          showIcon
-        />
+        <Alert message="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
       </div>
     );
   }
@@ -187,10 +170,7 @@ const ProjectDetailPage: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate('/project')}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/project')}>
                 返回列表
               </Button>
               <Title level={2} style={{ margin: 0 }}>
@@ -218,12 +198,7 @@ const ProjectDetailPage: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: '24px' }}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="关联资产"
-              value={totalAssets}
-              prefix={<HomeOutlined />}
-              suffix="个"
-            />
+            <Statistic title="关联资产" value={totalAssets} prefix={<HomeOutlined />} suffix="个" />
           </Card>
         </Col>
         <Col span={6}>
@@ -283,14 +258,10 @@ const ProjectDetailPage: React.FC = () => {
             {project.description ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">
-            {project.created_at
-              ? new Date(project.created_at).toLocaleString('zh-CN')
-              : '-'}
+            {project.created_at ? new Date(project.created_at).toLocaleString('zh-CN') : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="更新时间">
-            {project.updated_at
-              ? new Date(project.updated_at).toLocaleString('zh-CN')
-              : '-'}
+            {project.updated_at ? new Date(project.updated_at).toLocaleString('zh-CN') : '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -312,7 +283,7 @@ const ProjectDetailPage: React.FC = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: total => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联资产' }}
         />

@@ -19,7 +19,7 @@ import {
   Statistic,
   Modal,
   Descriptions,
-  Divider
+  Divider,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -31,14 +31,14 @@ import {
   DatabaseOutlined,
   EyeOutlined,
   DownloadOutlined,
-  ReloadOutlined
+  ReloadOutlined,
 } from '@ant-design/icons';
 
 import {
   pdfImportService,
   type SessionProgress,
   type CompleteResult,
-  type FileInfo
+  type FileInfo,
 } from '../../services/pdfImportService';
 import { COLORS } from '@/styles/colorMap';
 
@@ -65,7 +65,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   fileInfo,
   onComplete,
   onError,
-  onCancel
+  onCancel,
 }) => {
   const [currentProgress, setCurrentProgress] = useState<SessionProgress | null>(null);
   const [steps, setSteps] = useState<ProcessingStep[]>([]);
@@ -83,36 +83,36 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         description: '上传PDF文件到服务器',
         icon: <FileTextOutlined />,
         status: 'finish',
-        details: `文件: ${fileInfo?.filename} (${pdfImportService.formatFileSize(fileInfo?.size || 0)})`
+        details: `文件: ${fileInfo?.filename} (${pdfImportService.formatFileSize(fileInfo?.size || 0)})`,
       },
       {
         title: '文档解析',
         description: '解析文档结构与内容',
         icon: <RobotOutlined />,
         status: 'process',
-        details: '智能识别文档布局'
+        details: '智能识别文档布局',
       },
       {
         title: '智能识别',
         description: '识别合同条款与关键要素',
         icon: <DatabaseOutlined />,
         status: 'wait',
-        details: '提取合同编号、金额等关键信息'
+        details: '提取合同编号、金额等关键信息',
       },
       {
         title: '数据校验',
         description: '校验数据完整性与合规性',
         icon: <CheckCircleOutlined />,
         status: 'wait',
-        details: '自动检查必填项'
+        details: '自动检查必填项',
       },
       {
         title: '关联分析',
         description: '匹配系统内资产与权属方',
         icon: <EyeOutlined />,
         status: 'wait',
-        details: '自动关联业务数据'
-      }
+        details: '自动关联业务数据',
+      },
     ];
     setSteps(initialSteps);
   }, [fileInfo, sessionId]);
@@ -177,14 +177,14 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
     setSteps(prevSteps => {
       const newSteps = [...prevSteps];
       const stepMapping: Record<string, number> = {
-        'created': 0,
-        'converting_pdf': 1,
-        'extracting_info': 2,
-        'validating_data': 3,
-        'matching_data': 4,
-        'ready_for_review': 5,
-        'completed': 5,
-        'failed': 5
+        created: 0,
+        converting_pdf: 1,
+        extracting_info: 2,
+        validating_data: 3,
+        matching_data: 4,
+        ready_for_review: 5,
+        completed: 5,
+        failed: 5,
       };
 
       const currentStep = stepMapping[progress.current_step] || 0;
@@ -217,38 +217,56 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ready_for_review': return COLORS.success;
+      case 'ready_for_review':
+        return COLORS.success;
       case 'failed':
-      case 'cancelled': return COLORS.error;
-      case 'completed': return COLORS.primary;
-      default: return COLORS.warning;
+      case 'cancelled':
+        return COLORS.error;
+      case 'completed':
+        return COLORS.primary;
+      default:
+        return COLORS.warning;
     }
   };
 
   // 获取状态文本
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'created': return '已创建';
-      case 'converting': return '转换中';
-      case 'extracting': return '提取中';
-      case 'validating': return '验证中';
-      case 'matching': return '匹配中';
-      case 'ready_for_review': return '待确认';
-      case 'failed': return '处理失败';
-      case 'cancelled': return '已取消';
-      case 'imported': return '已导入';
-      default: return '处理中';
+      case 'created':
+        return '已创建';
+      case 'converting':
+        return '转换中';
+      case 'extracting':
+        return '提取中';
+      case 'validating':
+        return '验证中';
+      case 'matching':
+        return '匹配中';
+      case 'ready_for_review':
+        return '待确认';
+      case 'failed':
+        return '处理失败';
+      case 'cancelled':
+        return '已取消';
+      case 'imported':
+        return '已导入';
+      default:
+        return '处理中';
     }
   };
 
   // 获取状态图标
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'ready_for_review': return <CheckCircleOutlined />;
+      case 'ready_for_review':
+        return <CheckCircleOutlined />;
       case 'failed':
-      case 'cancelled': return <CloseCircleOutlined />;
-      case 'completed': return <CheckCircleOutlined />;
-      default: return <LoadingOutlined />;
+      case 'cancelled':
+        return <CloseCircleOutlined />;
+      case 'completed':
+        return <CheckCircleOutlined />;
+      default:
+        return <LoadingOutlined />;
     }
   };
 
@@ -263,19 +281,13 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 <Title level={4} style={{ margin: 0 }}>
                   PDF合同处理状态
                 </Title>
-                <Text type="secondary">
-                  会话ID: {sessionId}
-                </Text>
+                <Text type="secondary">会话ID: {sessionId}</Text>
               </div>
             </Space>
           </Col>
           <Col>
             <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRefresh}
-                loading={!currentProgress}
-              >
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={!currentProgress}>
                 刷新
               </Button>
               <Button
@@ -285,9 +297,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               >
                 下载
               </Button>
-              <Button onClick={onCancel}>
-                取消
-              </Button>
+              <Button onClick={onCancel}>取消</Button>
             </Space>
           </Col>
         </Row>
@@ -299,25 +309,28 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
           <Row gutter={16} align="middle">
             <Col flex="auto">
               <Space>
-                <div style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  backgroundColor: getStatusColor(currentProgress.status),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white'
-                }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: getStatusColor(currentProgress.status),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                  }}
+                >
                   {getStatusIcon(currentProgress.status)}
                 </div>
                 <div>
-                  <Title level={5} style={{ margin: 0, color: getStatusColor(currentProgress.status) }}>
+                  <Title
+                    level={5}
+                    style={{ margin: 0, color: getStatusColor(currentProgress.status) }}
+                  >
                     {getStatusText(currentProgress.status)}
                   </Title>
-                  <Text type="secondary">
-                    {currentProgress.current_step}
-                  </Text>
+                  <Text type="secondary">{currentProgress.current_step}</Text>
                 </div>
               </Space>
             </Col>
@@ -328,7 +341,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 precision={0}
                 suffix="%"
                 valueStyle={{
-                  color: getStatusColor(currentProgress.status)
+                  color: getStatusColor(currentProgress.status),
                 }}
               />
             </Col>
@@ -357,7 +370,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
             description: (
               <div>
                 <div>{step.description}</div>
-                {(step.details != null) && (
+                {step.details != null && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {step.details}
                   </Text>
@@ -377,10 +390,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
             <Title level={5}>处理详情</Title>
           </Col>
           <Col>
-            <Button
-              type="text"
-              onClick={() => setShowDetailsModal(true)}
-            >
+            <Button type="text" onClick={() => setShowDetailsModal(true)}>
               查看详细信息
             </Button>
           </Col>
@@ -389,21 +399,13 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="文件名">
-                {fileInfo?.filename}
-              </Descriptions.Item>
+              <Descriptions.Item label="文件名">{fileInfo?.filename}</Descriptions.Item>
               <Descriptions.Item label="文件大小">
                 {pdfImportService.formatFileSize(fileInfo?.size || 0)}
               </Descriptions.Item>
-              <Descriptions.Item label="文件类型">
-                {fileInfo?.content_type}
-              </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
-                {currentProgress?.created_at}
-              </Descriptions.Item>
-              <Descriptions.Item label="更新时间">
-                {currentProgress?.updated_at}
-              </Descriptions.Item>
+              <Descriptions.Item label="文件类型">{fileInfo?.content_type}</Descriptions.Item>
+              <Descriptions.Item label="创建时间">{currentProgress?.created_at}</Descriptions.Item>
+              <Descriptions.Item label="更新时间">{currentProgress?.updated_at}</Descriptions.Item>
             </Descriptions>
           </Col>
           <Col span={12}>
@@ -530,7 +532,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         footer={[
           <Button key="close" onClick={() => setShowDetailsModal(false)}>
             关闭
-          </Button>
+          </Button>,
         ]}
         width={800}
       >
@@ -544,18 +546,12 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 {getStatusText(currentProgress.status)}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="当前步骤">
-              {currentProgress.current_step}
-            </Descriptions.Item>
+            <Descriptions.Item label="当前步骤">{currentProgress.current_step}</Descriptions.Item>
             <Descriptions.Item label="进度">
               <Progress percent={currentProgress.progress} />
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {currentProgress.created_at}
-            </Descriptions.Item>
-            <Descriptions.Item label="更新时间">
-              {currentProgress.updated_at}
-            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">{currentProgress.created_at}</Descriptions.Item>
+            <Descriptions.Item label="更新时间">{currentProgress.updated_at}</Descriptions.Item>
             <Descriptions.Item label="错误信息" span={2}>
               {currentProgress.error_message ?? '无'}
             </Descriptions.Item>

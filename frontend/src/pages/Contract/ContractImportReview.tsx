@@ -19,11 +19,9 @@ import {
   Typography,
   Tabs,
   Statistic,
-  Switch
+  Switch,
 } from 'antd';
-import {
-  SaveOutlined
-} from '@ant-design/icons';
+import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -32,7 +30,7 @@ import {
   type ConfirmedContractData,
   type ConfirmImportResponse,
   type AssetMatch,
-  type OwnershipMatch
+  type OwnershipMatch,
 } from '../../services/pdfImportService';
 import { COLORS } from '@/styles/colorMap';
 
@@ -76,7 +74,7 @@ interface FormValues {
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
   onConfirm,
-  onBack
+  onBack,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -99,15 +97,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       sign_date: validatedData.sign_date != null ? dayjs(String(validatedData.sign_date)) : null,
       start_date: validatedData.start_date != null ? dayjs(String(validatedData.start_date)) : null,
       end_date: validatedData.end_date != null ? dayjs(String(validatedData.end_date)) : null,
-      rentable_area: validatedData.rentable_area != null ? parseFloat(String(validatedData.rentable_area)) : undefined,
-      monthly_rent: validatedData.monthly_rent != null ? parseFloat(String(validatedData.monthly_rent)) : undefined,
-      total_deposit: validatedData.total_deposit != null ? parseFloat(String(validatedData.total_deposit)) : 0,
+      rentable_area:
+        validatedData.rentable_area != null
+          ? parseFloat(String(validatedData.rentable_area))
+          : undefined,
+      monthly_rent:
+        validatedData.monthly_rent != null
+          ? parseFloat(String(validatedData.monthly_rent))
+          : undefined,
+      total_deposit:
+        validatedData.total_deposit != null ? parseFloat(String(validatedData.total_deposit)) : 0,
       contract_status: validatedData.contract_status ?? '有效',
       payment_terms: validatedData.payment_terms ?? '',
       contract_notes: validatedData.contract_notes ?? '',
-      rent_terms: validatedData.rent_terms ?? []
+      rent_terms: validatedData.rent_terms ?? [],
     });
-
   }, [result, form]);
 
   // 表单字段变更处理
@@ -123,7 +127,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = await form.validateFields() as FormValues;
+      const values = (await form.validateFields()) as FormValues;
 
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
@@ -142,12 +146,13 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         contract_status: values.contract_status,
         payment_terms: values.payment_terms,
         contract_notes: values.contract_notes,
-        rent_terms: values.rent_terms?.map(term => ({
-          start_date: term.start_date,
-          end_date: term.end_date,
-          monthly_rent: term.monthly_rent,
-          rent_description: term.rent_description
-        })) ?? []
+        rent_terms:
+          values.rent_terms?.map(term => ({
+            start_date: term.start_date,
+            end_date: term.end_date,
+            monthly_rent: term.monthly_rent,
+            rent_description: term.rent_description,
+          })) ?? [],
       };
 
       setLoading(true);
@@ -178,11 +183,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 基本信息表单
   const BasicInfoForm = () => (
-    <Form
-      form={form}
-      layout="vertical"
-      onValuesChange={handleFieldChange}
-    >
+    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
@@ -261,11 +262,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 日期和金额表单
   const DateAmountForm = () => (
-    <Form
-      form={form}
-      layout="vertical"
-      onValuesChange={handleFieldChange}
-    >
+    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
@@ -334,7 +331,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请输入租赁面积"
               min={0}
               precision={2}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -356,7 +353,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请输入月租金"
               min={0}
               precision={2}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -378,7 +375,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               min={0}
               precision={2}
               defaultValue={0}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -410,7 +407,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请选择匹配的资产"
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_assets.map((asset: AssetMatch) => (
@@ -418,7 +417,15 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                   <div>
                     <Space>
                       <span>{asset.property_name}</span>
-                      <Tag color={asset.similarity >= 80 ? 'green' : asset.similarity >= 60 ? 'orange' : 'red'}>
+                      <Tag
+                        color={
+                          asset.similarity >= 80
+                            ? 'green'
+                            : asset.similarity >= 60
+                              ? 'orange'
+                              : 'red'
+                        }
+                      >
                         相似度: {asset.similarity}%
                       </Tag>
                     </Space>
@@ -461,14 +468,24 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请选择匹配的权属方"
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_ownerships.map((ownership: OwnershipMatch) => (
                 <Select.Option key={ownership.id} value={ownership.id}>
                   <Space>
                     <span>{ownership.ownership_name}</span>
-                    <Tag color={ownership.similarity >= 80 ? 'green' : ownership.similarity >= 60 ? 'orange' : 'red'}>
+                    <Tag
+                      color={
+                        ownership.similarity >= 80
+                          ? 'green'
+                          : ownership.similarity >= 60
+                            ? 'orange'
+                            : 'red'
+                      }
+                    >
                       相似度: {ownership.similarity}%
                     </Tag>
                   </Space>
@@ -490,11 +507,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 高级字段表单
   const AdvancedForm = () => (
-    <Form
-      form={form}
-      layout="vertical"
-      onValuesChange={handleFieldChange}
-    >
+    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
       <Form.Item
         label={
           <Space>

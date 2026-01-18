@@ -41,14 +41,14 @@ export const API_CONFIG = {
   // 缓存配置
   CACHE: {
     DEFAULT_TTL: 5 * 60 * 1000, // 5分钟
-    LONG_TTL: 30 * 60 * 1000,   // 30分钟
-    SHORT_TTL: 1 * 60 * 1000,   // 1分钟
+    LONG_TTL: 30 * 60 * 1000, // 30分钟
+    SHORT_TTL: 1 * 60 * 1000, // 1分钟
   },
 
   // 文件上传配置
   UPLOAD: {
     MAX_SIZE: 50 * 1024 * 1024, // 50MB
-    CHUNK_SIZE: 1024 * 1024,    // 1MB
+    CHUNK_SIZE: 1024 * 1024, // 1MB
     ALLOWED_TYPES: [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
@@ -188,7 +188,6 @@ export const getApiUrl = (endpoint: string) => {
  */
 export const generateRequestId = (): string => {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-
 };
 
 /**
@@ -212,7 +211,9 @@ export const isDevelopment = () => ENV.DEVELOPMENT;
  * 验证文件类型
  */
 export const isValidFileType = (file: File) => {
-  return API_CONFIG.UPLOAD.ALLOWED_TYPES.includes(file.type as typeof API_CONFIG.UPLOAD.ALLOWED_TYPES[number]);
+  return API_CONFIG.UPLOAD.ALLOWED_TYPES.includes(
+    file.type as (typeof API_CONFIG.UPLOAD.ALLOWED_TYPES)[number]
+  );
 };
 
 /**
@@ -256,10 +257,7 @@ export class ApiError extends Error {
 /**
  * 通用API请求函数
  */
-export const apiRequest = async <T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> => {
+export const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const url = createApiUrl(endpoint);
 
   // 创建AbortController实现超时
@@ -283,7 +281,7 @@ export const apiRequest = async <T>(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
-        const errorData = (await response.json() as unknown) as Record<string, unknown>;
+        const errorData = (await response.json()) as unknown as Record<string, unknown>;
 
         const rawMessage = errorData.message as unknown;
         const rawDetail = errorData.detail as unknown;
@@ -300,30 +298,18 @@ export const apiRequest = async <T>(
       throw new ApiError(errorMessage, response.status, response);
     }
 
-    const data = (await response.json() as unknown) as T;
+    const data = (await response.json()) as unknown as T;
     return data;
-
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
 
     // 网络错误或其他错误
-    throw new ApiError(
-      error instanceof Error ? error.message : '网络请求失败',
-      0,
-      error
-    );
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败', 0, error);
   }
 };
 
 // ==================== 导出便捷访问 ====================
 
-export const {
-  BASE_URL,
-  TIMEOUT,
-  RETRY,
-  CACHE,
-  UPLOAD,
-  PAGINATION,
-} = API_CONFIG;
+export const { BASE_URL, TIMEOUT, RETRY, CACHE, UPLOAD, PAGINATION } = API_CONFIG;

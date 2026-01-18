@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -15,10 +15,10 @@ import {
   Descriptions,
   Drawer,
   Typography,
-} from 'antd'
+} from 'antd';
 
-const { Text } = Typography
-import { MessageManager } from '@/utils/messageManager'
+const { Text } = Typography;
+import { MessageManager } from '@/utils/messageManager';
 import {
   ReloadOutlined,
   SearchOutlined,
@@ -32,28 +32,28 @@ import {
   SecurityScanOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
-  PlusOutlined
-} from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
-import dayjs from 'dayjs'
-import { COLORS } from '@/styles/colorMap'
+  PlusOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { COLORS } from '@/styles/colorMap';
 
-const { RangePicker } = DatePicker
-const { Search } = Input
-const { Option } = Select
-import { type OperationLog, type LogStatistics } from '../../services/systemService'
+const { RangePicker } = DatePicker;
+const { Search } = Input;
+const { Option } = Select;
+import { type OperationLog, type LogStatistics } from '../../services/systemService';
 
 const OperationLogPage: React.FC = () => {
-  const [logs, setLogs] = useState<OperationLog[]>([])
-  const [statistics, setStatistics] = useState<LogStatistics | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false)
-  const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null)
-  const [_searchText, _setSearchText] = useState('')
-  const [_moduleFilter, _setModuleFilter] = useState<string>('')
-  const [_actionFilter, _setActionFilter] = useState<string>('')
-  const [_statusFilter, _setStatusFilter] = useState<string>('')
-  const [_dateRange, _setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
+  const [logs, setLogs] = useState<OperationLog[]>([]);
+  const [statistics, setStatistics] = useState<LogStatistics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null);
+  const [_searchText, _setSearchText] = useState('');
+  const [_moduleFilter, _setModuleFilter] = useState<string>('');
+  const [_actionFilter, _setActionFilter] = useState<string>('');
+  const [_statusFilter, _setStatusFilter] = useState<string>('');
+  const [_dateRange, _setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
   // 操作类型选项
   const actionOptions = [
@@ -65,8 +65,8 @@ const OperationLogPage: React.FC = () => {
     { value: 'logout', label: '登出', color: 'orange', icon: <LogoutOutlined /> },
     { value: 'export', label: '导出', color: 'purple', icon: <FileTextOutlined /> },
     { value: 'import', label: '导入', color: 'purple', icon: <FileTextOutlined /> },
-    { value: 'security', label: '安全操作', color: 'red', icon: <SecurityScanOutlined /> }
-  ]
+    { value: 'security', label: '安全操作', color: 'red', icon: <SecurityScanOutlined /> },
+  ];
 
   // 模块选项
   const moduleOptions = [
@@ -76,23 +76,23 @@ const OperationLogPage: React.FC = () => {
     { value: 'ownership', label: '权属方管理' },
     { value: 'project', label: '项目管理' },
     { value: 'system', label: '系统管理' },
-    { value: 'auth', label: '认证授权' }
-  ]
+    { value: 'auth', label: '认证授权' },
+  ];
 
   // 状态选项
   const statusOptions = [
     { value: 'success', label: '成功', color: 'green' },
     { value: 'error', label: '失败', color: 'red' },
-    { value: 'warning', label: '警告', color: 'orange' }
-  ]
+    { value: 'warning', label: '警告', color: 'orange' },
+  ];
 
   useEffect(() => {
-    loadLogs()
-    loadStatistics()
-  }, [])
+    loadLogs();
+    loadStatistics();
+  }, []);
 
   const loadLogs = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       // 模拟API调用
       const mockLogs: OperationLog[] = [
@@ -116,7 +116,7 @@ const OperationLogPage: React.FC = () => {
           response_time: 120,
           error_message: null,
           details: { login_type: 'password', device: 'web' },
-          created_at: dayjs().subtract(1, 'hour').toISOString()
+          created_at: dayjs().subtract(1, 'hour').toISOString(),
         },
         {
           id: '2',
@@ -138,7 +138,7 @@ const OperationLogPage: React.FC = () => {
           response_time: 250,
           error_message: null,
           details: { asset_name: '测试资产', asset_type: 'commercial' },
-          created_at: dayjs().subtract(2, 'hours').toISOString()
+          created_at: dayjs().subtract(2, 'hours').toISOString(),
         },
         {
           id: '3',
@@ -160,16 +160,16 @@ const OperationLogPage: React.FC = () => {
           response_time: 80,
           error_message: null,
           details: { view_type: 'detail' },
-          created_at: dayjs().subtract(3, 'hours').toISOString()
-        }
-      ]
-      setLogs(mockLogs)
+          created_at: dayjs().subtract(3, 'hours').toISOString(),
+        },
+      ];
+      setLogs(mockLogs);
     } catch {
-      MessageManager.error('加载操作日志失败')
+      MessageManager.error('加载操作日志失败');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const loadStatistics = async () => {
     try {
@@ -182,43 +182,44 @@ const OperationLogPage: React.FC = () => {
         by_action: {},
         by_module: {},
         error_count: logs.filter(log => log.response_status >= 400).length,
-        avg_response_time: Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0
-      }
-      setStatistics(mockStats)
+        avg_response_time:
+          Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0,
+      };
+      setStatistics(mockStats);
     } catch {
-      MessageManager.error('加载统计信息失败')
+      MessageManager.error('加载统计信息失败');
     }
-  }
+  };
 
   const handleSearch = (value: string) => {
-    _setSearchText(value)
+    _setSearchText(value);
     // 这里可以添加搜索逻辑
-  }
+  };
 
   const handleViewDetail = (log: OperationLog) => {
-    setSelectedLog(log)
-    setDetailDrawerVisible(true)
-  }
+    setSelectedLog(log);
+    setDetailDrawerVisible(true);
+  };
 
   const getActionTag = (action: string) => {
-    const actionConfig = actionOptions.find(a => a.value === action)
+    const actionConfig = actionOptions.find(a => a.value === action);
     return (
       <Tag color={actionConfig?.color ?? 'default'} icon={actionConfig?.icon}>
         {actionConfig?.label ?? action}
       </Tag>
-    )
-  }
+    );
+  };
 
   const getStatusTag = (status: number) => {
     if (status >= 200 && status < 300) {
-      return <Tag color="green">成功</Tag>
+      return <Tag color="green">成功</Tag>;
     } else if (status >= 400 && status < 500) {
-      return <Tag color="orange">客户端错误</Tag>
+      return <Tag color="orange">客户端错误</Tag>;
     } else if (status >= 500) {
-      return <Tag color="red">服务器错误</Tag>
+      return <Tag color="red">服务器错误</Tag>;
     }
-    return <Tag>未知</Tag>
-  }
+    return <Tag>未知</Tag>;
+  };
 
   const columns: ColumnsType<OperationLog> = [
     {
@@ -226,7 +227,7 @@ const OperationLogPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
-      render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+      render: date => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '用户信息',
@@ -235,25 +236,23 @@ const OperationLogPage: React.FC = () => {
       render: (_, record) => (
         <Space direction="vertical" size="small">
           <div style={{ fontWeight: 500 }}>{record.user_name}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            @{record.username}
-          </div>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>@{record.username}</div>
         </Space>
-      )
+      ),
     },
     {
       title: '操作',
       dataIndex: 'action',
       key: 'action',
       width: 100,
-      render: (action) => getActionTag(action)
+      render: action => getActionTag(action),
     },
     {
       title: '模块',
       dataIndex: 'module_name',
       key: 'module',
       width: 120,
-      render: (module) => <Tag color="blue">{module}</Tag>
+      render: module => <Tag color="blue">{module}</Tag>,
     },
     {
       title: '资源',
@@ -266,36 +265,40 @@ const OperationLogPage: React.FC = () => {
             {record.resource_type || '-'}
           </div>
         </div>
-      )
+      ),
     },
     {
       title: 'IP地址',
       dataIndex: 'ip_address',
       key: 'ip_address',
       width: 120,
-      render: (ip) => (
+      render: ip => (
         <Tooltip title={ip ?? ''}>
           <span>{ip ?? ''}</span>
         </Tooltip>
-      )
+      ),
     },
     {
       title: '响应状态',
       dataIndex: 'response_status',
       key: 'response_status',
       width: 100,
-      render: (status) => getStatusTag(status)
+      render: status => getStatusTag(status),
     },
     {
       title: '响应时间',
       dataIndex: 'response_time',
       key: 'response_time',
       width: 100,
-      render: (time) => (
-        <span style={{ color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success }}>
+      render: time => (
+        <span
+          style={{
+            color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success,
+          }}
+        >
           {time}ms
         </span>
-      )
+      ),
     },
     {
       title: '操作',
@@ -311,9 +314,9 @@ const OperationLogPage: React.FC = () => {
             onClick={() => handleViewDetail(record)}
           />
         </Tooltip>
-      )
-    }
-  ]
+      ),
+    },
+  ];
 
   return (
     <div style={{ padding: '24px' }}>
@@ -358,8 +361,12 @@ const OperationLogPage: React.FC = () => {
                 suffix="ms"
                 prefix={<SettingOutlined />}
                 valueStyle={{
-                  color: statistics.avg_response_time > 1000 ? COLORS.error :
-                    statistics.avg_response_time > 500 ? COLORS.warning : COLORS.success
+                  color:
+                    statistics.avg_response_time > 1000
+                      ? COLORS.error
+                      : statistics.avg_response_time > 500
+                        ? COLORS.warning
+                        : COLORS.success,
                 }}
               />
             </Card>
@@ -423,22 +430,18 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
-                onChange={(dates) => {
+                onChange={dates => {
                   if (dates && dates[0] && dates[1]) {
-                    _setDateRange([dates[0], dates[1]])
+                    _setDateRange([dates[0], dates[1]]);
                   } else {
-                    _setDateRange(null)
+                    _setDateRange(null);
                   }
                 }}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>
             <Col xs={24} sm={12} md={4}>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={loadLogs}
-                loading={loading}
-              >
+              <Button icon={<ReloadOutlined />} onClick={loadLogs} loading={loading}>
                 刷新
               </Button>
             </Col>
@@ -455,7 +458,7 @@ const OperationLogPage: React.FC = () => {
             pageSize: 20,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
           }}
           scroll={{ x: 1200 }}
         />
@@ -478,7 +481,9 @@ const OperationLogPage: React.FC = () => {
               <Descriptions.Item label="用户信息">
                 <Space>
                   <UserOutlined />
-                  <span>{selectedLog.user_name} (@{selectedLog.username})</span>
+                  <span>
+                    {selectedLog.user_name} (@{selectedLog.username})
+                  </span>
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="操作类型">
@@ -515,38 +520,60 @@ const OperationLogPage: React.FC = () => {
               <Descriptions.Item label="响应信息">
                 <div>
                   <div>状态: {getStatusTag(selectedLog.response_status)}</div>
-                  <div>耗时: <span style={{
-                    color: selectedLog.response_time > 1000 ? COLORS.error :
-                      selectedLog.response_time > 500 ? COLORS.warning : COLORS.success
-                  }}>
-                    {selectedLog.response_time}ms
-                  </span></div>
+                  <div>
+                    耗时:{' '}
+                    <span
+                      style={{
+                        color:
+                          selectedLog.response_time > 1000
+                            ? COLORS.error
+                            : selectedLog.response_time > 500
+                              ? COLORS.warning
+                              : COLORS.success,
+                      }}
+                    >
+                      {selectedLog.response_time}ms
+                    </span>
+                  </div>
                 </div>
               </Descriptions.Item>
               {selectedLog.error_message != null && (
                 <Descriptions.Item label="错误信息">
-                  <div style={{ color: COLORS.error, background: 'var(--color-error-light)', padding: '8px', borderRadius: '4px' }}>
+                  <div
+                    style={{
+                      color: COLORS.error,
+                      background: 'var(--color-error-light)',
+                      padding: '8px',
+                      borderRadius: '4px',
+                    }}
+                  >
                     {selectedLog.error_message}
                   </div>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="用户代理">
-                <div style={{ fontSize: '12px', color: COLORS.textSecondary, wordBreak: 'break-all' }}>
+                <div
+                  style={{ fontSize: '12px', color: COLORS.textSecondary, wordBreak: 'break-all' }}
+                >
                   {selectedLog.user_agent}
                 </div>
               </Descriptions.Item>
               <Descriptions.Item label="详细信息">
-                <div style={{
-                  background: COLORS.bgTertiary,
-                  padding: '12px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  overflow: 'auto',
-                  maxHeight: '300px'
-                }}>
+                <div
+                  style={{
+                    background: COLORS.bgTertiary,
+                    padding: '12px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    overflow: 'auto',
+                    maxHeight: '300px',
+                  }}
+                >
                   {Object.entries(selectedLog.details || {}).map(([key, value]) => (
                     <div key={key} style={{ marginBottom: 4 }}>
-                      <Text strong style={{ marginRight: 8 }}>{key}:</Text>
+                      <Text strong style={{ marginRight: 8 }}>
+                        {key}:
+                      </Text>
                       <Text type="secondary">
                         {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                       </Text>
@@ -559,7 +586,7 @@ const OperationLogPage: React.FC = () => {
         )}
       </Drawer>
     </div>
-  )
-}
+  );
+};
 
-export default OperationLogPage
+export default OperationLogPage;

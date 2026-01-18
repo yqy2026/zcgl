@@ -32,8 +32,8 @@ class MessageManagerClass {
         // eslint-disable-next-line no-console
         console.error(
           `[MessageManager] 未初始化 - 调用了 ${methodName}()。` +
-          '请在 App 组件中使用 MessageManager.init(App.useApp().message) 初始化。' +
-          '当前使用静态 API 作为后备。'
+            '请在 App 组件中使用 MessageManager.init(App.useApp().message) 初始化。' +
+            '当前使用静态 API 作为后备。'
         );
       }
       return false;

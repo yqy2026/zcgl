@@ -19,7 +19,7 @@ import {
   Statistic,
   Typography,
   Form,
-  Alert
+  Alert,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -29,7 +29,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   DollarOutlined,
-  FileExcelOutlined
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -39,7 +39,7 @@ import {
   RentLedgerQueryParams,
   RentLedgerPageState,
   RentLedgerUpdate,
-  RentStatisticsOverview
+  RentStatisticsOverview,
 } from '../../types/rentContract';
 import { Asset } from '../../types/asset';
 import { Ownership } from '../../types/ownership';
@@ -87,44 +87,47 @@ const RentLedgerPage: React.FC = () => {
   const format = useFormat();
 
   // 加载台账列表
-  const loadLedgers = useCallback(async (params?: RentLedgerQueryParams) => {
-    setState(prev => ({ ...prev, loading: true }));
-    try {
-      const response = await rentContractService.getRentLedgers({
-        page: state.pagination.current,
-        limit: state.pagination.pageSize,
-        ...state.filters,
-        ...params,
-      });
+  const loadLedgers = useCallback(
+    async (params?: RentLedgerQueryParams) => {
+      setState(prev => ({ ...prev, loading: true }));
+      try {
+        const response = await rentContractService.getRentLedgers({
+          page: state.pagination.current,
+          limit: state.pagination.pageSize,
+          ...state.filters,
+          ...params,
+        });
 
-      // 安全检查：确保response和response.items存在
-      if (response == null) {
-        pageLogger.error('API响应为空');
-        MessageManager.error('加载台账列表失败：响应为空');
-        setState(prev => ({ ...prev, loading: false }));
-        return;
+        // 安全检查：确保response和response.items存在
+        if (response == null) {
+          pageLogger.error('API响应为空');
+          MessageManager.error('加载台账列表失败：响应为空');
+          setState(prev => ({ ...prev, loading: false }));
+          return;
+        }
+
+        // 确保items是一个数组
+        const ledgers = Array.isArray(response.items) ? response.items : [];
+
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          ledgers: ledgers,
+          pagination: {
+            ...prev.pagination,
+            total: response.total || 0,
+            pages: response.pages || 0,
+          },
+        }));
+      } catch (error) {
+        pageLogger.error('加载台账列表失败:', error as Error);
+        const errorMessage = error instanceof Error ? error.message : '未知错误';
+        MessageManager.error(`加载台账列表失败: ${errorMessage}`);
+        setState(prev => ({ ...prev, loading: false, ledgers: [] }));
       }
-
-      // 确保items是一个数组
-      const ledgers = Array.isArray(response.items) ? response.items : [];
-
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        ledgers: ledgers,
-        pagination: {
-          ...prev.pagination,
-          total: response.total || 0,
-          pages: response.pages || 0,
-        },
-      }));
-    } catch (error) {
-      pageLogger.error('加载台账列表失败:', error as Error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      MessageManager.error(`加载台账列表失败: ${errorMessage}`);
-      setState(prev => ({ ...prev, loading: false, ledgers: [] }));
-    }
-  }, [state.pagination.current, state.pagination.pageSize, state.filters]);
+    },
+    [state.pagination.current, state.pagination.pageSize, state.filters]
+  );
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
@@ -238,7 +241,9 @@ const RentLedgerPage: React.FC = () => {
   // 导出Excel
   const handleExport = async () => {
     try {
-      const blob = await rentContractService.exportLedgersToExcel(state.filters as Record<string, unknown>);
+      const blob = await rentContractService.exportLedgersToExcel(
+        state.filters as Record<string, unknown>
+      );
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -351,10 +356,10 @@ const RentLedgerPage: React.FC = () => {
       key: 'payment_status',
       render: (status: string) => {
         const statusConfig = {
-          '未支付': { color: 'default', icon: <ClockCircleOutlined /> },
-          '部分支付': { color: 'warning', icon: <ExclamationCircleOutlined /> },
-          '已支付': { color: 'success', icon: <CheckOutlined /> },
-          '逾期': { color: 'error', icon: <ExclamationCircleOutlined /> },
+          未支付: { color: 'default', icon: <ClockCircleOutlined /> },
+          部分支付: { color: 'warning', icon: <ExclamationCircleOutlined /> },
+          已支付: { color: 'success', icon: <CheckOutlined /> },
+          逾期: { color: 'error', icon: <ExclamationCircleOutlined /> },
         };
         const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig['未支付'];
         return (
@@ -368,7 +373,7 @@ const RentLedgerPage: React.FC = () => {
       title: '支付日期',
       dataIndex: 'payment_date',
       key: 'payment_date',
-      render: (date: string) => date != null ? dayjs(date).format('YYYY-MM-DD') : '-',
+      render: (date: string) => (date != null ? dayjs(date).format('YYYY-MM-DD') : '-'),
     },
     {
       title: '操作',
@@ -472,7 +477,7 @@ const RentLedgerPage: React.FC = () => {
           <Col span={4}>
             <Search
               placeholder="搜索合同或承租方"
-              onSearch={(value) => handleSearch({ keyword: value })}
+              onSearch={value => handleSearch({ keyword: value })}
               enterButton={<SearchOutlined />}
             />
           </Col>
@@ -481,7 +486,7 @@ const RentLedgerPage: React.FC = () => {
               placeholder="选择物业"
               style={{ width: '100%' }}
               allowClear
-              onChange={(value) => handleSearch({ asset_id: value })}
+              onChange={value => handleSearch({ asset_id: value })}
             >
               {assets.map(asset => (
                 <Option key={asset.id} value={asset.id}>
@@ -495,7 +500,7 @@ const RentLedgerPage: React.FC = () => {
               placeholder="选择权属方"
               style={{ width: '100%' }}
               allowClear
-              onChange={(value) => handleSearch({ ownership_id: value })}
+              onChange={value => handleSearch({ ownership_id: value })}
             >
               {ownerships.map(ownership => (
                 <Option key={ownership.id} value={ownership.id}>
@@ -509,7 +514,7 @@ const RentLedgerPage: React.FC = () => {
               placeholder="支付状态"
               style={{ width: '100%' }}
               allowClear
-              onChange={(value) => handleSearch({ payment_status: value })}
+              onChange={value => handleSearch({ payment_status: value })}
             >
               <Option value="未支付">未支付</Option>
               <Option value="部分支付">部分支付</Option>
@@ -527,11 +532,7 @@ const RentLedgerPage: React.FC = () => {
           <Col span={4}>
             <Space>
               <Button onClick={handleReset}>重置</Button>
-              <Button
-                type="primary"
-                icon={<FileExcelOutlined />}
-                onClick={handleExport}
-              >
+              <Button type="primary" icon={<FileExcelOutlined />} onClick={handleExport}>
                 导出
               </Button>
             </Space>
@@ -595,11 +596,7 @@ const RentLedgerPage: React.FC = () => {
         footer={null}
         width={500}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleBatchUpdate}
-        >
+        <Form form={form} layout="vertical" onFinish={handleBatchUpdate}>
           <Form.Item
             name="payment_status"
             label="支付状态"
@@ -613,17 +610,11 @@ const RentLedgerPage: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="payment_date"
-            label="支付日期"
-          >
+          <Form.Item name="payment_date" label="支付日期">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item
-            name="payment_method"
-            label="支付方式"
-          >
+          <Form.Item name="payment_method" label="支付方式">
             <Select placeholder="请选择支付方式">
               <Option value="现金">现金</Option>
               <Option value="银行转账">银行转账</Option>
@@ -632,18 +623,13 @@ const RentLedgerPage: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="notes"
-            label="备注"
-          >
+          <Form.Item name="notes" label="备注">
             <Input.TextArea rows={3} placeholder="请输入备注信息" />
           </Form.Item>
 
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => setState(prev => ({ ...prev, showBatchModal: false }))}
-              >
+              <Button onClick={() => setState(prev => ({ ...prev, showBatchModal: false }))}>
                 取消
               </Button>
               <Button type="primary" htmlType="submit">

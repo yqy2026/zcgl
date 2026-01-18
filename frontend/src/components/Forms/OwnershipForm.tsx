@@ -3,18 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Space,
-  Card,
-  Row,
-  Col,
-  Divider,
-  Switch,
-  Select
-} from 'antd';
+import { Form, Input, Button, Space, Card, Row, Col, Divider, Switch, Select } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 
 const { Option } = Select;
@@ -39,11 +28,7 @@ interface OwnershipFormProps {
   onCancel: () => void;
 }
 
-const OwnershipForm: React.FC<OwnershipFormProps> = ({
-  initialValues,
-  onSuccess,
-  onCancel
-}) => {
+const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [projectOptions, setProjectOptions] = useState<ProjectDropdownOption[]>([]);
@@ -58,9 +43,13 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // 确保响应数据是数组
       const projects = Array.isArray(response)
         ? response
-        : (typeof response === 'object' && response != null && 'data' in (response as Record<string, unknown>)
-            ? Array.isArray((response as Record<string, unknown>).data) ? (response as Record<string, unknown>).data as ProjectDropdownOption[] : []
-            : []);
+        : typeof response === 'object' &&
+            response != null &&
+            'data' in (response as Record<string, unknown>)
+          ? Array.isArray((response as Record<string, unknown>).data)
+            ? ((response as Record<string, unknown>).data as ProjectDropdownOption[])
+            : []
+          : [];
 
       setProjectOptions(projects as ProjectDropdownOption[]);
     } catch {
@@ -81,20 +70,17 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
   // 表单验证规则接口
   interface FormValidationRule {
-    field?: string
-    fullField?: string
-    type?: string
-    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+    field?: string;
+    fullField?: string;
+    type?: string;
+    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>;
   }
 
   // 验证名称唯一性
   const validateName = async (_: FormValidationRule, value: string) => {
     if (value == null) return Promise.resolve();
 
-    const isUnique = await ownershipService.validateOwnershipName(
-      value,
-      initialValues?.id
-    );
+    const isUnique = await ownershipService.validateOwnershipName(value, initialValues?.id);
     if (!isUnique) {
       return Promise.reject('该名称已存在');
     }
@@ -105,7 +91,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
   // 提交表单
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields() as OwnershipFormValues;
+      const values = (await form.validateFields()) as OwnershipFormValues;
       setLoading(true);
 
       if (initialValues !== undefined && initialValues !== null) {
@@ -114,7 +100,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
           name: values.name,
           code: values.code,
           short_name: values.short_name,
-          is_active: values.is_active
+          is_active: values.is_active,
         };
 
         // Submit update data
@@ -127,7 +113,11 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 如果有关联项目数据，则更新关联项目
         if (values.related_projects != null && Array.isArray(values.related_projects)) {
           try {
-            await (ownershipService as unknown as { updateOwnershipProjects: (id: string, projects: string[]) => Promise<void> }).updateOwnershipProjects(initialValues.id, values.related_projects);
+            await (
+              ownershipService as unknown as {
+                updateOwnershipProjects: (id: string, projects: string[]) => Promise<void>;
+              }
+            ).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
             MessageManager.warning('基本信息更新成功，但关联项目更新失败');
           }
@@ -138,8 +128,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 创建权属方 - 编码将由后端自动生成
         const createData: OwnershipCreate = {
           name: values.name,
-          code: values.code ?? '',  // 临时设为空字符串，后端会自动生成
-          short_name: values.short_name
+          code: values.code ?? '', // 临时设为空字符串，后端会自动生成
+          short_name: values.short_name,
         };
 
         await ownershipService.createOwnership(createData);
@@ -161,7 +151,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       layout="vertical"
       onFinish={handleSubmit}
       initialValues={{
-        is_active: true
+        is_active: true,
       }}
     >
       <Card title="基本信息" size="small">
@@ -172,17 +162,14 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
               name="name"
               rules={[
                 { required: true, message: '请输入权属方全称' },
-                { validator: validateName as any }
+                { validator: validateName as any },
               ]}
             >
               <Input placeholder="请输入权属方全称" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item
-              label="权属方简称"
-              name="short_name"
-            >
+            <Form.Item label="权属方简称" name="short_name">
               <Input placeholder="请输入权属方简称（可选）" />
             </Form.Item>
           </Col>
@@ -190,11 +177,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item
-              label="关联项目"
-              name="related_projects"
-              help="选择与该权属方关联的项目"
-            >
+            <Form.Item label="关联项目" name="related_projects" help="选择与该权属方关联的项目">
               <Select
                 mode="multiple"
                 placeholder="请选择关联项目"
@@ -217,15 +200,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         </Row>
 
         {initialValues && (
-          <Form.Item
-            label="状态"
-            name="is_active"
-            valuePropName="checked"
-          >
-            <Switch
-              checkedChildren="启用"
-              unCheckedChildren="禁用"
-            />
+          <Form.Item label="状态" name="is_active" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
           </Form.Item>
         )}
       </Card>
@@ -235,14 +211,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       <Row>
         <Col span={24} style={{ textAlign: 'right' }}>
           <Space>
-            <Button onClick={onCancel}>
-              取消
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-            >
+            <Button onClick={onCancel}>取消</Button>
+            <Button type="primary" htmlType="submit" loading={loading}>
               {initialValues ? '更新' : '创建'}
             </Button>
           </Space>

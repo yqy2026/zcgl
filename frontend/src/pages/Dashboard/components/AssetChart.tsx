@@ -1,32 +1,32 @@
-import React from 'react'
-import { Row, Col, Progress, Typography, Space } from 'antd'
+import React from 'react';
+import { Row, Col, Progress, Typography, Space } from 'antd';
 
-const { Text, Title } = Typography
+const { Text, Title } = Typography;
 
 interface ChartData {
   propertyTypes?: Array<{
-    name: string
-    value: number
-    color: string
-  }>
+    name: string;
+    value: number;
+    color: string;
+  }>;
   occupancyTrend?: Array<{
-    month: string
-    rate: number
-  }>
+    month: string;
+    rate: number;
+  }>;
 }
 
 interface AssetChartProps {
-  data?: ChartData
-  loading?: boolean
+  data?: ChartData;
+  loading?: boolean;
 }
 
 const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
   if (loading === true) {
-    return <div>加载中...</div>
+    return <div>加载中...</div>;
   }
 
-  const propertyTypes = data?.propertyTypes || []
-  const total = propertyTypes.reduce((sum, item) => sum + item.value, 0)
+  const propertyTypes = data?.propertyTypes || [];
+  const total = propertyTypes.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div>
@@ -34,22 +34,22 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
       <Title level={5} style={{ marginBottom: '16px' }}>
         物业类型分布
       </Title>
-      
+
       <div style={{ marginBottom: '24px' }}>
         {propertyTypes.map((item, index) => {
-          const percentage = total > 0 ? (item.value / total) * 100 : 0
+          const percentage = total > 0 ? (item.value / total) * 100 : 0;
           return (
             <div key={index} style={{ marginBottom: '12px' }}>
               <Row justify="space-between" align="middle" style={{ marginBottom: '4px' }}>
                 <Col>
                   <Space>
-                    <div 
-                      style={{ 
-                        width: '12px', 
-                        height: '12px', 
+                    <div
+                      style={{
+                        width: '12px',
+                        height: '12px',
                         backgroundColor: item.color,
-                        borderRadius: '2px'
-                      }} 
+                        borderRadius: '2px',
+                      }}
                     />
                     <Text>{item.name}</Text>
                   </Space>
@@ -65,7 +65,7 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
                 size="small"
               />
             </div>
-          )
+          );
         })}
       </div>
 
@@ -73,7 +73,7 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
       <Title level={5} style={{ marginBottom: '16px' }}>
         出租率趋势
       </Title>
-      
+
       <div>
         {data?.occupancyTrend?.map((item, index) => (
           <div key={index} style={{ marginBottom: '8px' }}>
@@ -89,7 +89,7 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AssetChart
+export default AssetChart;

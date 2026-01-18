@@ -15,8 +15,8 @@ export interface RouteComponentProps {
 interface RouteBuilderConfig extends RouteConfig {
   lazy?: boolean;
   component?:
-  | React.ComponentType<RouteComponentProps>
-  | React.LazyExoticComponent<React.ComponentType<RouteComponentProps>>;
+    | React.ComponentType<RouteComponentProps>
+    | React.LazyExoticComponent<React.ComponentType<RouteComponentProps>>;
   preload?: () => void;
   children?: RouteBuilderConfig[];
   errorBoundary?: boolean;

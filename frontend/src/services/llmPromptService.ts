@@ -40,10 +40,9 @@ export class LLMPromptService {
    */
   async getPrompts(params?: PromptQueryParams): Promise<PromptTemplateListResponse> {
     try {
-      const response = await enhancedApiClient.get<PromptTemplateListResponse>(
-        API_BASE,
-        { params }
-      );
+      const response = await enhancedApiClient.get<PromptTemplateListResponse>(API_BASE, {
+        params,
+      });
       return extractData(response, '获取 Prompt 列表失败: 响应数据为空');
     } catch (error) {
       logger.error('获取 Prompt 列表失败', error);
@@ -56,9 +55,7 @@ export class LLMPromptService {
    */
   async getPrompt(id: string): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.get<PromptTemplate>(
-        `${API_BASE}/${id}`
-      );
+      const response = await enhancedApiClient.get<PromptTemplate>(`${API_BASE}/${id}`);
       return extractData(response, `获取 Prompt 详情失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 详情失败: ${id}`, error);
@@ -71,10 +68,7 @@ export class LLMPromptService {
    */
   async createPrompt(data: PromptTemplateCreate): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.post<PromptTemplate>(
-        API_BASE,
-        data
-      );
+      const response = await enhancedApiClient.post<PromptTemplate>(API_BASE, data);
       const result = extractData(response, '创建 Prompt 失败: 响应数据为空');
       logger.info(`创建 Prompt 成功: ${result.name}`);
       return result;
@@ -87,15 +81,9 @@ export class LLMPromptService {
   /**
    * 更新 Prompt (自动创建新版本)
    */
-  async updatePrompt(
-    id: string,
-    data: PromptTemplateUpdate
-  ): Promise<PromptTemplate> {
+  async updatePrompt(id: string, data: PromptTemplateUpdate): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.put<PromptTemplate>(
-        `${API_BASE}/${id}`,
-        data
-      );
+      const response = await enhancedApiClient.put<PromptTemplate>(`${API_BASE}/${id}`, data);
       const result = extractData(response, `更新 Prompt 失败: ${id}`);
       logger.info(`更新 Prompt 成功: ${result.name} -> v${result.version}`);
       return result;
@@ -126,10 +114,7 @@ export class LLMPromptService {
   /**
    * 回滚 Prompt 到指定版本
    */
-  async rollbackPrompt(
-    id: string,
-    request: PromptRollbackRequest
-  ): Promise<PromptTemplate> {
+  async rollbackPrompt(id: string, request: PromptRollbackRequest): Promise<PromptTemplate> {
     try {
       const response = await enhancedApiClient.post<PromptTemplate>(
         `${API_BASE}/${id}/rollback`,
@@ -149,9 +134,7 @@ export class LLMPromptService {
    */
   async getPromptVersions(id: string): Promise<PromptVersion[]> {
     try {
-      const response = await enhancedApiClient.get<PromptVersion[]>(
-        `${API_BASE}/${id}/versions`
-      );
+      const response = await enhancedApiClient.get<PromptVersion[]>(`${API_BASE}/${id}/versions`);
       return extractData(response, `获取 Prompt 版本历史失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 版本历史失败: ${id}`, error);
@@ -177,7 +160,9 @@ export class LLMPromptService {
   /**
    * 提交用户反馈
    */
-  async submitFeedback(data: ExtractionFeedbackCreate): Promise<{ success: boolean; feedback_id: string }> {
+  async submitFeedback(
+    data: ExtractionFeedbackCreate
+  ): Promise<{ success: boolean; feedback_id: string }> {
     try {
       const response = await enhancedApiClient.post<{ success: boolean; feedback_id: string }>(
         `${API_BASE}/feedback`,
@@ -195,10 +180,7 @@ export class LLMPromptService {
   /**
    * 获取活跃的 Prompt (按文档类型和提供商)
    */
-  async getActivePrompt(
-    docType: string,
-    provider?: string
-  ): Promise<PromptTemplate | null> {
+  async getActivePrompt(docType: string, provider?: string): Promise<PromptTemplate | null> {
     try {
       const params: PromptQueryParams = {
         doc_type: docType as any,
@@ -266,29 +248,23 @@ export class LLMPromptService {
 export const llmPromptService = new LLMPromptService();
 
 // 导出便捷方法
-export const getPrompts = (params?: PromptQueryParams) =>
-  llmPromptService.getPrompts(params);
+export const getPrompts = (params?: PromptQueryParams) => llmPromptService.getPrompts(params);
 
-export const getPrompt = (id: string) =>
-  llmPromptService.getPrompt(id);
+export const getPrompt = (id: string) => llmPromptService.getPrompt(id);
 
-export const createPrompt = (data: PromptTemplateCreate) =>
-  llmPromptService.createPrompt(data);
+export const createPrompt = (data: PromptTemplateCreate) => llmPromptService.createPrompt(data);
 
 export const updatePrompt = (id: string, data: PromptTemplateUpdate) =>
   llmPromptService.updatePrompt(id, data);
 
-export const activatePrompt = (id: string) =>
-  llmPromptService.activatePrompt(id);
+export const activatePrompt = (id: string) => llmPromptService.activatePrompt(id);
 
 export const rollbackPrompt = (id: string, request: PromptRollbackRequest) =>
   llmPromptService.rollbackPrompt(id, request);
 
-export const getPromptVersions = (id: string) =>
-  llmPromptService.getPromptVersions(id);
+export const getPromptVersions = (id: string) => llmPromptService.getPromptVersions(id);
 
-export const getStatistics = () =>
-  llmPromptService.getStatistics();
+export const getStatistics = () => llmPromptService.getStatistics();
 
 export const submitFeedback = (data: ExtractionFeedbackCreate) =>
   llmPromptService.submitFeedback(data);

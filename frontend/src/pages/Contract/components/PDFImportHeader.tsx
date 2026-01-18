@@ -20,47 +20,40 @@ interface PDFImportHeaderProps {
 export const PDFImportHeader: React.FC<PDFImportHeaderProps> = ({
   onShowHelp,
   onReload,
-  loading
+  loading,
 }) => {
   return (
     <Card style={{ marginBottom: 16 }}>
       <Row justify="space-between" align="middle">
         <Col>
           <Space size="large">
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              backgroundColor: `${COLORS.primary}10`
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                backgroundColor: `${COLORS.primary}10`,
+              }}
+            >
               <UploadOutlined style={{ fontSize: 24, color: COLORS.primary }} />
             </div>
             <div>
               <Title level={3} style={{ margin: 0 }}>
                 PDF合同智能导入
               </Title>
-              <Text type="secondary">
-                上传PDF文件,自动提取合同信息并导入系统
-              </Text>
+              <Text type="secondary">上传PDF文件,自动提取合同信息并导入系统</Text>
             </div>
           </Space>
         </Col>
         <Col>
           <Space>
-            <Button
-              icon={<QuestionCircleOutlined />}
-              onClick={onShowHelp}
-            >
+            <Button icon={<QuestionCircleOutlined />} onClick={onShowHelp}>
               使用帮助
             </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={onReload}
-              loading={loading}
-            >
+            <Button icon={<ReloadOutlined />} onClick={onReload} loading={loading}>
               刷新
             </Button>
           </Space>

@@ -1,8 +1,8 @@
-import React from "react";
-import { Card, Row, Col, Statistic } from "antd";
-import type { AnalyticsData } from "@/services/analyticsService";
-import { formatArea, formatPercentage } from "@/utils/format";
-import { getOccupancyRateColor, COLORS } from "@/styles/colorMap";
+import React from 'react';
+import { Card, Row, Col, Statistic } from 'antd';
+import type { AnalyticsData } from '@/services/analyticsService';
+import { formatArea, formatPercentage } from '@/utils/format';
+import { getOccupancyRateColor, COLORS } from '@/styles/colorMap';
 
 interface AssetAreaSummaryProps {
   analyticsData?: AnalyticsData;
@@ -18,13 +18,13 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
   const summary =
     hasAnalyticsData === true && analyticsData?.area_summary !== undefined
       ? {
-        totalLandArea: analyticsData.area_summary.total_area ?? 0,
-        totalActualArea: analyticsData.area_summary.total_area ?? 0,
-        totalRentableArea: analyticsData.area_summary.total_rentable_area,
-        totalRentedArea: analyticsData.area_summary.total_rented_area,
-        totalUnrentedArea: analyticsData.area_summary.total_unrented_area,
-        averageOccupancyRate: analyticsData.area_summary.occupancy_rate,
-      }
+          totalLandArea: analyticsData.area_summary.total_area ?? 0,
+          totalActualArea: analyticsData.area_summary.total_area ?? 0,
+          totalRentableArea: analyticsData.area_summary.total_rentable_area,
+          totalRentedArea: analyticsData.area_summary.total_rented_area,
+          totalUnrentedArea: analyticsData.area_summary.total_unrented_area,
+          averageOccupancyRate: analyticsData.area_summary.occupancy_rate,
+        }
       : null;
 
   return (
@@ -35,7 +35,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="土地面积"
               value={summary.totalLandArea}
-              formatter={(value) => formatArea(value)}
+              formatter={value => formatArea(value)}
               valueStyle={{ color: COLORS.success }}
             />
           </Col>
@@ -43,7 +43,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="实际物业面积"
               value={summary.totalActualArea}
-              formatter={(value) => formatArea(value)}
+              formatter={value => formatArea(value)}
               valueStyle={{ color: COLORS.primary }}
             />
           </Col>
@@ -51,7 +51,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="可出租面积"
               value={summary.totalRentableArea}
-              formatter={(value) => formatArea(value)}
+              formatter={value => formatArea(value)}
               valueStyle={{ color: COLORS.primary }}
             />
           </Col>
@@ -59,7 +59,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="已出租面积"
               value={summary.totalRentedArea}
-              formatter={(value) => formatArea(value)}
+              formatter={value => formatArea(value)}
               valueStyle={{ color: COLORS.success }}
             />
           </Col>
@@ -67,7 +67,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="未出租面积"
               value={summary.totalUnrentedArea}
-              formatter={(value) => formatArea(value)}
+              formatter={value => formatArea(value)}
               valueStyle={{ color: COLORS.error }}
             />
           </Col>
@@ -75,7 +75,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
             <Statistic
               title="平均出租率"
               value={summary.averageOccupancyRate}
-              formatter={(value) => formatPercentage(value)}
+              formatter={value => formatPercentage(value)}
               valueStyle={{
                 color: getOccupancyRateColor(summary.averageOccupancyRate ?? 0),
               }}
@@ -84,8 +84,8 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
           </Col>
         </Row>
       ) : (
-        <div style={{ textAlign: "center", padding: "20px", color: COLORS.textTertiary }}>
-          {loading ? "正在加载统计数据..." : "暂无统计数据"}
+        <div style={{ textAlign: 'center', padding: '20px', color: COLORS.textTertiary }}>
+          {loading ? '正在加载统计数据...' : '暂无统计数据'}
         </div>
       )}
     </Card>
