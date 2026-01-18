@@ -17,6 +17,15 @@ import { createLogger } from '@/utils/logger'
 
 const projectLogger = createLogger('useProject')
 
+// API错误类型
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      detail?: string
+    }
+  }
+}
+
 // 项目查询参数接口
 interface ProjectQueryParams {
   keyword?: string;
@@ -222,7 +231,7 @@ export const useCreateProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('创建项目失败:', error as Error)
-      const err = error as any
+      const err = error as ApiErrorResponse
       MessageManager.error(err.response?.data?.detail ?? '创建项目失败')
     }
   })
@@ -248,7 +257,7 @@ export const useUpdateProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('更新项目失败:', error as Error)
-      const err = error as any
+      const err = error as ApiErrorResponse
       MessageManager.error(err.response?.data?.detail ?? '更新项目失败')
     }
   })
@@ -273,7 +282,7 @@ export const useDeleteProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('删除项目失败:', error as Error)
-      const err = error as any
+      const err = error as ApiErrorResponse
       MessageManager.error(err.response?.data?.detail ?? '删除项目失败')
     }
   })

@@ -37,6 +37,10 @@ export interface ApiError {
   }
 }
 
+interface InternalAxiosRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean
+}
+
 /**
  * 统一的API客户端类
  */
@@ -92,7 +96,7 @@ export class ApiClient {
         return response
       },
       async (error) => {
-        const originalRequest = error.config as any
+        const originalRequest = error.config as InternalAxiosRequestConfig | undefined
         const errorResp = error as { response?: { status?: number } }
 
         // 处理401未授权错误
@@ -142,7 +146,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await axios.post('/api/auth/refresh', {
+      const response = await axios.post<{ access_token: string }>('/api/auth/refresh', {
         refresh_token: refreshToken,
       })
 

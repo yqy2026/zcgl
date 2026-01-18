@@ -44,6 +44,12 @@ interface RentContractExcelImportProps {
   className?: string;
 }
 
+interface ExportFormValues {
+  date_range?: [dayjs.Dayjs, dayjs.Dayjs];
+  include_terms?: boolean;
+  include_ledger?: boolean;
+}
+
 const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
   onImportSuccess,
   className,
@@ -99,14 +105,14 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
   // 处理导出
   const handleExport = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as ExportFormValues;
       setExporting(true);
 
       await rentContractExcelService.exportAndDownload({
         start_date: values.date_range?.[0]?.format('YYYY-MM-DD'),
         end_date: values.date_range?.[1]?.format('YYYY-MM-DD'),
-        include_terms: values.include_terms,
-        include_ledger: values.include_ledger,
+        include_terms: values.include_terms ?? false,
+        include_ledger: values.include_ledger ?? false,
       });
 
       MessageManager.success('导出成功');

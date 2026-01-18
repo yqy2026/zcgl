@@ -317,7 +317,11 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/progress/${sessionId}`);
+      const response = await axios.get<{
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      }>(`${API_BASE_URL}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取进度失败:', error as Error);
@@ -433,7 +437,7 @@ class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/confirm_import`, {
+      const response = await axios.post<ConfirmImportResponse>(`${API_BASE_URL}/confirm_import`, {
         session_id: sessionId,
         confirmed_data: confirmedData
       });
@@ -459,7 +463,11 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/session/${sessionId}`);
+      const response = await axios.delete<{
+        success: boolean;
+        message: string;
+        error?: string;
+      }>(`${API_BASE_URL}/session/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
       logger.error('取消会话失败:', error as Error);
@@ -489,7 +497,19 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(PDF_API.SESSIONS);
+      const response = await axios.get<{
+        success: boolean;
+        active_sessions: Array<{
+          session_id: string;
+          status: string;
+          progress: number;
+          current_step: string;
+          created_at: string;
+          file_name: string;
+        }>;
+        total_count: number;
+        error?: string;
+      }>(PDF_API.SESSIONS);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取会话列表失败:', error as Error);
@@ -519,10 +539,21 @@ class PDFImportService {
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
       // 使用PDF_API.INFO，如果404则使用备用方案
-      const response = await axios.get(PDF_API.INFO);
+      const response = await axios.get<{
+        success: boolean;
+        message: string;
+        capabilities: SystemCapabilities;
+        system_info?: {
+          version: string;
+          ocr_available: boolean;
+          features: string[];
+        };
+        extractor_summary?: Record<string, unknown>;
+        validator_summary?: Record<string, unknown>;
+      }>(PDF_API.INFO);
 
       // 直接使用后端返回的能力信息，并添加增强功能检测
-      const capabilities = response.data.capabilities ?? {
+      const capabilities: SystemCapabilities = response.data.capabilities ?? {
         pdfplumber_available: true,
         pymupdf_available: true,
         spacy_available: true,
@@ -533,7 +564,7 @@ class PDFImportService {
       };
 
       // 添加增强功能标识
-      const enhancedCapabilities = {
+      const enhancedCapabilities: SystemCapabilities = {
         ...capabilities,
         enhanced_extraction: true,
         intelligent_matching: true,
@@ -616,9 +647,20 @@ class PDFImportService {
   }
 
   // 获取系统能力信息
-  static async getSystemCapabilities() {
+  static async getSystemCapabilities(): Promise<{
+    spacy_available: boolean;
+    ocr_available: boolean;
+    supported_formats: string[];
+    max_file_size_mb: number;
+    estimated_processing_time: string;
+    extractor_summary?: Record<string, unknown>;
+    validator_summary?: Record<string, unknown>;
+  }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/capabilities`);
+      const response = await axios.get<{
+        extractor_summary?: Record<string, unknown>;
+        validator_summary?: Record<string, unknown>;
+      }>(`${API_BASE_URL}/capabilities`);
       return {
         spacy_available: true,
         ocr_available: true,
@@ -646,7 +688,10 @@ class PDFImportService {
   }> {
     try {
       // 简单API使用 /info 端点来测试系统状态
-      const response = await axios.get(`${API_BASE_URL}/info`);
+      const response = await axios.get<{
+        message: string;
+        features?: Record<string, unknown>;
+      }>(`${API_BASE_URL}/info`);
       return {
         success: true,
         message: response.data.message,
@@ -782,7 +827,7 @@ class PDFImportService {
    */
   async getEnhancedSystemInfo(): Promise<SystemInfoResponse> {
     try {
-      const response = await axios.get(`${ENHANCED_API_BASE}/info`);
+      const response = await axios.get<SystemInfoResponse>(`${ENHANCED_API_BASE}/info`);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取增强版系统信息失败:', error as Error);
@@ -892,7 +937,11 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${ENHANCED_API_BASE}/progress/${sessionId}`);
+      const response = await axios.get<{
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      }>(`${ENHANCED_API_BASE}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取增强版进度失败:', error as Error);
@@ -916,7 +965,11 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.delete(`${ENHANCED_API_BASE}/session/${sessionId}`, {
+      const response = await axios.delete<{
+        success: boolean;
+        message: string;
+        error?: string;
+      }>(`${ENHANCED_API_BASE}/session/${sessionId}`, {
         params: { reason }
       });
       return response.data;
@@ -1105,7 +1158,13 @@ class PDFImportService {
     system_ready?: boolean;
   }> {
     try {
-      const response = await axios.get(`${ENHANCED_API_BASE}/test/all`);
+      const response = await axios.get<{
+        success: boolean;
+        message: string;
+        test_results?: Array<{ name: string; status: string; message?: string;[key: string]: unknown }>;
+        availability_rate?: number;
+        system_ready?: boolean;
+      }>(`${ENHANCED_API_BASE}/test/all`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
@@ -1134,7 +1193,13 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${ENHANCED_API_BASE}/health`);
+      const response = await axios.get<{
+        status: string;
+        components: Record<string, boolean>;
+        health_score?: number;
+        timestamp: string;
+        error?: string;
+      }>(`${ENHANCED_API_BASE}/health`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
@@ -1158,7 +1223,11 @@ class PDFImportService {
     data?: Record<string, unknown>;
   }> {
     try {
-      const response = await axios.get(`${ENHANCED_API_BASE}/performance/summary`);
+      const response = await axios.get<{
+        success: boolean;
+        message: string;
+        data?: Record<string, unknown>;
+      }>(`${ENHANCED_API_BASE}/performance/summary`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console

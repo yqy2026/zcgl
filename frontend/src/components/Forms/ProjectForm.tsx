@@ -117,7 +117,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       onSuccess();
     } catch (error: unknown) {
       componentLogger.error('保存项目失败:', error as Error);
-      const errorMsg = (((error as any)?.response?.data?.detail != null) ? (error as any).response.data.detail : '保存项目失败') as string;
+      const err = error as { response?: { data?: { detail?: string } } };
+      const errorMsg = err.response?.data?.detail ?? '保存项目失败';
       MessageManager.error(errorMsg);
     } finally {
       setLoading(false);

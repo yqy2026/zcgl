@@ -127,7 +127,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 如果有关联项目数据，则更新关联项目
         if (values.related_projects != null && Array.isArray(values.related_projects)) {
           try {
-            await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
+            await (ownershipService as unknown as { updateOwnershipProjects: (id: string, projects: string[]) => Promise<void> }).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
             MessageManager.warning('基本信息更新成功，但关联项目更新失败');
           }

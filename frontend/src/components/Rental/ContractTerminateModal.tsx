@@ -63,13 +63,13 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
     const deposit = typeof contract.total_deposit === 'number'
       ? contract.total_deposit
       : parseFloat(contract.total_deposit as string) ?? 0;
-    const deduction = form.getFieldValue('deduction_amount') ?? 0;
+    const deduction = form.getFieldValue('deduction_amount') as number ?? 0;
     return Math.max(0, deposit - deduction);
   }, [contract.total_deposit, form]);
 
   // 实时获取抵扣金额用于显示
   const deductionAmount = useMemo(() => {
-    return form.getFieldValue('deduction_amount') ?? 0;
+    return (form.getFieldValue('deduction_amount') as number ?? 0);
   }, [form]);
 
   // 初始化表单

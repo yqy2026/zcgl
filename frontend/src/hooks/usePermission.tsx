@@ -25,6 +25,14 @@ export interface UserPermissions {
   organizationId: string
 }
 
+interface StoredUser {
+  id: string
+  username: string
+  roles?: UserRole[]
+  permissions?: string[]
+  organization_id: string
+}
+
 export interface MenuItem {
   key: string
   label: string
@@ -49,7 +57,7 @@ const usePermission = () => {
         return
       }
 
-      const currentUser = JSON.parse(storedUser)
+      const currentUser = JSON.parse(storedUser) as StoredUser
 
       // 获取用户详细权限信息
       const userPermissionsData: UserPermissions = {

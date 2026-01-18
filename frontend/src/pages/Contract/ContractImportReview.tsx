@@ -48,6 +48,31 @@ interface ContractImportReviewProps {
   onBack: () => void;
 }
 
+interface FormValues {
+  contract_number: string;
+  asset_id?: string;
+  ownership_id?: string;
+  tenant_name: string;
+  tenant_contact?: string;
+  tenant_phone?: string;
+  tenant_address?: string;
+  sign_date?: dayjs.Dayjs;
+  start_date?: dayjs.Dayjs;
+  end_date?: dayjs.Dayjs;
+  rentable_area?: number;
+  monthly_rent?: number;
+  total_deposit?: number;
+  contract_status?: string;
+  payment_terms?: string;
+  contract_notes?: string;
+  rent_terms?: Array<{
+    start_date: string;
+    end_date: string;
+    monthly_rent: string;
+    rent_description?: string;
+  }>;
+}
+
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
   onConfirm,
@@ -98,16 +123,31 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as FormValues;
 
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
-        ...values,
+        contract_number: values.contract_number,
+        asset_id: values.asset_id,
+        ownership_id: values.ownership_id,
+        tenant_name: values.tenant_name,
+        tenant_contact: values.tenant_contact,
+        tenant_phone: values.tenant_phone,
+        tenant_address: values.tenant_address,
         sign_date: values.sign_date != null ? values.sign_date.format('YYYY-MM-DD') : undefined,
         start_date: values.start_date != null ? values.start_date.format('YYYY-MM-DD') : '',
         end_date: values.end_date != null ? values.end_date.format('YYYY-MM-DD') : '',
-        monthly_rent: values.monthly_rent?.toString() ?? '',
-        total_deposit: values.total_deposit?.toString() ?? '0'
+        monthly_rent_base: values.monthly_rent?.toString() ?? '',
+        total_deposit: values.total_deposit?.toString() ?? '0',
+        contract_status: values.contract_status,
+        payment_terms: values.payment_terms,
+        contract_notes: values.contract_notes,
+        rent_terms: values.rent_terms?.map(term => ({
+          start_date: term.start_date,
+          end_date: term.end_date,
+          monthly_rent: term.monthly_rent,
+          rent_description: term.rent_description
+        })) ?? []
       };
 
       setLoading(true);
