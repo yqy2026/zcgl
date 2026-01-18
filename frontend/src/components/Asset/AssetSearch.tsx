@@ -161,14 +161,14 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     }
 
     // 过滤空值
-    const searchParams = Object.entries(values).reduce<Record<string, unknown>>((acc, [key, value]) => {
+    const searchParams = Object.entries(values).reduce<AssetSearchParams>((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value
+        acc[key as keyof AssetSearchParams] = value as never
       }
       return acc
-    }, {})
+    }, {} as AssetSearchParams)
 
-    onSearch(searchParams as AssetSearchParams)
+    onSearch(searchParams)
   }
 
   // 处理重置
@@ -200,7 +200,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     addSearchHistory({
       id: Date.now().toString(),
       name: saveName,
-      conditions: values,
+      conditions: values as Record<string, unknown>,
       createdAt: new Date().toISOString(),
     })
 

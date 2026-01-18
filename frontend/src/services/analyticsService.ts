@@ -111,7 +111,7 @@ export class AnalyticsService {
    * 将后端API返回的数据适配为前端期望的 AnalyticsData 格式
    */
   private adaptApiDataToAnalyticsData(apiData: RawApiData): AnalyticsData {
-    serviceLogger.debug('Adapting API data to AnalyticsData format:', apiData);
+    serviceLogger.debug('Adapting API data to AnalyticsData format:', apiData as Record<string, unknown>);
 
     // 从 API 数据中提取 area_summary
     const rawAreaSummary = apiData.area_summary ?? apiData.data?.area_summary ?? {};
@@ -143,12 +143,12 @@ export class AnalyticsService {
     };
 
     // 提取分布数据（如果不存在则使用空数组）
-    const property_nature_distribution = apiData.property_nature_distribution ??
-                                         apiData.data?.property_nature_distribution ?? [];
-    const ownership_status_distribution = apiData.ownership_status_distribution ??
-                                          apiData.data?.ownership_status_distribution ?? [];
-    const usage_status_distribution = apiData.usage_status_distribution ??
-                                       apiData.data?.usage_status_distribution ?? [];
+    const property_nature_distribution = (apiData.property_nature_distribution ??
+                                         apiData.data?.property_nature_distribution ?? []) as AnalyticsData['property_nature_distribution'];
+    const ownership_status_distribution = (apiData.ownership_status_distribution ??
+                                          apiData.data?.ownership_status_distribution ?? []) as AnalyticsData['ownership_status_distribution'];
+    const usage_status_distribution = (apiData.usage_status_distribution ??
+                                       apiData.data?.usage_status_distribution ?? []) as AnalyticsData['usage_status_distribution'];
 
     // BusinessCategoryDistribution 需要 percentage 字段
     const rawBusinessCategories = apiData.business_category_distribution ??
@@ -156,24 +156,24 @@ export class AnalyticsService {
     const business_category_distribution = rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
       ...item,
       percentage: item.percentage ?? 0, // 确保有 percentage 字段
-    }));
+    })) as unknown as AnalyticsData['business_category_distribution'];
 
     // 提取趋势数据
-    const occupancy_trend = apiData.occupancy_trend ?? apiData.data?.occupancy_trend ?? [];
+    const occupancy_trend = (apiData.occupancy_trend ?? apiData.data?.occupancy_trend ?? []) as AnalyticsData['occupancy_trend'];
 
     // 提取面积分布数据
-    const property_nature_area_distribution = apiData.property_nature_area_distribution ??
-                                                apiData.data?.property_nature_area_distribution ?? [];
-    const ownership_status_area_distribution = apiData.ownership_status_area_distribution ??
-                                                 apiData.data?.ownership_status_area_distribution ?? [];
-    const usage_status_area_distribution = apiData.usage_status_area_distribution ??
-                                              apiData.data?.usage_status_area_distribution ?? [];
-    const business_category_area_distribution = apiData.business_category_area_distribution ??
-                                                   apiData.data?.business_category_area_distribution ?? [];
+    const property_nature_area_distribution = (apiData.property_nature_area_distribution ??
+                                                apiData.data?.property_nature_area_distribution ?? []) as AnalyticsData['property_nature_area_distribution'];
+    const ownership_status_area_distribution = (apiData.ownership_status_area_distribution ??
+                                                 apiData.data?.ownership_status_area_distribution ?? []) as AnalyticsData['ownership_status_area_distribution'];
+    const usage_status_area_distribution = (apiData.usage_status_area_distribution ??
+                                              apiData.data?.usage_status_area_distribution ?? []) as AnalyticsData['usage_status_area_distribution'];
+    const business_category_area_distribution = (apiData.business_category_area_distribution ??
+                                                   apiData.data?.business_category_area_distribution ?? []) as AnalyticsData['business_category_area_distribution'];
 
     // 提取出租率分布
-    const occupancy_distribution = apiData.occupancy_distribution ??
-                                    apiData.data?.occupancy_distribution ?? [];
+    const occupancy_distribution = (apiData.occupancy_distribution ??
+                                    apiData.data?.occupancy_distribution ?? []) as AnalyticsData['occupancy_distribution'];
 
     const adaptedData: AnalyticsData = {
       area_summary,

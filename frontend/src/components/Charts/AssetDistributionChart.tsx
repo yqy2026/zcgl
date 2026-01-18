@@ -77,7 +77,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   const propertyNatureChartConfig = {
     data: data?.by_property_nature?.map((item): DistributionDataPoint => ({
       type: item.property_nature,
-      value: item.count,
+      value: item.count ?? 0,
       percentage: item.percentage,
       total_area: item.total_area,
     })) ?? [],
@@ -118,7 +118,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   const ownershipStatusChartConfig = {
     data: data?.by_ownership_status?.map((item): DistributionDataPoint => ({
       type: item.ownership_status,
-      value: item.count,
+      value: item.count ?? 0,
       percentage: item.percentage,
     })) ?? [],
     angleField: 'value' as const,
@@ -152,7 +152,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   const usageStatusChartConfig = {
     data: data?.by_usage_status?.map((item): DistributionDataPoint => ({
       type: item.usage_status,
-      value: item.count,
+      value: item.count ?? 0,
       percentage: item.percentage,
     })) ?? [],
     angleField: 'value' as const,
@@ -182,10 +182,11 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       entity: item.ownership_entity.length > 8
         ? item.ownership_entity.substring(0, 8) + '...'
         : item.ownership_entity,
-      count: item.count,
+      count: item.count ?? 0,
       percentage: item.percentage,
       total_area: item.total_area,
       full_name: item.ownership_entity,
+      value: item.count ?? 0,
     })) ?? [],
     xField: 'entity' as const,
     yField: 'count' as const,

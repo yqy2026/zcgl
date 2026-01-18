@@ -136,7 +136,7 @@ class ResponseDetector {
  * 提供智能、类型安全的响应数据提取功能
  */
 export class ResponseExtractor {
-  private static readonly DEFAULT_OPTIONS: SmartExtractOptions = {
+  private static readonly DEFAULT_OPTIONS: SmartExtractOptions<unknown> = {
     detection: {
       successField: 'success',
       dataField: 'data',
@@ -158,7 +158,7 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options?: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const finalOptions = { ...this.DEFAULT_OPTIONS, ...options };
+    const finalOptions: SmartExtractOptions<T> = { ...this.DEFAULT_OPTIONS, ...options } as SmartExtractOptions<T>;
 
     try {
       // 获取响应数据
@@ -519,10 +519,16 @@ export class ApiErrorHandler {
     }
 
     // 其他错误
+    const errorMessage = (responseData?.message?.trim() !== '' && responseData?.message != null)
+      ? responseData.message
+      : ((error as Error)?.message?.trim() !== '' && (error as Error)?.message != null
+        ? (error as Error).message
+        : '未知错误');
+
     return {
       type: ApiErrorType.UNKNOWN_ERROR,
       code: 'UNKNOWN_ERROR',
-      message: (responseData?.message?.trim() !== '') ? responseData.message : ((error as Error)?.message?.trim() !== '' ? (error as Error).message : '未知错误'),
+      message: errorMessage,
       statusCode,
       timestamp: new Date().toISOString(),
       originalError: error

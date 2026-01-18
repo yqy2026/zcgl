@@ -196,6 +196,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       rate: item.rate,
       asset_count: item.asset_count,
       full_name: item.ownership_entity,
+      value: item.rate,
     })) ?? [],
     xField: 'ownership' as const,
     yField: 'rate' as const,

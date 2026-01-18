@@ -126,7 +126,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           current: response.page ?? prev.current,
           pageSize: response.size ?? prev.pageSize
         }));
-      } else if (response != null && 'data' in response && response.data?.items != null) {
+      } else if (response != null && 'data' in (response as Record<string, unknown>) && ((response as Record<string, unknown>).data as Record<string, unknown>)?.items != null) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
         const nestedResponse = response as NestedProjectListResponse;
         setProjects(nestedResponse.data.items ?? []);
@@ -147,7 +147,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items ?? ('data' in response && response.data?.items) ?? [];
+      const loadedProjects = response?.items ?? (('data' in (response as unknown as Record<string, unknown>) ? ((response as unknown as Record<string, unknown>).data as Record<string, unknown>)?.items as Project[] ?? [] : []));
       const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 

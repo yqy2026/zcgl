@@ -58,8 +58,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // 确保响应数据是数组
       const projects = Array.isArray(response)
         ? response
-        : (typeof response === 'object' && response != null && 'data' in response
-            ? Array.isArray(response.data) ? response.data : []
+        : (typeof response === 'object' && response != null && 'data' in (response as Record<string, unknown>)
+            ? Array.isArray((response as Record<string, unknown>).data) ? (response as Record<string, unknown>).data as ProjectDropdownOption[] : []
             : []);
 
       setProjectOptions(projects as ProjectDropdownOption[]);
