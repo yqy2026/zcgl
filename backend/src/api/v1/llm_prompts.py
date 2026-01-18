@@ -3,10 +3,10 @@ LLM Prompt管理API路由
 提供Prompt模板的CRUD操作和版本管理
 """
 
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ...core.middleware.auth import get_current_active_user
@@ -14,13 +14,12 @@ from ...database import get_db
 from ...models.auth import User
 from ...models.llm_prompt import PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import (
-    PromptTemplateCreate,
-    PromptTemplateUpdate,
-    PromptTemplateResponse,
-    PromptTemplateListResponse,
-    PromptVersionResponse,
-    PromptActivationRequest,
     PromptRollbackRequest,
+    PromptTemplateCreate,
+    PromptTemplateListResponse,
+    PromptTemplateResponse,
+    PromptTemplateUpdate,
+    PromptVersionResponse,
 )
 from ...services.llm_prompt.prompt_manager import PromptManager
 
@@ -78,9 +77,9 @@ def get_prompts(
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(10, ge=1, le=100, description="每页数量"),
-    doc_type: Optional[str] = Query(None, description="文档类型筛选"),
-    status: Optional[str] = Query(None, description="状态筛选"),
-    provider: Optional[str] = Query(None, description="提供商筛选"),
+    doc_type: str | None = Query(None, description="文档类型筛选"),
+    status: str | None = Query(None, description="状态筛选"),
+    provider: str | None = Query(None, description="提供商筛选"),
 ):
     """
     获取Prompt模板列表
@@ -300,7 +299,7 @@ async def collect_feedback(
     confidence_before: float,
     doc_type: str,
     file_path: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     user_action: str = "corrected",
 ):
     """
@@ -314,8 +313,8 @@ async def collect_feedback(
     - **corrected_value**: 用户修正后的值
     - **confidence_before**: 修正前的置信度
     """
+
     from ...models.llm_prompt import ExtractionFeedback
-    from sqlalchemy import select
 
     # 验证Prompt存在
     template = db.query(PromptTemplate).get(template_id)
@@ -348,4 +347,5 @@ async def collect_feedback(
 
 # 注册路由
 from ...core.router_registry import route_registry
+
 route_registry.register_router(router, prefix="/api/v1", tags=["LLM Prompts"], version="v1")
