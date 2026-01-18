@@ -204,6 +204,29 @@ class ErrorIDs:
         DECRYPTION_FAILED: Final[str] = "SECURITY_DECRYPTION_FAILED"
         SQL_INJECTION_ATTEMPT: Final[str] = "SECURITY_SQL_INJECTION_ATTEMPT"
         XSS_ATTEMPT: Final[str] = "SECURITY_XSS_ATTEMPT"
+        TOKEN_BLACKLIST_FAILED: Final[str] = "SECURITY_TOKEN_BLACKLIST_FAILED"
+
+    # ========================================================================
+    # Task Error IDs
+    # ========================================================================
+
+    class Task:
+        """Background task related error IDs"""
+
+        EXPORT_FAILED: Final[str] = "TASK_EXPORT_FAILED"
+        IMPORT_FAILED: Final[str] = "TASK_IMPORT_FAILED"
+        STATUS_UPDATE_FAILED: Final[str] = "TASK_STATUS_UPDATE_FAILED"
+
+    # ========================================================================
+    # Excel Error IDs
+    # ========================================================================
+
+    class Excel:
+        """Excel operation related error IDs"""
+
+        EXPORT_FAILED: Final[str] = "EXCEL_EXPORT_FAILED"
+        IMPORT_FAILED: Final[str] = "EXCEL_IMPORT_FAILED"
+        TEMPLATE_DOWNLOAD_ERROR: Final[str] = "EXCEL_TEMPLATE_DOWNLOAD_ERROR"
 
 
 # Legacy aliases for backward compatibility

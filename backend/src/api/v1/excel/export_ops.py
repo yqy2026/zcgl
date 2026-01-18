@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ....config.excel_config import STANDARD_SHEET_NAME
+from ....constants.errors.error_ids import ErrorIDs
 from ....core.api_errors import bad_request, not_found
 from ....crud.task import task_crud
 from ....database import get_db
@@ -246,22 +247,47 @@ async def _process_excel_export_async(
         db_session.commit()
 
     except Exception as e:
+        # 记录关键错误到监控系统
+        logger.critical(
+            f"异步Excel导出任务失败: task_id={task_id}",
+            exc_info=True,
+            extra={
+                "error_id": ErrorIDs.Task.EXPORT_FAILED,
+                "task_id": task_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
+
         # 更新任务失败状态
-        db_obj = task_crud.get(db=db_session, id=task_id)
-        if db_obj is not None:
-            task_crud.update(
-                db=db_session,
-                db_obj=db_obj,
-                obj_in=TaskUpdate(
-                    status=TaskStatus.FAILED,
-                    error_message=str(e),
-                    progress=0,
-                    processed_items=0,
-                    failed_items=0,
-                    result_data=None,
-                ),
+        try:
+            db_obj = task_crud.get(db=db_session, id=task_id)
+            if db_obj is not None:
+                task_crud.update(
+                    db=db_session,
+                    db_obj=db_obj,
+                    obj_in=TaskUpdate(
+                        status=TaskStatus.FAILED,
+                        error_message=str(e),
+                        progress=0,
+                        processed_items=0,
+                        failed_items=0,
+                        result_data=None,
+                    ),
+                )
+            db_session.commit()
+        except Exception as commit_error:
+            logger.error(
+                f"无法更新任务失败状态: task_id={task_id}",
+                exc_info=True,
+                extra={
+                    "error_id": ErrorIDs.Task.STATUS_UPDATE_FAILED,
+                    "task_id": task_id,
+                    "original_error": str(e),
+                    "commit_error": str(commit_error),
+                },
             )
-        db_session.commit()
+            # 不抛出异常 - 让原始异常传播
 
 
 @router.get("/download/{task_id}", summary="下载导出文件")
