@@ -4,7 +4,8 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -27,7 +28,7 @@ class OwnerType(str, Enum):
     JOINT = "joint"  # 共有
 
 
-class PropertyOwner(Base):
+class PropertyOwner(Base):  # type: ignore[valid-type, misc]
     """权利人表 - 支持个人、组织、共有权利人"""
 
     __tablename__ = "property_owners"
