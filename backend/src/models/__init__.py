@@ -63,6 +63,12 @@ from .rent_contract import (  # noqa: F401
     ServiceFeeLedger,
     rent_contract_assets,
 )
+from .property_certificate import (  # noqa: F401
+    CertificateType,
+    OwnerType,
+    PropertyCertificate,
+    PropertyOwner,
+)
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 
 __all__ = [
@@ -117,6 +123,11 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationPriority",
+    # Property Certificate models
+    "CertificateType",
+    "OwnerType",
+    "PropertyCertificate",
+    "PropertyOwner",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",
