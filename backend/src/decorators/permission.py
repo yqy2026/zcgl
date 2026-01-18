@@ -3,8 +3,10 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from sqlalchemy.orm import Session
+
+from ..core.api_errors import unauthorized, forbidden, internal_error
 
 from ..database import get_db
 from ..exceptions import BusinessLogicError
@@ -51,17 +53,12 @@ def permission_required(
             # 获取当前用户
             current_user = kwargs.get("current_user")
             if not current_user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="未认证用户"
-                )
+                raise unauthorized("未认证用户")
 
             # 获取数据库会话
             db = kwargs.get("db")
             if not db:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="数据库会话未找到",
-                )
+                raise internal_error("数据库会话未找到")
 
             try:
                 # 初始化RBAC服务
@@ -88,10 +85,7 @@ def permission_required(
                     logger.warning(
                         f"用户 {current_user.username} 尝试访问未授权资源: {resource}:{action}"
                     )
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"权限不足，需要 {resource}:{action} 权限",
-                    )
+                    raise forbidden(f"权限不足，需要 {resource}:{action} 权限")
 
                 logger.info(
                     f"用户 {current_user.username} 权限验证通过: {resource}:{action}"
@@ -105,15 +99,10 @@ def permission_required(
                 raise
             except BusinessLogicError as e:
                 logger.error(f"权限验证业务逻辑错误: {str(e)}")
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail=str(e)
-                )
+                raise forbidden(str(e))
             except Exception as e:
                 logger.error(f"权限验证系统错误: {str(e)}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="权限验证失败",
-                )
+                raise internal_error("权限验证失败")
 
         return wrapper
 
@@ -140,19 +129,14 @@ def role_required(role_code: str) -> Callable[[Callable[..., Any]], Callable[...
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             current_user = kwargs.get("current_user")
             if not current_user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="未认证用户"
-                )
+                raise unauthorized("未认证用户")
 
             # 检查用户是否具有指定角色
             user_roles = (
                 [role.code for role in current_user.roles] if current_user.roles else []
             )
             if role_code not in user_roles:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"权限不足，需要 {role_code} 角色",
-                )
+                raise forbidden(f"权限不足，需要 {role_code} 角色")
 
             return await func(*args, **kwargs)
 
@@ -176,16 +160,11 @@ def organization_required(
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             current_user = kwargs.get("current_user")
             if not current_user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="未认证用户"
-                )
+                raise unauthorized("未认证用户")
 
             db = kwargs.get("db")
             if not db:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="数据库会话未找到",
-                )
+                raise internal_error("数据库会话未找到")
 
             # 获取目标组织ID
             target_org_id = kwargs.get(organization_id_param)
@@ -199,10 +178,7 @@ def organization_required(
             )
 
             if not has_access:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="权限不足，无法访问该组织资源",
-                )
+                raise forbidden("权限不足，无法访问该组织资源")
 
             return await func(*args, **kwargs)
 
@@ -223,9 +199,7 @@ def get_current_user_with_permissions(
         current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
     ) -> User:
         if not current_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="未认证用户"
-            )
+            raise unauthorized("未认证用户")
 
         rbac_service = RBACService(db)
         user_id_value: str = getattr(current_user, "id", "")
@@ -234,10 +208,7 @@ def get_current_user_with_permissions(
         )
 
         if not has_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"权限不足，需要 {resource}:{action} 权限",
-            )
+            raise forbidden(f"权限不足，需要 {resource}:{action} 权限")
 
         return current_user
 

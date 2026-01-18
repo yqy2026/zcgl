@@ -8,7 +8,9 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import status
+
+from .api_errors import not_found
 
 
 def is_debug_mode() -> bool:
@@ -33,10 +35,7 @@ def debug_only(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not is_debug_mode():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Not Found",  # 故意模糊响应，不暴露端点存在
-            )
+            raise not_found("Not Found")  # 故意模糊响应，不暴露端点存在
         return await func(*args, **kwargs)
 
     return wrapper
@@ -51,9 +50,7 @@ def require_debug_mode(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not is_debug_mode():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Not Found"
-            )
+            raise not_found("Not Found")
         return func(*args, **kwargs)
 
     return wrapper

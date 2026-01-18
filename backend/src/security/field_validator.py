@@ -23,7 +23,7 @@ Usage:
 import logging
 from typing import Any
 
-from fastapi import HTTPException
+from ..core.api_errors import bad_request
 
 from ..crud.field_whitelist import get_whitelist_for_model
 from ..models.asset import Asset
@@ -111,13 +111,12 @@ class FieldValidator:
                 f"Blocked attempt to filter on unauthorized fields: {invalid_fields} "
                 f"for model {model_name}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail={
+            raise bad_request(
+                f"不允许查询字段: {', '.join(invalid_fields)}。"
+                "请检查 API 文档了解允许的过滤字段。",
+                details={
                     "error": "Invalid filter fields",
                     "invalid_fields": invalid_fields,
-                    "message": f"不允许查询字段: {', '.join(invalid_fields)}。"
-                               "请检查 API 文档了解允许的过滤字段。"
                 }
             )
 
@@ -162,12 +161,11 @@ class FieldValidator:
                 f"Blocked attempt to search on unauthorized fields: {invalid_fields} "
                 f"for model {model_name}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail={
+            raise bad_request(
+                f"不允许搜索字段: {', '.join(invalid_fields)}",
+                details={
                     "error": "Invalid search fields",
                     "invalid_fields": invalid_fields,
-                    "message": f"不允许搜索字段: {', '.join(invalid_fields)}"
                 }
             )
 
@@ -203,12 +201,11 @@ class FieldValidator:
                 f"Blocked attempt to sort on unauthorized field: {field} "
                 f"for model {model_name}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail={
+            raise bad_request(
+                f"不允许按字段排序: {field}",
+                field=field,
+                details={
                     "error": "Invalid sort field",
-                    "field": field,
-                    "message": f"不允许按字段排序: {field}"
                 }
             )
 
@@ -247,13 +244,12 @@ class FieldValidator:
                 f"Blocked attempt to group by unauthorized field: {field} "
                 f"for model {model_name}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail={
+            raise bad_request(
+                f"不允许按字段分组: {field}。"
+                "请检查 API 文档了解允许的分组字段。",
+                field=field,
+                details={
                     "error": "Invalid group_by field",
-                    "field": field,
-                    "message": f"不允许按字段分组: {field}。"
-                               "请检查 API 文档了解允许的分组字段。"
                 }
             )
 

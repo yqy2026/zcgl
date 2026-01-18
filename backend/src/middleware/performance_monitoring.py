@@ -10,8 +10,10 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-from fastapi import HTTPException, Request, Response
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+from ..core.api_errors import bad_request
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,8 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         # 请求频率检查
         if not await self._check_rate_limit(client_ip):
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
-            raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
+            raise bad_request("请求过于频繁，请稍后再试")
+
 
         # 记录请求
         await self._record_request(path)

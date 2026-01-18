@@ -1,7 +1,8 @@
 from typing import Any
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
+from ...core.api_errors import validation_error
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.asset import asset_crud
@@ -59,8 +60,8 @@ class AssetService:
         validation_service = get_enum_validation_service(self.db)
         is_valid, errors = validation_service.validate_asset_data(asset_in.model_dump())
         if not is_valid:
-            raise HTTPException(
-                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            raise validation_error(
+                f"枚举值验证失败: {'; '.join(errors)}", field_errors=errors
             )
 
         # 2. 名称查重
@@ -77,10 +78,10 @@ class AssetService:
         calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
         final_data = {**asset_data, **calculated_fields}
 
-        errors = AssetCalculator.validate_area_consistency(final_data)
-        if errors:
-            raise HTTPException(
-                status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
+        area_errors = AssetCalculator.validate_area_consistency(final_data)
+        if area_errors:
+            raise validation_error(
+                f"数据验证失败: {'; '.join(area_errors)}", field_errors=area_errors
             )
 
         enhanced_asset_in = AssetCreate(**final_data)
@@ -105,10 +106,10 @@ class AssetService:
         validation_service = get_enum_validation_service(self.db)
         # only validate fields that are present
         update_data_raw = asset_in.model_dump(exclude_unset=True)
-        is_valid, errors = validation_service.validate_asset_data(update_data_raw)
+        is_valid, enum_errors = validation_service.validate_asset_data(update_data_raw)
         if not is_valid:
-            raise HTTPException(
-                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            raise validation_error(
+                f"枚举值验证失败: {'; '.join(enum_errors)}", field_errors=enum_errors
             )
 
         # 3. 名称查重 (如果修改了名称)
@@ -137,10 +138,10 @@ class AssetService:
         merged_data = {**current_data, **update_data_raw}
         calculated_data = AssetCalculator.auto_calculate_fields(merged_data)
 
-        errors = AssetCalculator.validate_area_consistency(calculated_data)
-        if errors:
-            raise HTTPException(
-                status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
+        area_errors = AssetCalculator.validate_area_consistency(calculated_data)
+        if area_errors:
+            raise validation_error(
+                f"数据验证失败: {'; '.join(area_errors)}", field_errors=area_errors
             )
 
         # 合并计算字段到更新数据

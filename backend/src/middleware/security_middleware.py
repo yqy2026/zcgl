@@ -10,10 +10,12 @@ import logging
 import time
 from collections import defaultdict
 
-from fastapi import HTTPException, Request, Response, status
+from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
+from ..core.api_errors import forbidden, bad_request
 
 from ..constants.errors.messages import ErrorMessages
 from ..constants.http.methods import HTTPMethods
@@ -91,20 +93,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             # 检查IP是否被封禁
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ErrorMessages.IP_BLOCKED,
-                )
+                raise forbidden(ErrorMessages.IP_BLOCKED)
 
             # 请求频率限制
             if not self._check_rate_limit(client_ip, request):
                 await self._log_blocked_request(
                     request, client_ip, "RATE_LIMIT_EXCEEDED"
                 )
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=ErrorMessages.RATE_LIMIT_EXCEEDED,
-                )
+                raise bad_request(ErrorMessages.RATE_LIMIT_EXCEEDED)
 
             # 请求内容验证
             await self._validate_request_content(request)
