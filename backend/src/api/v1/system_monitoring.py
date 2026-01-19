@@ -21,9 +21,11 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
+
+from ...core.api_errors import internal_error, not_found, service_unavailable
 
 if TYPE_CHECKING:
     from src.database import DatabaseManager
@@ -269,7 +271,7 @@ def collect_system_metrics() -> SystemMetrics:
         return metrics
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"收集系统指标失败: {str(e)}")
+        raise internal_error(f"收集系统指标失败: {str(e)}")
 
 
 def collect_application_metrics() -> ApplicationMetrics:
@@ -294,7 +296,7 @@ def collect_application_metrics() -> ApplicationMetrics:
         return metrics
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"收集应用指标失败: {str(e)}")
+        raise internal_error(f"收集应用指标失败: {str(e)}")
 
 
 def check_component_health() -> dict[str, dict[str, Any]]:
@@ -753,7 +755,9 @@ async def resolve_alert(
             alert.resolved = True
             return {"message": f"告警 {alert_id} 已标记为解决", "success": True}
 
-    raise HTTPException(status_code=404, detail=f"告警 {alert_id} 未找到")
+    raise not_found(
+        f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id
+    )
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
@@ -851,7 +855,7 @@ async def get_database_health_metrics(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         # 获取健康检查结果
         health_check = db_manager.run_health_check()
@@ -900,10 +904,10 @@ async def get_database_health_metrics(
             health_score=health_score,
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取数据库健康指标失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取数据库健康指标失败: {str(e)}")
 
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
@@ -921,7 +925,7 @@ async def get_slow_queries(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         slow_queries = db_manager.get_slow_queries(limit=limit)
 
@@ -932,10 +936,10 @@ async def get_slow_queries(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取慢查询失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取慢查询失败: {str(e)}")
 
 
 @router.post(
@@ -961,7 +965,7 @@ async def optimize_database(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         # 记录优化前的指标
         before_metrics = db_manager.get_metrics()
@@ -1008,10 +1012,10 @@ async def optimize_database(
             },
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据库优化失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"数据库优化失败: {str(e)}")
 
 
 @router.post("/database/cleanup", summary="清理数据库过期数据")
@@ -1035,7 +1039,7 @@ async def cleanup_database(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         cleaned_count: int = db_manager.cleanup_old_sessions(days=days)
 
@@ -1046,10 +1050,10 @@ async def cleanup_database(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据库清理失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"数据库清理失败: {str(e)}")
 
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
@@ -1068,7 +1072,7 @@ async def get_connection_pool_status(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
@@ -1085,7 +1089,65 @@ async def get_connection_pool_status(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取连接池状态失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取连接池状态失败: {str(e)}")
+
+
+@router.get("/encryption-status", summary="获取加密状态")
+async def get_encryption_status(
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
+) -> dict[str, Any]:
+    """
+    获取数据加密系统状态
+
+    返回加密系统的配置和状态信息，包括:
+    - 加密是否启用
+    - 加密算法
+    - 保护的字段列表
+    - 密钥版本
+
+    需要 system_monitoring 读取权限
+    """
+    try:
+        from ...core.encryption import EncryptionKeyManager
+
+        # 初始化密钥管理器
+        key_manager = EncryptionKeyManager()
+
+        # 获取加密状态
+        encryption_enabled = key_manager.is_available()
+
+        # PII 字段列表（来自各模型）
+        protected_fields = {
+            "Organization": ["id_card", "phone", "leader_phone", "emergency_phone"],
+            "RentContract": ["owner_phone", "tenant_phone"],
+            "Contact": ["phone", "office_phone"],
+            "Asset": ["project_phone"],
+        }
+
+        total_protected_fields = sum(
+            len(fields) for fields in protected_fields.values()
+        )
+
+        response = {
+            "encryption_enabled": encryption_enabled,
+            "encryption_algorithm": "AES-256-CBC (deterministic) / AES-256-GCM (standard)",
+            "key_version": key_manager.get_version() if encryption_enabled else None,
+            "protected_fields": protected_fields,
+            "total_protected_fields": total_protected_fields,
+            "status": "active" if encryption_enabled else "disabled",
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        if not encryption_enabled:
+            response["warning"] = (
+                "数据加密未启用。敏感数据（PII）将以明文存储。"
+                "强烈建议设置 DATA_ENCRYPTION_KEY 环境变量以保护敏感信息。"
+            )
+
+        return response
+
+    except Exception as e:
+        raise internal_error(f"获取加密状态失败: {str(e)}")

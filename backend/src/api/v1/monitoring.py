@@ -10,10 +10,11 @@ import logging
 from datetime import datetime
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error
 from ...database import get_db
 from ...decorators.permission import permission_required
 from ...middleware.auth import get_current_user
@@ -102,7 +103,7 @@ async def report_route_performance(
 
     except Exception as e:
         logger.error(f"保存性能指标失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="性能指标保存失败")
+        raise internal_error("性能指标保存失败")
 
 
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)
@@ -126,7 +127,7 @@ async def get_system_health() -> HealthCheck:
 
     except Exception as e:
         logger.error(f"获取系统健康状态失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取系统健康状态失败")
+        raise internal_error("获取系统健康状态失败")
 
 
 @router.get("/performance/dashboard", summary="获取性能监控仪表板数据")
@@ -172,7 +173,7 @@ async def get_performance_dashboard() -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"获取仪表板数据失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取仪表板数据失败")
+        raise internal_error("获取仪表板数据失败")
 
 
 # === 新增系统监控API ===
@@ -288,7 +289,7 @@ def collect_system_metrics() -> SystemMetrics:
 
     except Exception as e:
         logger.error(f"收集系统指标失败: {e}")
-        raise HTTPException(status_code=500, detail=f"收集系统指标失败: {str(e)}")
+        raise internal_error(f"收集系统指标失败: {str(e)}")
 
 
 def collect_application_metrics() -> ApplicationMetrics:
@@ -314,7 +315,7 @@ def collect_application_metrics() -> ApplicationMetrics:
 
     except Exception as e:
         logger.error(f"收集应用指标失败: {e}")
-        raise HTTPException(status_code=500, detail=f"收集应用指标失败: {str(e)}")
+        raise internal_error(f"收集应用指标失败: {str(e)}")
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
@@ -449,7 +450,7 @@ async def get_system_monitoring_dashboard(
 
     except Exception as e:
         logger.error(f"获取监控仪表板数据失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取监控仪表板数据失败: {str(e)}")
+        raise internal_error(f"获取监控仪表板数据失败: {str(e)}")
 
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
@@ -471,4 +472,4 @@ async def trigger_metrics_collection(
 
     except Exception as e:
         logger.error(f"手动指标收集失败: {e}")
-        raise HTTPException(status_code=500, detail=f"手动指标收集失败: {str(e)}")
+        raise internal_error(f"手动指标收集失败: {str(e)}")

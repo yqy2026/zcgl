@@ -6,10 +6,11 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.rbac import permission_crud, role_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_admin
@@ -134,9 +135,7 @@ async def get_roles(
             pages=pages,
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise internal_error(str(e))
 
 
 @router.post(
@@ -167,9 +166,9 @@ async def create_role(
 
         return RoleDetailResponse.model_validate(new_role)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.get("/{role_id}", response_model=RoleDetailResponse, summary="获取角色详情")
@@ -183,17 +182,13 @@ async def get_role(
         role = role_crud.get(db, id=role_id)
 
         if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在"
-            )
+            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
 
         return RoleDetailResponse.model_validate(role)
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(str(e))
 
 
 @router.put("/{role_id}", response_model=RoleDetailResponse, summary="更新角色")
@@ -220,10 +215,10 @@ async def update_role(
         return RoleDetailResponse.model_validate(updated_role)
     except ValueError as e:
         if "不存在" in str(e):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise not_found(str(e), resource_type="role", resource_id=role_id)
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, summary="删除角色")
@@ -244,13 +239,11 @@ async def delete_role(
         )
 
         if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在"
-            )
+            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 # ==================== 权限管理端点 ====================
@@ -281,9 +274,7 @@ async def get_all_permissions(
             "total": len(permissions),
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise internal_error(str(e))
 
 
 @router.put(
@@ -321,10 +312,10 @@ async def set_role_permissions(
         }
     except ValueError as e:
         if "不存在" in str(e):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise not_found(str(e), resource_type="role", resource_id=role_id)
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 # ==================== 角色用户关联端点 ====================
@@ -347,9 +338,7 @@ async def get_role_users(
         role = role_crud.get(db, id=role_id)
 
         if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在"
-            )
+            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
 
         from ...crud.auth import UserCRUD
         # Assuming UserCRUD is compatible or we should use UserRoleAssignmentCRUD?
@@ -374,12 +363,10 @@ async def get_role_users(
             ],
             total=total,
         )
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(str(e))
 
 
 # ==================== 统计端点 ====================
@@ -414,6 +401,4 @@ async def get_role_statistics(
             },
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise internal_error(str(e))

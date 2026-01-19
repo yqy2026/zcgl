@@ -11,3 +11,9 @@
 
 # React Router
 /.react-router/
+
+# Test coverage
+/coverage/
+
+# Lint output
+lint_output.txt

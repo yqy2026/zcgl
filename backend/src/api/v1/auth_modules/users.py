@@ -8,8 +8,10 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
+from ....core.api_errors import bad_request, forbidden, internal_error, not_found
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +92,7 @@ async def create_user(
         user = user_crud.create(db, user_data)
         return UserResponse.model_validate(user)
     except BusinessLogicError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.get("/{user_id}", response_model=UserResponse, summary="获取用户详情")
@@ -109,13 +111,11 @@ async def get_user(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该用户信息"
-        )
+        raise forbidden("无权访问该用户信息")
 
     user = user_crud.get(db, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     return UserResponse.model_validate(user)
 
@@ -138,20 +138,16 @@ async def update_user(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户信息"
-        )
+        raise forbidden("无权修改该用户信息")
 
     try:
         existing_user = user_crud.get(db, str(user_id))
         if not existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
-            )
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
         user = user_crud.update(db, existing_user, user_data)
         return UserResponse.model_validate(user)
     except BusinessLogicError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/change-password", summary="修改密码")
@@ -173,13 +169,11 @@ async def change_password(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户密码"
-        )
+        raise forbidden("无权修改该用户密码")
 
     user = user_crud.get(db, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     try:
         success = auth_service.change_password(  # type: ignore[no-untyped-call]
@@ -190,11 +184,9 @@ async def change_password(
         if success:
             return {"message": "密码修改成功"}
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="密码修改失败"
-            )
+            raise internal_error("密码修改失败")
     except BusinessLogicError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/deactivate", summary="停用用户")
@@ -218,7 +210,7 @@ async def deactivate_user(
     else:
         success = False
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     return {"message": "用户已停用"}
 
@@ -239,7 +231,7 @@ async def activate_user(
 
     success = auth_service.activate_user(user_id)  # type: ignore[no-untyped-call]
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     return {"message": "用户已激活"}
 
@@ -263,9 +255,7 @@ async def lock_user(
         user = user_crud.get(db, user_id)
 
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
-            )
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         setattr(user, "is_locked", True)
         setattr(user, "updated_at", datetime.now(UTC))
@@ -285,11 +275,11 @@ async def lock_user(
         )
 
         return {"success": True, "message": f"用户 {user.username} 已锁定"}
-    except HTTPException:
-        raise
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/unlock", summary="解锁用户账户")
@@ -311,9 +301,7 @@ async def unlock_user_account(
         user = user_crud.get(db, user_id)
 
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
-            )
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         setattr(user, "is_locked", False)
         setattr(user, "updated_at", datetime.now(UTC))
@@ -333,11 +321,11 @@ async def unlock_user_account(
         )
 
         return {"success": True, "message": f"用户 {user.username} 已解锁"}
-    except HTTPException:
-        raise
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/reset-password", summary="重置用户密码")
@@ -373,9 +361,7 @@ async def reset_user_password(
 
         user = user_crud.get(db, user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
-            )
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         # 设置新密码
         setattr(
@@ -404,11 +390,11 @@ async def reset_user_password(
             "message": f"用户 {user.username} 密码已重置",
             "user_id": user_id,
         }
-    except HTTPException:
-        raise
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.get(
@@ -444,6 +430,4 @@ async def get_user_statistics(
             },
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise internal_error(str(e))

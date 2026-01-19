@@ -4,9 +4,10 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.custom_field import custom_field_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -58,7 +59,7 @@ async def get_custom_fields(
         return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取自定义字段列表失败: {str(e)}")
+        raise internal_error(f"获取自定义字段列表失败: {str(e)}")
 
 
 @router.get(
@@ -79,13 +80,17 @@ async def get_custom_field(
 
         field: AssetCustomField | None = custom_field_crud.get(db=db, id=field_id)
         if not field:
-            raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
+            )
         return field
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取自定义字段详情失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取自定义字段详情失败: {str(e)}")
 
 
 @router.post(
@@ -109,11 +114,11 @@ async def create_custom_field(
         return field
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建自定义字段失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"创建自定义字段失败: {str(e)}")
 
 
 @router.put(
@@ -139,12 +144,12 @@ async def update_custom_field(
 
     except ValueError as e:
         if "不存在" in str(e) and "已存在" not in str(e):
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
+            raise not_found(str(e), resource_type="custom_field")
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新自定义字段失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"更新自定义字段失败: {str(e)}")
 
 
 @router.delete("/{field_id}", summary="删除自定义字段")
@@ -163,11 +168,11 @@ async def delete_custom_field(
         return {"message": f"字段 {field_id} 已成功删除"}
 
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except HTTPException:
-        raise
+        raise not_found(str(e), resource_type="custom_field", resource_id=field_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除自定义字段失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"删除自定义字段失败: {str(e)}")
 
 
 @router.post("/validate", summary="验证自定义字段值")
@@ -187,7 +192,11 @@ async def validate_custom_field_value(
         # 获取字段配置
         field = custom_field_crud.get(db=db, id=field_id)
         if not field:
-            raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
+            )
 
         # 验证字段值 (使用Service)
         is_valid, error_message = custom_field_service.validate_field_value(
@@ -199,10 +208,10 @@ async def validate_custom_field_value(
         else:
             return {"valid": False, "error": error_message}
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"验证字段值失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"验证字段值失败: {str(e)}")
 
 
 @router.get("/types/list[Any]", summary="获取字段类型列表")
@@ -230,7 +239,7 @@ async def get_field_types(
         return {"field_types": field_types}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取字段类型失败: {str(e)}")
+        raise internal_error(f"获取字段类型失败: {str(e)}")
 
 
 # 资产自定义字段值相关接口
@@ -250,9 +259,7 @@ async def get_asset_custom_field_values(
         return {"asset_id": asset_id, "values": values}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"获取资产自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"获取资产自定义字段值失败: {str(e)}")
 
 
 @router.put("/assets/{asset_id}/values", summary="更新资产自定义字段值")
@@ -275,11 +282,9 @@ async def update_asset_custom_field_values(
         return {"asset_id": asset_id, "values": updated_values}
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"更新资产自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"更新资产自定义字段值失败: {str(e)}")
 
 
 @router.post("/assets/batch-values", summary="批量设置自定义字段值")
@@ -318,6 +323,4 @@ async def batch_set_custom_field_values(
         return {"results": results}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"批量设置自定义字段值失败: {str(e)}"
-        )
+        raise internal_error(f"批量设置自定义字段值失败: {str(e)}")

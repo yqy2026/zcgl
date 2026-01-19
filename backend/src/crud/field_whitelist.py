@@ -327,24 +327,6 @@ def get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
 # ============================================================================
 
 
-class PermissiveWhitelist(ModelFieldWhitelist):
-    """
-    Temporary permissive whitelist for backward compatibility.
-
-    WARNING: This allows ALL fields. Use only during migration.
-    TODO: Remove after all models have explicit whitelists.
-    """
-
-    def can_filter(self, field_name: str) -> bool:
-        return True  # Temporary: allow all
-
-    def can_search(self, field_name: str) -> bool:
-        return True  # Temporary: allow all
-
-    def can_sort(self, field_name: str) -> bool:
-        return True  # Temporary: allow all
-
-
 class EmptyWhitelist(ModelFieldWhitelist):
     """
     Strict whitelist that denies all fields.

@@ -19,8 +19,9 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
+from ...core.api_errors import internal_error
 from ...core.performance import PerformanceMonitor
 from ...core.route_guards import debug_only
 from ...schemas.pdf_import import SystemCapabilities, SystemInfoResponse
@@ -68,7 +69,7 @@ async def get_system_info() -> SystemInfoResponse:
         import traceback
 
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
+        raise internal_error(f"获取系统信息失败: {str(e)}")
 
 
 @router.get("/test_system")

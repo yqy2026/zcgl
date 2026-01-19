@@ -26,11 +26,11 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     UploadFile,
 )
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
@@ -90,7 +90,7 @@ async def upload_pdf_file(
                 error=error_result["suggested_action"],
             )
         else:
-            raise HTTPException(status_code=400, detail="只支持PDF文件上传")
+            raise bad_request("只支持PDF文件上传")
 
     # 验证并保存文件大小（流式处理，避免内存耗尽）
     max_size = (
@@ -134,9 +134,8 @@ async def upload_pdf_file(
                             error=error_result["suggested_action"],
                         )
                     else:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"文件大小超过限制({max_size // (1024 * 1024)}MB)",
+                        raise bad_request(
+                            f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
                         )
                 temp_file.write(chunk)
 
@@ -159,7 +158,7 @@ async def upload_pdf_file(
                 error=error_result["suggested_action"],
             )
         else:
-            raise HTTPException(status_code=500, detail=f"文件处理失败: {str(e)}")
+            raise internal_error(f"文件处理失败: {str(e)}")
 
     # 创建会话
     processing_options = {
@@ -230,7 +229,7 @@ async def upload_pdf_file(
                 session_id=session.session_id,
             )
         else:
-            raise HTTPException(status_code=500, detail=f"PDF处理失败: {str(e)}")
+            raise internal_error(f"PDF处理失败: {str(e)}")
 
     # 返回优化后的结果
     if process_result["success"]:
@@ -277,15 +276,13 @@ async def upload_and_extract_pdf_v1_compatible(
 
     # 验证文件类型
     if not file.content_type == "application/pdf":
-        raise HTTPException(status_code=400, detail="只支持PDF文件上传")
+        raise bad_request("只支持PDF文件上传")
 
     # 验证文件大小（50MB限制）
     max_size = 50 * 1024 * 1024  # 50MB
     file_content = await file.read()
     if len(file_content) > max_size:
-        raise HTTPException(
-            status_code=400, detail=f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-        )
+        raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
 
     if pdf_processing_service is None:
         return ExtractionResponse(

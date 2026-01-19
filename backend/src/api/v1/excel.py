@@ -2,7 +2,35 @@ from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 """
-Excel导入导出API路由 - 增强版，支持任务管理和状态跟踪
+Excel导入导出API路由模块 / Excel Import/Export API Routes
+
+🏷️ MODULE_TYPE: API_ROUTES
+🎯 LAYER: API (Presentation Layer)
+📋 ARCHITECTURE: ✅ Compliant (Delegates to Service Layer)
+✅ DELEGATES_TO: services/excel/ (ExcelImportService, ExcelExportService, ExcelTemplateService)
+
+增强版Excel导入导出API，支持任务管理和状态跟踪
+
+职责 / Responsibilities:
+- 定义Excel导入导出相关的HTTP端点
+- 文件上传验证和安全检查
+- 委托导入/导出逻辑给ExcelService层
+- 异步任务管理和状态跟踪
+
+不包含 / Does NOT Contain:
+- ❌ Excel文件解析逻辑 (No Excel Parsing Logic)
+- ❌ 数据验证规则 (No Data Validation Rules)
+- ❌ 业务逻辑实现 (No Business Logic)
+
+端点分组 / Endpoint Groups:
+- 模板管理: GET /excel/template
+- 预览功能: POST /excel/preview, POST /excel/preview/advanced
+- 导入功能: POST /excel/import, POST /excel/import/async
+- 导出功能: GET /excel/export, POST /excel/export/async
+- 配置管理: GET/POST/PUT/DELETE /excel/configs/*
+
+注意 / Note:
+此文件较大(1000+ lines)，包含多个相关端点。建议未来重构为多个子模块。
 """
 
 # 标准库导入
@@ -20,7 +48,6 @@ from fastapi import (
     Body,
     Depends,
     File,
-    HTTPException,
     Query,
     UploadFile,
 )
@@ -28,6 +55,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...config.excel_config import STANDARD_SHEET_NAME
+from ...core.api_errors import bad_request, not_found
 from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
 from ...core.route_guards import debug_only
@@ -155,7 +183,11 @@ async def get_default_excel_config(
         db=db, config_type=config_type, task_type=task_type
     )
     if not config:
-        raise HTTPException(status_code=404, detail="未找到默认配置")
+        raise not_found(
+            "未找到默认配置",
+            resource_type="excel_config",
+            resource_id=f"{config_type}_{task_type}",
+        )
     return config
 
 
@@ -170,7 +202,9 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
     return config
 
 
@@ -188,7 +222,9 @@ async def update_excel_config(
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
 
     updated_config = excel_task_config_crud.update(
         db=db, db_obj=config, obj_in=config_in
@@ -819,10 +855,10 @@ async def download_export_file(
     # 获取任务信息
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
 
     if task.status != TaskStatus.COMPLETED:
-        raise HTTPException(status_code=400, detail="任务尚未完成")
+        raise bad_request("任务尚未完成")
 
     # 获取文件信息
     result_data_raw = task.result_data if task.result_data else {}
@@ -833,7 +869,9 @@ async def download_export_file(
     file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
     if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="导出文件不存在")
+        raise not_found(
+            "导出文件不存在", resource_type="file", resource_id=str(file_path)
+        )
 
     # 返回文件流
     def file_iter() -> Generator[bytes, None, None]:
@@ -861,7 +899,7 @@ async def get_excel_task_status(
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
 
     # Extract values from Column objects - use getattr to get actual values
     task_id_val = str(getattr(task, "id", ""))

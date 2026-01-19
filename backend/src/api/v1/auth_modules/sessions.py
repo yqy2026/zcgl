@@ -4,9 +4,10 @@
 包含: 会话查询、会话撤销
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from ....core.api_errors import internal_error, not_found
 from ....crud.auth import UserSessionCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -40,13 +41,11 @@ async def revoke_session(
     # 获取会话记录
     session = session_crud.get(db, session_id)
     if not session or str(session.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
+        raise not_found("会话不存在", resource_type="session", resource_id=session_id)
 
     # 使用refresh_token撤销会话（API修复：传递refresh_token而非session_id）
     success = auth_service.revoke_session(session.refresh_token)  # type: ignore[no-untyped-call]
     if success:
         return {"message": "会话已撤销"}
     else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="撤销会话失败"
-        )
+        raise internal_error("撤销会话失败")

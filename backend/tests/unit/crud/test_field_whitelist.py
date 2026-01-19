@@ -13,7 +13,6 @@ from src.crud.field_whitelist import (
     AssetWhitelist,
     EmptyWhitelist,
     OwnershipWhitelist,
-    PermissiveWhitelist,
     RentContractWhitelist,
     get_whitelist_for_model,
     register_whitelist,
@@ -197,23 +196,6 @@ class TestOwnershipWhitelist:
         assert not whitelist.can_filter("updated_by")
         assert not whitelist.can_search("created_by")
         assert not whitelist.can_sort("created_by")
-
-
-class TestPermissiveWhitelist:
-    """Test permissive whitelist (backward compatibility)."""
-
-    def test_allows_all_fields_temporarily(self):
-        """Permissive whitelist allows all fields."""
-        whitelist = PermissiveWhitelist()
-
-        assert whitelist.can_filter("any_field")
-        assert whitelist.can_search("any_field")
-        assert whitelist.can_sort("any_field")
-
-        # Even sensitive fields
-        assert whitelist.can_filter("manager_name")
-        assert whitelist.can_filter("monthly_rent")
-        assert whitelist.can_search("tenant_name")
 
 
 class TestEmptyWhitelist:

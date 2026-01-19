@@ -24,9 +24,10 @@ except ImportError:
     magic = None
     MAGIC_AVAILABLE = False
     logger.warning("python-magic模块不可用，文件类型检测功能将受限")
-from fastapi import Depends, HTTPException, Request, UploadFile, status
+from fastapi import Depends, Request, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from ..core.api_errors import bad_request, forbidden
 from ..core.config import get_config
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
@@ -561,16 +562,11 @@ class SecurityMiddleware:
 
         # 检查IP黑名单
         if self._is_ip_blacklisted(client_ip):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁"
-            )
+            raise forbidden("IP地址已被封禁")
 
         # 检查请求频率限制
         if not self.rate_limiter.check_rate_limit(client_ip):
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="请求过于频繁，请稍后重试",
-            )
+            raise bad_request("请求过于频繁，请稍后重试")
 
         # 检查User-Agent
         user_agent = request.headers.get("User-Agent", "")

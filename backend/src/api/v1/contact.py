@@ -4,9 +4,10 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import internal_error, not_found
 from ...crud.contact import contact_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -44,7 +45,7 @@ def create_contact(
         contact = contact_crud.create(db=db, obj_in=contact_data)
         return contact
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建联系人失败: {str(e)}")
+        raise internal_error(f"创建联系人失败: {str(e)}")
 
 
 @router.get("/{contact_id}", response_model=ContactResponse, summary="获取联系人详情")
@@ -56,7 +57,7 @@ def get_contact(
     """获取联系人详情"""
     contact = contact_crud.get(db, id=contact_id)
     if not contact:
-        raise HTTPException(status_code=404, detail="联系人不存在")
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
     return contact
 
 
@@ -118,7 +119,7 @@ def get_primary_contact(
         db=db, entity_type=entity_type, entity_id=entity_id
     )
     if not contact:
-        raise HTTPException(status_code=404, detail="主要联系人不存在")
+        raise not_found("主要联系人不存在", resource_type="primary_contact")
 
     return PrimaryContactResponse.model_validate(contact)
 
@@ -134,7 +135,7 @@ def update_contact(
     """更新联系人信息"""
     contact = contact_crud.get(db, id=contact_id)
     if not contact:
-        raise HTTPException(status_code=404, detail="联系人不存在")
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
 
     # Include updated_by in the update
     update_data = contact_in.model_dump(exclude_unset=True)
@@ -144,7 +145,7 @@ def update_contact(
         updated_contact = contact_crud.update(db=db, db_obj=contact, obj_in=update_data)
         return updated_contact
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新联系人失败: {str(e)}")
+        raise internal_error(f"更新联系人失败: {str(e)}")
 
 
 @router.delete("/{contact_id}", response_model=ContactResponse, summary="删除联系人")
@@ -161,7 +162,7 @@ def delete_contact(
     """
     contact = contact_crud.delete(db, id=contact_id)
     if not contact:
-        raise HTTPException(status_code=404, detail="联系人不存在")
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
     return contact
 
 
@@ -197,6 +198,6 @@ def create_contacts_batch(
             contact = contact_crud.create(db=db, obj_in=contact_data)
             created_contacts.append(contact)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"批量创建失败: {str(e)}")
+            raise internal_error(f"批量创建失败: {str(e)}")
 
     return created_contacts

@@ -1,7 +1,8 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
+from ...core.api_errors import internal_error
 from ...database import create_tables, drop_tables
 from ...middleware.auth import require_admin
 
@@ -33,6 +34,4 @@ async def reset_database(
         create_tables()  # pragma: no cover
         return {"message": "数据库重置成功"}  # pragma: no cover
     except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"数据库重置失败: {str(e)}"
-        )  # pragma: no cover
+        raise internal_error(f"数据库重置失败: {str(e)}")  # pragma: no cover

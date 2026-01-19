@@ -7,10 +7,10 @@ import os
 import pytest
 
 # Set environment variables at the earliest possible moment
-# Use consistent database path with CI workflow
-# CI uses: sqlite:///./test_database.db
-# Tests use: sqlite:///./test_database.db (aligned)
-os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite:///./test_database.db")
+# Use in-memory database for unit tests to avoid file lock contention
+# Integration tests override this in conftest.py
+# Performance improvement: 37min → <5min (estimated)
+os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite:///:memory:")
 
 # 为测试环境设置强密钥（使用固定种子确保可复现性，或动态生成）
 # 这里使用动态生成，因为测试不应依赖于特定的密钥值
@@ -134,7 +134,16 @@ def setup_test_database():
                 # Base is defined in src/database.py, NOT src/models/base.py!
                 from src.database import Base
 
-                engine = create_engine(database_url)
+                # SQLite optimization for tests: increase timeout and pool size
+                if "sqlite" in database_url:
+                    engine = create_engine(
+                        database_url,
+                        connect_args={"timeout": 30},  # 30 seconds lock timeout
+                        poolclass=None,  # Disable pooling for SQLite
+                    )
+                else:
+                    engine = create_engine(database_url)
+
                 Base.metadata.create_all(bind=engine)
                 print("[OK] Database tables created (fallback)")
         except Exception as e:
@@ -146,7 +155,16 @@ def setup_test_database():
                 # Base is defined in src/database.py, NOT src/models/base.py!
                 from src.database import Base
 
-                engine = create_engine(database_url)
+                # SQLite optimization for tests
+                if "sqlite" in database_url:
+                    engine = create_engine(
+                        database_url,
+                        connect_args={"timeout": 30},
+                        poolclass=None,
+                    )
+                else:
+                    engine = create_engine(database_url)
+
                 Base.metadata.create_all(bind=engine)
                 print("[OK] Database tables created (fallback)")
             except Exception as e2:

@@ -4,9 +4,10 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, Path
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.project import project_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -38,9 +39,9 @@ async def create_project(
         )
         return ProjectResponse.model_validate(project)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建项目失败: {str(e)}")
+        raise internal_error(f"创建项目失败: {str(e)}")
 
 
 @router.get("", response_model=ProjectListResponse, summary="获取项目列表")
@@ -71,7 +72,7 @@ async def list_projects(
         result = project_service.search_projects(db=db, search_params=search_params)
         return ProjectListResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取项目列表失败: {str(e)}")
+        raise internal_error(f"获取项目列表失败: {str(e)}")
 
 
 @router.post("/search", response_model=ProjectListResponse, summary="搜索项目")
@@ -87,7 +88,7 @@ async def search_projects(
         result = project_service.search_projects(db=db, search_params=search_params)
         return ProjectListResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"搜索项目失败: {str(e)}")
+        raise internal_error(f"搜索项目失败: {str(e)}")
 
 
 @router.get("/options/dropdown", summary="获取项目下拉选项")
@@ -123,7 +124,7 @@ async def get_project(
     """
     project = project_crud.get(db=db, id=project_id)
     if not project:
-        raise HTTPException(status_code=404, detail="项目不存在")
+        raise not_found("项目不存在", resource_type="project", resource_id=project_id)
     return ProjectResponse.model_validate(project)
 
 
@@ -143,9 +144,9 @@ async def update_project(
         )
         return ProjectResponse.model_validate(project)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise not_found(str(e), resource_type="project")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新项目失败: {str(e)}")
+        raise internal_error(f"更新项目失败: {str(e)}")
 
 
 @router.delete("/{project_id}", summary="删除项目")
@@ -162,10 +163,10 @@ async def delete_project(
         return {"message": "项目删除成功"}
     except ValueError as e:
         if "资产" in str(e):
-            raise HTTPException(status_code=400, detail=str(e))
-        raise HTTPException(status_code=404, detail=str(e))
+            raise bad_request(str(e))
+        raise not_found(str(e), resource_type="project")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除项目失败: {str(e)}")
+        raise internal_error(f"删除项目失败: {str(e)}")
 
 
 @router.put("/{project_id}/status", response_model=ProjectResponse, summary="切换状态")
@@ -183,6 +184,6 @@ async def toggle_project_status(
         )
         return ProjectResponse.model_validate(project)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise not_found(str(e), resource_type="project")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"切换状态失败: {str(e)}")
+        raise internal_error(f"切换状态失败: {str(e)}")

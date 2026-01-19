@@ -4,9 +4,10 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.ownership import ownership
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -56,7 +57,7 @@ async def get_ownership_dropdown_options(
             responses.append(response)
         return responses
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取权属方选项失败: {str(e)}")
+        raise internal_error(f"获取权属方选项失败: {str(e)}")
 
 
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
@@ -71,9 +72,9 @@ async def create_ownership(
         db_ownership = ownership_service.create_ownership(db, obj_in=ownership_in)
         return OwnershipResponse.model_validate(db_ownership)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建权属方失败: {str(e)}")
+        raise internal_error(f"创建权属方失败: {str(e)}")
 
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
@@ -87,7 +88,9 @@ async def update_ownership(
     """更新权属方信息"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
-        raise HTTPException(status_code=404, detail="权属方不存在")
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     try:
         updated_ownership = ownership_service.update_ownership(
@@ -95,9 +98,9 @@ async def update_ownership(
         )
         return OwnershipResponse.model_validate(updated_ownership)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新权属方失败: {str(e)}")
+        raise internal_error(f"更新权属方失败: {str(e)}")
 
 
 @router.put("/{ownership_id}/projects", summary="更新权属方关联项目")
@@ -111,7 +114,9 @@ async def update_ownership_projects(
     """更新权属方的关联项目"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
-        raise HTTPException(status_code=404, detail="权属方不存在")
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     try:
         # 更新关联项目
@@ -128,7 +133,7 @@ async def update_ownership_projects(
         response.project_count = actual_project_count
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新关联项目失败: {str(e)}")
+        raise internal_error(f"更新关联项目失败: {str(e)}")
 
 
 @router.delete(
@@ -152,9 +157,9 @@ async def delete_ownership(
             affected_assets=asset_count,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除权属方失败: {str(e)}")
+        raise internal_error(f"删除权属方失败: {str(e)}")
 
 
 @router.get("", response_model=OwnershipListResponse, summary="获取权属方列表")
@@ -263,9 +268,9 @@ async def toggle_ownership_status(
         db_ownership = ownership_service.toggle_status(db, id=ownership_id)
         return OwnershipResponse.model_validate(db_ownership)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"切换状态失败: {str(e)}")
+        raise internal_error(f"切换状态失败: {str(e)}")
 
 
 @router.get(
@@ -294,7 +299,9 @@ async def get_ownership_financial_summary(
     # 验证权属方是否存在
     ownership_obj = ownership.get(db, id=ownership_id)
     if not ownership_obj:
-        raise HTTPException(status_code=404, detail="权属方不存在")
+        raise not_found(
+            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+        )
 
     # 查询该权属方下所有合同的台账
     subquery = (

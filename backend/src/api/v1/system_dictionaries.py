@@ -4,9 +4,10 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...crud.system_dictionary import system_dictionary_crud
 from ...database import get_db
 from ...schemas.asset import (
@@ -49,7 +50,7 @@ async def get_system_dictionaries(
         return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取系统字典列表失败: {str(e)}")
+        raise internal_error(f"获取系统字典列表失败: {str(e)}")
 
 
 @router.get(
@@ -72,13 +73,17 @@ async def get_system_dictionary(
             db=db, id=dictionary_id
         )
         if not dictionary:
-            raise HTTPException(status_code=404, detail=f"字典 {dictionary_id} 不存在")
+            raise not_found(
+                f"字典 {dictionary_id} 不存在",
+                resource_type="system_dictionary",
+                resource_id=dictionary_id,
+            )
         return dictionary
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取系统字典详情失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取系统字典详情失败: {str(e)}")
 
 
 @router.post(
@@ -102,11 +107,11 @@ async def create_system_dictionary(
         return dictionary
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建系统字典失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"创建系统字典失败: {str(e)}")
 
 
 @router.put(
@@ -131,12 +136,12 @@ async def update_system_dictionary(
 
     except ValueError as e:
         if "不存在" in str(e):
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
+            raise not_found(str(e), resource_type="system_dictionary")
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新系统字典失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"更新系统字典失败: {str(e)}")
 
 
 @router.delete("/{dictionary_id}", summary="删除系统字典")
@@ -153,11 +158,13 @@ async def delete_system_dictionary(
         return {"message": f"字典 {dictionary_id} 已成功删除"}
 
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except HTTPException:
-        raise
+        raise not_found(
+            str(e), resource_type="system_dictionary", resource_id=dictionary_id
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除系统字典失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"删除系统字典失败: {str(e)}")
 
 
 @router.post(
@@ -204,7 +211,7 @@ async def batch_update_system_dictionaries(
         return updated_dictionaries
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"批量更新系统字典失败: {str(e)}")
+        raise internal_error(f"批量更新系统字典失败: {str(e)}")
 
 
 @router.get("/types/list[Any]", summary="获取字典类型列表")
@@ -217,4 +224,4 @@ async def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[
         return {"types": types}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取字典类型失败: {str(e)}")
+        raise internal_error(f"获取字典类型失败: {str(e)}")

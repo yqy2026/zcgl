@@ -8,9 +8,11 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request
 from jose import jwt
 from sqlalchemy.orm import Session
+
+from ....core.api_errors import bad_request, internal_error, unauthorized
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +73,7 @@ async def login(
                     user_agent=user_agent,
                 )
 
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
-            )
+            raise unauthorized("用户名或密码错误")
 
         # 创建令牌（增强安全性）
         device_info: dict[str, str] = {
@@ -125,9 +125,9 @@ async def login(
             "message": "登录成功",
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         # Log the error for debugging (internal use only)
         import logging
 
@@ -135,13 +135,10 @@ async def login(
         logger.error(f"Authentication error: {str(e)}", exc_info=True)
 
         # Return generic error message to client
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="登录服务暂时不可用，请稍后重试",
-        )
+        raise internal_error("登录服务暂时不可用，请稍后重试")
 
     except BusinessLogicError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/logout", summary="用户登出")
@@ -251,9 +248,7 @@ async def refresh_token(
             ip_address=client_ip,
             user_agent=user_agent,
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的刷新令牌"
-        )
+        raise unauthorized("无效的刷新令牌")
 
     # 获取用户
     user = auth_service.get_user_by_id(str(session.user_id))  # type: ignore[no-untyped-call]
@@ -261,9 +256,7 @@ async def refresh_token(
     if not user or not user_active:
         # 撤销无效会话
         auth_service.revoke_session(refresh_data.refresh_token)  # type: ignore[no-untyped-call]
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用"
-        )
+        raise unauthorized("用户不存在或已被禁用")
 
     # 检查IP变化（可选安全检查）
     session_ip = (

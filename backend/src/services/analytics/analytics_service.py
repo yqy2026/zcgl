@@ -13,7 +13,10 @@ Analytics Service - 综合分析服务
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from ...models.auth import User
 
 from sqlalchemy.orm import Session
 
@@ -37,7 +40,7 @@ class AnalyticsService:
         self,
         filters: dict[str, Any] | None = None,
         use_cache: bool = True,
-        current_user: Any = None,
+        current_user: "User | None" = None,
     ) -> dict[str, Any]:
         """
         获取综合统计分析数据
@@ -270,6 +273,26 @@ class AnalyticsService:
         Returns:
             分布数据
         """
+        # Security: Whitelist of allowed distribution fields to prevent arbitrary field access
+        allowed_distribution_fields = {
+            "property_nature",
+            "business_category",
+            "usage_status",
+            "ownership_status",
+            "manager_name",
+            "business_model",
+            "operation_status",
+            "project_name",
+        }
+
+        if distribution_type not in allowed_distribution_fields:
+            from ...core.api_errors import bad_request
+
+            raise bad_request(
+                f"无效的分布类型: {distribution_type}",
+                details=f"允许的类型: {', '.join(sorted(allowed_distribution_fields))}",
+            )
+
         query = self.db.query(Asset)
 
         if filters is not None and not filters.get("include_deleted", False):

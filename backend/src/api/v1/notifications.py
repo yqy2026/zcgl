@@ -6,10 +6,11 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import forbidden, not_found
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
@@ -162,7 +163,9 @@ async def mark_notification_as_read(
     )
 
     if not notification:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="通知不存在")
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
+        )
 
     notification.mark_as_read()
     db.commit()
@@ -207,7 +210,9 @@ async def delete_notification(
     )
 
     if not notification:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="通知不存在")
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
+        )
 
     db.delete(notification)
     db.commit()
@@ -227,10 +232,7 @@ async def run_notification_tasks_endpoint(
     """
     # 检查用户权限（只有管理员可以手动触发）
     if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="只有管理员可以手动触发通知任务",
-        )
+        raise forbidden("只有管理员可以手动触发通知任务")
 
     # 在后台运行任务
     def run_tasks():

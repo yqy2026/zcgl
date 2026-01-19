@@ -25,10 +25,19 @@ from sqlalchemy.pool import QueuePool, StaticPool
 from src.constants.database.pool import DatabasePoolConfig
 from src.constants.errors.error_ids import ErrorIDs
 
+logger = logging.getLogger(__name__)
+
 try:
     from .database_security import enhance_database_security
 except ImportError:  # pragma: no cover
-    # Fallback database security enhancer when module is not available
+    # 回退数据库安全增强器（模块不可用时）
+    logger.warning(
+        "database_security模块不可用，使用不安全的后备实现",
+        extra={
+            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
+            "module": "database_security",
+        },
+    )
     from sqlalchemy.engine import Engine
 
     def enhance_database_security(engine: Engine) -> None:  # pragma: no cover
@@ -38,12 +47,16 @@ except ImportError:  # pragma: no cover
 try:
     from .core.config import get_config
 except ImportError:  # pragma: no cover
+    logger.warning(
+        "config模块不可用，所有配置将使用默认值",
+        extra={
+            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
+            "module": "config",
+        },
+    )
 
     def get_config(key: str, default: Any = None) -> Any:  # pragma: no cover
         return default  # pragma: no cover
-
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

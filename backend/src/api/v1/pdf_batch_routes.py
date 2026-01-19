@@ -10,10 +10,11 @@ import os
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, not_found, service_unavailable
 from ...core.config import settings
 from ...core.response_handler import success_response
 from ...database import get_db
@@ -156,18 +157,14 @@ async def batch_upload_pdfs(
     """
     # 验证文件数量
     if len(files) > MAX_BATCH_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"文件数量超过限制，最多支持 {MAX_BATCH_SIZE} 个文件",
-        )
+        raise bad_request(f"文件数量超过限制，最多支持 {MAX_BATCH_SIZE} 个文件")
 
     # 验证并发限制
     tracker = _get_batch_tracker()
     stats = tracker.get_stats()
     if stats["active_batches"] >= MAX_CONCURRENT_BATCHES:
-        raise HTTPException(
-            status_code=503,
-            detail=f"系统繁忙，同时最多支持 {MAX_CONCURRENT_BATCHES} 个批处理任务",
+        raise service_unavailable(
+            f"系统繁忙，同时最多支持 {MAX_CONCURRENT_BATCHES} 个批处理任务"
         )
 
     # 生成批处理 ID
@@ -195,9 +192,7 @@ async def batch_upload_pdfs(
         valid_files.append((file, content, file_size))
 
     if not valid_files:
-        raise HTTPException(
-            status_code=400, detail="没有有效的 PDF 文件（请检查文件格式和大小）"
-        )
+        raise bad_request("没有有效的 PDF 文件（请检查文件格式和大小）")
 
     # 初始化批处理状态（使用 BatchStatusTracker）
     tracker.create_batch(
@@ -323,7 +318,9 @@ async def get_batch_status(
     """
     batch = _get_batch_status(batch_id)
     if not batch:
-        raise HTTPException(status_code=404, detail=f"批处理任务不存在: {batch_id}")
+        raise not_found(
+            f"批处理任务不存在: {batch_id}", resource_type="batch", resource_id=batch_id
+        )
 
     # 获取各会话状态
     session_statuses: list[dict[str, Any]] = []
@@ -441,16 +438,16 @@ async def cancel_batch(
     """
     batch = _get_batch_status(batch_id)
     if not batch:
-        raise HTTPException(status_code=404, detail=f"批处理任务不存在: {batch_id}")
+        raise not_found(
+            f"批处理任务不存在: {batch_id}", resource_type="batch", resource_id=batch_id
+        )
 
     if batch["status"] in [
         BatchStatus.COMPLETED,
         BatchStatus.FAILED,
         BatchStatus.CANCELLED,
     ]:
-        raise HTTPException(
-            status_code=400, detail="批处理任务已完成或已取消，无法取消"
-        )
+        raise bad_request("批处理任务已完成或已取消，无法取消")
 
     # 取消所有处理中的会话
     service = PDFImportService()

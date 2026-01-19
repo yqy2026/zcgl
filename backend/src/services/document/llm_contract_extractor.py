@@ -40,7 +40,10 @@ class LLMContractExtractor:
         # To avoid breaking too much, I'll allow this class to hold the legacy text logic
         # but usage of 'extract_from_pdf_vision' will go to the adapter.
 
-        # TODO: Implement text-only extraction or remove this method
+        # Note: Text-only extraction is intentionally unimplemented.
+        # The system uses Vision-based extraction via extract_smart() which provides
+        # better accuracy for contract documents. This method exists only for
+        # backward compatibility with the legacy API interface.
         raise NotImplementedError(
             "Text-only extraction not implemented. Use extract_smart() instead."
         )

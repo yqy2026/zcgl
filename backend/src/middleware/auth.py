@@ -6,12 +6,13 @@ from typing import Any
 
 import logging
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ..core.api_errors import bad_request, forbidden, unauthorized
 from ..core.config import settings
 from ..database import get_db
 from ..models.auth import User, UserRole
@@ -42,8 +43,8 @@ def _is_token_blacklisted(jti: str) -> bool:
         return False
     except Exception as e:
         logger.error(f"Error checking token blacklist: {e}")
-        # 出错时保守处理，允许token通过
-        return False
+        # 安全优先：出错时视为token在黑名单中，拒绝访问（fail-closed策略）
+        return True
 
 
 # JWT配置
@@ -63,11 +64,7 @@ def get_current_user(
 ) -> User | None:
     """从JWT令牌中获取当前用户"""
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="无效的认证凭据",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    credentials_exception = unauthorized("无效的认证凭据")
 
     # 如果没有token，抛出认证异常而不是返回None
     if not token:
@@ -108,9 +105,7 @@ def get_current_user(
         # 验证token是否在黑名单中（如果实现了token黑名单）
         if jti and _is_token_blacklisted(jti):
             logger.warning(f"JWT token {jti} is blacklisted")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token已失效"
-            )
+            raise unauthorized("Token已失效")
 
         # Handle both string and enum role types
         role_enum = role
@@ -150,15 +145,10 @@ def get_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户账户已被禁用"
-        )
+        raise unauthorized("用户账户已被禁用")
 
     if user.is_locked_now():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户账户已被锁定，请稍后再试",
-        )
+        raise unauthorized("用户账户已被锁定，请稍后再试")
 
     return user
 
@@ -166,18 +156,14 @@ def get_current_user(
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="用户账户未激活"
-        )
+        raise bad_request("用户账户未激活")
     return current_user
 
 
 def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """要求管理员权限"""
     if not safe_role_compare(current_user.role, UserRole.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
-        )
+        raise forbidden("需要管理员权限")
     return current_user
 
 
@@ -219,9 +205,7 @@ class PermissionChecker:
     def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
         """检查用户权限"""
         if not self._has_permission(current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="权限不足"
-            )
+            raise forbidden("权限不足")
         return current_user
 
     def _has_permission(self, user: User) -> bool:
@@ -258,9 +242,7 @@ class OrganizationPermissionChecker:
     def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
         """检查用户是否有访问指定组织的权限"""
         if not self._can_access_organization(current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该组织的数据"
-            )
+            raise forbidden("无权访问该组织的数据")
         return current_user
 
     def _can_access_organization(self, user: User) -> bool:
@@ -408,9 +390,7 @@ class RBACPermissionChecker:
 
         # 如果没有用户（未认证），抛出认证异常
         if current_user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证"
-            )
+            raise unauthorized("需要认证")
 
         # 管理员拥有所有权限
         if safe_role_compare(current_user.role, UserRole.ADMIN):
@@ -430,10 +410,7 @@ class RBACPermissionChecker:
         )
 
         if not permission_result.has_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"权限不足，需要 {self.resource}:{self.action} 权限",
-            )
+            raise forbidden(f"权限不足，需要 {self.resource}:{self.action} 权限")
 
         return current_user
 
@@ -480,10 +457,7 @@ class ResourcePermissionChecker:
         )
 
         if not resource_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"无权访问此{self.resource_type}资源",
-            )
+            raise forbidden(f"无权访问此{self.resource_type}资源")
 
         # 检查权限级别
         level_actions = {
@@ -495,10 +469,7 @@ class ResourcePermissionChecker:
 
         # 简化处理：假设当前操作对应required_level
         if self.required_level not in level_actions:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"无效的权限级别: {self.required_level}",
-            )
+            raise forbidden(f"无效的权限级别: {self.required_level}")
 
         return current_user
 
@@ -534,10 +505,7 @@ class RoleBasedAccessChecker:
 
         # 检查是否有所需角色
         if not any(role_name in self.required_roles for role_name in user_role_names):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"需要以下角色之一: {', '.join(self.required_roles)}",
-            )
+            raise forbidden(f"需要以下角色之一: {', '.join(self.required_roles)}")
 
         return current_user
 

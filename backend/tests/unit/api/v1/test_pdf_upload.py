@@ -41,7 +41,8 @@ def mock_pdf_file():
     file = MagicMock(spec=UploadFile)
     file.filename = "test_document.pdf"
     file.content_type = "application/pdf"
-    content = io.BytesIO(b"fake pdf content" * 100)
+    # Use smaller content to avoid polluting test output
+    content = io.BytesIO(b"%PDF-1.4\n%Test PDF content for unit tests\n")
     file.read = AsyncMock(return_value=content.getvalue())
     file.seek = AsyncMock(return_value=None)
     return file

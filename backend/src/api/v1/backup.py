@@ -6,10 +6,11 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error, not_found
 from ...database import get_db
 from ...services.backup import BackupService
 
@@ -63,7 +64,7 @@ async def create_backup(
 
     except Exception as e:
         logger.error(f"创建数据备份异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"创建数据备份失败: {str(e)}")
+        raise internal_error(f"创建数据备份失败: {str(e)}")
 
 
 @router.get("/list[Any]", summary="获取备份列表")
@@ -89,7 +90,7 @@ async def list_backups() -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"获取备份列表异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取备份列表失败: {str(e)}")
+        raise internal_error(f"获取备份列表失败: {str(e)}")
 
 
 @router.get("/download/{backup_name}", summary="下载备份文件")
@@ -108,9 +109,7 @@ async def download_backup(backup_name: str) -> FileResponse:
         backup_info = service.get_backup(backup_name)
 
         if not backup_info:
-            raise HTTPException(
-                status_code=404, detail=f"备份文件不存在: {backup_name}"
-            )
+            raise not_found(f"备份文件不存在: {backup_name}", resource_type="backup")
 
         backup_path = backup_info["file_path"]
         backup_filename = backup_info["filename"]
@@ -123,11 +122,11 @@ async def download_backup(backup_name: str) -> FileResponse:
             media_type="application/octet-stream",
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         logger.error(f"下载备份文件异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"下载备份文件失败: {str(e)}")
+        raise internal_error(f"下载备份文件失败: {str(e)}")
 
 
 @router.post("/restore/{backup_name}", summary="恢复数据备份")
@@ -149,9 +148,7 @@ async def restore_backup(
     """
     try:
         if not confirm:
-            raise HTTPException(
-                status_code=400, detail="请确认恢复操作，这将覆盖当前数据"
-            )
+            raise bad_request("请确认恢复操作，这将覆盖当前数据")
 
         # 使用BackupService恢复备份
         service = BackupService(backup_dir=BACKUP_DIR)
@@ -178,12 +175,12 @@ async def restore_backup(
         }
 
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except HTTPException:
-        raise
+        raise not_found(str(e), resource_type="backup")
     except Exception as e:
+        if "UnifiedError" in type(e).__name__:
+            raise
         logger.error(f"恢复数据备份异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"恢复数据备份失败: {str(e)}")
+        raise internal_error(f"恢复数据备份失败: {str(e)}")
 
 
 @router.delete("/delete/{backup_name}", summary="删除备份文件")
@@ -211,10 +208,10 @@ async def delete_backup(backup_name: str) -> dict[str, Any]:
         }
 
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise not_found(str(e), resource_type="backup")
     except Exception as e:
         logger.error(f"删除备份文件异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"删除备份文件失败: {str(e)}")
+        raise internal_error(f"删除备份文件失败: {str(e)}")
 
 
 @router.get("/stats", summary="获取备份统计信息")
@@ -236,7 +233,7 @@ async def get_backup_stats() -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"获取备份统计异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取备份统计失败: {str(e)}")
+        raise internal_error(f"获取备份统计失败: {str(e)}")
 
 
 @router.post("/validate/{backup_name}", summary="验证备份文件")
@@ -261,7 +258,7 @@ async def validate_backup(backup_name: str) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"验证备份文件异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"验证备份文件失败: {str(e)}")
+        raise internal_error(f"验证备份文件失败: {str(e)}")
 
 
 @router.post("/cleanup", summary="清理旧备份")
@@ -289,4 +286,4 @@ async def cleanup_old_backups(
 
     except Exception as e:
         logger.error(f"清理旧备份异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"清理旧备份失败: {str(e)}")
+        raise internal_error(f"清理旧备份失败: {str(e)}")

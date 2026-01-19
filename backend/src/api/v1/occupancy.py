@@ -6,9 +6,10 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import bad_request, internal_error
 from ...database import get_db
 
 # 配置日志
@@ -94,7 +95,7 @@ async def calculate_occupancy_rate(
 
     except Exception as e:
         logger.error(f"计算出租率异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"计算出租率失败: {str(e)}")
+        raise internal_error(f"计算出租率失败: {str(e)}")
 
 
 @router.get("/analysis", summary="出租率分析")
@@ -112,7 +113,7 @@ async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
         overall_rate = await calculate_occupancy_rate(db=db)
 
         if not overall_rate["success"]:
-            raise HTTPException(status_code=400, detail=overall_rate["message"])
+            raise bad_request(overall_rate["message"])
 
         # 按权属方分析（模拟数据）
         ownership_analysis = [
@@ -175,7 +176,7 @@ async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"出租率分析异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"出租率分析失败: {str(e)}")
+        raise internal_error(f"出租率分析失败: {str(e)}")
 
 
 @router.get("/trends", summary="出租率趋势")
@@ -241,4 +242,4 @@ async def get_occupancy_trends(
 
     except Exception as e:
         logger.error(f"获取出租率趋势异常: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取出租率趋势失败: {str(e)}")
+        raise internal_error(f"获取出租率趋势失败: {str(e)}")

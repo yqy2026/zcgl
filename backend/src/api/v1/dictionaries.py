@@ -7,11 +7,12 @@ from typing import Any
 
 import logging
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...core.api_errors import conflict, internal_error, not_found
 from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ...database import get_db
 from ...models.asset import SystemDictionary
@@ -112,9 +113,7 @@ async def get_dictionary_options(
         ]  # pragma: no cover
 
     except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取字典选项失败: {str(e)}"
-        )  # pragma: no cover
+        raise internal_error(f"获取字典选项失败: {str(e)}")  # pragma: no cover
 
 
 @router.post("/{dict_type}/quick-create")
@@ -133,7 +132,7 @@ async def quick_create_dictionary(
         # 检查是否已存在
         existing_type = enum_type_crud.get_by_code(dict_type)
         if existing_type:
-            raise HTTPException(status_code=400, detail=f"字典类型 {dict_type} 已存在")
+            raise conflict(f"字典类型 {dict_type} 已存在", resource_type="dictionary")
 
         # 创建枚举类型
         enum_type_create = EnumFieldTypeCreate(
@@ -185,10 +184,10 @@ async def quick_create_dictionary(
             },
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建简单字典失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"创建简单字典失败: {str(e)}")
 
 
 @router.get("/types", response_model=list[str])
@@ -269,7 +268,7 @@ async def add_dictionary_value(
         enum_type = enum_type_crud.get_by_code(dict_type)
 
         if not enum_type:
-            raise HTTPException(status_code=404, detail=f"字典类型 {dict_type} 不存在")
+            raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
 
         enum_value_crud = get_enum_field_value_crud(db)
 
@@ -279,9 +278,9 @@ async def add_dictionary_value(
             enum_type_id_str, value_data.get("value", "")
         )  # pragma: no cover
         if existing_value:  # pragma: no cover
-            raise HTTPException(  # pragma: no cover
-                status_code=400,
-                detail=f"值 {value_data.get('value')} 已存在",  # pragma: no cover
+            raise conflict(  # pragma: no cover
+                f"值 {value_data.get('value')} 已存在",
+                resource_type="dictionary_value",  # pragma: no cover
             )  # pragma: no cover
 
         enum_value_create = EnumFieldValueCreate(
@@ -306,10 +305,10 @@ async def add_dictionary_value(
             content={"message": "字典值添加成功", "value_id": str(created_value.id)},
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"添加字典值失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"添加字典值失败: {str(e)}")
 
 
 @router.delete("/{dict_type}")
@@ -323,7 +322,7 @@ async def delete_dictionary_type(
         enum_type = enum_type_crud.get_by_code(dict_type)
 
         if not enum_type:
-            raise HTTPException(status_code=404, detail=f"字典类型 {dict_type} 不存在")
+            raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
 
         # 软删除枚举类型（会级联删除枚举值）
         enum_type_id_str = str(enum_type.id)
@@ -332,16 +331,16 @@ async def delete_dictionary_type(
         )  # pragma: no cover
 
         if not success:  # pragma: no cover
-            raise HTTPException(status_code=500, detail="删除失败")  # pragma: no cover
+            raise internal_error("删除失败")  # pragma: no cover
 
         return JSONResponse(
             status_code=200,
             content={"message": f"字典类型 {dict_type} 删除成功"},  # pragma: no cover
         )  # pragma: no cover
 
-    except HTTPException:  # pragma: no cover
-        raise  # pragma: no cover
     except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"删除字典类型失败: {str(e)}"
+        if "UnifiedError" in type(e).__name__:  # pragma: no cover
+            raise  # pragma: no cover
+        raise internal_error(  # pragma: no cover
+            f"删除字典类型失败: {str(e)}"
         )  # pragma: no cover

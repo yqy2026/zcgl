@@ -9,3 +9,9 @@
 # Alembic - ignore temp migration files but keep structure
 # Note: We keep alembic/versions/*.py for version control
 alembic/versions/*.pyc
+
+# Backend coverage reports
+htmlcov/
+
+# Development database
+land_property.db

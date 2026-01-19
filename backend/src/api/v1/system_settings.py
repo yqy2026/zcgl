@@ -7,7 +7,9 @@ from typing import Annotated, Any
 import json
 import logging
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -113,9 +115,6 @@ def handle_audit_log_failure(
 
     # 3.1 尝试写入回退文件（带验证和fsync）
     try:
-        import os
-        from pathlib import Path
-
         audit_log_path = Path("logs/audit_log_fallback.txt")
         audit_log_path.parent.mkdir(exist_ok=True)
 
@@ -148,12 +147,14 @@ def handle_audit_log_failure(
         syslog_success = False
         try:
             syslog_msg = f"[AUDIT FAILURE] {timestamp} | {action} | User:{current_user.id} | Error:{error}"
+            is_unix = sys.platform != "win32"
 
-            # Unix-like系统: 使用syslog
-            try:
+            if is_unix:
+                # Unix系统: 使用syslog
                 import syslog
 
-                syslog.syslog(syslog.LOG_ERR, syslog_msg)
+                # Use getattr to bypass type checker on Windows where syslog lacks stubs
+                getattr(syslog, "syslog")(getattr(syslog, "LOG_ERR"), syslog_msg)
                 syslog_success = True
                 logger.warning(
                     "审计日志已写入syslog",
@@ -163,7 +164,7 @@ def handle_audit_log_failure(
                         "action": action,
                     },
                 )
-            except (ImportError, AttributeError):
+            else:
                 # Windows系统: 尝试事件日志
                 try:
                     import win32con
@@ -196,13 +197,13 @@ def handle_audit_log_failure(
             # 🔒 安全修复: 只捕获syslog/网络/OS相关错误
             fallback_errors["syslog_error"] = str(syslog_error)
 
-            # 3.3 尝试写入已知位置（/tmp 或当前目录）: 尝试写入已知位置（/tmp 或当前目录）
+            # 3.3 尝试写入临时目录或当前目录
             try:
-                import os
-                import sys
+                import tempfile
 
-                emergency_log_path = Path("/tmp/audit_emergency.log")
-                if not emergency_log_path.exists():
+                # Use tempfile.gettempdir() for secure temp directory
+                emergency_log_path = Path(tempfile.gettempdir()) / "audit_emergency.log"
+                if not emergency_log_path.parent.exists():
                     # 尝试当前目录作为最后的回退
                     emergency_log_path = Path("audit_emergency.log")
 

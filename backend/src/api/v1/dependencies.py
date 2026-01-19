@@ -1,10 +1,23 @@
-"""
-PDF导入API的依赖注入工具
+from typing import Protocol
 
-遵循 FastAPI 最佳实践，提供类型安全的依赖注入
-"""
 
-from typing import Any
+class PDFProcessingServiceProtocol(Protocol):
+    """Protocol for PDF processing service"""
+
+    async def process(self, file_path: str) -> dict[str, object]: ...
+
+
+class PDFSessionServiceProtocol(Protocol):
+    """Protocol for PDF session service"""
+
+    def get_session(self, session_id: str) -> object: ...
+
+
+class ErrorHandlerProtocol(Protocol):
+    """Protocol for enhanced error handler"""
+
+    def handle(self, error: Exception) -> dict[str, object]: ...
+
 
 from ...core.performance import PerformanceMonitor
 from ...services.document.pdf_import_service import PDFImportService
@@ -48,9 +61,9 @@ class OptionalServices:
     """
 
     def __init__(self) -> None:
-        self.pdf_processing_service: Any | None = None
-        self.pdf_session_service: Any | None = None
-        self.enhanced_error_handler: Any | None = None
+        self.pdf_processing_service: PDFProcessingServiceProtocol | None = None
+        self.pdf_session_service: type[PDFSessionServiceProtocol] | None = None
+        self.enhanced_error_handler: ErrorHandlerProtocol | None = None
 
         # 尝试导入可选服务
         try:
@@ -78,7 +91,7 @@ class OptionalServices:
                 enhanced_error_handler,
             )
 
-            self.enhanced_error_handler = enhanced_error_handler
+            self.enhanced_error_handler = enhanced_error_handler  # type: ignore[assignment]
         except ImportError:
             pass
 

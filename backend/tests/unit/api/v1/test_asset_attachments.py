@@ -75,7 +75,6 @@ def mock_pdf_file():
     file = MagicMock(spec=UploadFile)
     file.filename = "test_document.pdf"
     file.content_type = "application/pdf"
-    io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file = io.BytesIO(b"%PDF-1.4 fake pdf content")
     file.file.seek = Mock(return_value=None)
     file.file.tell = Mock(return_value=100)

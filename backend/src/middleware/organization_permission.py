@@ -6,9 +6,10 @@
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from ..core.api_errors import bad_request, forbidden
 from ..database import get_db
 from ..models.auth import User
 from ..services.organization_permission_service import OrganizationPermissionService
@@ -34,15 +35,11 @@ def require_organization_access(
         检查用户是否有权访问指定组织
         """
         if organization_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="组织ID不能为空"
-            )
+            raise bad_request("组织ID不能为空")
 
         org_service = OrganizationPermissionService(db)
         if not org_service.check_organization_access(current_user.id, organization_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该组织的数据"
-            )
+            raise forbidden("无权访问该组织的数据")
 
         return organization_id
 
@@ -68,15 +65,11 @@ def require_organization_management(
         检查用户是否有权管理指定组织
         """
         if organization_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="组织ID不能为空"
-            )
+            raise bad_request("组织ID不能为空")
 
         org_service = OrganizationPermissionService(db)
         if not org_service.can_manage_organization(current_user.id, organization_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="无权管理该组织"
-            )
+            raise forbidden("无权管理该组织")
 
         return organization_id
 
@@ -201,9 +194,7 @@ class OrganizationPermissionChecker:
         accessible_orgs = org_service.get_user_accessible_organizations(current_user.id)
 
         if not accessible_orgs:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="无任何组织访问权限"
-            )
+            raise forbidden("无任何组织访问权限")
 
         return current_user
 

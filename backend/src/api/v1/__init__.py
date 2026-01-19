@@ -10,7 +10,6 @@ from .auth import router as auth_router
 from .backup import router as backup_router
 from .contact import router as contact_router
 from .custom_fields import router as custom_fields_router
-from .defect_tracking import router as defect_tracking_router
 from .dictionaries import router as dictionaries_router
 from .enum_field import router as enum_field_router
 
@@ -122,7 +121,7 @@ if system_settings_router is not None:
     )
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 # test_coverage and test_performance routers removed
-api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺陷跟踪"])
+# defect_tracking router removed - architecture violation (raw SQL in API layer)
 # missing_apis_router removed - was a temporary placeholder with broken imports
 
 # 注册新创建的统一路由模块
