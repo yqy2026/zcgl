@@ -6,6 +6,7 @@ import type { AuthResponse, StandardApiResponse } from '../types/apiResponse';
 
 import type { LoginCredentials, User, UserActivity } from '../types/auth';
 import { createLogger } from '../utils/logger';
+import { AuthStorage } from '@/utils/AuthStorage';
 
 const logger = createLogger('AuthService');
 
@@ -50,6 +51,15 @@ export class AuthService {
         tokens?: AuthResponse['tokens'];
         token?: string;
         message?: string;
+        data?: {
+          access_token?: string;
+          refresh_token?: string;
+          permissions?: Array<{
+            resource: string;
+            action: string;
+            description?: string;
+          }>;
+        };
       };
 
       logger.debug('API响应数据', { responseData });
@@ -99,9 +109,34 @@ export class AuthService {
         throw new Error('未找到访问令牌');
       }
 
+      if (responseData.data.access_token && responseData.data.refresh_token) {
+        const { access_token: accessToken, refresh_token: refreshToken } = responseData.data;
+
+        // Store in AuthStorage with permissions from API
+        const authData = {
+          token: accessToken,
+          refreshToken: refreshToken,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            full_name: user.full_name,
+            role: user.role,
+            organization_id: user.organization_id,
+          },
+          permissions: responseData.data.permissions ?? [], // Use permissions from API
+        };
+
+        AuthStorage.setAuthData(authData);
+
+        // Also set legacy keys for backward compatibility
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+      } else {
+        throw new Error('Access token or refresh token not found');
+      }
+
       localStorage.setItem('user', JSON.stringify(user));
-      // 权限信息暂时为空数组，后续可以从用户信息中获取
-      localStorage.setItem('permissions', JSON.stringify([]));
 
       return {
         success: true,
@@ -113,7 +148,7 @@ export class AuthService {
             token_type: 'Bearer',
             expires_in: 3600, // 默认1小时
           },
-          permissions: [],
+          permissions: responseData.data.permissions ?? [], // Return actual permissions
         },
         message: (responseData.message as string) || '登录成功',
       };
