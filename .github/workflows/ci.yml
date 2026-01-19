@@ -155,7 +155,6 @@ jobs:
         uv run pytest tests/unit/ \
           --cov=src \
           --cov-report=xml:coverage.xml \
-          --cov-report=html:htmlcov \
           --cov-report=term-missing \
           --junit-xml=test-results.xml \
           -v \
