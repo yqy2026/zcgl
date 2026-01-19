@@ -152,10 +152,14 @@ def handle_audit_log_failure(
             # Unix-like系统: 使用syslog
             try:
                 import syslog
+                import sys
 
-                # Note: type: ignore needed on Windows due to missing syslog stubs
-                syslog.syslog(syslog.LOG_ERR, syslog_msg)  # type: ignore
-                syslog_success = True
+                # Only use syslog on Unix systems (not Windows)
+                if sys.platform != "win32":
+                    # Cast to Any to avoid type errors on Windows where syslog lacks stubs
+                    import typing
+                    typing.cast(typing.Any, syslog).syslog(syslog.LOG_ERR, syslog_msg)
+                    syslog_success = True
                 logger.warning(
                     "审计日志已写入syslog",
                     extra={
