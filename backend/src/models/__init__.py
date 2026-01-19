@@ -69,6 +69,11 @@ from .rent_contract import (  # noqa: F401
     ServiceFeeLedger,
     rent_contract_assets,
 )
+from .security_event import (  # noqa: F401
+    SecurityEvent,
+    SecurityEventType,
+    SecuritySeverity,
+)
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 
 __all__ = [
@@ -132,4 +137,8 @@ __all__ = [
     "AsyncTask",
     "ExcelTaskConfig",
     "TaskHistory",
+    # Security Event models
+    "SecurityEvent",
+    "SecurityEventType",
+    "SecuritySeverity",
 ]
