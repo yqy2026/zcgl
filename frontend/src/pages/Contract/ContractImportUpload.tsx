@@ -17,7 +17,6 @@ import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
 import { COLORS } from '@/styles/colorMap';
 
-
 const { Title, Text, Paragraph } = Typography;
 
 interface ContractImportUploadProps {

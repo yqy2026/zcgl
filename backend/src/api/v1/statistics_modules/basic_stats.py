@@ -186,26 +186,30 @@ async def get_dashboard_data(
     ownership_distribution = [
         ChartDataItem(
             name="已确权",
-            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "已确权"),
+            value=sum(
+                1 for a in assets if getattr(a, "ownership_status", None) == "已确权"
+            ),
             percentage=0.0,  # 计算在下面
         ),
         ChartDataItem(
             name="未确权",
-            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "未确权"),
+            value=sum(
+                1 for a in assets if getattr(a, "ownership_status", None) == "未确权"
+            ),
             percentage=0.0,
         ),
         ChartDataItem(
             name="部分确权",
-            value=sum(1 for a in assets if getattr(a, "ownership_status", None) == "部分确权"),
+            value=sum(
+                1 for a in assets if getattr(a, "ownership_status", None) == "部分确权"
+            ),
             percentage=0.0,
         ),
     ]
 
     # 计算百分比
     for item in ownership_distribution:
-        item.percentage = (
-            (item.value / total_assets * 100) if total_assets > 0 else 0.0
-        )
+        item.percentage = (item.value / total_assets * 100) if total_assets > 0 else 0.0
 
     # TODO: 实现财务汇总和出租率统计
     # 这需要从其他服务获取数据
@@ -331,7 +335,9 @@ async def get_cache_info() -> dict[str, Any]:
     # CacheManager 不支持列出所有键，这是 Redis 特有的功能
     # 返回缓存管理器信息作为替代
     backend_type = (
-        cache_mgr.backend.__class__.__name__ if hasattr(cache_mgr, "backend") else "Unknown"
+        cache_mgr.backend.__class__.__name__
+        if hasattr(cache_mgr, "backend")
+        else "Unknown"
     )
     backend_info = {
         "backend_type": backend_type,
