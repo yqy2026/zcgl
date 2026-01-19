@@ -172,6 +172,18 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="bearer", description="令牌类型")
     expires_in: int = Field(..., description="过期时间（秒）")
     session_id: str | None = Field(None, description="会话ID")
+    permissions: list["PermissionSchema"] = Field(default_factory=list, description="用户权限列表")
+
+
+# Permission相关模式
+class PermissionSchema(BaseModel):
+    """权限模式"""
+
+    resource: str = Field(..., description="资源类型")
+    action: str = Field(..., description="操作类型")
+    description: str | None = Field(None, description="权限描述")
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginResponse(BaseModel):

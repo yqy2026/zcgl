@@ -27,11 +27,13 @@ from ....middleware.auth import (
 )
 from ....schemas.auth import (
     LoginRequest,
+    PermissionSchema,
     RefreshTokenRequest,
     TokenResponse,
     UserResponse,
 )
 from ....services import AuthService
+from ....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["认证管理"])
 
@@ -104,6 +106,28 @@ async def login(
             user_agent=user_agent,
         )
 
+        # Get user permissions
+        rbac_service = RBACService(db)
+        try:
+            permission_summary = rbac_service.get_user_permissions_summary(str(user.id))
+            # Extract unique permissions from roles
+            permissions_set = set()
+            for perm in permission_summary.permissions:
+                permissions_set.add(
+                    PermissionSchema(
+                        resource=perm.resource,
+                        action=perm.action,
+                        description=perm.description,
+                    )
+                )
+
+            # Convert to list
+            permissions_list = list(permissions_set)
+        except Exception as e:
+            # If permission fetching fails, return empty list
+            logger.warning(f"Failed to fetch permissions for user {user.id}: {e}")
+            permissions_list = []
+
         # Return simple response instead of LoginResponse to avoid validation issues
         return {
             "user": {
@@ -122,6 +146,14 @@ async def login(
                 "token_type": tokens.token_type,
                 "expires_in": tokens.expires_in,
             },
+            "permissions": [
+                {
+                    "resource": p.resource,
+                    "action": p.action,
+                    "description": p.description,
+                }
+                for p in permissions_list
+            ],
             "message": "登录成功",
         }
 

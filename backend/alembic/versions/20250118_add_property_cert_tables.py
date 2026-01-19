@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "20250118_add_property_cert_tables"
-down_revision: str | None = "20250118_add_llm_prompt"
+down_revision: str | None = "20250118_add_user_id_feedback"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
