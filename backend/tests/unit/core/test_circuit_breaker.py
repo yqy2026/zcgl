@@ -1,6 +1,7 @@
-import pytest
 import time
+
 from src.core.circuit_breaker import CircuitBreaker, CircuitState
+
 
 def test_circuit_breaker_initially_closed():
     """Test that circuit breaker starts in closed state"""

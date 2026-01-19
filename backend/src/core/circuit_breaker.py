@@ -1,6 +1,7 @@
 import time
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+
 
 class CircuitState(str, Enum):
     """Circuit breaker states"""
