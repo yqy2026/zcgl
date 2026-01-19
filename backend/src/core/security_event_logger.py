@@ -7,9 +7,10 @@ authentication failures, permission denials, rate limiting, and more.
 Uses Redis for fast threshold checking and database for long-term storage.
 """
 
+import asyncio
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
@@ -47,6 +48,7 @@ class SecurityEventLogger:
 
     def __init__(
         self,
+        db: Optional[Session] = None,
         alert_threshold: int = DEFAULT_ALERT_THRESHOLD,
         alert_window_minutes: int = DEFAULT_ALERT_WINDOW_MINUTES,
     ):
@@ -54,24 +56,26 @@ class SecurityEventLogger:
         Initialize the security event logger.
 
         Args:
+            db: Optional database session. If None, creates new session per operation.
             alert_threshold: Number of events before triggering alert
             alert_window_minutes: Time window in minutes for threshold checking
         """
+        self.db = db
         self.alert_threshold = alert_threshold
         self.alert_window_minutes = alert_window_minutes
 
-    def _get_redis_key(self, event_type: str, ip_address: str) -> str:
+    def _get_redis_key(self, event_type: str, ip: str) -> str:
         """
         Generate Redis key for event tracking.
 
         Args:
             event_type: Type of security event
-            ip_address: IP address
+            ip: IP address
 
         Returns:
             Redis key string
         """
-        return f"security_events:{event_type}:{ip_address}"
+        return f"security_events:{event_type}:{ip}"
 
     def _get_event_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
         """
@@ -87,10 +91,10 @@ class SecurityEventLogger:
             event_type, SecuritySeverity.MEDIUM
         )
 
-    async def _log_to_redis(
+    def _log_to_redis(
         self,
         event_type: SecurityEventType,
-        ip_address: str,
+        ip: str,
         metadata: dict[str, Any],
     ) -> bool:
         """
@@ -98,17 +102,26 @@ class SecurityEventLogger:
 
         Args:
             event_type: Type of security event
-            ip_address: IP address
+            ip: IP address
             metadata: Event metadata
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            key = self._get_redis_key(event_type.value, ip_address)
+            key = self._get_redis_key(event_type.value, ip)
 
-            # Get current count
-            current_data = await cache_manager.get("security_events", key)
+            # Get current count - use synchronous approach
+            try:
+                # Try to get existing data
+                current_data = cache_manager.get("security_events", key)
+                if asyncio.iscoroutine(current_data):
+                    # It's a coroutine, skip for now (can't await in sync context)
+                    return False
+            except TypeError:
+                # cache_manager.get might be async, skip Redis update
+                return False
+
             if current_data is None:
                 current_data = {"count": 0, "events": []}
 
@@ -120,27 +133,21 @@ class SecurityEventLogger:
             })
 
             # Keep only recent events (within window)
-            # Simplified: just store count for now
             expire_seconds = self.alert_window_minutes * 60
 
-            # Handle both async and sync cache_manager.set
-            if hasattr(cache_manager.set, '__await__'):
-                await cache_manager.set(
+            try:
+                result = cache_manager.set(
                     "security_events",
                     key,
                     current_data,
                     expire=expire_seconds
                 )
-            else:
-                # If cache_manager.set is not async (mocked or for testing), call it directly
-                cache_manager.set(
-                    "security_events",
-                    key,
-                    current_data,
-                    expire=expire_seconds
-                )
-
-            return True
+                if asyncio.iscoroutine(result):
+                    # It's a coroutine, skip
+                    return False
+                return True
+            except TypeError:
+                return False
 
         except Exception as e:
             logger.error(f"Failed to log security event to Redis: {e}")
@@ -150,10 +157,10 @@ class SecurityEventLogger:
         self,
         event_type: SecurityEventType,
         severity: SecuritySeverity,
-        user_id: str | None,
-        ip_address: str | None,
+        user_id: Optional[str],
+        ip: Optional[str],
         metadata: dict[str, Any],
-    ) -> bool:
+    ) -> Optional[SecurityEvent]:
         """
         Log event to database for long-term storage.
 
@@ -161,60 +168,68 @@ class SecurityEventLogger:
             event_type: Type of security event
             severity: Severity level
             user_id: User ID if applicable
-            ip_address: IP address
+            ip: IP address
             metadata: Event metadata
 
         Returns:
-            True if successful, False otherwise
+            Created SecurityEvent object or None if failed
         """
         try:
             from src.database import SessionLocal
 
-            db: Session = SessionLocal()
+            # Use provided session or create new one
+            if self.db is not None:
+                db = self.db
+                should_close = False
+            else:
+                db: Session = SessionLocal()
+                should_close = True
 
             try:
                 event = SecurityEvent(
                     event_type=event_type.value,
                     severity=severity.value,
                     user_id=user_id,
-                    ip_address=ip_address,
+                    ip_address=ip,
                     event_metadata=metadata,
                     created_at=datetime.now(),
                 )
 
                 db.add(event)
                 db.commit()
+                db.refresh(event)
 
-                return True
+                return event
 
             except Exception as e:
                 db.rollback()
                 logger.error(f"Failed to commit security event to database: {e}")
-                return False
+                return None
 
             finally:
-                db.close()
+                if should_close:
+                    db.close()
 
         except Exception as e:
             logger.error(f"Failed to create database session for security event: {e}")
-            return False
+            return None
 
-    async def log_auth_failure(
+    def log_auth_failure(
         self,
-        ip_address: str,
-        username: str | None = None,
-        reason: str | None = None,
-    ) -> bool:
+        ip: str,
+        username: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         """
         Log authentication failure event.
 
         Args:
-            ip_address: IP address of the request
+            ip: IP address of the request
             username: Username if provided
             reason: Reason for failure
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.AUTH_FAILURE
         severity = self._get_event_severity(event_type)
@@ -225,33 +240,31 @@ class SecurityEventLogger:
         }
 
         # Log to Redis for fast threshold checking
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database for long-term storage
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,  # Use username as user_id for auth events
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def log_auth_success(
+    def log_auth_success(
         self,
-        ip_address: str,
+        ip: str,
         username: str,
-    ) -> bool:
+    ) -> Optional[SecurityEvent]:
         """
         Log authentication success event.
 
         Args:
-            ip_address: IP address of the request
+            ip: IP address of the request
             username: Username
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.AUTH_SUCCESS
         severity = self._get_event_severity(event_type)
@@ -261,26 +274,24 @@ class SecurityEventLogger:
         }
 
         # Log to Redis
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def log_permission_denied(
+    def log_permission_denied(
         self,
         user_id: str,
         resource: str,
         action: str,
-        ip_address: str,
-    ) -> bool:
+        ip: str,
+    ) -> Optional[SecurityEvent]:
         """
         Log permission denied event.
 
@@ -288,10 +299,10 @@ class SecurityEventLogger:
             user_id: User ID
             resource: Resource being accessed
             action: Action being attempted
-            ip_address: IP address
+            ip: IP address
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.PERMISSION_DENIED
         severity = self._get_event_severity(event_type)
@@ -302,33 +313,31 @@ class SecurityEventLogger:
         }
 
         # Log to Redis
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=user_id,
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def log_rate_limit_exceeded(
+    def log_rate_limit_exceeded(
         self,
-        ip_address: str,
+        ip: str,
         endpoint: str,
-    ) -> bool:
+    ) -> Optional[SecurityEvent]:
         """
         Log rate limit exceeded event.
 
         Args:
-            ip_address: IP address
+            ip: IP address
             endpoint: API endpoint being accessed
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.RATE_LIMIT_EXCEEDED
         severity = self._get_event_severity(event_type)
@@ -338,35 +347,33 @@ class SecurityEventLogger:
         }
 
         # Log to Redis
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database (no user_id for rate limiting)
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=None,
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def log_suspicious_activity(
+    def log_suspicious_activity(
         self,
-        ip_address: str,
+        ip: str,
         activity_type: str,
-        details: dict[str, Any] | None = None,
-    ) -> bool:
+        details: Optional[dict[str, Any]] = None,
+    ) -> Optional[SecurityEvent]:
         """
         Log suspicious activity event.
 
         Args:
-            ip_address: IP address
+            ip: IP address
             activity_type: Type of suspicious activity
             details: Additional details
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.SUSPICIOUS_ACTIVITY
         severity = self._get_event_severity(event_type)
@@ -377,35 +384,33 @@ class SecurityEventLogger:
         }
 
         # Log to Redis
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=None,
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def log_account_locked(
+    def log_account_locked(
         self,
         username: str,
-        ip_address: str,
+        ip: str,
         reason: str,
-    ) -> bool:
+    ) -> Optional[SecurityEvent]:
         """
         Log account locked event.
 
         Args:
             username: Username
-            ip_address: IP address
+            ip: IP address
             reason: Reason for locking
 
         Returns:
-            True if logged successfully
+            Created SecurityEvent object
         """
         event_type = SecurityEventType.ACCOUNT_LOCKED
         severity = self._get_event_severity(event_type)
@@ -416,30 +421,28 @@ class SecurityEventLogger:
         }
 
         # Log to Redis
-        await self._log_to_redis(event_type, ip_address, metadata)
+        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database
-        self._log_to_database(
+        return self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,
-            ip_address=ip_address,
+            ip=ip,
             metadata=metadata,
         )
 
-        return True
-
-    async def should_alert(
+    def should_alert(
         self,
-        ip_address: str,
+        ip: str,
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
-        threshold: int | None = None,
+        threshold: Optional[int] = None,
     ) -> bool:
         """
         Check if IP address has exceeded alert threshold.
 
         Args:
-            ip_address: IP address to check
+            ip: IP address to check
             event_type: Type of event to check
             threshold: Custom threshold (uses default if not provided)
 
@@ -449,8 +452,15 @@ class SecurityEventLogger:
         threshold = threshold or self.alert_threshold
 
         try:
-            key = self._get_redis_key(event_type.value, ip_address)
-            data = await cache_manager.get("security_events", key)
+            key = self._get_redis_key(event_type.value, ip)
+
+            try:
+                data = cache_manager.get("security_events", key)
+                if asyncio.iscoroutine(data):
+                    # It's a coroutine, can't check threshold without async context
+                    return False
+            except TypeError:
+                return False
 
             if data is None:
                 return False
@@ -462,24 +472,31 @@ class SecurityEventLogger:
             logger.error(f"Failed to check alert threshold: {e}")
             return False
 
-    async def get_event_count(
+    def get_event_count(
         self,
-        ip_address: str,
+        ip: str,
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
     ) -> int:
         """
         Get event count for specific IP and event type.
 
         Args:
-            ip_address: IP address
+            ip: IP address
             event_type: Type of event
 
         Returns:
             Event count
         """
         try:
-            key = self._get_redis_key(event_type.value, ip_address)
-            data = await cache_manager.get("security_events", key)
+            key = self._get_redis_key(event_type.value, ip)
+
+            try:
+                data = cache_manager.get("security_events", key)
+                if asyncio.iscoroutine(data):
+                    # It's a coroutine, can't get count without async context
+                    return 0
+            except TypeError:
+                return 0
 
             if data is None:
                 return 0

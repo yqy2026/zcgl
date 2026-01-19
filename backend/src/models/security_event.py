@@ -64,9 +64,9 @@ class SecurityEvent(Base):  # type: ignore[valid-type, misc]
         String(45), nullable=True, index=True, comment="IP address (IPv4 or IPv6)"
     )
 
-    # Event metadata
+    # Event metadata (mapped to 'metadata' column in DB)
     event_metadata: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, comment="Event metadata (JSON)"
+        "metadata", JSON, comment="Event metadata (JSON)"
     )
 
     # Timestamp

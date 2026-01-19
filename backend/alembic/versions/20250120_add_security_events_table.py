@@ -25,7 +25,7 @@ def upgrade():
         sa.Column('severity', sa.String(length=20), nullable=False, comment='Severity level'),
         sa.Column('user_id', sa.String(), nullable=True, comment='User ID if applicable'),
         sa.Column('ip_address', sa.String(length=45), nullable=True, comment='IP address (IPv4 or IPv6)'),
-        sa.Column('event_metadata', sa.JSON(), nullable=True, comment='Event metadata (JSON)'),
+        sa.Column('metadata', sa.JSON(), nullable=True, comment='Event metadata (JSON)'),
         sa.Column('created_at', sa.DateTime(), nullable=False, comment='Event timestamp'),
         sa.PrimaryKeyConstraint('id')
     )

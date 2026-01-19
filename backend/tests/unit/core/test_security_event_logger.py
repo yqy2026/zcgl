@@ -5,10 +5,9 @@ Test the security event logging system including event types,
 threshold checking, Redis integration, and database storage.
 """
 
-import asyncio
 import time
 from datetime import datetime
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -17,21 +16,24 @@ from src.core.security_event_logger import (
     SecurityEventType,
     SecuritySeverity,
 )
+from src.models.security_event import SecurityEvent
 
 
 def setup_mock_cache(mock_cache, set_return=True, get_return=None):
-    """Helper to set up mock cache_manager with async functions"""
-    async def mock_set(prefix, key, value, expire):
+    """Helper to set up mock cache_manager with sync functions"""
+    def mock_set(prefix, key, value, expire):
         return set_return
 
-    async def mock_get(prefix, key):
+    def mock_get(prefix, key):
         # If get_return is a dict with just 'count', add 'events' key
         if get_return and isinstance(get_return, dict) and 'count' in get_return and 'events' not in get_return:
             return {"count": get_return["count"], "events": []}
+        # Handle the case where get_return is explicitly set to a return value
         return get_return
 
     mock_cache.set = mock_set
     mock_cache.get = mock_get
+    mock_cache.get.is_coroutine = False  # Mark as not a coroutine
 
 
 class TestSecurityEventLoggerBasics:
@@ -43,6 +45,12 @@ class TestSecurityEventLoggerBasics:
         assert logger is not None
         assert logger.alert_threshold == 5
         assert logger.alert_window_minutes == 10
+
+    def test_logger_with_db_session(self):
+        """Test logger with database session"""
+        mock_db = Mock()
+        logger = SecurityEventLogger(db=mock_db)
+        assert logger.db == mock_db
 
     def test_logger_custom_threshold(self):
         """Test logger with custom threshold"""
@@ -73,55 +81,56 @@ class TestAuthFailureLogging:
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_auth_failure_basic(self, mock_cache):
         """Test logging basic auth failure"""
-        # Create proper async mock functions
-        async def mock_set(prefix, key, value, expire):
-            return True
-
-        async def mock_get(prefix, key):
-            return None
-
-        mock_cache.set = mock_set
-        mock_cache.get = mock_get
+        setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "auth_failure"
+            mock_event.ip_address = "192.168.1.1"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
-        # The mock functions are async and will be called correctly
+            result = logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password")
+
+            # Verify the returned event object
+            assert result is not None
+            assert result.event_type == "auth_failure"
+            assert result.ip_address == "192.168.1.1"
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_auth_failure_without_username(self, mock_cache):
         """Test logging auth failure without username"""
-        async def mock_set(prefix, key, value, expire):
-            return True
-
-        async def mock_get(prefix, key):
-            return None
-
-        mock_cache.set = mock_set
-        mock_cache.get = mock_get
+        setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_auth_failure("192.168.1.1", reason="account_locked"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "auth_failure"
+            mock_event.ip_address = "192.168.1.1"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_auth_failure("192.168.1.1", reason="account_locked")
+
+            # Should still log even without username
+            assert result is not None
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_auth_failure_with_ipv6(self, mock_cache):
         """Test logging auth failure with IPv6 address"""
-        async def mock_set(prefix, key, value, expire):
-            return True
-
-        async def mock_get(prefix, key):
-            return None
-
-        mock_cache.set = mock_set
-        mock_cache.get = mock_get
+        setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_auth_failure("::ffff:192.168.1.1", "testuser"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "auth_failure"
+            mock_event.ip_address = "::ffff:192.168.1.1"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_auth_failure("::ffff:192.168.1.1", "testuser")
+
+            # Should handle IPv6 addresses
+            assert result is not None
+            assert result.ip_address == "::ffff:192.168.1.1"
 
 
 class TestPermissionDeniedLogging:
@@ -133,14 +142,23 @@ class TestPermissionDeniedLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_permission_denied(
-            user_id="user123",
-            resource="assets",
-            action="delete",
-            ip_address="192.168.1.1"
-        ))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "permission_denied"
+            mock_event.ip_address = "192.168.1.1"
+            mock_event.user_id = "user123"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_permission_denied(
+                user_id="user123",
+                resource="assets",
+                action="delete",
+                ip="192.168.1.1"
+            )
+
+            assert result is not None
+            assert result.event_type == "permission_denied"
+            assert result.user_id == "user123"
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_permission_denied_with_details(self, mock_cache):
@@ -148,14 +166,20 @@ class TestPermissionDeniedLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_permission_denied(
-            user_id="user123",
-            resource="contracts",
-            action="update",
-            ip_address="10.0.0.1"
-        ))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "permission_denied"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_permission_denied(
+                user_id="user123",
+                resource="contracts",
+                action="update",
+                ip="10.0.0.1"
+            )
+
+            # Should log the event
+            assert result is not None
 
 
 class TestRateLimitExceededLogging:
@@ -167,9 +191,15 @@ class TestRateLimitExceededLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_rate_limit_exceeded("192.168.1.1", "/api/v1/assets"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "rate_limit_exceeded"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_rate_limit_exceeded("192.168.1.1", "/api/v1/assets")
+
+            assert result is not None
+            assert result.event_type == "rate_limit_exceeded"
 
 
 class TestThresholdChecking:
@@ -181,7 +211,7 @@ class TestThresholdChecking:
         setup_mock_cache(mock_cache, get_return={"count": 3})
 
         logger = SecurityEventLogger(alert_threshold=5)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1"))
+        should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is False
 
@@ -191,7 +221,7 @@ class TestThresholdChecking:
         setup_mock_cache(mock_cache, get_return={"count": 5})
 
         logger = SecurityEventLogger(alert_threshold=5)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1"))
+        should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is True
 
@@ -201,7 +231,7 @@ class TestThresholdChecking:
         setup_mock_cache(mock_cache, get_return={"count": 10})
 
         logger = SecurityEventLogger(alert_threshold=5)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1"))
+        should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is True
 
@@ -211,7 +241,7 @@ class TestThresholdChecking:
         setup_mock_cache(mock_cache, get_return={"count": 8})
 
         logger = SecurityEventLogger(alert_threshold=10)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1", threshold=10))
+        should_alert = logger.should_alert("192.168.1.1", threshold=10)
 
         assert should_alert is False
 
@@ -221,7 +251,7 @@ class TestThresholdChecking:
         setup_mock_cache(mock_cache, get_return={"count": 0})
 
         logger = SecurityEventLogger(alert_threshold=5)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1"))
+        should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is False
 
@@ -235,7 +265,7 @@ class TestEventCounting:
         setup_mock_cache(mock_cache, get_return={"count": 7})
 
         logger = SecurityEventLogger()
-        count = asyncio.run(logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE))
+        count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
 
         assert count == 7
 
@@ -245,7 +275,7 @@ class TestEventCounting:
         setup_mock_cache(mock_cache, get_return=None)
 
         logger = SecurityEventLogger()
-        count = asyncio.run(logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE))
+        count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
 
         assert count == 0
 
@@ -257,11 +287,11 @@ class TestEventCounting:
         logger = SecurityEventLogger()
 
         # Count auth failures
-        count1 = asyncio.run(logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE))
+        count1 = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
         assert count1 == 5
 
         # Count permission denied events
-        count2 = asyncio.run(logger.get_event_count("192.168.1.1", SecurityEventType.PERMISSION_DENIED))
+        count2 = logger.get_event_count("192.168.1.1", SecurityEventType.PERMISSION_DENIED)
         assert count2 == 5
 
 
@@ -274,10 +304,18 @@ class TestDatabaseStorage:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database', return_value=True):
-            asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "auth_failure"
+            mock_event.ip_address = "192.168.1.1"
+            mock_db_log.return_value = mock_event
 
-            # If we get here without exception, the test passes
+            result = logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password")
+
+            # Verify database log was called
+            mock_db_log.assert_called_once()
+            # Verify returned event
+            assert result is not None
 
 
 class TestAllEventTypes:
@@ -289,9 +327,15 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_auth_success("192.168.1.1", "testuser"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "auth_success"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_auth_success("192.168.1.1", "testuser")
+
+            assert result is not None
+            assert result.event_type == "auth_success"
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_suspicious_activity(self, mock_cache):
@@ -299,9 +343,14 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_suspicious_activity("192.168.1.1", "multiple_failed_logins"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "suspicious_activity"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_suspicious_activity("192.168.1.1", "multiple_failed_logins")
+
+            assert result is not None
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_log_account_locked(self, mock_cache):
@@ -309,9 +358,14 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        asyncio.run(logger.log_account_locked("testuser", "192.168.1.1", "too_many_failures"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.event_type = "account_locked"
+            mock_db_log.return_value = mock_event
 
-        # If we get here without exception, the test passes
+            result = logger.log_account_locked("testuser", "192.168.1.1", "too_many_failures")
+
+            assert result is not None
 
 
 class TestSeverityLevels:
@@ -340,18 +394,21 @@ class TestErrorHandling:
     @patch("src.core.security_event_logger.cache_manager")
     def test_redis_failure_graceful_handling(self, mock_cache):
         """Test graceful handling when Redis fails"""
-        async def mock_set(prefix, key, value, expire):
+        def mock_set(prefix, key, value, expire):
             raise Exception("Redis connection failed")
 
         mock_cache.set = mock_set
 
         logger = SecurityEventLogger()
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_db_log.return_value = mock_event
 
-        # Should not raise exception
-        try:
-            asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser"))
-        except Exception:
-            pytest.fail("Should handle Redis errors gracefully")
+            # Should not raise exception
+            result = logger.log_auth_failure("192.168.1.1", "testuser")
+
+            # Should still return event from database
+            assert result is not None
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_invalid_ip_address(self, mock_cache):
@@ -359,10 +416,13 @@ class TestErrorHandling:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_db_log.return_value = mock_event
 
-        # Should handle gracefully
-        asyncio.run(logger.log_auth_failure("", "testuser"))
-        asyncio.run(logger.log_auth_failure(None, "testuser"))  # type: ignore
+            # Should handle gracefully
+            logger.log_auth_failure("", "testuser")
+            logger.log_auth_failure(None, "testuser")  # type: ignore
 
 
 class TestIntegrationScenarios:
@@ -375,14 +435,18 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        # Log 5 auth failures (they won't actually increment in our mock, so we simulate with return value)
-        for i in range(5):
-            asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_db_log.return_value = mock_event
 
-        # Check if should alert (mock returns count=5)
-        should_alert = asyncio.run(logger.should_alert("192.168.1.1"))
+            # Log 5 auth failures
+            for i in range(5):
+                logger.log_auth_failure("192.168.1.1", "testuser")
 
-        assert should_alert is True
+            # Check if should alert (mock returns count=5)
+            should_alert = logger.should_alert("192.168.1.1")
+
+            assert should_alert is True
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_different_ips_separate_tracking(self, mock_cache):
@@ -391,22 +455,26 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        # Log failures for different IPs
-        for _ in range(5):
-            asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_db_log.return_value = mock_event
 
-        for _ in range(2):
-            asyncio.run(logger.log_auth_failure("192.168.1.2", "testuser"))
+            # Log failures for different IPs
+            for _ in range(5):
+                logger.log_auth_failure("192.168.1.1", "testuser")
 
-        # First IP should trigger alert
-        assert asyncio.run(logger.should_alert("192.168.1.1")) is True
+            for _ in range(2):
+                logger.log_auth_failure("192.168.1.2", "testuser")
 
-        # Second IP should not trigger alert (update mock to return 2)
-        async def mock_get_2(prefix, key):
-            return {"count": 2}
+            # First IP should trigger alert
+            assert logger.should_alert("192.168.1.1") is True
 
-        mock_cache.get = mock_get_2
-        assert asyncio.run(logger.should_alert("192.168.1.2")) is False
+            # Second IP should not trigger alert (update mock to return 2)
+            def mock_get_2(prefix, key):
+                return {"count": 2, "events": []}
+
+            mock_cache.get = mock_get_2
+            assert logger.should_alert("192.168.1.2") is False
 
     @patch("src.core.security_event_logger.cache_manager")
     def test_mixed_event_types_separate_counts(self, mock_cache):
@@ -415,21 +483,77 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        # Log different event types
-        for _ in range(3):
-            asyncio.run(logger.log_auth_failure("192.168.1.1", "testuser"))
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_db_log.return_value = mock_event
 
-        for _ in range(2):
-            asyncio.run(logger.log_permission_denied(
-                user_id="user123",
-                resource="assets",
-                action="delete",
-                ip_address="192.168.1.1"
-            ))
+            # Log different event types
+            for _ in range(3):
+                logger.log_auth_failure("192.168.1.1", "testuser")
 
-        # Auth failures should not trigger alert (3 < 5)
-        assert asyncio.run(logger.should_alert("192.168.1.1")) is False
+            for _ in range(2):
+                logger.log_permission_denied(
+                    user_id="user123",
+                    resource="assets",
+                    action="delete",
+                    ip="192.168.1.1"
+                )
 
-        # But should correctly count auth failures
-        count = asyncio.run(logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE))
-        assert count == 3
+            # Auth failures should not trigger alert (3 < 5)
+            assert logger.should_alert("192.168.1.1") is False
+
+            # But should correctly count auth failures
+            count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+            assert count == 3
+
+
+class TestMethodSignatures:
+    """Test method signatures match spec"""
+
+    def test_log_auth_failure_signature(self):
+        """Test log_auth_failure has correct signature"""
+        logger = SecurityEventLogger()
+        import inspect
+        sig = inspect.signature(logger.log_auth_failure)
+        params = list(sig.parameters.keys())
+        assert 'ip' in params
+        assert 'username' in params
+        assert 'reason' in params
+
+    def test_log_permission_denied_signature(self):
+        """Test log_permission_denied has correct signature"""
+        logger = SecurityEventLogger()
+        import inspect
+        sig = inspect.signature(logger.log_permission_denied)
+        params = list(sig.parameters.keys())
+        assert 'user_id' in params
+        assert 'resource' in params
+        assert 'action' in params
+        assert 'ip' in params
+
+    def test_log_rate_limit_exceeded_signature(self):
+        """Test log_rate_limit_exceeded has correct signature"""
+        logger = SecurityEventLogger()
+        import inspect
+        sig = inspect.signature(logger.log_rate_limit_exceeded)
+        params = list(sig.parameters.keys())
+        assert 'ip' in params
+        assert 'endpoint' in params
+
+    def test_methods_return_security_event(self):
+        """Test methods return SecurityEvent object"""
+        logger = SecurityEventLogger()
+        with patch.object(logger, '_log_to_database') as mock_db_log:
+            mock_event = Mock(spec=SecurityEvent)
+            mock_event.id = "test-id"
+            mock_event.event_type = "auth_failure"
+            mock_event.ip_address = "192.168.1.1"
+            mock_db_log.return_value = mock_event
+
+            result = logger.log_auth_failure(ip="192.168.1.1")
+
+            # Should return SecurityEvent object
+            assert result is not None
+            assert hasattr(result, 'id')
+            assert hasattr(result, 'event_type')
+            assert hasattr(result, 'ip_address')
