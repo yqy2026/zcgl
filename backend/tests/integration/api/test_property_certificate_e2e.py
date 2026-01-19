@@ -26,7 +26,8 @@ def test_upload_extract_confirm_flow(db_session: Session):
 
     # 1. Upload file (create a fake PDF)
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
-        f.write(b"fake pdf content for testing")
+        f.write(b"%PDF-1.4
+Test PDF content")
         temp_path = f.name
 
     try:

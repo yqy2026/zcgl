@@ -60,7 +60,8 @@ def mock_pdf_files():
         file = MagicMock(spec=UploadFile)
         file.filename = f"test_{i}.pdf"
         file.content_type = "application/pdf"
-        content = io.BytesIO(b"fake pdf content" * 100)
+        # Use minimal content to avoid polluting CI output
+        content = io.BytesIO(b"%PDF-1.4\n%Test PDF content\n")
         file.read = AsyncMock(return_value=content.getvalue())
         # seek needs to be async for FastAPI UploadFile
         file.seek = AsyncMock(return_value=None)

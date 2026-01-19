@@ -65,7 +65,7 @@ def mock_mixed_page():
 def sample_pdf_path(tmp_path):
     """Create a sample PDF file path"""
     pdf_path = tmp_path / "test_contract.pdf"
-    pdf_path.write_bytes(b"%PDF-1.4\nfake pdf content")
+    pdf_path.write_bytes(b"%PDF-1.4\n%Test PDF content for unit tests")
     return str(pdf_path)
 
 
