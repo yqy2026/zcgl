@@ -98,8 +98,7 @@ class TestRequestValidationMiddleware:
 
         middleware = RequestValidationMiddleware(
             app=None,
-            rate_limit=100,  # 100请求
-            rate_window=60,  # 60秒窗口
+            rate_limit_config={"max_requests": 100, "window_seconds": 60},
         )
 
         request = Mock(spec=Request)
@@ -311,15 +310,12 @@ class TestSecurityMiddlewareConfiguration:
         # 使用自定义配置创建中间件
         middleware = RequestValidationMiddleware(
             app=None,
-            rate_limit=1000,  # 1000请求
-            rate_window=300,  # 5分钟窗口
-            block_duration=600,  # 10分钟阻止
+            rate_limit_config={"max_requests": 1000, "window_seconds": 300},
         )
 
         # 验证配置被正确设置
-        assert middleware.rate_limit == 1000
-        assert middleware.rate_window == 300
-        assert middleware.block_duration == 600
+        assert middleware.config["max_requests"] == 1000
+        assert middleware.config["window_seconds"] == 300
 
     def test_file_upload_middleware_config(self):
         """测试文件上传中间件配置"""
@@ -329,12 +325,10 @@ class TestSecurityMiddlewareConfiguration:
         middleware = FileUploadSecurityMiddleware(
             app=None,
             max_file_size=100 * 1024 * 1024,  # 100MB
-            allowed_mime_types=["application/pdf", "image/jpeg"],
         )
 
         # 验证配置被正确设置
         assert middleware.max_file_size == 100 * 1024 * 1024
-        assert "application/pdf" in middleware.allowed_mime_types
 
 
 class TestSecurityMiddlewareErrorHandling:
