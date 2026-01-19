@@ -134,7 +134,16 @@ def setup_test_database():
                 # Base is defined in src/database.py, NOT src/models/base.py!
                 from src.database import Base
 
-                engine = create_engine(database_url)
+                # SQLite optimization for tests: increase timeout and pool size
+                if "sqlite" in database_url:
+                    engine = create_engine(
+                        database_url,
+                        connect_args={"timeout": 30},  # 30 seconds lock timeout
+                        poolclass=None,  # Disable pooling for SQLite
+                    )
+                else:
+                    engine = create_engine(database_url)
+
                 Base.metadata.create_all(bind=engine)
                 print("[OK] Database tables created (fallback)")
         except Exception as e:
@@ -146,7 +155,16 @@ def setup_test_database():
                 # Base is defined in src/database.py, NOT src/models/base.py!
                 from src.database import Base
 
-                engine = create_engine(database_url)
+                # SQLite optimization for tests
+                if "sqlite" in database_url:
+                    engine = create_engine(
+                        database_url,
+                        connect_args={"timeout": 30},
+                        poolclass=None,
+                    )
+                else:
+                    engine = create_engine(database_url)
+
                 Base.metadata.create_all(bind=engine)
                 print("[OK] Database tables created (fallback)")
             except Exception as e2:
