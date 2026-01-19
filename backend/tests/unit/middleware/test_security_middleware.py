@@ -4,10 +4,25 @@
 测试安全头、请求验证、文件上传安全等中间件功能。
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException, Request, Response
+
+
+def create_mock_request(url_path: str = "/api/test", method: str = "GET") -> Mock:
+    """创建Mock Request对象，具有必要的属性"""
+    request = Mock(spec=Request)
+    # 创建一个有path属性的URL对象
+    url_mock = Mock()
+    url_mock.path = url_path
+    url_mock.__str__ = lambda self: f"https://example.com{url_path}"
+    request.url = url_mock
+    request.method = method
+    request.headers = {}
+    request.query_params = {}
+    request.client = Mock(host="192.168.1.100")
+    return request
 
 
 class TestSecurityHeadersMiddleware:
@@ -75,11 +90,9 @@ class TestRequestValidationMiddleware:
 
         middleware = RequestValidationMiddleware(app=None)
 
-        request = Mock(spec=Request)
+        request = create_mock_request(url_path="/api/test")
         request.headers = {"user-agent": ""}
-        request.client = Mock()
         request.client.host = "192.168.1.100"
-        request.url = "https://example.com/api/test"
 
         async def mock_call_next(req):
             return Response(content="test")
@@ -98,17 +111,14 @@ class TestRequestValidationMiddleware:
 
         middleware = RequestValidationMiddleware(
             app=None,
-            rate_limit_config={"max_requests": 100, "window_seconds": 60},
+            rate_limit_config={"max_requests": 100, "time_window": 60},
         )
 
-        request = Mock(spec=Request)
-        request.client = Mock(host="192.168.1.100")
+        request = create_mock_request(url_path="/api/test")
         request.headers = {"user-agent": "Mozilla/5.0"}
-        request.url = "https://example.com/api/test"
 
-        call_next = MagicMock()
-        response = Mock()
-        call_next.return_value = response
+        async def call_next(req):
+            return Response(content="test")
 
         # 模拟超过速率限制
         with patch.object(middleware, "_check_rate_limit", return_value=False):
@@ -132,12 +142,14 @@ class TestFileUploadSecurityMiddleware:
             max_file_size=50 * 1024 * 1024,  # 50MB
         )
 
-        request = Mock(spec=Request)
+        request = create_mock_request(url_path="/api/upload")
         request.headers = {
-            "content-length": "52428801"  # 51MB (超过限制)
+            "content-type": "multipart/form-data",
+            "content-length": "52428801",  # 51MB (超过限制)
         }
 
-        call_next = MagicMock()
+        async def call_next(req):
+            return Response(content="test")
 
         # 应该拒绝大文件
         with pytest.raises(HTTPException) as exc_info:
@@ -156,16 +168,19 @@ class TestFileUploadSecurityMiddleware:
         )
 
         # 测试合法的Content-Length
-        request = Mock(spec=Request)
+        request = create_mock_request(url_path="/api/upload")
         request.headers = {"content-length": "1048576"}  # 1MB
 
-        call_next = MagicMock()
-        response = Mock()
-        call_next.return_value = response
+        call_next_called = False
+
+        async def call_next(req):
+            nonlocal call_next_called
+            call_next_called = True
+            return Response(content="test")
 
         # 应该允许
         await middleware.dispatch(request, call_next)
-        assert call_next.called
+        assert call_next_called
 
     @pytest.mark.asyncio
     async def test_missing_content_length_allowed(self):
@@ -174,16 +189,19 @@ class TestFileUploadSecurityMiddleware:
 
         middleware = FileUploadSecurityMiddleware(app=None)
 
-        request = Mock(spec=Request)
+        request = create_mock_request(url_path="/api/upload")
         request.headers = {}  # 没有Content-Length
 
-        call_next = MagicMock()
-        response = Mock()
-        call_next.return_value = response
+        call_next_called = False
+
+        async def call_next(req):
+            nonlocal call_next_called
+            call_next_called = True
+            return Response(content="test")
 
         # 应该允许（可能使用分块传输编码）
         await middleware.dispatch(request, call_next)
-        assert call_next.called
+        assert call_next_called
 
 
 class TestSecurityMiddlewareIntegration:
@@ -205,25 +223,22 @@ class TestSecurityMiddlewareIntegration:
         request_validation = RequestValidationMiddleware(security_headers)
         file_upload = FileUploadSecurityMiddleware(request_validation)
 
-        request = Mock(spec=Request)
-        request.client = Mock(host="192.168.1.100")
+        request = create_mock_request(url_path="/api/upload")
         request.headers = {
             "user-agent": "Mozilla/5.0",
             "content-length": "1048576",  # 1MB
         }
-        request.url = "https://example.com/api/upload"
 
         # 模拟call_next
-        call_next = MagicMock()
-        response = Mock()
-        response.headers = {}
-        call_next.return_value = response
+        async def call_next(req):
+            response = Response(content="test")
+            response.headers = {}
+            return response
 
-        # 调用中间件链
-        await file_upload.dispatch(request, call_next)
+        response = await file_upload.dispatch(request, call_next)
 
-        # 验证请求被处理
-        assert call_next.called
+        # 验证响应存在且有安全头
+        assert response is not None
         # 验证响应包含安全头
         assert "X-Content-Type-Options" in response.headers
 
@@ -238,14 +253,14 @@ class TestSecurityLogging:
 
         middleware = RequestValidationMiddleware(app=None)
 
-        request = Mock(spec=Request)
-        request.client = Mock(host="192.168.1.100")
+        request = create_mock_request(url_path="/api/test")
         request.headers = {"user-agent": "TestScanner/1.0"}
-        request.url = "https://example.com/api/test"
 
-        call_next = MagicMock()
-        response = Mock()
-        call_next.return_value = response
+        async def call_next(req):
+            return Response(content="test")
+
+        # 调用中间件并验证没有异常
+        await middleware.dispatch(request, call_next)
 
         # 验证可疑活动被记录
         with patch("src.middleware.security_middleware.logger") as mock_logger:
