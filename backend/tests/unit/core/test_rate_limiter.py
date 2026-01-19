@@ -208,7 +208,7 @@ class TestRateLimiterErrorHandling:
         # 负参数在 check_rate_limit 中应该被拒绝或转换为正值
         try:
             result = limiter.check_rate_limit(
-                "test_key", max_requests=-10, window_seconds=-60
+                "test_key", max_requests=-10, time_window=-60
             )
             # 如果没有抛出异常，参数应该被规范化
             assert result is False  # 负值应该返回False或被规范化
@@ -222,9 +222,7 @@ class TestRateLimiterErrorHandling:
         # 应该能够处理合理的最大值
         limiter = RateLimiter()
         # 参数通过 check_rate_limit 传递
-        limiter.check_rate_limit(
-            "test_key", max_requests=1_000_000, window_seconds=86400
-        )
+        limiter.check_rate_limit("test_key", max_requests=1_000_000, time_window=86400)
 
         # 验证配置被正确应用（具体验证取决于实现）
 
