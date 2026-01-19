@@ -30,6 +30,7 @@ except ImportError as e:
     def set_ocr_service(x):
         return None
 
+
 try:
     from .services.adapters.paddle_ocr_engine_adapter import PaddleOCREngineAdapter
 except Exception:

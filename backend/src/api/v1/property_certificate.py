@@ -209,7 +209,9 @@ def list_certificates(
         certificates = property_certificate_crud.get_multi(db, skip=skip, limit=limit)
         logger.debug(
             "Retrieved %d certificates (skip=%d, limit=%d)",
-            len(certificates), skip, limit
+            len(certificates),
+            skip,
+            limit,
         )
         return certificates
     except Exception as e:
@@ -286,7 +288,8 @@ def create_certificate(
         result = property_certificate_crud.create(db, obj_in=certificate)
         logger.info(
             "Created certificate %s (number: %r)",
-            result.id, certificate.certificate_number
+            result.id,
+            certificate.certificate_number,
         )
         return result
     except Exception as e:
