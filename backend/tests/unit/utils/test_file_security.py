@@ -290,7 +290,7 @@ class TestFileContentSanitization:
 
     def test_binary_files_unchanged(self):
         """测试二进制文件内容不被修改"""
-        pdf_content = b"%PDF-1.4\n%fake pdf content"
+        pdf_content = b"%PDF-1.4\n%Test PDF content for unit tests"
         cleaned = sanitize_file_content("test.pdf", pdf_content)
 
         # PDF内容应该保持不变
