@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
+import { AuthStorage, AuthData } from '@/utils/AuthStorage';
 
 const permLogger = createLogger('usePermission');
 
@@ -10,27 +11,12 @@ export interface Permission {
   granted: boolean;
 }
 
-export interface UserRole {
-  id: string;
-  name: string;
-  code: string;
-  permissions: string[];
-}
-
 export interface UserPermissions {
   userId: string;
   username: string;
-  roles: UserRole[];
-  permissions: string[];
-  organizationId: string;
-}
-
-interface StoredUser {
-  id: string;
-  username: string;
-  roles?: UserRole[];
-  permissions?: string[];
-  organization_id: string;
+  roles: string[];
+  permissions: Array<{ resource: string; action: string }>;
+  organizationId?: string;
 }
 
 export interface MenuItem {
@@ -50,28 +36,27 @@ const usePermission = () => {
   const loadUserPermissions = useCallback(async () => {
     setLoading(true);
     try {
-      // 从localStorage或API获取当前用户信息
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser == null) {
+      // Get auth data from centralized AuthStorage
+      const authData = AuthStorage.getAuthData();
+
+      if (authData == null) {
         setUserPermissions(null);
         return;
       }
 
-      const currentUser = JSON.parse(storedUser) as StoredUser;
-
-      // 获取用户详细权限信息
+      // Create user permissions object
       const userPermissionsData: UserPermissions = {
-        userId: currentUser.id,
-        username: currentUser.username,
-        roles: currentUser.roles ?? [],
-        permissions: currentUser.permissions ?? [],
-        organizationId: currentUser.organization_id,
+        userId: authData.user.id,
+        username: authData.user.username,
+        roles: authData.user.role ? [authData.user.role] : [],
+        permissions: authData.permissions,
+        organizationId: authData.user.organization_id,
       };
 
       setUserPermissions(userPermissionsData);
     } catch (error) {
-      permLogger.error('加载用户权限失败:', error as Error);
-      MessageManager.error('加载权限信息失败');
+      permLogger.error('Failed to load user permissions:', error as Error);
+      MessageManager.error('Failed to load permissions');
     } finally {
       setLoading(false);
     }
@@ -83,12 +68,14 @@ const usePermission = () => {
       if (!userPermissions) return false;
 
       // 管理员拥有所有权限
-      if (userPermissions.roles.some(role => role.code === 'admin')) {
+      if (userPermissions.roles.includes('admin')) {
         return true;
       }
 
-      const permissionKey = `${resource}:${action}`;
-      return userPermissions.permissions.includes(permissionKey);
+      // Check if user has permission matching resource and action
+      return userPermissions.permissions.some(
+        perm => perm.resource === resource && perm.action === action
+      );
     },
     [userPermissions]
   );
@@ -113,7 +100,7 @@ const usePermission = () => {
   const hasRole = useCallback(
     (roleCode: string): boolean => {
       if (!userPermissions) return false;
-      return userPermissions.roles.some(role => role.code === roleCode);
+      return userPermissions.roles.includes(roleCode);
     },
     [userPermissions]
   );
