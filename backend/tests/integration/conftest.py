@@ -27,8 +27,9 @@ except ImportError:
     PostgresContainer = None
 
 
-# Use the same database file as CI for consistency
-TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_database.db")
+# Integration tests use file database (not memory)
+# Unit tests use memory database to avoid lock contention
+TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL", "sqlite:///./test_integration.db")
 
 
 @pytest.fixture(scope="session")
