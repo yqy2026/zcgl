@@ -21,8 +21,6 @@ except ImportError as e:
 
 try:
     from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
-
-    OCR_PROVIDER_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: OCR提供者不可用 - {e}")
 
@@ -31,8 +29,6 @@ except ImportError as e:
 
     def set_ocr_service(x):
         return None
-
-    OCR_PROVIDER_AVAILABLE = False
 
 try:
     from .services.adapters.paddle_ocr_engine_adapter import PaddleOCREngineAdapter
