@@ -10,6 +10,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from ..core.api_errors import bad_request, forbidden
+from ..core.role_normalizer import RoleNormalizer
 from ..database import get_db
 from ..models.auth import User
 from ..services.organization_permission_service import OrganizationPermissionService
@@ -177,19 +178,19 @@ class OrganizationPermissionChecker:
         db: Session = Depends(get_db),
     ) -> User:
         """
-        检查用户权限
+        Check user permissions with case-insensitive role comparison
         """
-        # 检查基本权限
-        if current_user.role == "ADMIN":
+        # Check for admin role (case-insensitive)
+        if RoleNormalizer.is_admin(current_user.role):
             return current_user
 
-        # 如果有组织ID参数，检查组织权限
+        # If there's an organization ID parameter, check organization permission
         if self.organization_id_param:
-            # 这里应该从请求参数中获取organization_id
-            # 由于中间件设计限制，这里只做基本检查
+            # Extract organization_id from request
+            # Due to middleware design limitations, we do basic check here
             pass
 
-        # 检查用户是否有对应权限
+        # Check if user has any organization access permissions
         org_service = OrganizationPermissionService(db)
         accessible_orgs = org_service.get_user_accessible_organizations(current_user.id)
 
