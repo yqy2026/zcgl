@@ -18,8 +18,10 @@ from starlette.types import ASGIApp
 from ..constants.errors.messages import ErrorMessages
 from ..constants.http.methods import HTTPMethods
 from ..core.api_errors import bad_request, forbidden
+from ..core.circuit_breaker import CircuitBreaker
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
+from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
 from ..core.security import RateLimiter
 
 try:
@@ -69,6 +71,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self.config = rate_limit_config or {}
         self.request_count: dict[str, int] = defaultdict(int)
         self.blocked_ips: dict[str, float] = {}
+
+        # Initialize circuit breaker and rate limit strategy
+        self.rate_limit_config = RateLimitConfig.from_env()
+        self.circuit_breaker = CircuitBreaker(
+            max_failures=self.rate_limit_config.max_failures,
+            cooldown=self.rate_limit_config.cooldown_seconds
+        )
+
         self.suspicious_patterns = [
             r"<script",
             r"javascript:",
@@ -211,20 +221,16 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         return False
 
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
-        """检查请求频率限制"""
-        # 本地开发环境更宽松的限制
-        (
-            ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]  # nosec - B104: Local IP check, not binding
-            or ip.startswith("192.168.")
-            or ip.startswith("10.")
-            or ip.startswith("172.")
-        )
+        """
+        Check rate limiting with fail-closed behavior
 
+        Returns:
+            bool: True if request is allowed, False if rate limited
+        """
         # 检查是否为可疑请求
         is_suspicious = self._is_suspicious_request(request)
 
-        # 使用自适应速率限制器
-        rate_limit_key = ip
+        # Generate rate limit key
         path = request.url.path or ""
 
         if path.startswith("/api/v1/pdf_import"):
@@ -236,16 +242,77 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         elif request.method == HTTPMethods.POST:
             # POST请求限制
             rate_limit_key = f"{ip}:post"
-
-        # 检查速率限制
-        if adaptive_limiter is not None and ADAPTIVE_LIMITER_AVAILABLE:
-            return adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
         else:
-            # 如果自适应限流器不可用，使用简单的默认限流器
+            # 默认限制
+            rate_limit_key = f"{ip}:default"
+
+        # Check circuit breaker state
+        if self.circuit_breaker.is_open():
             logger.warning(
-                "Adaptive rate limiter not available, using default rate limiting"
+                f"Circuit breaker open, using degraded rate limiting for {ip}"
             )
-            return True  # 默认允许通过，在生产环境中应该实现更严格的限流
+            # Use simple IP-based limiting in degraded mode
+            return self._degraded_rate_limit_check(rate_limit_key)
+
+        # Try adaptive rate limiting
+        try:
+            if adaptive_limiter is not None and ADAPTIVE_LIMITER_AVAILABLE:
+                result = adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
+                # Record success on successful check
+                self.circuit_breaker.record_success()
+                return result
+            else:
+                logger.warning("Adaptive rate limiter not available")
+                # Check if we should fail-closed
+                if self.rate_limit_config.should_block_on_error():
+                    self.circuit_breaker.record_failure()
+                    return False
+                else:
+                    return True
+
+        except Exception as e:
+            logger.error(f"Rate limiter error: {e}")
+            self.circuit_breaker.record_failure()
+
+            # Fail-closed: block on error in STRICT mode
+            if self.rate_limit_config.strategy == RateLimitStrategy.STRICT:
+                return False
+            # Fail-open: allow in PERMISSIVE mode
+            elif self.rate_limit_config.strategy == RateLimitStrategy.PERMISSIVE:
+                return True
+            # DEGRADED: fallback to simple limiting
+            else:
+                return self._degraded_rate_limit_check(rate_limit_key)
+
+    def _degraded_rate_limit_check(self, key: str) -> bool:
+        """
+        Simple degraded mode rate limiting using in-memory counter
+
+        Args:
+            key: Rate limit key
+
+        Returns:
+            bool: True if request is allowed, False if rate limited
+        """
+        try:
+            # Simple 60 req/min limit in degraded mode
+            current_time = time.time()
+            minute_key = f"{key}:{int(current_time // 60)}"
+
+            self.request_count[minute_key] += 1
+
+            # Clean up old entries
+            if len(self.request_count) > 1000:
+                old_minute = int(current_time // 60) - 1
+                old_key = f"{key}:{old_minute}"
+                if old_key in self.request_count:
+                    del self.request_count[old_key]
+
+            return self.request_count[minute_key] <= 60
+        except Exception as e:
+            logger.error(f"Degraded rate limiting failed: {e}")
+            # Ultimate fallback: allow request
+            return True
 
     def _is_suspicious_request(self, request: Request) -> bool:
         """检查是否为可疑请求"""
