@@ -69,4 +69,72 @@ describe('AuthStorage', () => {
 
     expect(token).toBe('test-token');
   });
+
+  it('should get refresh token from authData', () => {
+    const authData = {
+      token: 'test-token',
+      refreshToken: 'test-refresh',
+      user: { id: '1' },
+      permissions: []
+    };
+
+    AuthStorage.setAuthData(authData);
+    const refreshToken = AuthStorage.getRefreshToken();
+
+    expect(refreshToken).toBe('test-refresh');
+  });
+
+  it('should get current user from authData', () => {
+    const authData = {
+      token: 'test-token',
+      refreshToken: 'test-refresh',
+      user: { id: '1', username: 'test' },
+      permissions: []
+    };
+
+    AuthStorage.setAuthData(authData);
+    const user = AuthStorage.getCurrentUser();
+
+    expect(user).toEqual({ id: '1', username: 'test' });
+  });
+
+  it('should get permissions from authData', () => {
+    const authData = {
+      token: 'test-token',
+      refreshToken: 'test-refresh',
+      user: { id: '1' },
+      permissions: [{ resource: 'assets', action: 'read' }]
+    };
+
+    AuthStorage.setAuthData(authData);
+    const permissions = AuthStorage.getPermissions();
+
+    expect(permissions).toEqual([{ resource: 'assets', action: 'read' }]);
+  });
+
+  it('should check authentication status', () => {
+    // Test when not authenticated
+    expect(AuthStorage.isAuthenticated()).toBe(false);
+
+    // Test when authenticated
+    const authData = {
+      token: 'test-token',
+      refreshToken: 'test-refresh',
+      user: { id: '1' },
+      permissions: []
+    };
+
+    AuthStorage.setAuthData(authData);
+    expect(AuthStorage.isAuthenticated()).toBe(true);
+
+    // Test with empty token
+    localStorage.clear();
+    AuthStorage.setAuthData({
+      token: '   ',  // whitespace
+      refreshToken: 'test-refresh',
+      user: { id: '1' },
+      permissions: []
+    });
+    expect(AuthStorage.isAuthenticated()).toBe(false);
+  });
 });
