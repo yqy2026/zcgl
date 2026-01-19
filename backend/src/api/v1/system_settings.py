@@ -197,10 +197,13 @@ def handle_audit_log_failure(
             # 🔒 安全修复: 只捕获syslog/网络/OS相关错误
             fallback_errors["syslog_error"] = str(syslog_error)
 
-            # 3.3 尝试写入已知位置（/tmp 或当前目录）: 尝试写入已知位置（/tmp 或当前目录）
+            # 3.3 尝试写入临时目录或当前目录
             try:
-                emergency_log_path = Path("/tmp/audit_emergency.log")
-                if not emergency_log_path.exists():
+                import tempfile
+
+                # Use tempfile.gettempdir() for secure temp directory
+                emergency_log_path = Path(tempfile.gettempdir()) / "audit_emergency.log"
+                if not emergency_log_path.parent.exists():
                     # 尝试当前目录作为最后的回退
                     emergency_log_path = Path("audit_emergency.log")
 
