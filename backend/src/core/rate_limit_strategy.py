@@ -1,6 +1,8 @@
+import os
 from enum import Enum
+
 from pydantic import BaseModel, Field
-from src.core.environment import get_environment
+
 
 class RateLimitStrategy(str, Enum):
     """Rate limit failure strategy"""
@@ -34,15 +36,24 @@ class RateLimitConfig(BaseModel):
     @classmethod
     def from_env(cls) -> "RateLimitConfig":
         """Create config from environment variables"""
-        env = get_environment()
-        strategy_str = env.getenv("RATE_LIMIT_FAILURE_MODE", "strict")
+        strategy_str = os.getenv("RATE_LIMIT_FAILURE_MODE", "strict")
         try:
             strategy = RateLimitStrategy(strategy_str)
         except ValueError:
             strategy = RateLimitStrategy.STRICT
 
+        try:
+            max_failures = int(os.getenv("RATE_LIMIT_MAX_FAILURES", "3"))
+        except (ValueError, TypeError):
+            max_failures = 3
+
+        try:
+            cooldown_seconds = int(os.getenv("RATE_LIMIT_COOLDOWN_SECONDS", "60"))
+        except (ValueError, TypeError):
+            cooldown_seconds = 60
+
         return cls(
             strategy=strategy,
-            max_failures=int(env.getenv("RATE_LIMIT_MAX_FAILURES", "3")),
-            cooldown_seconds=int(env.getenv("RATE_LIMIT_COOLDOWN_SECONDS", "60"))
+            max_failures=max_failures,
+            cooldown_seconds=cooldown_seconds
         )
