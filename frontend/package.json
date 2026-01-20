@@ -103,7 +103,13 @@
     "lint:a11y": "eslint src --ext .ts,.tsx --plugin jsx-a11y",
     "test:a11y": "vitest run --coverage --reporter=verbose --run",
     "audit:ui": "npm run lint && npm run lint:css && npm run type-check",
-    "audit:full": "npm run lint && npm run lint:css && npm run type-check && npm run test:ci"
+    "audit:full": "npm run lint && npm run lint:css && npm run type-check && npm run test:ci",
+    "diagnose": "tsx scripts/diagnose/puppeteer-check.ts",
+    "diagnose:headful": "HEADLESS=false pnpm diagnose",
+    "diagnose:routes": "PAGES=/dashboard,/assets/list,/rental/contracts pnpm diagnose",
+    "diagnose:custom": "tsx scripts/diagnose/puppeteer-check.ts",
+    "diagnose:report": "start frontend/diagnostics/diagnostic-report-*.html",
+    "diagnose:test": "tsx scripts/diagnose/test.ts"
   },
   "typeCoverage": {
     "atLeast": 95,
