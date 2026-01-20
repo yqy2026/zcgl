@@ -104,6 +104,27 @@ logger.info("依赖导入完成")
 async def lifespan(app: FastAPI) -> Any:
     """应用生命周期管理器"""
     # 启动时执行
+
+    # Secret validation - NEW: Validate SECRET_KEY and DATA_ENCRYPTION_KEY on startup
+    logger.info("Validating application secrets...")
+    try:
+        from .core.secret_validator import secret_validator, SecretValidationError
+
+        print("\n🔐 Validating application secrets...")
+
+        if not secret_validator.validate_env_secrets():
+            print("\n⚠️  WARNING: Weak secrets detected!")
+            print("In production, the application will refuse to start.")
+            if get_environment().environment == "production":
+                print("\n❌ Production mode requires strong secrets. Exiting.")
+                raise SystemExit(1)
+    except SecretValidationError as e:
+        print(f"\n❌ Secret validation failed: {e}")
+        if get_environment().environment == "production":
+            raise SystemExit(1)
+    except ImportError:
+        logger.warning("Secret validator module not available, skipping validation")
+
     # 安全配置检查
     logger.info("开始安全配置检查...")
     settings.log_security_status()
