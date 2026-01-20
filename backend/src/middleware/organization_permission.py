@@ -3,6 +3,7 @@
 实现基于组织架构的权限控制和数据隔离
 """
 
+import ipaddress
 from collections.abc import Callable
 from typing import Any
 
@@ -44,7 +45,13 @@ def require_organization_access(
         if not org_service.check_organization_access(current_user.id, organization_id):
             # Log permission denied event
             security_logger = SecurityEventLogger(db)
+
+            # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
+            try:
+                ipaddress.ip_address(client_ip)
+            except ValueError:
+                client_ip = "unknown"
 
             security_logger.log_permission_denied(
                 user_id=str(current_user.id),
@@ -55,8 +62,13 @@ def require_organization_access(
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
-                # TODO: Send alert (will be implemented in monitoring integration)
-                pass
+                # Log security alert when threshold exceeded
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Security alert threshold exceeded for IP: {client_ip}, "
+                    f"user: {current_user.id}, resource: organization:{organization_id}"
+                )
 
             raise forbidden("无权访问该组织的数据")
 
@@ -91,7 +103,13 @@ def require_organization_management(
         if not org_service.can_manage_organization(current_user.id, organization_id):
             # Log permission denied event
             security_logger = SecurityEventLogger(db)
+
+            # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
+            try:
+                ipaddress.ip_address(client_ip)
+            except ValueError:
+                client_ip = "unknown"
 
             security_logger.log_permission_denied(
                 user_id=str(current_user.id),
@@ -102,8 +120,13 @@ def require_organization_management(
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
-                # TODO: Send alert (will be implemented in monitoring integration)
-                pass
+                # Log security alert when threshold exceeded
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Security alert threshold exceeded for IP: {client_ip}, "
+                    f"user: {current_user.id}, resource: organization:{organization_id}"
+                )
 
             raise forbidden("无权管理该组织")
 
@@ -233,7 +256,13 @@ class OrganizationPermissionChecker:
         if not accessible_orgs:
             # Log permission denied event
             security_logger = SecurityEventLogger(db)
+
+            # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
+            try:
+                ipaddress.ip_address(client_ip)
+            except ValueError:
+                client_ip = "unknown"
 
             security_logger.log_permission_denied(
                 user_id=str(current_user.id),
@@ -244,8 +273,13 @@ class OrganizationPermissionChecker:
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
-                # TODO: Send alert (will be implemented in monitoring integration)
-                pass
+                # Log security alert when threshold exceeded
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Security alert threshold exceeded for IP: {client_ip}, "
+                    f"user: {current_user.id}, resource: organizations"
+                )
 
             raise forbidden("无任何组织访问权限")
 

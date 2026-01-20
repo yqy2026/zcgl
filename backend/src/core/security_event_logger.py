@@ -10,7 +10,7 @@ Uses Redis for fast threshold checking and database for long-term storage.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,23 @@ from src.models.security_event import (
 from src.utils.cache_manager import cache_manager
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """
+    Helper to run async coroutine in sync context.
+
+    Handles the case where an event loop is already running.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        # We're in an async context, can't use asyncio.run
+        # Create a task and run it in the background
+        asyncio.create_task(coro)
+        return None
+    except RuntimeError:
+        # No event loop running, use asyncio.run
+        return asyncio.run(coro)
 
 
 class SecurityEventLogger:
@@ -48,7 +65,7 @@ class SecurityEventLogger:
 
     def __init__(
         self,
-        db: Optional[Session] = None,
+        db: Session | None = None,
         alert_threshold: int = DEFAULT_ALERT_THRESHOLD,
         alert_window_minutes: int = DEFAULT_ALERT_WINDOW_MINUTES,
     ):
@@ -111,16 +128,16 @@ class SecurityEventLogger:
         try:
             key = self._get_redis_key(event_type.value, ip)
 
-            # Get current count - use synchronous approach
-            try:
-                # Try to get existing data
-                current_data = cache_manager.get("security_events", key)
-                if asyncio.iscoroutine(current_data):
-                    # It's a coroutine, skip for now (can't await in sync context)
+            # Try to get existing data
+            get_coroutine = cache_manager.get("security_events", key)
+            if asyncio.iscoroutine(get_coroutine):
+                current_data = _run_async(get_coroutine)
+                # If we're in async context, current_data will be None
+                # Fall back to database-only logging
+                if current_data is None:
                     return False
-            except TypeError:
-                # cache_manager.get might be async, skip Redis update
-                return False
+            else:
+                current_data = get_coroutine
 
             if current_data is None:
                 current_data = {"count": 0, "events": []}
@@ -136,17 +153,17 @@ class SecurityEventLogger:
             expire_seconds = self.alert_window_minutes * 60
 
             try:
-                result = cache_manager.set(
+                set_coroutine = cache_manager.set(
                     "security_events",
                     key,
                     current_data,
                     expire=expire_seconds
                 )
-                if asyncio.iscoroutine(result):
-                    # It's a coroutine, skip
-                    return False
+                if asyncio.iscoroutine(set_coroutine):
+                    _run_async(set_coroutine)
                 return True
-            except TypeError:
+            except Exception as e:
+                logger.debug(f"Cannot run async cache set operation: {e}")
                 return False
 
         except Exception as e:
@@ -157,10 +174,10 @@ class SecurityEventLogger:
         self,
         event_type: SecurityEventType,
         severity: SecuritySeverity,
-        user_id: Optional[str],
-        ip: Optional[str],
+        user_id: str | None,
+        ip: str | None,
         metadata: dict[str, Any],
-    ) -> Optional[SecurityEvent]:
+    ) -> SecurityEvent | None:
         """
         Log event to database for long-term storage.
 
@@ -217,9 +234,9 @@ class SecurityEventLogger:
     def log_auth_failure(
         self,
         ip: str,
-        username: Optional[str] = None,
-        reason: Optional[str] = None,
-    ) -> Optional[SecurityEvent]:
+        username: str | None = None,
+        reason: str | None = None,
+    ) -> SecurityEvent | None:
         """
         Log authentication failure event.
 
@@ -255,7 +272,7 @@ class SecurityEventLogger:
         self,
         ip: str,
         username: str,
-    ) -> Optional[SecurityEvent]:
+    ) -> SecurityEvent | None:
         """
         Log authentication success event.
 
@@ -291,7 +308,7 @@ class SecurityEventLogger:
         resource: str,
         action: str,
         ip: str,
-    ) -> Optional[SecurityEvent]:
+    ) -> SecurityEvent | None:
         """
         Log permission denied event.
 
@@ -328,7 +345,7 @@ class SecurityEventLogger:
         self,
         ip: str,
         endpoint: str,
-    ) -> Optional[SecurityEvent]:
+    ) -> SecurityEvent | None:
         """
         Log rate limit exceeded event.
 
@@ -362,8 +379,8 @@ class SecurityEventLogger:
         self,
         ip: str,
         activity_type: str,
-        details: Optional[dict[str, Any]] = None,
-    ) -> Optional[SecurityEvent]:
+        details: dict[str, Any] | None = None,
+    ) -> SecurityEvent | None:
         """
         Log suspicious activity event.
 
@@ -400,7 +417,7 @@ class SecurityEventLogger:
         username: str,
         ip: str,
         reason: str,
-    ) -> Optional[SecurityEvent]:
+    ) -> SecurityEvent | None:
         """
         Log account locked event.
 
@@ -436,7 +453,7 @@ class SecurityEventLogger:
         self,
         ip: str,
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
-        threshold: Optional[int] = None,
+        threshold: int | None = None,
     ) -> bool:
         """
         Check if IP address has exceeded alert threshold.
@@ -454,13 +471,14 @@ class SecurityEventLogger:
         try:
             key = self._get_redis_key(event_type.value, ip)
 
-            try:
-                data = cache_manager.get("security_events", key)
-                if asyncio.iscoroutine(data):
-                    # It's a coroutine, can't check threshold without async context
+            get_coroutine = cache_manager.get("security_events", key)
+            if asyncio.iscoroutine(get_coroutine):
+                data = _run_async(get_coroutine)
+                # If we're in async context, data will be None
+                if data is None:
                     return False
-            except TypeError:
-                return False
+            else:
+                data = get_coroutine
 
             if data is None:
                 return False
@@ -490,13 +508,14 @@ class SecurityEventLogger:
         try:
             key = self._get_redis_key(event_type.value, ip)
 
-            try:
-                data = cache_manager.get("security_events", key)
-                if asyncio.iscoroutine(data):
-                    # It's a coroutine, can't get count without async context
+            get_coroutine = cache_manager.get("security_events", key)
+            if asyncio.iscoroutine(get_coroutine):
+                data = _run_async(get_coroutine)
+                # If we're in async context, data will be None
+                if data is None:
                     return 0
-            except TypeError:
-                return 0
+            else:
+                data = get_coroutine
 
             if data is None:
                 return 0
