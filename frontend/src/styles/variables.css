@@ -63,11 +63,12 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
 
-  /* Transitions */
-  --transition-fast: 0.1s ease;
-  --transition-base: 0.2s ease;
-  --transition-slow: 0.3s ease;
-  --transition-slower: 0.5s ease;
+  /* Transitions - Material Design inspired */
+  --transition-instant: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1); /* Standard - Material Design */
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1); /* Base - slightly slower */
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1); /* For complex transitions */
+  --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1); /* For major layout changes */
 
   /* Z-Index Layers */
   --z-index-dropdown: 1000;

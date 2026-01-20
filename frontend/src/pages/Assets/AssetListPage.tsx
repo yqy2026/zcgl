@@ -13,6 +13,7 @@ import AssetSearch from '../../components/Asset/AssetSearch';
 import AssetAreaSummary from '../../components/Asset/AssetAreaSummary';
 import type { AssetSearchParams } from '../../types/asset';
 import { createLogger } from '../../utils/logger';
+import { PageContainer, ContentSection, LoadingContainer } from '../../components/Common/StateContainer';
 
 const pageLogger = createLogger('AssetList');
 
@@ -161,17 +162,12 @@ const AssetListPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16' }}>加载资产数据中...</div>
-      </div>
-    );
+    return <LoadingContainer text="加载资产数据中..." />;
   }
 
   if (error) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer>
         <Alert
           message="数据加载失败"
           description={
@@ -189,13 +185,13 @@ const AssetListPage: React.FC = () => {
             </Button>
           }
         />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
+    <PageContainer>
+      <ContentSection spacing="lg">
         <Row justify="space-between" align="middle">
           <Col>
             <Title level={2} style={{ margin: 0 }}>
@@ -225,7 +221,7 @@ const AssetListPage: React.FC = () => {
             </Space>
           </Col>
         </Row>
-      </div>
+      </ContentSection>
 
       {/* 搜索组件 */}
       <AssetSearch
@@ -250,7 +246,7 @@ const AssetListPage: React.FC = () => {
         selectedRowKeys={selectedRowKeys}
         onSelectChange={handleSelectChange}
       />
-    </div>
+    </PageContainer>
   );
 };
 

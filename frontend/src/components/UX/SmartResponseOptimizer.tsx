@@ -1,6 +1,16 @@
 import React, { createContext, useCallback, useContext, useState, useRef } from 'react';
 import { Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd';
-import { ThunderboltOutlined, EyeOutlined } from '@ant-design/icons';
+import {
+  ThunderboltOutlined,
+  EyeOutlined,
+  ClockCircleOutlined,
+  BgColorsOutlined,
+  InboxOutlined,
+  SaveOutlined,
+  GlobalOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 
 const { Text } = Typography;
@@ -473,16 +483,22 @@ const ResponseOptimizationDashboard: React.FC<{
                     <Col span={4}>
                       <Text>
                         状态:{' '}
-                        {_getResponseType(metric) === 'loading'
-                          ? '⏳'
-                          : _getResponseType(metric) === 'rendering'
-                            ? '🎨'
-                            : _getResponseType(metric) === 'compression'
-                              ? '📦'
-                              : _getResponseType(metric) === 'caching'
-                                ? '💾'
-                                : '🌐'}{' '}
-                        {metric.cacheHit === true ? '✅' : '❌'}
+                        {_getResponseType(metric) === 'loading' ? (
+                          <ClockCircleOutlined style={{ color: '#1677ff' }} />
+                        ) : _getResponseType(metric) === 'rendering' ? (
+                          <BgColorsOutlined style={{ color: '#722ed1' }} />
+                        ) : _getResponseType(metric) === 'compression' ? (
+                          <InboxOutlined style={{ color: '#fa8c16' }} />
+                        ) : _getResponseType(metric) === 'caching' ? (
+                          <SaveOutlined style={{ color: '#52c41a' }} />
+                        ) : (
+                          <GlobalOutlined style={{ color: '#13c2c2' }} />
+                        )}{' '}
+                        {metric.cacheHit === true ? (
+                          <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                        ) : (
+                          <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                        )}
                       </Text>
                     </Col>
                     <Col span={4}>

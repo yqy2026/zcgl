@@ -1,0 +1,147 @@
+/**
+ * Common Layout and Container Styles
+ * Reusable utility classes to replace inline styles
+ */
+
+/* Page Container */
+.pageContainer {
+  padding: 24px;
+}
+
+.pageContainerCenter {
+  padding: 24px;
+  text-align: center;
+}
+
+.pageContainerCompact {
+  padding: 16px;
+}
+
+.pageContainerSpacious {
+  padding: 32px;
+}
+
+/* Responsive Page Container - Uses clamp() for fluid spacing */
+.pageContainerResponsive {
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.pageContainerResponsiveCompact {
+  padding: clamp(8px, 1.5vw, 16px);
+}
+
+.pageContainerResponsiveSpacious {
+  padding: clamp(16px, 3vw, 32px);
+}
+
+/* Loading and Empty States */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  min-height: 200px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.errorContainer {
+  padding: 24px;
+}
+
+/* Responsive Page Container */
+.pageContainerResponsive {
+  padding: clamp(12px, 2vw, 24px);
+}
+
+/* Flex Layout Utilities */
+.flexRow {
+  display: flex;
+  flex-direction: row;
+}
+
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.flexCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flexBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Spacing Utilities */
+.marginBottomSm {
+  margin-bottom: 8px;
+}
+
+.marginBottomMd {
+  margin-bottom: 16px;
+}
+
+.marginBottomLg {
+  margin-bottom: 24px;
+}
+
+.marginBottomResponsive {
+  margin-bottom: clamp(8px, 1.5vw, 16px);
+}
+
+.marginTopSm {
+  margin-top: 8px;
+}
+
+.marginTopMd {
+  margin-top: 16px;
+}
+
+.marginTopLg {
+  margin-top: 24px;
+}
+
+.marginTopResponsive {
+  margin-top: clamp(8px, 1.5vw, 16px);
+}
+
+/* Responsive padding utilities */
+.paddingResponsive {
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.paddingResponsiveSm {
+  padding: clamp(8px, 1.5vw, 16px);
+}
+
+.paddingResponsiveLg {
+  padding: clamp(16px, 3vw, 32px);
+}
+
+/* Text Alignment */
+.textCenter {
+  text-align: center;
+}
+
+.textLeft {
+  text-align: left;
+}
+
+.textRight {
+  text-align: right;
+}

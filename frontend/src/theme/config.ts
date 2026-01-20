@@ -24,7 +24,7 @@ export const baseThemeConfig: ThemeConfig = {
     fontSize: 14,
     colorTextHeading: '#1e293b', // Slate 800
     colorText: '#334155', // Slate 700
-    colorTextSecondary: '#64748b', // Slate 500
+    colorTextSecondary: '#475569', // Slate 600 - Improved contrast (WCAG AAA)
 
     // Modern Borders & Radius
     borderRadius: 8,
@@ -32,8 +32,8 @@ export const baseThemeConfig: ThemeConfig = {
   },
   components: {
     Layout: {
-      headerBg: 'rgba(255, 255, 255, 0.8)', // Stronger glass base
-      siderBg: 'rgba(255, 255, 255, 0.8)', // Stronger glass base
+      headerBg: 'rgba(255, 255, 255, 0.95)', // Better visibility in light mode
+      siderBg: 'rgba(255, 255, 255, 0.95)', // Better visibility in light mode
       triggerBg: '#fff',
     },
     Menu: {
@@ -41,7 +41,7 @@ export const baseThemeConfig: ThemeConfig = {
       subMenuItemBg: 'transparent',
       itemSelectedBg: 'rgba(22, 119, 255, 0.08)', // Very subtle active state
       itemSelectedColor: '#1677ff',
-      itemColor: '#64748b', // Slate 500
+      itemColor: '#475569', // Slate 600 - Improved contrast
       itemHoverColor: '#1677ff',
     },
     Card: {

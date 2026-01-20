@@ -8,3 +8,6 @@
 
 /* 2. Global Styles */
 @import './global.css';
+
+/* 3. Common Utility Classes */
+@import './common.css';

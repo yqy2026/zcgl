@@ -7,6 +7,7 @@ import {
   ApiOutlined,
   DatabaseOutlined,
   WifiOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
@@ -183,8 +184,9 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
                 margin: '0 auto',
               }}
             >
-              <Title level={5} style={{ margin: '0 0 12px 0', color: '#666' }}>
-                💡 建议解决方案
+              <Title level={5} style={{ margin: '0 0 12px 0', color: '#666', display: 'flex', alignItems: 'center' }}>
+                <BulbOutlined style={{ marginRight: '8px', color: '#1677ff' }} />
+                建议解决方案
               </Title>
               <ul style={{ margin: 0, paddingLeft: '20px' }}>
                 {getErrorSuggestions().map((suggestion, index) => (

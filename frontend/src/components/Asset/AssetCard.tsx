@@ -46,6 +46,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
       style={{
         marginBottom: 16,
         border: selected ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.border}`,
+        cursor: 'pointer',
       }}
       onClick={() => onSelect?.(asset, !selected)}
       actions={[
