@@ -61,13 +61,33 @@ def safe_role_compare(role_value: Any, target_role: Any) -> bool:
 
 
 def get_current_user(
-    token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
-) -> User | None:
-    """从JWT令牌中获取当前用户"""
+    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Get current authenticated user from JWT token.
+
+    Authentication priority:
+    1. httpOnly cookie (primary method for XSS protection)
+    2. Authorization header (fallback for backward compatibility)
+
+    This unified approach ensures ALL protected endpoints automatically
+    support both cookie and Bearer token authentication.
+    """
 
     credentials_exception = unauthorized("无效的认证凭据")
 
-    # 如果没有token，抛出认证异常而不是返回None
+    # Try cookie first (primary method for XSS protection)
+    token = None
+    if auth_token:
+        token = auth_token
+        logger.debug("Authenticating using httpOnly cookie")
+    elif authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        logger.debug("Authenticating using Authorization header (fallback)")
+
+    # No token found in either cookie or header
     if not token:
         raise credentials_exception
 
@@ -151,6 +171,7 @@ def get_current_user(
     if user.is_locked_now():
         raise unauthorized("用户账户已被锁定，请稍后再试")
 
+    logger.debug(f"Successfully authenticated user {user.username}")
     return user
 
 
