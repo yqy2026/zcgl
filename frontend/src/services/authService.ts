@@ -82,40 +82,18 @@ export class AuthService {
 
       logger.debug('用户数据解析成功', { user });
 
-      // 处理tokens（新格式）或token（旧格式）
-      let accessToken: string;
-      let refreshToken: string;
-
-      if (responseData.tokens) {
-        // 新格式：嵌套的tokens对象
-        accessToken = responseData.tokens.access_token;
-        refreshToken = responseData.tokens.refresh_token;
-
-        // 存储到多个键以确保兼容性
-        localStorage.setItem('auth_token', accessToken);
-        localStorage.setItem('token', accessToken); // 前端常用的键
-        localStorage.setItem('refresh_token', refreshToken); // snake_case (匹配后端schema)
-        localStorage.setItem('refreshToken', refreshToken); // camelCase (向后兼容)
-      } else if (typeof responseData.token === 'string' && responseData.token !== '') {
-        // 旧格式：单个token字段
-        accessToken = responseData.token;
-        refreshToken = responseData.token;
-
-        localStorage.setItem('auth_token', accessToken);
-        localStorage.setItem('token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken); // snake_case
-        localStorage.setItem('refreshToken', refreshToken); // camelCase
-      } else {
-        throw new Error('未找到访问令牌');
-      }
+      // Tokens are now stored in httpOnly cookies by backend
+      // No need to store tokens in localStorage
+      // For backward compatibility, keep response structure
 
       if (responseData.data.access_token && responseData.data.refresh_token) {
         const { access_token: accessToken, refresh_token: refreshToken } = responseData.data;
 
         // Store in AuthStorage with permissions from API
+        // Note: Tokens are in httpOnly cookies, but we keep metadata
         const authData = {
-          token: accessToken,
-          refreshToken: refreshToken,
+          token: accessToken, // Kept for compatibility, but actual auth uses cookie
+          refreshToken: refreshToken, // Kept for compatibility
           user: {
             id: user.id,
             username: user.username,
@@ -129,9 +107,7 @@ export class AuthService {
 
         AuthStorage.setAuthData(authData);
 
-        // Also set legacy keys for backward compatibility
-        localStorage.setItem('token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken);
+        // Legacy keys removed - tokens are now in httpOnly cookies
       } else {
         throw new Error('Access token or refresh token not found');
       }
@@ -178,17 +154,10 @@ export class AuthService {
   // 刷新令牌
   static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
     try {
-      const refreshTokenValue =
-        localStorage.getItem('refresh_token') ?? localStorage.getItem('refreshToken') ?? '';
-      if (refreshTokenValue === '') {
-        throw new Error('没有刷新令牌');
-      }
-
+      // Refresh token is now in httpOnly cookie, sent automatically
       const result = await enhancedApiClient.post(
         AUTH_API.REFRESH,
-        {
-          refresh_token: refreshTokenValue,
-        },
+        {}, // Empty body - refresh token is in cookie
         {
           retry: {
             maxAttempts: 2,
@@ -209,16 +178,8 @@ export class AuthService {
 
       const responseData = result.data as AuthResponse['tokens'];
 
-      if (typeof responseData?.access_token === 'string' && responseData.access_token !== '') {
-        localStorage.setItem('auth_token', responseData.access_token);
-        localStorage.setItem('token', responseData.access_token);
-      }
-
-      // 同时存储新的刷新令牌（如果返回）
-      if (typeof responseData?.refresh_token === 'string' && responseData.refresh_token !== '') {
-        localStorage.setItem('refresh_token', responseData.refresh_token);
-        localStorage.setItem('refreshToken', responseData.refresh_token);
-      }
+      // Tokens are rotated in httpOnly cookies by backend
+      // No need to update localStorage
 
       return {
         success: true,
@@ -333,10 +294,11 @@ export class AuthService {
 
   // 清除认证数据
   private static clearAuthData(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refreshToken');
+    // Tokens are in httpOnly cookies, cleared by backend logout endpoint
+    // Only clear user metadata from localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('permissions');
+    // Note: auth_token and refreshToken keys removed - tokens are now in cookies
   }
 
   // 修改密码

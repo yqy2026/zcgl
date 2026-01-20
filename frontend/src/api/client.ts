@@ -165,6 +165,7 @@ export class EnhancedApiClient {
     this.instance = axios.create({
       baseURL: this.config.baseURL,
       timeout: this.config.timeout,
+      withCredentials: true, // Include cookies in requests for httpOnly cookie auth
       headers: {
         'Content-Type': 'application/json',
       },
@@ -186,11 +187,8 @@ export class EnhancedApiClient {
     // 请求拦截器
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        // 添加认证token
-        const token = localStorage.getItem('auth_token');
-        if (token != null && config.headers != null) {
-          config.headers.set('Authorization', `Bearer ${token}`);
-        }
+        // Authorization header removed - backend reads auth from httpOnly cookie
+        // Cookies are automatically sent by browser with withCredentials: true
 
         // 添加请求ID
         if (config.headers != null) {
@@ -257,7 +255,7 @@ export class EnhancedApiClient {
         const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>;
         const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined;
 
-        // 处理401错误 - 自动刷新token
+        // 处理401错误 - 自动刷新token via cookie
         if (
           axiosError.response?.status === 401 &&
           originalRequest != null &&
@@ -266,34 +264,21 @@ export class EnhancedApiClient {
           apiLogger.warn('🔑 Token过期，尝试刷新...');
 
           try {
-            // 动态导入AuthService避免循环依赖
-            const { AuthService } = await import('../services/authService');
-
-            // 尝试刷新token
-            await AuthService.refreshToken();
+            // Try to refresh using cookie-based auth
+            await this.instance.post('/auth/refresh');
 
             apiLogger.info('✅ Token刷新成功，重试原始请求');
 
             // 标记请求已重试过，避免无限循环
             originalRequest._retry = true;
 
-            // 更新请求头中的token
-            const newToken = localStorage.getItem('auth_token');
-            if (newToken != null && originalRequest.headers != null) {
-              originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
-            }
-
-            // 重试原始请求
+            // 重试原始请求 (cookie automatically included)
             return await this.instance(originalRequest);
           } catch (refreshError) {
             apiLogger.error('❌ Token刷新失败，执行登出', { refreshError });
 
-            // 刷新失败，清除认证数据
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-
-            // 跳转到登录页
+            // 刷新失败，跳转到登录页
+            // Cookie will be cleared by backend logout endpoint
             if (typeof window !== 'undefined') {
               window.location.href = '/login';
             }

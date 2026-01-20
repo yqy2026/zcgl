@@ -38,11 +38,10 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 检查本地存储的认证状态
   useEffect(() => {
-    // 优先读取真正的JWT token，其次是auth_token
-    const token = localStorage.getItem('token') ?? localStorage.getItem('auth_token') ?? '';
+    // Check for stored user metadata (tokens are in httpOnly cookies)
     const storedUser = localStorage.getItem('user') ?? localStorage.getItem('user_info') ?? '';
 
-    if (token !== '' && storedUser !== '') {
+    if (storedUser !== '') {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
         setUser(parsedUser);
@@ -57,8 +56,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 清除所有可能的认证相关存储
         localStorage.removeItem('user');
         localStorage.removeItem('user_info');
-        localStorage.removeItem('token');
-        localStorage.removeItem('auth_token');
       }
     }
   }, []);
@@ -99,13 +96,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
 
-      // 直接清除本地存储的认证信息（避免循环调用）
+      // Call backend logout to clear httpOnly cookies
+      await AuthService.logout();
+
+      // Clear local user metadata (tokens are in cookies, cleared by backend)
       localStorage.removeItem('user');
       localStorage.removeItem('user_info');
-      localStorage.removeItem('token');
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('permissions');
 
       setUser(null);
@@ -115,10 +111,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 即使出错也要确保清除状态
       localStorage.removeItem('user');
       localStorage.removeItem('user_info');
-      localStorage.removeItem('token');
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('permissions');
       setUser(null);
     } finally {
@@ -126,120 +118,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Token自动刷新机制
-  useEffect(() => {
-    if (!user) return;
-
-    const token = localStorage.getItem('token') ?? localStorage.getItem('auth_token') ?? '';
-    if (token === '') {
-      logger.debug('没有访问令牌，需要重新登录');
-      return;
-    }
-
-    const refreshToken = async () => {
-      try {
-        const refresh_token =
-          localStorage.getItem('refresh_token') ?? localStorage.getItem('refreshToken') ?? '';
-        if (refresh_token === '') {
-          logger.debug('没有刷新令牌，需要重新登录');
-          await logout();
-          return;
-        }
-
-        // 调用刷新令牌API
-        const response = await fetch(AUTH_API.REFRESH, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refresh_token }),
-        });
-
-        if (response.ok) {
-          const data = (await response.json()) as { access_token?: string; refresh_token?: string };
-          if (typeof data.access_token === 'string' && data.access_token !== '') {
-            localStorage.setItem('token', data.access_token);
-            if (typeof data.refresh_token === 'string' && data.refresh_token !== '') {
-              localStorage.setItem('refresh_token', data.refresh_token);
-            }
-            logger.debug('令牌已自动刷新');
-          }
-        } else {
-          logger.debug('刷新令牌失败，需要重新登录');
-          await logout();
-        }
-      } catch (error) {
-        logger.error('自动刷新令牌失败', error instanceof Error ? error : new Error(String(error)));
-        await logout();
-      }
-    };
-
-    // 设置定时器，在令牌过期前5分钟刷新
-    const setupTokenRefresh = () => {
-      // 解析当前JWT token的过期时间
-      const currentToken =
-        localStorage.getItem('token') ?? localStorage.getItem('auth_token') ?? '';
-      if (currentToken === '') {
-        return;
-      }
-
-      try {
-        // 健壮的JWT token解析
-        const tokenParts = currentToken.split('.');
-        if (tokenParts.length !== 3) {
-          logger.warn('Token格式不正确，清理无效token');
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          return;
-        }
-
-        let payload: { exp?: number };
-        try {
-          payload = JSON.parse(atob(tokenParts[1])) as { exp?: number };
-        } catch (parseError) {
-          logger.warn('Token payload解析失败，清理无效token', { error: parseError });
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          return;
-        }
-
-        if (typeof payload.exp !== 'number') {
-          logger.warn('Token缺少过期时间，清理无效token');
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          return;
-        }
-
-        const exp = payload.exp * 1000; // 转换为毫秒
-        const now = Date.now();
-
-        // 检查token是否已过期
-        if (exp <= now) {
-          logger.debug('Token已过期，清理无效token');
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          return;
-        }
-
-        const timeUntilExpiry = exp - now;
-
-        // 在过期前5分钟刷新
-        const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60000); // 最少1分钟后刷新
-
-        logger.debug(`令牌将在${Math.round(refreshTime / 1000 / 60)}分钟后自动刷新`);
-
-        const timer = setTimeout(refreshToken, refreshTime);
-        return () => clearTimeout(timer);
-      } catch (error) {
-        logger.error('解析token失败', error instanceof Error ? error : new Error(String(error)));
-        return;
-      }
-    };
-
-    const cleanup = setupTokenRefresh();
-
-    return cleanup;
-  }, [user]);
+  // Token自动刷新机制 - Now handled by httpOnly cookies and API client interceptor
+  // The API client automatically handles 401 errors and refreshes tokens via cookies
+  // No need for manual token refresh logic here
 
   const value: AuthContextType = {
     user,
