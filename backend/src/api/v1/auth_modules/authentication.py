@@ -8,7 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from jose import jwt
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from ....core.api_errors import bad_request, internal_error, unauthorized
 
 logger = logging.getLogger(__name__)
 
+from ....core.cookie_auth import cookie_manager
 from ....core.route_guards import debug_only
 from ....crud.auth import AuditLogCRUD, UserCRUD
 from ....database import get_db
@@ -40,7 +41,10 @@ router = APIRouter(tags=["认证管理"])
 
 @router.post("/login", summary="用户登录")
 async def login(
-    request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
+    request: Request,
+    credentials: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
     用户登录接口
@@ -83,6 +87,9 @@ async def login(
             "ip_address": client_ip,
         }
         tokens = auth_service.create_tokens(user, device_info)  # type: ignore[no-untyped-call]
+
+        # Set httpOnly cookie for XSS protection
+        cookie_manager.set_auth_cookie(response, tokens.access_token)
 
         # 创建会话
         auth_service.create_user_session(  # type: ignore[no-untyped-call]
@@ -176,6 +183,7 @@ async def login(
 @router.post("/logout", summary="用户登出")
 async def logout(
     request: Request,
+    response: Response,
     current_user: UserResponse = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -184,7 +192,7 @@ async def logout(
 
     - 撤销当前会话
     - 将当前JWT令牌加入黑名单
-    - 清除客户端令牌
+    - 清除客户端令牌（包括 httpOnly cookie）
     - 记录登出审计日志
     """
     auth_service = AuthService(db)
@@ -193,6 +201,9 @@ async def logout(
     # 获取客户端信息
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
+
+    # Clear httpOnly cookie
+    cookie_manager.clear_auth_cookie(response)
 
     # 提取并黑名单当前JWT令牌
     auth_header = request.headers.get("Authorization")

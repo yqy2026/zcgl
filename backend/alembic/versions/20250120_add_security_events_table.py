@@ -1,7 +1,7 @@
 """Add security_events table
 
 Revision ID: 20250120_add_security_events
-Revises: 20250118_add_user_id_to_extraction_feedback
+Revises: 20250118_add_property_cert_tables
 Create Date: 2026-01-20
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250120_add_security_events'
-down_revision = '20250118_add_user_id_to_extraction_feedback'
+down_revision = '20250118_add_property_cert_tables'
 branch_labels = None
 depends_on = None
 

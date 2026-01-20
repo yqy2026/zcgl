@@ -166,13 +166,15 @@ def test_data(db_session):
     but can use this fixture for common entities.
     """
     # Import models needed for test data
-    from src.models.user import User
+    from src.models.auth import User
 
-    from src.core.security import get_password_hash
+    from src.services.core.password_service import PasswordService
     from src.models.organization import Organization
 
+    password_service = PasswordService()
+
     # Create test organization
-    test_org = Organization(name="Test Organization", code="TEST_ORG", is_active=True)
+    test_org = Organization(name="Test Organization", code="TEST_ORG")
     db_session.add(test_org)
     db_session.commit()
 
@@ -181,7 +183,7 @@ def test_data(db_session):
         username="admin",
         email="admin@test.com",
         full_name="Test Admin",
-        password_hash=get_password_hash("Admin123!@#"),
+        password_hash=password_service.get_password_hash("Admin123!@#"),
         role="admin",
         is_active=True,
         organization_id=test_org.id,
