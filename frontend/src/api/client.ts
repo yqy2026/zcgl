@@ -16,6 +16,31 @@ import { createLogger } from '../utils/logger';
 
 const apiLogger = createLogger('API');
 
+// ==================== API配置 ====================
+
+export const API_CONFIG = {
+  baseURL: '/api/v1',
+  timeout: 30000,
+} as const;
+
+// ==================== URL验证 ====================
+
+/**
+ * 验证API路径是否使用正确的 /api/v1 前缀
+ * @param url API URL
+ */
+const validateApiPath = (url: string): void => {
+  if (url.startsWith('/')) {
+    // 检查是否使用正确的 /api/v1 前缀
+    if (!url.startsWith('/api/v1') && !url.startsWith('/auth')) {
+      console.warn(
+        `[API Client] URL does not use /api/v1 prefix: ${url}\n` +
+        `All API calls should use the centralized API client with correct prefix.`
+      );
+    }
+  }
+};
+
 // ==================== 类型定义 ====================
 
 /**
@@ -187,6 +212,11 @@ export class EnhancedApiClient {
     // 请求拦截器
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        // 验证API路径前缀
+        if (config.url != null) {
+          validateApiPath(config.url);
+        }
+
         // Authorization header removed - backend reads auth from httpOnly cookie
         // Cookies are automatically sent by browser with withCredentials: true
 

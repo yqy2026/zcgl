@@ -3,8 +3,8 @@
  * 测试API客户端的核心功能（简化版本，不依赖MSW）
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { EnhancedApiClient } from '../client';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { EnhancedApiClient, API_CONFIG, enhancedApiClient } from '../client';
 
 // =============================================================================
 // Mock数据
@@ -256,6 +256,122 @@ describe('EnhancedApiClient', () => {
       const config = prodClient.getConfig();
       expect(config.enableLogging).toBe(false);
     });
+  });
+});
+
+// =============================================================================
+// API_CONFIG 测试
+// =============================================================================
+
+describe('API_CONFIG', () => {
+  it('should have baseURL set to /api/v1', () => {
+    expect(API_CONFIG.baseURL).toBe('/api/v1');
+  });
+
+  it('should have timeout set to 30000', () => {
+    expect(API_CONFIG.timeout).toBe(30000);
+  });
+});
+
+// =============================================================================
+// URL Validation 测试
+// =============================================================================
+
+describe('URL Validation', () => {
+  const originalWarn = console.warn;
+  let client: EnhancedApiClient;
+
+  beforeEach(() => {
+    console.warn = vi.fn();
+    client = new EnhancedApiClient({
+      baseURL: '/api/v1',
+      enableLogging: false,
+      enableAutoRetry: false,
+    });
+  });
+
+  afterEach(() => {
+    console.warn = originalWarn;
+  });
+
+  it('should not warn for URLs starting with /api/v1', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: '/api/v1/auth/login' });
+
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('should not warn for URLs starting with /auth (legacy)', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: '/auth/login' });
+
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('should warn for URLs without /api/v1 prefix', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: '/users' });
+
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[API Client] URL does not use /api/v1 prefix: /users')
+    );
+  });
+
+  it('should warn for URLs without /api/v1 prefix (with nested path)', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: '/assets/list' });
+
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[API Client] URL does not use /api/v1 prefix: /assets/list')
+    );
+  });
+
+  it('should not validate relative URLs (not starting with /)', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: 'relative-path' });
+
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('should not validate URLs without / prefix (full URLs)', () => {
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
+
+    // @ts-expect-error - testing internal interceptor
+    requestInterceptor.fulfilled({ url: 'https://api.example.com/data' });
+
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Default Instance 测试
+// =============================================================================
+
+describe('Default Instance', () => {
+  it('should export default enhancedApiClient instance', () => {
+    expect(enhancedApiClient).toBeInstanceOf(EnhancedApiClient);
+  });
+
+  it('should have correct configuration on default instance', () => {
+    const config = enhancedApiClient.getConfig();
+    expect(config.baseURL).toBe('/api/v1');
+    expect(config.timeout).toBe(30000);
   });
 });
 
