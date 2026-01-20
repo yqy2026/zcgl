@@ -66,54 +66,94 @@ class TestPermissionDeniedLogging:
 
     def test_should_alert_when_threshold_exceeded(self, test_db: Session):
         """Test that should_alert returns True when threshold is exceeded"""
+        from src.models.security_event import SecurityEvent
+        from src.core.security_event_logger import SecurityEventType
+        from datetime import datetime, timedelta
+
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 
-        # Log 6 events (exceeds threshold of 5)
+        # Manually create 6 events in the database (simulating past events)
+        window_start = datetime.now() - timedelta(minutes=5)
         for i in range(6):
-            logger.log_permission_denied(
+            event = SecurityEvent(
+                event_type=SecurityEventType.PERMISSION_DENIED.value,
+                severity="medium",
                 user_id=f"user_{i}",
-                resource="organizations",
-                action="access",
-                ip="192.168.1.102"
+                ip_address="192.168.1.102",
+                event_metadata={"resource": "organizations", "action": "access"},
+                created_at=window_start + timedelta(seconds=i)
             )
+            test_db.add(event)
+        test_db.commit()
 
-        # Should alert
-        assert logger.should_alert(ip="192.168.1.102") is True
+        # Should alert with 6 events (exceeds threshold of 5)
+        assert logger.should_alert(
+            ip="192.168.1.102",
+            event_type=SecurityEventType.PERMISSION_DENIED
+        ) is True
 
     def test_should_not_alert_when_threshold_not_exceeded(self, test_db: Session):
         """Test that should_alert returns False when threshold is not exceeded"""
+        from src.models.security_event import SecurityEvent
+        from src.core.security_event_logger import SecurityEventType
+        from datetime import datetime, timedelta
+
         logger = SecurityEventLogger(test_db, alert_threshold=10)
 
-        # Log 5 events (below threshold of 10)
+        # Manually create 5 events in the database
+        window_start = datetime.now() - timedelta(minutes=5)
         for i in range(5):
-            logger.log_permission_denied(
+            event = SecurityEvent(
+                event_type=SecurityEventType.PERMISSION_DENIED.value,
+                severity="medium",
                 user_id=f"user_{i}",
-                resource="organizations",
-                action="access",
-                ip="192.168.1.103"
+                ip_address="192.168.1.103",
+                event_metadata={"resource": "organizations", "action": "access"},
+                created_at=window_start + timedelta(seconds=i)
             )
+            test_db.add(event)
+        test_db.commit()
 
-        # Should not alert
-        assert logger.should_alert(ip="192.168.1.103") is False
+        # Should not alert with only 5 events (below threshold of 10)
+        assert logger.should_alert(
+            ip="192.168.1.103",
+            event_type=SecurityEventType.PERMISSION_DENIED
+        ) is False
 
     def test_should_alert_with_custom_threshold(self, test_db: Session):
         """Test that should_alert respects custom threshold"""
+        from src.models.security_event import SecurityEvent
+        from src.core.security_event_logger import SecurityEventType
+        from datetime import datetime, timedelta
+
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 
-        # Log 3 events
+        # Manually create 3 events in the database
+        window_start = datetime.now() - timedelta(minutes=5)
         for i in range(3):
-            logger.log_permission_denied(
+            event = SecurityEvent(
+                event_type=SecurityEventType.PERMISSION_DENIED.value,
+                severity="medium",
                 user_id=f"user_{i}",
-                resource="organizations",
-                action="access",
-                ip="192.168.1.104"
+                ip_address="192.168.1.104",
+                event_metadata={"resource": "organizations", "action": "access"},
+                created_at=window_start + timedelta(seconds=i)
             )
+            test_db.add(event)
+        test_db.commit()
 
         # Should not alert with default threshold (5)
-        assert logger.should_alert(ip="192.168.1.104") is False
+        assert logger.should_alert(
+            ip="192.168.1.104",
+            event_type=SecurityEventType.PERMISSION_DENIED
+        ) is False
 
         # Should alert with custom threshold (2)
-        assert logger.should_alert(ip="192.168.1.104", threshold=2) is True
+        assert logger.should_alert(
+            ip="192.168.1.104",
+            event_type=SecurityEventType.PERMISSION_DENIED,
+            threshold=2
+        ) is True
 
 
 class TestSecurityAlertsEndpoint:

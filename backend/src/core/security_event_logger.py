@@ -4,12 +4,14 @@ Security Event Logger
 Centralized logging system for security-related events including
 authentication failures, permission denials, rate limiting, and more.
 
-Uses Redis for fast threshold checking and database for long-term storage.
+Uses database for all storage (synchronous operations).
+Threshold checking is done via database queries for reliability.
+
+Note: Redis caching will be added in Phase 4 with proper async handling.
 """
 
-import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -19,34 +21,16 @@ from src.models.security_event import (
     SecurityEventType,
     SecuritySeverity,
 )
-from src.utils.cache_manager import cache_manager
 
 logger = logging.getLogger(__name__)
-
-
-def _run_async(coro):
-    """
-    Helper to run async coroutine in sync context.
-
-    Handles the case where an event loop is already running.
-    """
-    try:
-        loop = asyncio.get_running_loop()
-        # We're in an async context, can't use asyncio.run
-        # Create a task and run it in the background
-        asyncio.create_task(coro)
-        return None
-    except RuntimeError:
-        # No event loop running, use asyncio.run
-        return asyncio.run(coro)
 
 
 class SecurityEventLogger:
     """
     Centralized security event logging system.
 
-    Tracks security events in both Redis (for fast threshold checking)
-    and database (for long-term storage and auditing).
+    Tracks security events in the database for long-term storage,
+    auditing, and threshold checking.
     """
 
     # Default configuration
@@ -81,19 +65,6 @@ class SecurityEventLogger:
         self.alert_threshold = alert_threshold
         self.alert_window_minutes = alert_window_minutes
 
-    def _get_redis_key(self, event_type: str, ip: str) -> str:
-        """
-        Generate Redis key for event tracking.
-
-        Args:
-            event_type: Type of security event
-            ip: IP address
-
-        Returns:
-            Redis key string
-        """
-        return f"security_events:{event_type}:{ip}"
-
     def _get_event_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
         """
         Get severity level for an event type.
@@ -107,68 +78,6 @@ class SecurityEventLogger:
         return self.EVENT_SEVERITY_MAP.get(
             event_type, SecuritySeverity.MEDIUM
         )
-
-    def _log_to_redis(
-        self,
-        event_type: SecurityEventType,
-        ip: str,
-        metadata: dict[str, Any],
-    ) -> bool:
-        """
-        Log event to Redis for fast threshold checking.
-
-        Args:
-            event_type: Type of security event
-            ip: IP address
-            metadata: Event metadata
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            key = self._get_redis_key(event_type.value, ip)
-
-            # Try to get existing data
-            get_coroutine = cache_manager.get("security_events", key)
-            if asyncio.iscoroutine(get_coroutine):
-                current_data = _run_async(get_coroutine)
-                # If we're in async context, current_data will be None
-                # Fall back to database-only logging
-                if current_data is None:
-                    return False
-            else:
-                current_data = get_coroutine
-
-            if current_data is None:
-                current_data = {"count": 0, "events": []}
-
-            # Increment count and add event
-            current_data["count"] += 1
-            current_data["events"].append({
-                "timestamp": datetime.now().isoformat(),
-                "metadata": metadata,
-            })
-
-            # Keep only recent events (within window)
-            expire_seconds = self.alert_window_minutes * 60
-
-            try:
-                set_coroutine = cache_manager.set(
-                    "security_events",
-                    key,
-                    current_data,
-                    expire=expire_seconds
-                )
-                if asyncio.iscoroutine(set_coroutine):
-                    _run_async(set_coroutine)
-                return True
-            except Exception as e:
-                logger.debug(f"Cannot run async cache set operation: {e}")
-                return False
-
-        except Exception as e:
-            logger.error(f"Failed to log security event to Redis: {e}")
-            return False
 
     def _log_to_database(
         self,
@@ -256,9 +165,6 @@ class SecurityEventLogger:
             "reason": reason,
         }
 
-        # Log to Redis for fast threshold checking
-        self._log_to_redis(event_type, ip, metadata)
-
         # Log to database for long-term storage
         return self._log_to_database(
             event_type=event_type,
@@ -289,9 +195,6 @@ class SecurityEventLogger:
         metadata = {
             "username": username,
         }
-
-        # Log to Redis
-        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database
         return self._log_to_database(
@@ -329,9 +232,6 @@ class SecurityEventLogger:
             "action": action,
         }
 
-        # Log to Redis
-        self._log_to_redis(event_type, ip, metadata)
-
         # Log to database
         return self._log_to_database(
             event_type=event_type,
@@ -362,9 +262,6 @@ class SecurityEventLogger:
         metadata = {
             "endpoint": endpoint,
         }
-
-        # Log to Redis
-        self._log_to_redis(event_type, ip, metadata)
 
         # Log to database (no user_id for rate limiting)
         return self._log_to_database(
@@ -400,9 +297,6 @@ class SecurityEventLogger:
             "details": details or {},
         }
 
-        # Log to Redis
-        self._log_to_redis(event_type, ip, metadata)
-
         # Log to database
         return self._log_to_database(
             event_type=event_type,
@@ -437,9 +331,6 @@ class SecurityEventLogger:
             "reason": reason,
         }
 
-        # Log to Redis
-        self._log_to_redis(event_type, ip, metadata)
-
         # Log to database
         return self._log_to_database(
             event_type=event_type,
@@ -458,6 +349,8 @@ class SecurityEventLogger:
         """
         Check if IP address has exceeded alert threshold.
 
+        Uses database query to count events within time window.
+
         Args:
             ip: IP address to check
             event_type: Type of event to check
@@ -469,22 +362,32 @@ class SecurityEventLogger:
         threshold = threshold or self.alert_threshold
 
         try:
-            key = self._get_redis_key(event_type.value, ip)
+            from src.database import SessionLocal
 
-            get_coroutine = cache_manager.get("security_events", key)
-            if asyncio.iscoroutine(get_coroutine):
-                data = _run_async(get_coroutine)
-                # If we're in async context, data will be None
-                if data is None:
-                    return False
+            # Use provided session or create new one
+            if self.db is not None:
+                db = self.db
+                should_close = False
             else:
-                data = get_coroutine
+                db = SessionLocal()
+                should_close = True
 
-            if data is None:
-                return False
+            try:
+                # Calculate time window
+                window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
 
-            count = data.get("count", 0)
-            return count >= threshold
+                # Query events within window for this IP and event type
+                count = db.query(SecurityEvent).filter(
+                    SecurityEvent.ip_address == ip,
+                    SecurityEvent.event_type == event_type.value,
+                    SecurityEvent.created_at >= window_start,
+                ).count()
+
+                return count >= threshold
+
+            finally:
+                if should_close:
+                    db.close()
 
         except Exception as e:
             logger.error(f"Failed to check alert threshold: {e}")
@@ -496,7 +399,7 @@ class SecurityEventLogger:
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
     ) -> int:
         """
-        Get event count for specific IP and event type.
+        Get event count for specific IP and event type within time window.
 
         Args:
             ip: IP address
@@ -506,21 +409,32 @@ class SecurityEventLogger:
             Event count
         """
         try:
-            key = self._get_redis_key(event_type.value, ip)
+            from src.database import SessionLocal
 
-            get_coroutine = cache_manager.get("security_events", key)
-            if asyncio.iscoroutine(get_coroutine):
-                data = _run_async(get_coroutine)
-                # If we're in async context, data will be None
-                if data is None:
-                    return 0
+            # Use provided session or create new one
+            if self.db is not None:
+                db = self.db
+                should_close = False
             else:
-                data = get_coroutine
+                db = SessionLocal()
+                should_close = True
 
-            if data is None:
-                return 0
+            try:
+                # Calculate time window
+                window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
 
-            return data.get("count", 0)
+                # Query events within window for this IP and event type
+                count = db.query(SecurityEvent).filter(
+                    SecurityEvent.ip_address == ip,
+                    SecurityEvent.event_type == event_type.value,
+                    SecurityEvent.created_at >= window_start,
+                ).count()
+
+                return count
+
+            finally:
+                if should_close:
+                    db.close()
 
         except Exception as e:
             logger.error(f"Failed to get event count: {e}")
