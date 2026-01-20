@@ -7,10 +7,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
+from src.core.unified_error_handler import UnifiedError
 from src.models.asset import Asset
 from src.models.auth import User
 from src.schemas.asset import AssetCreate, AssetUpdate
@@ -230,11 +230,11 @@ class TestCreateAsset:
         asset_in = AssetCreate(**asset_create_dict)
 
         try:
-            with pytest.raises(HTTPException) as excinfo:
+            with pytest.raises(UnifiedError) as excinfo:
                 service.create_asset(asset_in)
 
             assert excinfo.value.status_code == 422
-            assert "枚举值验证失败" in str(excinfo.value.detail)
+            assert "枚举值验证失败" in str(excinfo.value.message)
         finally:
             # 恢复原始 mock
             mock_enum_validation_service.validate_asset_data = original_validate
@@ -267,12 +267,12 @@ class TestCreateAsset:
             mock_validation.return_value = mock_validation_service
 
             with patch("src.crud.asset.asset_crud.get_by_name", return_value=None):
-                with pytest.raises(HTTPException) as excinfo:
+                with pytest.raises(UnifiedError) as excinfo:
                     service.create_asset(asset_in)
 
                 assert excinfo.value.status_code == 422
-                assert "数据验证失败" in str(excinfo.value.detail)
-                assert "已出租面积不能大于可出租面积" in str(excinfo.value.detail)
+                assert "数据验证失败" in str(excinfo.value.message)
+                assert "已出租面积不能大于可出租面积" in str(excinfo.value.message)
 
     def test_create_asset_with_user(self, service, asset_create_dict, mock_asset):
         """测试带用户信息的创建"""
@@ -342,30 +342,28 @@ class TestUpdateAsset:
             with pytest.raises(ResourceNotFoundError):
                 service.update_asset(TEST_ASSET_ID, asset_in)
 
-    def test_update_asset_enum_validation_fails(self, service, mock_asset):
+    def test_update_asset_enum_validation_fails(self, service, mock_asset, mock_enum_validation_service):
         """测试更新时枚举验证失败"""
         update_data = {"property_nature": "无效性质"}
         asset_in = AssetUpdate(**update_data)
 
-        with patch(
-            "src.services.asset.asset_service.AssetService.get_asset",
-            return_value=mock_asset,
-        ):
-            with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
-            ) as mock_validation:
-                mock_validation_service = MagicMock()
-                mock_validation_service.validate_asset_data.return_value = (
-                    False,
-                    ["物业性质无效"],
-                )
-                mock_validation.return_value = mock_validation_service
+        # 修改全局 mock 返回验证失败
+        original_validate = mock_enum_validation_service.validate_asset_data
+        mock_enum_validation_service.validate_asset_data = lambda data: (False, ["物业性质无效"])
 
-                with pytest.raises(HTTPException) as excinfo:
+        try:
+            with patch(
+                "src.services.asset.asset_service.AssetService.get_asset",
+                return_value=mock_asset,
+            ):
+                with pytest.raises(UnifiedError) as excinfo:
                     service.update_asset(TEST_ASSET_ID, asset_in)
 
                 assert excinfo.value.status_code == 422
-                assert "枚举值验证失败" in str(excinfo.value.detail)
+                assert "枚举值验证失败" in str(excinfo.value.message)
+        finally:
+            # 恢复原始 mock
+            mock_enum_validation_service.validate_asset_data = original_validate
 
     def test_update_asset_duplicate_name(self, service, mock_asset):
         """测试更新为重复的名称"""
@@ -432,22 +430,20 @@ class TestUpdateAsset:
         update_data = {"rented_area": 150.0}  # 大于 rentable_area
         asset_in = AssetUpdate(**update_data)
 
-        with patch(
-            "src.services.asset.asset_service.AssetService.get_asset",
-            return_value=mock_asset,
+        # Mock get_asset to return the mock_asset with proper attributes
+        with patch.object(
+            service, "get_asset", return_value=mock_asset
         ):
+            # Mock the calculator to return validation errors
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
-            ) as mock_validation:
-                mock_validation_service = MagicMock()
-                mock_validation_service.validate_asset_data.return_value = (True, [])
-                mock_validation.return_value = mock_validation_service
-
-                with pytest.raises(HTTPException) as excinfo:
+                "src.services.asset.asset_service.AssetCalculator.validate_area_consistency",
+                return_value=["已出租面积不能大于可出租面积"]
+            ):
+                with pytest.raises(UnifiedError) as excinfo:
                     service.update_asset(TEST_ASSET_ID, asset_in)
 
                 assert excinfo.value.status_code == 422
-                assert "数据验证失败" in str(excinfo.value.detail)
+                assert "数据验证失败" in str(excinfo.value.message)
 
     def test_update_asset_with_user(self, service, mock_asset, mock_user):
         """测试带用户信息的更新"""

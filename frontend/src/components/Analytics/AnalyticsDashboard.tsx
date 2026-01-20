@@ -85,11 +85,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       const params = new URLSearchParams();
       params.append('export_format', format);
 
-      if (filters.date_from) {
-        params.append('date_from', filters.date_from);
+      if (filters.start_date) {
+        params.append('start_date', filters.start_date);
       }
-      if (filters.date_to) {
-        params.append('date_to', filters.date_to);
+      if (filters.end_date) {
+        params.append('end_date', filters.end_date);
       }
       if (filters.include_deleted !== undefined) {
         params.append('include_deleted', String(filters.include_deleted));

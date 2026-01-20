@@ -30,6 +30,7 @@
     "@babel/preset-typescript": "^7.28.5",
     "@emotion/jest": "^11.11.0",
     "@faker-js/faker": "^10.1.0",
+    "@playwright/test": "^1.49.1",
     "@tanstack/react-virtual": "^3.13.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",
@@ -104,12 +105,10 @@
     "test:a11y": "vitest run --coverage --reporter=verbose --run",
     "audit:ui": "npm run lint && npm run lint:css && npm run type-check",
     "audit:full": "npm run lint && npm run lint:css && npm run type-check && npm run test:ci",
-    "diagnose": "tsx scripts/diagnose/puppeteer-check.ts",
+    "diagnose": "node scripts/diagnose/run-diagnostics.js",
     "diagnose:headful": "HEADLESS=false pnpm diagnose",
     "diagnose:routes": "PAGES=/dashboard,/assets/list,/rental/contracts pnpm diagnose",
-    "diagnose:custom": "tsx scripts/diagnose/puppeteer-check.ts",
-    "diagnose:report": "start frontend/diagnostics/diagnostic-report-*.html",
-    "diagnose:test": "tsx scripts/diagnose/test.ts"
+    "diagnose:report": "start frontend/diagnostics/diagnostic-report-*.html"
   },
   "typeCoverage": {
     "atLeast": 95,

@@ -22,7 +22,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import pytest
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
+
+from src.core.unified_error_handler import UnifiedError
 
 pytestmark = pytest.mark.api
 
@@ -478,7 +480,7 @@ class TestUploadAssetAttachments:
 
         mock_asset_crud_obj.get.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(UnifiedError) as exc_info:
             await upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file],
@@ -487,7 +489,7 @@ class TestUploadAssetAttachments:
             )
 
         assert exc_info.value.status_code == 500
-        assert "上传附件失败" in exc_info.value.detail
+        assert "上传附件失败" in exc_info.value.message
 
 
 # ============================================================================

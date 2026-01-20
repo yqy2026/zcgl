@@ -73,7 +73,11 @@ export interface AuthResponse {
     token_type: string;
     expires_in: number;
   };
-  permissions: string[];
+  permissions: Array<{
+    resource: string;
+    action: string;
+    description?: string;
+  }>;
 }
 
 /**

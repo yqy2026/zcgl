@@ -86,31 +86,31 @@ export class AuthService {
       // No need to store tokens in localStorage
       // For backward compatibility, keep response structure
 
-      if (responseData.data.access_token && responseData.data.refresh_token) {
-        const { access_token: accessToken, refresh_token: refreshToken } = responseData.data;
+      const tokenData = responseData.data ?? responseData.tokens;
+      const accessToken = tokenData?.access_token;
+      const refreshToken = tokenData?.refresh_token;
 
-        // Store in AuthStorage with permissions from API
-        // Note: Tokens are in httpOnly cookies, but we keep metadata
-        const authData = {
-          token: accessToken, // Kept for compatibility, but actual auth uses cookie
-          refreshToken: refreshToken, // Kept for compatibility
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            full_name: user.full_name,
-            role: user.role,
-            organization_id: user.organization_id,
-          },
-          permissions: responseData.data.permissions ?? [], // Use permissions from API
-        };
-
-        AuthStorage.setAuthData(authData);
-
-        // Legacy keys removed - tokens are now in httpOnly cookies
-      } else {
+      if (accessToken == null || refreshToken == null) {
         throw new Error('Access token or refresh token not found');
       }
+
+      const permissions = responseData.data?.permissions ?? [];
+
+      const authData = {
+        token: accessToken,
+        refreshToken: refreshToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role,
+          organization_id: user.organization_id,
+        },
+        permissions,
+      };
+
+      AuthStorage.setAuthData(authData);
 
       localStorage.setItem('user', JSON.stringify(user));
 
@@ -124,7 +124,7 @@ export class AuthService {
             token_type: 'Bearer',
             expires_in: 3600, // 默认1小时
           },
-          permissions: responseData.data.permissions ?? [], // Return actual permissions
+          permissions,
         },
         message: (responseData.message as string) || '登录成功',
       };
