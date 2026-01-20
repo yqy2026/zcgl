@@ -6,7 +6,7 @@ from typing import Any
 
 import logging
 
-from fastapi import Depends
+from fastapi import Cookie, Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import and_
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..core.api_errors import bad_request, forbidden, unauthorized
 from ..core.config import settings
+from ..core.cookie_auth import cookie_manager
 from ..database import get_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
@@ -150,6 +151,135 @@ def get_current_user(
     if user.is_locked_now():
         raise unauthorized("用户账户已被锁定，请稍后再试")
 
+    return user
+
+
+def get_current_user_from_cookie(
+    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Get current user from httpOnly cookie or Authorization header (fallback)
+
+    This function implements cookie-first authentication with Bearer token fallback:
+    1. First tries to read JWT from httpOnly cookie (primary method for XSS protection)
+    2. Falls back to Authorization header (for backward compatibility)
+    3. Validates the JWT token
+    4. Returns the User object
+
+    Args:
+        auth_token: JWT from httpOnly cookie (automatically sent by browser)
+        authorization: Bearer token from Authorization header (fallback)
+        db: Database session
+
+    Returns:
+        User: Authenticated user object
+
+    Raises:
+        unauthorized: If no valid token found or user is inactive/locked
+    """
+
+    # Try cookie first (primary method for XSS protection)
+    token = None
+    if auth_token:
+        token = auth_token
+        logger.debug("Authenticating using httpOnly cookie")
+    elif authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        logger.debug("Authenticating using Authorization header (fallback)")
+
+    # No token found in either cookie or header
+    if not token:
+        raise unauthorized("Not authenticated")
+
+    # Validate token using the same logic as get_current_user()
+    credentials_exception = unauthorized("Invalid authentication credentials")
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience="land-property-system",
+            issuer="land-property-auth",
+        )
+        user_id: str | None = payload.get("sub")
+        username: str | None = payload.get("username")
+        role: str | None = payload.get("role")
+        exp: int | None = payload.get("exp")
+        iat: int | None = payload.get("iat")
+        jti: str | None = payload.get("jti")  # JWT ID for token tracking
+
+        # Validate required fields
+        if user_id is None or username is None or role is None:
+            logger.warning(
+                f"JWT token missing required fields: sub={user_id}, username={username}, role={role}"
+            )
+            raise credentials_exception
+
+        # Validate expiration
+        if exp is None:
+            logger.warning("JWT token missing expiration time")
+            raise credentials_exception
+
+        # Validate issued at time
+        if iat is None:
+            logger.warning("JWT token missing issued at time")
+            raise credentials_exception
+
+        # Check if token is blacklisted
+        if jti and _is_token_blacklisted(jti):
+            logger.warning(f"JWT token {jti} is blacklisted")
+            raise unauthorized("Token has been revoked")
+
+        # Handle role conversion (string to enum)
+        role_enum = role
+        if isinstance(role, str):
+            try:
+                role_enum = UserRole(role)
+            except ValueError:
+                logger.warning(f"Invalid role value '{role}', defaulting to USER")
+                role_enum = UserRole.USER
+        elif isinstance(role, UserRole):
+            # Already an enum, use as-is
+            pass
+        else:
+            # Unknown type, default to USER
+            logger.warning(
+                f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER"
+            )
+            role_enum = UserRole.USER
+
+        # Create TokenData for validation
+        try:
+            token_data = TokenData(
+                sub=user_id,
+                username=username,
+                role=role_enum,
+                exp=payload.get("exp") if payload else None,
+            )
+        except Exception as e:
+            logger.error(f"TokenData validation failed: {e}")
+            raise credentials_exception
+    except JWTError as e:
+        logger.warning(f"JWT decode error: {e}")
+        raise credentials_exception
+
+    # Get user from database
+    user = db.query(User).filter(User.id == token_data.sub).first()
+    if user is None:
+        raise credentials_exception
+
+    # Check if user is active
+    if not user.is_active:
+        raise unauthorized("User account is disabled")
+
+    # Check if user is locked
+    if user.is_locked_now():
+        raise unauthorized("User account is locked, please try again later")
+
+    logger.debug(f"Successfully authenticated user {user.username} via cookie-based auth")
     return user
 
 

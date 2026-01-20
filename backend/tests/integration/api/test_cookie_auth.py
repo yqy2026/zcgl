@@ -154,3 +154,58 @@ def test_login_response_includes_user_data(client, test_data):
     assert data["user"]["username"] == admin_user.username, "Username should match"
     assert "permissions" in data, "Response should include permissions"
     assert isinstance(data["permissions"], list), "Permissions should be a list"
+
+
+def test_protected_endpoint_authenticates_via_cookie(client, test_data):
+    """Test that protected endpoints can authenticate using httpOnly cookie"""
+    from fastapi.testclient import TestClient
+
+    admin_user = test_data["admin"]
+
+    # Login to set the httpOnly cookie
+    login_response = client.post("/api/v1/auth/login", data={
+        "username": admin_user.username,
+        "password": "Admin123!@#"
+    })
+    assert login_response.status_code == 200
+
+    # Get the access token for comparison
+    login_data = login_response.json()
+    access_token = login_data["tokens"]["access_token"]
+
+    # Access a protected endpoint WITHOUT Authorization header
+    # The cookie should be sent automatically by the TestClient
+    protected_response = client.get("/api/v1/users/me")
+
+    # Should succeed because cookie is sent automatically
+    assert protected_response.status_code == 200
+    data = protected_response.json()
+    assert data["username"] == admin_user.username
+
+
+def test_cookie_auth_fallback_to_authorization_header(client, test_data):
+    """Test that cookie auth falls back to Authorization header if cookie is missing"""
+    admin_user = test_data["admin"]
+
+    # Login
+    login_response = client.post("/api/v1/auth/login", data={
+        "username": admin_user.username,
+        "password": "Admin123!@#"
+    })
+    assert login_response.status_code == 200
+
+    # Get the token
+    login_data = login_response.json()
+    access_token = login_data["tokens"]["access_token"]
+
+    # Access protected endpoint with Authorization header but NO cookie
+    # (simulate browser with cookies disabled)
+    protected_response = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    # Should succeed using Authorization header fallback
+    assert protected_response.status_code == 200
+    data = protected_response.json()
+    assert data["username"] == admin_user.username
