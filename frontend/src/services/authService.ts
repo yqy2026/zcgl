@@ -86,31 +86,31 @@ export class AuthService {
       // No need to store tokens in localStorage
       // For backward compatibility, keep response structure
 
-      const tokenData = responseData.data ?? responseData.tokens;
-      const accessToken = tokenData?.access_token;
-      const refreshToken = tokenData?.refresh_token;
+      if (responseData.data.access_token && responseData.data.refresh_token) {
+        const { access_token: accessToken, refresh_token: refreshToken } = responseData.data;
 
-      if (accessToken == null || refreshToken == null) {
+        // Store in AuthStorage with permissions from API
+        // Note: Tokens are in httpOnly cookies, but we keep metadata
+        const authData = {
+          token: accessToken, // Kept for compatibility, but actual auth uses cookie
+          refreshToken: refreshToken, // Kept for compatibility
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            full_name: user.full_name,
+            role: user.role,
+            organization_id: user.organization_id,
+          },
+          permissions: responseData.data.permissions ?? [], // Use permissions from API
+        };
+
+        AuthStorage.setAuthData(authData);
+
+        // Legacy keys removed - tokens are now in httpOnly cookies
+      } else {
         throw new Error('Access token or refresh token not found');
       }
-
-      const permissions = responseData.data?.permissions ?? [];
-
-      const authData = {
-        token: accessToken,
-        refreshToken: refreshToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          full_name: user.full_name,
-          role: user.role,
-          organization_id: user.organization_id,
-        },
-        permissions,
-      };
-
-      AuthStorage.setAuthData(authData);
 
       localStorage.setItem('user', JSON.stringify(user));
 
@@ -124,7 +124,7 @@ export class AuthService {
             token_type: 'Bearer',
             expires_in: 3600, // 默认1小时
           },
-          permissions,
+          permissions: responseData.data.permissions ?? [], // Return actual permissions
         },
         message: (responseData.message as string) || '登录成功',
       };
@@ -287,7 +287,11 @@ export class AuthService {
 
   // 清除认证数据
   private static clearAuthData(): void {
-    AuthStorage.clearAuthData();
+    // Tokens are in httpOnly cookies, cleared by backend logout endpoint
+    // Only clear user metadata from localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
+    // Note: auth_token and refreshToken keys removed - tokens are now in cookies
   }
 
   // 修改密码

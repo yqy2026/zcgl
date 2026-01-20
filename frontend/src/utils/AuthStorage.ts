@@ -26,15 +26,10 @@ export class AuthStorageClass {
    */
   setAuthData(data: AuthData): void {
     try {
-      const sanitizedData: AuthData = {
-        ...data,
-        token: '',
-        refreshToken: '',
-      };
-      localStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(sanitizedData));
-      localStorage.removeItem(this.TOKEN_KEY);
-      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-      localStorage.removeItem('refreshToken');
+      localStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
+      // Also set individual keys for backward compatibility
+      localStorage.setItem(this.TOKEN_KEY, data.token);
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, data.refreshToken);
     } catch (error) {
       console.error('Failed to store auth data:', error);
       throw error;
@@ -62,8 +57,7 @@ export class AuthStorageClass {
    */
   getToken(): string | null {
     const authData = this.getAuthData();
-    const token = authData?.token?.trim();
-    return token != null && token !== '' ? token : null;
+    return authData?.token ?? null;
   }
 
   /**
@@ -71,8 +65,7 @@ export class AuthStorageClass {
    */
   getRefreshToken(): string | null {
     const authData = this.getAuthData();
-    const refreshToken = authData?.refreshToken?.trim();
-    return refreshToken != null && refreshToken !== '' ? refreshToken : null;
+    return authData?.refreshToken ?? null;
   }
 
   /**
@@ -112,8 +105,8 @@ export class AuthStorageClass {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const authData = this.getAuthData();
-    return authData?.user?.id != null && authData.user.id.trim() !== '';
+    const token = this.getToken();
+    return token != null && token.trim() !== '';
   }
 }
 

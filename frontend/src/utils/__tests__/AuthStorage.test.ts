@@ -21,11 +21,7 @@ describe('AuthStorage', () => {
 
     const stored = localStorage.getItem('authData');
     expect(stored).toBeDefined();
-    expect(JSON.parse(stored!)).toEqual({
-      ...authData,
-      token: '',
-      refreshToken: '',
-    });
+    expect(JSON.parse(stored!)).toEqual(authData);
   });
 
   it('should retrieve auth data correctly', () => {
@@ -39,11 +35,7 @@ describe('AuthStorage', () => {
     AuthStorage.setAuthData(authData);
     const retrieved = AuthStorage.getAuthData();
 
-    expect(retrieved).toEqual({
-      ...authData,
-      token: '',
-      refreshToken: '',
-    });
+    expect(retrieved).toEqual(authData);
   });
 
   it('should return null when no auth data exists', () => {
@@ -75,7 +67,7 @@ describe('AuthStorage', () => {
     AuthStorage.setAuthData(authData);
     const token = AuthStorage.getToken();
 
-    expect(token).toBeNull();
+    expect(token).toBe('test-token');
   });
 
   it('should get refresh token from authData', () => {
@@ -89,7 +81,7 @@ describe('AuthStorage', () => {
     AuthStorage.setAuthData(authData);
     const refreshToken = AuthStorage.getRefreshToken();
 
-    expect(refreshToken).toBeNull();
+    expect(refreshToken).toBe('test-refresh');
   });
 
   it('should get current user from authData', () => {
@@ -135,12 +127,12 @@ describe('AuthStorage', () => {
     AuthStorage.setAuthData(authData);
     expect(AuthStorage.isAuthenticated()).toBe(true);
 
-    // Test with missing user
+    // Test with empty token
     localStorage.clear();
     AuthStorage.setAuthData({
-      token: 'test-token',
+      token: '   ',  // whitespace
       refreshToken: 'test-refresh',
-      user: { id: '' },
+      user: { id: '1' },
       permissions: []
     });
     expect(AuthStorage.isAuthenticated()).toBe(false);

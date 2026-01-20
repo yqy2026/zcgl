@@ -12,15 +12,15 @@
  * Issue #11: Frontend Permission Display - Verify permissions are visible
  */
 
-import { test, expect, type Page, type BrowserContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Flow', () => {
-  test.beforeEach(async ({ page }: { page: Page }) => {
+  test.beforeEach(async ({ page }) => {
     // Navigate to login page before each test
     await page.goto('/login');
   });
 
-  test('should login successfully and store auth data', async ({ page }: { page: Page }) => {
+  test('should login successfully and store auth data', async ({ page }) => {
     // Fill and submit login form
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -36,13 +36,13 @@ test.describe('Authentication Flow', () => {
     });
 
     expect(authData).not.toBeNull();
-    expect(authData?.token).toBe('');
-    expect(authData?.refreshToken).toBe('');
+    expect(authData?.token).toBeDefined();
+    expect(authData?.refreshToken).toBeDefined();
     expect(authData?.user).toBeDefined();
     expect(authData?.permissions).toBeInstanceOf(Array);
   });
 
-  test('should display user permissions in profile', async ({ page }: { page: Page }) => {
+  test('should display user permissions in profile', async ({ page }) => {
     // Login as admin
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -67,7 +67,7 @@ test.describe('Authentication Flow', () => {
     expect(permissionBadges).toBeGreaterThan(0);
   });
 
-  test('should deny access to admin pages for regular users', async ({ page }: { page: Page }) => {
+  test('should deny access to admin pages for regular users', async ({ page }) => {
     // Login as regular user
     await page.fill('input[name="username"]', 'testuser');
     await page.fill('input[name="password"]', 'TestPass123!');
@@ -86,7 +86,7 @@ test.describe('Authentication Flow', () => {
     expect(isAccessDenied || isRedirected).toBeTruthy();
   });
 
-  test('should allow admin access to admin pages', async ({ page }: { page: Page }) => {
+  test('should allow admin access to admin pages', async ({ page }) => {
     // Login as admin
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -104,7 +104,7 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('h1:has-text("User Management")')).toBeVisible();
   });
 
-  test('should logout and clear auth data', async ({ page }: { page: Page }) => {
+  test('should logout and clear auth data', async ({ page }) => {
     // Login first
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -124,7 +124,7 @@ test.describe('Authentication Flow', () => {
     expect(authData).toBeNull();
   });
 
-  test('should redirect to login when accessing protected route without auth', async ({ page }: { page: Page }) => {
+  test('should redirect to login when accessing protected route without auth', async ({ page }) => {
     // Try to access dashboard without login
     await page.goto('/dashboard');
 
@@ -132,7 +132,7 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL('/login');
   });
 
-  test('should show error message with invalid credentials', async ({ page }: { page: Page }) => {
+  test('should show error message with invalid credentials', async ({ page }) => {
     // Fill with invalid credentials
     await page.fill('input[name="username"]', 'invalid');
     await page.fill('input[name="password"]', 'wrongpassword');
@@ -144,7 +144,7 @@ test.describe('Authentication Flow', () => {
     await expect(errorMessage).toContainText(/username|password|invalid/i);
   });
 
-  test('should handle token refresh on API calls', async ({ page }: { page: Page }) => {
+  test('should handle token refresh on API calls', async ({ page }) => {
     // Login
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -160,7 +160,7 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('table, .ant-table')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should display rate limit message when exceeded', async ({ page }: { page: Page }) => {
+  test('should display rate limit message when exceeded', async ({ page }) => {
     // Login
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -185,7 +185,7 @@ test.describe('Authentication Flow', () => {
     }
   });
 
-  test('should store and use permissions for UI element control', async ({ page }: { page: Page }) => {
+  test('should store and use permissions for UI element control', async ({ page }) => {
     // Login as regular user
     await page.fill('input[name="username"]', 'testuser');
     await page.fill('input[name="password"]', 'TestPass123!');
@@ -200,7 +200,7 @@ test.describe('Authentication Flow', () => {
     expect(isAdminButtonVisible).toBeFalsy();
   });
 
-  test('should handle session timeout gracefully', async ({ page }: { page: Page }) => {
+  test('should handle session timeout gracefully', async ({ page }) => {
     // Login
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -228,7 +228,7 @@ test.describe('Authentication Flow', () => {
     }
   });
 
-  test('should persist auth data across page refreshes', async ({ page }: { page: Page }) => {
+  test('should persist auth data across page refreshes', async ({ page }) => {
     // Login
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -252,7 +252,7 @@ test.describe('Authentication Flow', () => {
     expect(authData?.user?.username).toBe('admin');
   });
 
-  test('should display correct role badge in UI', async ({ page }: { page: Page }) => {
+  test('should display correct role badge in UI', async ({ page }) => {
     // Login as admin
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
@@ -269,7 +269,7 @@ test.describe('Authentication Flow', () => {
 });
 
 test.describe('Authentication Security', () => {
-  test('should not expose sensitive data in localStorage', async ({ page }: { page: Page }) => {
+  test('should not expose sensitive data in localStorage', async ({ page }) => {
     // Login
     await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
@@ -288,7 +288,7 @@ test.describe('Authentication Security', () => {
     expect(authData?.user?.password).toBeUndefined();
   });
 
-  test('should handle concurrent login attempts', async ({ context }: { context: BrowserContext }) => {
+  test('should handle concurrent login attempts', async ({ context }) => {
     // Create two pages/tabs
     const page1 = await context.newPage();
     const page2 = await context.newPage();

@@ -30,7 +30,6 @@
     "@babel/preset-typescript": "^7.28.5",
     "@emotion/jest": "^11.11.0",
     "@faker-js/faker": "^10.1.0",
-    "@playwright/test": "^1.49.1",
     "@tanstack/react-virtual": "^3.13.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",

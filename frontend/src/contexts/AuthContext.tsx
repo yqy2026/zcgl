@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, LoginCredentials } from '../types/auth';
 import { AuthService } from '../services/authService';
+import { AUTH_API } from '../constants/api';
 import { createLogger } from '../utils/logger';
 import { MessageManager } from '@/utils/messageManager';
 

@@ -7,15 +7,11 @@
 - 保持了原有的API签名和响应格式，确保向后兼容
 """
 
-import io
-import json
 import logging
-from collections.abc import AsyncIterator
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ...core.response_handler import ResponseHandler, get_request_id
@@ -273,13 +269,18 @@ async def export_analytics(
     date_to: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> JSONResponse | StreamingResponse:
+):
     """
     导出综合分析数据
 
     支持导出为 Excel、CSV 或 PDF 格式
     权限要求: 需要登录
     """
+    from fastapi.responses import StreamingResponse
+    import io
+    import json
+    from datetime import datetime
+
     try:
         # 构建筛选条件
         filters: dict[str, Any] = {
@@ -308,7 +309,7 @@ async def export_analytics(
             json.dump(result, output, ensure_ascii=False, indent=2)
             output.seek(0)
 
-            async def csv_generator() -> AsyncIterator[bytes]:
+            async def csv_generator():
                 yield output.getvalue().encode("utf-8")
 
             return StreamingResponse(
@@ -326,7 +327,7 @@ async def export_analytics(
             excel_service = ExcelExportService(db)
             buffer = excel_service.export_analytics_to_excel(result)
 
-            async def excel_generator() -> AsyncIterator[bytes]:
+            async def excel_generator():
                 data = buffer.getvalue()
                 yield data
                 buffer.close()
