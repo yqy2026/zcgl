@@ -3,7 +3,6 @@ Integration tests for auth permissions in login response
 Tests that the login API returns user permissions
 """
 
-import pytest
 
 
 def test_login_returns_permissions(client, test_data):

@@ -168,9 +168,6 @@ async def login(
         if "UnifiedError" in type(e).__name__:
             raise
         # Log the error for debugging (internal use only)
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.error(f"Authentication error: {str(e)}", exc_info=True)
 
         # Return generic error message to client
@@ -228,9 +225,6 @@ async def logout(
                 blacklist_manager.add_token(jti, exp)
         except Exception as e:
             # 记录错误但继续登出流程
-            import logging
-
-            logger = logging.getLogger(__name__)
             logger.warning(f"Failed to blacklist token during logout: {e}")
 
     # 撤销用户所有会话

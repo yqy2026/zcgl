@@ -15,9 +15,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from src.main import app
-from src.models.auth import User
-
 
 def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     """

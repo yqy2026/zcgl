@@ -7,8 +7,7 @@ Supports environment-specific behavior (production vs development).
 
 import os
 from datetime import datetime
-from ipaddress import ip_network, ip_address, IPv4Network
-from typing import List, Set
+from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 
 from src.core.environment import get_environment
 
@@ -38,12 +37,12 @@ class IPWhitelistManager:
         "0.0.0.0/0",  # Matches everything
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.env = get_environment()
-        self.whitelist: Set[IPv4Network] = set()
+        self.whitelist: set[IPv4Network | IPv6Network] = set()
         self._load_from_env()
 
-    def _load_from_env(self):
+    def _load_from_env(self) -> None:
         """Load whitelist from environment variable"""
         whitelist_str = os.getenv("IP_WHITELIST", "")
         if whitelist_str:
@@ -118,7 +117,7 @@ class IPWhitelistManager:
         except ValueError:
             return False
 
-    def get_ranges(self) -> List[str]:
+    def get_ranges(self) -> list[str]:
         """Get all whitelisted ranges as CIDR strings"""
         return [str(network) for network in self.whitelist]
 

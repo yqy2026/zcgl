@@ -1,11 +1,10 @@
 """Integration tests for rate limiting with circuit breaker"""
+
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from src.main import app
-from src.middleware.security_middleware import RequestValidationMiddleware
-from src.core.rate_limit_strategy import RateLimitStrategy
+
 from src.core.circuit_breaker import CircuitBreaker
+from src.core.rate_limit_strategy import RateLimitStrategy
+from src.middleware.security_middleware import RequestValidationMiddleware
 
 
 def test_rate_limit_fail_closed_blocks_requests():
@@ -20,7 +19,6 @@ def test_rate_limit_fail_closed_blocks_requests():
     assert config.strategy == RateLimitStrategy.STRICT  # Default
 
     # Test that circuit breaker is properly configured
-    from src.middleware.security_middleware import RequestValidationMiddleware
     from fastapi import FastAPI
 
     test_app = FastAPI()
@@ -102,8 +100,9 @@ async def test_circuit_breaker_closes_on_success():
 
 def test_rate_limit_config_from_env():
     """Test RateLimitConfig loads from environment"""
-    from src.core.rate_limit_strategy import RateLimitConfig
     import os
+
+    from src.core.rate_limit_strategy import RateLimitConfig
 
     # Test default (STRICT)
     config = RateLimitConfig.from_env()

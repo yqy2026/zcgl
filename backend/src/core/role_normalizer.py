@@ -8,7 +8,6 @@ All role comparisons should use RoleNormalizer for case-insensitive matching.
 """
 
 from enum import Enum
-from typing import Literal
 
 
 # Centralized role definition (matches UserRole but with utility methods)

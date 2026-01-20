@@ -4,7 +4,7 @@
 测试安全头、请求验证、文件上传安全等中间件功能。
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException, Request, Response

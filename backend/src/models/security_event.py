@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Index, Integer, String
+from sqlalchemy import JSON, DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base

@@ -5,11 +5,7 @@ Test the security event logging system including event types,
 threshold checking, Redis integration, and database storage.
 """
 
-import time
-from datetime import datetime
 from unittest.mock import Mock, patch
-
-import pytest
 
 from src.core.security_event_logger import (
     SecurityEventLogger,

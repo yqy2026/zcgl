@@ -10,9 +10,10 @@ Tests secret validation logic including:
 """
 
 import pytest
+
 from src.core.secret_validator import (
-    SecretValidator,
     SecretValidationError,
+    SecretValidator,
     secret_validator,
 )
 
@@ -195,5 +196,4 @@ class TestSecretValidator:
 
     def test_singleton_instance(self):
         """secret_validator should be a singleton instance"""
-        from src.core.secret_validator import secret_validator
         assert isinstance(secret_validator, SecretValidator)

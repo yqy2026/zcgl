@@ -50,6 +50,7 @@ def engine(test_database_url):
 def db_tables(engine):
     """Create all database tables using Alembic migrations."""
     from alembic.config import Config
+
     from alembic import command
     from src.database import Base
 
@@ -101,6 +102,7 @@ def db_session(engine, db_tables):
 def client(db_session):
     """Create a FastAPI TestClient with database session."""
     from fastapi.testclient import TestClient
+
     from src.database import get_db
     from src.main import app
 

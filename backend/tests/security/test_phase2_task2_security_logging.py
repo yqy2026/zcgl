@@ -12,12 +12,9 @@ Created: 2026-01-20
 Task: Integrate Security Event Logging into Permission Middleware (Issue #5)
 """
 
-import pytest
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from src.core.security_event_logger import SecurityEventLogger, SecurityEventType
-from src.models.auth import User
 from src.models.security_event import SecurityEvent
 
 
@@ -66,9 +63,10 @@ class TestPermissionDeniedLogging:
 
     def test_should_alert_when_threshold_exceeded(self, test_db: Session):
         """Test that should_alert returns True when threshold is exceeded"""
-        from src.models.security_event import SecurityEvent
-        from src.core.security_event_logger import SecurityEventType
         from datetime import datetime, timedelta
+
+        from src.core.security_event_logger import SecurityEventType
+        from src.models.security_event import SecurityEvent
 
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 
@@ -94,9 +92,10 @@ class TestPermissionDeniedLogging:
 
     def test_should_not_alert_when_threshold_not_exceeded(self, test_db: Session):
         """Test that should_alert returns False when threshold is not exceeded"""
-        from src.models.security_event import SecurityEvent
-        from src.core.security_event_logger import SecurityEventType
         from datetime import datetime, timedelta
+
+        from src.core.security_event_logger import SecurityEventType
+        from src.models.security_event import SecurityEvent
 
         logger = SecurityEventLogger(test_db, alert_threshold=10)
 
@@ -122,9 +121,10 @@ class TestPermissionDeniedLogging:
 
     def test_should_alert_with_custom_threshold(self, test_db: Session):
         """Test that should_alert respects custom threshold"""
-        from src.models.security_event import SecurityEvent
-        from src.core.security_event_logger import SecurityEventType
         from datetime import datetime, timedelta
+
+        from src.core.security_event_logger import SecurityEventType
+        from src.models.security_event import SecurityEvent
 
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 
@@ -162,8 +162,10 @@ class TestSecurityAlertsEndpoint:
     def test_security_alerts_test_requires_admin(self, test_client, test_admin):
         """Test that /security/alerts/test requires admin role"""
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()
@@ -196,8 +198,10 @@ class TestSecurityAlertsEndpoint:
         initial_count = test_db.query(SecurityEvent).count()
 
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()
@@ -229,13 +233,14 @@ class TestSecurityAlertsEndpoint:
     def test_security_alerts_test_non_admin_forbidden(self, test_client, test_user):
         """Test that non-admin users cannot access /security/alerts/test"""
         # Create auth headers for regular user
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         # Change user role to non-admin
         test_user.role = "user"
-        test_db = None  # We'll get this from fixture
 
         now = datetime.utcnow()
         token_data = {
@@ -272,8 +277,10 @@ class TestSecurityEventsEndpoint:
     def test_security_events_requires_admin(self, test_client, test_admin):
         """Test that /security/events requires admin role"""
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()
@@ -304,8 +311,10 @@ class TestSecurityEventsEndpoint:
     def test_security_events_returns_paginated_results(self, test_client, test_admin):
         """Test that /security/events supports pagination"""
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()
@@ -346,8 +355,10 @@ class TestSecurityEventsEndpoint:
         )
 
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()
@@ -392,8 +403,10 @@ class TestSecurityEventsEndpoint:
     def test_security_events_non_admin_forbidden(self, test_client, test_user):
         """Test that non-admin users cannot access /security/events"""
         # Create auth headers for regular user
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         # Change user role to non-admin
@@ -446,8 +459,10 @@ class TestSecurityEventsEndpoint:
             time.sleep(0.01)  # Small delay to ensure different timestamps
 
         # Create auth headers for admin
-        import jwt
         from datetime import datetime, timedelta
+
+        import jwt
+
         from src.core.config import settings
 
         now = datetime.utcnow()

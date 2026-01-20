@@ -3,7 +3,6 @@ Integration tests for httpOnly cookie-based authentication
 Tests cookie setting, security attributes, and clearing on logout
 """
 
-import pytest
 
 
 def test_login_sets_http_only_cookie(client, test_data):
@@ -158,7 +157,6 @@ def test_login_response_includes_user_data(client, test_data):
 
 def test_protected_endpoint_authenticates_via_cookie(client, test_data):
     """Test that protected endpoints can authenticate using httpOnly cookie"""
-    from fastapi.testclient import TestClient
 
     admin_user = test_data["admin"]
 
@@ -168,10 +166,6 @@ def test_protected_endpoint_authenticates_via_cookie(client, test_data):
         "password": "Admin123!@#"
     })
     assert login_response.status_code == 200
-
-    # Get the access token and cookie from login response
-    login_data = login_response.json()
-    access_token = login_data["tokens"]["access_token"]
 
     # Extract cookie value from login response
     # Note: TestClient doesn't automatically send cookies like browsers do

@@ -5,14 +5,13 @@ Tests IP range validation, dangerous range blocking, and environment-specific be
 """
 
 import os
-import pytest
-from ipaddress import ip_network, IPv4Network
-from unittest.mock import patch, MagicMock
+from ipaddress import IPv4Network, ip_network
+from unittest.mock import patch
 
 # Set test environment before importing
 os.environ["TESTING_MODE"] = "true"
 
-from src.core.ip_whitelist import IPWhitelistManager, IPRange, ip_whitelist
+from src.core.ip_whitelist import IPRange, IPWhitelistManager, ip_whitelist
 
 
 class TestIPRange:

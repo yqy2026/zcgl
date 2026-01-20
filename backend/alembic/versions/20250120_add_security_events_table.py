@@ -5,9 +5,9 @@ Revises: 20250118_add_property_cert_tables
 Create Date: 2026-01-20
 
 """
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '20250120_add_security_events'

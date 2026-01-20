@@ -1,5 +1,5 @@
-import pytest
 from src.core.role_normalizer import RoleNormalizer
+
 
 def test_admin_role_lowercase_recognized():
     """Test that lowercase 'admin' role is recognized as admin"""

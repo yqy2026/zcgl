@@ -12,7 +12,7 @@ Note: Redis caching will be added in Phase 4 with proper async handling.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -108,8 +108,13 @@ class SecurityEventLogger:
                 db = self.db
                 should_close = False
             else:
-                db: Session = SessionLocal()
+                # SessionLocal should never be None at runtime
+                if SessionLocal is None:
+                    raise RuntimeError("Database not initialized. Call init_database() first.")
+                db = SessionLocal()
                 should_close = True
+
+            db = cast(Session, db)  # type: ignore[redundant-cast]
 
             try:
                 event = SecurityEvent(
@@ -369,8 +374,13 @@ class SecurityEventLogger:
                 db = self.db
                 should_close = False
             else:
+                # SessionLocal should never be None at runtime
+                if SessionLocal is None:
+                    raise RuntimeError("Database not initialized. Call init_database() first.")
                 db = SessionLocal()
                 should_close = True
+
+            db = cast(Session, db)  # type: ignore[redundant-cast]
 
             try:
                 # Calculate time window
@@ -416,8 +426,13 @@ class SecurityEventLogger:
                 db = self.db
                 should_close = False
             else:
+                # SessionLocal should never be None at runtime
+                if SessionLocal is None:
+                    raise RuntimeError("Database not initialized. Call init_database() first.")
                 db = SessionLocal()
                 should_close = True
+
+            db = cast(Session, db)  # type: ignore[redundant-cast]
 
             try:
                 # Calculate time window

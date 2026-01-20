@@ -7,6 +7,7 @@ security vulnerabilities from weak or default values.
 
 import os
 import re
+
 from src.core.environment import get_environment
 
 
@@ -39,7 +40,7 @@ class SecretValidator:
         "example-secret",
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.env = get_environment()
 
     def validate(self, secret: str) -> bool:

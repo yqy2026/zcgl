@@ -4,7 +4,8 @@ Tests case-insensitive role comparison and normalization
 """
 
 import pytest
-from src.core.role_normalizer import RoleNormalizer, Role
+
+from src.core.role_normalizer import Role, RoleNormalizer
 from src.models.auth import UserRole
 
 

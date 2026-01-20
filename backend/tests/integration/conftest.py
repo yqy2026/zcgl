@@ -176,9 +176,8 @@ def test_data(db_session):
     """
     # Import models needed for test data
     from src.models.auth import User
-
-    from src.services.core.password_service import PasswordService
     from src.models.organization import Organization
+    from src.services.core.password_service import PasswordService
 
     password_service = PasswordService()
 

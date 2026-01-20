@@ -11,8 +11,7 @@ Security Features:
 - Max-Age: Automatic expiration
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Response
 
@@ -20,7 +19,7 @@ from fastapi import Response
 class CookieManager:
     """Manage httpOnly authentication cookies"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Cookie configuration
         self.cookie_name = "auth_token"
         self.cookie_max_age = timedelta(hours=1)  # 1 hour default
@@ -31,7 +30,7 @@ class CookieManager:
         self,
         response: Response,
         token: str,
-        max_age: Optional[timedelta] = None,
+        max_age: timedelta | None = None,
     ) -> None:
         """
         Set httpOnly authentication cookie
@@ -47,7 +46,7 @@ class CookieManager:
             key=self.cookie_name,
             value=token,
             max_age=int(max_age.total_seconds()),
-            expires=datetime.now(timezone.utc) + max_age,
+            expires=datetime.now(UTC) + max_age,
             path=self.cookie_path,
             domain=self.cookie_domain,
             secure=True,  # HTTPS only
@@ -71,7 +70,7 @@ class CookieManager:
             samesite="lax",
         )
 
-    def get_token_from_cookie(self, cookie_header: str) -> Optional[str]:
+    def get_token_from_cookie(self, cookie_header: str) -> str | None:
         """
         Extract token from cookie header
 

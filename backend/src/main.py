@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI) -> Any:
     # Secret validation - NEW: Validate SECRET_KEY and DATA_ENCRYPTION_KEY on startup
     logger.info("Validating application secrets...")
     try:
-        from .core.secret_validator import secret_validator, SecretValidationError
+        from .core.secret_validator import SecretValidationError, secret_validator
 
         print("\n🔐 Validating application secrets...")
 
