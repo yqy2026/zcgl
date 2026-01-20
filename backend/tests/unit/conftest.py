@@ -38,19 +38,9 @@ def mock_enum_validation_service():
         }
         return enum_values.get(enum_type_code, ['test_value'])
 
-    # Mock validate_field_value 方法总是通过验证
-    def mock_validate_field_value(
-        self,
-        table_name: str,
-        field_name: str,
-        value: str
-    ) -> bool:
-        """Mock 验证总是返回 True"""
-        return True
-
-    # Mock 方法
-    mock_service.get_valid_values = mock_get_valid_values
-    mock_service.validate_field_value = mock_validate_field_value
+    # Mock 方法 (注意: 这些是实例方法，不需要 self 参数)
+    mock_service.validate_field_value = lambda table, field, value: True
+    mock_service.validate_asset_data = lambda data: (True, [])
 
     # Patch EnumValidationService 在所有模块中的使用
     with patch('src.services.enum_validation_service.EnumValidationService', return_value=mock_service):

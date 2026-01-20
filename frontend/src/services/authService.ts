@@ -287,11 +287,7 @@ export class AuthService {
 
   // 清除认证数据
   private static clearAuthData(): void {
-    // Tokens are in httpOnly cookies, cleared by backend logout endpoint
-    // Only clear user metadata from localStorage
-    localStorage.removeItem('user');
-    localStorage.removeItem('permissions');
-    // Note: auth_token and refreshToken keys removed - tokens are now in cookies
+    AuthStorage.clearAuthData();
   }
 
   // 修改密码

@@ -221,45 +221,36 @@ class TestCreateAsset:
                     assert result == mock_asset
                     mock_create.assert_called_once()
 
-    def test_create_asset_enum_validation_fails(self, service, asset_create_dict):
+    def test_create_asset_enum_validation_fails(self, service, asset_create_dict, mock_enum_validation_service):
         """测试枚举验证失败"""
+        # 修改全局 mock 返回验证失败
+        original_validate = mock_enum_validation_service.validate_asset_data
+        mock_enum_validation_service.validate_asset_data = lambda data: (False, ["物业性质无效"])
+
         asset_in = AssetCreate(**asset_create_dict)
 
-        with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
-        ) as mock_validation:
-            mock_validation_service = MagicMock()
-            mock_validation_service.validate_asset_data.return_value = (
-                False,
-                ["物业性质无效"],
-            )
-            mock_validation.return_value = mock_validation_service
-
+        try:
             with pytest.raises(HTTPException) as excinfo:
                 service.create_asset(asset_in)
 
             assert excinfo.value.status_code == 422
             assert "枚举值验证失败" in str(excinfo.value.detail)
+        finally:
+            # 恢复原始 mock
+            mock_enum_validation_service.validate_asset_data = original_validate
 
     def test_create_asset_duplicate_name(self, service, asset_create_dict, mock_asset):
         """测试资产名称重复"""
         asset_in = AssetCreate(**asset_create_dict)
 
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
-        ) as mock_validation:
-            mock_validation_service = MagicMock()
-            mock_validation_service.validate_asset_data.return_value = (True, [])
-            mock_validation.return_value = mock_validation_service
+            "src.crud.asset.asset_crud.get_by_name", return_value=mock_asset
+        ):
+            with pytest.raises(DuplicateResourceError) as excinfo:
+                service.create_asset(asset_in)
 
-            with patch(
-                "src.crud.asset.asset_crud.get_by_name", return_value=mock_asset
-            ):
-                with pytest.raises(DuplicateResourceError) as excinfo:
-                    service.create_asset(asset_in)
-
-                assert "Asset" in str(excinfo.value)
-                assert "property_name" in str(excinfo.value)
+            assert "Asset" in str(excinfo.value)
+            assert "property_name" in str(excinfo.value)
 
     def test_create_asset_area_validation_fails(self, service, asset_create_dict):
         """测试面积一致性验证失败"""
