@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from src.constants.errors.error_ids import ErrorIDs
 
+from ...core.role_normalizer import RoleNormalizer
 from ...crud.auth import AuditLogCRUD
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -306,6 +307,93 @@ def create_audit_log_with_fallback(
                 "X-Error-ID": ErrorIDs.AuditLog.CREATION_FAILED,
             },
         ) from audit_error
+
+
+@router.post("/security/alerts/test", summary="测试安全警报系统")
+async def test_security_alert(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+) -> dict[str, Any]:
+    """
+    测试安全警报系统
+
+    生成测试安全事件并验证警报阈值
+
+    - 需要 admin 权限
+    - 生成12个测试安全事件（超过默认阈值）
+    - 返回是否应该触发警报
+    """
+    # Verify admin access
+    if not RoleNormalizer.is_admin(current_user.role):
+        raise HTTPException(status_code=403, detail="需要管理员权限")
+
+    from ...core.security_event_logger import SecurityEventLogger
+
+    logger_instance = SecurityEventLogger(db)
+
+    # Simulate security events
+    for i in range(12):  # Exceed threshold
+        logger_instance.log_auth_failure(
+            ip=f"192.168.1.{i}",
+            username="testuser",
+            reason="test_alert"
+        )
+
+    return {
+        "message": "Generated 12 test security events",
+        "should_alert": logger_instance.should_alert(ip="192.168.1.1", threshold=10)
+    }
+
+
+@router.get("/security/events", summary="获取安全事件日志")
+async def get_security_events(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    skip: int = 0,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """
+    获取安全事件日志
+
+    返回安全事件列表，按时间倒序排列
+
+    - 需要 admin 权限
+    - 支持分页 (skip/limit)
+    - 返回事件类型、用户ID、IP地址、严重程度等信息
+    """
+    # Verify admin access
+    if not RoleNormalizer.is_admin(current_user.role):
+        raise HTTPException(status_code=403, detail="需要管理员权限")
+
+    from ...models.security_event import SecurityEvent
+
+    # Get total count
+    total = db.query(SecurityEvent).count()
+
+    # Query events with pagination
+    events = db.query(SecurityEvent)\
+        .order_by(SecurityEvent.created_at.desc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "events": [
+            {
+                "id": e.id,
+                "type": e.event_type,
+                "user_id": e.user_id,
+                "ip": e.ip_address,
+                "severity": e.severity,
+                "metadata": e.event_metadata,
+                "created_at": e.created_at.isoformat()
+            }
+            for e in events
+        ]
+    }
 
 
 class SystemSettings(BaseModel):

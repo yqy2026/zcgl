@@ -6,11 +6,12 @@
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from ..core.api_errors import bad_request, forbidden
 from ..core.role_normalizer import RoleNormalizer
+from ..core.security_event_logger import SecurityEventLogger
 from ..database import get_db
 from ..models.auth import User
 from ..services.organization_permission_service import OrganizationPermissionService
@@ -31,6 +32,7 @@ def require_organization_access(
         organization_id: str | None = None,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
+        request: Request = Depends(),
     ) -> Any:
         """
         检查用户是否有权访问指定组织
@@ -40,6 +42,22 @@ def require_organization_access(
 
         org_service = OrganizationPermissionService(db)
         if not org_service.check_organization_access(current_user.id, organization_id):
+            # Log permission denied event
+            security_logger = SecurityEventLogger(db)
+            client_ip = request.client.host if request.client else "unknown"
+
+            security_logger.log_permission_denied(
+                user_id=str(current_user.id),
+                resource=f"organization:{organization_id}",
+                action="access",
+                ip=client_ip
+            )
+
+            # Check for alert threshold
+            if security_logger.should_alert(ip=client_ip):
+                # TODO: Send alert (will be implemented in monitoring integration)
+                pass
+
             raise forbidden("无权访问该组织的数据")
 
         return organization_id
@@ -61,6 +79,7 @@ def require_organization_management(
         organization_id: str | None = None,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
+        request: Request = Depends(),
     ) -> Any:
         """
         检查用户是否有权管理指定组织
@@ -70,6 +89,22 @@ def require_organization_management(
 
         org_service = OrganizationPermissionService(db)
         if not org_service.can_manage_organization(current_user.id, organization_id):
+            # Log permission denied event
+            security_logger = SecurityEventLogger(db)
+            client_ip = request.client.host if request.client else "unknown"
+
+            security_logger.log_permission_denied(
+                user_id=str(current_user.id),
+                resource=f"organization:{organization_id}",
+                action="manage",
+                ip=client_ip
+            )
+
+            # Check for alert threshold
+            if security_logger.should_alert(ip=client_ip):
+                # TODO: Send alert (will be implemented in monitoring integration)
+                pass
+
             raise forbidden("无权管理该组织")
 
         return organization_id
@@ -176,6 +211,7 @@ class OrganizationPermissionChecker:
         self,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
+        request: Request = Depends(),
     ) -> User:
         """
         Check user permissions with case-insensitive role comparison
@@ -195,6 +231,22 @@ class OrganizationPermissionChecker:
         accessible_orgs = org_service.get_user_accessible_organizations(current_user.id)
 
         if not accessible_orgs:
+            # Log permission denied event
+            security_logger = SecurityEventLogger(db)
+            client_ip = request.client.host if request.client else "unknown"
+
+            security_logger.log_permission_denied(
+                user_id=str(current_user.id),
+                resource="organizations",
+                action="access",
+                ip=client_ip
+            )
+
+            # Check for alert threshold
+            if security_logger.should_alert(ip=client_ip):
+                # TODO: Send alert (will be implemented in monitoring integration)
+                pass
+
             raise forbidden("无任何组织访问权限")
 
         return current_user
