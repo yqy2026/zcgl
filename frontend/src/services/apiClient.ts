@@ -1,4 +1,24 @@
 /**
+ * @deprecated This file is kept for backward compatibility only.
+ *
+ * ⚠️ DO NOT USE THIS FILE IN NEW CODE!
+ *
+ * Please use `src/api/client.ts` instead, which supports httpOnly
+ * cookie-based authentication for improved security.
+ *
+ * This legacy file will be removed in a future version.
+ *
+ * Migration Guide:
+ * - Replace imports from '@/services/apiClient' with '@/api/client'
+ * - Remove Authorization header handling (now done via cookies)
+ * - Update error handling to use the new ApiErrorHandler utility
+ *
+ * @see src/api/client.ts
+ * @see https://github.com/your-repo/issues/11
+ * @see https://github.com/your-repo/issues/12
+ */
+
+/**
  * 统一的API客户端
  * 提供标准化的API调用方法，包含错误处理、重试机制等
  */

@@ -20,16 +20,12 @@ export const useAuth = () => {
           const _permissions = AuthService.getLocalPermissions();
 
           setUser(currentUser);
-          // 设置API请求头
-          const token = localStorage.getItem('auth_token');
-          if (token != null) {
-            // 这里可以设置API默认的Authorization header
-          }
+          // Authorization header now handled by httpOnly cookie
         }
       } catch (error) {
         authLogger.error('初始化认证状态失败:', error as Error);
         // 清除可能损坏的本地存储
-        AuthService.logout();
+        await AuthService.logout();
       }
     };
 

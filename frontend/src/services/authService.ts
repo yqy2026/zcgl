@@ -216,34 +216,27 @@ export class AuthService {
     }
   }
 
-  // 检查本地认证状态
+  // 检查认证状态 - 验证cookie是否有效
   static isAuthenticated(): boolean {
-    const token = localStorage.getItem('auth_token') ?? '';
+    // 检查本地存储的用户信息作为快速检查
     const user = localStorage.getItem('user') ?? '';
-
-    // 必须同时存在token和user信息
-    if (token === '' || user === '') {
+    if (user === '') {
       return false;
     }
 
+    // 注意：实际认证由httpOnly cookie处理
+    // 这个方法只做本地快速检查，真实的认证验证在API调用时通过cookie完成
+    return true;
+  }
+
+  // 验证认证状态 - 通过API调用验证cookie有效性
+  static async verifyAuth(): Promise<boolean> {
     try {
-      // 验证JWT Token
-      const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) {
-        return false;
-      }
-
-      const tokenData = JSON.parse(atob(tokenParts[1])) as { exp?: number };
-      const currentTime = Date.now() / 1000;
-
-      // 检查token是否过期
-      // 检查token是否过期
-      if (typeof tokenData.exp !== 'number' || tokenData.exp <= currentTime) {
-        // Token已过期,清除本地存储
-        this.logout();
-        return false;
-      }
-
+      // 调用/me端点验证cookie是否有效
+      await enhancedApiClient.get(AUTH_API.PROFILE, {
+        cache: false, // 不使用缓存
+        retry: false, // 验证失败不重试
+      });
       return true;
     } catch {
       return false;

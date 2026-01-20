@@ -1,4 +1,25 @@
 /**
+ * @deprecated This file is kept for backward compatibility only.
+ *
+ * ⚠️ DO NOT USE THIS FILE IN NEW CODE!
+ *
+ * Please use `src/api/client.ts` instead, which supports httpOnly
+ * cookie-based authentication for improved security.
+ *
+ * This legacy file will be removed in a future version.
+ *
+ * Migration Guide:
+ * - Replace imports from '@/utils/request' with '@/api/client'
+ * - Remove token storage logic (now handled via httpOnly cookies)
+ * - Remove Authorization header injection (now done automatically)
+ * - Update to use enhancedApiClient with withCredentials: true
+ *
+ * @see src/api/client.ts
+ * @see https://github.com/your-repo/issues/11
+ * @see https://github.com/your-repo/issues/12
+ */
+
+/**
  * API请求工具
  */
 
