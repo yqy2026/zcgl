@@ -31,6 +31,10 @@ except ImportError:
 # Unit tests use memory database to avoid lock contention
 TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL", "sqlite:///./test_integration.db")
 
+# Set DATABASE_URL early so root conftest's setup_test_database fixture
+# uses this for migrations instead of the default :memory:
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
 
 @pytest.fixture(scope="session")
 def test_database_url():
@@ -38,6 +42,9 @@ def test_database_url():
     Provide the test database URL.
     Uses CI database path when available, otherwise defaults to local test database.
     """
+    # Set DATABASE_URL env var so that root conftest's setup_test_database
+    # fixture runs migrations against the correct database
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
     return TEST_DATABASE_URL
 
 
@@ -104,7 +111,7 @@ def db_tables(engine):
     versions_dir = Path("alembic/versions")
     has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
 
-    # Run Alembic migrations to create tables, or create directly if no migrations
+    # Run Alembic migrations first, then create any remaining tables
     if has_migrations:
         # Use Alembic migrations if they exist
         from alembic import command
@@ -112,9 +119,11 @@ def db_tables(engine):
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
         command.upgrade(alembic_cfg, "head")
-    else:
-        # No migrations exist, create tables directly
-        Base.metadata.create_all(bind=engine)
+
+    # ALWAYS create tables from Base.metadata
+    # The initial migration is empty (placeholder), so we need to create base tables
+    # This also creates any tables that aren't managed by Alembic
+    Base.metadata.create_all(bind=engine)
 
     yield
 
@@ -174,7 +183,7 @@ def test_data(db_session):
     password_service = PasswordService()
 
     # Create test organization
-    test_org = Organization(name="Test Organization", code="TEST_ORG")
+    test_org = Organization(name="Test Organization", code="TEST_ORG", type="department")
     db_session.add(test_org)
     db_session.commit()
 
@@ -186,7 +195,7 @@ def test_data(db_session):
         password_hash=password_service.get_password_hash("Admin123!@#"),
         role="admin",
         is_active=True,
-        organization_id=test_org.id,
+        default_organization_id=test_org.id,
     )
     db_session.add(test_admin)
     db_session.commit()

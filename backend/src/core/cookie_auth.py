@@ -11,7 +11,7 @@ Security Features:
 - Max-Age: Automatic expiration
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Response
@@ -47,7 +47,7 @@ class CookieManager:
             key=self.cookie_name,
             value=token,
             max_age=int(max_age.total_seconds()),
-            expires=datetime.utcnow() + max_age,
+            expires=datetime.now(timezone.utc) + max_age,
             path=self.cookie_path,
             domain=self.cookie_domain,
             secure=True,  # HTTPS only

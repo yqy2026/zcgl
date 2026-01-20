@@ -10,7 +10,7 @@ def test_login_sets_http_only_cookie(client, test_data):
     """Test that login response sets httpOnly cookie"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -30,7 +30,7 @@ def test_cookie_is_http_only(client, test_data):
     """Test that auth cookie is httpOnly, Secure, and SameSite"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -53,7 +53,7 @@ def test_cookie_has_expiration(client, test_data):
     """Test that auth cookie has proper expiration"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -71,7 +71,7 @@ def test_logout_clears_cookie(client, test_data):
     """Test that logout clears auth cookie"""
     # First login
     admin_user = test_data["admin"]
-    login_response = client.post("/api/v1/auth/login", data={
+    login_response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -103,7 +103,7 @@ def test_backward_compatibility_tokens_in_response(client, test_data):
     """Test that login still returns tokens in response body for backward compatibility"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -122,7 +122,7 @@ def test_cookie_path_is_root(client, test_data):
     """Test that cookie path is set to root (/)"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -141,7 +141,7 @@ def test_login_response_includes_user_data(client, test_data):
     """Test that login response includes user data and permissions"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
+    response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -163,21 +163,30 @@ def test_protected_endpoint_authenticates_via_cookie(client, test_data):
     admin_user = test_data["admin"]
 
     # Login to set the httpOnly cookie
-    login_response = client.post("/api/v1/auth/login", data={
+    login_response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
     assert login_response.status_code == 200
 
-    # Get the access token for comparison
+    # Get the access token and cookie from login response
     login_data = login_response.json()
     access_token = login_data["tokens"]["access_token"]
 
-    # Access a protected endpoint WITHOUT Authorization header
-    # The cookie should be sent automatically by the TestClient
-    protected_response = client.get("/api/v1/users/me")
+    # Extract cookie value from login response
+    # Note: TestClient doesn't automatically send cookies like browsers do
+    # So we need to manually extract and send the cookie
+    auth_cookie = login_response.cookies.get("auth_token")
+    assert auth_cookie is not None, "Login should set auth_token cookie"
 
-    # Should succeed because cookie is sent automatically
+    # Access a protected endpoint WITHOUT Authorization header
+    # Send the cookie explicitly (TestClient limitation)
+    protected_response = client.get(
+        "/api/v1/auth/me",
+        cookies={"auth_token": auth_cookie}
+    )
+
+    # Should succeed because cookie is being sent
     assert protected_response.status_code == 200
     data = protected_response.json()
     assert data["username"] == admin_user.username
@@ -188,7 +197,7 @@ def test_cookie_auth_fallback_to_authorization_header(client, test_data):
     admin_user = test_data["admin"]
 
     # Login
-    login_response = client.post("/api/v1/auth/login", data={
+    login_response = client.post("/api/v1/auth/login", json={
         "username": admin_user.username,
         "password": "Admin123!@#"
     })
@@ -201,7 +210,7 @@ def test_cookie_auth_fallback_to_authorization_header(client, test_data):
     # Access protected endpoint with Authorization header but NO cookie
     # (simulate browser with cookies disabled)
     protected_response = client.get(
-        "/api/v1/users/me",
+        "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {access_token}"}
     )
 

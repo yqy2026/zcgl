@@ -8,9 +8,10 @@ import pytest
 
 # Set environment variables at the earliest possible moment
 # Use in-memory database for unit tests to avoid file lock contention
-# Integration tests override this in conftest.py
+# Integration tests should set INTEGRATION_TEST_DATABASE_URL to use file-based DB
 # Performance improvement: 37min → <5min (estimated)
-os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite:///:memory:")
+if "DATABASE_URL" not in os.environ:
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 # 为测试环境设置强密钥（使用固定种子确保可复现性，或动态生成）
 # 这里使用动态生成，因为测试不应依赖于特定的密钥值
@@ -20,8 +21,10 @@ if not test_secret_key or any(
     weak in test_secret_key.lower() for weak in ["test", "secret", "key", "changeme"]
 ):
     # 使用固定的测试密钥（确保无弱模式）
-    # 这是个43字符的URL安全字符串，不包含任何弱密钥模式
-    os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6"
+    # 53字符字符串，包含大写、小写、数字和特殊字符，满足Task 7验证器要求
+    os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6!@#$%^&*"
+    # 设置测试数据加密密钥 (43字节 + 版本后缀，满足32字节最小要求)
+    os.environ["DATA_ENCRYPTION_KEY"] = "TestEncryptionKeyWithSpecialChars123!@#XyZ456:1"
 
 os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"

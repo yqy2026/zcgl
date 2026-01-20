@@ -242,6 +242,13 @@ class StructuredFormatter(logging.Formatter):
             return None
         elif isinstance(obj, (str, int, float, bool)):
             return obj
+        elif isinstance(obj, bytes):
+            # Handle bytes by decoding to string, or return base64 representation
+            try:
+                return obj.decode('utf-8')
+            except UnicodeDecodeError:
+                # If not UTF-8 decodable, return hex representation
+                return obj.hex()
         elif isinstance(obj, datetime):  # pragma: no cover
             return obj.isoformat()  # pragma: no cover
         elif isinstance(obj, dict):
@@ -427,6 +434,13 @@ class SecurityAuditor:
             return None
         elif isinstance(obj, (str, int, float, bool)):
             return obj
+        elif isinstance(obj, bytes):
+            # Handle bytes by decoding to string, or return base64 representation
+            try:
+                return obj.decode('utf-8')
+            except UnicodeDecodeError:
+                # If not UTF-8 decodable, return hex representation
+                return obj.hex()
         elif isinstance(obj, datetime):  # pragma: no cover
             return obj.isoformat()  # pragma: no cover
         elif isinstance(obj, dict):
@@ -582,6 +596,13 @@ class RequestLogger:
             return None
         elif isinstance(obj, (str, int, float, bool)):
             return obj
+        elif isinstance(obj, bytes):
+            # Handle bytes by decoding to string, or return base64 representation
+            try:
+                return obj.decode('utf-8')
+            except UnicodeDecodeError:
+                # If not UTF-8 decodable, return hex representation
+                return obj.hex()
         elif isinstance(obj, datetime):  # pragma: no cover
             return obj.isoformat()  # pragma: no cover
         elif isinstance(obj, dict):

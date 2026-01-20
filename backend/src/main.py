@@ -21,6 +21,7 @@ from .core.encoding_utils import (
 from .core.environment import (
     get_dependency_policy,
     get_environment,
+    is_production,
     is_testing,
 )
 from .core.exception_handler import setup_exception_handlers
@@ -115,12 +116,12 @@ async def lifespan(app: FastAPI) -> Any:
         if not secret_validator.validate_env_secrets():
             print("\n⚠️  WARNING: Weak secrets detected!")
             print("In production, the application will refuse to start.")
-            if get_environment().environment == "production":
+            if is_production():
                 print("\n❌ Production mode requires strong secrets. Exiting.")
                 raise SystemExit(1)
     except SecretValidationError as e:
         print(f"\n❌ Secret validation failed: {e}")
-        if get_environment().environment == "production":
+        if is_production():
             raise SystemExit(1)
     except ImportError:
         logger.warning("Secret validator module not available, skipping validation")
@@ -204,6 +205,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    default_response_class=JSONResponse,
 )
 
 # PDF智能导入API - 直接注册到应用

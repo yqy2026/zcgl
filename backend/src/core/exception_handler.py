@@ -339,6 +339,12 @@ class ExceptionHandler:
 
         if isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, bytes):
+            # Handle bytes by decoding to string, or return hex representation
+            try:
+                return obj.decode('utf-8')
+            except UnicodeDecodeError:
+                return obj.hex()
         elif isinstance(obj, dict):
             return {k: self._clean_for_serialization(v) for k, v in obj.items()}
         elif isinstance(obj, list):
@@ -370,7 +376,7 @@ class ExceptionHandler:
         business_exc = BusinessValidationError(  # pragma: no cover
             message="数据验证失败",  # pragma: no cover
             field_errors=field_errors,  # pragma: no cover
-            details={"errors": exc.errors()},  # pragma: no cover
+            details={"errors": self._clean_for_serialization(exc.errors())},  # pragma: no cover
         )  # pragma: no cover
 
         return self.handle_business_exception(request, business_exc)  # pragma: no cover
