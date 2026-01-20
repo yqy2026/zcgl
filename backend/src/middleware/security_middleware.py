@@ -20,6 +20,7 @@ from ..constants.http.methods import HTTPMethods
 from ..core.api_errors import bad_request, forbidden
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.exception_handler import BusinessValidationError
+from ..core.ip_whitelist import ip_whitelist
 from ..core.logging_security import security_auditor
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
 from ..core.security import RateLimiter
@@ -71,6 +72,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self.config = rate_limit_config or {}
         self.request_count: dict[str, int] = defaultdict(int)
         self.blocked_ips: dict[str, float] = {}
+        self.ip_whitelist = ip_whitelist
 
         # Initialize circuit breaker and rate limit strategy
         self.rate_limit_config = RateLimitConfig.from_env()
@@ -187,28 +189,11 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         return "unknown"
 
     def _is_ip_blocked(self, ip: str) -> bool:
-        """检查IP是否被封禁"""
-        # 本地开发环境IP白名单
-        local_whitelist = [
-            "127.0.0.1",
-            "localhost",
-            "::1",
-            "0.0.0.0",  # nosec - B104: Docker/容器环境, not binding
-            "192.168.1.90",  # 当前本地网络IP
-        ]
-
-        # 如果是本地IP，直接允许
-        if (
-            ip in local_whitelist
-            or ip.startswith("192.168.")
-            or ip.startswith("10.")
-            or ip.startswith("172.")
-        ):
-            # 如果本地IP被封禁，清除封禁记录
-            if ip in self.blocked_ips:
-                del self.blocked_ips[ip]
-                logger.info(f" cleared block for local IP: {ip}")
-            return False
+        """检查IP是否被封禁或不在白名单中"""
+        # 检查IP是否在白名单中
+        if not self.ip_whitelist.is_allowed(ip):
+            logger.warning(f"IP not in whitelist: {ip}")
+            return True
 
         # 临时封禁（1小时）
         if ip in self.blocked_ips:
