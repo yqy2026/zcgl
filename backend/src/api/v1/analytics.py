@@ -258,3 +258,98 @@ async def get_distribution_data(
             message=f"获取分布数据失败: {str(e)}",
             request_id=get_request_id(request),
         )
+
+
+@router.post("/export", summary="导出分析数据")
+async def export_analytics(
+    request: Request,
+    export_format: str = Query("excel", description="导出格式: excel, csv, pdf"),
+    include_deleted: bool = False,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    导出综合分析数据
+
+    支持导出为 Excel、CSV 或 PDF 格式
+    权限要求: 需要登录
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+    import json
+    from datetime import datetime
+
+    try:
+        # 构建筛选条件
+        filters: dict[str, Any] = {
+            "include_deleted": include_deleted,
+        }
+
+        if date_from is not None:
+            filters["date_from"] = date_from
+        if date_to is not None:
+            filters["date_to"] = date_to
+
+        # 调用服务层获取数据
+        service = AnalyticsService(db)
+        result = service.get_comprehensive_analytics(
+            filters=filters,
+            use_cache=False,  # 导出时不使用缓存
+            current_user=current_user,
+        )
+
+        # 生成文件名
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if export_format == "csv":
+            # 导出为 CSV (JSON 格式)
+            output = io.StringIO()
+            json.dump(result, output, ensure_ascii=False, indent=2)
+            output.seek(0)
+
+            async def csv_generator():
+                yield output.getvalue().encode("utf-8")
+
+            return StreamingResponse(
+                csv_generator(),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analytics_{timestamp}.csv"
+                },
+            )
+
+        elif export_format == "excel":
+            # 导出为 Excel (使用现有服务)
+            from ....services.excel import ExcelExportService
+
+            excel_service = ExcelExportService(db)
+            buffer = excel_service.export_analytics_to_excel(result)
+
+            async def excel_generator():
+                data = buffer.getvalue()
+                yield data
+                buffer.close()
+
+            return StreamingResponse(
+                excel_generator(),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analytics_{timestamp}.xlsx"
+                },
+            )
+
+        else:  # pdf
+            # PDF 导出需要额外库，暂时返回 JSON
+            return ResponseHandler.error(
+                message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
+                request_id=get_request_id(request),
+            )
+
+    except Exception as e:
+        logger.error(f"导出分析数据失败: {str(e)}")
+        return ResponseHandler.error(
+            message=f"导出失败: {str(e)}",
+            request_id=get_request_id(request),
+        )

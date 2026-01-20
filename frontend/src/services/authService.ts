@@ -325,7 +325,7 @@ export class AuthService {
     avatar?: string;
   }): Promise<User> {
     try {
-      const result = await enhancedApiClient.put(AUTH_API.CHANGE_PASSWORD, profileData, {
+      const result = await enhancedApiClient.put(AUTH_API.PROFILE, profileData, {
         retry: {
           maxAttempts: 2,
           delay: 500,

@@ -10,6 +10,10 @@ import {
 import { useAnalytics } from '../../hooks/useAnalytics';
 import type { AssetSearchParams } from '../../types/asset';
 import type { AnalyticsResponse } from '../../types/analytics';
+import { MessageManager } from '@/utils/messageManager';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('AnalyticsDashboard');
 
 // Analytics数据类型定义
 interface DistributionItem {
@@ -73,8 +77,57 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
-  const handleExport = (_format: 'excel' | 'pdf' | 'csv') => {
-    // TODO: Implement export functionality
+  const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
+    try {
+      MessageManager.loading('正在导出...');
+
+      // 构建查询参数
+      const params = new URLSearchParams();
+      params.append('export_format', format);
+
+      if (filters.date_from) {
+        params.append('date_from', filters.date_from);
+      }
+      if (filters.date_to) {
+        params.append('date_to', filters.date_to);
+      }
+      if (filters.include_deleted !== undefined) {
+        params.append('include_deleted', String(filters.include_deleted));
+      }
+
+      // 调用导出API
+      const response = await fetch(`/api/v1/analytics/export?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+
+      // 下载文件
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // 生成文件名
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+      const extension = format === 'excel' ? 'xlsx' : format;
+      a.download = `analytics_${timestamp}.${extension}`;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      MessageManager.success('导出成功');
+    } catch (error) {
+      MessageManager.error('导出失败');
+      logger.error('Export failed', error as Error);
+    }
   };
 
   const handleRefresh = () => {
