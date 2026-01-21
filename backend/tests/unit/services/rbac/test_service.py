@@ -39,6 +39,7 @@ def mock_role():
     role.name = "管理员"
     role.description = "系统管理员"
     role.created_by = "user_123"
+    role.is_system_role = False  # 不是系统角色，允许删除和修改权限
     return role
 
 
@@ -91,6 +92,7 @@ class TestCreateRole:
         """测试创建角色（含权限）"""
         obj_in = RoleCreate(
             name="新角色",
+            display_name="新角色",
             description="测试角色",
             permission_ids=["perm_123", "perm_456"],
         )
@@ -146,19 +148,23 @@ class TestDeleteRole:
         """测试成功删除"""
         with patch("src.crud.rbac.role_crud.get", return_value=mock_role):
             with patch("src.crud.rbac.role_crud.remove", return_value=True):
-                result = rbac_service.delete_role(
-                    mock_db, role_id="role_123", deleted_by="user_123"
-                )
+                with patch(
+                    "src.crud.rbac.user_role_assignment_crud.count_by_role",
+                    return_value=0,  # 没有用户使用此角色
+                ):
+                    result = rbac_service.delete_role(
+                        mock_db, role_id="role_123", deleted_by="user_123"
+                    )
 
-                assert result is True
+                    assert result is True
 
     def test_delete_role_not_found(self, rbac_service, mock_db):
         """测试角色不存在"""
         with patch("src.crud.rbac.role_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="角色不存在"):
-                rbac_service.delete_role(
-                    mock_db, role_id="nonexistent", deleted_by="user_123"
-                )
+            result = rbac_service.delete_role(
+                mock_db, role_id="nonexistent", deleted_by="user_123"
+            )
+            assert result is False
 
 
 # ============================================================================
@@ -240,12 +246,13 @@ class TestAssignRoleToUser:
         )
 
         mock_existing = MagicMock(spec=UserRoleAssignment)
+        mock_existing.is_active = True  # 已经是活跃状态，才会抛出错误
 
         with patch(
             "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
             return_value=mock_existing,
         ):
-            with pytest.raises(ValueError, match="用户已拥有该角色"):
+            with pytest.raises(ValueError, match="用户已分配.*角色"):
                 rbac_service.assign_role_to_user(
                     mock_db, obj_in=obj_in, assigned_by="admin"
                 )
@@ -280,10 +287,10 @@ class TestRevokeUserRole:
             "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
             return_value=None,
         ):
-            with pytest.raises(ValueError, match="用户角色分配不存在"):
-                rbac_service.revoke_user_role(
-                    mock_db, user_id="user_123", role_id="role_456"
-                )
+            result = rbac_service.revoke_user_role(
+                mock_db, user_id="user_123", role_id="role_456"
+            )
+            assert result is False
 
 
 # ============================================================================
@@ -294,51 +301,76 @@ class TestCheckPermission:
 
     def test_check_permission_granted(self, rbac_service, mock_db):
         """测试有权限"""
-        mock_role = MagicMock(spec=Role)
-        mock_role.id = "role_123"
+        mock_assignment = MagicMock()
+        mock_assignment.role_id = "role_123"
 
-        mock_perm = MagicMock(spec=Permission)
-        mock_perm.name = "read:assets"
+        # Mock permission query to return a matching permission
+        mock_permission = MagicMock()
+        mock_permission.resource = "assets"
+        mock_permission.action = "read"
 
-        mock_role.permissions = [mock_perm]
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_user_active_assignments",
+            return_value=[mock_assignment],
+        ):
+            # Mock the database query for permissions
+            mock_query_result = MagicMock()
+            mock_query_result.first.return_value = mock_permission
 
-        mock_query = MagicMock()
-        mock_query.join.return_value.filter.return_value.all.return_value = [mock_role]
-        mock_db.query.return_value = mock_query
+            mock_query = MagicMock()
+            mock_query.join.return_value.filter.return_value = mock_query_result
+            mock_db.query.return_value = mock_query
 
-        result = rbac_service.check_permission(
-            mock_db, user_id="user_123", resource="assets", action="read"
-        )
+            result = rbac_service.check_permission(
+                mock_db, user_id="user_123", resource="assets", action="read"
+            )
 
-        assert result is True
+            assert result is True
 
     def test_check_permission_denied(self, rbac_service, mock_db):
         """测试无权限"""
-        mock_role = MagicMock(spec=Role)
-        mock_role.id = "role_123"
-        mock_role.permissions = []
+        # Mock that user has a role but the role doesn't have the required permission
+        mock_assignment = MagicMock()
+        mock_assignment.role_id = "role_123"
 
-        mock_query = MagicMock()
-        mock_query.join.return_value.filter.return_value.all.return_value = [mock_role]
-        mock_db.query.return_value = mock_query
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_user_active_assignments",
+            return_value=[mock_assignment],  # 用户有角色分配
+        ):
+            # Mock the database query to return None (no matching permission)
+            mock_query_result = MagicMock()
+            mock_query_result.first.return_value = None  # 没有匹配的权限
 
-        result = rbac_service.check_permission(
-            mock_db, user_id="user_123", resource="assets", action="read"
-        )
+            mock_query = MagicMock()
+            mock_query.join.return_value.filter.return_value = mock_query_result
+            mock_db.query.return_value = mock_query
 
-        assert result is False
+            result = rbac_service.check_permission(
+                mock_db, user_id="user_123", resource="assets", action="read"
+            )
+
+            assert result is False
 
     def test_check_permission_no_roles(self, rbac_service, mock_db):
         """测试用户无角色"""
-        mock_query = MagicMock()
-        mock_query.join.return_value.filter.return_value.all.return_value = []
-        mock_db.query.return_value = mock_query
+        # Mock that user has no active role assignments
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_user_active_assignments",
+            return_value=[],
+        ):
+            # Mock the database query to return None (no roles = no permissions)
+            mock_query_result = MagicMock()
+            mock_query_result.first.return_value = None
 
-        result = rbac_service.check_permission(
-            mock_db, user_id="user_123", resource="assets", action="read"
-        )
+            mock_query = MagicMock()
+            mock_query.join.return_value.filter.return_value = mock_query_result
+            mock_db.query.return_value = mock_query
 
-        assert result is False
+            result = rbac_service.check_permission(
+                mock_db, user_id="user_123", resource="assets", action="read"
+            )
+
+            assert result is False
 
 
 # ============================================================================

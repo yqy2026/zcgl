@@ -10,13 +10,20 @@ from sqlalchemy.orm import Session
 
 
 @pytest.fixture(autouse=True)
-def mock_enum_validation_service():
+def mock_enum_validation_service(request):
     """
     自动 mock EnumValidationService 用于所有测试
 
     这个 fixture 会自动应用到所有测试，避免在每个测试中单独 mock。
     它返回常见枚举值，使测试可以正常通过验证。
+
+    跳过 TestConvenienceFunctions 测试类，该类需要测试真实的便捷函数。
     """
+    # Skip mocking for TestConvenienceFunctions tests
+    if request.node.parent and "TestConvenienceFunctions" in request.node.parent.name:
+        yield None
+        return
+
     mock_service = MagicMock()
 
     # Mock get_valid_values 方法返回常见枚举值

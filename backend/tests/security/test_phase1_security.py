@@ -12,7 +12,7 @@ Created: 2026-01-17
 import pytest
 from fastapi import HTTPException
 
-from src.security.field_validator import FieldValidator
+from src.core.security import FieldValidator
 
 
 class TestFieldFilteringValidation:

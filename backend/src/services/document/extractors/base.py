@@ -223,7 +223,9 @@ class BaseVisionAdapter(ContractExtractorInterface):
                     "ConnectionError",
                     "TimeoutError",
                     "ConnectTimeout",
+                    "ConnectTimeoutError",  # Full name for ConnectTimeout
                     "ReadTimeout",
+                    "ReadTimeoutError",  # Full name for ReadTimeout
                     "RateLimitError",
                     "APIError",
                 )

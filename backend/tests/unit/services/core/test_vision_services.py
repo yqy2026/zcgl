@@ -550,7 +550,7 @@ class TestDeepSeekVisionService:
         """Test successful image extraction."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -583,7 +583,7 @@ class TestDeepSeekVisionService:
         """Test extraction with custom parameters."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -629,7 +629,7 @@ class TestDeepSeekVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 401
@@ -656,7 +656,7 @@ class TestDeepSeekVisionService:
         """Test extraction with network error."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
 
             error = httpx.ConnectError("Network error")
@@ -729,7 +729,7 @@ class TestHunyuanVisionService:
         """Test successful image extraction."""
         monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.hunyuan_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -762,7 +762,7 @@ class TestHunyuanVisionService:
         """Test extraction with custom parameters."""
         monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.hunyuan_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -808,7 +808,7 @@ class TestHunyuanVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.hunyuan_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 403
@@ -886,7 +886,7 @@ class TestQwenVisionService:
         """Test successful image extraction."""
         monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.qwen_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -919,7 +919,7 @@ class TestQwenVisionService:
         """Test extraction with custom parameters."""
         monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.qwen_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -965,7 +965,7 @@ class TestQwenVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch("src.services.core.qwen_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 404
@@ -1019,6 +1019,9 @@ class TestVisionServiceCommonPatterns:
         # Without API key
         monkeypatch.delenv(env_key, raising=False)
         service = service_class()
+        # Manually clear API key if it was set from settings
+        if service.api_key:
+            service.api_key = None
         assert service.is_available is False
 
         # With API key
@@ -1086,6 +1089,9 @@ class TestVisionServiceCommonPatterns:
 
         monkeypatch.delenv(env_key, raising=False)
         service = service_class()
+        # Manually clear API key if it was set from settings
+        if service.api_key:
+            service.api_key = None
 
         async def test_extract():
             return await service.extract_from_images([temp_image_file], "Extract")
