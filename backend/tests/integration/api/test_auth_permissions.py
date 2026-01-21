@@ -4,16 +4,18 @@ Tests that the login API returns user permissions
 """
 
 
-
 def test_login_returns_permissions(client, test_data):
     """Test that login response includes permissions array"""
     # Get test admin user from test_data
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
-        "username": admin_user.username,
-        "password": "Admin123!@#"  # Matches the password in conftest.py
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": admin_user.username,
+            "password": "Admin123!@#",  # Matches the password in conftest.py
+        },
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -25,10 +27,10 @@ def test_permission_structure(client, test_data):
     """Test that permissions have correct structure"""
     admin_user = test_data["admin"]
 
-    response = client.post("/api/v1/auth/login", data={
-        "username": admin_user.username,
-        "password": "Admin123!@#"
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": admin_user.username, "password": "Admin123!@#"},
+    )
 
     assert response.status_code == 200
     data = response.json()

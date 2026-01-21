@@ -30,7 +30,11 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error
+from ...core.exception_handler import (
+    bad_request,
+    internal_error,
+    service_unavailable,
+)
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
@@ -70,34 +74,14 @@ async def upload_pdf_file(
     返回：
     - FileUploadResponse: 包含会话ID和预计处理时间
     """
-    retry_count = 0
-    enhanced_error_handler = optional.enhanced_error_handler
-
     # 验证文件类型
     if file.content_type != "application/pdf" and not (
         file.filename and file.filename.lower().endswith(".pdf")
     ):
-        if enhanced_error_handler:
-            error_result = enhanced_error_handler.handle_error(
-                ValueError("不支持的文件类型"),
-                {"filename": file.filename, "content_type": file.content_type},
-                "file_format_unsupported",
-                retry_count,
-            )
-            return FileUploadResponse(
-                success=False,
-                message=error_result["error"],
-                error=error_result["suggested_action"],
-            )
-        else:
-            raise bad_request("只支持PDF文件上传")
+        raise bad_request("只支持PDF文件上传")
 
     # 验证并保存文件大小（流式处理，避免内存耗尽）
-    max_size = (
-        enhanced_error_handler.max_file_size_mb * 1024 * 1024
-        if enhanced_error_handler
-        else 50 * 1024 * 1024
-    )
+    max_size = 50 * 1024 * 1024
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
 
@@ -121,22 +105,9 @@ async def upload_pdf_file(
                     temp_file.close()
                     temp_file_path.unlink(missing_ok=True)
 
-                    if enhanced_error_handler:
-                        error_result = enhanced_error_handler.handle_error(
-                            ValueError(f"文件大小 {total_size} 超过限制 {max_size}"),
-                            {"filename": file.filename, "file_size": total_size},
-                            "file_too_large",
-                            retry_count,
-                        )
-                        return FileUploadResponse(
-                            success=False,
-                            message=error_result["error"],
-                            error=error_result["suggested_action"],
-                        )
-                    else:
-                        raise bad_request(
-                            f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-                        )
+                    raise bad_request(
+                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
+                    )
                 temp_file.write(chunk)
 
         logger.info(f"PDF文件已流式保存: {temp_file_path}, 大小: {total_size} bytes")
@@ -145,20 +116,7 @@ async def upload_pdf_file(
         # 清理临时文件
         temp_file_path.unlink(missing_ok=True)
 
-        if enhanced_error_handler:
-            error_result = enhanced_error_handler.handle_error(
-                e,
-                {"filename": file.filename, "step": "file_upload"},
-                "unknown_error",
-                retry_count,
-            )
-            return FileUploadResponse(
-                success=False,
-                message=error_result["error"],
-                error=error_result["suggested_action"],
-            )
-        else:
-            raise internal_error(f"文件处理失败: {str(e)}")
+        raise internal_error(f"文件处理失败: {str(e)}")
 
     # 创建会话
     processing_options = {
@@ -175,12 +133,7 @@ async def upload_pdf_file(
     # 获取session service（可选）
     session_service = optional.pdf_session_service
     if session_service is None:
-        # 如果不可用，返回错误
-        return FileUploadResponse(
-            success=False,
-            message="PDF会话服务不可用",
-            error="PDF_SESSION_SERVICE_UNAVAILABLE",
-        )
+        raise service_unavailable("PDF会话服务不可用", service_name="pdf_session_service")
 
     session = await session_service.create_session(
         db=db,
@@ -206,30 +159,7 @@ async def upload_pdf_file(
 
     except Exception as e:
         logger.error(f"PDF处理失败: {str(e)}")
-
-        if enhanced_error_handler:
-            error_result = enhanced_error_handler.handle_error(
-                e,
-                {
-                    "session_id": session.session_id,
-                    "file_path": str(temp_file_path),
-                    "processing_options": processing_options,
-                    "step": "pdf_processing",
-                },
-                "processing_timeout"
-                if "timeout" in str(e).lower()
-                else "unknown_error",
-                retry_count,
-            )
-
-            return FileUploadResponse(
-                success=False,
-                message=error_result["error"],
-                error=error_result["suggested_action"],
-                session_id=session.session_id,
-            )
-        else:
-            raise internal_error(f"PDF处理失败: {str(e)}")
+        raise internal_error(f"PDF处理失败: {str(e)}")
 
     # 返回优化后的结果
     if process_result["success"]:

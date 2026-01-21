@@ -1,4 +1,4 @@
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { STATISTICS_API } from '@/constants/api';
 import type { AssetSearchParams } from '../types/asset';
 import type { AnalyticsData, AnalyticsResponse } from '../types/analytics';
@@ -70,7 +70,7 @@ interface RawBusinessCategoryItem {
 }
 
 export class AnalyticsService {
-  private api = enhancedApiClient;
+  private api = apiClient;
 
   async getComprehensiveAnalytics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
     try {

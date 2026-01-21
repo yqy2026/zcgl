@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { API_BASE_URL } from '@/api/config';
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -170,10 +171,11 @@ test.describe('Authentication Flow', () => {
 
     // Make multiple rapid requests to trigger rate limiting
     // Note: This might not trigger in all environments depending on rate limit settings
+    const healthUrl = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}health` : `${API_BASE_URL}/health`;
     for (let i = 0; i < 70; i++) {
-      await page.evaluate(async () => {
-        await fetch('/api/v1/health');
-      });
+      await page.evaluate(async url => {
+        await fetch(url);
+      }, healthUrl);
     }
 
     // Check if rate limit message appears

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UseFormWatch, FieldValues } from 'react-hook-form';
-import type { AssetFormData } from '@/schemas/assetFormSchema';
+import type { AssetFormData } from '@/assetFormSchema';
 
 /**
  * 泛型字段可见性规则接口

@@ -1,5 +1,5 @@
 /**
- * 增强型API客户端
+ * API客户端
  * 提供统一的响应处理、错误处理、重试和缓存功能
  */
 
@@ -11,30 +11,29 @@ import axios, {
   AxiosError,
 } from 'axios';
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
-import { EnhancedApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
+import { ApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
 import { createLogger } from '../utils/logger';
+import { API_BASE_URL } from './config';
 
 const apiLogger = createLogger('API');
-
-// ==================== API配置 ====================
-
-export const API_CONFIG = {
-  baseURL: '/api/v1',
-  timeout: 30000,
-} as const;
 
 // ==================== URL验证 ====================
 
 /**
- * 验证API路径是否使用正确的 /api/v1 前缀
+ * 验证API路径是否使用正确的基础前缀
  * @param url API URL
  */
 const validateApiPath = (url: string): void => {
   if (url.startsWith('/')) {
-    // 检查是否使用正确的 /api/v1 前缀
-    if (!url.startsWith('/api/v1') && !url.startsWith('/auth')) {
+    const normalizedBaseUrl = API_BASE_URL.startsWith('http')
+      ? new URL(API_BASE_URL).pathname
+      : API_BASE_URL;
+    const basePath = normalizedBaseUrl.endsWith('/')
+      ? normalizedBaseUrl.slice(0, -1)
+      : normalizedBaseUrl;
+    if (!url.startsWith(basePath) && !url.startsWith('/auth')) {
       console.warn(
-        `[API Client] URL does not use /api/v1 prefix: ${url}\n` +
+        `[API Client] URL does not use ${basePath} prefix: ${url}\n` +
         `All API calls should use the centralized API client with correct prefix.`
       );
     }
@@ -145,17 +144,17 @@ class RetryManager {
 // ==================== 主要客户端类 ====================
 
 /**
- * 增强型API客户端
+ * API客户端
  */
-export class EnhancedApiClient {
+export class ApiClient {
   private instance: AxiosInstance;
   private cache: MemoryCache;
-  private config: EnhancedApiClientConfig;
+  private config: ApiClientConfig;
 
-  constructor(config: EnhancedApiClientConfig = {}) {
+  constructor(config: ApiClientConfig = {}) {
     this.config = {
       // 默认配置
-      baseURL: config.baseURL ?? '/api/v1',
+      baseURL: config.baseURL ?? API_BASE_URL,
       timeout: config.timeout ?? 30000,
       responseDetection: {
         successField: 'success',
@@ -653,14 +652,14 @@ export class EnhancedApiClient {
   /**
    * 更新配置
    */
-  updateConfig(newConfig: Partial<EnhancedApiClientConfig>): void {
+  updateConfig(newConfig: Partial<ApiClientConfig>): void {
     this.config = { ...this.config, ...newConfig };
   }
 
   /**
    * 获取当前配置
    */
-  getConfig(): EnhancedApiClientConfig {
+  getConfig(): ApiClientConfig {
     return { ...this.config };
   }
 }
@@ -670,15 +669,15 @@ export class EnhancedApiClient {
 /**
  * 创建默认的增强API客户端实例
  */
-export const createEnhancedApiClient = (config?: EnhancedApiClientConfig): EnhancedApiClient => {
-  return new EnhancedApiClient(config);
+export const createApiClient = (config?: ApiClientConfig): ApiClient => {
+  return new ApiClient(config);
 };
 
 /**
  * 默认实例
  */
-export const enhancedApiClient = new EnhancedApiClient({
-  baseURL: '/api/v1',
+export const apiClient = new ApiClient({
+  baseURL: API_BASE_URL,
   enableAutoRetry: true,
   enableLogging: process.env.NODE_ENV === 'development',
   defaultRetryConfig: {
@@ -688,4 +687,6 @@ export const enhancedApiClient = new EnhancedApiClient({
   },
 });
 
-export default EnhancedApiClient;
+export const enhancedApiClient = apiClient;
+
+export default ApiClient;

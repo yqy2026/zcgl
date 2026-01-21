@@ -45,6 +45,7 @@ backend/src/services/providers/      # 完全空的目录
 - Suggests a design pattern that doesn't exist in the codebase
 
 **Action**: **DELETE immediately** - no migration needed
+**状态**: ✅ 已修复（interfaces/providers 目录已移除）
 
 ---
 
@@ -94,6 +95,7 @@ graph LR
 ```
 
 **Merge into ONE system**: Keep `backend/src/core/exception_handler.py` as the single source of truth. Delete the other two files and update all references.
+**状态**: ✅ 已修复（仅保留 exception_handler.py）
 
 ---
 
@@ -106,16 +108,16 @@ graph LR
 
 | File | Class/Name | Recommended Replacement |
 |------|-----------|------------------------|
-| `middleware/unified_error_middleware.py` | `UnifiedErrorMiddleware` | `ErrorMiddleware` |
 | `core/unified_error_handler.py` | `UnifiedErrorHandler` | DELETE (use ExceptionHandler) |
 | `core/unified_error_handler.py` | `UnifiedError` | DELETE (use BaseBusinessError) |
 | `core/unified_error_handler.py` | `UnifiedErrorResponse` | DELETE (use standard format) |
+**状态**: ✅ 已修复（unified_error_handler 已删除）
 
 #### Frontend Occurrences (TypeScript/React)
 
 **High Usage Areas**:
-- `types/pdfImport.ts`: 7 "Enhanced" type definitions
-- `services/pdfImportService.ts`: 10+ "Enhanced" method names
+- `types/pdfImport.ts`: 7 "Enhanced" type definitions（✅ 已修复）
+- `services/pdfImportService.ts`: 10+ "Enhanced" method names（✅ 已修复）
 - `services/dictionary/index.ts`: `UnifiedDictionaryService`
 - `pages/Rental/PDFImportPage.tsx`: Multiple "Enhanced" references
 
@@ -327,7 +329,7 @@ Merge from: `strings/` (2 files), `errors/` (1 file)
 
 | Current Name | New Name | File |
 |-------------|----------|------|
-| `UnifiedErrorMiddleware` | `ErrorMiddleware` | `middleware/unified_error_middleware.py` → `middleware/error_middleware.py` |
+| `UnifiedErrorMiddleware` | `ErrorMiddleware` | `middleware/error_middleware.py` |
 | `UnifiedErrorHandler` | DELETE | Replaced by `ExceptionHandler` |
 | `UnifiedError` | DELETE | Replaced by `BaseBusinessError` |
 | `UnifiedErrorResponse` | DELETE | Use standard response format |
@@ -568,5 +570,192 @@ src/
 ```
 
 ---
+
+## Full Execution Plan | 完整执行方案
+
+本方案作为后续执行依据，覆盖目标架构、实施阶段、改造清单、验收标准与回滚策略，确保改造可控、可验证、可回退。
+
+### 1. Target Architecture | 目标架构
+
+**Backend**
+
+- Error Handling: `src/core/exception_handler.py` 为唯一异常入口与响应格式来源
+- Security & Rate Limit: 仅保留一条中间件链路，策略与配置来源统一
+- Core Modules: `core` 仅保留基础能力，业务逻辑全部下沉至 `services`
+
+**Frontend**
+
+- API Client: `src/api/client.ts` 为唯一请求入口
+- Routing: `src/constants/routes.ts` 为唯一事实源，`RouteBuilder` 负责构建
+- Naming: 业务语义命名统一，移除 "Enhanced/Unified/Advanced" 等前缀
+
+### 2. Scope and Principles | 范围与原则
+
+- 单一事实源：同一能力只允许一个权威入口
+- 单一责任：模块边界清晰，禁止横向复制
+- 向后兼容优先：改造阶段保持 URL、响应结构可控变更
+- 渐进式收敛：每阶段可独立验证与回滚
+
+### 3. Execution Phases | 实施阶段
+
+#### Phase 0: Baseline Freeze | 基线冻结
+
+**目标**
+- 固定当前行为与依赖关系，防止并行冲突
+
+**动作**
+- 记录错误处理、响应格式、路由与客户端依赖引用清单
+- 记录关键 API 的现状响应样例
+
+**验收**
+- 依赖清单已整理
+- 关键 API 样例可复现
+
+---
+
+#### Phase 1: Error Handling Unification | 错误处理统一
+
+**目标**
+- 统一为 `exception_handler.py` 单一入口
+
+**动作**
+- 迁移 `unified_error_handler.py`、`error_handler.py`、`schemas/error.py` 中的处理入口
+- 统一异常类型为 `BaseBusinessError` 及子类
+- 全量替换 import 引用
+
+**验收**
+- 响应错误结构完全一致
+- 401/403/404/422/500 结构一致且字段齐全
+
+**风险与回滚**
+- 风险：旧代码仍引用旧异常
+- 回滚：保留旧文件备份与单点开关
+
+---
+
+#### Phase 2: Security and Rate Limit Single Chain | 安全与限流单链路
+
+**目标**
+- 仅保留一条安全中间件链路
+
+**动作**
+- 选择 `security_middleware.py` 为唯一安全链路
+- 将 `error_middleware.py` 中安全头与限流逻辑移除或合并
+- 速率限制策略统一到 `core/security/ratelimit.py` 或由中间件直接引用
+
+**验收**
+- 安全头存在且一致
+- 速率限制策略一致且可配置
+
+**风险与回滚**
+- 风险：重复限流导致误封
+- 回滚：恢复原中间件配置顺序
+
+---
+
+#### Phase 3: API Client Unification | 前端 API 客户端统一
+
+**目标**
+- `src/api/client.ts` 成为唯一入口
+
+**动作**
+- 替换 `services/apiClient.ts` 的引用
+- 删除 token 刷新逻辑，统一为 cookie 认证
+- 统一错误处理与重试策略
+
+**验收**
+- 所有请求走 `api/client.ts`
+- 登录、刷新、401 处理一致
+
+**风险与回滚**
+- 风险：旧模块仍使用旧客户端
+- 回滚：保留旧客户端兼容层并加告警
+
+---
+
+#### Phase 4: Routing Single Source | 路由单一事实源
+
+**目标**
+- 路由配置、权限、菜单统一来源
+
+**动作**
+- `AppRoutes.tsx` 通过 `ROUTE_CONFIG` 构建
+- `RouteBuilder` 与 `constants/routes.ts` 对齐
+
+**验收**
+- 路由路径与权限一致
+- 菜单、面包屑与路由一致
+
+**风险与回滚**
+- 风险：动态路由遗漏
+- 回滚：保留现有路由清单临时兜底
+
+---
+
+#### Phase 5: Module Consolidation | 模块整合
+
+**目标**
+- 删除空目录与单文件目录
+
+**动作**
+- 删除空目录 `services/interfaces`、`services/providers`
+- 合并单文件目录到 `core` 或 `services`
+- 合并常量目录为少量文件
+
+**验收**
+- 目录层级明显收敛
+- 引用路径无断裂
+
+---
+
+#### Phase 6: Naming Cleanup | 命名统一
+
+**目标**
+- 语义化命名，移除 AI 生成前缀
+
+**动作**
+- 全量替换 Enhanced/Unified/Advanced 命名
+- 服务、类型、组件一致重命名
+
+**验收**
+- 无 AI 前缀残留
+- 类型与 API 更符合业务语义
+
+---
+
+### 4. Verification Plan | 验证计划
+
+**Backend**
+- 单元测试：`pytest tests/ -v`
+- 类型检查：`mypy src/`
+- Lint：`ruff check src/`
+
+**Frontend**
+- Typecheck：`pnpm type-check`
+- Lint：`pnpm lint`
+- Build：`pnpm build`
+- Test：`pnpm test`
+
+**Smoke Tests**
+- 认证流程：登录、刷新、未授权访问
+- 关键业务：资产 CRUD、合同导入、统计报表
+- 安全：限流触发、安全头验证
+
+### 5. Rollback Strategy | 回滚策略
+
+- 每阶段单独提交，确保可单阶段回滚
+- 保留旧入口的兼容层至下一阶段验证完成
+- 生产发布采用灰度发布与监控告警
+
+### 6. Execution Checklist | 执行清单
+
+- Phase 0 基线清单已完成
+- Phase 1 错误处理唯一入口已完成
+- Phase 2 安全中间件单链路已完成
+- Phase 3 API 客户端唯一入口已完成
+- Phase 4 路由事实源统一已完成
+- Phase 5 模块整合已完成
+- Phase 6 命名统一已完成
+- 全量测试通过并完成验收
 
 **Document End** | **文档结束**

@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, Mock, mock_open, patch
 import pytest
 from fastapi import UploadFile
 
-from src.core.unified_error_handler import UnifiedError
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -480,7 +480,7 @@ class TestUploadAssetAttachments:
 
         mock_asset_crud_obj.get.side_effect = Exception("Database error")
 
-        with pytest.raises(UnifiedError) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file],
@@ -677,7 +677,7 @@ class TestGetAssetAttachments:
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.side_effect = Exception("Filesystem error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_asset_attachments(
                 asset_id="asset-123",
                 db=mock_db,
@@ -685,7 +685,7 @@ class TestGetAssetAttachments:
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取附件列表失败" in exc_info.value.detail
+        assert "获取附件列表失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -758,7 +758,9 @@ class TestDownloadAssetAttachment:
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = False
 
-        with pytest.raises(HTTPException) as exc_info:
+        from src.core.exception_handler import ResourceNotFoundError
+
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             await download_asset_attachment(
                 asset_id="asset-123",
                 filename="nonexistent.pdf",
@@ -767,7 +769,7 @@ class TestDownloadAssetAttachment:
             )
 
         assert exc_info.value.status_code == 404
-        assert "文件不存在" in exc_info.value.detail
+        assert "attachment不存在" in exc_info.value.message
 
     @patch("os.path.exists")
     @patch("src.api.v1.asset_attachments.asset_crud")
@@ -781,7 +783,7 @@ class TestDownloadAssetAttachment:
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.txt",
@@ -790,7 +792,7 @@ class TestDownloadAssetAttachment:
             )
 
         assert exc_info.value.status_code == 400
-        assert "仅支持PDF文件" in exc_info.value.detail
+        assert "仅支持PDF文件" in exc_info.value.message
 
     @patch("os.path.exists")
     @patch("src.api.v1.asset_attachments.asset_crud")
@@ -829,7 +831,7 @@ class TestDownloadAssetAttachment:
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.side_effect = Exception("Filesystem error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.pdf",
@@ -838,7 +840,7 @@ class TestDownloadAssetAttachment:
             )
 
         assert exc_info.value.status_code == 500
-        assert "下载附件失败" in exc_info.value.detail
+        assert "下载附件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -911,7 +913,9 @@ class TestDeleteAssetAttachment:
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = False
 
-        with pytest.raises(HTTPException) as exc_info:
+        from src.core.exception_handler import ResourceNotFoundError
+
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             await delete_asset_attachment(
                 asset_id="asset-123",
                 attachment_id="nonexistent.pdf",
@@ -920,7 +924,7 @@ class TestDeleteAssetAttachment:
             )
 
         assert exc_info.value.status_code == 404
-        assert "文件不存在" in exc_info.value.detail
+        assert "attachment不存在" in exc_info.value.message
 
     @patch("os.path.exists")
     @patch("os.remove")
@@ -973,7 +977,7 @@ class TestDeleteAssetAttachment:
         mock_exists.return_value = True
         mock_remove.side_effect = Exception("Permission denied")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_asset_attachment(
                 asset_id="asset-123",
                 attachment_id="document.pdf",
@@ -982,7 +986,7 @@ class TestDeleteAssetAttachment:
             )
 
         assert exc_info.value.status_code == 500
-        assert "删除附件失败" in exc_info.value.detail
+        assert "删除附件失败" in exc_info.value.message
 
 
 # ============================================================================

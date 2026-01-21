@@ -17,12 +17,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from ....core.security import FieldValidator
 from ....crud.asset import asset_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.statistics import ChartDataItem, DistributionResponse
-from ....security.field_validator import FieldValidator
 
 logger = logging.getLogger(__name__)
 

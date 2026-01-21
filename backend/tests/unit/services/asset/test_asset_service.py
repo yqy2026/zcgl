@@ -9,8 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
-from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
-from src.core.unified_error_handler import UnifiedError
+from src.core.exception_handler import (
+    BaseBusinessError,
+    DuplicateResourceError,
+    ResourceNotFoundError,
+)
 from src.models.asset import Asset
 from src.models.auth import User
 from src.schemas.asset import AssetCreate, AssetUpdate
@@ -221,16 +224,21 @@ class TestCreateAsset:
                     assert result == mock_asset
                     mock_create.assert_called_once()
 
-    def test_create_asset_enum_validation_fails(self, service, asset_create_dict, mock_enum_validation_service):
+    def test_create_asset_enum_validation_fails(
+        self, service, asset_create_dict, mock_enum_validation_service
+    ):
         """测试枚举验证失败"""
         # 修改全局 mock 返回验证失败
         original_validate = mock_enum_validation_service.validate_asset_data
-        mock_enum_validation_service.validate_asset_data = lambda data: (False, ["物业性质无效"])
+        mock_enum_validation_service.validate_asset_data = lambda data: (
+            False,
+            ["物业性质无效"],
+        )
 
         asset_in = AssetCreate(**asset_create_dict)
 
         try:
-            with pytest.raises(UnifiedError) as excinfo:
+            with pytest.raises(BaseBusinessError) as excinfo:
                 service.create_asset(asset_in)
 
             assert excinfo.value.status_code == 422
@@ -243,9 +251,7 @@ class TestCreateAsset:
         """测试资产名称重复"""
         asset_in = AssetCreate(**asset_create_dict)
 
-        with patch(
-            "src.crud.asset.asset_crud.get_by_name", return_value=mock_asset
-        ):
+        with patch("src.crud.asset.asset_crud.get_by_name", return_value=mock_asset):
             with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_asset(asset_in)
 
@@ -267,7 +273,7 @@ class TestCreateAsset:
             mock_validation.return_value = mock_validation_service
 
             with patch("src.crud.asset.asset_crud.get_by_name", return_value=None):
-                with pytest.raises(UnifiedError) as excinfo:
+                with pytest.raises(BaseBusinessError) as excinfo:
                     service.create_asset(asset_in)
 
                 assert excinfo.value.status_code == 422
@@ -342,21 +348,26 @@ class TestUpdateAsset:
             with pytest.raises(ResourceNotFoundError):
                 service.update_asset(TEST_ASSET_ID, asset_in)
 
-    def test_update_asset_enum_validation_fails(self, service, mock_asset, mock_enum_validation_service):
+    def test_update_asset_enum_validation_fails(
+        self, service, mock_asset, mock_enum_validation_service
+    ):
         """测试更新时枚举验证失败"""
         update_data = {"property_nature": "无效性质"}
         asset_in = AssetUpdate(**update_data)
 
         # 修改全局 mock 返回验证失败
         original_validate = mock_enum_validation_service.validate_asset_data
-        mock_enum_validation_service.validate_asset_data = lambda data: (False, ["物业性质无效"])
+        mock_enum_validation_service.validate_asset_data = lambda data: (
+            False,
+            ["物业性质无效"],
+        )
 
         try:
             with patch(
                 "src.services.asset.asset_service.AssetService.get_asset",
                 return_value=mock_asset,
             ):
-                with pytest.raises(UnifiedError) as excinfo:
+                with pytest.raises(BaseBusinessError) as excinfo:
                     service.update_asset(TEST_ASSET_ID, asset_in)
 
                 assert excinfo.value.status_code == 422
@@ -431,15 +442,13 @@ class TestUpdateAsset:
         asset_in = AssetUpdate(**update_data)
 
         # Mock get_asset to return the mock_asset with proper attributes
-        with patch.object(
-            service, "get_asset", return_value=mock_asset
-        ):
+        with patch.object(service, "get_asset", return_value=mock_asset):
             # Mock the calculator to return validation errors
             with patch(
                 "src.services.asset.asset_service.AssetCalculator.validate_area_consistency",
-                return_value=["已出租面积不能大于可出租面积"]
+                return_value=["已出租面积不能大于可出租面积"],
             ):
-                with pytest.raises(UnifiedError) as excinfo:
+                with pytest.raises(BaseBusinessError) as excinfo:
                     service.update_asset(TEST_ASSET_ID, asset_in)
 
                 assert excinfo.value.status_code == 422

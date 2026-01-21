@@ -8,8 +8,8 @@ import { usePDFImportContext } from './PDFImportContext';
 
 const { Paragraph } = Typography;
 
-// 增强状态类型定义 - 保持灵活性用于显示目的
-interface DisplayEnhancedStatus {
+// 处理状态类型定义 - 保持灵活性用于显示目的
+interface DisplayProcessingStatus {
   document_analysis?: {
     document_type?: string;
     quality_score?: number;
@@ -27,15 +27,14 @@ interface DisplayEnhancedStatus {
 const PreviewModal: React.FC = () => {
   const { showPreviewModal, setShowPreviewModal, processingProgress } = usePDFImportContext();
 
-  // 安全地提取enhanced_status用于显示
-  const getEnhancedStatus = (): DisplayEnhancedStatus | undefined => {
+  // 安全地提取processing_status用于显示
+  const getProcessingStatus = (): DisplayProcessingStatus | undefined => {
     if (processingProgress === null) return undefined;
-    // 访问可能存在的enhanced_status属性
-    const progress = processingProgress as { enhanced_status?: DisplayEnhancedStatus };
-    return progress.enhanced_status;
+    const progress = processingProgress as { processing_status?: DisplayProcessingStatus };
+    return progress.processing_status;
   };
 
-  const enhancedStatus = getEnhancedStatus();
+  const processingStatus = getProcessingStatus();
 
   return (
     <Modal
@@ -58,17 +57,17 @@ const PreviewModal: React.FC = () => {
             </Tag>
           </Paragraph>
 
-          {enhancedStatus !== undefined && (
+          {processingStatus !== undefined && (
             <div>
               <Divider />
               <Paragraph>
                 <Typography.Text strong>文档分析结果：</Typography.Text>
               </Paragraph>
               <ul>
-                <li>文档类型：{enhancedStatus.document_analysis?.document_type ?? '未知'}</li>
-                <li>质量评分：{enhancedStatus.document_analysis?.quality_score ?? 0}/10</li>
+                <li>文档类型：{processingStatus.document_analysis?.document_type ?? '未知'}</li>
+                <li>质量评分：{processingStatus.document_analysis?.quality_score ?? 0}/10</li>
                 <li>
-                  建议：{enhancedStatus.document_analysis?.recommendations?.join('；') ?? '无'}
+                  建议：{processingStatus.document_analysis?.recommendations?.join('；') ?? '无'}
                 </li>
               </ul>
 
@@ -77,13 +76,14 @@ const PreviewModal: React.FC = () => {
               </Paragraph>
               <ul>
                 <li>
-                  总体质量：{enhancedStatus.final_results?.extraction_quality?.overall_quality ?? 0}
+                  总体质量：
+                  {processingStatus.final_results?.extraction_quality?.overall_quality ?? 0}
                   /10
                 </li>
-                <li>验证分数：{enhancedStatus.final_results?.validation_score ?? 0}/10</li>
+                <li>验证分数：{processingStatus.final_results?.validation_score ?? 0}/10</li>
                 <li>
                   处理方法：
-                  {enhancedStatus.final_results?.extraction_quality?.processing_methods?.join(
+                  {processingStatus.final_results?.extraction_quality?.processing_methods?.join(
                     '、'
                   ) ?? '未知'}
                 </li>

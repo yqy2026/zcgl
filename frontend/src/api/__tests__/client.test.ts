@@ -1,10 +1,11 @@
 /**
- * EnhancedApiClient 测试
+ * ApiClient 测试
  * 测试API客户端的核心功能（简化版本，不依赖MSW）
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EnhancedApiClient, API_CONFIG, enhancedApiClient } from '../client';
+import { ApiClient, apiClient } from '../client';
+import { API_BASE_URL } from '../config';
 
 // =============================================================================
 // Mock数据
@@ -21,10 +22,10 @@ const _mockResponse = {
 // =============================================================================
 
 describe('MemoryCache', () => {
-  let client: EnhancedApiClient;
+  let client: ApiClient;
 
   beforeEach(() => {
-    client = new EnhancedApiClient({
+    client = new ApiClient({
       enableCaching: true,
       defaultCacheConfig: {
         enabled: true,
@@ -88,7 +89,7 @@ describe('MemoryCache', () => {
   describe('缓存容量限制', () => {
     it('达到最大容量时应该删除最旧的条目', () => {
       const maxSize = 3;
-      const cacheClient = new EnhancedApiClient({
+      const cacheClient = new ApiClient({
         defaultCacheConfig: {
           enabled: true,
           ttl: 5000,
@@ -117,15 +118,15 @@ describe('MemoryCache', () => {
 });
 
 // =============================================================================
-// EnhancedApiClient 核心功能测试
+// ApiClient 核心功能测试
 // =============================================================================
 
-describe('EnhancedApiClient', () => {
-  let client: EnhancedApiClient;
+describe('ApiClient', () => {
+  let client: ApiClient;
 
   beforeEach(() => {
-    client = new EnhancedApiClient({
-      baseURL: '/api/v1',
+    client = new ApiClient({
+      baseURL: API_BASE_URL,
       enableAutoRetry: false,
       enableCaching: false,
       enableLogging: false,
@@ -134,17 +135,17 @@ describe('EnhancedApiClient', () => {
 
   describe('构造函数和初始化', () => {
     it('应该使用默认配置创建客户端', () => {
-      const defaultClient = new EnhancedApiClient();
+      const defaultClient = new ApiClient();
       const config = defaultClient.getConfig();
 
-      expect(config.baseURL).toBe('/api/v1');
+      expect(config.baseURL).toBe(API_BASE_URL);
       expect(config.timeout).toBe(30000);
       expect(config.enableAutoRetry).toBe(false);
       expect(config.enableCaching).toBe(false);
     });
 
     it('应该接受自定义配置', () => {
-      const customClient = new EnhancedApiClient({
+      const customClient = new ApiClient({
         baseURL: '/custom/api',
         timeout: 5000,
         enableAutoRetry: true,
@@ -161,13 +162,13 @@ describe('EnhancedApiClient', () => {
     it('应该创建axios实例', () => {
       const axiosInstance = client.getAxiosInstance();
       expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe('/api/v1');
+      expect(axiosInstance.defaults.baseURL).toBe(API_BASE_URL);
     });
   });
 
   describe('配置管理', () => {
     it('应该支持自定义响应检测配置', () => {
-      const customClient = new EnhancedApiClient({
+      const customClient = new ApiClient({
         responseDetection: {
           successField: 'ok',
           dataField: 'result',
@@ -182,7 +183,7 @@ describe('EnhancedApiClient', () => {
     });
 
     it('应该支持自定义重试配置', () => {
-      const customClient = new EnhancedApiClient({
+      const customClient = new ApiClient({
         defaultRetryConfig: {
           maxAttempts: 5,
           delay: 2000,
@@ -198,7 +199,7 @@ describe('EnhancedApiClient', () => {
 
   describe('工具方法', () => {
     it('clearCache应该清除所有缓存', () => {
-      const cacheClient = new EnhancedApiClient({
+      const cacheClient = new ApiClient({
         enableCaching: true,
         defaultCacheConfig: { enabled: true, ttl: 5000, maxSize: 100 },
       });
@@ -240,7 +241,7 @@ describe('EnhancedApiClient', () => {
 
   describe('日志功能', () => {
     it('开发环境应该启用日志', () => {
-      const devClient = new EnhancedApiClient({
+      const devClient = new ApiClient({
         enableLogging: true,
       });
 
@@ -249,7 +250,7 @@ describe('EnhancedApiClient', () => {
     });
 
     it('生产环境应该禁用日志', () => {
-      const prodClient = new EnhancedApiClient({
+      const prodClient = new ApiClient({
         enableLogging: false,
       });
 
@@ -260,31 +261,23 @@ describe('EnhancedApiClient', () => {
 });
 
 // =============================================================================
-// API_CONFIG 测试
-// =============================================================================
-
-describe('API_CONFIG', () => {
-  it('should have baseURL set to /api/v1', () => {
-    expect(API_CONFIG.baseURL).toBe('/api/v1');
-  });
-
-  it('should have timeout set to 30000', () => {
-    expect(API_CONFIG.timeout).toBe(30000);
-  });
-});
-
-// =============================================================================
 // URL Validation 测试
 // =============================================================================
 
 describe('URL Validation', () => {
   const originalWarn = console.warn;
-  let client: EnhancedApiClient;
+  let client: ApiClient;
+  const normalizedBaseUrl = API_BASE_URL.startsWith('http')
+    ? new URL(API_BASE_URL).pathname
+    : API_BASE_URL;
+  const basePath = normalizedBaseUrl.endsWith('/')
+    ? normalizedBaseUrl.slice(0, -1)
+    : normalizedBaseUrl;
 
   beforeEach(() => {
     console.warn = vi.fn();
-    client = new EnhancedApiClient({
-      baseURL: '/api/v1',
+    client = new ApiClient({
+      baseURL: API_BASE_URL,
       enableLogging: false,
       enableAutoRetry: false,
     });
@@ -294,12 +287,12 @@ describe('URL Validation', () => {
     console.warn = originalWarn;
   });
 
-  it('should not warn for URLs starting with /api/v1', () => {
+  it('should not warn for URLs starting with base path', () => {
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
 
     // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: '/api/v1/auth/login' });
+    requestInterceptor.fulfilled({ url: `${basePath}/auth/login` });
 
     expect(console.warn).not.toHaveBeenCalled();
   });
@@ -314,7 +307,7 @@ describe('URL Validation', () => {
     expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('should warn for URLs without /api/v1 prefix', () => {
+  it('should warn for URLs without base path prefix', () => {
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
 
@@ -322,11 +315,11 @@ describe('URL Validation', () => {
     requestInterceptor.fulfilled({ url: '/users' });
 
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('[API Client] URL does not use /api/v1 prefix: /users')
+      expect.stringContaining(`[API Client] URL does not use ${basePath} prefix: /users`)
     );
   });
 
-  it('should warn for URLs without /api/v1 prefix (with nested path)', () => {
+  it('should warn for URLs without base path prefix (with nested path)', () => {
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
 
@@ -334,7 +327,9 @@ describe('URL Validation', () => {
     requestInterceptor.fulfilled({ url: '/assets/list' });
 
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('[API Client] URL does not use /api/v1 prefix: /assets/list')
+      expect.stringContaining(
+        `[API Client] URL does not use ${basePath} prefix: /assets/list`
+      )
     );
   });
 
@@ -364,13 +359,13 @@ describe('URL Validation', () => {
 // =============================================================================
 
 describe('Default Instance', () => {
-  it('should export default enhancedApiClient instance', () => {
-    expect(enhancedApiClient).toBeInstanceOf(EnhancedApiClient);
+  it('should export default apiClient instance', () => {
+    expect(apiClient).toBeInstanceOf(ApiClient);
   });
 
   it('should have correct configuration on default instance', () => {
-    const config = enhancedApiClient.getConfig();
-    expect(config.baseURL).toBe('/api/v1');
+    const config = apiClient.getConfig();
+    expect(config.baseURL).toBe(API_BASE_URL);
     expect(config.timeout).toBe(30000);
   });
 });
@@ -380,19 +375,19 @@ describe('Default Instance', () => {
 // =============================================================================
 
 describe('工厂函数', () => {
-  it('createEnhancedApiClient应该创建新实例', async () => {
-    const { createEnhancedApiClient } = await import('../client');
-    const client = createEnhancedApiClient({
+  it('createApiClient应该创建新实例', async () => {
+    const { createApiClient } = await import('../client');
+    const client = createApiClient({
       baseURL: '/custom',
     });
 
-    expect(client).toBeInstanceOf(EnhancedApiClient);
+    expect(client).toBeInstanceOf(ApiClient);
     expect(client.getConfig().baseURL).toBe('/custom');
   });
 
-  it('应该导出默认的enhancedApiClient实例', async () => {
-    const { enhancedApiClient } = await import('../client');
+  it('应该导出默认的apiClient实例', async () => {
+    const { apiClient } = await import('../client');
 
-    expect(enhancedApiClient).toBeInstanceOf(EnhancedApiClient);
+    expect(apiClient).toBeInstanceOf(ApiClient);
   });
 });

@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request
+from ....core.exception_handler import bad_request
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User

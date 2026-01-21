@@ -74,10 +74,7 @@ class SecretValidator:
 
         if errors:
             suggestion = self._generate_suggestion()
-            raise SecretValidationError(
-                "\n".join(f"- {e}" for e in errors),
-                suggestion
-            )
+            raise SecretValidationError("\n".join(f"- {e}" for e in errors), suggestion)
 
         return True
 

@@ -11,7 +11,13 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, forbidden, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    forbidden,
+    internal_error,
+    not_found,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +282,7 @@ async def lock_user(
 
         return {"success": True, "message": f"用户 {user.username} 已锁定"}
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         db.rollback()
         raise bad_request(str(e))
@@ -322,7 +328,7 @@ async def unlock_user_account(
 
         return {"success": True, "message": f"用户 {user.username} 已解锁"}
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         db.rollback()
         raise bad_request(str(e))
@@ -391,7 +397,7 @@ async def reset_user_password(
             "user_id": user_id,
         }
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         db.rollback()
         raise bad_request(str(e))

@@ -13,7 +13,7 @@ import {
   ExtractResult,
   SmartExtractOptions,
   ResponseDetectionConfig,
-  EnhancedApiError,
+  ApiClientError,
   ApiErrorType,
 } from '../types/apiResponse';
 import {
@@ -469,7 +469,7 @@ export class ApiErrorHandler {
   /**
    * 将axios错误转换为增强API错误
    */
-  static handleError(error: unknown): EnhancedApiError {
+  static handleError(error: unknown): ApiClientError {
     if (error instanceof AxiosError) {
       return this.handleAxiosError(error);
     }
@@ -482,7 +482,7 @@ export class ApiErrorHandler {
       'code' in error &&
       'message' in error
     ) {
-      return error as EnhancedApiError;
+      return error as ApiClientError;
     }
 
     // 未知错误
@@ -499,7 +499,7 @@ export class ApiErrorHandler {
   /**
    * 处理axios错误
    */
-  private static handleAxiosError(error: AxiosError): EnhancedApiError {
+  private static handleAxiosError(error: AxiosError): ApiClientError {
     const statusCode = error.response?.status;
     const responseData = error.response?.data as ApiResponseData | undefined;
 

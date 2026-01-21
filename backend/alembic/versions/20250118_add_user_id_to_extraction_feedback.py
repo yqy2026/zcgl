@@ -64,7 +64,9 @@ def downgrade() -> None:
         columns = [c["name"] for c in inspector.get_columns("extraction_feedback")]
         if "user_id" in columns:
             # Drop index first
-            op.drop_index("ix_extraction_feedback_user_id", table_name="extraction_feedback")
+            op.drop_index(
+                "ix_extraction_feedback_user_id", table_name="extraction_feedback"
+            )
 
             # Drop column
             op.drop_column("extraction_feedback", "user_id")

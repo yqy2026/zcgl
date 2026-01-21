@@ -12,7 +12,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import conflict, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    conflict,
+    internal_error,
+    not_found,
+)
 from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ...database import get_db
 from ...models.asset import SystemDictionary
@@ -185,7 +190,7 @@ async def quick_create_dictionary(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"创建简单字典失败: {str(e)}")
 
@@ -306,7 +311,7 @@ async def add_dictionary_value(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"添加字典值失败: {str(e)}")
 
@@ -339,7 +344,7 @@ async def delete_dictionary_type(
         )  # pragma: no cover
 
     except Exception as e:  # pragma: no cover
-        if "UnifiedError" in type(e).__name__:  # pragma: no cover
+        if isinstance(e, BaseBusinessError):  # pragma: no cover
             raise  # pragma: no cover
         raise internal_error(  # pragma: no cover
             f"删除字典类型失败: {str(e)}"

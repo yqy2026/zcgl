@@ -19,7 +19,7 @@ import type {
 
 const logger = createLogger('LLMPromptService');
 
-const API_BASE = '/api/v1/llm-prompts';
+const API_BASE = '/llm-prompts';
 
 /**
  * 辅助函数：从ExtractResult中提取数据，如果数据为空则抛出错误

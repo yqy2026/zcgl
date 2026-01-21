@@ -13,7 +13,7 @@ import psutil
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from ..core.api_errors import bad_request
+from ..core.exception_handler import bad_request
 
 logger = logging.getLogger(__name__)
 

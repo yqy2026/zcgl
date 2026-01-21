@@ -73,7 +73,11 @@ export interface AuthResponse {
     token_type: string;
     expires_in: number;
   };
-  permissions: string[];
+  permissions: Array<{
+    resource: string;
+    action: string;
+    description?: string;
+  }>;
 }
 
 /**
@@ -145,7 +149,7 @@ export enum ApiErrorType {
 /**
  * 增强的API错误信息
  */
-export interface EnhancedApiError {
+export interface ApiClientError {
   type: ApiErrorType;
   code: string;
   message: string;
@@ -183,7 +187,7 @@ export interface CacheConfig {
 /**
  * 增强API客户端配置
  */
-export interface EnhancedApiClientConfig {
+export interface ApiClientConfig {
   // 基础配置
   baseURL?: string;
   timeout?: number;
@@ -200,7 +204,7 @@ export interface EnhancedApiClientConfig {
   enableTypeValidation?: boolean;
 
   // 错误处理
-  globalErrorHandler?: (error: EnhancedApiError) => void;
+  globalErrorHandler?: (error: ApiClientError) => void;
 
   // 拦截器
   requestInterceptors?: Array<(config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig>;

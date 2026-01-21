@@ -57,11 +57,11 @@ export class ApiPathTester {
   testAuthPaths(): void {
     testLogger.log('🔐 Testing Authentication API paths...');
 
-    // 登录路径应该以 /api/auth 开头
-    this.testPath('LOGIN', AUTH_API.LOGIN, /^\/api\/auth\/login$/);
-    this.testPath('LOGOUT', AUTH_API.LOGOUT, /^\/api\/auth\/logout$/);
-    this.testPath('USERS', AUTH_API.USERS, /^\/api\/auth\/users$/);
-    this.testPath('PROFILE', AUTH_API.PROFILE, /^\/api\/auth\/profile$/);
+    // 登录路径应该以 /auth 开头
+    this.testPath('LOGIN', AUTH_API.LOGIN, /^\/auth\/login$/);
+    this.testPath('LOGOUT', AUTH_API.LOGOUT, /^\/auth\/logout$/);
+    this.testPath('USERS', AUTH_API.USERS, /^\/auth\/users$/);
+    this.testPath('PROFILE', AUTH_API.PROFILE, /^\/auth\/me$/);
   }
 
   /**
@@ -70,10 +70,10 @@ export class ApiPathTester {
   testPdfPaths(): void {
     testLogger.log('📄 Testing PDF API paths...');
 
-    // PDF路径应该以 /api/v1/pdf-import 开头
-    this.testPath('PDF_INFO', PDF_API.INFO, /^\/api\/v1\/pdf-import\/info$/);
-    this.testPath('PDF_SESSIONS', PDF_API.SESSIONS, /^\/api\/v1\/pdf-import\/sessions$/);
-    this.testPath('PDF_UPLOAD', PDF_API.UPLOAD, /^\/api\/v1\/pdf-import\/upload$/);
+    // PDF路径应该以 /pdf-import 开头
+    this.testPath('PDF_INFO', PDF_API.INFO, /^\/pdf-import\/info$/);
+    this.testPath('PDF_SESSIONS', PDF_API.SESSIONS, /^\/pdf-import\/sessions$/);
+    this.testPath('PDF_UPLOAD', PDF_API.UPLOAD, /^\/pdf-import\/upload$/);
   }
 
   /**
@@ -82,10 +82,10 @@ export class ApiPathTester {
   testSystemPaths(): void {
     testLogger.log('⚙️ Testing System API paths...');
 
-    // 系统API应该以 /api/system 开头或使用legacy路径
-    this.testPath('SYSTEM_USERS', SYSTEM_API.USERS, /^\/api\/auth\/users$/);
-    this.testPath('SYSTEM_HEALTH', SYSTEM_API.HEALTH, /^\/api\/system\/health$/);
-    this.testPath('SYSTEM_SETTINGS', SYSTEM_API.SETTINGS, /^\/api\/system\/settings$/);
+    // 系统API应该以 /system 开头或使用认证路径
+    this.testPath('SYSTEM_USERS', SYSTEM_API.USERS, /^\/auth\/users$/);
+    this.testPath('SYSTEM_HEALTH', SYSTEM_API.HEALTH, /^\/system\/health$/);
+    this.testPath('SYSTEM_SETTINGS', SYSTEM_API.SETTINGS, /^\/system\/settings$/);
   }
 
   /**
@@ -114,15 +114,11 @@ export class ApiPathTester {
   testTestCoveragePaths(): void {
     testLogger.log('🧪 Testing Test Coverage API paths...');
 
-    this.testPath(
-      'COVERAGE_REPORT',
-      TEST_COVERAGE_API.REPORT,
-      /^\/api\/v1\/test-coverage\/report$/
-    );
+    this.testPath('COVERAGE_REPORT', TEST_COVERAGE_API.REPORT, /^\/test-coverage\/report$/);
     this.testPath(
       'COVERAGE_TREND',
       TEST_COVERAGE_API.TREND(7),
-      /^\/api\/v1\/test-coverage\/trend\?days=7$/
+      /^\/test-coverage\/trend\?days=7$/
     );
   }
 
@@ -135,13 +131,9 @@ export class ApiPathTester {
     this.testPath(
       'MONITORING_PERFORMANCE',
       MONITORING_API.ROUTE_PERFORMANCE,
-      /^\/api\/v1\/monitoring\/route-performance$/
+      /^\/monitoring\/route-performance$/
     );
-    this.testPath(
-      'MONITORING_HEALTH',
-      MONITORING_API.SYSTEM_HEALTH,
-      /^\/api\/v1\/monitoring\/health$/
-    );
+    this.testPath('MONITORING_HEALTH', MONITORING_API.SYSTEM_HEALTH, /^\/monitoring\/health$/);
   }
 
   /**
@@ -150,7 +142,7 @@ export class ApiPathTester {
   testErrorReportingPaths(): void {
     testLogger.log('🚨 Testing Error Reporting API paths...');
 
-    this.testPath('ERROR_REPORT', ERROR_REPORTING_API.REPORT, /^\/api\/v1\/errors\/report$/);
+    this.testPath('ERROR_REPORT', ERROR_REPORTING_API.REPORT, /^\/errors\/report$/);
   }
 
   /**

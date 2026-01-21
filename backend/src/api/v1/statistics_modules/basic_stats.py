@@ -215,7 +215,7 @@ async def get_dashboard_data(
     # 这需要从其他服务获取数据
     # 注意：BasicStatisticsResponse的schema与原有实现不匹配
     # 需要重构整个endpoint以匹配正确的schema
-    from ....core.api_errors import service_unavailable
+    from ....core.exception_handler import service_unavailable
 
     raise service_unavailable(
         "仪表板数据的财务汇总和详细出租率统计尚未实现，需要重构schema"

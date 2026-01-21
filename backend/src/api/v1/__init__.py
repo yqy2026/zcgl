@@ -34,7 +34,7 @@ except ImportError as e:
 
     logging.warning(f"PDF batch routes not available: {e}")
 
-from .pdf_import_routes import router as pdf_import_router
+from .pdf_import import router as pdf_import_router
 from .project import router as project_router
 from .rent_contract import router as rent_contract_router
 from .roles import router as roles_router
@@ -126,7 +126,7 @@ api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
-api_router.include_router(pdf_import_router, tags=["PDF智能导入"])
+api_router.include_router(pdf_import_router, prefix="/pdf-import", tags=["PDF智能导入"])
 if pdf_batch_router is not None:
     api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])
 api_router.include_router(

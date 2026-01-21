@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import * as useAssetsHooks from '../useAssets';
 
 // =============================================================================
 // 类型定义
@@ -54,68 +55,55 @@ vi.mock('@/services/assetService', () => ({
 // =============================================================================
 
 describe('useAssets - Hook验证', () => {
-  it('应该导出useAssets hook', async () => {
-    const { useAssets } = await import('../useAssets');
-    expect(typeof useAssets).toBe('function');
+  it('应该导出useAssets hook', () => {
+    expect(typeof useAssetsHooks.useAssets).toBe('function');
   });
 
-  it('应该导出useAsset hook', async () => {
-    const { useAsset } = await import('../useAssets');
-    expect(typeof useAsset).toBe('function');
+  it('应该导出useAsset hook', () => {
+    expect(typeof useAssetsHooks.useAsset).toBe('function');
   });
 
-  it('应该导出useCreateAsset hook', async () => {
-    const { useCreateAsset } = await import('../useAssets');
-    expect(typeof useCreateAsset).toBe('function');
+  it('应该导出useCreateAsset hook', () => {
+    expect(typeof useAssetsHooks.useCreateAsset).toBe('function');
   });
 
-  it('应该导出useUpdateAsset hook', async () => {
-    const { useUpdateAsset } = await import('../useAssets');
-    expect(typeof useUpdateAsset).toBe('function');
+  it('应该导出useUpdateAsset hook', () => {
+    expect(typeof useAssetsHooks.useUpdateAsset).toBe('function');
   });
 
-  it('应该导出useDeleteAsset hook', async () => {
-    const { useDeleteAsset } = await import('../useAssets');
-    expect(typeof useDeleteAsset).toBe('function');
+  it('应该导出useDeleteAsset hook', () => {
+    expect(typeof useAssetsHooks.useDeleteAsset).toBe('function');
   });
 
-  it('应该导出useBatchDeleteAssets hook', async () => {
-    const { useBatchDeleteAssets } = await import('../useAssets');
-    expect(typeof useBatchDeleteAssets).toBe('function');
+  it('应该导出useBatchDeleteAssets hook', () => {
+    expect(typeof useAssetsHooks.useBatchDeleteAssets).toBe('function');
   });
 
-  it('应该导出useAssetHistory hook', async () => {
-    const { useAssetHistory } = await import('../useAssets');
-    expect(typeof useAssetHistory).toBe('function');
+  it('应该导出useAssetHistory hook', () => {
+    expect(typeof useAssetsHooks.useAssetHistory).toBe('function');
   });
 
-  it('应该导出useAssetStats hook', async () => {
-    const { useAssetStats } = await import('../useAssets');
-    expect(typeof useAssetStats).toBe('function');
+  it('应该导出useAssetStats hook', () => {
+    expect(typeof useAssetsHooks.useAssetStats).toBe('function');
   });
 
-  it('应该导出useOwnershipEntities hook', async () => {
-    const { useOwnershipEntities } = await import('../useAssets');
-    expect(typeof useOwnershipEntities).toBe('function');
+  it('应该导出useOwnershipEntities hook', () => {
+    expect(typeof useAssetsHooks.useOwnershipEntities).toBe('function');
   });
 
-  it('应该导出useManagementEntities hook', async () => {
-    const { useManagementEntities } = await import('../useAssets');
-    expect(typeof useManagementEntities).toBe('function');
+  it('应该导出useManagementEntities hook', () => {
+    expect(typeof useAssetsHooks.useManagementEntities).toBe('function');
   });
 
-  it('应该导出useBusinessCategories hook', async () => {
-    const { useBusinessCategories } = await import('../useAssets');
-    expect(typeof useBusinessCategories).toBe('function');
+  it('应该导出useBusinessCategories hook', () => {
+    expect(typeof useAssetsHooks.useBusinessCategories).toBe('function');
   });
 
-  it('应该导出useAssetSearch hook', async () => {
-    const { useAssetSearch } = await import('../useAssets');
-    expect(typeof useAssetSearch).toBe('function');
+  it('应该导出useAssetSearch hook', () => {
+    expect(typeof useAssetsHooks.useAssetSearch).toBe('function');
   });
 
-  it('应该导出useValidateAsset hook', async () => {
-    const { useValidateAsset } = await import('../useAssets');
-    expect(typeof useValidateAsset).toBe('function');
+  it('应该导出useValidateAsset hook', () => {
+    expect(typeof useAssetsHooks.useValidateAsset).toBe('function');
   });
 });

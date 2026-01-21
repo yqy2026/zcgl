@@ -7,7 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.system_dictionary import system_dictionary_crud
 from ...database import get_db
 from ...schemas.asset import (
@@ -81,7 +86,7 @@ async def get_system_dictionary(
         return dictionary
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取系统字典详情失败: {str(e)}")
 
@@ -109,7 +114,7 @@ async def create_system_dictionary(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"创建系统字典失败: {str(e)}")
 
@@ -139,7 +144,7 @@ async def update_system_dictionary(
             raise not_found(str(e), resource_type="system_dictionary")
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新系统字典失败: {str(e)}")
 
@@ -162,7 +167,7 @@ async def delete_system_dictionary(
             str(e), resource_type="system_dictionary", resource_id=dictionary_id
         )
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除系统字典失败: {str(e)}")
 

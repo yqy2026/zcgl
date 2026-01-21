@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Depends, Query
 
 from ....constants.errors.error_ids import ErrorIDs
-from ....core.api_errors import internal_error, not_found
+from ....core.exception_handler import internal_error, not_found
 from .collectors import (
     check_performance_alerts,
     collect_application_metrics,

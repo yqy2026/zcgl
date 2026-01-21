@@ -24,27 +24,33 @@ def mock_enum_validation_service():
         # 定义常见的枚举值映射
         enum_values = {
             # 资产相关枚举
-            'ownership_status': ['已确权', '未确权', '确权中'],
-            'property_nature': ['商业', '住宅', '工业', '办公', '综合'],
-            'usage_status': ['在租', '空置', '自用', '装修中'],
-            'data_status': ['正常', '冻结', '已删除'],
-            'business_model': ['自持', '租赁', '混合'],
-            'operation_status': ['运营中', '停业', '筹备中'],
-            'tenant_type': ['企业', '个人', '政府', '事业单位'],
-            'business_category': ['零售', '餐饮', '办公', '仓储'],
+            "ownership_status": ["已确权", "未确权", "确权中"],
+            "property_nature": ["商业", "住宅", "工业", "办公", "综合"],
+            "usage_status": ["在租", "空置", "自用", "装修中"],
+            "data_status": ["正常", "冻结", "已删除"],
+            "business_model": ["自持", "租赁", "混合"],
+            "operation_status": ["运营中", "停业", "筹备中"],
+            "tenant_type": ["企业", "个人", "政府", "事业单位"],
+            "business_category": ["零售", "餐饮", "办公", "仓储"],
             # 角色权限相关枚举
-            'role_type': ['系统角色', '自定义角色'],
-            'permission_type': ['菜单权限', '按钮权限', '数据权限'],
+            "role_type": ["系统角色", "自定义角色"],
+            "permission_type": ["菜单权限", "按钮权限", "数据权限"],
         }
-        return enum_values.get(enum_type_code, ['test_value'])
+        return enum_values.get(enum_type_code, ["test_value"])
 
     # Mock 方法 (注意: 这些是实例方法，不需要 self 参数)
     mock_service.validate_field_value = lambda table, field, value: True
     mock_service.validate_asset_data = lambda data: (True, [])
 
     # Patch EnumValidationService 在所有模块中的使用
-    with patch('src.services.enum_validation_service.EnumValidationService', return_value=mock_service):
-        with patch('src.services.enum_validation_service.get_enum_validation_service', return_value=mock_service):
+    with patch(
+        "src.services.enum_validation_service.EnumValidationService",
+        return_value=mock_service,
+    ):
+        with patch(
+            "src.services.enum_validation_service.get_enum_validation_service",
+            return_value=mock_service,
+        ):
             yield mock_service
 
 

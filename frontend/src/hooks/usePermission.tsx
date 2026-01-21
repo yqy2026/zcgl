@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
-import { AuthStorage, AuthData } from '@/utils/AuthStorage';
+import { AuthStorage } from '@/utils/AuthStorage';
 
 const permLogger = createLogger('usePermission');
 

@@ -286,7 +286,7 @@ class AnalyticsService:
         }
 
         if distribution_type not in allowed_distribution_fields:
-            from ...core.api_errors import bad_request
+            from ...core.exception_handler import bad_request
 
             raise bad_request(
                 f"无效的分布类型: {distribution_type}",

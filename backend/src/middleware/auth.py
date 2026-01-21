@@ -12,7 +12,7 @@ from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from ..core.api_errors import bad_request, forbidden, unauthorized
+from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..core.config import settings
 from ..core.cookie_auth import cookie_manager
 from ..database import get_db
@@ -300,7 +300,9 @@ def get_current_user_from_cookie(
     if user.is_locked_now():
         raise unauthorized("User account is locked, please try again later")
 
-    logger.debug(f"Successfully authenticated user {user.username} via cookie-based auth")
+    logger.debug(
+        f"Successfully authenticated user {user.username} via cookie-based auth"
+    )
     return user
 
 

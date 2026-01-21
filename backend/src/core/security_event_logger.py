@@ -75,9 +75,7 @@ class SecurityEventLogger:
         Returns:
             Severity level
         """
-        return self.EVENT_SEVERITY_MAP.get(
-            event_type, SecuritySeverity.MEDIUM
-        )
+        return self.EVENT_SEVERITY_MAP.get(event_type, SecuritySeverity.MEDIUM)
 
     def _log_to_database(
         self,
@@ -110,7 +108,9 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError("Database not initialized. Call init_database() first.")
+                    raise RuntimeError(
+                        "Database not initialized. Call init_database() first."
+                    )
                 db = SessionLocal()
                 should_close = True
 
@@ -376,7 +376,9 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError("Database not initialized. Call init_database() first.")
+                    raise RuntimeError(
+                        "Database not initialized. Call init_database() first."
+                    )
                 db = SessionLocal()
                 should_close = True
 
@@ -384,14 +386,20 @@ class SecurityEventLogger:
 
             try:
                 # Calculate time window
-                window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
+                window_start = datetime.now() - timedelta(
+                    minutes=self.alert_window_minutes
+                )
 
                 # Query events within window for this IP and event type
-                count = db.query(SecurityEvent).filter(
-                    SecurityEvent.ip_address == ip,
-                    SecurityEvent.event_type == event_type.value,
-                    SecurityEvent.created_at >= window_start,
-                ).count()
+                count = (
+                    db.query(SecurityEvent)
+                    .filter(
+                        SecurityEvent.ip_address == ip,
+                        SecurityEvent.event_type == event_type.value,
+                        SecurityEvent.created_at >= window_start,
+                    )
+                    .count()
+                )
 
                 return count >= threshold
 
@@ -428,7 +436,9 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError("Database not initialized. Call init_database() first.")
+                    raise RuntimeError(
+                        "Database not initialized. Call init_database() first."
+                    )
                 db = SessionLocal()
                 should_close = True
 
@@ -436,14 +446,20 @@ class SecurityEventLogger:
 
             try:
                 # Calculate time window
-                window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
+                window_start = datetime.now() - timedelta(
+                    minutes=self.alert_window_minutes
+                )
 
                 # Query events within window for this IP and event type
-                count = db.query(SecurityEvent).filter(
-                    SecurityEvent.ip_address == ip,
-                    SecurityEvent.event_type == event_type.value,
-                    SecurityEvent.created_at >= window_start,
-                ).count()
+                count = (
+                    db.query(SecurityEvent)
+                    .filter(
+                        SecurityEvent.ip_address == ip,
+                        SecurityEvent.event_type == event_type.value,
+                        SecurityEvent.created_at >= window_start,
+                    )
+                    .count()
+                )
 
                 return count
 

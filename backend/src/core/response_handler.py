@@ -6,7 +6,6 @@ from typing import Any, TypeVar
 """
 
 import logging
-import traceback
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, Request, status
@@ -14,7 +13,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .config import settings
-from .exception_handler import BaseBusinessError
 
 logger = logging.getLogger(__name__)
 
@@ -236,81 +234,6 @@ class ResponseHandler:
             message=message,
             request_id=request_id,
             pagination=pagination_info,
-        )
-
-
-class ExceptionHandler:
-    """统一异常处理器"""
-
-    @staticmethod
-    def handle_business_exception(
-        exc: BaseBusinessError, request_id: str | None = None
-    ) -> JSONResponse:
-        """处理业务异常"""
-
-        return ResponseHandler.error(
-            message=exc.message,
-            error_code=exc.code,
-            status_code=exc.status_code,
-            details=getattr(exc, "details", None),
-            request_id=request_id,
-        )
-
-    @staticmethod
-    def handle_http_exception(
-        exc: HTTPException, request_id: str | None = None
-    ) -> JSONResponse:
-        """处理HTTP异常"""
-
-        return ResponseHandler.error(
-            message=exc.detail,
-            error_code=f"HTTP_{exc.status_code}",
-            status_code=exc.status_code,
-            details=getattr(exc, "details", None),
-            request_id=request_id,
-        )
-
-    @staticmethod
-    def handle_validation_exception(
-        exc: Exception, request_id: str | None = None
-    ) -> JSONResponse:
-        """处理验证异常"""
-
-        # 尝试从异常中提取验证错误详情
-        details = {}
-        if hasattr(exc, "errors"):
-            details = {"validation_errors": exc.errors()}
-        elif str(exc):
-            details = {"error_detail": str(exc)}
-
-        return ResponseHandler.validation_error(
-            errors=[details] if isinstance(details, dict) else details,
-            request_id=request_id,
-        )
-
-    @staticmethod
-    def handle_general_exception(
-        exc: Exception, request_id: str | None = None
-    ) -> JSONResponse:
-        """处理通用异常"""
-
-        # 在开发环境中显示详细错误信息
-        if settings.DEBUG:
-            details = {
-                "exception_type": type(exc).__name__,
-                "exception_message": str(exc),
-                "traceback": traceback.format_exc(),
-            }
-        else:
-            details = {}
-            logger.exception(f"Unexpected error: {exc}")
-
-        return ResponseHandler.error(
-            message="服务器内部错误",
-            error_code="INTERNAL_SERVER_ERROR",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            details=details,
-            request_id=request_id,
         )
 
 

@@ -24,10 +24,17 @@ from typing import Any
 
 from fastapi import status
 
-from .unified_error_handler import (
-    ErrorCode,
-    ErrorSeverity,
-    UnifiedError,
+from .exception_handler import (
+    AuthenticationError,
+    BaseBusinessError,
+    BusinessValidationError,
+    InternalServerError,
+    InvalidRequestError,
+    OperationNotAllowedError,
+    PermissionDeniedError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+    ServiceUnavailableError,
 )
 
 
@@ -36,7 +43,7 @@ def not_found(
     *,
     resource_type: str | None = None,
     resource_id: str | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建404未找到错误
 
@@ -49,18 +56,14 @@ def not_found(
         raise not_found("合同不存在")
         raise not_found("资产不存在", resource_type="asset", resource_id="123")
     """
-    extra_data: dict[str, Any] = {}
     if resource_type:
-        extra_data["resource_type"] = resource_type
-    if resource_id:
-        extra_data["resource_id"] = resource_id
+        return ResourceNotFoundError(resource_type, resource_id)
 
-    return UnifiedError(
+    return BaseBusinessError(
         message=message,
-        code=ErrorCode.NOT_FOUND,
+        code="RESOURCE_NOT_FOUND",
+        details={"resource_id": resource_id} if resource_id else {},
         status_code=status.HTTP_404_NOT_FOUND,
-        severity=ErrorSeverity.LOW,
-        extra_data=extra_data,
     )
 
 
@@ -69,7 +72,7 @@ def bad_request(
     *,
     field: str | None = None,
     details: str | dict[str, Any] | list[str] | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建400错误请求错误
 
@@ -82,17 +85,14 @@ def bad_request(
         raise bad_request("参数无效")
         raise bad_request("日期格式错误", field="start_date")
     """
-    extra_data: dict[str, Any] = {}
-    if field:
-        extra_data["field"] = field
+    error_details: dict[str, Any] = {}
+    if details is not None:
+        error_details["details"] = details
 
-    return UnifiedError(
+    return InvalidRequestError(
         message=message,
-        code=ErrorCode.INVALID_REQUEST,
-        status_code=status.HTTP_400_BAD_REQUEST,
-        details=details,
-        severity=ErrorSeverity.MEDIUM,
-        extra_data=extra_data,
+        field=field,
+        details=error_details or None,
     )
 
 
@@ -100,7 +100,7 @@ def validation_error(
     message: str = "数据验证失败",
     *,
     field_errors: list[str] | dict[str, str] | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建422验证错误
 
@@ -111,18 +111,22 @@ def validation_error(
     Examples:
         raise validation_error("必填字段缺失", field_errors=["name", "email"])
     """
-    details = field_errors if field_errors else None
+    if isinstance(field_errors, dict):
+        normalized_field_errors = {
+            field: [error] for field, error in field_errors.items()
+        }
+    elif isinstance(field_errors, list):
+        normalized_field_errors = {"_errors": field_errors}
+    else:
+        normalized_field_errors = {}
 
-    return UnifiedError(
+    return BusinessValidationError(
         message=message,
-        code=ErrorCode.VALIDATION_ERROR,
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        details=details,
-        severity=ErrorSeverity.MEDIUM,
+        field_errors=normalized_field_errors,
     )
 
 
-def unauthorized(message: str = "未授权，请登录") -> UnifiedError:
+def unauthorized(message: str = "未授权，请登录") -> BaseBusinessError:
     """
     创建401未授权错误
 
@@ -130,15 +134,10 @@ def unauthorized(message: str = "未授权，请登录") -> UnifiedError:
         raise unauthorized()
         raise unauthorized("登录已过期")
     """
-    return UnifiedError(
-        message=message,
-        code=ErrorCode.UNAUTHORIZED,
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        severity=ErrorSeverity.HIGH,
-    )
+    return AuthenticationError(message=message)
 
 
-def forbidden(message: str = "权限不足") -> UnifiedError:
+def forbidden(message: str = "权限不足") -> BaseBusinessError:
     """
     创建403禁止访问错误
 
@@ -146,19 +145,14 @@ def forbidden(message: str = "权限不足") -> UnifiedError:
         raise forbidden()
         raise forbidden("只有管理员可以执行此操作")
     """
-    return UnifiedError(
-        message=message,
-        code=ErrorCode.FORBIDDEN,
-        status_code=status.HTTP_403_FORBIDDEN,
-        severity=ErrorSeverity.HIGH,
-    )
+    return PermissionDeniedError(message=message)
 
 
 def conflict(
     message: str,
     *,
     resource_type: str | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建409冲突错误
 
@@ -166,16 +160,9 @@ def conflict(
         raise conflict("资源已存在")
         raise conflict("合同编号已存在", resource_type="contract")
     """
-    extra_data: dict[str, Any] = {}
-    if resource_type:
-        extra_data["resource_type"] = resource_type
-
-    return UnifiedError(
+    return ResourceConflictError(
         message=message,
-        code=ErrorCode.RESOURCE_CONFLICT,
-        status_code=status.HTTP_409_CONFLICT,
-        severity=ErrorSeverity.MEDIUM,
-        extra_data=extra_data,
+        resource_type=resource_type,
     )
 
 
@@ -183,7 +170,7 @@ def internal_error(
     message: str = "服务器内部错误",
     *,
     original_error: Exception | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建500内部服务器错误
 
@@ -195,16 +182,9 @@ def internal_error(
         raise internal_error(f"操作失败: {str(e)}")
         raise internal_error("数据库错误", original_error=e)
     """
-    extra_data: dict[str, Any] = {}
-    if original_error:
-        extra_data["original_error"] = str(original_error)
-
-    return UnifiedError(
+    return InternalServerError(
         message=message,
-        code=ErrorCode.INTERNAL_SERVER_ERROR,
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        severity=ErrorSeverity.CRITICAL,
-        extra_data=extra_data,
+        original_error=original_error,
     )
 
 
@@ -212,23 +192,16 @@ def service_unavailable(
     message: str = "服务暂时不可用",
     *,
     service_name: str | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建503服务不可用错误
 
     Examples:
         raise service_unavailable("数据库管理器不可用")
     """
-    extra_data: dict[str, Any] = {}
-    if service_name:
-        extra_data["service"] = service_name
-
-    return UnifiedError(
+    return ServiceUnavailableError(
         message=message,
-        code=ErrorCode.EXTERNAL_SERVICE_ERROR,
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        severity=ErrorSeverity.HIGH,
-        extra_data=extra_data,
+        service_name=service_name,
     )
 
 
@@ -236,23 +209,16 @@ def operation_not_allowed(
     message: str,
     *,
     reason: str | None = None,
-) -> UnifiedError:
+) -> BaseBusinessError:
     """
     创建业务操作不允许错误
 
     Examples:
         raise operation_not_allowed("合同状态不允许此操作")
     """
-    extra_data: dict[str, Any] = {}
-    if reason:
-        extra_data["reason"] = reason
-
-    return UnifiedError(
+    return OperationNotAllowedError(
         message=message,
-        code=ErrorCode.OPERATION_NOT_ALLOWED,
-        status_code=status.HTTP_400_BAD_REQUEST,
-        severity=ErrorSeverity.MEDIUM,
-        extra_data=extra_data,
+        reason=reason,
     )
 
 
@@ -267,8 +233,5 @@ __all__ = [
     "internal_error",
     "service_unavailable",
     "operation_not_allowed",
-    # Re-export core types for convenience
-    "UnifiedError",
-    "ErrorCode",
-    "ErrorSeverity",
+    "BaseBusinessError",
 ]

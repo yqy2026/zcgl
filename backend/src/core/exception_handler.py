@@ -151,6 +151,108 @@ class AuthenticationError(BaseBusinessError):
         )
 
 
+class InvalidRequestError(BaseBusinessError):
+    """错误请求异常"""
+
+    def __init__(
+        self,
+        message: str,
+        field: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        detail_payload: dict[str, Any] = {}
+        if field:
+            detail_payload["field"] = field
+        if details:
+            detail_payload.update(details)
+        super().__init__(
+            message=message,
+            code="INVALID_REQUEST",
+            details=detail_payload,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class ResourceConflictError(BaseBusinessError):
+    """资源冲突异常"""
+
+    def __init__(
+        self,
+        message: str,
+        resource_type: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        payload = {"resource_type": resource_type} if resource_type else {}
+        if details:
+            payload.update(details)
+        super().__init__(
+            message=message,
+            code="RESOURCE_CONFLICT",
+            details=payload,
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class ServiceUnavailableError(BaseBusinessError):
+    """服务不可用异常"""
+
+    def __init__(
+        self,
+        message: str,
+        service_name: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        payload = {"service": service_name} if service_name else {}
+        if details:
+            payload.update(details)
+        super().__init__(
+            message=message,
+            code="SERVICE_UNAVAILABLE",
+            details=payload,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+
+class OperationNotAllowedError(BaseBusinessError):
+    """业务操作不允许异常"""
+
+    def __init__(
+        self,
+        message: str,
+        reason: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        payload = {"reason": reason} if reason else {}
+        if details:
+            payload.update(details)
+        super().__init__(
+            message=message,
+            code="OPERATION_NOT_ALLOWED",
+            details=payload,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class InternalServerError(BaseBusinessError):
+    """内部服务器异常"""
+
+    def __init__(
+        self,
+        message: str,
+        original_error: Exception | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        payload = {"original_error": str(original_error)} if original_error else {}
+        if details:
+            payload.update(details)
+        super().__init__(
+            message=message,
+            code="INTERNAL_SERVER_ERROR",
+            details=payload,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 class FileProcessingError(BaseBusinessError):
     """文件处理异常"""
 
@@ -253,7 +355,6 @@ class ExceptionHandler:
         self, request: Request, exc: BaseBusinessError
     ) -> JSONResponse:
         """处理业务异常"""
-        # 清理异常详情中的不可序列化内容
         safe_details = self._sanitize_exception_details(exc.details)
 
         self.logger.warning(
@@ -266,7 +367,19 @@ class ExceptionHandler:
             },
         )
 
-        return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
+        response_data = {
+            "success": False,
+            "message": exc.message,
+            "error": {
+                "code": exc.code,
+                "message": exc.message,
+                "details": safe_details,
+            },
+            "timestamp": exc.timestamp.isoformat(),
+            "request_id": self._get_request_id(request),
+        }
+
+        return JSONResponse(status_code=exc.status_code, content=response_data)
 
     def _sanitize_exception_details(
         self, details: dict[str, Any]
@@ -342,7 +455,7 @@ class ExceptionHandler:
         elif isinstance(obj, bytes):
             # Handle bytes by decoding to string, or return hex representation
             try:
-                return obj.decode('utf-8')
+                return obj.decode("utf-8")
             except UnicodeDecodeError:
                 return obj.hex()
         elif isinstance(obj, dict):
@@ -359,27 +472,6 @@ class ExceptionHandler:
             }
         else:
             return obj
-
-    def handle_pydantic_validation_exception(  # pragma: no cover
-        self,
-        request: Request,
-        exc: RequestValidationError,  # pragma: no cover
-    ) -> JSONResponse:  # pragma: no cover
-        """处理Pydantic验证异常"""
-        field_errors: dict[str, list[str]] = {}  # pragma: no cover
-        for error in exc.errors():  # pragma: no cover
-            field_name = ".".join(str(loc) for loc in error["loc"])  # pragma: no cover
-            if field_name not in field_errors:  # pragma: no cover
-                field_errors[field_name] = []  # pragma: no cover
-            field_errors[field_name].append(error["msg"])  # pragma: no cover
-
-        business_exc = BusinessValidationError(  # pragma: no cover
-            message="数据验证失败",  # pragma: no cover
-            field_errors=field_errors,  # pragma: no cover
-            details={"errors": self._clean_for_serialization(exc.errors())},  # pragma: no cover
-        )  # pragma: no cover
-
-        return self.handle_business_exception(request, business_exc)  # pragma: no cover
 
     def handle_http_exception(
         self, request: Request, exc: HTTPException
@@ -433,29 +525,129 @@ class ExceptionHandler:
 
         return self.handle_business_exception(request, business_exc)
 
+    def _get_request_id(self, request: Request) -> str | None:
+        request_id = getattr(request.state, "request_id", None)
+        if isinstance(request_id, str) and request_id:
+            return request_id
+
+        header_id = request.headers.get("X-Request-ID")
+        if header_id:
+            return header_id
+
+        return request.headers.get("Request-ID")
+
 
 # 全局异常处理器实例
 exception_handler = ExceptionHandler()
 
+def not_found(
+    message: str = "资源未找到",
+    *,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+) -> BaseBusinessError:
+    if resource_type:
+        return ResourceNotFoundError(resource_type, resource_id)
+
+    return BaseBusinessError(
+        message=message,
+        code="RESOURCE_NOT_FOUND",
+        details={"resource_id": resource_id} if resource_id else {},
+        status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+
+def bad_request(
+    message: str,
+    *,
+    field: str | None = None,
+    details: str | dict[str, Any] | list[str] | None = None,
+) -> BaseBusinessError:
+    error_details: dict[str, Any] = {}
+    if details is not None:
+        error_details["details"] = details
+
+    return InvalidRequestError(
+        message=message,
+        field=field,
+        details=error_details or None,
+    )
+
+
+def validation_error(
+    message: str = "数据验证失败",
+    *,
+    field_errors: list[str] | dict[str, str] | None = None,
+) -> BaseBusinessError:
+    if isinstance(field_errors, dict):
+        normalized_field_errors = {
+            field: [error] for field, error in field_errors.items()
+        }
+    elif isinstance(field_errors, list):
+        normalized_field_errors = {"_errors": field_errors}
+    else:
+        normalized_field_errors = {}
+
+    return BusinessValidationError(
+        message=message,
+        field_errors=normalized_field_errors,
+    )
+
+
+def unauthorized(message: str = "未授权，请登录") -> BaseBusinessError:
+    return AuthenticationError(message=message)
+
+
+def forbidden(message: str = "权限不足") -> BaseBusinessError:
+    return PermissionDeniedError(message=message)
+
+
+def conflict(
+    message: str,
+    *,
+    resource_type: str | None = None,
+) -> BaseBusinessError:
+    return ResourceConflictError(
+        message=message,
+        resource_type=resource_type,
+    )
+
+
+def internal_error(
+    message: str = "服务器内部错误",
+    *,
+    original_error: Exception | None = None,
+) -> BaseBusinessError:
+    return InternalServerError(
+        message=message,
+        original_error=original_error,
+    )
+
+
+def service_unavailable(
+    message: str = "服务暂时不可用",
+    *,
+    service_name: str | None = None,
+) -> BaseBusinessError:
+    return ServiceUnavailableError(
+        message=message,
+        service_name=service_name,
+    )
+
+
+def operation_not_allowed(
+    message: str,
+    *,
+    reason: str | None = None,
+) -> BaseBusinessError:
+    return OperationNotAllowedError(
+        message=message,
+        reason=reason,
+    )
+
 
 def setup_exception_handlers(app: Any) -> None:
     """设置应用异常处理器"""
-    # 导入UnifiedError用于统一错误处理
-    from .unified_error_handler import UnifiedError
-
-    # UnifiedError异常处理器（来自统一错误处理系统）
-    @app.exception_handler(UnifiedError)  # type: ignore[misc]
-    async def unified_error_exception_handler(
-        request: Request, exc: UnifiedError
-    ) -> JSONResponse:
-        """处理UnifiedError异常，与api_errors.py配合使用"""
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "success": False,
-                "error": exc.to_dict(),
-            },
-        )
 
     # 业务异常处理器
     @app.exception_handler(BaseBusinessError)  # type: ignore[misc]
@@ -470,15 +662,6 @@ def setup_exception_handlers(app: Any) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         return exception_handler.handle_validation_exception(
-            request, exc
-        )  # pragma: no cover
-
-    # Pydantic验证异常处理器
-    @app.exception_handler(RequestValidationError)  # type: ignore[misc]
-    async def pydantic_validation_exception_handler(
-        request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
-        return exception_handler.handle_pydantic_validation_exception(
             request, exc
         )  # pragma: no cover
 

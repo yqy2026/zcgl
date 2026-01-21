@@ -25,7 +25,12 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import internal_error, not_found, service_unavailable
+from ...core.exception_handler import (
+    BaseBusinessError,
+    internal_error,
+    not_found,
+    service_unavailable,
+)
 
 if TYPE_CHECKING:
     from src.database import DatabaseManager
@@ -905,7 +910,7 @@ async def get_database_health_metrics(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取数据库健康指标失败: {str(e)}")
 
@@ -937,7 +942,7 @@ async def get_slow_queries(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取慢查询失败: {str(e)}")
 
@@ -1013,7 +1018,7 @@ async def optimize_database(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"数据库优化失败: {str(e)}")
 
@@ -1051,7 +1056,7 @@ async def cleanup_database(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"数据库清理失败: {str(e)}")
 
@@ -1090,7 +1095,7 @@ async def get_connection_pool_status(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取连接池状态失败: {str(e)}")
 

@@ -5,6 +5,8 @@
  * Integrates with Sentry in production, falls back to console logging in development.
  */
 
+import { createApiUrl } from '@/api/config';
+
 interface ErrorContext {
   component?: string;
   action?: string;
@@ -231,7 +233,7 @@ export async function flushErrorQueue(): Promise<void> {
 
   try {
     // Send to custom error reporting endpoint
-    await fetch('/api/v1/monitoring/errors', {
+    await fetch(createApiUrl('/monitoring/errors'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

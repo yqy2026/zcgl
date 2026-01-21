@@ -20,7 +20,13 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, forbidden, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    forbidden,
+    internal_error,
+    not_found,
+)
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
@@ -95,8 +101,7 @@ def create_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"创建合同失败: {str(e)}")
 
@@ -198,8 +203,7 @@ def update_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新合同失败: {str(e)}")
 
@@ -227,8 +231,7 @@ def delete_contract(
         rent_contract.remove(db, id=contract_id)
         return {"message": "合同删除成功"}
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除合同失败: {str(e)}")
 
@@ -263,7 +266,7 @@ def renew_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"合同续签失败: {str(e)}")
 
@@ -303,7 +306,7 @@ def terminate_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"合同终止失败: {str(e)}")
 
@@ -445,8 +448,7 @@ def generate_monthly_ledger(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"生成台账失败: {str(e)}")
 
@@ -532,8 +534,7 @@ def batch_update_rent_ledger(
             "ledgers": ledger_responses,
         }
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"批量更新失败: {str(e)}")
 
@@ -564,8 +565,7 @@ def update_rent_ledger(
         updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
         return updated_ledger
     except Exception as e:
-        # Don't catch UnifiedError - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新台账失败: {str(e)}")
 
@@ -598,8 +598,7 @@ def get_rent_statistics(
         )
         return statistics
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取统计信息失败: {str(e)}")
 
@@ -625,8 +624,7 @@ def get_ownership_statistics(
         )
         return statistics
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取权属方统计失败: {str(e)}")
 
@@ -652,8 +650,7 @@ def get_asset_statistics(
         )
         return statistics
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取资产统计失败: {str(e)}")
 
@@ -679,8 +676,7 @@ def get_monthly_statistics(
         )
         return statistics
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取月度统计失败: {str(e)}")
 
@@ -741,8 +737,7 @@ def export_statistics(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"导出统计数据失败: {str(e)}")
 
@@ -809,8 +804,7 @@ def download_excel_template(
             filename=result["file_name"],
         )
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"下载模板失败: {str(e)}")
 
@@ -851,8 +845,7 @@ def import_contracts_from_excel(
         return cast(dict[str, Any], result)
 
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"导入失败: {str(e)}")
 
@@ -888,8 +881,7 @@ def export_contracts_to_excel(
         )
 
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"导出失败: {str(e)}")
 

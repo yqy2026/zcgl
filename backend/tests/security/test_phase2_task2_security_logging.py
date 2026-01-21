@@ -29,7 +29,7 @@ class TestPermissionDeniedLogging:
             user_id="test_user_123",
             resource="organizations",
             action="access",
-            ip="192.168.1.100"
+            ip="192.168.1.100",
         )
 
         assert event is not None
@@ -50,13 +50,12 @@ class TestPermissionDeniedLogging:
                 user_id=f"user_{i}",
                 resource="organizations",
                 action="access",
-                ip="192.168.1.101"
+                ip="192.168.1.101",
             )
 
         # Check event count
         count = logger.get_event_count(
-            ip="192.168.1.101",
-            event_type=SecurityEventType.PERMISSION_DENIED
+            ip="192.168.1.101", event_type=SecurityEventType.PERMISSION_DENIED
         )
 
         assert count == 3
@@ -79,16 +78,18 @@ class TestPermissionDeniedLogging:
                 user_id=f"user_{i}",
                 ip_address="192.168.1.102",
                 event_metadata={"resource": "organizations", "action": "access"},
-                created_at=window_start + timedelta(seconds=i)
+                created_at=window_start + timedelta(seconds=i),
             )
             test_db.add(event)
         test_db.commit()
 
         # Should alert with 6 events (exceeds threshold of 5)
-        assert logger.should_alert(
-            ip="192.168.1.102",
-            event_type=SecurityEventType.PERMISSION_DENIED
-        ) is True
+        assert (
+            logger.should_alert(
+                ip="192.168.1.102", event_type=SecurityEventType.PERMISSION_DENIED
+            )
+            is True
+        )
 
     def test_should_not_alert_when_threshold_not_exceeded(self, test_db: Session):
         """Test that should_alert returns False when threshold is not exceeded"""
@@ -108,16 +109,18 @@ class TestPermissionDeniedLogging:
                 user_id=f"user_{i}",
                 ip_address="192.168.1.103",
                 event_metadata={"resource": "organizations", "action": "access"},
-                created_at=window_start + timedelta(seconds=i)
+                created_at=window_start + timedelta(seconds=i),
             )
             test_db.add(event)
         test_db.commit()
 
         # Should not alert with only 5 events (below threshold of 10)
-        assert logger.should_alert(
-            ip="192.168.1.103",
-            event_type=SecurityEventType.PERMISSION_DENIED
-        ) is False
+        assert (
+            logger.should_alert(
+                ip="192.168.1.103", event_type=SecurityEventType.PERMISSION_DENIED
+            )
+            is False
+        )
 
     def test_should_alert_with_custom_threshold(self, test_db: Session):
         """Test that should_alert respects custom threshold"""
@@ -137,23 +140,28 @@ class TestPermissionDeniedLogging:
                 user_id=f"user_{i}",
                 ip_address="192.168.1.104",
                 event_metadata={"resource": "organizations", "action": "access"},
-                created_at=window_start + timedelta(seconds=i)
+                created_at=window_start + timedelta(seconds=i),
             )
             test_db.add(event)
         test_db.commit()
 
         # Should not alert with default threshold (5)
-        assert logger.should_alert(
-            ip="192.168.1.104",
-            event_type=SecurityEventType.PERMISSION_DENIED
-        ) is False
+        assert (
+            logger.should_alert(
+                ip="192.168.1.104", event_type=SecurityEventType.PERMISSION_DENIED
+            )
+            is False
+        )
 
         # Should alert with custom threshold (2)
-        assert logger.should_alert(
-            ip="192.168.1.104",
-            event_type=SecurityEventType.PERMISSION_DENIED,
-            threshold=2
-        ) is True
+        assert (
+            logger.should_alert(
+                ip="192.168.1.104",
+                event_type=SecurityEventType.PERMISSION_DENIED,
+                threshold=2,
+            )
+            is True
+        )
 
 
 class TestSecurityAlertsEndpoint:
@@ -184,7 +192,7 @@ class TestSecurityAlertsEndpoint:
 
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -192,7 +200,9 @@ class TestSecurityAlertsEndpoint:
         assert "message" in data
         assert "should_alert" in data
 
-    def test_security_alerts_test_generates_events(self, test_client, test_admin, test_db: Session):
+    def test_security_alerts_test_generates_events(
+        self, test_client, test_admin, test_db: Session
+    ):
         """Test that /security/alerts/test generates security events"""
         # Get initial count
         initial_count = test_db.query(SecurityEvent).count()
@@ -221,7 +231,7 @@ class TestSecurityAlertsEndpoint:
         # Call test endpoint
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -258,7 +268,7 @@ class TestSecurityAlertsEndpoint:
 
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 403
@@ -299,7 +309,7 @@ class TestSecurityEventsEndpoint:
 
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -334,7 +344,7 @@ class TestSecurityEventsEndpoint:
         # Test first page
         response = test_client.get(
             "/api/v1/system/security/events?skip=0&limit=5",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -343,7 +353,9 @@ class TestSecurityEventsEndpoint:
         assert data["skip"] == 0
         assert data["limit"] == 5
 
-    def test_security_events_includes_event_details(self, test_client, test_admin, test_db: Session):
+    def test_security_events_includes_event_details(
+        self, test_client, test_admin, test_db: Session
+    ):
         """Test that /security/events returns complete event information"""
         # Create a test event
         logger = SecurityEventLogger(test_db)
@@ -351,7 +363,7 @@ class TestSecurityEventsEndpoint:
             user_id="test_user",
             resource="organizations",
             action="access",
-            ip="192.168.1.200"
+            ip="192.168.1.200",
         )
 
         # Create auth headers for admin
@@ -378,7 +390,7 @@ class TestSecurityEventsEndpoint:
         # Fetch events
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -428,7 +440,7 @@ class TestSecurityEventsEndpoint:
 
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 403
@@ -440,7 +452,9 @@ class TestSecurityEventsEndpoint:
 
         assert response.status_code == 401
 
-    def test_security_events_ordered_by_created_at_desc(self, test_client, test_admin, test_db: Session):
+    def test_security_events_ordered_by_created_at_desc(
+        self, test_client, test_admin, test_db: Session
+    ):
         """Test that /security/events returns events in descending order by created_at"""
         # Create multiple events with slight delay
         import time
@@ -453,7 +467,7 @@ class TestSecurityEventsEndpoint:
                 user_id=f"user_{i}",
                 resource="organizations",
                 action="access",
-                ip=f"192.168.1.{i}"
+                ip=f"192.168.1.{i}",
             )
             event_ids.append(event.id)
             time.sleep(0.01)  # Small delay to ensure different timestamps
@@ -482,7 +496,7 @@ class TestSecurityEventsEndpoint:
         # Fetch events
         response = test_client.get(
             "/api/v1/system/security/events?limit=10",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 200
@@ -497,6 +511,6 @@ class TestSecurityEventsEndpoint:
         # The last created event should appear first
         assert len(event_positions) == 3
         positions = list(event_positions.values())
-        assert positions[0] < positions[1] < positions[2], \
+        assert positions[0] < positions[1] < positions[2], (
             "Events should be ordered by created_at descending"
-
+        )

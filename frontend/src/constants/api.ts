@@ -9,75 +9,23 @@
  * 4. 版本控制友好
  */
 
-// ==================== API环境配置 ====================
-
-// 环境类型定义
-export type EnvironmentType = 'development' | 'production' | 'test';
-
-// API版本配置
-export const API_VERSIONS = {
-  V1: 'v1',
-  V2: 'v2',
-} as const;
-
-// 当前使用的版本
-export const CURRENT_API_VERSION = API_VERSIONS.V1; // 版本化API
-
-// 获取当前环境
-const getCurrentEnvironment = (): EnvironmentType => {
-  if (process.env.NODE_ENV === 'production') {
-    return 'production';
-  }
-  if (process.env.NODE_ENV === 'test') {
-    return 'test';
-  }
-  return 'development';
-};
-
-// API基础路径配置
-export const API_CONFIG = {
-  // 当前环境
-  ENVIRONMENT: getCurrentEnvironment(),
-
-  // API版本
-  VERSION: API_VERSIONS.V1,
-
-  // 基础路径配置
-  BASE_PATH: '',
-  BASE_URL: '/api/v1', // 统一使用版本化路径，与后端路由匹配
-  PROXY_PREFIX: '/api',
-
-  // 超时配置（毫秒）
-  TIMEOUTS: {
-    DEFAULT: 30000,
-    UPLOAD: 120000,
-    DOWNLOAD: 60000,
-  },
-
-  // 重试配置
-  RETRY: {
-    ATTEMPTS: 3,
-    DELAY: 1000,
-    BACKOFF_FACTOR: 2,
-  },
-} as const;
+import { API_BASE_URL, createApiUrl } from '@/api/config';
 
 // 构建完整API路径的工具函数
 export const buildApiPath = (path: string): string => {
-  // 统一使用版本化路径，与后端 /api/v1/{module}/{action} 模式匹配
-  return `${API_CONFIG.BASE_URL}${path}`;
+  return createApiUrl(path);
 };
 
 // 构建不带版本的API路径（用于兼容旧API）
 export const buildLegacyApiPath = (path: string): string => {
-  return `${API_CONFIG.BASE_URL}${path}`;
+  return `${API_BASE_URL}${path}`;
 };
 
 // ==================== API模块路径 ====================
 
 // 认证相关API
 export const AUTH_API = {
-  // 基础认证 (后端使用 /api/v1/auth/ 前缀)
+  // 基础认证 (后端使用 /auth/ 前缀)
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
   REGISTER: '/auth/register',
@@ -220,6 +168,7 @@ export const RENT_CONTRACT_API = {
 // 数据统计API
 export const STATISTICS_API = {
   // 基础统计
+  BASIC: '/statistics/basic',
   OVERVIEW: '/statistics/overview',
   ASSET_SUMMARY: '/statistics/asset-summary',
   FINANCIAL_SUMMARY: '/statistics/financial-summary',
@@ -237,6 +186,7 @@ export const STATISTICS_API = {
 
 // Excel导入导出API
 export const EXCEL_API = {
+  EXPORT: '/excel/export',
   // 导入操作
   IMPORT_ASSETS: '/excel/import/assets',
   IMPORT_CONTRACTS: '/excel/import/contracts',
@@ -402,7 +352,7 @@ export const AB_TESTING_API = {
  * @returns 完整的API URL
  */
 export const buildApiUrl = (path: string, params?: Record<string, string | number>): string => {
-  let url = `${API_CONFIG.BASE_PATH}${path}`;
+  let url = createApiUrl(path);
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -427,7 +377,7 @@ export const buildApiUrlWithPathParams = (
   pathParams: Record<string, string | number>,
   queryParams?: Record<string, string | number>
 ): string => {
-  let url = `${API_CONFIG.BASE_PATH}${pathTemplate}`;
+  let url = createApiUrl(pathTemplate);
 
   // 替换路径参数
   Object.entries(pathParams).forEach(([key, value]) => {

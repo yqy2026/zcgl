@@ -12,6 +12,7 @@ import type { AssetSearchParams } from '../../types/asset';
 import type { AnalyticsResponse } from '../../types/analytics';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
+import { createApiUrl } from '@/api/config';
 
 const logger = createLogger('AnalyticsDashboard');
 
@@ -54,7 +55,7 @@ import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
 import { ChartCard } from './AnalyticsCard';
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from './Charts';
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
-import PerformanceMonitor from '../Performance/PerformanceMonitor';
+import PerformanceMonitor from '../PerformanceMonitor';
 
 const { Title } = Typography;
 
@@ -85,18 +86,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       const params = new URLSearchParams();
       params.append('export_format', format);
 
-      if (filters.date_from) {
-        params.append('date_from', filters.date_from);
+      if (filters.start_date) {
+        params.append('date_from', filters.start_date);
       }
-      if (filters.date_to) {
-        params.append('date_to', filters.date_to);
+      if (filters.end_date) {
+        params.append('date_to', filters.end_date);
       }
       if (filters.include_deleted !== undefined) {
         params.append('include_deleted', String(filters.include_deleted));
       }
 
       // 调用导出API
-      const response = await fetch(`/api/v1/analytics/export?${params.toString()}`, {
+      const exportUrl = createApiUrl('/analytics/export');
+      const response = await fetch(`${exportUrl}?${params.toString()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 import type { DashboardData, ChartDataItem } from '@/types/api';
@@ -75,7 +75,7 @@ export class StatisticsService {
    * 获取仪表板数�?   */
   async getDashboardData(): Promise<DashboardData> {
     try {
-      const result = await enhancedApiClient.get<DashboardData>('/statistics/dashboard', {
+      const result = await apiClient.get<DashboardData>('/statistics/dashboard', {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -99,7 +99,7 @@ export class StatisticsService {
    */
   async getBasicStatistics(filters?: Filters): Promise<BasicStatistics> {
     try {
-      const result = await enhancedApiClient.get<BasicStatistics>('/statistics/basic', {
+      const result = await apiClient.get<BasicStatistics>('/statistics/basic', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -122,7 +122,7 @@ export class StatisticsService {
    */
   async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
     try {
-      const result = await enhancedApiClient.get<AreaStatistics>('/assets/statistics/summary', {
+      const result = await apiClient.get<AreaStatistics>('/assets/statistics/summary', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -146,7 +146,7 @@ export class StatisticsService {
    * 获取权属方分布数�?   */
   async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<ChartDataItem[]>(
+      const result = await apiClient.get<ChartDataItem[]>(
         '/statistics/ownership-distribution',
         {
           params: filters,
@@ -173,7 +173,7 @@ export class StatisticsService {
    */
   async getPropertyNatureDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<ChartDataItem[]>(
+      const result = await apiClient.get<ChartDataItem[]>(
         '/statistics/property-nature-distribution',
         {
           params: filters,
@@ -199,7 +199,7 @@ export class StatisticsService {
    * 获取使用状态分布数�?   */
   async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<ChartDataItem[]>(
+      const result = await apiClient.get<ChartDataItem[]>(
         '/statistics/usage-status-distribution',
         {
           params: filters,
@@ -226,7 +226,7 @@ export class StatisticsService {
    */
   async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<{ categories: ChartDataItem[] }>(
+      const result = await apiClient.get<{ categories: ChartDataItem[] }>(
         '/statistics/occupancy-rate/by-category',
         {
           params: { category_field: 'business_category', ...filters },
@@ -259,7 +259,7 @@ export class StatisticsService {
     filters?: Filters
   ): Promise<TrendDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<TrendDataItem[]>(`/statistics/trend/${metric}`, {
+      const result = await apiClient.get<TrendDataItem[]>(`/statistics/trend/${metric}`, {
         params: { period, ...filters },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -316,7 +316,7 @@ export class StatisticsService {
     filters?: Filters
   ): Promise<ComparisonData> {
     try {
-      const result = await enhancedApiClient.get<ComparisonData>(
+      const result = await apiClient.get<ComparisonData>(
         `/statistics/comparison/${metric}`,
         {
           params: { compare_type: compareType, ...filters },
@@ -383,7 +383,7 @@ export class StatisticsService {
     format: 'json' | 'excel' | 'pdf' = 'json'
   ): Promise<ReportGenerationResponse> {
     try {
-      const result = await enhancedApiClient.post<ReportGenerationResponse>(
+      const result = await apiClient.post<ReportGenerationResponse>(
         `/statistics/report/${reportType}`,
         {
           filters,
@@ -410,7 +410,7 @@ export class StatisticsService {
    * 获取报表状�?   */
   async getReportStatus(reportId: string): Promise<ReportGenerationResponse> {
     try {
-      const result = await enhancedApiClient.get<ReportGenerationResponse>(
+      const result = await apiClient.get<ReportGenerationResponse>(
         `/statistics/report/status/${reportId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -434,7 +434,7 @@ export class StatisticsService {
    */
   async downloadReport(reportId: string): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`/statistics/report/download/${reportId}`, {
+      const result = await apiClient.get<Blob>(`/statistics/report/download/${reportId}`, {
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
@@ -461,7 +461,7 @@ export class StatisticsService {
     filters?: Filters
   ): Promise<Array<{ name: string; value: number; rank: number }>> {
     try {
-      const result = await enhancedApiClient.get<
+      const result = await apiClient.get<
         Array<{ name: string; value: number; rank: number }>
       >(`/statistics/rankings/asset/${metric}`, {
         params: { limit, ...filters },
@@ -490,7 +490,7 @@ export class StatisticsService {
     metrics: Record<string, number[]>;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         regions: string[];
         metrics: Record<string, number[]>;
       }>('/statistics/regional-comparison', {
@@ -523,7 +523,7 @@ export class StatisticsService {
     efficiency: number;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         totalAssets: number;
         totalArea: number;
         averageOccupancyRate: number;

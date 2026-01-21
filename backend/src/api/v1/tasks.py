@@ -4,7 +4,12 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.task import excel_task_config_crud, task_crud
 from ...database import get_db
 from ...enums.task import TaskStatus
@@ -333,7 +338,7 @@ async def get_default_excel_config(
             raise not_found("未找到默认配置", resource_type="excel_config")
         return config
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取默认Excel配置失败: {str(e)}")
 

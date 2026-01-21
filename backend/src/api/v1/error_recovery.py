@@ -11,7 +11,12 @@ from fastapi import APIRouter, Body, Depends, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...middleware.auth import PermissionChecker
 from ...middleware.error_recovery_middleware import api_error_recovery
 from ...models.auth import User
@@ -228,7 +233,7 @@ async def update_recovery_strategy(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新策略失败: {str(e)}")
 
@@ -306,7 +311,7 @@ async def reset_circuit_breaker(
             }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"重置熔断器失败: {str(e)}")
 
@@ -412,7 +417,7 @@ async def test_error_recovery(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"测试失败: {str(e)}")
 

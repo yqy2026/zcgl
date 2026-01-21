@@ -5,7 +5,7 @@
 export { PDFImportProvider, usePDFImportContext, usePDFImportUpload } from './PDFImportContext';
 export { default as ProcessingStepsDisplay } from './ProcessingStepsDisplay';
 export { default as PDFUploadArea } from './PDFUploadArea';
-export { default as AdvancedOptionsPanel } from './AdvancedOptionsPanel';
+export { default as ImportOptionsPanel } from './ImportOptionsPanel';
 export { default as SystemInfoDisplay } from './SystemInfoDisplay';
 export { default as UploadStatsPanel } from './UploadStatsPanel';
 export { default as ActionButtons } from './ActionButtons';

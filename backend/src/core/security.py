@@ -1,5 +1,3 @@
-from typing import Any
-
 """
 文件验证和安全模块
 提供文件上传验证、请求限制和安全防护功能
@@ -11,7 +9,9 @@ import re
 from collections import defaultdict, deque
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Lock
 from time import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,23 @@ except ImportError:
     magic = None
     MAGIC_AVAILABLE = False
     logger.warning("python-magic模块不可用，文件类型检测功能将受限")
+
 from fastapi import Depends, Request, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..core.api_errors import bad_request, forbidden
 from ..core.config import get_config
-from ..core.exception_handler import BusinessValidationError
+from ..core.exception_handler import (
+    BusinessValidationError,
+    InvalidRequestError,
+    PermissionDeniedError,
+    RateLimitError,
+)
 from ..core.logging_security import security_auditor
+from ..crud.field_whitelist import get_whitelist_for_model
+from ..models.asset import Asset
+from ..models.contact import Contact
+from ..models.organization import Organization
+from ..models.rent_contract import RentContract
 
 
 class FileValidationConfig:
@@ -538,6 +548,162 @@ class RateLimiter:
         return int(result)
 
 
+class TokenBucketRateLimiter:
+    """基于令牌桶算法的速率限制器"""
+
+    def __init__(self) -> None:
+        self.buckets: dict[str, tuple[float, float]] = defaultdict(
+            lambda: (0.0, 0.0)
+        )
+        self.lock = Lock()
+        self.config = get_config("rate_limit", {})
+
+    def _get_bucket_config(self, key: str) -> tuple[float, float]:
+        """
+        获取桶配置
+
+        Args:
+            key: 限制键
+
+        Returns:
+            Tuple[float, float]: (容量, 令牌生成速率)
+        """
+        if ":pdf_import" in key:
+            return (10.0, 5.0 / 60.0)
+        if ":excel" in key:
+            return (20.0, 10.0 / 60.0)
+        if ":post" in key:
+            return (50.0, 30.0 / 60.0)
+        return (200.0, 100.0 / 60.0)
+
+    def check_rate_limit(self, key: str) -> bool:
+        """
+        检查请求是否超过频率限制
+
+        Args:
+            key: 限制键（如IP地址或用户ID）
+
+        Returns:
+            bool: 是否允许请求
+        """
+        with self.lock:
+            current_time = time()
+            tokens, last_time = self.buckets[key]
+
+            capacity, rate = self._get_bucket_config(key)
+
+            tokens += (current_time - last_time) * rate
+            tokens = min(tokens, capacity)
+
+            if tokens >= 1.0:
+                tokens -= 1.0
+                self.buckets[key] = (tokens, current_time)
+                return True
+
+            self.buckets[key] = (tokens, current_time)
+            security_auditor.log_security_event(
+                event_type="RATE_LIMIT_EXCEEDED",
+                message=f"Rate limit exceeded for {key}",
+                details={
+                    "key": key,
+                    "available_tokens": tokens,
+                    "bucket_capacity": capacity,
+                    "token_rate": rate,
+                },
+            )
+            return False
+
+    def get_remaining_tokens(self, key: str) -> float:
+        """
+        获取剩余令牌数
+
+        Args:
+            key: 限制键
+
+        Returns:
+            float: 剩余令牌数
+        """
+        with self.lock:
+            current_time = time()
+            tokens, last_time = self.buckets[key]
+
+            capacity, rate = self._get_bucket_config(key)
+
+            tokens += (current_time - last_time) * rate
+            tokens = min(tokens, capacity)
+
+            return tokens
+
+
+class AdaptiveRateLimiter:
+    """自适应速率限制器"""
+
+    def __init__(self) -> None:
+        self.token_bucket = TokenBucketRateLimiter()
+        self.suspicious_ips: defaultdict[str, int] = defaultdict(int)
+        self.blocked_ips: dict[str, float] = {}
+        self.config = get_config("adaptive_rate_limit", {})
+
+    def check_rate_limit(self, key: str, is_suspicious: bool = False) -> bool:
+        """
+        检查请求是否超过频率限制（自适应）
+
+        Args:
+            key: 限制键（如IP地址或用户ID）
+            is_suspicious: 是否为可疑请求
+
+        Returns:
+            bool: 是否允许请求
+        """
+        if self._is_ip_blocked(key):
+            return False
+
+        if is_suspicious:
+            self.suspicious_ips[key] += 1
+            if self.suspicious_ips[key] >= self.config.get(
+                "max_suspicious_requests", 5
+            ):
+                self._block_ip(key)
+                return False
+
+        return self.token_bucket.check_rate_limit(key)
+
+    def _is_ip_blocked(self, ip: str) -> bool:
+        """检查IP是否被封禁"""
+        if ip in self.blocked_ips:
+            block_time = self.blocked_ips[ip]
+            block_duration = self.config.get("block_duration", 3600)
+            if time() - block_time < block_duration:
+                return True
+            del self.blocked_ips[ip]
+            if ip in self.suspicious_ips:
+                del self.suspicious_ips[ip]
+        return False
+
+    def _block_ip(self, ip: str) -> None:
+        """封禁IP"""
+        self.blocked_ips[ip] = time()
+        security_auditor.log_security_event(
+            event_type="IP_BLOCKED",
+            message=f"IP blocked due to suspicious activity: {ip}",
+            details={
+                "ip": ip,
+                "suspicious_count": self.suspicious_ips[ip],
+                "block_time": time(),
+            },
+        )
+
+    def report_suspicious_activity(self, key: str) -> None:
+        """报告可疑活动"""
+        self.suspicious_ips[key] += 1
+        if self.suspicious_ips[key] >= self.config.get("max_suspicious_requests", 5):
+            self._block_ip(key)
+
+
+token_bucket_limiter = TokenBucketRateLimiter()
+adaptive_limiter = AdaptiveRateLimiter()
+
+
 class SecurityMiddleware:
     """安全中间件"""
 
@@ -562,11 +728,11 @@ class SecurityMiddleware:
 
         # 检查IP黑名单
         if self._is_ip_blacklisted(client_ip):
-            raise forbidden("IP地址已被封禁")
+            raise PermissionDeniedError("IP地址已被封禁")
 
         # 检查请求频率限制
         if not self.rate_limiter.check_rate_limit(client_ip):
-            raise bad_request("请求过于频繁，请稍后重试")
+            raise RateLimitError("请求过于频繁，请稍后重试")
 
         # 检查User-Agent
         user_agent = request.headers.get("User-Agent", "")
@@ -692,6 +858,212 @@ class RequestSecurity:
 
         except Exception:
             return False
+
+
+MODEL_REGISTRY: dict[str, type] = {
+    "Asset": Asset,
+    "RentContract": RentContract,
+    "Organization": Organization,
+    "Contact": Contact,
+}
+
+
+class FieldValidator:
+    """
+    统一的字段验证器
+
+    Prevents arbitrary field access attacks by validating all field names
+    against model-specific whitelists before allowing database queries.
+    """
+
+    @staticmethod
+    def _get_model_class(model_name: str) -> type:
+        """
+        Get model class from registry.
+
+        Args:
+            model_name: Model name (e.g., "Asset", "RentContract")
+
+        Returns:
+            Model class
+
+        Raises:
+            ValueError: If model not found in registry
+        """
+        if model_name not in MODEL_REGISTRY:
+            raise ValueError(
+                f"Unknown model: {model_name}. "
+                f"Valid models: {', '.join(MODEL_REGISTRY.keys())}"
+            )
+        return MODEL_REGISTRY[model_name]
+
+    @staticmethod
+    def validate_filter_fields(
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
+    ) -> tuple[list[str], list[str]]:
+        """
+        验证过滤字段是否在白名单中
+
+        Args:
+            model_name: 模型名称 (e.g., "Asset")
+            fields: 要验证的字段列表
+            raise_on_invalid: 是否在发现无效字段时抛出异常
+
+        Returns:
+            (valid_fields, invalid_fields) 元组
+
+        Raises:
+            HTTPException: 如果 raise_on_invalid=True 且发现无效字段
+        """
+        model_class = FieldValidator._get_model_class(model_name)
+        whitelist = get_whitelist_for_model(model_class)
+
+        valid_fields = []
+        invalid_fields = []
+
+        for field in fields:
+            if whitelist.can_filter(field):
+                valid_fields.append(field)
+            else:
+                invalid_fields.append(field)
+
+        if invalid_fields and raise_on_invalid:
+            logger.warning(
+                f"Blocked attempt to filter on unauthorized fields: {invalid_fields} "
+                f"for model {model_name}"
+            )
+            raise InvalidRequestError(
+                f"不允许查询字段: {', '.join(invalid_fields)}。"
+                "请检查 API 文档了解允许的过滤字段。",
+                details={
+                    "error": "Invalid filter fields",
+                    "invalid_fields": invalid_fields,
+                },
+            )
+
+        if invalid_fields:
+            logger.info(
+                f"Filtered out unauthorized fields: {invalid_fields} for {model_name}"
+            )
+
+        return valid_fields, invalid_fields
+
+    @staticmethod
+    def validate_search_fields(
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
+    ) -> tuple[list[str], list[str]]:
+        """
+        验证搜索字段是否在白名单中
+
+        Args:
+            model_name: 模型名称
+            fields: 要验证的字段列表
+            raise_on_invalid: 是否在发现无效字段时抛出异常
+
+        Returns:
+            (valid_fields, invalid_fields) 元组
+        """
+        model_class = FieldValidator._get_model_class(model_name)
+        whitelist = get_whitelist_for_model(model_class)
+
+        valid_fields = []
+        invalid_fields = []
+
+        for field in fields:
+            if whitelist.can_search(field):
+                valid_fields.append(field)
+            else:
+                invalid_fields.append(field)
+
+        if invalid_fields and raise_on_invalid:
+            logger.warning(
+                f"Blocked attempt to search on unauthorized fields: {invalid_fields} "
+                f"for model {model_name}"
+            )
+            raise InvalidRequestError(
+                f"不允许搜索字段: {', '.join(invalid_fields)}",
+                details={
+                    "error": "Invalid search fields",
+                    "invalid_fields": invalid_fields,
+                },
+            )
+
+        return valid_fields, invalid_fields
+
+    @staticmethod
+    def validate_sort_field(
+        model_name: str, field: str, raise_on_invalid: bool = True
+    ) -> bool:
+        """
+        验证排序字段是否在白名单中
+
+        Args:
+            model_name: 模型名称
+            field: 排序字段
+            raise_on_invalid: 是否在无效时抛出异常
+
+        Returns:
+            bool: 字段是否有效
+
+        Raises:
+            HTTPException: 如果字段无效且 raise_on_invalid=True
+        """
+        model_class = FieldValidator._get_model_class(model_name)
+        whitelist = get_whitelist_for_model(model_class)
+
+        is_valid = whitelist.can_sort(field)
+
+        if not is_valid and raise_on_invalid:
+            logger.warning(
+                f"Blocked attempt to sort on unauthorized field: {field} "
+                f"for model {model_name}"
+            )
+            raise InvalidRequestError(
+                f"不允许按字段排序: {field}",
+                field=field,
+                details={
+                    "error": "Invalid sort field",
+                },
+            )
+
+        return is_valid
+
+    @staticmethod
+    def validate_group_by_field(
+        model_name: str, field: str, raise_on_invalid: bool = True
+    ) -> bool:
+        """
+        验证 group_by 字段是否在白名单中
+
+        Note: Group_by uses filter_fields whitelist (same security level)
+
+        Args:
+            model_name: 模型名称
+            field: Group by 字段
+            raise_on_invalid: 是否在无效时抛出异常
+
+        Returns:
+            bool: 字段是否有效
+        """
+        model_class = FieldValidator._get_model_class(model_name)
+        whitelist = get_whitelist_for_model(model_class)
+
+        is_valid = whitelist.can_filter(field)
+
+        if not is_valid and raise_on_invalid:
+            logger.warning(
+                f"Blocked attempt to group by unauthorized field: {field} "
+                f"for model {model_name}"
+            )
+            raise InvalidRequestError(
+                f"不允许按字段分组: {field}",
+                field=field,
+                details={
+                    "error": "Invalid group_by field",
+                },
+            )
+
+        return is_valid
 
 
 # 创建全局实例

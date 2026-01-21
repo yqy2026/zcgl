@@ -18,39 +18,27 @@ def test_error_handling() -> tuple[bool, dict]:
     print("=" * 70)
 
     try:
-        from src.core.error_codes import (
-            APIResponse,
-            ErrorCode,
-            ResourceNotFoundException,
-        )
-        from src.core.error_handler import get_http_status_code
+        from src.core.api_errors import bad_request, not_found
+        from src.core.exception_handler import BaseBusinessError
 
-        # 验证错误码
-        assert ErrorCode.UNAUTHORIZED.code == 2000
-        assert ErrorCode.VALIDATION_ERROR.code == 3000
-        print("   ✅ 错误码定义正确 (25个)")
-
-        # 验证异常
         try:
-            raise ResourceNotFoundException("资产", "123")
-        except ResourceNotFoundException as e:
+            raise not_found("资产不存在")
+        except BaseBusinessError as e:
+            assert e.status_code == 404
             assert "资产不存在" in e.message
-            response = e.to_response()
-            assert response.success is False
-        print("   ✅ 异常处理正确")
+            error_dict = e.to_dict()
+            assert error_dict["success"] is False
+            assert error_dict["error"]["code"] == "RESOURCE_NOT_FOUND"
+        print("   ✅ 业务异常处理正确")
 
-        # 验证API响应格式
-        response = APIResponse(success=True, data={"id": 1})
-        data = response.to_dict()
-        assert data["success"] is True
-        print("   ✅ API响应格式正确")
+        try:
+            raise bad_request("参数无效", field="name")
+        except BaseBusinessError as e:
+            assert e.status_code == 400
+            assert e.details["field"] == "name"
+        print("   ✅ 错误细节构建正确")
 
-        # 验证HTTP状态码映射
-        assert get_http_status_code(ErrorCode.VALIDATION_ERROR) == 422
-        assert get_http_status_code(ErrorCode.UNAUTHORIZED) == 401
-        print("   ✅ HTTP状态码映射正确")
-
-        return True, {"tests": 4, "passed": 4}
+        return True, {"tests": 2, "passed": 2}
 
     except Exception as e:
         print(f"   ❌ 测试失败: {e}")

@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.rbac import permission_crud, role_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_admin
@@ -186,7 +191,7 @@ async def get_role(
 
         return RoleDetailResponse.model_validate(role)
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(str(e))
 
@@ -364,7 +369,7 @@ async def get_role_users(
             total=total,
         )
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(str(e))
 

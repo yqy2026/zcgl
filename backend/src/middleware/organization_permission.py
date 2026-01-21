@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
-from ..core.api_errors import bad_request, forbidden
+from ..core.exception_handler import bad_request, forbidden
 from ..core.role_normalizer import RoleNormalizer
 from ..core.security_event_logger import SecurityEventLogger
 from ..database import get_db
@@ -57,13 +57,14 @@ def require_organization_access(
                 user_id=str(current_user.id),
                 resource=f"organization:{organization_id}",
                 action="access",
-                ip=client_ip
+                ip=client_ip,
             )
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
                 # Log security alert when threshold exceeded
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     f"Security alert threshold exceeded for IP: {client_ip}, "
@@ -115,13 +116,14 @@ def require_organization_management(
                 user_id=str(current_user.id),
                 resource=f"organization:{organization_id}",
                 action="manage",
-                ip=client_ip
+                ip=client_ip,
             )
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
                 # Log security alert when threshold exceeded
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     f"Security alert threshold exceeded for IP: {client_ip}, "
@@ -268,13 +270,14 @@ class OrganizationPermissionChecker:
                 user_id=str(current_user.id),
                 resource="organizations",
                 action="access",
-                ip=client_ip
+                ip=client_ip,
             )
 
             # Check for alert threshold
             if security_logger.should_alert(ip=client_ip):
                 # Log security alert when threshold exceeded
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     f"Security alert threshold exceeded for IP: {client_ip}, "

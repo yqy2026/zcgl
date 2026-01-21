@@ -4,13 +4,13 @@ import { AuthStorage } from '@/utils/AuthStorage';
 
 // Mock API client
 vi.mock('@/api/client', () => ({
-  enhancedApiClient: {
+  apiClient: {
     post: vi.fn(),
     get: vi.fn(),
   },
 }));
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 
 describe('AuthService - Login with Permissions', () => {
   beforeEach(() => {
@@ -22,10 +22,7 @@ describe('AuthService - Login with Permissions', () => {
   it('should store permissions from login response', async () => {
     const mockResponse = {
       data: {
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        token_type: 'Bearer',
-        expires_in: 3600,
+        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
@@ -34,14 +31,18 @@ describe('AuthService - Login with Permissions', () => {
           role: 'admin',
           organization_id: 'org-123',
         },
-        permissions: [
-          { resource: 'assets', action: 'read', description: 'Read assets' },
-          { resource: 'users', action: 'write', description: 'Write users' },
-        ],
+        data: {
+          access_token: 'test-access-token',
+          refresh_token: 'test-refresh-token',
+          permissions: [
+            { resource: 'assets', action: 'read', description: 'Read assets' },
+            { resource: 'users', action: 'write', description: 'Write users' },
+          ],
+        },
       },
     };
 
-    vi.mocked(enhancedApiClient.post).mockResolvedValue({
+    vi.mocked(apiClient.post).mockResolvedValue({
       success: true,
       data: mockResponse.data,
     });
@@ -65,20 +66,21 @@ describe('AuthService - Login with Permissions', () => {
   it('should handle empty permissions array', async () => {
     const mockResponse = {
       data: {
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        token_type: 'Bearer',
-        expires_in: 3600,
+        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
           email: 'test@example.com',
         },
-        permissions: [],
+        data: {
+          access_token: 'test-access-token',
+          refresh_token: 'test-refresh-token',
+          permissions: [],
+        },
       },
     };
 
-    vi.mocked(enhancedApiClient.post).mockResolvedValue({
+    vi.mocked(apiClient.post).mockResolvedValue({
       success: true,
       data: mockResponse.data,
     });
@@ -95,20 +97,21 @@ describe('AuthService - Login with Permissions', () => {
   it('should handle missing permissions field (defaults to empty array)', async () => {
     const mockResponse = {
       data: {
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        token_type: 'Bearer',
-        expires_in: 3600,
+        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
           email: 'test@example.com',
         },
+        data: {
+          access_token: 'test-access-token',
+          refresh_token: 'test-refresh-token',
+        },
         // permissions field missing
       },
     };
 
-    vi.mocked(enhancedApiClient.post).mockResolvedValue({
+    vi.mocked(apiClient.post).mockResolvedValue({
       success: true,
       data: mockResponse.data,
     });

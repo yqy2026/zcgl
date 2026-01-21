@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import AssetList from '../AssetList';
 
 // Mock Ant Design components before importing
 vi.mock('antd', async () => {
@@ -83,14 +84,11 @@ vi.mock('@/utils/format', () => ({
 }));
 
 describe('AssetList - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../AssetList');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
+  it('应该能够导入组件', () => {
+    expect(AssetList).toBeDefined();
   });
 
-  it('组件应该是React函数组件', async () => {
-    const AssetList = (await import('../AssetList')).default;
+  it('组件应该是React函数组件', () => {
     expect(typeof AssetList).toBe('function');
   });
 });
@@ -125,9 +123,7 @@ describe('AssetList - 基础渲染测试', () => {
     pages: 1,
   };
 
-  it('应该渲染资产列表表格', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该渲染资产列表表格', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -149,9 +145,7 @@ describe('AssetList - 基础渲染测试', () => {
     expect(table.getAttribute('data-row-count')).toBe('1');
   });
 
-  it('应该显示加载状态', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该显示加载状态', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -172,9 +166,7 @@ describe('AssetList - 基础渲染测试', () => {
     expect(table.getAttribute('data-loading')).toBe('true');
   });
 
-  it('应该处理空数据', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该处理空数据', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -246,9 +238,7 @@ describe('AssetList - 数据渲染测试', () => {
     pages: 1,
   };
 
-  it('应该正确渲染多条资产记录', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该正确渲染多条资产记录', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -299,9 +289,7 @@ describe('AssetList - 交互操作测试', () => {
     pages: 1,
   };
 
-  it('应该接收并正确传递回调函数', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该接收并正确传递回调函数', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -362,9 +350,7 @@ describe('AssetList - 行选择测试', () => {
     pages: 1,
   };
 
-  it('应该支持行选择功能', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该支持行选择功能', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -389,9 +375,7 @@ describe('AssetList - 行选择测试', () => {
     expect(table.getAttribute('data-has-selection')).toBe('true');
   });
 
-  it('应该在没有onSelectChange时不显示行选择', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该在没有onSelectChange时不显示行选择', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -422,9 +406,7 @@ describe('AssetList - 分页测试', () => {
     pages: 5,
   };
 
-  it('应该正确显示分页信息', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该正确显示分页信息', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -494,9 +476,7 @@ describe('AssetList - 汇总行测试', () => {
     pages: 1,
   };
 
-  it('应该显示汇总行', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该显示汇总行', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -517,9 +497,7 @@ describe('AssetList - 汇总行测试', () => {
     expect(table.getAttribute('data-has-summary')).toBe('true');
   });
 
-  it('应该在没有数据时可以正常渲染', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该在没有数据时可以正常渲染', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -545,9 +523,7 @@ describe('AssetList - 汇总行测试', () => {
 });
 
 describe('AssetList - 属性传递测试', () => {
-  it('应该正确传递所有必需属性', async () => {
-    const AssetList = (await import('../AssetList')).default;
-
+  it('应该正确传递所有必需属性', () => {
     const mockData = {
       items: [],
       total: 0,

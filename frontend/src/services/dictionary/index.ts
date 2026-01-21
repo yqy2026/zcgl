@@ -33,7 +33,7 @@ import {
   type CreateEnumFieldValueRequest,
   type UpdateEnumFieldValueRequest,
 } from './manager';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
 
@@ -42,7 +42,7 @@ const serviceLogger = createLogger('dictionaryService');
 /**
  * 字典统计信息接口
  */
-export interface UnifiedDictionaryStats {
+export interface DictionaryStats {
   totalTypes: number;
   activeTypes: number;
   totalValues: number;
@@ -75,7 +75,7 @@ export interface DictionaryOperationResult {
  * 统一字典服务类
  * 整合基础功能和管理功能，提供简化的使用接口
  */
-class UnifiedDictionaryService {
+export class DictionaryService {
   // 基础功能 - 直接绑定到基础服务方法
   getOptions = baseDictionaryService.getOptions.bind(baseDictionaryService);
   getBatchOptions = baseDictionaryService.getBatchOptions.bind(baseDictionaryService);
@@ -120,8 +120,8 @@ class UnifiedDictionaryService {
       const types = baseDictionaryService.getAvailableTypes();
       return types.map(config => config.code);
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      serviceLogger.error(`获取字典类型失败: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      serviceLogger.error(`获取字典类型失败: ${apiError.message}`);
       return [];
     }
   }
@@ -169,11 +169,11 @@ class UnifiedDictionaryService {
         };
       }
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `快速创建字典失败 [${dictType}]: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `快速创建字典失败 [${dictType}]: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'quickCreate',
         timestamp: new Date().toISOString(),
       };
@@ -206,11 +206,11 @@ class UnifiedDictionaryService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `删除字典类型失败 [${dictType}]: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `删除字典类型失败 [${dictType}]: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'deleteType',
         timestamp: new Date().toISOString(),
       };
@@ -256,11 +256,11 @@ class UnifiedDictionaryService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `添加字典值失败 [${dictType}]: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `添加字典值失败 [${dictType}]: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'addValue',
         timestamp: new Date().toISOString(),
       };
@@ -270,7 +270,7 @@ class UnifiedDictionaryService {
   /**
    * 获取统一的字典统计信息
    */
-  async getDictionaryStats(): Promise<UnifiedDictionaryStats> {
+  async getDictionaryStats(): Promise<DictionaryStats> {
     try {
       const startTime = Date.now();
 
@@ -319,8 +319,8 @@ class UnifiedDictionaryService {
         },
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      serviceLogger.error(`获取字典统计失败: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      serviceLogger.error(`获取字典统计失败: ${apiError.message}`);
 
       // 返回默认统计信息
       return {
@@ -347,7 +347,7 @@ class UnifiedDictionaryService {
    */
   async getSystemDictionaries(dictType: string): Promise<SystemDictionary[]> {
     try {
-      const result = await enhancedApiClient.get<SystemDictionary[]>('/system/dictionaries', {
+      const result = await apiClient.get<SystemDictionary[]>('/system/dictionaries', {
         params: { dict_type: dictType },
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -360,8 +360,8 @@ class UnifiedDictionaryService {
 
       throw new Error(result.error ?? '获取系统字典失败');
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      serviceLogger.error(`获取系统字典失败 [${dictType}]: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      serviceLogger.error(`获取系统字典失败 [${dictType}]: ${apiError.message}`);
 
       // 如果系统字典API失败，尝试从枚举字段获取
       try {
@@ -399,8 +399,8 @@ class UnifiedDictionaryService {
 
       return [];
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      serviceLogger.error(`通过类型代码获取枚举值失败 [${typeCode}]: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      serviceLogger.error(`通过类型代码获取枚举值失败 [${typeCode}]: ${apiError.message}`);
       return [];
     }
   }
@@ -431,11 +431,11 @@ class UnifiedDictionaryService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `创建枚举值失败: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `创建枚举值失败: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'createEnumValue',
         timestamp: new Date().toISOString(),
       };
@@ -475,11 +475,11 @@ class UnifiedDictionaryService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `更新枚举值失败: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `更新枚举值失败: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'updateEnumValue',
         timestamp: new Date().toISOString(),
       };
@@ -512,11 +512,11 @@ class UnifiedDictionaryService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `删除枚举值失败: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `删除枚举值失败: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'deleteEnumValue',
         timestamp: new Date().toISOString(),
       };
@@ -565,11 +565,11 @@ class UnifiedDictionaryService {
 
       return result;
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+      const apiError = ApiErrorHandler.handleError(error);
       return {
         success: false,
-        message: `切换枚举值状态失败: ${enhancedError.message}`,
-        error: enhancedError.message,
+        message: `切换枚举值状态失败: ${apiError.message}`,
+        error: apiError.message,
         operationType: 'toggleEnumValueActive',
         timestamp: new Date().toISOString(),
       };
@@ -661,11 +661,11 @@ class UnifiedDictionaryService {
           failedCount++;
         }
       } catch (error) {
-        const enhancedError = ApiErrorHandler.handleError(error);
+        const apiError = ApiErrorHandler.handleError(error);
         results.push({
           success: false,
-          message: `批量操作失败: ${enhancedError.message}`,
-          error: enhancedError.message,
+          message: `批量操作失败: ${apiError.message}`,
+          error: apiError.message,
           operationType: `batch${operation}`,
           timestamp: new Date().toISOString(),
         });
@@ -767,8 +767,8 @@ class UnifiedDictionaryService {
 
       return results;
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      serviceLogger.error(`搜索字典值失败: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      serviceLogger.error(`搜索字典值失败: ${apiError.message}`);
       return [];
     }
   }
@@ -817,8 +817,8 @@ class UnifiedDictionaryService {
         return await this.exportEnumFieldData(dictType ?? 'all');
       }
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(`导出字典数据失败: ${enhancedError.message}`);
+      const apiError = ApiErrorHandler.handleError(error);
+      throw new Error(`导出字典数据失败: ${apiError.message}`);
     }
   }
 
@@ -896,7 +896,7 @@ class UnifiedDictionaryService {
 }
 
 // 创建统一服务实例
-export const dictionaryService = new UnifiedDictionaryService();
+export const dictionaryService = new DictionaryService();
 
 // 向后兼容：导出默认实例
 export default dictionaryService;

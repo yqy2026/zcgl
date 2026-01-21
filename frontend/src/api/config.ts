@@ -3,7 +3,7 @@
  *
  * 合并说明:
  * - 原 services/config.ts 的内容已合并至此
- * - 保留原有的 API_ENDPOINTS 和 apiRequest 函数
+ * - 保留原有的 apiRequest 函数
  * - 新增完整的错误代码、HTTP状态码、工具函数等
  * @lastModified 2025-12-24
  */
@@ -28,7 +28,7 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/a
 
 export const API_CONFIG = {
   // 基础配置
-  BASE_URL: '/api/v1',
+  BASE_URL: API_BASE_URL,
   TIMEOUT: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000')),
 
   // 重试配置
@@ -66,57 +66,6 @@ export const API_CONFIG = {
   // 请求头配置
   headers: {
     'Content-Type': 'application/json',
-  },
-} as const;
-
-// ==================== API端点配置 ====================
-
-export const API_ENDPOINTS = {
-  // 认证管理
-  auth: {
-    login: '/auth/login',
-    logout: '/auth/logout',
-    me: '/auth/me',
-    refresh: '/auth/refresh',
-  },
-
-  // 资产管理
-  assets: '/assets/',
-  assetDetail: (id: string) => `/assets/${id}`,
-
-  // 数据分析
-  analytics: {
-    comprehensive: '/analytics/comprehensive',
-    dashboard: '/analytics/dashboard',
-    assets: '/analytics/assets',
-  },
-
-  // 统计数据
-  statistics: {
-    basic: '/statistics/basic',
-    dashboard: '/statistics/dashboard',
-    summary: '/statistics/summary',
-  },
-
-  // 组织架构
-  organizations: {
-    list: '/organizations',
-    tree: '/organizations/tree',
-  },
-
-  // Excel导入导出
-  excel: {
-    export: '/excel/export',
-    import: '/excel/import',
-    import_optimized: '/excel/import/optimized',
-    template: '/excel/template',
-  },
-
-  // 备份恢复
-  backup: {
-    create: '/backup/create',
-    restore: '/backup/restore',
-    list: '/backup/list',
   },
 } as const;
 

@@ -12,8 +12,13 @@ from fastapi import APIRouter, Depends, File, Path, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
-from ...core.exception_handler import ResourceNotFoundError
+from ...core.exception_handler import (
+    BaseBusinessError,
+    ResourceNotFoundError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.asset import asset_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_permission
@@ -185,7 +190,7 @@ async def download_asset_attachment(
     except ResourceNotFoundError:
         raise
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"下载附件失败: {str(e)}")
 
@@ -223,6 +228,6 @@ async def delete_asset_attachment(
     except ResourceNotFoundError:
         raise
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除附件失败: {str(e)}")

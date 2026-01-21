@@ -34,7 +34,7 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request
+from ...core.exception_handler import bad_request
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionRequest, ExtractionResponse
 from .dependencies import get_optional_services, get_pdf_import_service

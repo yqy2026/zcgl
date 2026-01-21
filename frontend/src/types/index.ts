@@ -51,14 +51,14 @@ export type {
 
   // 错误处理
   ApiErrorType,
-  EnhancedApiError,
+  ApiClientError,
 
   // 重试和缓存
   RetryConfig,
   CacheConfig,
 
   // 客户端配置
-  EnhancedApiClientConfig,
+  ApiClientConfig,
 } from './apiResponse';
 
 // ==================== 通用类型 ====================
@@ -221,7 +221,7 @@ export type {} from // PDF 导入相关
 // EnhancedPdfImportResult, // Does not exist
 // ParsedFieldData, // Does not exist
 // FieldExtractionResult, // Does not exist
-'./enhancedPdfImport';
+'./pdfImport';
 
 // ==================== 类型守卫 ====================
 

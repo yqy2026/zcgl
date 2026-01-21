@@ -99,7 +99,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
   useEffect(() => {
     const loadSystemInfo = async () => {
       try {
-        const info = await pdfImportService.getEnhancedSystemInfo();
+        const info = await pdfImportService.getPdfImportSystemInfo();
         setSystemInfo(info);
       } catch {
         // Failed to get system info
@@ -161,7 +161,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
 
       progressTimerRef.current = setInterval(async () => {
         try {
-          const result = await pdfImportService.getEnhancedProgress(sessionId);
+          const result = await pdfImportService.getPdfImportProgress(sessionId);
 
           if (result.success && result.session_status) {
             setProcessingProgress(result.session_status);
@@ -217,7 +217,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
           });
         }, 200);
 
-        const response = await pdfImportService.uploadPDFFileEnhanced(
+        const response = await pdfImportService.uploadPdfFileWithOptions(
           file,
           processingOptions,
           abortControllerRef.current.signal
@@ -230,17 +230,10 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
           setCurrentSession(response.session_id!);
           startProgressPolling(response.session_id!);
 
-          // 使用类型安全的方式访问enhanced_status
-          const enhancedStatus = (
-            response as unknown as {
-              enhanced_status?: {
-                final_results?: { extraction_quality?: { processing_methods?: string[] } };
-              };
-            }
-          ).enhanced_status;
-          if (enhancedStatus !== undefined && enhancedStatus !== null) {
+          const processingStatus = response.processing_status;
+          if (processingStatus !== undefined && processingStatus !== null) {
             const processingMethods =
-              enhancedStatus.final_results?.extraction_quality?.processing_methods;
+              processingStatus.final_results?.extraction_quality?.processing_methods;
             setUploadStats({
               uploadSpeed: file.size / 1024 / (Date.now() / 1000),
               estimatedTime: 30,
@@ -295,7 +288,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
     }
 
     if (currentSession !== null && currentSession !== '') {
-      pdfImportService.cancelEnhancedSession(currentSession, '用户取消');
+      pdfImportService.cancelPdfImportSession(currentSession, '用户取消');
     }
 
     if (progressTimerRef.current) {

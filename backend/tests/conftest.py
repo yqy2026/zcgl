@@ -24,7 +24,9 @@ if not test_secret_key or any(
     # 53字符字符串，包含大写、小写、数字和特殊字符，满足Task 7验证器要求
     os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6!@#$%^&*"
     # 设置测试数据加密密钥 (43字节 + 版本后缀，满足32字节最小要求)
-    os.environ["DATA_ENCRYPTION_KEY"] = "TestEncryptionKeyWithSpecialChars123!@#XyZ456:1"
+    os.environ["DATA_ENCRYPTION_KEY"] = (
+        "TestEncryptionKeyWithSpecialChars123!@#XyZ456:1"
+    )
 
 os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"

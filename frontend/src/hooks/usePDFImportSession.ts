@@ -15,7 +15,7 @@ import type {
   ConfirmedContractData,
   ConfirmImportResponse,
 } from '@/services/pdfImportService';
-import type { ProcessingSession } from '@/types/enhancedPdfImport';
+import type { ProcessingSession } from '@/types/pdfImport';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 

@@ -1,6 +1,6 @@
 // import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import type { AuthResponse, StandardApiResponse } from '../types/apiResponse';
 
@@ -26,7 +26,7 @@ export class AuthService {
       logger.debug('开始登录流程', { username: credentials.username });
 
       // 使用增强型API客户端，自动处理响应提取和错误
-      const result = await enhancedApiClient.post(AUTH_API.LOGIN, credentials, {
+      const result = await apiClient.post(AUTH_API.LOGIN, credentials, {
         retry: {
           maxAttempts: 3,
           delay: 1000,
@@ -82,12 +82,13 @@ export class AuthService {
 
       logger.debug('用户数据解析成功', { user });
 
-      // Tokens are now stored in httpOnly cookies by backend
-      // No need to store tokens in localStorage
-      // For backward compatibility, keep response structure
+      // Backend returns tokens at root level in responseData.tokens
+      // Format: { user, tokens: { access_token, refresh_token, token_type, expires_in }, permissions, message }
+      const tokens = responseData.tokens;
 
-      if (responseData.data.access_token && responseData.data.refresh_token) {
-        const { access_token: accessToken, refresh_token: refreshToken } = responseData.data;
+      if (tokens?.access_token && tokens.refresh_token) {
+        const { access_token: accessToken, refresh_token: refreshToken } = tokens;
+        const permissions = responseData.permissions ?? [];
 
         // Store in AuthStorage with permissions from API
         // Note: Tokens are in httpOnly cookies, but we keep metadata
@@ -102,32 +103,33 @@ export class AuthService {
             role: user.role,
             organization_id: user.organization_id,
           },
-          permissions: responseData.data.permissions ?? [], // Use permissions from API
+          permissions,
         };
 
         AuthStorage.setAuthData(authData);
 
+        // Save user and permissions to localStorage for AuthContext to restore
         // Legacy keys removed - tokens are now in httpOnly cookies
-      } else {
-        throw new Error('Access token or refresh token not found');
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('permissions', JSON.stringify(permissions));
+
+        return {
+          success: true,
+          data: {
+            user,
+            tokens: {
+              access_token: accessToken,
+              refresh_token: refreshToken,
+              token_type: tokens.token_type ?? 'Bearer',
+              expires_in: tokens.expires_in ?? 3600,
+            },
+            permissions,
+          },
+          message: (responseData.message as string) || '登录成功',
+        };
       }
 
-      localStorage.setItem('user', JSON.stringify(user));
-
-      return {
-        success: true,
-        data: {
-          user,
-          tokens: {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            token_type: 'Bearer',
-            expires_in: 3600, // 默认1小时
-          },
-          permissions: responseData.data.permissions ?? [], // Return actual permissions
-        },
-        message: (responseData.message as string) || '登录成功',
-      };
+      throw new Error('Access token or refresh token not found');
     } catch (error) {
       // 使用统一的错误处理器
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -139,7 +141,7 @@ export class AuthService {
   static async logout(): Promise<void> {
     try {
       // 使用增强型API客户端，即使失败也会清除本地存储
-      await enhancedApiClient.post(AUTH_API.LOGOUT, undefined, {
+      await apiClient.post(AUTH_API.LOGOUT, undefined, {
         retry: false, // 登出不重试
       });
     } catch (error) {
@@ -155,7 +157,7 @@ export class AuthService {
   static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
     try {
       // Refresh token is now in httpOnly cookie, sent automatically
-      const result = await enhancedApiClient.post(
+      const result = await apiClient.post(
         AUTH_API.REFRESH,
         {}, // Empty body - refresh token is in cookie
         {
@@ -195,7 +197,7 @@ export class AuthService {
   // 获取当前用户信息
   static async getCurrentUser(): Promise<User> {
     try {
-      const result = await enhancedApiClient.get(AUTH_API.PROFILE, {
+      const result = await apiClient.get(AUTH_API.PROFILE, {
         cache: false, // 用户信息不缓存
         retry: {
           maxAttempts: 2,
@@ -233,7 +235,7 @@ export class AuthService {
   static async verifyAuth(): Promise<boolean> {
     try {
       // 调用/me端点验证cookie是否有效
-      await enhancedApiClient.get(AUTH_API.PROFILE, {
+      await apiClient.get(AUTH_API.PROFILE, {
         cache: false, // 不使用缓存
         retry: false, // 验证失败不重试
       });
@@ -297,7 +299,7 @@ export class AuthService {
   // 修改密码
   static async changePassword(oldPassword: string, newPassword: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.post(
+      const result = await apiClient.post(
         AUTH_API.CHANGE_PASSWORD,
         {
           oldPassword,
@@ -325,7 +327,7 @@ export class AuthService {
     avatar?: string;
   }): Promise<User> {
     try {
-      const result = await enhancedApiClient.put(AUTH_API.PROFILE, profileData, {
+      const result = await apiClient.put(AUTH_API.PROFILE, profileData, {
         retry: {
           maxAttempts: 2,
           delay: 500,
@@ -350,7 +352,7 @@ export class AuthService {
   // 获取用户活动记录
   static async getUserActivity(limit: number = 20): Promise<UserActivity[]> {
     try {
-      const result = await enhancedApiClient.get(AUTH_API.SESSIONS, {
+      const result = await apiClient.get(AUTH_API.SESSIONS, {
         params: { limit },
         cache: true,
       });

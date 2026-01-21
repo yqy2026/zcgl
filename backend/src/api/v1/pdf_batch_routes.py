@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, not_found, service_unavailable
+from ...core.exception_handler import bad_request, not_found, service_unavailable
 from ...core.config import settings
 from ...core.response_handler import success_response
 from ...database import get_db

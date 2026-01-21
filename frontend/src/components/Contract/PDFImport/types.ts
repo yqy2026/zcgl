@@ -5,7 +5,7 @@
 import type { UploadFile } from 'antd';
 import type { SessionProgress, SystemInfoResponse } from '../../../services/pdfImportService';
 
-export interface EnhancedPDFImportUploaderProps {
+export interface PdfImportUploaderProps {
   onUploadSuccess: (sessionId: string, fileInfo: UploadFile) => void;
   onUploadError: (error: string) => void;
   maxSize?: number; // MB

@@ -12,7 +12,12 @@ from fastapi import APIRouter, Depends, Request, Response
 from jose import jwt
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, internal_error, unauthorized
+from ....core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    unauthorized,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +170,7 @@ async def login(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         # Log the error for debugging (internal use only)
         logger.error(f"Authentication error: {str(e)}", exc_info=True)

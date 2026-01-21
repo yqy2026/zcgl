@@ -8,7 +8,7 @@ import React from 'react';
 import { Card, Button, Space, Typography, Tag } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { COLORS } from '@/styles/colorMap';
-import type { ProcessingSession } from '@/types/enhancedPdfImport';
+import type { ProcessingSession } from '@/types/pdfImport';
 
 const { Title, Paragraph, Text } = Typography;
 

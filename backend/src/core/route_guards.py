@@ -8,7 +8,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from .api_errors import not_found
+from .exception_handler import not_found
 
 
 def is_debug_mode() -> bool:

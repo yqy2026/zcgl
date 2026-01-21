@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import AssetImport from '../AssetImport';
 
 // Mock enhancedApiClient before importing
 vi.mock('@/api/client', () => ({
@@ -179,22 +180,17 @@ vi.mock('@ant-design/icons', () => ({
 }));
 
 describe('AssetImport - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../AssetImport');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
+  it('应该能够导入组件', () => {
+    expect(AssetImport).toBeDefined();
   });
 
-  it('组件应该是React函数组件', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
+  it('组件应该是React函数组件', () => {
     expect(typeof AssetImport).toBe('function');
   });
 });
 
 describe('AssetImport - 初始渲染测试', () => {
-  it('应该渲染文件上传界面（步骤0）', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该渲染文件上传界面（步骤0）', () => {
     render(React.createElement(AssetImport));
 
     const steps = screen.getByTestId('steps');
@@ -202,9 +198,7 @@ describe('AssetImport - 初始渲染测试', () => {
     expect(screen.getByTestId('upload-dragger')).toBeTruthy();
   });
 
-  it('应该显示导入说明', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该显示导入说明', () => {
     render(React.createElement(AssetImport));
 
     const alert = screen.getByTestId('alert');
@@ -214,17 +208,13 @@ describe('AssetImport - 初始渲染测试', () => {
 });
 
 describe('AssetImport - 按钮和UI元素测试', () => {
-  it('应该有下载模板按钮', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该有下载模板按钮', () => {
     render(React.createElement(AssetImport));
 
     expect(screen.getByTestId('button-下载Excel模板')).toBeTruthy();
   });
 
-  it('应该显示3个步骤指示器', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该显示3个步骤指示器', () => {
     render(React.createElement(AssetImport));
 
     const steps = screen.getByTestId('steps');
@@ -235,17 +225,13 @@ describe('AssetImport - 按钮和UI元素测试', () => {
 });
 
 describe('AssetImport - 组件状态测试', () => {
-  it('应该可以正常渲染而不抛出错误', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该可以正常渲染而不抛出错误', () => {
     expect(() => {
       render(React.createElement(AssetImport));
     }).not.toThrow();
   });
 
-  it('初始状态应该是步骤0', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('初始状态应该是步骤0', () => {
     render(React.createElement(AssetImport));
 
     const steps = screen.getByTestId('steps');
@@ -254,9 +240,7 @@ describe('AssetImport - 组件状态测试', () => {
 });
 
 describe('AssetImport - 必要UI元素测试', () => {
-  it('应该包含所有必要的UI元素', async () => {
-    const AssetImport = (await import('../AssetImport')).default;
-
+  it('应该包含所有必要的UI元素', () => {
     render(React.createElement(AssetImport));
 
     // 上传区域

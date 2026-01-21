@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {} from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Routes } from 'react-router-dom';
+import LazyRoute from '../LazyRoute';
 
 // Mock dependencies
 vi.mock('@/components/Loading', () => ({
@@ -50,22 +51,17 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('LazyRoute - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../LazyRoute');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
+  it('应该能够导入组件', () => {
+    expect(LazyRoute).toBeDefined();
   });
 
-  it('组件应该是React函数组件', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('组件应该是React函数组件', () => {
     expect(typeof LazyRoute).toBe('function');
   });
 });
 
 describe('LazyRoute - 属性测试', () => {
-  it('应该支持component属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该支持component属性', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 验证组件可以接收必要属性
@@ -78,9 +74,7 @@ describe('LazyRoute - 属性测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持fallback属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该支持fallback属性', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const customFallback = <div>Custom Loading</div>;
@@ -95,9 +89,7 @@ describe('LazyRoute - 属性测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持preload属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该支持preload属性', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const preloadFn = vi.fn();
@@ -112,9 +104,7 @@ describe('LazyRoute - 属性测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持permissions属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该支持permissions属性', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const permissions = [{ resource: 'asset', action: 'view' }];
@@ -129,9 +119,7 @@ describe('LazyRoute - 属性测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持errorBoundary属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该支持errorBoundary属性', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const elementWithBoundary = React.createElement(LazyRoute, {
@@ -154,9 +142,7 @@ describe('LazyRoute - 属性测试', () => {
 });
 
 describe('LazyRoute - 默认值测试', () => {
-  it('应该有默认的fallback', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('应该有默认的fallback', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 不提供fallback，应该使用默认值
@@ -169,9 +155,7 @@ describe('LazyRoute - 默认值测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('errorBoundary默认应该为true', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
-
+  it('errorBoundary默认应该为true', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 不提供errorBoundary，应该默认为true
@@ -194,8 +178,7 @@ describe('LazyRoute - 属性验证', () => {
     vi.clearAllMocks();
   });
 
-  it('应该传递lazy属性给组件', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该传递lazy属性给组件', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
 
     const element = React.createElement(LazyRoute, {
@@ -207,8 +190,7 @@ describe('LazyRoute - 属性验证', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该传递preload函数', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该传递preload函数', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
     const preloadFn = vi.fn();
 
@@ -221,8 +203,7 @@ describe('LazyRoute - 属性验证', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该传递自定义fallback', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该传递自定义fallback', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
     const customFallback = <div>Custom Loading</div>;
 
@@ -245,8 +226,7 @@ describe('LazyRoute - 边界情况', () => {
     vi.clearAllMocks();
   });
 
-  it('应该处理undefined权限', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该处理undefined权限', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {
@@ -258,8 +238,7 @@ describe('LazyRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理空权限数组', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该处理空权限数组', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {
@@ -271,8 +250,7 @@ describe('LazyRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理多个权限', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该处理多个权限', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Multi</div> }));
 
     const element = React.createElement(LazyRoute, {
@@ -287,8 +265,7 @@ describe('LazyRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理空路径', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default;
+  it('应该处理空路径', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {

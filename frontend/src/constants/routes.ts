@@ -21,6 +21,9 @@ export const ASSET_ROUTES = {
   NEW: '/assets/new',
   IMPORT: '/assets/import',
   ANALYTICS: '/assets/analytics',
+  ANALYTICS_SIMPLE: '/assets/analytics-simple',
+  DETAIL_PATH: '/assets/:id',
+  EDIT_PATH: '/assets/:id/edit',
   DETAIL: (id: string) => `/assets/${id}`,
   EDIT: (id: string) => `/assets/${id}/edit`,
 } as const;
@@ -30,9 +33,14 @@ export const RENTAL_ROUTES = {
   CONTRACTS: {
     LIST: '/rental/contracts',
     NEW: '/rental/contracts/new',
+    CREATE: '/rental/contracts/create',
     PDF_IMPORT: '/rental/contracts/pdf-import',
+    DETAIL_PATH: '/rental/contracts/:id',
+    EDIT_PATH: '/rental/contracts/:id/edit',
+    RENEW_PATH: '/rental/contracts/:id/renew',
     DETAIL: (id: string) => `/rental/contracts/${id}`,
     EDIT: (id: string) => `/rental/contracts/${id}/edit`,
+    RENEW: (id: string) => `/rental/contracts/${id}/renew`,
   },
   LEDGER: '/rental/ledger',
   STATISTICS: '/rental/statistics',
@@ -53,6 +61,26 @@ export const SYSTEM_ROUTES = {
 export const OTHER_ROUTES = {
   OWNERSHIP: '/ownership',
   PROJECT: '/project',
+} as const;
+
+export const OWNERSHIP_ROUTES = {
+  LIST: '/ownership',
+  DETAIL_PATH: '/ownership/:id',
+  EDIT_PATH: '/ownership/:id/edit',
+  DETAIL: (id: string) => `/ownership/${id}`,
+  EDIT: (id: string) => `/ownership/${id}/edit`,
+} as const;
+
+export const PROJECT_ROUTES = {
+  LIST: '/project',
+  DETAIL_PATH: '/project/:id',
+  EDIT_PATH: '/project/:id/edit',
+  DETAIL: (id: string) => `/project/${id}`,
+  EDIT: (id: string) => `/project/${id}/edit`,
+} as const;
+
+export const PROFILE_ROUTES = {
+  PROFILE: '/profile',
 } as const;
 
 // 页面重定向配置
@@ -206,6 +234,9 @@ export const ROUTES = {
   RENTAL_ROUTES,
   SYSTEM_ROUTES,
   OTHER_ROUTES,
+  OWNERSHIP_ROUTES,
+  PROJECT_ROUTES,
+  PROFILE_ROUTES,
   REDIRECTS,
   NOT_FOUND_REDIRECT,
 } as const;

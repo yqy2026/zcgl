@@ -26,7 +26,7 @@ export default defineConfig({
 
     // 测试文件匹配
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules/', 'dist/', 'e2e/'],
+    exclude: ['node_modules/', 'dist/', 'e2e/', 'src/e2e/'],
 
     // 超时配置（毫秒）
     testTimeout: 10000,

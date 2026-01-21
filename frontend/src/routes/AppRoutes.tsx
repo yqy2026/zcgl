@@ -1,4 +1,13 @@
 import React from 'react';
+import {
+  ASSET_ROUTES,
+  RENTAL_ROUTES,
+  OWNERSHIP_ROUTES,
+  PROJECT_ROUTES,
+  PROFILE_ROUTES,
+  SYSTEM_ROUTES,
+  BASE_PATHS,
+} from '../constants/routes';
 
 /**
  * 受保护的路由配置
@@ -8,135 +17,135 @@ import React from 'react';
 export const protectedRoutes = [
   // 仪表板 - 首页
   {
-    path: '/dashboard',
+    path: BASE_PATHS.DASHBOARD,
     element: React.lazy(() => import('../pages/Dashboard/DashboardPage')),
   },
 
   // 资产管理模块 - 注意路由顺序，更具体的路径要在前面
   {
-    path: '/assets/new',
+    path: ASSET_ROUTES.NEW,
     element: React.lazy(() => import('../pages/Assets/AssetCreatePage')),
   },
   {
-    path: '/assets/import',
+    path: ASSET_ROUTES.IMPORT,
     element: React.lazy(() => import('../pages/Assets/AssetImportPage')),
   },
   {
-    path: '/assets/analytics',
+    path: ASSET_ROUTES.ANALYTICS,
     element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage')),
   },
   {
-    path: '/assets/analytics-simple',
+    path: ASSET_ROUTES.ANALYTICS_SIMPLE,
     element: React.lazy(() => import('../pages/Assets/SimpleAnalyticsPage')),
   },
   {
-    path: '/assets/list',
+    path: ASSET_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Assets/AssetListPage')),
   },
   {
-    path: '/assets/:id',
+    path: ASSET_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Assets/AssetDetailPage')),
   },
 
   // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
   {
-    path: '/rental/contracts',
+    path: RENTAL_ROUTES.CONTRACTS.LIST,
     element: React.lazy(() => import('../pages/Rental/ContractListPage')),
   },
   {
-    path: '/rental/contracts/new', // 具体路由 - 创建合同
+    path: RENTAL_ROUTES.CONTRACTS.NEW, // 具体路由 - 创建合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {
-    path: '/rental/contracts/create', // 具体路由 - 创建合同（备用）
+    path: RENTAL_ROUTES.CONTRACTS.CREATE, // 具体路由 - 创建合同（备用）
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {
-    path: '/rental/contracts/pdf-import', // 具体路由 - PDF导入
+    path: RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, // 具体路由 - PDF导入
     element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
   },
   {
-    path: '/rental/contracts/:id/renew', // 具体路由 - 续签合同（必须在 :id/edit 之前）
+    path: RENTAL_ROUTES.CONTRACTS.RENEW_PATH, // 具体路由 - 续签合同（必须在 :id/edit 之前）
     element: React.lazy(() => import('../pages/Rental/ContractRenewPage')),
   },
   {
-    path: '/rental/contracts/:id', // 动态路由 - 合同详情页
+    path: RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, // 动态路由 - 合同详情页
     element: React.lazy(() => import('../pages/Rental/ContractDetailPage')),
   },
   {
-    path: '/rental/contracts/:id/edit', // 动态路由 - 编辑合同
+    path: RENTAL_ROUTES.CONTRACTS.EDIT_PATH, // 动态路由 - 编辑合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
   },
   {
-    path: '/rental/ledger',
+    path: RENTAL_ROUTES.LEDGER,
     element: React.lazy(() => import('../pages/Rental/RentLedgerPage')),
   },
   {
-    path: '/rental/statistics',
+    path: RENTAL_ROUTES.STATISTICS,
     element: React.lazy(() => import('../pages/Rental/RentStatisticsPage')),
   },
 
   // 权属方管理 - 注意路由顺序，详情页必须在列表页之前
   {
-    path: '/ownership/:id/edit',
+    path: OWNERSHIP_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
   },
   {
-    path: '/ownership/:id',
+    path: OWNERSHIP_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Ownership/OwnershipDetailPage')),
   },
   {
-    path: '/ownership',
+    path: OWNERSHIP_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
   },
 
   // 项目管理 - 注意路由顺序，详情页必须在列表页之前
   {
-    path: '/project/:id/edit',
+    path: PROJECT_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
   },
   {
-    path: '/project/:id',
+    path: PROJECT_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Project/ProjectDetailPage')),
   },
   {
-    path: '/project',
+    path: PROJECT_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
   },
 
   // 个人中心
   {
-    path: '/profile',
-    element: React.lazy(() => import('../pages/Profile/ProfilePage')),
+    path: PROFILE_ROUTES.PROFILE,
+    element: React.lazy(() => import('../pages/ProfilePage')),
   },
 
   // 系统管理
   {
-    path: '/system/users',
+    path: SYSTEM_ROUTES.USERS,
     element: React.lazy(() => import('../pages/System/UserManagementPage')),
   },
   {
-    path: '/system/roles',
+    path: SYSTEM_ROUTES.ROLES,
     element: React.lazy(() => import('../pages/System/RoleManagementPage')),
   },
   {
-    path: '/system/organizations',
+    path: SYSTEM_ROUTES.ORGANIZATIONS,
     element: React.lazy(() => import('../pages/System/OrganizationPage')),
   },
   {
-    path: '/system/dictionaries',
+    path: SYSTEM_ROUTES.DICTIONARIES,
     element: React.lazy(() => import('../pages/System/DictionaryPage')),
   },
   {
-    path: '/system/logs',
+    path: SYSTEM_ROUTES.LOGS,
     element: React.lazy(() => import('../pages/System/OperationLogPage')),
   },
   {
-    path: '/system/templates',
+    path: SYSTEM_ROUTES.TEMPLATES,
     element: React.lazy(() => import('../pages/System/TemplateManagementPage')),
   },
   {
-    path: '/system/settings',
+    path: SYSTEM_ROUTES.SETTINGS,
     element: React.lazy(() => import('../pages/System/SystemSettingsPage')),
   },
 ];

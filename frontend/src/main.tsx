@@ -7,7 +7,7 @@ import 'dayjs/locale/zh-cn';
 
 import App from './App.tsx';
 import './styles/index.css';
-import { baseThemeConfig, appLocale } from './theme/config';
+import { baseThemeConfig, appLocale } from './themeConfig';
 import { initErrorMonitoring } from './utils/errorMonitoring';
 
 // Initialize error monitoring as early as possible

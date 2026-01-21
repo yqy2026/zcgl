@@ -6,27 +6,24 @@ from pydantic import BaseModel, Field
 
 class RateLimitStrategy(str, Enum):
     """Rate limit failure strategy"""
+
     STRICT = "strict"  # Block on error (fail-closed)
     PERMISSIVE = "permissive"  # Allow on error (fail-open)
     DEGRADED = "degraded"  # Fallback to simple IP limiting
 
+
 class RateLimitConfig(BaseModel):
     """Rate limit configuration"""
+
     strategy: RateLimitStrategy = Field(
         default=RateLimitStrategy.STRICT,
-        description="Strategy for rate limiter failures"
+        description="Strategy for rate limiter failures",
     )
     max_failures: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Max failures before entering degraded mode"
+        default=3, ge=1, le=10, description="Max failures before entering degraded mode"
     )
     cooldown_seconds: int = Field(
-        default=60,
-        ge=10,
-        le=600,
-        description="Cooldown period in degraded mode"
+        default=60, ge=10, le=600, description="Cooldown period in degraded mode"
     )
 
     def should_block_on_error(self) -> bool:
@@ -55,5 +52,5 @@ class RateLimitConfig(BaseModel):
         return cls(
             strategy=strategy,
             max_failures=max_failures,
-            cooldown_seconds=cooldown_seconds
+            cooldown_seconds=cooldown_seconds,
         )

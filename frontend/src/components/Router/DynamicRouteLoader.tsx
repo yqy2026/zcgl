@@ -90,7 +90,7 @@ class DynamicRouteLoader {
       {
         id: 'dashboard',
         path: '/dashboard',
-        component: React.lazy(() => import('../../pages/Dashboard/DashboardPage')),
+        component: React.lazy(() => import('@/pages/Dashboard/DashboardPage')),
         meta: {
           title: '工作台',
           icon: 'dashboard',

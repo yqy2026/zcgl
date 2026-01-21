@@ -245,7 +245,7 @@ class StructuredFormatter(logging.Formatter):
         elif isinstance(obj, bytes):
             # Handle bytes by decoding to string, or return base64 representation
             try:
-                return obj.decode('utf-8')
+                return obj.decode("utf-8")
             except UnicodeDecodeError:
                 # If not UTF-8 decodable, return hex representation
                 return obj.hex()
@@ -437,7 +437,7 @@ class SecurityAuditor:
         elif isinstance(obj, bytes):
             # Handle bytes by decoding to string, or return base64 representation
             try:
-                return obj.decode('utf-8')
+                return obj.decode("utf-8")
             except UnicodeDecodeError:
                 # If not UTF-8 decodable, return hex representation
                 return obj.hex()
@@ -599,7 +599,7 @@ class RequestLogger:
         elif isinstance(obj, bytes):
             # Handle bytes by decoding to string, or return base64 representation
             try:
-                return obj.decode('utf-8')
+                return obj.decode("utf-8")
             except UnicodeDecodeError:
                 # If not UTF-8 decodable, return hex representation
                 return obj.hex()

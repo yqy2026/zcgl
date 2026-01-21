@@ -12,7 +12,7 @@ import time
 import traceback
 import uuid
 from collections.abc import Awaitable
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -130,6 +130,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
                 status_code=200,
                 content={
                     "success": True,
+                    "message": "操作成功",
                     "data": recovery_result.metrics.get("result"),
                     "recovery_info": {
                         "was_recovered": True,
@@ -139,6 +140,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
                         "recovery_actions": recovery_result.recovery_actions,
                     },
                     "request_id": request_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "processing_time": recovery_time,
                 },
             )
@@ -152,24 +154,29 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
             self._record_recovery_failure(error_context, recovery_result)
 
             # 创建错误响应
+            error_message = str(recovery_result.final_error or exc)
             return JSONResponse(
                 status_code=self._get_error_status_code(error_category, error_severity),
                 content={
                     "success": False,
+                    "message": error_message,
                     "error": {
                         "code": f"{error_category.value.upper()}_ERROR",
-                        "message": str(recovery_result.final_error or exc),
-                        "type": error_category.value,
-                        "severity": error_severity.value,
+                        "message": error_message,
+                        "details": {
+                            "type": error_category.value,
+                            "severity": error_severity.value,
+                            "suggestions": self._get_error_suggestions(error_category),
+                        },
                     },
                     "recovery_info": {
                         "was_recovered": False,
                         "strategy_used": recovery_result.strategy_used,
                         "attempts_made": recovery_result.attempts_made,
                         "recovery_actions": recovery_result.recovery_actions,
-                        "suggestions": self._get_error_suggestions(error_category),
                     },
                     "request_id": request_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -340,17 +347,27 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
         self, http_exc: HTTPException, request_id: str
     ) -> JSONResponse:
         """创建HTTP错误响应"""
+        detail = http_exc.detail
+        if isinstance(detail, dict):
+            message = detail.get("message") or "请求处理失败"
+        else:
+            message = str(detail)
         return JSONResponse(
             status_code=http_exc.status_code,
             content={
                 "success": False,
+                "message": message,
                 "error": {
                     "code": f"HTTP_{http_exc.status_code}",
-                    "message": http_exc.detail,
-                    "type": "http_error",
-                    "severity": "medium",
+                    "message": message,
+                    "details": {
+                        "type": "http_error",
+                        "severity": "medium",
+                        "detail": detail,
+                    },
                 },
                 "request_id": request_id,
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
 

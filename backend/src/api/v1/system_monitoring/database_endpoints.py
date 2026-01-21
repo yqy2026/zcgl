@@ -9,7 +9,11 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Depends, Query
 
 from ....constants.errors.error_ids import ErrorIDs
-from ....core.api_errors import internal_error, service_unavailable
+from ....core.exception_handler import (
+    BaseBusinessError,
+    internal_error,
+    service_unavailable,
+)
 from ....middleware.auth import require_permission
 from .health import get_database_manager
 from .models import DatabaseHealthMetrics, DatabaseOptimizationReport
@@ -98,7 +102,7 @@ async def get_database_health_metrics(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取数据库健康指标失败: {str(e)}")
 
@@ -124,7 +128,7 @@ async def get_slow_queries(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取慢查询失败: {str(e)}")
 
@@ -183,7 +187,7 @@ async def optimize_database(
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"数据库优化失败: {str(e)}")
 
@@ -209,7 +213,7 @@ async def cleanup_database(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"数据库清理失败: {str(e)}")
 
@@ -240,6 +244,6 @@ async def get_connection_pool_status(
         }
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取连接池状态失败: {str(e)}")

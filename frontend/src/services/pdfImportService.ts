@@ -1,15 +1,15 @@
 /**
  * PDF导入服务
  * 处理PDF文件上传、转换、信息提取等API调用
- * 支持增强版中文合同识别功能
+ * 支持多引擎中文合同识别功能
  */
 
 import axios from 'axios';
 import type {
   ProcessingOptions,
-  EnhancedFileUploadResponse,
-  EnhancedSessionProgress,
-} from '../types/enhancedPdfImport';
+  PdfImportFileUploadResponse,
+  PdfImportSessionProgress,
+} from '../types/pdfImport';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('PDFImportService');
@@ -44,7 +44,7 @@ export interface SessionProgress {
   confidence_score?: number;
   ocr_used?: boolean;
   validation_results?: Record<string, unknown>;
-  // Extended properties for enhanced processing
+  // Extended properties for multi-engine processing
   file_name?: string;
   file_size?: number;
   validated_data?: Record<string, unknown>;
@@ -55,7 +55,7 @@ export interface SessionProgress {
     recommendations?: Record<string, string>;
     overall_match_confidence?: number;
   };
-  enhanced_status?: EnhancedSessionProgress['enhanced_status'];
+  processing_status?: PdfImportSessionProgress['processing_status'];
 }
 
 export interface SystemCapabilities {
@@ -210,7 +210,7 @@ import { PDF_API } from '../constants/api';
 
 // 使用API常量，如果端点不存在则提供备用方案
 const API_BASE_URL = PDF_API.INFO.replace('/info', ''); // 获取基础路径
-const ENHANCED_API_BASE = `${API_BASE_URL}/enhanced`;
+const PROCESSING_API_BASE = `${API_BASE_URL}/enhanced`;
 
 // 类型守卫：检查是否为Error对象
 function isError(error: unknown): error is Error {
@@ -231,6 +231,34 @@ function isAxiosError(error: unknown): error is {
     ('response' in error || 'request' in error || 'code' in error)
   );
 }
+
+type LegacyProcessingStatus = PdfImportSessionProgress['processing_status'];
+
+type LegacySessionStatus = SessionProgress & {
+  enhanced_status?: LegacyProcessingStatus;
+};
+
+const normalizeSessionStatus = (status: LegacySessionStatus): SessionProgress => {
+  const { enhanced_status: legacyStatus, ...rest } = status;
+  return {
+    ...rest,
+    processing_status: rest.processing_status ?? legacyStatus,
+  };
+};
+
+type LegacyUploadResponse = PdfImportFileUploadResponse & {
+  enhanced_status?: LegacyProcessingStatus;
+};
+
+const normalizeUploadResponse = (
+  response: LegacyUploadResponse
+): PdfImportFileUploadResponse => {
+  const { enhanced_status: legacyStatus, ...rest } = response;
+  return {
+    ...rest,
+    processing_status: rest.processing_status ?? legacyStatus,
+  };
+};
 
 class PDFImportService {
   /**
@@ -567,7 +595,7 @@ class PDFImportService {
   }
 
   /**
-   * 获取系统信息 - 增强版本
+   * 获取系统信息 - 多引擎版本
    */
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
@@ -585,7 +613,7 @@ class PDFImportService {
         validator_summary?: Record<string, unknown>;
       }>(PDF_API.INFO);
 
-      // 直接使用后端返回的能力信息，并添加增强功能检测
+      // 直接使用后端返回的能力信息，并添加多引擎功能检测
       const capabilities: SystemCapabilities = response.data.capabilities ?? {
         pdfplumber_available: true,
         pymupdf_available: true,
@@ -596,8 +624,8 @@ class PDFImportService {
         estimated_processing_time: '30-60秒',
       };
 
-      // 添加增强功能标识
-      const enhancedCapabilities: SystemCapabilities = {
+      // 直接使用后端返回的能力信息，并添加多引擎功能检测
+      const processingCapabilities: SystemCapabilities = {
         ...capabilities,
         enhanced_extraction: true,
         intelligent_matching: true,
@@ -608,17 +636,17 @@ class PDFImportService {
 
       return {
         success: true,
-        message: response.data.message ?? '增强版PDF智能导入系统运行正常',
-        capabilities: enhancedCapabilities,
+        message: response.data.message ?? '多引擎PDF导入系统运行正常',
+        capabilities: processingCapabilities,
         extractor_summary: {
-          method: 'enhanced_multi_engine',
-          description: '增强版多引擎PDF处理，支持智能引擎选择和质量评估',
+          method: 'multi_engine',
+          description: '多引擎PDF处理，支持智能引擎选择和质量评估',
           engines: ['PyMuPDF', 'PDFPlumber', 'PaddleOCR'],
-          features: ['智能预处理', '增强字段提取', '实时验证', '优化匹配算法'],
+          features: ['智能预处理', '多引擎字段提取', '实时验证', '优化匹配算法'],
         },
         validator_summary: {
           enabled: true,
-          description: '增强版数据验证和智能匹配功能',
+          description: '多引擎数据验证和智能匹配功能',
           features: ['多维度验证', '智能模糊匹配', '重复检测', '置信度评估'],
           accuracy_improvement: '15-20%',
         },
@@ -861,17 +889,17 @@ class PDFImportService {
     return '60-120秒';
   }
 
-  // === 增强版PDF导入功能 ===
+  // === PDF导入扩展功能 ===
 
   /**
-   * 获取增强版系统信息
+   * 获取系统信息
    */
-  async getEnhancedSystemInfo(): Promise<SystemInfoResponse> {
+  async getPdfImportSystemInfo(): Promise<SystemInfoResponse> {
     try {
-      const response = await axios.get<SystemInfoResponse>(`${ENHANCED_API_BASE}/info`);
+      const response = await axios.get<SystemInfoResponse>(`${PROCESSING_API_BASE}/info`);
       return response.data;
     } catch (error: unknown) {
-      logger.error('获取增强版系统信息失败:', error as Error);
+      logger.error('获取系统信息失败:', error as Error);
       return {
         success: false,
         message: '获取系统信息失败',
@@ -889,13 +917,13 @@ class PDFImportService {
   }
 
   /**
-   * 上传PDF文件并开始增强版处理
+   * 上传PDF文件并开始处理
    */
-  async uploadPDFFileEnhanced(
+  async uploadPdfFileWithOptions(
     file: File,
     processingOptions: Partial<ProcessingOptions> = {},
     signal?: AbortSignal
-  ): Promise<EnhancedFileUploadResponse> {
+  ): Promise<PdfImportFileUploadResponse> {
     // 默认处理选项
     const defaultOptions: ProcessingOptions = {
       prefer_ocr: true,
@@ -914,29 +942,29 @@ class PDFImportService {
     formData.append('processing_options', JSON.stringify(defaultOptions));
 
     try {
-      const response = await axios.post<EnhancedFileUploadResponse>(
-        `${ENHANCED_API_BASE}/upload`,
+      const response = await axios.post<PdfImportFileUploadResponse>(
+        `${PROCESSING_API_BASE}/upload`,
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 600000, // 10分钟，支持增强版处理
+          timeout: 600000, // 10分钟，支持多引擎处理
           onUploadProgress: progressEvent => {
             if (progressEvent.total != null && progressEvent.total > 0) {
               const _percentCompleted = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
               );
-              // Enhanced upload progress
+              // Upload progress
             }
           },
           signal,
         }
       );
 
-      return response.data;
+      return normalizeUploadResponse(response.data as LegacyUploadResponse);
     } catch (error: unknown) {
-      logger.error('增强版PDF上传失败:', error as Error);
+      logger.error('PDF上传失败:', error as Error);
 
       if (isAxiosError(error)) {
         if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
@@ -972,9 +1000,9 @@ class PDFImportService {
   }
 
   /**
-   * 获取增强版会话处理进度
+   * 获取会话处理进度
    */
-  async getEnhancedProgress(sessionId: string): Promise<{
+  async getPdfImportProgress(sessionId: string): Promise<{
     success: boolean;
     session_status?: SessionProgress;
     error?: string;
@@ -984,10 +1012,16 @@ class PDFImportService {
         success: boolean;
         session_status?: SessionProgress;
         error?: string;
-      }>(`${ENHANCED_API_BASE}/progress/${sessionId}`);
-      return response.data;
+      }>(`${PROCESSING_API_BASE}/progress/${sessionId}`);
+      const normalizedSession = response.data.session_status
+        ? normalizeSessionStatus(response.data.session_status as LegacySessionStatus)
+        : undefined;
+      return {
+        ...response.data,
+        session_status: normalizedSession,
+      };
     } catch (error: unknown) {
-      logger.error('获取增强版进度失败:', error as Error);
+      logger.error('获取进度失败:', error as Error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message)
         : isError(error)
@@ -1001,11 +1035,11 @@ class PDFImportService {
   }
 
   /**
-   * 取消增强版会话处理
+   * 取消会话处理
    */
-  async cancelEnhancedSession(
+  async cancelPdfImportSession(
     sessionId: string,
-    reason: string = '用户取消增强版处理'
+    reason: string = '用户取消处理'
   ): Promise<{
     success: boolean;
     message: string;
@@ -1016,12 +1050,12 @@ class PDFImportService {
         success: boolean;
         message: string;
         error?: string;
-      }>(`${ENHANCED_API_BASE}/session/${sessionId}`, {
+      }>(`${PROCESSING_API_BASE}/session/${sessionId}`, {
         params: { reason },
       });
       return response.data;
     } catch (error: unknown) {
-      logger.error('取消增强版会话失败:', error as Error);
+      logger.error('取消会话失败:', error as Error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message ?? '取消失败')
         : isError(error)
@@ -1040,16 +1074,16 @@ class PDFImportService {
   }
 
   /**
-   * 轮询增强版进度
+   * 轮询进度
    */
-  async pollEnhancedProgress(
+  async pollPdfImportProgress(
     sessionId: string,
     onProgress: (progress: SessionProgress) => void,
-    interval: number = 3000 // 增强版处理间隔稍长
+    interval: number = 3000 // 处理间隔稍长
   ): Promise<void> {
     const poll = async () => {
       try {
-        const result = await this.getEnhancedProgress(sessionId);
+        const result = await this.getPdfImportProgress(sessionId);
 
         if (result.success && result.session_status) {
           onProgress(result.session_status);
@@ -1064,7 +1098,7 @@ class PDFImportService {
           }
         }
       } catch (error: unknown) {
-        logger.error('轮询增强版进度失败:', error as Error);
+        logger.error('轮询进度失败:', error as Error);
       }
     };
 
@@ -1072,22 +1106,23 @@ class PDFImportService {
   }
 
   /**
-   * 获取增强版处理结果
+   * 获取处理结果
    */
-  async getEnhancedResult(sessionId: string): Promise<{
+  async getPdfImportResult(sessionId: string): Promise<{
     success: boolean;
     result?: CompleteResult;
     error?: string;
   }> {
     try {
-      // 通过增强版进度API获取结果
-      const progressResponse = await this.getEnhancedProgress(sessionId);
+      // 通过进度API获取结果
+      const progressResponse = await this.getPdfImportProgress(sessionId);
 
       if (progressResponse.success && progressResponse.session_status) {
         const session = progressResponse.session_status;
+        const processingStatus = session.processing_status;
 
         if (session.status === 'ready_for_review' || session.status === 'completed') {
-          // 构建增强版结果对象
+          // 构建结果对象
           const result: CompleteResult = {
             success: true,
             session_id: sessionId,
@@ -1098,20 +1133,20 @@ class PDFImportService {
             },
             extraction_result: {
               success: true,
-              data: session.enhanced_status?.final_fields ?? {},
+              data: processingStatus?.final_fields ?? {},
               confidence_score:
-                session.enhanced_status?.final_results?.extraction_quality?.overall_quality ?? 0.8,
-              extraction_method: 'enhanced_multi_engine',
-              processed_fields: Object.keys(session.enhanced_status?.final_fields ?? {}).length,
+                processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
+              extraction_method: 'multi_engine',
+              processed_fields: Object.keys(processingStatus?.final_fields ?? {}).length,
               total_fields: 58,
             },
             validation_result: {
               success: true,
               errors: [],
               warnings: [],
-              validated_data: session.enhanced_status?.final_fields ?? {},
-              validation_score: session.enhanced_status?.final_results?.validation_score ?? 0.8,
-              processed_fields: Object.keys(session.enhanced_status?.final_fields ?? {}).length,
+              validated_data: processingStatus?.final_fields ?? {},
+              validation_score: processingStatus?.final_results?.validation_score ?? 0.8,
+              processed_fields: Object.keys(processingStatus?.final_fields ?? {}).length,
               required_fields_count: 10,
               missing_required_fields: [],
             },
@@ -1120,9 +1155,9 @@ class PDFImportService {
               matched_ownerships: [],
               duplicate_contracts: [],
               recommendations: {},
-              match_confidence: session.enhanced_status?.final_results?.match_confidence ?? 0.7,
+              match_confidence: processingStatus?.final_results?.match_confidence ?? 0.7,
             },
-            semantic_validation: session.enhanced_status?.semantic_validation ?? {
+            semantic_validation: processingStatus?.semantic_validation ?? {
               total_fields: 0,
               valid_fields: 0,
               error_fields: 0,
@@ -1135,9 +1170,9 @@ class PDFImportService {
             },
             processing_summary: {
               total_processing_time: '60-90秒',
-              extraction_method: 'enhanced_multi_engine',
+              extraction_method: 'multi_engine',
               engines_used:
-                session.enhanced_status?.final_results?.processing_summary?.engines_used ?? [],
+                processingStatus?.final_results?.processing_summary?.engines_used ?? [],
               processing_steps: [],
               performance_metrics: {
                 total_processing_time: 0,
@@ -1155,25 +1190,25 @@ class PDFImportService {
             },
             summary: {
               extraction_confidence:
-                session.enhanced_status?.final_results?.extraction_quality?.overall_quality ?? 0.8,
-              validation_score: session.enhanced_status?.final_results?.validation_score ?? 0.8,
-              match_confidence: session.enhanced_status?.final_results?.match_confidence ?? 0.7,
+                processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
+              validation_score: processingStatus?.final_results?.validation_score ?? 0.8,
+              match_confidence: processingStatus?.final_results?.match_confidence ?? 0.7,
               semantic_confidence:
-                session.enhanced_status?.semantic_validation?.overall_confidence ?? 0.8,
-              fusion_confidence: session.enhanced_status?.fusion_results?.confidence ?? 0.8,
+                processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
+              fusion_confidence: processingStatus?.fusion_results?.confidence ?? 0.8,
               overall_quality:
-                session.enhanced_status?.final_results?.extraction_quality?.overall_quality ?? 0.8,
+                processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
               total_confidence: 0.8,
             },
-            recommendations: session.enhanced_status?.semantic_validation?.recommendations ?? [],
+            recommendations: processingStatus?.semantic_validation?.recommendations ?? [],
             ready_for_import: true,
             quality_metrics: {
               extraction_quality:
-                session.enhanced_status?.final_results?.extraction_quality?.overall_quality ?? 0.8,
-              validation_quality: session.enhanced_status?.final_results?.validation_score ?? 0.8,
-              matching_quality: session.enhanced_status?.final_results?.match_confidence ?? 0.7,
+                processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
+              validation_quality: processingStatus?.final_results?.validation_score ?? 0.8,
+              matching_quality: processingStatus?.final_results?.match_confidence ?? 0.7,
               semantic_quality:
-                session.enhanced_status?.semantic_validation?.overall_confidence ?? 0.8,
+                processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
               processing_efficiency: 0.8,
               overall_score: 0.8,
             },
@@ -1202,7 +1237,7 @@ class PDFImportService {
       }
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error('获取增强版结果失败:', error);
+      console.error('获取处理结果失败:', error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message)
         : isError(error)
@@ -1216,9 +1251,9 @@ class PDFImportService {
   }
 
   /**
-   * 测试增强版功能
+   * 测试功能
    */
-  async testEnhancedFeatures(): Promise<{
+  async testPdfImportFeatures(): Promise<{
     success: boolean;
     message: string;
     test_results?: Array<{
@@ -1242,11 +1277,11 @@ class PDFImportService {
         }>;
         availability_rate?: number;
         system_ready?: boolean;
-      }>(`${ENHANCED_API_BASE}/test/all`);
+      }>(`${PROCESSING_API_BASE}/test/all`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error('测试增强版功能失败:', error);
+      console.error('测试功能失败:', error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message ?? 'Unknown error')
         : isError(error)
@@ -1261,9 +1296,9 @@ class PDFImportService {
   }
 
   /**
-   * 增强版健康检查
+   * 健康检查
    */
-  async enhancedHealthCheck(): Promise<{
+  async pdfImportHealthCheck(): Promise<{
     status: string;
     components: Record<string, boolean>;
     health_score?: number;
@@ -1277,11 +1312,11 @@ class PDFImportService {
         health_score?: number;
         timestamp: string;
         error?: string;
-      }>(`${ENHANCED_API_BASE}/health`);
+      }>(`${PROCESSING_API_BASE}/health`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error('增强版健康检查失败:', error);
+      console.error('健康检查失败:', error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message)
         : isError(error)
@@ -1309,7 +1344,7 @@ class PDFImportService {
         success: boolean;
         message: string;
         data?: Record<string, unknown>;
-      }>(`${ENHANCED_API_BASE}/performance/summary`);
+      }>(`${PROCESSING_API_BASE}/performance/summary`);
       return response.data;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
@@ -1328,10 +1363,10 @@ class PDFImportService {
   }
 
   /**
-   * 估算增强版处理时间
+   * 估算处理时间
    */
-  estimateEnhancedProcessingTime(fileSize: number): string {
-    // 增强版处理时间较长，但更准确
+  estimatePdfImportProcessingTime(fileSize: number): string {
+    // 多引擎处理时间较长，但更准确
     const sizeMB = fileSize / (1024 * 1024);
 
     if (sizeMB < 1) return '30-45秒';
@@ -1343,15 +1378,15 @@ class PDFImportService {
   }
 
   /**
-   * 检查增强版功能可用性
+   * 检查功能可用性
    */
-  async checkEnhancedFeaturesAvailability(): Promise<{
+  async checkPdfImportFeaturesAvailability(): Promise<{
     available: boolean;
     features: Record<string, boolean>;
     message: string;
   }> {
     try {
-      const systemInfo = await this.getEnhancedSystemInfo();
+      const systemInfo = await this.getPdfImportSystemInfo();
 
       const features: Record<string, boolean> = {
         pdfplumber_available: Boolean(systemInfo.capabilities.pdfplumber_available),
@@ -1367,15 +1402,15 @@ class PDFImportService {
       return {
         available,
         features,
-        message: available ? '增强版功能可用' : '部分增强版功能不可用',
+        message: available ? '功能可用' : '部分功能不可用',
       };
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error('检查增强版功能可用性失败:', error);
+      console.error('检查功能可用性失败:', error);
       return {
         available: false,
         features: {},
-        message: '无法检查增强版功能可用性',
+        message: '无法检查功能可用性',
       };
     }
   }

@@ -33,7 +33,7 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
         "email": "admin_test@example.com",
         "password": "AdminPass123!",
         "full_name": "Admin Test User",
-        "role": "admin"
+        "role": "admin",
     }
     response = client.post("/api/v1/users", json=admin_user_data)
     assert response.status_code == 201
@@ -42,10 +42,10 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     assert created_user["username"] == "admin_test"
 
     # Step 2: Login with admin user
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": "admin_test",
-        "password": "AdminPass123!"
-    })
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin_test", "password": "AdminPass123!"},
+    )
 
     assert login_response.status_code == 200
     data = login_response.json()
@@ -65,7 +65,9 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     headers = {"Authorization": f"Bearer {data['access_token']}"}
     me_response = client.get("/api/v1/users/me", headers=headers)
 
-    assert me_response.status_code == 200, f"Failed to access protected endpoint: {me_response.text}"
+    assert me_response.status_code == 200, (
+        f"Failed to access protected endpoint: {me_response.text}"
+    )
     user_data = me_response.json()
     assert user_data["username"] == "admin_test"
     assert user_data["role"] == "admin"
@@ -99,7 +101,7 @@ def test_regular_user_auth_flow_e2e(db_session: Session, client: TestClient):
         "email": "regular@example.com",
         "password": "UserPass123!",
         "full_name": "Regular User",
-        "role": "user"
+        "role": "user",
     }
     response = client.post("/api/v1/users", json=user_data)
     assert response.status_code == 201
@@ -107,10 +109,10 @@ def test_regular_user_auth_flow_e2e(db_session: Session, client: TestClient):
     assert created_user["role"] == "user"
 
     # Step 2: Login
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": "regular_user",
-        "password": "UserPass123!"
-    })
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "regular_user", "password": "UserPass123!"},
+    )
 
     assert login_response.status_code == 200
     data = login_response.json()
@@ -144,15 +146,15 @@ def test_invalid_credentials_flow(db_session: Session, client: TestClient):
         "email": "credential@example.com",
         "password": "ValidPass123!",
         "full_name": "Credential Test",
-        "role": "user"
+        "role": "user",
     }
     client.post("/api/v1/users", json=user_data)
 
     # Try login with wrong password
-    response = client.post("/api/v1/auth/login", data={
-        "username": "credential_test",
-        "password": "WrongPassword123!"
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "credential_test", "password": "WrongPassword123!"},
+    )
 
     assert response.status_code == 401 or response.status_code == 400
 
@@ -172,15 +174,15 @@ def test_token_refresh_flow(db_session: Session, client: TestClient):
         "email": "refresh@example.com",
         "password": "RefreshPass123!",
         "full_name": "Refresh Test",
-        "role": "user"
+        "role": "user",
     }
     client.post("/api/v1/users", json=user_data)
 
     # Login to get tokens
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": "refresh_test",
-        "password": "RefreshPass123!"
-    })
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "refresh_test", "password": "RefreshPass123!"},
+    )
 
     assert login_response.status_code == 200
     tokens = login_response.json()
@@ -193,9 +195,9 @@ def test_token_refresh_flow(db_session: Session, client: TestClient):
     assert me_response.status_code == 200
 
     # Refresh token
-    refresh_response = client.post("/api/v1/auth/refresh", json={
-        "refresh_token": refresh_token
-    })
+    refresh_response = client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
+    )
 
     if refresh_response.status_code == 200:
         # If refresh endpoint is implemented
@@ -222,15 +224,15 @@ def test_logout_flow(db_session: Session, client: TestClient):
         "email": "logout@example.com",
         "password": "LogoutPass123!",
         "full_name": "Logout Test",
-        "role": "user"
+        "role": "user",
     }
     client.post("/api/v1/users", json=user_data)
 
     # Login
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": "logout_test",
-        "password": "LogoutPass123!"
-    })
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "logout_test", "password": "LogoutPass123!"},
+    )
 
     assert login_response.status_code == 200
     tokens = login_response.json()
@@ -268,7 +270,7 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
         "email": "perm_admin@example.com",
         "password": "AdminPerm123!",
         "full_name": "Permission Admin",
-        "role": "admin"
+        "role": "admin",
     }
     client.post("/api/v1/users", json=admin_data)
 
@@ -277,23 +279,22 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
         "email": "perm_user@example.com",
         "password": "UserPerm123!",
         "full_name": "Permission User",
-        "role": "user"
+        "role": "user",
     }
     client.post("/api/v1/users", json=user_data)
 
     # Login as admin
-    admin_login = client.post("/api/v1/auth/login", data={
-        "username": "perm_admin",
-        "password": "AdminPerm123!"
-    })
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        data={"username": "perm_admin", "password": "AdminPerm123!"},
+    )
     admin_tokens = admin_login.json()
     admin_headers = {"Authorization": f"Bearer {admin_tokens['access_token']}"}
 
     # Login as regular user
-    user_login = client.post("/api/v1/auth/login", data={
-        "username": "perm_user",
-        "password": "UserPerm123!"
-    })
+    user_login = client.post(
+        "/api/v1/auth/login", data={"username": "perm_user", "password": "UserPerm123!"}
+    )
     user_tokens = user_login.json()
     user_headers = {"Authorization": f"Bearer {user_tokens['access_token']}"}
 
@@ -317,11 +318,16 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
             assert len(users["items"]) <= 1
 
 
-@pytest.mark.parametrize("role,expected_permission_count", [
-    ("admin", 10),  # Admin should have many permissions
-    ("user", 5),    # Regular user should have basic permissions
-])
-def test_role_based_permissions(db_session: Session, client: TestClient, role: str, expected_permission_count: int):
+@pytest.mark.parametrize(
+    "role,expected_permission_count",
+    [
+        ("admin", 10),  # Admin should have many permissions
+        ("user", 5),  # Regular user should have basic permissions
+    ],
+)
+def test_role_based_permissions(
+    db_session: Session, client: TestClient, role: str, expected_permission_count: int
+):
     """
     Test that different roles receive appropriate permissions
 
@@ -333,15 +339,15 @@ def test_role_based_permissions(db_session: Session, client: TestClient, role: s
         "email": f"{role}@example.com",
         "password": f"{role.capitalize()}Pass123!",
         "full_name": f"{role.capitalize()} Test",
-        "role": role
+        "role": role,
     }
     client.post("/api/v1/users", json=user_data)
 
     # Login
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": f"{role}_test",
-        "password": f"{role.capitalize()}Pass123!"
-    })
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={"username": f"{role}_test", "password": f"{role.capitalize()}Pass123!"},
+    )
 
     assert login_response.status_code == 200
     data = login_response.json()
@@ -349,5 +355,6 @@ def test_role_based_permissions(db_session: Session, client: TestClient, role: s
     # Verify permissions
     assert "permissions" in data
     assert isinstance(data["permissions"], list)
-    assert len(data["permissions"]) >= expected_permission_count, \
+    assert len(data["permissions"]) >= expected_permission_count, (
         f"{role} role should have at least {expected_permission_count} permissions, got {len(data['permissions'])}"
+    )

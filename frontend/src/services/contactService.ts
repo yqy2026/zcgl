@@ -100,7 +100,7 @@ export interface ContactListResponse {
  * 联系人服务类
  */
 class ContactService {
-  private readonly basePath = '/api/v1/contacts';
+  private readonly basePath = '/contacts';
 
   /**
    * 创建联系人

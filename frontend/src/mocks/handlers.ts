@@ -5,6 +5,7 @@
 
 import { http, HttpResponse } from 'msw';
 import type { HttpHandler } from 'msw';
+import { API_BASE_URL } from '@/api/config';
 
 import {
   assetListResponse,
@@ -28,8 +29,6 @@ import {
 // 基础URL配置
 // =============================================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-
 // =============================================================================
 // 辅助函数
 // =============================================================================
@@ -52,7 +51,7 @@ const getSearchParams = (request: Request) => {
 // =============================================================================
 
 /**
- * GET /api/v1/assets - 获取资产列表
+ * GET /assets - 获取资产列表
  */
 export const getAssetsHandler = http.get(`${API_BASE_URL}/assets`, async ({ request }) => {
   await delay(50);
@@ -79,7 +78,7 @@ export const getAssetsHandler = http.get(`${API_BASE_URL}/assets`, async ({ requ
 });
 
 /**
- * GET /api/v1/assets/:id - 获取资产详情
+ * GET /assets/:id - 获取资产详情
  */
 export const getAssetByIdHandler = http.get(`${API_BASE_URL}/assets/:id`, async ({ params }) => {
   await delay(50);
@@ -95,7 +94,7 @@ export const getAssetByIdHandler = http.get(`${API_BASE_URL}/assets/:id`, async 
 });
 
 /**
- * POST /api/v1/assets - 创建资产
+ * POST /assets - 创建资产
  */
 export const createAssetHandler = http.post(`${API_BASE_URL}/assets`, async ({ request }) => {
   await delay(100);
@@ -121,7 +120,7 @@ export const createAssetHandler = http.post(`${API_BASE_URL}/assets`, async ({ r
 });
 
 /**
- * PUT /api/v1/assets/:id - 更新资产
+ * PUT /assets/:id - 更新资产
  */
 export const updateAssetHandler = http.put(
   `${API_BASE_URL}/assets/:id`,
@@ -146,7 +145,7 @@ export const updateAssetHandler = http.put(
 );
 
 /**
- * DELETE /api/v1/assets/:id - 删除资产
+ * DELETE /assets/:id - 删除资产
  */
 export const deleteAssetHandler = http.delete(`${API_BASE_URL}/assets/:id`, async ({ params }) => {
   await delay(50);
@@ -166,7 +165,7 @@ export const deleteAssetHandler = http.delete(`${API_BASE_URL}/assets/:id`, asyn
 // =============================================================================
 
 /**
- * POST /api/v1/auth/login - 用户登录
+ * POST /auth/login - 用户登录
  */
 export const loginHandler = http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
   await delay(100);
@@ -186,7 +185,7 @@ export const loginHandler = http.post(`${API_BASE_URL}/auth/login`, async ({ req
 });
 
 /**
- * POST /api/v1/auth/logout - 用户登出
+ * POST /auth/logout - 用户登出
  */
 export const logoutHandler = http.post(`${API_BASE_URL}/auth/logout`, async () => {
   await delay(50);
@@ -194,7 +193,7 @@ export const logoutHandler = http.post(`${API_BASE_URL}/auth/logout`, async () =
 });
 
 /**
- * POST /api/v1/auth/refresh - 刷新Token
+ * POST /auth/refresh - 刷新Token
  */
 export const refreshTokenHandler = http.post(`${API_BASE_URL}/auth/refresh`, async () => {
   await delay(50);
@@ -212,7 +211,7 @@ export const refreshTokenHandler = http.post(`${API_BASE_URL}/auth/refresh`, asy
 // =============================================================================
 
 /**
- * GET /api/v1/contracts - 获取合同列表
+ * GET /contracts - 获取合同列表
  */
 export const getContractsHandler = http.get(`${API_BASE_URL}/contracts`, async () => {
   await delay(50);
@@ -224,7 +223,7 @@ export const getContractsHandler = http.get(`${API_BASE_URL}/contracts`, async (
 // =============================================================================
 
 /**
- * GET /api/v1/projects - 获取项目列表
+ * GET /projects - 获取项目列表
  */
 export const getProjectsHandler = http.get(`${API_BASE_URL}/projects`, async () => {
   await delay(50);
@@ -236,7 +235,7 @@ export const getProjectsHandler = http.get(`${API_BASE_URL}/projects`, async () 
 // =============================================================================
 
 /**
- * GET /api/v1/ownerships - 获取权属方列表
+ * GET /ownerships - 获取权属方列表
  */
 export const getOwnershipsHandler = http.get(`${API_BASE_URL}/ownerships`, async () => {
   await delay(50);
@@ -248,7 +247,7 @@ export const getOwnershipsHandler = http.get(`${API_BASE_URL}/ownerships`, async
 // =============================================================================
 
 /**
- * GET /api/v1/statistics/dashboard - 获取工作台统计数据
+ * GET /statistics/dashboard - 获取工作台统计数据
  */
 export const getStatisticsHandler = http.get(`${API_BASE_URL}/statistics/dashboard`, async () => {
   await delay(50);
@@ -256,7 +255,7 @@ export const getStatisticsHandler = http.get(`${API_BASE_URL}/statistics/dashboa
 });
 
 /**
- * GET /api/v1/test - 测试端点
+ * GET /test - 测试端点
  */
 export const testHandler = http.get(`${API_BASE_URL}/test`, async () => {
   await delay(50);

@@ -7,7 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.custom_field import custom_field_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
@@ -88,7 +93,7 @@ async def get_custom_field(
         return field
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取自定义字段详情失败: {str(e)}")
 
@@ -116,7 +121,7 @@ async def create_custom_field(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"创建自定义字段失败: {str(e)}")
 
@@ -147,7 +152,7 @@ async def update_custom_field(
             raise not_found(str(e), resource_type="custom_field")
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新自定义字段失败: {str(e)}")
 
@@ -170,7 +175,7 @@ async def delete_custom_field(
     except ValueError as e:
         raise not_found(str(e), resource_type="custom_field", resource_id=field_id)
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除自定义字段失败: {str(e)}")
 
@@ -209,7 +214,7 @@ async def validate_custom_field_value(
             return {"valid": False, "error": error_message}
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"验证字段值失败: {str(e)}")
 

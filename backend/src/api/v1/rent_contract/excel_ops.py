@@ -12,7 +12,11 @@ from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from ....constants.errors.error_ids import ErrorIDs
-from ....core.api_errors import UnifiedError, internal_error, service_unavailable
+from ....core.exception_handler import (
+    BaseBusinessError,
+    internal_error,
+    service_unavailable,
+)
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 
@@ -67,8 +71,7 @@ def download_excel_template(
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename=result["file_name"],
         )
-    except UnifiedError:
-        # 让我们的自定义错误传播
+    except BaseBusinessError:
         raise
     except Exception as e:
         logger.error(
@@ -118,8 +121,7 @@ def import_contracts_from_excel(
 
         return cast(dict[str, Any], result)
 
-    except UnifiedError:
-        # 让我们的自定义错误传播
+    except BaseBusinessError:
         raise
     except Exception as e:
         logger.error(
@@ -167,8 +169,7 @@ def export_contracts_to_excel(
             filename=result["file_name"],
         )
 
-    except UnifiedError:
-        # 让我们的自定义错误传播
+    except BaseBusinessError:
         raise
     except Exception as e:
         logger.error(

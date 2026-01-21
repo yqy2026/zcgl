@@ -8,7 +8,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, forbidden, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    forbidden,
+    internal_error,
+    not_found,
+)
 from ....crud.asset import asset_crud
 from ....crud.ownership import ownership
 from ....crud.rent_contract import rent_contract
@@ -61,7 +67,7 @@ def create_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"创建合同失败: {str(e)}")
 
@@ -160,7 +166,7 @@ def update_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新合同失败: {str(e)}")
 
@@ -187,7 +193,7 @@ def delete_contract(
         rent_contract.remove(db, id=contract_id)
         return {"message": "合同删除成功"}
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除合同失败: {str(e)}")
 

@@ -9,6 +9,7 @@ def test_rate_limit_strategy_enum():
     assert RateLimitStrategy.PERMISSIVE.value == "permissive"
     assert RateLimitStrategy.DEGRADED.value == "degraded"
 
+
 def test_rate_limit_config_defaults():
     """Test rate limit config has secure defaults"""
     config = RateLimitConfig()
@@ -16,16 +17,19 @@ def test_rate_limit_config_defaults():
     assert config.max_failures == 3
     assert config.cooldown_seconds == 60
 
+
 def test_strict_mode_blocks_on_error():
     """Test that strict mode blocks requests when rate limiter fails"""
     config = RateLimitConfig(strategy=RateLimitStrategy.STRICT)
     # Simulate rate limiter error
     assert config.should_block_on_error() is True
 
+
 def test_permissive_mode_allows_on_error():
     """Test that permissive mode allows requests when rate limiter fails"""
     config = RateLimitConfig(strategy=RateLimitStrategy.PERMISSIVE)
     assert config.should_block_on_error() is False
+
 
 def test_from_env_defaults():
     """Test from_env() uses correct defaults when env vars not set"""
@@ -39,6 +43,7 @@ def test_from_env_defaults():
     assert config.strategy == RateLimitStrategy.STRICT
     assert config.max_failures == 3
     assert config.cooldown_seconds == 60
+
 
 def test_from_env_custom_values():
     """Test from_env() loads custom values from environment"""
@@ -57,6 +62,7 @@ def test_from_env_custom_values():
     os.environ.pop("RATE_LIMIT_MAX_FAILURES", None)
     os.environ.pop("RATE_LIMIT_COOLDOWN_SECONDS", None)
 
+
 def test_from_env_invalid_strategy():
     """Test from_env() falls back to STRICT for invalid strategy"""
     os.environ["RATE_LIMIT_FAILURE_MODE"] = "invalid_strategy"
@@ -67,6 +73,7 @@ def test_from_env_invalid_strategy():
 
     # Clean up
     os.environ.pop("RATE_LIMIT_FAILURE_MODE", None)
+
 
 def test_from_env_invalid_max_failures():
     """Test from_env() falls back to default for invalid max_failures"""
@@ -79,6 +86,7 @@ def test_from_env_invalid_max_failures():
     # Clean up
     os.environ.pop("RATE_LIMIT_MAX_FAILURES", None)
 
+
 def test_from_env_invalid_cooldown():
     """Test from_env() falls back to default for invalid cooldown"""
     os.environ["RATE_LIMIT_COOLDOWN_SECONDS"] = "invalid"
@@ -89,6 +97,7 @@ def test_from_env_invalid_cooldown():
 
     # Clean up
     os.environ.pop("RATE_LIMIT_COOLDOWN_SECONDS", None)
+
 
 def test_from_env_degraded_mode():
     """Test from_env() loads degraded mode from environment"""

@@ -17,16 +17,19 @@ from starlette.types import ASGIApp
 
 from ..constants.errors.messages import ErrorMessages
 from ..constants.http.methods import HTTPMethods
-from ..core.api_errors import bad_request, forbidden
 from ..core.circuit_breaker import CircuitBreaker
-from ..core.exception_handler import BusinessValidationError
+from ..core.exception_handler import (
+    BusinessValidationError,
+    PermissionDeniedError,
+    RateLimitError,
+)
 from ..core.ip_whitelist import ip_whitelist
 from ..core.logging_security import security_auditor
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
 from ..core.security import RateLimiter
 
 try:
-    from ..core.security.ratelimit import AdaptiveRateLimiter, adaptive_limiter
+    from ..core.security import AdaptiveRateLimiter, adaptive_limiter
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
@@ -78,7 +81,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self.rate_limit_config = RateLimitConfig.from_env()
         self.circuit_breaker = CircuitBreaker(
             max_failures=self.rate_limit_config.max_failures,
-            cooldown=self.rate_limit_config.cooldown_seconds
+            cooldown=self.rate_limit_config.cooldown_seconds,
         )
 
         self.suspicious_patterns = [
@@ -104,14 +107,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             # 检查IP是否被封禁
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")
-                raise forbidden(ErrorMessages.IP_BLOCKED)
+                raise PermissionDeniedError(ErrorMessages.IP_BLOCKED)
 
             # 请求频率限制
             if not self._check_rate_limit(client_ip, request):
                 await self._log_blocked_request(
                     request, client_ip, "RATE_LIMIT_EXCEEDED"
                 )
-                raise bad_request(ErrorMessages.RATE_LIMIT_EXCEEDED)
+                raise RateLimitError(ErrorMessages.RATE_LIMIT_EXCEEDED)
 
             # 请求内容验证
             await self._validate_request_content(request)
@@ -246,7 +249,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # Try adaptive rate limiting
         try:
             if adaptive_limiter is not None and ADAPTIVE_LIMITER_AVAILABLE:
-                result = adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
+                result = adaptive_limiter.check_rate_limit(
+                    rate_limit_key, is_suspicious
+                )
                 # Record success on successful check
                 self.circuit_breaker.record_success()
                 return result

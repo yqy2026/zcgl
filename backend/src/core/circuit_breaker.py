@@ -5,13 +5,16 @@ from enum import Enum
 
 class CircuitState(str, Enum):
     """Circuit breaker states"""
+
     CLOSED = "closed"  # Normal operation
     OPEN = "open"  # Failing, block requests
     HALF_OPEN = "half_open"  # Testing if system recovered
 
+
 @dataclass
 class CircuitBreaker:
     """Circuit breaker for fail-closed rate limiting"""
+
     max_failures: int = 3
     cooldown: int = 60  # seconds
     _state: CircuitState = CircuitState.CLOSED

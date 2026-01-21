@@ -8,7 +8,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, internal_error, not_found, validation_error
+from ....core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+    validation_error,
+)
 from ....crud.rent_contract import rent_ledger
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -109,7 +115,7 @@ def generate_monthly_ledger(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"生成台账失败: {str(e)}")
 
@@ -191,7 +197,7 @@ def batch_update_rent_ledger(
             "ledgers": ledger_responses,
         }
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"批量更新失败: {str(e)}")
 
@@ -221,7 +227,7 @@ def update_rent_ledger(
         updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
         return updated_ledger
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新台账失败: {str(e)}")
 

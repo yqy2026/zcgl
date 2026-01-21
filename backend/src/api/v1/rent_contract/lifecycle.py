@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, internal_error
+from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -48,7 +48,7 @@ def renew_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"合同续签失败: {str(e)}")
 
@@ -86,6 +86,6 @@ def terminate_contract(
     except ValueError as e:
         raise bad_request(str(e))
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"合同终止失败: {str(e)}")

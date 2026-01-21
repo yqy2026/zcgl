@@ -1,8 +1,8 @@
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { SYSTEM_API, BACKUP_API } from '../constants/api';
 
 // 使用增强型API客户端
-const api = enhancedApiClient;
+const api = apiClient;
 
 // 用户管理相关接口
 export interface User {

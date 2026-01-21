@@ -7,8 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import internal_error, not_found
-from ...core.exception_handler import ResourceNotFoundError
+from ...core.exception_handler import (
+    BaseBusinessError,
+    ResourceNotFoundError,
+    internal_error,
+    not_found,
+)
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
@@ -97,7 +101,7 @@ async def get_history_detail(
         return history_record
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取历史记录详情失败: {str(e)}")
 
@@ -124,6 +128,6 @@ async def delete_history(
         return {"message": f"历史记录 {history_id} 已成功删除"}
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"删除历史记录失败: {str(e)}")

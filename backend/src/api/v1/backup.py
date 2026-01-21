@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...database import get_db
 from ...services.backup import BackupService
 
@@ -123,7 +128,7 @@ async def download_backup(backup_name: str) -> FileResponse:
         )
 
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         logger.error(f"下载备份文件异常: {str(e)}")
         raise internal_error(f"下载备份文件失败: {str(e)}")
@@ -177,7 +182,7 @@ async def restore_backup(
     except FileNotFoundError as e:
         raise not_found(str(e), resource_type="backup")
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         logger.error(f"恢复数据备份异常: {str(e)}")
         raise internal_error(f"恢复数据备份失败: {str(e)}")

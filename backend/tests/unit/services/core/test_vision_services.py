@@ -246,11 +246,13 @@ class TestZhipuVisionService:
             error = httpx.HTTPStatusError(
                 "Authentication failed", request=Mock(), response=mock_response
             )
+
             # Make raise_for_status() raise the error, not post()
             # Track calls and verify error is raised
             def track_raise(*args, **kwargs):
                 print(f"DEBUG: raise_for_status called, will raise: {error}")
                 raise error
+
             mock_response.raise_for_status = Mock(side_effect=track_raise)
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -282,10 +284,12 @@ class TestZhipuVisionService:
             error = httpx.HTTPStatusError(
                 "Rate limit exceeded", request=Mock(), response=mock_response
             )
+
             # Track calls and verify error is raised
             def track_raise(*args, **kwargs):
                 print(f"DEBUG: raise_for_status called, will raise: {error}")
                 raise error
+
             mock_response.raise_for_status = Mock(side_effect=track_raise)
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -655,7 +659,6 @@ class TestDeepSeekVisionService:
         with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
             mock_client = AsyncMock()
 
-            
             error = httpx.ConnectError("Network error")
             mock_client.post = AsyncMock(side_effect=error)
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)

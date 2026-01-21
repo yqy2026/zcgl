@@ -17,9 +17,9 @@ import {
   OrganizationBatchResult,
   OrganizationMoveResult,
   OrganizationPath,
-  OrganizationAdvancedSearch,
+  OrganizationSearchCriteria,
 } from '../types/organization';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 
@@ -43,7 +43,7 @@ class OrganizationService {
    */
   async getOrganizations(params?: { skip?: number; limit?: number }): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(this.baseUrl, {
+      const result = await apiClient.get<Organization[]>(this.baseUrl, {
         params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 100 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -68,7 +68,7 @@ class OrganizationService {
    */
   async getOrganization(id: string): Promise<Organization> {
     try {
-      const result = await enhancedApiClient.get<Organization>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.get<Organization>(`${this.baseUrl}/${id}`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -90,7 +90,7 @@ class OrganizationService {
    */
   async createOrganization(organization: OrganizationCreate): Promise<Organization> {
     try {
-      const result = await enhancedApiClient.post<Organization>(this.baseUrl, organization, {
+      const result = await apiClient.post<Organization>(this.baseUrl, organization, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -111,7 +111,7 @@ class OrganizationService {
    */
   async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
     try {
-      const result = await enhancedApiClient.put<Organization>(
+      const result = await apiClient.put<Organization>(
         `${this.baseUrl}/${id}`,
         organization,
         {
@@ -140,7 +140,7 @@ class OrganizationService {
         deletedBy !== null && deletedBy !== undefined && deletedBy !== ''
           ? { deleted_by: deletedBy }
           : {};
-      const result = await enhancedApiClient.delete<void>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.delete<void>(`${this.baseUrl}/${id}`, {
         params,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
@@ -165,7 +165,7 @@ class OrganizationService {
         parentId !== null && parentId !== undefined && parentId !== ''
           ? { parent_id: parentId }
           : {};
-      const result = await enhancedApiClient.get<OrganizationTree[]>(`${this.baseUrl}/tree`, {
+      const result = await apiClient.get<OrganizationTree[]>(`${this.baseUrl}/tree`, {
         params,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -190,7 +190,7 @@ class OrganizationService {
    */
   async getOrganizationChildren(id: string, recursive: boolean = false): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/${id}/children`, {
+      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/${id}/children`, {
         params: { recursive },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -212,7 +212,7 @@ class OrganizationService {
    * 获取组织到根节点的路�?   */
   async getOrganizationPath(id: string): Promise<OrganizationPath> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/${id}/path`, {
+      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/${id}/path`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -241,7 +241,7 @@ class OrganizationService {
     params?: { skip?: number; limit?: number }
   ): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/search`, {
+      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/search`, {
         params: { keyword, ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -263,10 +263,10 @@ class OrganizationService {
    * 高级搜索组织
    */
   async advancedSearchOrganizations(
-    searchRequest: OrganizationAdvancedSearch
+    searchRequest: OrganizationSearchCriteria
   ): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.post<Organization[]>(
+      const result = await apiClient.post<Organization[]>(
         `${this.baseUrl}/advanced-search`,
         searchRequest,
         {
@@ -293,7 +293,7 @@ class OrganizationService {
    */
   async getStatistics(): Promise<OrganizationStatistics> {
     try {
-      const result = await enhancedApiClient.get<OrganizationStatistics>(
+      const result = await apiClient.get<OrganizationStatistics>(
         `${this.baseUrl}/statistics`,
         {
           cache: true,
@@ -321,7 +321,7 @@ class OrganizationService {
     params?: { skip?: number; limit?: number }
   ): Promise<OrganizationHistory[]> {
     try {
-      const result = await enhancedApiClient.get<OrganizationHistory[]>(
+      const result = await apiClient.get<OrganizationHistory[]>(
         `${this.baseUrl}/${id}/history`,
         {
           params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
@@ -352,7 +352,7 @@ class OrganizationService {
     moveRequest: OrganizationMoveRequest
   ): Promise<OrganizationMoveResult> {
     try {
-      const result = await enhancedApiClient.post<OrganizationMoveResult>(
+      const result = await apiClient.post<OrganizationMoveResult>(
         `${this.baseUrl}/${id}/move`,
         moveRequest,
         {
@@ -379,7 +379,7 @@ class OrganizationService {
     batchRequest: OrganizationBatchRequest
   ): Promise<OrganizationBatchResult> {
     try {
-      const result = await enhancedApiClient.post<OrganizationBatchResult>(
+      const result = await apiClient.post<OrganizationBatchResult>(
         `${this.baseUrl}/batch`,
         batchRequest,
         {
@@ -425,7 +425,7 @@ class OrganizationService {
    */
   async exportOrganizations(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+      const result = await apiClient.get<Blob>(`${this.baseUrl}/export`, {
         params: { format },
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -454,7 +454,7 @@ class OrganizationService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         data?: unknown;

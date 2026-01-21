@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import internal_error
+from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -50,7 +50,7 @@ def get_rent_statistics(
         )
         return statistics
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取统计信息失败: {str(e)}")
 
@@ -76,7 +76,7 @@ def get_ownership_statistics(
         )
         return statistics
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取权属方统计失败: {str(e)}")
 
@@ -102,7 +102,7 @@ def get_asset_statistics(
         )
         return statistics
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取资产统计失败: {str(e)}")
 
@@ -128,7 +128,7 @@ def get_monthly_statistics(
         )
         return statistics
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取月度统计失败: {str(e)}")
 
@@ -187,6 +187,6 @@ def export_statistics(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"导出统计数据失败: {str(e)}")

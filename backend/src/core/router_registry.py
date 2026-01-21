@@ -179,7 +179,7 @@ class APIVersionManager:
 
     def __init__(self, registry: RouteRegistry):
         self.registry = registry
-        self.supported_versions = ["v1", "v2"]
+        self.supported_versions = ["v1"]
         self.default_version = "v1"
 
     def add_version_support(self, version: str) -> None:
@@ -236,66 +236,6 @@ def register_api_routes() -> None:
     except Exception as e:  # pragma: no cover
         logger.error(f"API 主路由注册失败: {e}")  # pragma: no cover
         raise  # pragma: no cover
-
-    # 注册PDF导入路由（独立注册）- 添加异常处理
-    try:
-        from ..api.v1.pdf_import import router as pdf_import_router
-
-        route_registry.register_router(
-            router=pdf_import_router,
-            prefix="/api/pdf-import",
-            tags=["PDF智能导入"],
-            version=None,
-        )
-        logger.info("PDF导入路由注册成功（模块化版本）")
-    except Exception as e:  # pragma: no cover
-        logger.warning(f"PDF导入路由注册失败（将跳过）: {e}")  # pragma: no cover
-        logger.info("系统将继续运行，但PDF导入功能可能不可用")  # pragma: no cover
-
-        # 添加基础的PDF路由作为备用
-        from fastapi import APIRouter  # pragma: no cover
-
-        pdf_fallback_router = APIRouter()  # pragma: no cover
-
-        @pdf_fallback_router.get("/info")  # pragma: no cover
-        async def get_pdf_import_info() -> dict[str, Any]:  # pragma: no cover
-            """获取PDF导入系统信息"""
-            return {  # pragma: no cover
-                "success": True,  # pragma: no cover
-                "data": {  # pragma: no cover
-                    "supported_formats": [".pdf"],  # pragma: no cover
-                    "max_file_size": 50 * 1024 * 1024,  # 50MB  # pragma: no cover
-                    "vision_engines": ["qwen", "deepseek", "glm"],  # pragma: no cover
-                    "processing_status": "available",  # pragma: no cover
-                },  # pragma: no cover
-                "message": "PDF导入系统信息获取成功",  # pragma: no cover
-            }  # pragma: no cover
-
-        @pdf_fallback_router.get("/sessions")  # pragma: no cover
-        async def get_pdf_import_sessions() -> dict[str, Any]:  # pragma: no cover
-            """获取PDF导入会话列表"""
-            return {
-                "success": True,
-                "data": [],
-                "message": "PDF导入会话列表获取成功",
-            }  # pragma: no cover
-
-        @pdf_fallback_router.post("/upload")  # pragma: no cover
-        async def upload_pdf_for_import() -> dict[str, Any]:  # pragma: no cover
-            """上传PDF进行智能导入"""
-            return {
-                "success": True,
-                "message": "PDF上传成功",
-                "task_id": "demo_task_id",
-            }  # pragma: no cover
-
-        route_registry.register_router(  # pragma: no cover
-            router=pdf_fallback_router,  # pragma: no cover
-            prefix="/api/v1/pdf-import",  # pragma: no cover
-            tags=["PDF智能导入"],  # pragma: no cover
-            version="v1",  # pragma: no cover
-        )  # pragma: no cover
-        logger.info("PDF导入备用路由注册成功")  # pragma: no cover
 
     logger.info("完成API路由注册")
 

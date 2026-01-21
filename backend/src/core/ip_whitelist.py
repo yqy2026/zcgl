@@ -64,6 +64,7 @@ class IPWhitelistManager:
             # In production/staging, reject private ranges
             # Allow private ranges in development and testing
             from src.core.environment import Environment
+
             if self.env in (Environment.PRODUCTION, Environment.STAGING):
                 for private in self.PRIVATE_RANGES:
                     if network.overlaps(ip_network(private)):
@@ -105,6 +106,7 @@ class IPWhitelistManager:
             # If whitelist is empty, allow all (except in production/staging)
             if not self.whitelist:
                 from src.core.environment import Environment
+
                 return self.env not in (Environment.PRODUCTION, Environment.STAGING)
 
             # Check if IP matches any whitelist entry

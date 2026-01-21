@@ -29,7 +29,9 @@ except ImportError:
 
 # Integration tests use file database (not memory)
 # Unit tests use memory database to avoid lock contention
-TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL", "sqlite:///./test_integration.db")
+TEST_DATABASE_URL = os.getenv(
+    "INTEGRATION_TEST_DATABASE_URL", "sqlite:///./test_integration.db"
+)
 
 # Set DATABASE_URL early so root conftest's setup_test_database fixture
 # uses this for migrations instead of the default :memory:
@@ -182,7 +184,9 @@ def test_data(db_session):
     password_service = PasswordService()
 
     # Create test organization
-    test_org = Organization(name="Test Organization", code="TEST_ORG", type="department")
+    test_org = Organization(
+        name="Test Organization", code="TEST_ORG", type="department"
+    )
     db_session.add(test_org)
     db_session.commit()
 

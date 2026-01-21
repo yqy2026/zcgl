@@ -23,8 +23,8 @@ def test_rate_limit_fail_closed_blocks_requests():
 
     test_app = FastAPI()
     middleware = RequestValidationMiddleware(test_app)
-    assert hasattr(middleware, 'circuit_breaker')
-    assert hasattr(middleware, 'rate_limit_config')
+    assert hasattr(middleware, "circuit_breaker")
+    assert hasattr(middleware, "rate_limit_config")
 
     # Verify circuit breaker has correct config
     assert middleware.circuit_breaker.max_failures == config.max_failures
@@ -69,6 +69,7 @@ async def test_circuit_breaker_resets_after_cooldown():
 
     # Wait for cooldown
     import time
+
     time.sleep(1.1)
 
     # Should allow test request (half-open state)
@@ -87,6 +88,7 @@ async def test_circuit_breaker_closes_on_success():
 
     # Wait for cooldown
     import time
+
     time.sleep(1.1)
 
     # Allow test request

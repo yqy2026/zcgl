@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ....core.api_errors import bad_request, internal_error, not_found
+from ....core.exception_handler import bad_request, internal_error, not_found
 from ....crud.rent_contract import rent_contract
 from ....database import get_db
 from ....middleware.auth import get_current_active_user

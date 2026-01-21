@@ -4,8 +4,7 @@
 // export { api } from './api' // 已弃用，迁移到enhancedApiClient
 
 // 现代化API客户端 - Re-exported from new api/ location
-export { enhancedApiClient, EnhancedApiClient } from '../api/client';
-export { createEnhancedApiClient } from '../api/client';
+export { apiClient, ApiClient, createApiClient } from '../api/client';
 export { assetService, AssetService } from './assetService';
 export { statisticsService, StatisticsService } from './statisticsService';
 export { excelService, ExcelService } from './excelService';

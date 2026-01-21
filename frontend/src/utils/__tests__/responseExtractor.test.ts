@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ResponseExtractor, ApiErrorHandler } from '../responseExtractor';
 import { AxiosResponse, AxiosError } from 'axios';
-import type { EnhancedApiError, ApiErrorType } from '@/types/apiResponse';
+import type { ApiClientError, ApiErrorType } from '@/types/apiResponse';
 
 // =============================================================================
 // Mock数据
@@ -507,9 +507,9 @@ describe('ApiErrorHandler - 错误处理', () => {
     });
   });
 
-  describe('handleError - 已有的增强错误', () => {
-    it('应该直接返回已有的增强错误', () => {
-      const existingError: EnhancedApiError = {
+  describe('handleError - 已有的客户端错误', () => {
+    it('应该直接返回已有的客户端错误', () => {
+      const existingError: ApiClientError = {
         type: 'VALIDATION_ERROR' as ApiErrorType,
         code: 'CUSTOM_ERROR',
         message: '自定义错误',

@@ -210,7 +210,7 @@ export interface OrganizationMoveResult {
 }
 
 // 高级搜索条件
-export interface OrganizationAdvancedSearch extends OrganizationSearchRequest {
+export interface OrganizationSearchCriteria extends OrganizationSearchRequest {
   date_range?: [string, string];
   created_by?: string;
   updated_by?: string;

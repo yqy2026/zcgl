@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...crud.operation_log import OperationLogCRUD
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_admin
@@ -136,7 +141,7 @@ async def get_operation_logs(
             pages=pages,
         )
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(str(e))
 
@@ -159,7 +164,7 @@ async def get_operation_log(
 
         return OperationLogResponse.model_validate(log)
     except Exception as e:
-        if "UnifiedError" in type(e).__name__:
+        if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(str(e))
 

@@ -38,6 +38,7 @@ class TestIPWhitelistManagerInit:
     def test_load_from_env(self):
         """Test loading whitelist from environment variable"""
         import os
+
         # Set the environment variable before creating manager
         original_value = os.environ.get("IP_WHITELIST")
         try:
@@ -92,6 +93,7 @@ class TestValidateRange:
     def test_private_ranges_in_production(self, mock_get_env):
         """Test rejecting private ranges in production"""
         from src.core.environment import Environment
+
         mock_get_env.return_value = Environment.PRODUCTION
 
         manager = IPWhitelistManager()
@@ -105,6 +107,7 @@ class TestValidateRange:
     def test_private_ranges_allowed_in_development(self, mock_get_env):
         """Test allowing private ranges in development"""
         from src.core.environment import Environment
+
         mock_get_env.return_value = Environment.DEVELOPMENT
 
         manager = IPWhitelistManager()
@@ -185,6 +188,7 @@ class TestIsAllowed:
     def test_deny_when_whitelist_empty_in_production(self):
         """Test that empty whitelist denies all in production"""
         from src.core.environment import Environment
+
         manager = IPWhitelistManager()
         manager.env = Environment.PRODUCTION
         assert manager.is_allowed("192.168.1.100") is False
@@ -262,6 +266,7 @@ class TestSingletonInstance:
     def test_singleton_is_shared(self):
         """Test that singleton is the same instance"""
         from src.core.ip_whitelist import ip_whitelist as ip_whitelist_2
+
         assert ip_whitelist is ip_whitelist_2
 
 
@@ -272,6 +277,7 @@ class TestEnvironmentBehavior:
     def test_production_mode_blocks_private_ranges(self, mock_get_env):
         """Test production mode blocks private range additions"""
         from src.core.environment import Environment
+
         mock_get_env.return_value = Environment.PRODUCTION
 
         manager = IPWhitelistManager()
@@ -285,6 +291,7 @@ class TestEnvironmentBehavior:
     def test_development_mode_allows_private_ranges(self, mock_get_env):
         """Test development mode allows private range additions"""
         from src.core.environment import Environment
+
         mock_get_env.return_value = Environment.DEVELOPMENT
 
         manager = IPWhitelistManager()

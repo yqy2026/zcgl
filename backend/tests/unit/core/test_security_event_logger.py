@@ -17,12 +17,18 @@ from src.models.security_event import SecurityEvent
 
 def setup_mock_cache(mock_cache, set_return=True, get_return=None):
     """Helper to set up mock cache_manager with sync functions"""
+
     def mock_set(prefix, key, value, expire):
         return set_return
 
     def mock_get(prefix, key):
         # If get_return is a dict with just 'count', add 'events' key
-        if get_return and isinstance(get_return, dict) and 'count' in get_return and 'events' not in get_return:
+        if (
+            get_return
+            and isinstance(get_return, dict)
+            and "count" in get_return
+            and "events" not in get_return
+        ):
             return {"count": get_return["count"], "events": []}
         # Handle the case where get_return is explicitly set to a return value
         return get_return
@@ -80,13 +86,15 @@ class TestAuthFailureLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
             mock_db_log.return_value = mock_event
 
-            result = logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password")
+            result = logger.log_auth_failure(
+                "192.168.1.1", "testuser", "invalid_password"
+            )
 
             # Verify the returned event object
             assert result is not None
@@ -99,7 +107,7 @@ class TestAuthFailureLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
@@ -116,7 +124,7 @@ class TestAuthFailureLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "::ffff:192.168.1.1"
@@ -138,7 +146,7 @@ class TestPermissionDeniedLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "permission_denied"
             mock_event.ip_address = "192.168.1.1"
@@ -146,10 +154,7 @@ class TestPermissionDeniedLogging:
             mock_db_log.return_value = mock_event
 
             result = logger.log_permission_denied(
-                user_id="user123",
-                resource="assets",
-                action="delete",
-                ip="192.168.1.1"
+                user_id="user123", resource="assets", action="delete", ip="192.168.1.1"
             )
 
             assert result is not None
@@ -162,16 +167,13 @@ class TestPermissionDeniedLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "permission_denied"
             mock_db_log.return_value = mock_event
 
             result = logger.log_permission_denied(
-                user_id="user123",
-                resource="contracts",
-                action="update",
-                ip="10.0.0.1"
+                user_id="user123", resource="contracts", action="update", ip="10.0.0.1"
             )
 
             # Should log the event
@@ -187,7 +189,7 @@ class TestRateLimitExceededLogging:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "rate_limit_exceeded"
             mock_db_log.return_value = mock_event
@@ -287,7 +289,9 @@ class TestEventCounting:
         assert count1 == 5
 
         # Count permission denied events
-        count2 = logger.get_event_count("192.168.1.1", SecurityEventType.PERMISSION_DENIED)
+        count2 = logger.get_event_count(
+            "192.168.1.1", SecurityEventType.PERMISSION_DENIED
+        )
         assert count2 == 5
 
 
@@ -300,13 +304,15 @@ class TestDatabaseStorage:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
             mock_db_log.return_value = mock_event
 
-            result = logger.log_auth_failure("192.168.1.1", "testuser", "invalid_password")
+            result = logger.log_auth_failure(
+                "192.168.1.1", "testuser", "invalid_password"
+            )
 
             # Verify database log was called
             mock_db_log.assert_called_once()
@@ -323,7 +329,7 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_success"
             mock_db_log.return_value = mock_event
@@ -339,12 +345,14 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "suspicious_activity"
             mock_db_log.return_value = mock_event
 
-            result = logger.log_suspicious_activity("192.168.1.1", "multiple_failed_logins")
+            result = logger.log_suspicious_activity(
+                "192.168.1.1", "multiple_failed_logins"
+            )
 
             assert result is not None
 
@@ -354,12 +362,14 @@ class TestAllEventTypes:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "account_locked"
             mock_db_log.return_value = mock_event
 
-            result = logger.log_account_locked("testuser", "192.168.1.1", "too_many_failures")
+            result = logger.log_account_locked(
+                "testuser", "192.168.1.1", "too_many_failures"
+            )
 
             assert result is not None
 
@@ -390,13 +400,14 @@ class TestErrorHandling:
     @patch("src.core.security_event_logger.cache_manager")
     def test_redis_failure_graceful_handling(self, mock_cache):
         """Test graceful handling when Redis fails"""
+
         def mock_set(prefix, key, value, expire):
             raise Exception("Redis connection failed")
 
         mock_cache.set = mock_set
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -412,7 +423,7 @@ class TestErrorHandling:
         setup_mock_cache(mock_cache)
 
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -431,7 +442,7 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -451,7 +462,7 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -479,7 +490,7 @@ class TestIntegrationScenarios:
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -492,14 +503,16 @@ class TestIntegrationScenarios:
                     user_id="user123",
                     resource="assets",
                     action="delete",
-                    ip="192.168.1.1"
+                    ip="192.168.1.1",
                 )
 
             # Auth failures should not trigger alert (3 < 5)
             assert logger.should_alert("192.168.1.1") is False
 
             # But should correctly count auth failures
-            count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+            count = logger.get_event_count(
+                "192.168.1.1", SecurityEventType.AUTH_FAILURE
+            )
             assert count == 3
 
 
@@ -510,36 +523,39 @@ class TestMethodSignatures:
         """Test log_auth_failure has correct signature"""
         logger = SecurityEventLogger()
         import inspect
+
         sig = inspect.signature(logger.log_auth_failure)
         params = list(sig.parameters.keys())
-        assert 'ip' in params
-        assert 'username' in params
-        assert 'reason' in params
+        assert "ip" in params
+        assert "username" in params
+        assert "reason" in params
 
     def test_log_permission_denied_signature(self):
         """Test log_permission_denied has correct signature"""
         logger = SecurityEventLogger()
         import inspect
+
         sig = inspect.signature(logger.log_permission_denied)
         params = list(sig.parameters.keys())
-        assert 'user_id' in params
-        assert 'resource' in params
-        assert 'action' in params
-        assert 'ip' in params
+        assert "user_id" in params
+        assert "resource" in params
+        assert "action" in params
+        assert "ip" in params
 
     def test_log_rate_limit_exceeded_signature(self):
         """Test log_rate_limit_exceeded has correct signature"""
         logger = SecurityEventLogger()
         import inspect
+
         sig = inspect.signature(logger.log_rate_limit_exceeded)
         params = list(sig.parameters.keys())
-        assert 'ip' in params
-        assert 'endpoint' in params
+        assert "ip" in params
+        assert "endpoint" in params
 
     def test_methods_return_security_event(self):
         """Test methods return SecurityEvent object"""
         logger = SecurityEventLogger()
-        with patch.object(logger, '_log_to_database') as mock_db_log:
+        with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.id = "test-id"
             mock_event.event_type = "auth_failure"
@@ -550,6 +566,6 @@ class TestMethodSignatures:
 
             # Should return SecurityEvent object
             assert result is not None
-            assert hasattr(result, 'id')
-            assert hasattr(result, 'event_type')
-            assert hasattr(result, 'ip_address')
+            assert hasattr(result, "id")
+            assert hasattr(result, "event_type")
+            assert hasattr(result, "ip_address")

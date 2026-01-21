@@ -71,7 +71,11 @@ class SecurityEvent(Base):  # type: ignore[valid-type, misc]
 
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now, index=True, comment="Event timestamp"
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        index=True,
+        comment="Event timestamp",
     )
 
     # Table indexes for querying

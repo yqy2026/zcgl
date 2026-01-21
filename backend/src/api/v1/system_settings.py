@@ -334,14 +334,12 @@ async def test_security_alert(
     # Simulate security events
     for i in range(12):  # Exceed threshold
         logger_instance.log_auth_failure(
-            ip=f"192.168.1.{i}",
-            username="testuser",
-            reason="test_alert"
+            ip=f"192.168.1.{i}", username="testuser", reason="test_alert"
         )
 
     return {
         "message": "Generated 12 test security events",
-        "should_alert": logger_instance.should_alert(ip="192.168.1.1", threshold=10)
+        "should_alert": logger_instance.should_alert(ip="192.168.1.1", threshold=10),
     }
 
 
@@ -371,11 +369,13 @@ async def get_security_events(
     total = db.query(SecurityEvent).count()
 
     # Query events with pagination
-    events = db.query(SecurityEvent)\
-        .order_by(SecurityEvent.created_at.desc())\
-        .offset(skip)\
-        .limit(limit)\
+    events = (
+        db.query(SecurityEvent)
+        .order_by(SecurityEvent.created_at.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
+    )
 
     return {
         "total": total,
@@ -389,10 +389,10 @@ async def get_security_events(
                 "ip": e.ip_address,
                 "severity": e.severity,
                 "metadata": e.event_metadata,
-                "created_at": e.created_at.isoformat()
+                "created_at": e.created_at.isoformat(),
             }
             for e in events
-        ]
+        ],
     }
 
 

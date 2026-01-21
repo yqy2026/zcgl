@@ -129,7 +129,9 @@ class TestSecretValidator:
 
         try:
             os.environ["SECRET_KEY"] = "Valid!S3cr3t@Key#With$All%Types^2026ABC"
-            os.environ["DATA_ENCRYPTION_KEY"] = "Another!Valid#Key$For%Data^Encryption&2026"
+            os.environ["DATA_ENCRYPTION_KEY"] = (
+                "Another!Valid#Key$For%Data^Encryption&2026"
+            )
 
             validator = SecretValidator()
             assert validator.validate_env_secrets() is True

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import LazyRoute from './LazyRoute';
-import { RouteConfig } from '@/constants/routes';
+import { RouteConfig, ASSET_ROUTES, SYSTEM_ROUTES } from '@/constants/routes';
 import { PERMISSIONS } from '@/hooks/usePermission';
 
 // 路由组件属性类型
@@ -165,35 +165,40 @@ class RouteBuilder {
 // 预定义的路由构建函数
 export const AssetRoutes = {
   list: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/assets/list', Component, 'ASSET_VIEW', '资产列表'),
+    RouteBuilder.createProtectedRoute(ASSET_ROUTES.LIST, Component, 'ASSET_VIEW', '资产列表'),
 
   new: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/assets/new', Component, 'ASSET_CREATE', '创建资产'),
+    RouteBuilder.createProtectedRoute(ASSET_ROUTES.NEW, Component, 'ASSET_CREATE', '创建资产'),
 
   import: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/assets/import', Component, 'ASSET_IMPORT', '资产导入'),
+    RouteBuilder.createProtectedRoute(ASSET_ROUTES.IMPORT, Component, 'ASSET_IMPORT', '资产导入'),
 
   analytics: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/assets/analytics', Component, 'ASSET_VIEW', '资产分析'),
+    RouteBuilder.createProtectedRoute(
+      ASSET_ROUTES.ANALYTICS,
+      Component,
+      'ASSET_VIEW',
+      '资产分析'
+    ),
 };
 
 export const SystemRoutes = {
   users: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/system/users', Component, 'USER_VIEW', '用户管理'),
+    RouteBuilder.createProtectedRoute(SYSTEM_ROUTES.USERS, Component, 'USER_VIEW', '用户管理'),
 
   roles: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute('/system/roles', Component, 'ROLE_VIEW', '角色管理'),
+    RouteBuilder.createProtectedRoute(SYSTEM_ROUTES.ROLES, Component, 'ROLE_VIEW', '角色管理'),
 
   organizations: (Component: React.ComponentType<RouteComponentProps>) =>
     RouteBuilder.createProtectedRoute(
-      '/system/organizations',
+      SYSTEM_ROUTES.ORGANIZATIONS,
       Component,
       'ORGANIZATION_VIEW',
       '组织架构'
     ),
 
   logs: (Component: React.ComponentType<Record<string, unknown>>) =>
-    RouteBuilder.createProtectedRoute('/system/logs', Component, 'SYSTEM_LOGS', '操作日志'),
+    RouteBuilder.createProtectedRoute(SYSTEM_ROUTES.LOGS, Component, 'SYSTEM_LOGS', '操作日志'),
 };
 
 export default RouteBuilder;

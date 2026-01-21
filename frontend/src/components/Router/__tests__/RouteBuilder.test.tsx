@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import {} from '@testing-library/react';
 import { MemoryRouter, Routes } from 'react-router-dom';
+import RouteBuilder, { AssetRoutes, SystemRoutes } from '../RouteBuilder';
 
 // Mock all dependencies before importing
 vi.mock('../ProtectedRoute', () => ({
@@ -73,24 +74,18 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('RouteBuilder - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../RouteBuilder');
-    expect(module).toBeDefined();
+  it('应该能够导入组件', () => {
+    expect(RouteBuilder).toBeDefined();
   });
 
-  it('应该导出RouteBuilder类', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
+  it('应该导出RouteBuilder类', () => {
     expect(RouteBuilder).toBeDefined();
     expect(typeof RouteBuilder.buildRoute).toBe('function');
   });
 });
 
 describe('RouteBuilder - 路由构建测试', () => {
-  it('应该能够构建路由配置', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('应该能够构建路由配置', () => {
     const TestComponent = () => <div>Dashboard</div>;
 
     const config = {
@@ -104,10 +99,7 @@ describe('RouteBuilder - 路由构建测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持懒加载路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('应该支持懒加载路由', () => {
     const TestComponent = React.lazy(() =>
       Promise.resolve({ default: () => <div>Lazy Page</div> })
     );
@@ -124,10 +116,7 @@ describe('RouteBuilder - 路由构建测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持嵌套路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('应该支持嵌套路由', () => {
     const ChildComponent = () => <div>Child Page</div>;
 
     const config = {
@@ -157,10 +146,7 @@ describe('RouteBuilder - 静态方法测试', () => {
     vi.clearAllMocks();
   });
 
-  it('buildRoutes应该构建多个路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('buildRoutes应该构建多个路由', () => {
     const ComponentA = () => <div>A</div>;
     const ComponentB = () => <div>B</div>;
 
@@ -176,19 +162,13 @@ describe('RouteBuilder - 静态方法测试', () => {
     expect(elements[1]).toBeTruthy();
   });
 
-  it('createRedirect应该创建重定向路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('createRedirect应该创建重定向路由', () => {
     const element = RouteBuilder.createRedirect('/old-path', '/new-path', true);
 
     expect(element).toBeTruthy();
   });
 
-  it('createLazyRoute应该创建懒加载路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('createLazyRoute应该创建懒加载路由', () => {
     const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
 
     const element = RouteBuilder.createLazyRoute('/lazy', TestComponent, {
@@ -198,10 +178,7 @@ describe('RouteBuilder - 静态方法测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('createProtectedRoute应该创建受保护路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('createProtectedRoute应该创建受保护路由', () => {
     const TestComponent = () => <div>Protected</div>;
 
     const element = RouteBuilder.createProtectedRoute(
@@ -224,10 +201,7 @@ describe('RouteBuilder - 边界情况', () => {
     vi.clearAllMocks();
   });
 
-  it('没有组件但有子路由时应该创建容器路由', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('没有组件但有子路由时应该创建容器路由', () => {
     const ChildComponent = () => <div>Child</div>;
 
     const config = {
@@ -239,10 +213,7 @@ describe('RouteBuilder - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('既没有组件也没有子路由时应该创建重定向', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('既没有组件也没有子路由时应该创建重定向', () => {
     const config = {
       path: '/orphan',
     };
@@ -251,10 +222,7 @@ describe('RouteBuilder - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('有element属性时应该直接使用Route', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('有element属性时应该直接使用Route', () => {
     const customElement = <div>Custom</div>;
 
     const config = {
@@ -266,10 +234,7 @@ describe('RouteBuilder - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该传递所有额外的props', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('应该传递所有额外的props', () => {
     const TestComponent = () => <div>Test</div>;
 
     const config = {
@@ -282,10 +247,7 @@ describe('RouteBuilder - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理空children数组', async () => {
-    const module = await import('../RouteBuilder');
-    const RouteBuilder = module.default || module.RouteBuilder;
-
+  it('应该处理空children数组', () => {
     const config = {
       path: '/test',
       children: [],
@@ -305,10 +267,7 @@ describe('RouteBuilder - 预定义路由', () => {
     vi.clearAllMocks();
   });
 
-  it('AssetRoutes应该预定义正确的路由', async () => {
-    const module = await import('../RouteBuilder');
-    const { AssetRoutes } = module;
-
+  it('AssetRoutes应该预定义正确的路由', () => {
     const TestComponent = () => <div>Asset Page</div>;
 
     const listRoute = AssetRoutes.list(TestComponent);
@@ -322,10 +281,7 @@ describe('RouteBuilder - 预定义路由', () => {
     expect(analyticsRoute).toBeTruthy();
   });
 
-  it('SystemRoutes应该预定义正确的路由', async () => {
-    const module = await import('../RouteBuilder');
-    const { SystemRoutes } = module;
-
+  it('SystemRoutes应该预定义正确的路由', () => {
     const TestComponent = () => <div>System Page</div>;
 
     const usersRoute = SystemRoutes.users(TestComponent);

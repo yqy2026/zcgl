@@ -52,11 +52,15 @@ class TestRateLimiterBasics:
         for _ in range(10):
             limiter.check_rate_limit("192.168.1.1", max_requests=10, time_window=60)
 
-        assert not limiter.check_rate_limit("192.168.1.1", max_requests=10, time_window=60)
+        assert not limiter.check_rate_limit(
+            "192.168.1.1", max_requests=10, time_window=60
+        )
 
         # IP2应该仍然有完整的配额
         for _ in range(10):
-            assert limiter.check_rate_limit("192.168.1.2", max_requests=10, time_window=60)
+            assert limiter.check_rate_limit(
+                "192.168.1.2", max_requests=10, time_window=60
+            )
 
 
 class TestRateLimiterEdgeCases:
@@ -98,11 +102,15 @@ class TestRateLimiterEdgeCases:
         for _ in range(10):
             limiter.check_rate_limit("192.168.1.1", max_requests=10, time_window=60)
 
-        assert not limiter.check_rate_limit("192.168.1.1", max_requests=10, time_window=60)
+        assert not limiter.check_rate_limit(
+            "192.168.1.1", max_requests=10, time_window=60
+        )
 
         # IPv6地址应该有独立配额（即使映射到同一主机）
         for _ in range(10):
-            assert limiter.check_rate_limit("::ffff:192.168.1.1", max_requests=10, time_window=60)
+            assert limiter.check_rate_limit(
+                "::ffff:192.168.1.1", max_requests=10, time_window=60
+            )
 
     def test_very_long_window(self):
         """测试长时间窗口"""
@@ -112,9 +120,13 @@ class TestRateLimiterEdgeCases:
 
         # 应该正确处理
         for _ in range(1000):
-            assert limiter.check_rate_limit("192.168.1.1", max_requests=1000, time_window=3600)
+            assert limiter.check_rate_limit(
+                "192.168.1.1", max_requests=1000, time_window=3600
+            )
 
-        assert not limiter.check_rate_limit("192.168.1.1", max_requests=1000, time_window=3600)
+        assert not limiter.check_rate_limit(
+            "192.168.1.1", max_requests=1000, time_window=3600
+        )
 
     def test_zero_requests_allowed(self):
         """测试零请求配额"""
@@ -122,8 +134,12 @@ class TestRateLimiterEdgeCases:
         limiter = RateLimiter()
 
         # 所有请求都应该被拒绝（0请求限制）
-        assert not limiter.check_rate_limit("192.168.1.1", max_requests=0, time_window=60)
-        assert not limiter.check_rate_limit("192.168.1.2", max_requests=0, time_window=60)
+        assert not limiter.check_rate_limit(
+            "192.168.1.1", max_requests=0, time_window=60
+        )
+        assert not limiter.check_rate_limit(
+            "192.168.1.2", max_requests=0, time_window=60
+        )
 
     def test_very_small_window(self):
         """测试非常小的时间窗口"""
@@ -132,7 +148,10 @@ class TestRateLimiterEdgeCases:
         limiter = RateLimiter()
 
         # 快速发送6个请求
-        results = [limiter.check_rate_limit("192.168.1.1", max_requests=5, time_window=0.1) for _ in range(6)]
+        results = [
+            limiter.check_rate_limit("192.168.1.1", max_requests=5, time_window=0.1)
+            for _ in range(6)
+        ]
 
         # 前5个应该成功，第6个应该失败
         assert sum(results) == 5
@@ -237,7 +256,9 @@ class TestRateLimiterStatistics:
         limiter = RateLimiter()
 
         # 初始应该有10个剩余（使用显式参数）
-        remaining = limiter.get_remaining_requests("192.168.1.1", max_requests=10, time_window=60)
+        remaining = limiter.get_remaining_requests(
+            "192.168.1.1", max_requests=10, time_window=60
+        )
         assert remaining == 10
 
         # 使用3个请求
@@ -245,7 +266,9 @@ class TestRateLimiterStatistics:
             limiter.check_rate_limit("192.168.1.1", max_requests=10, time_window=60)
 
         # 应该剩余7个
-        remaining = limiter.get_remaining_requests("192.168.1.1", max_requests=10, time_window=60)
+        remaining = limiter.get_remaining_requests(
+            "192.168.1.1", max_requests=10, time_window=60
+        )
         assert remaining == 7
 
     def test_get_rate_limit_status(self):
@@ -254,7 +277,9 @@ class TestRateLimiterStatistics:
         limiter = RateLimiter()
 
         # get_remaining_requests 提供状态信息
-        remaining = limiter.get_remaining_requests("192.168.1.1", max_requests=10, time_window=60)
+        remaining = limiter.get_remaining_requests(
+            "192.168.1.1", max_requests=10, time_window=60
+        )
 
         # 应该返回剩余请求数
         assert remaining == 10
@@ -300,7 +325,9 @@ class TestRateLimiterIntegrationScenarios:
         # 合法用户应该仍然能够访问
         legitimate_ip = "192.168.1.100"
         for _ in range(10):
-            assert limiter.check_rate_limit(legitimate_ip, max_requests=50, time_window=60)
+            assert limiter.check_rate_limit(
+                legitimate_ip, max_requests=50, time_window=60
+            )
 
     def test_burst_traffic_handling(self):
         """测试突发流量处理"""
@@ -311,7 +338,10 @@ class TestRateLimiterIntegrationScenarios:
         ip = "192.168.1.75"
 
         # 突发50个请求
-        burst_results = [limiter.check_rate_limit(ip, max_requests=90, time_window=60) for _ in range(50)]
+        burst_results = [
+            limiter.check_rate_limit(ip, max_requests=90, time_window=60)
+            for _ in range(50)
+        ]
         assert all(burst_results)
 
         # 持续流量应该继续工作

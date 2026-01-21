@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import {} from '@testing-library/react';
 import { MemoryRouter, Routes } from 'react-router-dom';
+import ProtectedRoute from '../ProtectedRoute';
 
 // Mock dependencies
 vi.mock('@/components/ErrorHandling', () => ({
@@ -47,22 +48,17 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('ProtectedRoute - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../ProtectedRoute');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
+  it('应该能够导入组件', () => {
+    expect(ProtectedRoute).toBeDefined();
   });
 
-  it('组件应该是React函数组件', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('组件应该是React函数组件', () => {
     expect(typeof ProtectedRoute).toBe('function');
   });
 });
 
 describe('ProtectedRoute - 基础功能测试', () => {
-  it('应该支持权限验证', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
-
+  it('应该支持权限验证', () => {
     const TestComponent = () => <div>Protected Content</div>;
     const permissions = [{ resource: 'asset', action: 'view' }];
 
@@ -76,9 +72,7 @@ describe('ProtectedRoute - 基础功能测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持fallback渲染', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
-
+  it('应该支持fallback渲染', () => {
     const TestComponent = () => <div>Protected Content</div>;
     const FallbackComponent = () => <div>Access Denied</div>;
     const permissions = [{ resource: 'asset', action: 'edit' }];
@@ -94,9 +88,7 @@ describe('ProtectedRoute - 基础功能测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持errorBoundary控制', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
-
+  it('应该支持errorBoundary控制', () => {
     const TestComponent = () => <div>Content</div>;
 
     const withBoundary = React.createElement(ProtectedRoute, {
@@ -117,9 +109,7 @@ describe('ProtectedRoute - 基础功能测试', () => {
     expect(withoutBoundary).toBeTruthy();
   });
 
-  it('无权限的路由应该也能正常工作', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
-
+  it('无权限的路由应该也能正常工作', () => {
     const TestComponent = () => <div>Public Content</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -142,8 +132,7 @@ describe('ProtectedRoute - 属性验证', () => {
     vi.clearAllMocks();
   });
 
-  it('应该支持title属性', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该支持title属性', () => {
     const TestComponent = () => <div>Test</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -155,8 +144,7 @@ describe('ProtectedRoute - 属性验证', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持exact属性', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该支持exact属性', () => {
     const TestComponent = () => <div>Test</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -178,8 +166,7 @@ describe('ProtectedRoute - 边界情况', () => {
     vi.clearAllMocks();
   });
 
-  it('应该处理undefined权限', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该处理undefined权限', () => {
     const TestComponent = () => <div>Test</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -191,8 +178,7 @@ describe('ProtectedRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理空权限数组', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该处理空权限数组', () => {
     const TestComponent = () => <div>Test</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -204,8 +190,7 @@ describe('ProtectedRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该处理多个权限', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该处理多个权限', () => {
     const TestComponent = () => <div>Test</div>;
 
     const element = React.createElement(ProtectedRoute, {
@@ -220,8 +205,7 @@ describe('ProtectedRoute - 边界情况', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该支持自定义fallback', async () => {
-    const ProtectedRoute = (await import('../ProtectedRoute')).default;
+  it('应该支持自定义fallback', () => {
     const TestComponent = () => <div>Protected</div>;
     const CustomFallback = () => <div>Access Denied</div>;
 
