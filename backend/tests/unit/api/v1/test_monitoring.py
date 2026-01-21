@@ -30,7 +30,7 @@ import pytest
 # Create mock modules BEFORE importing
 permission_mock = MagicMock()
 permission_mock.permission_required = lambda *args, **kwargs: lambda f: f
-sys.modules["src.decorators.permission"] = permission_mock
+sys.modules["src.core.permissions"] = permission_mock
 
 auth_mock = MagicMock()
 auth_mock.get_current_user = lambda: MagicMock(

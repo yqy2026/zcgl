@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...core.api_errors import internal_error
+from ...core.permissions import permission_required
 from ...database import get_db
-from ...decorators.permission import permission_required
 from ...middleware.auth import get_current_user
 from ...models.auth import User
 
