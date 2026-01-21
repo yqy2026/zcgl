@@ -16,7 +16,7 @@ import {
   AssetAreaSection,
   AssetStatusSection,
   AssetReceptionSection,
-  AssetAdvancedSection,
+  AssetDetailedSection,
 } from './Asset';
 
 const { Text } = Typography;
@@ -269,7 +269,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         <AssetAreaSection />
         <AssetStatusSection />
         <AssetReceptionSection />
-        <AssetAdvancedSection />
+        <AssetDetailedSection />
         <FormActions loading={loading} mode={mode} onCancel={onCancel} onReset={handleReset} />
       </Form>
     </div>

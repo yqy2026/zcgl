@@ -30,10 +30,10 @@ const { TextArea } = Input;
 const { Title } = Typography;
 
 /**
- * AssetForm - Advanced Options Section
+ * AssetForm - Detailed Information Section
  * Fields: tenant info, contract info, terminal contracts
  */
-const AssetAdvancedSection: React.FC = () => {
+const AssetDetailedSection: React.FC = () => {
   const {
     showAdvanced,
     setShowAdvanced,
@@ -272,4 +272,4 @@ const AssetAdvancedSection: React.FC = () => {
   );
 };
 
-export default AssetAdvancedSection;
+export default AssetDetailedSection;
