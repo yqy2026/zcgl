@@ -280,7 +280,12 @@ class ProcessingTracker:
             session.extracted_data = result.extracted_fields
             session.processing_result = result.model_dump()
             session.confidence_score = result.confidence
-            session.processing_method = result.extraction_method.value
+            # Handle both Enum and string (when use_enum_values=True)
+            session.processing_method = (
+                result.extraction_method.value
+                if hasattr(result.extraction_method, "value")
+                else str(result.extraction_method)
+            )
 
             # 如果有错误，保存错误信息
             if not result.success and result.error:
@@ -294,7 +299,11 @@ class ProcessingTracker:
                     step=step,
                     message=f"Extraction completed with confidence {result.confidence:.2f}",
                     details={
-                        "method": result.extraction_method.value,
+                        "method": (
+                            result.extraction_method.value
+                            if hasattr(result.extraction_method, "value")
+                            else str(result.extraction_method)
+                        ),
                         "fields_extracted": len(result.extracted_fields),
                         "processing_time_ms": result.processing_time_ms,
                     },
@@ -304,7 +313,11 @@ class ProcessingTracker:
                     step=step,
                     error_message=result.error or "Extraction failed",
                     details={
-                        "error_code": result.error_code.value
+                        "error_code": (
+                            result.error_code.value
+                            if hasattr(result.error_code, "value")
+                            else str(result.error_code)
+                        )
                         if result.error_code
                         else None
                     },

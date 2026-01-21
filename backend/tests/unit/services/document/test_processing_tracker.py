@@ -320,9 +320,6 @@ class TestHandleFailure:
 class TestSaveResult:
     """测试保存结果"""
 
-    @pytest.mark.skip(
-        reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string"
-    )
     def test_save_result_success(self, tracker, mock_session):
         """测试保存成功结果"""
         result = ExtractionResult(
@@ -343,9 +340,6 @@ class TestSaveResult:
         # extraction_method is stored as string due to use_enum_values=True
         assert mock_session.processing_method == "llm_hybrid"
 
-    @pytest.mark.skip(
-        reason="Source code bug: extraction_method.value fails because use_enum_values=True makes it a string"
-    )
     def test_save_result_failure(self, tracker, mock_session):
         """测试保存失败结果"""
         result = ExtractionResult(
