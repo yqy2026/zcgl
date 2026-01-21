@@ -6,9 +6,9 @@ const { Text } = Typography;
 const { Option } = Select;
 
 /**
- * Advanced filter controls: area range, rent range, operation status, business category, etc.
+ * Filter controls: area range, rent range, operation status, business category, etc.
  */
-const AdvancedFiltersSection: React.FC = () => {
+const FiltersSection: React.FC = () => {
   const { localFilters, handleFilterChange, loading, showAdvanced } = useAnalyticsFiltersContext();
 
   if (!showAdvanced) {
@@ -141,4 +141,4 @@ const AdvancedFiltersSection: React.FC = () => {
   );
 };
 
-export default AdvancedFiltersSection;
+export default FiltersSection;

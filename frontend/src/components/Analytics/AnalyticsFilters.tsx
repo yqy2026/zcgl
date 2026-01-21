@@ -19,7 +19,7 @@ import {
   AnalyticsFiltersProvider,
   useAnalyticsFiltersContext,
   BasicFiltersSection,
-  AdvancedFiltersSection,
+  FiltersSection,
   SearchPresetsSection,
   FilterHistorySection,
   FilterActionsSection,
@@ -124,7 +124,7 @@ const FiltersCardHeader: React.FC = () => {
       <FilterHistorySection />
       <SearchPresetsSection />
       <BasicFiltersSection />
-      <AdvancedFiltersSection />
+      <FiltersSection />
       <FilterActionsSection />
     </Card>
   );
