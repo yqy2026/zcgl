@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 import { createLogger } from '../utils/logger';
@@ -33,7 +33,7 @@ export class ProjectService {
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
     try {
-      const result = await enhancedApiClient.post<ProjectListResponse>('search', searchParams, {
+      const result = await apiClient.post<ProjectListResponse>('search', searchParams, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -54,7 +54,7 @@ export class ProjectService {
    */
   async getProject(id: string): Promise<Project> {
     try {
-      const result = await enhancedApiClient.get<Project>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.get<Project>(`${this.baseUrl}/${id}`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -85,7 +85,7 @@ export class ProjectService {
         ownership_id: params?.ownership_id,
       };
 
-      const result = await enhancedApiClient.get<ProjectListResponse>(this.baseUrl, {
+      const result = await apiClient.get<ProjectListResponse>(this.baseUrl, {
         params: requestParams,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -108,7 +108,7 @@ export class ProjectService {
    */
   async createProject(data: ProjectCreate): Promise<Project> {
     try {
-      const result = await enhancedApiClient.post<Project>(this.baseUrl, data, {
+      const result = await apiClient.post<Project>(this.baseUrl, data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -129,7 +129,7 @@ export class ProjectService {
    */
   async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
     try {
-      const result = await enhancedApiClient.put<Project>(`${this.baseUrl}/${id}`, data, {
+      const result = await apiClient.put<Project>(`${this.baseUrl}/${id}`, data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -150,7 +150,7 @@ export class ProjectService {
    */
   async deleteProject(id: string): Promise<ProjectDeleteResponse> {
     try {
-      const result = await enhancedApiClient.delete<ProjectDeleteResponse>(
+      const result = await apiClient.delete<ProjectDeleteResponse>(
         `${this.baseUrl}/${id}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -176,7 +176,7 @@ export class ProjectService {
    */
   async toggleProjectStatus(id: string): Promise<Project> {
     try {
-      const result = await enhancedApiClient.post<Project>(
+      const result = await apiClient.post<Project>(
         `${this.baseUrl}/${id}/toggle-status`,
         {},
         {
@@ -201,7 +201,7 @@ export class ProjectService {
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
     try {
-      const result = await enhancedApiClient.get<ProjectStatisticsResponse>('statistics/summary', {
+      const result = await apiClient.get<ProjectStatisticsResponse>('statistics/summary', {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -223,7 +223,7 @@ export class ProjectService {
    */
   async getProjectOptions(isActive: boolean = true): Promise<ProjectDropdownOption[]> {
     try {
-      const result = await enhancedApiClient.get<ProjectDropdownOption[]>(
+      const result = await apiClient.get<ProjectDropdownOption[]>(
         `${this.baseUrl}/dropdown-options?is_active=${isActive}`,
         {
           cache: true,
@@ -438,7 +438,7 @@ export class ProjectService {
     filters?: ProjectSearchParams
   ): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+      const result = await apiClient.get<Blob>(`${this.baseUrl}/export`, {
         params: { format, ...filters },
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -468,7 +468,7 @@ export class ProjectService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         imported?: number;

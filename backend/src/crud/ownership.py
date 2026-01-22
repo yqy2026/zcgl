@@ -10,7 +10,7 @@ from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
     """权属方CRUD操作类"""
 
-    def get(self, db: Session, id: Any) -> Ownership | None:  # type: ignore[override]
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> Ownership | None:
         """获取单个权属方"""
         ownership_obj = super().get(db, id=id)
         if ownership_obj:

@@ -17,3 +17,6 @@
 
 # Lint output
 lint_output.txt
+
+# Package managers - using pnpm, do not commit npm lockfile
+package-lock.json

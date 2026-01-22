@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
 
-from ....constants.errors.error_ids import ErrorIDs
+from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import (
     BaseBusinessError,
     internal_error,

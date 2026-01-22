@@ -21,7 +21,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { unifiedDictionaryService } from '../../services/dictionary';
+import { dictionaryService } from '../../services/dictionary';
 import type {
   EnumFieldType,
   EnumFieldValue,
@@ -82,7 +82,7 @@ const EnumFieldPage: React.FC = () => {
   const loadEnumTypes = async () => {
     setLoading(true);
     try {
-      const data = await unifiedDictionaryService.getEnumFieldTypes();
+      const data = await dictionaryService.getEnumFieldTypes();
       setEnumTypes(data);
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -96,7 +96,7 @@ const EnumFieldPage: React.FC = () => {
 
   const loadEnumValues = async (typeId: string) => {
     try {
-      const data = await unifiedDictionaryService.getEnumFieldValues(typeId);
+      const data = await dictionaryService.getEnumFieldValues(typeId);
       setEnumValues(data);
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -108,7 +108,7 @@ const EnumFieldPage: React.FC = () => {
 
   const loadStatistics = async () => {
     try {
-      const stats = await unifiedDictionaryService.getDictionaryStats();
+      const stats = await dictionaryService.getDictionaryStats();
       setStatistics({
         total_types: stats.totalTypes,
         active_types: stats.activeTypes,
@@ -356,7 +356,7 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteType = async (id: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumFieldType(id);
+      const success = await dictionaryService.deleteEnumFieldType(id);
       if (success) {
         MessageManager.success('删除成功');
         loadEnumTypes();
@@ -388,7 +388,7 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteValue = async (id: string) => {
     try {
-      const result = await unifiedDictionaryService.deleteEnumValue(id);
+      const result = await dictionaryService.deleteEnumValue(id);
       if (result.success) {
         MessageManager.success('删除成功');
         if (selectedTypeId != null) {
@@ -412,12 +412,12 @@ const EnumFieldPage: React.FC = () => {
       let success = false;
       if (editingType) {
         success =
-          (await unifiedDictionaryService.updateEnumFieldType(
+          (await dictionaryService.updateEnumFieldType(
             editingType.id,
             values as UpdateEnumFieldTypeRequest
           )) !== null;
       } else {
-        success = (await unifiedDictionaryService.createEnumFieldType(values)) !== null;
+        success = (await dictionaryService.createEnumFieldType(values)) !== null;
       }
 
       if (success) {
@@ -452,14 +452,14 @@ const EnumFieldPage: React.FC = () => {
           is_default: values.is_default,
         };
         success =
-          (await unifiedDictionaryService.updateEnumFieldValue(
+          (await dictionaryService.updateEnumFieldValue(
             selectedTypeId,
             editingValue.id,
             updateData
           )) !== null;
       } else {
         success =
-          (await unifiedDictionaryService.addEnumFieldValue(
+          (await dictionaryService.addEnumFieldValue(
             editingValue?.enum_type_id ?? selectedTypeId!,
             values
           )) !== null;

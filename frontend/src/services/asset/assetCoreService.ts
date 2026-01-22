@@ -3,7 +3,7 @@
  * 资产核心 CRUD 操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import { ASSET_API } from '../../constants/api';
 import type {
@@ -25,7 +25,7 @@ export class AssetCoreService {
    */
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
     try {
-      const result = await enhancedApiClient.get<AssetListResponse>(ASSET_API.LIST, {
+      const result = await apiClient.get<AssetListResponse>(ASSET_API.LIST, {
         params: {
           ...params,
           page: params?.page ?? 1,
@@ -60,7 +60,7 @@ export class AssetCoreService {
    */
   async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'limit'>): Promise<Asset[]> {
     try {
-      const result = await enhancedApiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
+      const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
           ...params,
           limit: 10000,
@@ -86,7 +86,7 @@ export class AssetCoreService {
    */
   async getAssetsByIds(ids: string[]): Promise<Asset[]> {
     try {
-      const result = await enhancedApiClient.post<Asset[]>(
+      const result = await apiClient.post<Asset[]>(
         `${ASSET_API.LIST}/by-ids`,
         { ids },
         {
@@ -111,7 +111,7 @@ export class AssetCoreService {
    */
   async getAsset(id: string): Promise<Asset> {
     try {
-      const result = await enhancedApiClient.get<Asset>(ASSET_API.DETAIL(id), {
+      const result = await apiClient.get<Asset>(ASSET_API.DETAIL(id), {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -133,7 +133,7 @@ export class AssetCoreService {
    */
   async createAsset(data: AssetCreateRequest): Promise<Asset> {
     try {
-      const result = await enhancedApiClient.post<Asset>(ASSET_API.CREATE, data, {
+      const result = await apiClient.post<Asset>(ASSET_API.CREATE, data, {
         retry: false,
         smartExtract: true,
       });
@@ -154,7 +154,7 @@ export class AssetCoreService {
    */
   async updateAsset(id: string, data: AssetUpdateRequest): Promise<Asset> {
     try {
-      const result = await enhancedApiClient.put<Asset>(ASSET_API.UPDATE(id), data, {
+      const result = await apiClient.put<Asset>(ASSET_API.UPDATE(id), data, {
         retry: false,
         smartExtract: true,
       });
@@ -175,7 +175,7 @@ export class AssetCoreService {
    */
   async deleteAsset(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(ASSET_API.DELETE(id), {
+      const result = await apiClient.delete<void>(ASSET_API.DELETE(id), {
         retry: false,
         smartExtract: true,
       });
@@ -194,7 +194,7 @@ export class AssetCoreService {
    */
   async deleteAssets(ids: string[]): Promise<void> {
     try {
-      const result = await enhancedApiClient.post<void>(
+      const result = await apiClient.post<void>(
         ASSET_API.BATCH_DELETE,
         { ids },
         {
@@ -230,7 +230,7 @@ export class AssetCoreService {
     errors: string[];
   }> {
     try {
-      const result = await enhancedApiClient.post<void>(`${ASSET_API.LIST}/validate`, data, {
+      const result = await apiClient.post<void>(`${ASSET_API.LIST}/validate`, data, {
         retry: false,
         smartExtract: true,
       });
@@ -260,7 +260,7 @@ export class AssetCoreService {
    */
   async getOwnershipEntities(): Promise<string[]> {
     try {
-      const result = await enhancedApiClient.get<string[]>(ASSET_API.OWNERSHIP_ENTITIES, {
+      const result = await apiClient.get<string[]>(ASSET_API.OWNERSHIP_ENTITIES, {
         timeout: 3000,
         cache: true,
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
@@ -283,7 +283,7 @@ export class AssetCoreService {
    */
   async getBusinessCategories(): Promise<string[]> {
     try {
-      const result = await enhancedApiClient.get<string[]>(ASSET_API.BUSINESS_CATEGORIES, {
+      const result = await apiClient.get<string[]>(ASSET_API.BUSINESS_CATEGORIES, {
         timeout: 3000,
         cache: true,
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
@@ -306,7 +306,7 @@ export class AssetCoreService {
    */
   async getManagementEntities(): Promise<string[]> {
     try {
-      const result = await enhancedApiClient.get<string[]>('/assets/management-entities', {
+      const result = await apiClient.get<string[]>('/assets/management-entities', {
         timeout: 3000,
         cache: true,
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },

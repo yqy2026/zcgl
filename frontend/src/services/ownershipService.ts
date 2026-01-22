@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 import { createLogger } from '../utils/logger';
@@ -33,7 +33,7 @@ export class OwnershipService {
    */
   async searchOwnerships(searchParams: OwnershipSearchRequest): Promise<OwnershipListResponse> {
     try {
-      const result = await enhancedApiClient.post<OwnershipListResponse>(
+      const result = await apiClient.post<OwnershipListResponse>(
         `${this.baseUrl}/search`,
         searchParams,
         {
@@ -58,7 +58,7 @@ export class OwnershipService {
    */
   async getOwnership(id: string): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.get<Ownership>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.get<Ownership>(`${this.baseUrl}/${id}`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -88,7 +88,7 @@ export class OwnershipService {
         is_active: params?.is_active,
       };
 
-      const result = await enhancedApiClient.get<OwnershipListResponse>(this.baseUrl, {
+      const result = await apiClient.get<OwnershipListResponse>(this.baseUrl, {
         params: requestParams,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -111,7 +111,7 @@ export class OwnershipService {
    */
   async createOwnership(data: OwnershipCreate): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.post<Ownership>(this.baseUrl, data, {
+      const result = await apiClient.post<Ownership>(this.baseUrl, data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -132,7 +132,7 @@ export class OwnershipService {
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.put<Ownership>(`${this.baseUrl}/${id}`, data, {
+      const result = await apiClient.put<Ownership>(`${this.baseUrl}/${id}`, data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -153,7 +153,7 @@ export class OwnershipService {
    */
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {
     try {
-      const result = await enhancedApiClient.delete<OwnershipDeleteResponse>(
+      const result = await apiClient.delete<OwnershipDeleteResponse>(
         `${this.baseUrl}/${id}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -179,7 +179,7 @@ export class OwnershipService {
    */
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
     try {
-      const result = await enhancedApiClient.post<Ownership>(
+      const result = await apiClient.post<Ownership>(
         `${this.baseUrl}/${id}/toggle-status`,
         {},
         {
@@ -204,7 +204,7 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     try {
-      const result = await enhancedApiClient.get<OwnershipStatisticsResponse>(
+      const result = await apiClient.get<OwnershipStatisticsResponse>(
         `${this.baseUrl}/statistics/summary`,
         {
           cache: true,
@@ -229,7 +229,7 @@ export class OwnershipService {
    */
   async getOwnershipOptions(isActive: boolean = true): Promise<OwnershipDropdownOption[]> {
     try {
-      const result = await enhancedApiClient.get<OwnershipDropdownOption[]>(
+      const result = await apiClient.get<OwnershipDropdownOption[]>(
         `${this.baseUrl}/dropdown-options?is_active=${isActive}`,
         {
           cache: true,
@@ -394,7 +394,7 @@ export class OwnershipService {
     filters?: OwnershipSearchParams
   ): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+      const result = await apiClient.get<Blob>(`${this.baseUrl}/export`, {
         params: { format, ...filters },
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -424,7 +424,7 @@ export class OwnershipService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         imported?: number;

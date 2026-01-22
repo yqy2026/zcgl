@@ -11,7 +11,7 @@ from typing import Any
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from ..config import settings
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -142,9 +142,9 @@ class JWTSecurityConfig:
         return token
 
     @classmethod
-    def verify_token_enhanced(cls, token: str) -> dict[str, Any]:
+    def verify_token(cls, token: str) -> dict[str, Any]:
         """
-        增强的JWT令牌验证
+        JWT令牌验证
 
         Args:
             token: JWT令牌字符串
@@ -258,7 +258,6 @@ class JWTSecurityConfig:
             return {"error": str(e), "parse_failed": True}
 
 
-# 创建全局实例
 jwt_security = JWTSecurityConfig()
 
 

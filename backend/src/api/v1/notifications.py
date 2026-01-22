@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import forbidden, not_found
+from ...core.exception_handler import forbidden, not_found
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User

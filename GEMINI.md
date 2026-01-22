@@ -2,13 +2,13 @@
 
 This file provides project context for Gemini, following 2026 best practices. For detailed documentation, please refer to the `docs/` directory.
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-22
 
 ---
 
 ## Project Overview
 
-**Land Property Asset Management System** - A full-stack asset management platform supporting RBAC permission management and contract lifecycle management.
+**Land Property Asset Management System** - A full-stack asset management platform supporting RBAC permission management, contract lifecycle management, and intelligent document extraction with multi-provider LLM integration.
 
 | Layer | Tech Stack |
 |---|-------|
@@ -16,6 +16,9 @@ This file provides project context for Gemini, following 2026 best practices. Fo
 | **Backend** | FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 |
 | **Database** | SQLite (dev) / PostgreSQL (prod) |
 | **Cache** | Redis |
+| **LLM** | GLM-4V, Qwen-VL-Max, DeepSeek-VL, Hunyuan-Vision |
+
+**Project Scale**: 274 Python files | 374 TypeScript files | 17 DB models | 70% test coverage
 
 ---
 

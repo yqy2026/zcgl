@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import bad_request, not_found
+from ...core.exception_handler import bad_request, not_found
 from ...crud.organization import organization as organization_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user

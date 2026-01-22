@@ -72,7 +72,7 @@ class OwnerType(str, Enum):
     JOINT = "joint"  # 共有
 
 
-class PropertyOwner(Base):  # type: ignore[valid-type, misc]
+class PropertyOwner(Base):
     """权利人表 - 支持个人、组织、共有权利人"""
 
     __tablename__ = "property_owners"
@@ -122,7 +122,7 @@ class PropertyOwner(Base):  # type: ignore[valid-type, misc]
     )
 
 
-class PropertyCertificate(Base):  # type: ignore[valid-type, misc]
+class PropertyCertificate(Base):
     """产权证主表"""
 
     __tablename__ = "property_certificates"

@@ -24,7 +24,7 @@ class ContactType(str, Enum):
     GENERAL = "general"  # 一般联系人
 
 
-class Contact(Base):  # type: ignore[valid-type, misc]
+class Contact(Base):
     """
     联系人模型
 

@@ -36,7 +36,7 @@ class SecuritySeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class SecurityEvent(Base):  # type: ignore[valid-type, misc]
+class SecurityEvent(Base):
     """Security event model for tracking security-related events"""
 
     __tablename__ = "security_events"

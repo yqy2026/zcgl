@@ -3,7 +3,7 @@
  * 资产自定义字段相关操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import type {
   AssetCustomField,
@@ -22,7 +22,7 @@ export class AssetFieldService {
    */
   async getAssetCustomFields(assetId?: string): Promise<AssetCustomField[]> {
     try {
-      const result = await enhancedApiClient.get<AssetCustomField[]>('/asset-custom-fields', {
+      const result = await apiClient.get<AssetCustomField[]>('/asset-custom-fields', {
         params: assetId != null ? { asset_id: assetId } : undefined,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -45,7 +45,7 @@ export class AssetFieldService {
    */
   async getAssetCustomField(id: string): Promise<AssetCustomField> {
     try {
-      const result = await enhancedApiClient.get<AssetCustomField>(`/asset-custom-fields/${id}`, {
+      const result = await apiClient.get<AssetCustomField>(`/asset-custom-fields/${id}`, {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -69,7 +69,7 @@ export class AssetFieldService {
     data: Omit<AssetCustomField, 'id' | 'created_at' | 'updated_at'>
   ): Promise<AssetCustomField> {
     try {
-      const result = await enhancedApiClient.post<AssetCustomField>('/asset-custom-fields', data, {
+      const result = await apiClient.post<AssetCustomField>('/asset-custom-fields', data, {
         retry: false,
         smartExtract: true,
       });
@@ -93,7 +93,7 @@ export class AssetFieldService {
     data: Partial<AssetCustomField>
   ): Promise<AssetCustomField> {
     try {
-      const result = await enhancedApiClient.put<AssetCustomField>(
+      const result = await apiClient.put<AssetCustomField>(
         `/asset-custom-fields/${id}`,
         data,
         {
@@ -118,7 +118,7 @@ export class AssetFieldService {
    */
   async deleteAssetCustomField(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(`/asset-custom-fields/${id}`, {
+      const result = await apiClient.delete<void>(`/asset-custom-fields/${id}`, {
         retry: false,
         smartExtract: true,
       });
@@ -137,7 +137,7 @@ export class AssetFieldService {
    */
   async getAssetCustomFieldValues(assetId: string): Promise<CustomFieldValue[]> {
     try {
-      const result = await enhancedApiClient.get<{ values: CustomFieldValue[] }>(
+      const result = await apiClient.get<{ values: CustomFieldValue[] }>(
         `/assets/${assetId}/custom-field-values`,
         {
           cache: true,
@@ -165,7 +165,7 @@ export class AssetFieldService {
     values: CustomFieldValue[]
   ): Promise<CustomFieldValue[]> {
     try {
-      const result = await enhancedApiClient.put<{ values: CustomFieldValue[] }>(
+      const result = await apiClient.put<{ values: CustomFieldValue[] }>(
         `/assets/${assetId}/custom-field-values`,
         { values },
         {
@@ -192,7 +192,7 @@ export class AssetFieldService {
     updates: Array<{ assetId: string; values: CustomFieldValue[] }>
   ): Promise<void> {
     try {
-      const result = await enhancedApiClient.post<void>(
+      const result = await apiClient.post<void>(
         '/assets/batch-custom-field-values',
         { updates },
         {
@@ -215,7 +215,7 @@ export class AssetFieldService {
    */
   async validateCustomFieldValue(fieldId: string, value: unknown): Promise<FieldValidationResult> {
     try {
-      const result = await enhancedApiClient.post<{ valid: boolean; error?: string }>(
+      const result = await apiClient.post<{ valid: boolean; error?: string }>(
         `/asset-custom-fields/${fieldId}/validate`,
         { value },
         {
@@ -246,7 +246,7 @@ export class AssetFieldService {
    */
   async getFieldOptions(fieldType: string, category?: string): Promise<FieldOption[]> {
     try {
-      const result = await enhancedApiClient.get<FieldOption[]>('/field-options', {
+      const result = await apiClient.get<FieldOption[]>('/field-options', {
         params: { field_type: fieldType, category },
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },

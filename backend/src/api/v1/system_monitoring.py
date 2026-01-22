@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 import logging
 
 try:
-    from src.constants.errors.error_ids import ErrorIDs
+    from src.constants.message_constants import ErrorIDs
 except ImportError:
     # 独立运行时的回退方案 - 提供完整的ErrorIDs mock
     class ErrorIDs:  # type: ignore[no-redef]

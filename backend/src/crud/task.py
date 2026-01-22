@@ -13,7 +13,7 @@ from .base import CRUDBase
 class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
     """任务CRUD操作类"""
 
-    def get_multi(  # type: ignore[override]
+    def get_multi(
         self,
         db: Session,
         *,
@@ -26,6 +26,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         created_before: datetime | None = None,
         order_by: str = "created_at",
         order_dir: str = "desc",
+        **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[AsyncTask]:
         """获取任务列表"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active)
@@ -53,8 +54,13 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         # 应用分页
         return query.offset(skip).limit(limit).all()
 
-    def count(  # type: ignore[override]
-        self, db: Session, *, task_type: str | None = None, status: str | None = None
+    def count(
+        self,
+        db: Session,
+        *,
+        task_type: str | None = None,
+        status: str | None = None,
+        **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> int:
         """统计任务数量"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active)
@@ -156,7 +162,7 @@ class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, TaskU
             .first()
         )
 
-    def get_multi(  # type: ignore[override]
+    def get_multi(
         self,
         db: Session,
         *,
@@ -165,6 +171,7 @@ class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, TaskU
         config_type: str | None = None,
         task_type: str | None = None,
         is_active: bool = True,
+        **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[ExcelTaskConfig]:
         """获取配置列表"""
         query = db.query(ExcelTaskConfig).filter(ExcelTaskConfig.is_active == is_active)

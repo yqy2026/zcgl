@@ -11,7 +11,7 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
-class Organization(Base):  # type: ignore[valid-type, misc]
+class Organization(Base):
     """组织架构模型"""
 
     __tablename__ = "organizations"
@@ -77,7 +77,7 @@ class Organization(Base):  # type: ignore[valid-type, misc]
         return f"<Organization(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
-class Position(Base):  # type: ignore[valid-type, misc]
+class Position(Base):
     """职位模型"""
 
     __tablename__ = "positions"
@@ -128,7 +128,7 @@ class Position(Base):  # type: ignore[valid-type, misc]
         return f"<Position(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
-class Employee(Base):  # type: ignore[valid-type, misc]
+class Employee(Base):
     """员工模型"""
 
     __tablename__ = "employees"
@@ -207,7 +207,7 @@ class Employee(Base):  # type: ignore[valid-type, misc]
         return f"<Employee(id={self.id}, name={self.name}, employee_no={self.employee_no})>"  # pragma: no cover
 
 
-class OrganizationHistory(Base):  # type: ignore[valid-type, misc]
+class OrganizationHistory(Base):
     """组织架构变更历史"""
 
     __tablename__ = "organization_history"

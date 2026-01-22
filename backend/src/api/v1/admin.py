@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 
-from ...core.api_errors import internal_error
+from ...core.exception_handler import internal_error
 from ...database import create_tables, drop_tables
 from ...middleware.auth import require_admin
 

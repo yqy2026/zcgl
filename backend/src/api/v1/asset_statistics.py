@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import internal_error
+from ...core.exception_handler import internal_error
 from ...core.route_guards import debug_only
 from ...database import get_db
 from ...middleware.auth import get_current_active_user

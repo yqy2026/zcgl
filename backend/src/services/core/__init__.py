@@ -32,8 +32,7 @@ try:
     from . import audit_service
 
     AuditService = audit_service.AuditService
-    EnhancedAuditLogger = audit_service.AuditService
-    __all__.extend(["AuditService", "EnhancedAuditLogger"])
+    __all__.append("AuditService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 

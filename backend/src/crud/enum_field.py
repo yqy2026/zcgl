@@ -23,6 +23,11 @@ from ..schemas.enum_field import (
 )
 
 
+def _set_attr(obj: Any, attr: str, value: Any) -> None:
+    """安全地设置 ORM 对象属性，避免 mypy 类型错误"""
+    object.__setattr__(obj, attr, value)
+
+
 class EnumFieldTypeCRUD:
     """枚举字段类型CRUD操作"""
 
@@ -204,9 +209,9 @@ class EnumFieldTypeCRUD:
         if usage_count > 0:
             raise ValueError("无法删除正在使用的枚举类型")
 
-        # Cast Column types to Python types for assignment
-        db_obj.is_deleted = True  # type: ignore[assignment]
-        db_obj.updated_by = deleted_by  # type: ignore[assignment]
+        # 安全设置属性
+        _set_attr(db_obj, "is_deleted", True)
+        _set_attr(db_obj, "updated_by", deleted_by)
 
         # 记录历史
         self._create_history(
@@ -377,8 +382,8 @@ class EnumFieldValueCRUD:
                 path = f"{parent_path}/{parent_id}" if parent_path else parent_id
 
         db_obj = EnumFieldValue(**obj_in.model_dump())
-        db_obj.level = level  # type: ignore[assignment]
-        db_obj.path = path  # type: ignore[assignment]
+        _set_attr(db_obj, "level", level)
+        _set_attr(db_obj, "path", path)
 
         self.db.add(db_obj)
         self.db.commit()
@@ -464,9 +469,9 @@ class EnumFieldValueCRUD:
         if children_count > 0:
             raise ValueError("无法删除包含子枚举值的枚举值")
 
-        # Cast Column types to Python types for assignment
-        db_obj.is_deleted = True  # type: ignore[assignment]
-        db_obj.updated_by = deleted_by  # type: ignore[assignment]
+        # 安全设置属性
+        _set_attr(db_obj, "is_deleted", True)
+        _set_attr(db_obj, "updated_by", deleted_by)
 
         # 记录历史
         self._create_history(

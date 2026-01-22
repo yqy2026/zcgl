@@ -10,6 +10,11 @@ from ..crud.asset import SensitiveDataHandler
 from ..models.contact import Contact, ContactType
 
 
+def _set_attr(obj: Any, attr: str, value: Any) -> None:
+    """安全地设置 ORM 对象属性，避免 mypy 类型错误"""
+    object.__setattr__(obj, attr, value)
+
+
 class ContactCRUD:
     """联系人 CRUD 操作类 - 支持敏感字段加密"""
 
@@ -133,7 +138,7 @@ class ContactCRUD:
         """软删除联系人（设置is_active=False）"""
         obj = self.get(db, id)
         if obj:
-            obj.is_active = False  # type: ignore[assignment]
+            _set_attr(obj, "is_active", False)
             db.commit()
             db.refresh(obj)
         return obj

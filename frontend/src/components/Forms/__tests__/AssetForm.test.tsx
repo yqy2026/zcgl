@@ -8,7 +8,7 @@ import React from 'react';
 
 // Mock all dependencies before importing
 vi.mock('@/api/client', () => ({
-  enhancedApiClient: {
+  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
   },

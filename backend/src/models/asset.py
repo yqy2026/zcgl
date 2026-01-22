@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from .rent_contract import RentContract
 
 
-class Asset(Base):  # type: ignore[valid-type, misc]
+class Asset(Base):
     """资产模型"""
 
     __tablename__ = "assets"
@@ -226,7 +226,7 @@ class Asset(Base):  # type: ignore[valid-type, misc]
         return f"<Asset(id={self.id}, name={self.property_name})>"
 
 
-class AssetHistory(Base):  # type: ignore[valid-type, misc]
+class AssetHistory(Base):
     """资产变更历史模型"""
 
     __tablename__ = "asset_history"
@@ -262,7 +262,7 @@ class AssetHistory(Base):  # type: ignore[valid-type, misc]
         return f"<AssetHistory(id={self.id}, asset_id={self.asset_id}, operation={self.operation_type})>"
 
 
-class AssetDocument(Base):  # type: ignore[valid-type, misc]
+class AssetDocument(Base):
     """资产文档模型"""
 
     __tablename__ = "asset_documents"
@@ -295,7 +295,7 @@ class AssetDocument(Base):  # type: ignore[valid-type, misc]
         return f"<AssetDocument(id={self.id}, name={self.document_name})>"
 
 
-class SystemDictionary(Base):  # type: ignore[valid-type, misc]
+class SystemDictionary(Base):
     """系统数据字典模型"""
 
     __tablename__ = "system_dictionaries"
@@ -336,7 +336,7 @@ class SystemDictionary(Base):  # type: ignore[valid-type, misc]
         return f"<SystemDictionary(type={self.dict_type}, code={self.dict_code}, label={self.dict_label})>"
 
 
-class AssetCustomField(Base):  # type: ignore[valid-type, misc]
+class AssetCustomField(Base):
     """资产自定义字段模型"""
 
     __tablename__ = "asset_custom_fields"
@@ -382,7 +382,7 @@ class AssetCustomField(Base):  # type: ignore[valid-type, misc]
         return f"<AssetCustomField(field_name={self.field_name}, display_name={self.display_name})>"
 
 
-class ProjectOwnershipRelation(Base):  # type: ignore[valid-type, misc]
+class ProjectOwnershipRelation(Base):
     """项目-权属方多对多关系表（简化版）"""
 
     __tablename__ = "project_ownership_relations"
@@ -426,7 +426,7 @@ class ProjectOwnershipRelation(Base):  # type: ignore[valid-type, misc]
         return f"<ProjectOwnershipRelation(project_id={self.project_id}, ownership_id={self.ownership_id})>"
 
 
-class Project(Base):  # type: ignore[valid-type, misc]
+class Project(Base):
     """项目模型"""
 
     __tablename__ = "projects"
@@ -536,7 +536,7 @@ class Project(Base):  # type: ignore[valid-type, misc]
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"
 
 
-class Ownership(Base):  # type: ignore[valid-type, misc]
+class Ownership(Base):
     """权属方模型"""
 
     __tablename__ = "ownerships"

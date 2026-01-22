@@ -2,7 +2,7 @@
  * 通知相关API服务
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 import {
@@ -17,7 +17,7 @@ class NotificationService {
    */
   async getNotifications(params?: NotificationQueryParams): Promise<NotificationListResponse> {
     try {
-      const result = await enhancedApiClient.get<NotificationListResponse>(
+      const result = await apiClient.get<NotificationListResponse>(
         API_ENDPOINTS.NOTIFICATION.LIST,
         {
           params,
@@ -41,7 +41,7 @@ class NotificationService {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const result = await enhancedApiClient.get<{ count: number }>(
+      const result = await apiClient.get<{ count: number }>(
         API_ENDPOINTS.NOTIFICATION.UNREAD_COUNT,
         {
           retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
@@ -66,7 +66,7 @@ class NotificationService {
    */
   async markAsRead(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.post<void>(
+      const result = await apiClient.post<void>(
         API_ENDPOINTS.NOTIFICATION.MARK_READ(id),
         {},
         {
@@ -88,7 +88,7 @@ class NotificationService {
    */
   async markAllAsRead(): Promise<void> {
     try {
-      const result = await enhancedApiClient.post<void>(
+      const result = await apiClient.post<void>(
         API_ENDPOINTS.NOTIFICATION.MARK_ALL_READ,
         {},
         {
@@ -110,7 +110,7 @@ class NotificationService {
    */
   async deleteNotification(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(API_ENDPOINTS.NOTIFICATION.DELETE(id), {
+      const result = await apiClient.delete<void>(API_ENDPOINTS.NOTIFICATION.DELETE(id), {
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
       });
 

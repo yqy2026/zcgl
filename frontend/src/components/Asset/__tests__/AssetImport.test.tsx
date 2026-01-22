@@ -8,9 +8,9 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AssetImport from '../AssetImport';
 
-// Mock enhancedApiClient before importing
+// Mock apiClient before importing
 vi.mock('@/api/client', () => ({
-  enhancedApiClient: {
+  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
   },

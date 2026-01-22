@@ -3,7 +3,7 @@
  * 资产导入导出相关操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import type {
   AssetSearchParams,
@@ -25,7 +25,7 @@ export class AssetImportExportService {
    */
   async exportAssets(filters?: AssetSearchParams, options?: ExportOptions): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.post<Blob>(
+      const result = await apiClient.post<Blob>(
         '/excel/export',
         {
           filters,
@@ -55,7 +55,7 @@ export class AssetImportExportService {
    */
   async exportSelectedAssets(assetIds: string[], options?: ExportOptions): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.post<Blob>(
+      const result = await apiClient.post<Blob>(
         '/excel/export-selected',
         {
           asset_ids: assetIds,
@@ -85,7 +85,7 @@ export class AssetImportExportService {
    */
   async getExportStatus(taskId: string): Promise<ExportTask> {
     try {
-      const result = await enhancedApiClient.get<ExportTask>(`/excel/export-status/${taskId}`, {
+      const result = await apiClient.get<ExportTask>(`/excel/export-status/${taskId}`, {
         cache: false,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -107,7 +107,7 @@ export class AssetImportExportService {
    */
   async getExportHistory(): Promise<ExportTask[]> {
     try {
-      const result = await enhancedApiClient.get<ExportTask[]>('/excel/export-history', {
+      const result = await apiClient.get<ExportTask[]>('/excel/export-history', {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -129,7 +129,7 @@ export class AssetImportExportService {
    */
   async deleteExportRecord(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(`/excel/export-history/${id}`, {
+      const result = await apiClient.delete<void>(`/excel/export-history/${id}`, {
         retry: false,
         smartExtract: true,
       });
@@ -165,7 +165,7 @@ export class AssetImportExportService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<ImportTask>('/excel/import', formData, {
+      const result = await apiClient.post<ImportTask>('/excel/import', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -192,7 +192,7 @@ export class AssetImportExportService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<ImportPreviewResult>('/excel/preview', formData, {
+      const result = await apiClient.post<ImportPreviewResult>('/excel/preview', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -216,7 +216,7 @@ export class AssetImportExportService {
    */
   async downloadImportTemplate(): Promise<void> {
     try {
-      const result = await enhancedApiClient.get<Blob>('/excel/template', {
+      const result = await apiClient.get<Blob>('/excel/template', {
         responseType: 'blob',
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -246,7 +246,7 @@ export class AssetImportExportService {
    */
   async getImportStatus(importId: string): Promise<ImportTask> {
     try {
-      const result = await enhancedApiClient.get<ImportTask>(`/excel/import-status/${importId}`, {
+      const result = await apiClient.get<ImportTask>(`/excel/import-status/${importId}`, {
         cache: false,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -268,7 +268,7 @@ export class AssetImportExportService {
    */
   async getImportHistory(): Promise<ImportTask[]> {
     try {
-      const result = await enhancedApiClient.get<ImportTask[]>('/excel/import-history', {
+      const result = await apiClient.get<ImportTask[]>('/excel/import-history', {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -290,7 +290,7 @@ export class AssetImportExportService {
    */
   async deleteImportRecord(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(`/excel/import-history/${id}`, {
+      const result = await apiClient.delete<void>(`/excel/import-history/${id}`, {
         retry: false,
         smartExtract: true,
       });

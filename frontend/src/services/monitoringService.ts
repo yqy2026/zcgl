@@ -7,7 +7,7 @@
  * @created 2025-11-01
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 
@@ -143,7 +143,7 @@ export class MonitoringService {
    */
   async getSystemMetrics(): Promise<SystemMetrics> {
     try {
-      const result = await enhancedApiClient.get<SystemMetrics>('/api/system-metrics', {
+      const result = await apiClient.get<SystemMetrics>('/api/system-metrics', {
         cache: false, // 系统指标不缓存，需要实时数据
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -165,7 +165,7 @@ export class MonitoringService {
    */
   async getApplicationMetrics(): Promise<ApplicationMetrics> {
     try {
-      const result = await enhancedApiClient.get<ApplicationMetrics>('/api/application-metrics', {
+      const result = await apiClient.get<ApplicationMetrics>('/api/application-metrics', {
         cache: false, // 应用指标不缓存，需要实时数据
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -187,7 +187,7 @@ export class MonitoringService {
    */
   async getHealthStatus(): Promise<HealthStatus> {
     try {
-      const result = await enhancedApiClient.get<HealthStatus>('/api/health', {
+      const result = await apiClient.get<HealthStatus>('/api/health', {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -211,7 +211,7 @@ export class MonitoringService {
    */
   async getMetricsHistory(hours: number = 24): Promise<SystemMetrics[]> {
     try {
-      const result = await enhancedApiClient.get<SystemMetrics[]>('/api/metrics/history', {
+      const result = await apiClient.get<SystemMetrics[]>('/api/metrics/history', {
         params: { hours },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -239,7 +239,7 @@ export class MonitoringService {
     resolved?: boolean;
   }): Promise<PerformanceAlert[]> {
     try {
-      const result = await enhancedApiClient.get<PerformanceAlert[]>('/api/alerts', {
+      const result = await apiClient.get<PerformanceAlert[]>('/api/alerts', {
         params,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -262,7 +262,7 @@ export class MonitoringService {
    */
   async resolveAlert(alertId: string): Promise<{ message: string; success: boolean }> {
     try {
-      const result = await enhancedApiClient.post<{ message: string; success: boolean }>(
+      const result = await apiClient.post<{ message: string; success: boolean }>(
         `/api/alerts/${alertId}/resolve`,
         {},
         {
@@ -296,7 +296,7 @@ export class MonitoringService {
     notification_channels?: string[];
   }): Promise<{ message: string; rule_id: string }> {
     try {
-      const result = await enhancedApiClient.post<{ message: string; rule_id: string }>(
+      const result = await apiClient.post<{ message: string; rule_id: string }>(
         '/api/alerts/rules',
         rule,
         {
@@ -334,7 +334,7 @@ export class MonitoringService {
     }>
   > {
     try {
-      const result = await enhancedApiClient.get<
+      const result = await apiClient.get<
         Array<{
           id: string;
           name: string;
@@ -369,7 +369,7 @@ export class MonitoringService {
    */
   async deleteAlertRule(ruleId: string): Promise<{ message: string; success: boolean }> {
     try {
-      const result = await enhancedApiClient.delete<{ message: string; success: boolean }>(
+      const result = await apiClient.delete<{ message: string; success: boolean }>(
         `/api/alerts/rules/${ruleId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -395,7 +395,7 @@ export class MonitoringService {
    */
   async getDashboardData(): Promise<DashboardData> {
     try {
-      const result = await enhancedApiClient.get<DashboardData>('/api/dashboard', {
+      const result = await apiClient.get<DashboardData>('/api/dashboard', {
         cache: false, // 仪表板数据需要实时
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -419,7 +419,7 @@ export class MonitoringService {
    */
   async triggerMetricsCollection(): Promise<MetricsCollectionResult> {
     try {
-      const result = await enhancedApiClient.post<MetricsCollectionResult>(
+      const result = await apiClient.post<MetricsCollectionResult>(
         '/api/metrics/collect',
         {},
         {
@@ -465,7 +465,7 @@ export class MonitoringService {
     last_collection?: string;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         is_running: boolean;
         collection_interval: number;
         data_points: {
@@ -517,7 +517,7 @@ export class MonitoringService {
     enable_alerting?: boolean;
   }): Promise<{ message: string; success: boolean }> {
     try {
-      const result = await enhancedApiClient.put<{ message: string; success: boolean }>(
+      const result = await apiClient.put<{ message: string; success: boolean }>(
         '/api/config',
         config,
         {
@@ -551,7 +551,7 @@ export class MonitoringService {
     include_alerts: boolean;
   }): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>('/api/export', {
+      const result = await apiClient.get<Blob>('/api/export', {
         params,
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -586,7 +586,7 @@ export class MonitoringService {
     }>;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         summary: PerformanceSummary;
         trends: TrendAnalysis[];
         recommendations: string[];
@@ -640,7 +640,7 @@ export class MonitoringService {
         componentName !== null && componentName !== undefined && componentName !== ''
           ? { component: componentName }
           : {};
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         component: string;
         status: string;
         metrics: Record<string, number | string | boolean | null>;

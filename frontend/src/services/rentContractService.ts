@@ -27,7 +27,7 @@ import {
   DepositLedger,
   ServiceFeeLedger,
 } from '../types/rentContract';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 import { API_ENDPOINTS } from '@/constants/api';
@@ -44,7 +44,7 @@ class RentContractService {
    */
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
-      const result = await enhancedApiClient.get<RentContractListResponse>(this.baseUrl, {
+      const result = await apiClient.get<RentContractListResponse>(this.baseUrl, {
         params: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -77,7 +77,7 @@ class RentContractService {
    */
   async getContract(id: string): Promise<RentContract> {
     try {
-      const result = await enhancedApiClient.get<RentContract>(
+      const result = await apiClient.get<RentContract>(
         API_ENDPOINTS.RENT_CONTRACT.DETAIL(id),
         {
           cache: true,
@@ -102,7 +102,7 @@ class RentContractService {
    */
   async createContract(data: RentContractCreate): Promise<RentContract> {
     try {
-      const result = await enhancedApiClient.post<RentContract>(
+      const result = await apiClient.post<RentContract>(
         API_ENDPOINTS.RENT_CONTRACT.CREATE,
         data,
         {
@@ -127,7 +127,7 @@ class RentContractService {
    */
   async updateContract(id: string, data: RentContractUpdate): Promise<RentContract> {
     try {
-      const result = await enhancedApiClient.put<RentContract>(
+      const result = await apiClient.put<RentContract>(
         API_ENDPOINTS.RENT_CONTRACT.UPDATE(id),
         data,
         {
@@ -152,7 +152,7 @@ class RentContractService {
    */
   async deleteContract(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(API_ENDPOINTS.RENT_CONTRACT.DELETE(id), {
+      const result = await apiClient.delete<void>(API_ENDPOINTS.RENT_CONTRACT.DELETE(id), {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
 
@@ -172,7 +172,7 @@ class RentContractService {
    */
   async getContractTerms(contractId: string): Promise<RentTerm[]> {
     try {
-      const result = await enhancedApiClient.get<RentTerm[]>(
+      const result = await apiClient.get<RentTerm[]>(
         API_ENDPOINTS.RENT_CONTRACT.TERMS(contractId),
         {
           cache: true,
@@ -197,7 +197,7 @@ class RentContractService {
    */
   async addRentTerm(contractId: string, data: RentTermCreate): Promise<RentTerm> {
     try {
-      const result = await enhancedApiClient.post<RentTerm>(
+      const result = await apiClient.post<RentTerm>(
         API_ENDPOINTS.RENT_CONTRACT.ADD_TERM(contractId),
         data,
         {
@@ -224,7 +224,7 @@ class RentContractService {
    */
   async getRentLedgers(params?: RentLedgerQueryParams): Promise<RentLedgerListResponse> {
     try {
-      const result = await enhancedApiClient.get<RentLedgerListResponse>(
+      const result = await apiClient.get<RentLedgerListResponse>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST,
         {
           params: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 },
@@ -260,7 +260,7 @@ class RentContractService {
    */
   async getRentLedger(id: string): Promise<RentLedger> {
     try {
-      const result = await enhancedApiClient.get<RentLedger>(
+      const result = await apiClient.get<RentLedger>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_DETAIL(id),
         {
           cache: true,
@@ -285,7 +285,7 @@ class RentContractService {
    */
   async updateRentLedger(id: string, data: RentLedgerUpdate): Promise<RentLedger> {
     try {
-      const result = await enhancedApiClient.put<RentLedger>(
+      const result = await apiClient.put<RentLedger>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_UPDATE(id),
         data,
         {
@@ -312,7 +312,7 @@ class RentContractService {
     data: RentLedgerBatchUpdate
   ): Promise<{ message: string; ledgers: RentLedger[] }> {
     try {
-      const result = await enhancedApiClient.put<{ message: string; ledgers: RentLedger[] }>(
+      const result = await apiClient.put<{ message: string; ledgers: RentLedger[] }>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_BATCH_UPDATE,
         data,
         {
@@ -339,7 +339,7 @@ class RentContractService {
     data: GenerateLedgerRequest
   ): Promise<{ message: string; ledgers: RentLedger[] }> {
     try {
-      const result = await enhancedApiClient.post<{ message: string; ledgers: RentLedger[] }>(
+      const result = await apiClient.post<{ message: string; ledgers: RentLedger[] }>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_GENERATE,
         data,
         {
@@ -366,7 +366,7 @@ class RentContractService {
    */
   async getRentStatistics(params?: RentStatisticsQuery): Promise<RentStatisticsOverview> {
     try {
-      const result = await enhancedApiClient.get<RentStatisticsOverview>(
+      const result = await apiClient.get<RentStatisticsOverview>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_OVERVIEW,
         {
           params,
@@ -398,7 +398,7 @@ class RentContractService {
    * 获取权属方租金统�?   */
   async getOwnershipStatistics(params?: RentStatisticsQuery): Promise<OwnershipRentStatistics[]> {
     try {
-      const result = await enhancedApiClient.get<OwnershipRentStatistics[]>(
+      const result = await apiClient.get<OwnershipRentStatistics[]>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_OWNERSHIP,
         {
           params,
@@ -424,7 +424,7 @@ class RentContractService {
    */
   async getAssetStatistics(params?: RentStatisticsQuery): Promise<AssetRentStatistics[]> {
     try {
-      const result = await enhancedApiClient.get<AssetRentStatistics[]>(
+      const result = await apiClient.get<AssetRentStatistics[]>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_ASSET,
         {
           params,
@@ -454,7 +454,7 @@ class RentContractService {
     end_month?: string;
   }): Promise<MonthlyRentStatistics[]> {
     try {
-      const result = await enhancedApiClient.get<MonthlyRentStatistics[]>(
+      const result = await apiClient.get<MonthlyRentStatistics[]>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_MONTHLY,
         {
           params,
@@ -482,7 +482,7 @@ class RentContractService {
    */
   async exportStatistics(params?: RentStatisticsQuery): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
+      const result = await apiClient.get<Blob>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_EXPORT,
         {
           params,
@@ -507,7 +507,7 @@ class RentContractService {
    */
   async exportContractsToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
+      const result = await apiClient.get<Blob>(
         API_ENDPOINTS.RENT_CONTRACT.CONTRACTS_EXPORT,
         {
           params: filters,
@@ -532,7 +532,7 @@ class RentContractService {
    */
   async exportLedgersToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT, {
+      const result = await apiClient.get<Blob>(API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT, {
         params: filters,
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -555,7 +555,7 @@ class RentContractService {
    * 获取合同对应的租金台�?   */
   async getContractLedger(contractId: string): Promise<RentLedger[]> {
     try {
-      const result = await enhancedApiClient.get<RentLedger[]>(
+      const result = await apiClient.get<RentLedger[]>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER(contractId),
         {
           cache: true,
@@ -579,7 +579,7 @@ class RentContractService {
    * 获取资产对应的租赁合�?   */
   async getAssetContracts(assetId: string): Promise<RentContract[]> {
     try {
-      const result = await enhancedApiClient.get<RentContract[]>(
+      const result = await apiClient.get<RentContract[]>(
         `${API_ENDPOINTS.ASSET.DETAIL(assetId)}/contracts`,
         {
           cache: true,
@@ -606,7 +606,7 @@ class RentContractService {
    */
   async getContractDepositLedger(contractId: string): Promise<DepositLedger[]> {
     try {
-      const result = await enhancedApiClient.get<DepositLedger[]>(
+      const result = await apiClient.get<DepositLedger[]>(
         `${this.baseUrl}/${contractId}/deposit-ledger`,
         {
           cache: true,
@@ -634,7 +634,7 @@ class RentContractService {
    */
   async getServiceFeeLedgers(contractId: string): Promise<ServiceFeeLedger[]> {
     try {
-      const result = await enhancedApiClient.get<ServiceFeeLedger[]>(
+      const result = await apiClient.get<ServiceFeeLedger[]>(
         `${this.baseUrl}/${contractId}/service-fee-ledger`,
         {
           cache: true,
@@ -694,7 +694,7 @@ class RentContractService {
     transferDeposit: boolean = true
   ): Promise<RentContract> {
     try {
-      const result = await enhancedApiClient.post<RentContract>(
+      const result = await apiClient.post<RentContract>(
         `${this.baseUrl}/${originalContractId}/renew`,
         {
           new_contract_data: newContractData,
@@ -733,7 +733,7 @@ class RentContractService {
     terminationReason?: string
   ): Promise<RentContract> {
     try {
-      const result = await enhancedApiClient.post<RentContract>(
+      const result = await apiClient.post<RentContract>(
         `${this.baseUrl}/${contractId}/terminate`,
         {
           termination_date: terminationDate,

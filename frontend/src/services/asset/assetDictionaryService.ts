@@ -3,7 +3,7 @@
  * 系统字典管理相关操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import type { SystemDictionary } from './types';
 
@@ -17,7 +17,7 @@ export class AssetDictionaryService {
    */
   async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
     try {
-      const result = await enhancedApiClient.get<SystemDictionary[]>('/system-dictionaries', {
+      const result = await apiClient.get<SystemDictionary[]>('/system-dictionaries', {
         params: dict_type != null ? { dict_type } : undefined,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -40,7 +40,7 @@ export class AssetDictionaryService {
    */
   async getSystemDictionary(id: string): Promise<SystemDictionary> {
     try {
-      const result = await enhancedApiClient.get<SystemDictionary>(`/system-dictionaries/${id}`, {
+      const result = await apiClient.get<SystemDictionary>(`/system-dictionaries/${id}`, {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -64,7 +64,7 @@ export class AssetDictionaryService {
     data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>
   ): Promise<SystemDictionary> {
     try {
-      const result = await enhancedApiClient.post<SystemDictionary>('/system-dictionaries', data, {
+      const result = await apiClient.post<SystemDictionary>('/system-dictionaries', data, {
         retry: false,
         smartExtract: true,
       });
@@ -88,7 +88,7 @@ export class AssetDictionaryService {
     data: Partial<SystemDictionary>
   ): Promise<SystemDictionary> {
     try {
-      const result = await enhancedApiClient.put<SystemDictionary>(
+      const result = await apiClient.put<SystemDictionary>(
         `/system-dictionaries/${id}`,
         data,
         {
@@ -113,7 +113,7 @@ export class AssetDictionaryService {
    */
   async deleteSystemDictionary(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(`/system-dictionaries/${id}`, {
+      const result = await apiClient.delete<void>(`/system-dictionaries/${id}`, {
         retry: false,
         smartExtract: true,
       });
@@ -134,7 +134,7 @@ export class AssetDictionaryService {
     updates: Array<{ id: string; data: Partial<SystemDictionary> }>
   ): Promise<SystemDictionary[]> {
     try {
-      const result = await enhancedApiClient.post<SystemDictionary[]>(
+      const result = await apiClient.post<SystemDictionary[]>(
         '/system-dictionaries/batch-update',
         { updates },
         {
@@ -159,7 +159,7 @@ export class AssetDictionaryService {
    */
   async getDictionaryTypes(): Promise<{ types: string[] }> {
     try {
-      const result = await enhancedApiClient.get<{ types: string[] }>(
+      const result = await apiClient.get<{ types: string[] }>(
         '/system-dictionaries/types/list',
         {
           cache: true,

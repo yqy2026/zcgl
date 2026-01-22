@@ -86,13 +86,13 @@ class AssetService:
                 f"数据验证失败: {'; '.join(area_errors)}", field_errors=area_errors
             )
 
-        enhanced_asset_in = AssetCreate(**final_data)
+        calculated_asset_in = AssetCreate(**final_data)
 
         # 4. 创建并记录历史
         # 注意: create_with_history 内部目前记录 operator="system"
         # 理想情况下应该传递 user_id，但 crud.create_with_history 需要修改以支持 operator 参数
         # 暂时保持现状，后续优化 CRUD
-        return asset_crud.create_with_history(db=self.db, obj_in=enhanced_asset_in)
+        return asset_crud.create_with_history(db=self.db, obj_in=calculated_asset_in)
 
     def update_asset(
         self, asset_id: str, asset_in: AssetUpdate, current_user: User | None = None
@@ -151,11 +151,11 @@ class AssetService:
             **update_data_raw,
             **{k: v for k, v in calculated_data.items() if k not in update_data_raw},
         }
-        enhanced_asset_in = AssetUpdate(**final_update)
+        calculated_asset_in = AssetUpdate(**final_update)
 
         # 5. 更新并记录历史
         return asset_crud.update_with_history(
-            db=self.db, db_obj=asset, obj_in=enhanced_asset_in
+            db=self.db, db_obj=asset, obj_in=calculated_asset_in
         )
 
     def delete_asset(self, asset_id: str, current_user: User | None = None) -> None:

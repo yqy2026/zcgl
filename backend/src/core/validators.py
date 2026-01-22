@@ -29,7 +29,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from ..constants.strings.empty import EMPTY_STRING
+from ..constants.message_constants import EMPTY_STRING
 
 
 class BaseValidator:

@@ -24,44 +24,44 @@ async def health_check():
         # 获取数据库状态
         db_status = get_database_status()
 
+        health_check = db_status.get("health_check", {})
+        metrics = db_status.get("metrics", {})
+        pool_status = (
+            health_check.get("checks", {}).get("connection_pool", {})
+            if isinstance(health_check, dict)
+            else {}
+        )
+
         health_data = {
             "status": "healthy",
             "version": "2.0.0",
             "service": "土地物业资产管理系统",
             "database": {
-                "enhanced_active": db_status.get("enhanced_active", False),
-                "enhanced_available": db_status.get("enhanced_available", False),
+                "healthy": bool(health_check.get("healthy", False)),
                 "engine_type": db_status.get("engine_type", "Unknown"),
             },
         }
 
-        # 如果增强数据库激活，添加更多指标
-        if db_status.get("enhanced_active"):
-            try:
-                pool_status = db_status.get("pool_status", {})
-                metrics = db_status.get("enhanced_metrics", {})
+        try:
+            database_data: dict[str, Any] = health_data["database"]  # type: ignore[assignment]
+            database_data.update(
+                {
+                    "connection_pool_utilization": pool_status.get("utilization", 0),
+                    "active_connections": metrics.get("active_connections", 0),
+                    "total_queries": metrics.get("total_queries", 0),
+                    "slow_queries": metrics.get("slow_queries", 0),
+                    "avg_response_time_ms": round(
+                        metrics.get("avg_response_time", 0), 2
+                    ),
+                    "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
+                }
+            )
+        except Exception as db_e:
+            import logging
 
-                database_data: dict[str, Any] = health_data["database"]  # type: ignore[assignment]
-                database_data.update(
-                    {
-                        "connection_pool_utilization": pool_status.get(
-                            "utilization", 0
-                        ),
-                        "active_connections": metrics.get("active_connections", 0),
-                        "total_queries": metrics.get("total_queries", 0),
-                        "slow_queries": metrics.get("slow_queries", 0),
-                        "avg_response_time_ms": round(
-                            metrics.get("avg_response_time", 0), 2
-                        ),
-                        "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
-                    }
-                )
-            except Exception as db_e:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to get detailed database metrics: {db_e}")
-                database_data["metrics_error"] = str(db_e)
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to get detailed database metrics: {db_e}")
+            database_data["metrics_error"] = str(db_e)
 
         return success_response(data=health_data, message="系统运行正常")
 

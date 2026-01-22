@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
 
-from ....constants.errors.error_ids import ErrorIDs
+from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import (
     BaseBusinessError,
     internal_error,

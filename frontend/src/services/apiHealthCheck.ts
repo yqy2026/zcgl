@@ -4,7 +4,7 @@
  * Monitors critical API endpoints and reports their health status.
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 
 export interface HealthCheckResult {
   endpoint: string;
@@ -43,7 +43,7 @@ class APIHealthCheckService {
       const startTime = performance.now();
 
       try {
-        await enhancedApiClient.get(endpoint.path, {
+        await apiClient.get(endpoint.path, {
           // Short timeout for health checks
           timeout: 5000,
         });
@@ -120,7 +120,7 @@ class APIHealthCheckService {
     const startTime = performance.now();
 
     try {
-      await enhancedApiClient.get(path, {
+      await apiClient.get(path, {
         timeout: 5000,
       });
 

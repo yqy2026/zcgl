@@ -20,7 +20,7 @@ vi.mock('../../hooks/useDictionary', () => ({
 
 // Mock services
 vi.mock('../../services/dictionary', () => ({
-  unifiedDictionaryService: {
+  dictionaryService: {
     isTypeAvailable: vi.fn(() => true),
   },
 }));
@@ -400,7 +400,7 @@ describe('DictionarySelect - 字典服务测试', () => {
     expect(element).toBeTruthy();
   });
 
-  it('应该使用unifiedDictionaryService', async () => {
+  it('应该使用dictionaryService', async () => {
     const DictionarySelect = (await import('../DictionarySelect')).default;
     const element = React.createElement(DictionarySelect, {
       dictType: 'test_type',

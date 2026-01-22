@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..core.api_errors import forbidden, internal_error, unauthorized
+from ..core.exception_handler import forbidden, internal_error, unauthorized
 from ..database import get_db
 from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user

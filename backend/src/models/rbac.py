@@ -42,7 +42,7 @@ role_permissions = Table(
 )
 
 
-class Role(Base):  # type: ignore[valid-type, misc]
+class Role(Base):
     """角色模型"""
 
     __tablename__ = "roles"
@@ -115,7 +115,7 @@ class Role(Base):  # type: ignore[valid-type, misc]
         )  # pragma: no cover
 
 
-class Permission(Base):  # type: ignore[valid-type, misc]
+class Permission(Base):
     """权限模型"""
 
     __tablename__ = "permissions"
@@ -190,7 +190,7 @@ class Permission(Base):  # type: ignore[valid-type, misc]
         return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"  # pragma: no cover
 
 
-class UserRoleAssignment(Base):  # type: ignore[valid-type, misc]
+class UserRoleAssignment(Base):
     """用户角色分配模型"""
 
     __tablename__ = "user_role_assignments"
@@ -245,7 +245,7 @@ class UserRoleAssignment(Base):  # type: ignore[valid-type, misc]
         return f"<UserRoleAssignment(user_id={self.user_id}, role_id={self.role_id}, active={self.is_active})>"  # pragma: no cover
 
 
-class ResourcePermission(Base):  # type: ignore[valid-type, misc]
+class ResourcePermission(Base):
     """资源权限模型 - 用于资源级别的权限控制"""
 
     __tablename__ = "resource_permissions"
@@ -315,7 +315,7 @@ class ResourcePermission(Base):  # type: ignore[valid-type, misc]
         return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"  # pragma: no cover
 
 
-class PermissionAuditLog(Base):  # type: ignore[valid-type, misc]
+class PermissionAuditLog(Base):
     """权限审计日志"""
 
     __tablename__ = "permission_audit_logs"

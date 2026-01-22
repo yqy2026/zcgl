@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ...core.api_errors import internal_error
+from ...core.exception_handler import internal_error
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db

@@ -65,7 +65,6 @@ from .core.response_handler import success_response
 from .database import (
     create_tables,
     get_database_status,
-    initialize_enhanced_database_if_available,
 )
 
 # 中间件导入 - 使用条件导入
@@ -437,9 +436,6 @@ try:
 except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
 
-# 初始化增强数据库管理器（如果可用）
-initialize_enhanced_database_if_available()
-
 # 创建数据库表
 create_tables()
 
@@ -447,9 +443,10 @@ create_tables()
 db_status = get_database_status()
 logger.info(f"数据库状态: {db_status}")
 
-if db_status.get("enhanced_active"):
-    logger.info("增强数据库管理器已激活 - 性能监控和连接池优化已启用")
+db_health_check = db_status.get("health_check", {})
+if isinstance(db_health_check, dict) and db_health_check.get("healthy"):
+    logger.info("数据库健康检查通过")
 else:
-    logger.info("使用基础数据库配置")
+    logger.info("数据库健康检查未通过或未返回状态")
 
 logger.info("FastAPI应用启动完成")

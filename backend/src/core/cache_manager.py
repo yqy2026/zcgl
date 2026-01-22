@@ -12,7 +12,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
 
-from ..constants.performance.cache import CacheTTL
+from ..constants.performance_constants import CacheTTL
 from .config import settings
 
 logger = logging.getLogger(__name__)

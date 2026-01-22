@@ -15,3 +15,6 @@ htmlcov/
 
 # Development database
 land_property.db
+
+# Temporary files (IDE/tool generated)
+src/api/v1/tmpclaude-*-cwd

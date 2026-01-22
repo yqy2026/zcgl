@@ -14,6 +14,11 @@ from ..models.enum_field import EnumFieldType, EnumFieldValue
 
 logger = logging.getLogger(__name__)
 
+
+def _set_attr(obj: Any, attr: str, value: Any) -> None:
+    """安全地设置 ORM 对象属性，避免 mypy 类型错误"""
+    object.__setattr__(obj, attr, value)
+
 # 标准枚举定义 - 与 schemas/asset.py 中的 Enum 类保持一致
 STANDARD_ENUMS = {
     "ownership_status": {
@@ -162,21 +167,19 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                 logger.info(f"创建枚举类型: {enum_code}")
             else:
                 # 更新现有枚举类型
-                enum_type.name = enum_config["name"]  # type: ignore[assignment]
-                enum_type.category = enum_config.get("category", enum_type.category)  # type: ignore[assignment]
-                enum_type.description = enum_config.get(  # type: ignore[assignment]
-                    "description", enum_type.description
-                )
-                enum_type.is_system = True  # type: ignore[assignment]
-                enum_type.status = "active"  # type: ignore[assignment]
-                enum_type.is_deleted = False  # type: ignore[assignment]
-                enum_type.updated_by = created_by  # type: ignore[assignment]
+                _set_attr(enum_type, "name", enum_config["name"])
+                _set_attr(enum_type, "category", enum_config.get("category", enum_type.category))
+                _set_attr(enum_type, "description", enum_config.get("description", enum_type.description))
+                _set_attr(enum_type, "is_system", True)
+                _set_attr(enum_type, "status", "active")
+                _set_attr(enum_type, "is_deleted", False)
+                _set_attr(enum_type, "updated_by", created_by)
                 stats["types_updated"] += 1
                 logger.info(f"更新枚举类型: {enum_code}")
 
             # 处理枚举值
             for value_config in enum_config["values"]:
-                value_dict: dict[str, Any] = value_config  # type: ignore[assignment]
+                value_dict: dict[str, Any] = value_config
                 existing_value = (
                     db.query(EnumFieldValue)
                     .filter(
@@ -201,13 +204,11 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                     stats["values_created"] += 1
                 else:
                     # 更新现有枚举值
-                    existing_value.label = value_dict["label"]
-                    existing_value.sort_order = value_dict.get(
-                        "sort_order", existing_value.sort_order
-                    )
-                    existing_value.is_active = True  # type: ignore[assignment]
-                    existing_value.is_deleted = False  # type: ignore[assignment]
-                    existing_value.updated_by = created_by  # type: ignore[assignment]
+                    _set_attr(existing_value, "label", value_dict["label"])
+                    _set_attr(existing_value, "sort_order", value_dict.get("sort_order", existing_value.sort_order))
+                    _set_attr(existing_value, "is_active", True)
+                    _set_attr(existing_value, "is_deleted", False)
+                    _set_attr(existing_value, "updated_by", created_by)
                     stats["values_updated"] += 1
 
         except Exception as e:

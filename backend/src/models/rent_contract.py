@@ -65,7 +65,7 @@ rent_contract_assets = Table(
 )
 
 
-class RentContract(Base):  # type: ignore[valid-type, misc]
+class RentContract(Base):
     """租金合同模型 - V2"""
 
     __tablename__ = "rent_contracts"
@@ -223,7 +223,7 @@ class RentContract(Base):  # type: ignore[valid-type, misc]
         return f"<RentContract(contract_number={self.contract_number}, tenant_name={self.tenant_name})>"  # pragma: no cover
 
 
-class RentDepositLedger(Base):  # type: ignore[valid-type, misc]
+class RentDepositLedger(Base):
     """押金台账模型 - V2 新增"""
 
     __tablename__ = "rent_deposit_ledger"
@@ -286,7 +286,7 @@ class RentDepositLedger(Base):  # type: ignore[valid-type, misc]
         return f"<RentDepositLedger(contract_id={self.contract_id}, type={self.transaction_type}, amount={self.amount})>"  # pragma: no cover
 
 
-class RentTerm(Base):  # type: ignore[valid-type, misc]
+class RentTerm(Base):
     """租金条款模型"""
 
     __tablename__ = "rent_terms"
@@ -340,7 +340,7 @@ class RentTerm(Base):  # type: ignore[valid-type, misc]
         return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"  # pragma: no cover
 
 
-class RentLedger(Base):  # type: ignore[valid-type, misc]
+class RentLedger(Base):
     """租金台账模型"""
 
     __tablename__ = "rent_ledger"
@@ -419,7 +419,7 @@ class RentLedger(Base):  # type: ignore[valid-type, misc]
         return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"  # pragma: no cover
 
 
-class ServiceFeeLedger(Base):  # type: ignore[valid-type, misc]
+class ServiceFeeLedger(Base):
     """服务费台账模型 - V2 新增（用于委托运营模式）"""
 
     __tablename__ = "service_fee_ledger"
@@ -485,7 +485,7 @@ class ServiceFeeLedger(Base):  # type: ignore[valid-type, misc]
         return f"<ServiceFeeLedger(contract_id={self.contract_id}, fee_amount={self.fee_amount})>"  # pragma: no cover
 
 
-class RentContractHistory(Base):  # type: ignore[valid-type, misc]
+class RentContractHistory(Base):
     """租金合同历史记录模型"""
 
     __tablename__ = "rent_contract_history"
@@ -525,7 +525,7 @@ class RentContractHistory(Base):  # type: ignore[valid-type, misc]
         return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"  # pragma: no cover
 
 
-class RentContractAttachment(Base):  # type: ignore[valid-type, misc]
+class RentContractAttachment(Base):
     """合同附件模型 - V2 新增"""
 
     __tablename__ = "rent_contract_attachments"

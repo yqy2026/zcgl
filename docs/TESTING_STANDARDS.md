@@ -147,7 +147,7 @@ frontend/src/
 │
 ├── services/
 │   └── __tests__/
-│       ├── enhancedApiClient.test.ts
+│       ├── apiClient.test.ts
 │       └── assetService.test.ts
 │
 ├── hooks/
@@ -342,7 +342,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock dependencies
 vi.mock('@/api/client', () => ({
-  enhancedApiClient: {
+  apiClient: {
     post: vi.fn(),
   },
 }))
@@ -482,7 +482,7 @@ describe('useAssets', () => {
   it('handles error state correctly', async () => {
     // Mock error response
     vi.mock('@/api/client', () => ({
-      enhancedApiClient: {
+      apiClient: {
         get: vi.fn().mockRejectedValue(new Error('API Error')),
       },
     }))
@@ -505,13 +505,13 @@ describe('useAssets', () => {
  * Asset service tests
  */
 
-import { enhancedApiClient } from '@/api/client'
+import { apiClient } from '@/api/client'
 import { assetService } from './assetService'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
-  enhancedApiClient: {
+  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
@@ -530,18 +530,18 @@ describe('assetService', () => {
         { id: '1', property_name: '测试物业1' },
         { id: '2', property_name: '测试物业2' },
       ]
-      vi.mocked(enhancedApiClient.get).mockResolvedValue({ data: mockAssets })
+      vi.mocked(apiClient.get).mockResolvedValue({ data: mockAssets })
 
       const result = await assetService.getAssets()
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/api/v1/assets', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/assets', {
         params: { page: 1, pageSize: 20 },
       })
       expect(result).toEqual(mockAssets)
     })
 
     it('handles API errors gracefully', async () => {
-      vi.mocked(enhancedApiClient.get).mockRejectedValue(new Error('Network Error'))
+      vi.mocked(apiClient.get).mockRejectedValue(new Error('Network Error'))
 
       await expect(assetService.getAssets()).rejects.toThrow('Network Error')
     })
@@ -555,11 +555,11 @@ describe('assetService', () => {
         address: '测试地址',
       }
       const createdAsset = { id: '123', ...newAsset }
-      vi.mocked(enhancedApiClient.post).mockResolvedValue({ data: createdAsset })
+      vi.mocked(apiClient.post).mockResolvedValue({ data: createdAsset })
 
       const result = await assetService.createAsset(newAsset)
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith(
+      expect(apiClient.post).toHaveBeenCalledWith(
         '/api/v1/assets',
         newAsset
       )

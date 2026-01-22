@@ -22,8 +22,8 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
-from src.constants.database.pool import DatabasePoolConfig
-from src.constants.errors.error_ids import ErrorIDs
+from src.constants.message_constants import ErrorIDs
+from src.constants.storage_constants import DatabasePoolConfig
 
 logger = logging.getLogger(__name__)
 

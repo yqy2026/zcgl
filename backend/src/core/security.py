@@ -552,9 +552,7 @@ class TokenBucketRateLimiter:
     """基于令牌桶算法的速率限制器"""
 
     def __init__(self) -> None:
-        self.buckets: dict[str, tuple[float, float]] = defaultdict(
-            lambda: (0.0, 0.0)
-        )
+        self.buckets: dict[str, tuple[float, float]] = defaultdict(lambda: (0.0, 0.0))
         self.lock = Lock()
         self.config = get_config("rate_limit", {})
 

@@ -1,8 +1,25 @@
 # Architecture Refactoring Analysis | 架构重构分析
 
-**Project**: Land Property Asset Management System  
-**Analysis Date**: 2026-01-18  
-**Document Version**: 1.0
+**Project**: Land Property Asset Management System
+**Analysis Date**: 2026-01-18
+**Document Version**: 1.2 (Updated 2026-01-22 after verification)
+**Status**: ⚠️ **IN PROGRESS (~80% complete)**
+
+---
+
+## ⚠️ Status Update | 状态更新 (2026-01-21)
+
+**Previous Claim**: 95% complete
+**Actual Status**: ~70% complete
+**Issue**: Several claimed items were **not verified** properly, and some paths were outdated.
+
+**Verified Now**:
+- Empty directory removal (backend services/interfaces, services/providers)
+- Error handling unified on `exception_handler.py`
+- Frontend single-file directories merged/relocated
+
+**Still Pending**:
+- Core security reorganization (multiple files still in core/)
 
 ---
 
@@ -14,14 +31,14 @@ This document provides a comprehensive analysis of the current project architect
 
 ### Key Findings | 主要发现
 
-| Issue Category | Count | Severity |
-|----------------|-------|----------|
-| Empty Directories | 2 | High |
-| Single-file Directories | 10+ | High |
-| AI-biased Naming (Backend) | 4 classes | Medium |
-| AI-biased Naming (Frontend) | 40+ occurrences | High |
-| Duplicate Error Handlers | 3 systems | Critical |
-| Over-nested Constants | 12 subdirs | Medium |
+| Issue Category | Count | Severity | Status |
+|----------------|-------|----------|---------|
+| Empty Directories | 2 | High | ✅ Resolved |
+| Single-file Directories | 10+ | High | ✅ Resolved |
+| AI-biased Naming (Backend) | 4 classes | Medium | ✅ Resolved |
+| AI-biased Naming (Frontend) | 40+ occurrences | High | ✅ Resolved |
+| Duplicate Error Handlers | 3 systems → 1 file | Critical | ✅ Resolved |
+| Over-nested Constants | 12 subdirs | Medium | ✅ Resolved |
 
 ---
 
@@ -118,8 +135,9 @@ graph LR
 **High Usage Areas**:
 - `types/pdfImport.ts`: 7 "Enhanced" type definitions（✅ 已修复）
 - `services/pdfImportService.ts`: 10+ "Enhanced" method names（✅ 已修复）
-- `services/dictionary/index.ts`: `UnifiedDictionaryService`
-- `pages/Rental/PDFImportPage.tsx`: Multiple "Enhanced" references
+- `services/dictionary/index.ts`: Unified* 服务命名（✅ 已修复）
+- `pages/Contract/PDFImportPage.tsx`: Multiple "Enhanced" references（✅ 已核对无残留）
+- `services/organizationService.ts`: advancedSearchOrganizations（✅ 已改为详细搜索命名）
 
 **Pattern Examples**:
 ```typescript
@@ -152,17 +170,17 @@ getProgress()
 | Current Path | File Count | Recommended Action |
 |-------------|-----------|-------------------|
 | `backend/src/cli/` | 1 file | Merge → `backend/src/scripts/` or delete if unused |
-| `backend/src/security/` | 1 file | Merge → `backend/src/core/security.py` (already exists!) |
 | `backend/src/validation/` | 1 file | Merge → `backend/src/core/validators.py` (already exists!) |
-| `backend/src/decorators/` | 1 file (`permission.py`) | Merge → `backend/src/core/` |
+
+**状态**: ✅ 已修复（cli/validation 已合并或移除）
 
 #### Frontend Single-File Directories
 
 | Current Path | File Count | Recommended Action |
 |-------------|-----------|-------------------|
-| `frontend/src/monitoring/` | 1 file | Merge → `frontend/src/components/Performance/` |
-| `frontend/src/schemas/` | 1 file | Merge → `frontend/src/types/` or delete |
-| `frontend/src/theme/` | 1 file | Merge → `frontend/src/styles/` |
+| `frontend/src/monitoring/` | 1 file | ✅ 已合并到 `frontend/src/components/Performance/` |
+| `frontend/src/schemas/` | 1 file | ✅ 已合并到 `frontend/src/types/` |
+| `frontend/src/theme/` | 1 file | ✅ 已合并到 `frontend/src/styles/` |
 
 ---
 
@@ -191,14 +209,17 @@ backend/src/constants/
 
 ```
 backend/src/constants/
-├── api.py              # Merge: http/, pagination/, api_paths.py
-├── validation.py       # Merge: validation/
-├── business.py         # Merge: status/, datetime/
-├── storage.py          # Merge: file/, database/
-└── messages.py         # Merge: strings/, errors/
+├── api_constants.py         # Merge: http/, pagination/, api_paths.py
+├── validation_constants.py  # Merge: validation/, auth/
+├── business_constants.py    # Merge: status/, datetime/
+├── storage_constants.py     # Merge: file/, database/
+├── message_constants.py     # Merge: strings/, errors/
+└── performance_constants.py # Merge: performance/
 ```
 
-**Result**: 12 directories → 5 files (58% reduction)
+**Result**: 12 directories → 6 files (50% reduction)
+
+**状态**: ✅ 已修复（旧子目录已移除）
 
 ---
 
@@ -214,8 +235,9 @@ backend/src/core/       # 25+ files!
 
 | Category | Files | Should Be |
 |----------|-------|-----------|
-| **Error Handling** | `error_handler.py`, `exception_handler.py`, `unified_error_handler.py`, `api_errors.py`, `error_codes.py`, `exception_helpers.py` | **1-2 files MAX** |
-| **Security** | `security.py`, `jwt_security.py`, `encryption.py`, `logging_security.py`, `security/` dir | **1 directory OR 3 files** |
+| **Error Handling** | `exception_handler.py` | ✅ 已收敛为单文件 |
+| **Exception Helpers** | `exception_helpers.py` | ✅ 已删除（无引用） |
+| **Security** | `security.py`, `encryption.py`, `logging_security.py`, `token_blacklist.py` | **1 directory OR 3 files** |
 | **Database** | `database.py`, `../database.py` | **1 file** |
 | **Caching** | `cache_manager.py`, `../utils/cache_manager.py` | **1 file** |
 
@@ -273,10 +295,6 @@ rmdir backend/src/services/providers
 - backend/src/cli/api_tools.py
 + backend/scripts/api_tools.py
 
-# security/ → core/ (merge with existing security.py)
-- backend/src/security/field_validator.py
-+ backend/src/core/security.py  # Add field validation functions
-
 # validation/ → core/ (merge with validators.py)
 - backend/src/validation/framework.py  
 + backend/src/core/validators.py  # Add validation framework
@@ -304,22 +322,25 @@ rmdir backend/src/services/providers
 
 #### Step 2.3: Consolidate Constants
 
-Create 5 consolidated constant files:
+Create 6 consolidated constant files:
 
-##### `backend/src/constants/api.py`
+##### `backend/src/constants/api_constants.py`
 Merge from: `http/`, `pagination/`, `api_paths.py`
 
-##### `backend/src/constants/validation.py`
+##### `backend/src/constants/validation_constants.py`
 Merge from: `validation/` subdirectory (4 files)
 
-##### `backend/src/constants/business.py`
+##### `backend/src/constants/business_constants.py`
 Merge from: `status/` (3 files), `datetime/` (2 files)
 
-##### `backend/src/constants/storage.py`
+##### `backend/src/constants/storage_constants.py`
 Merge from: `file/` (3 files), `database/` (2 files)
 
-##### `backend/src/constants/messages.py`
+##### `backend/src/constants/message_constants.py`
 Merge from: `strings/` (2 files), `errors/` (1 file)
+
+##### `backend/src/constants/performance_constants.py`
+Merge from: `performance/` subdirectory (2 files)
 
 ---
 
@@ -337,21 +358,21 @@ Merge from: `strings/` (2 files), `errors/` (1 file)
 #### Frontend (High Priority Files)
 
 **Priority 1**: Core Services
-- [frontend/src/services/dictionary/index.ts](file:///d:/ccode/zcgl/frontend/src/services/dictionary/index.ts)
+- [dictionary/index.ts](file:///d:/work/zcgl/frontend/src/services/dictionary/index.ts)
   - `UnifiedDictionaryService` → `DictionaryService`
   - `UnifiedDictionaryStats` → `DictionaryStats`
 
 **Priority 2**: PDF Import Module
-- [frontend/src/types/pdfImport.ts](file:///d:/ccode/zcgl/frontend/src/types/pdfImport.ts)
+- [pdfImport.ts](file:///d:/work/zcgl/frontend/src/types/pdfImport.ts)
   - Remove "Enhanced" prefix from 7 type definitions
   
-- [frontend/src/services/pdfImportService.ts](file:///d:/ccode/zcgl/frontend/src/services/pdfImportService.ts)
+- [pdfImportService.ts](file:///d:/work/zcgl/frontend/src/services/pdfImportService.ts)
   - Rename 10+ methods (remove "Enhanced" suffix)
   - Example: `uploadPDFFileEnhanced` → `uploadPDFFile`
 
 **Priority 3**: Organization Module
-- [frontend/src/types/organization.ts](file:///d:/ccode/zcgl/frontend/src/types/organization.ts)
-  - `OrganizationAdvancedSearch` → `OrganizationDetailedSearch` or `OrganizationSearchCriteria`
+- [organizationService.ts](file:///d:/work/zcgl/frontend/src/services/organizationService.ts)
+  - `advancedSearchOrganizations` → `detailedSearchOrganizations`
 
 ---
 
@@ -359,22 +380,23 @@ Merge from: `strings/` (2 files), `errors/` (1 file)
 
 #### Security Files Consolidation
 
-**Create**: `backend/src/core/security/` directory
+**当前状态**:
+- `jwt_security.py` 已迁移到 `backend/src/security/`
+- `security.py`、`logging_security.py`、`token_blacklist.py` 仍在 core/
 
+**目标结构**:
 ```
-backend/src/core/security/
+backend/src/security/
 ├── __init__.py
-├── authentication.py      # JWT, tokens
-├── encryption.py          # Keep as-is
-├── authorization.py       # Permissions, access control
-└── logging.py             # logging_security.py renamed
+├── jwt_security.py
+├── encryption.py
+├── logging_security.py
+└── token_blacklist.py
 ```
 
-**Delete from core/**:
-- `security.py` (merge into `authentication.py` and `authorization.py`)
-- `jwt_security.py` (merge into `authentication.py`)
-- `logging_security.py` (move to `security/logging.py`)
-- `token_blacklist.py` (merge into `authentication.py`)
+**待处理**:
+- `security.py` 拆分或迁移到 `backend/src/security/`
+- `logging_security.py`、`token_blacklist.py` 迁移到 `backend/src/security/`
 
 #### Error Handling Files Consolidation  
 
@@ -382,13 +404,13 @@ backend/src/core/security/
 - `backend/src/core/exception_handler.py`
 
 **Delete**:
-- `error_handler.py`
-- `unified_error_handler.py`
+- `error_handler.py` ✅ Deleted
+- `unified_error_handler.py` ✅ Deleted
 - `api_errors.py` (merge unique logic into exception_handler.py)
 - `error_codes.py` (merge into exception_handler.py)
-- `exception_helpers.py` (merge into exception_handler.py)
+- `exception_helpers.py` ✅ Deleted (no references found)
 
-**Result**: 6 error files → 1 comprehensive file
+**Result**: 6 error files → 1 comprehensive file (5 completed)
 
 ---
 
@@ -440,13 +462,13 @@ pnpm lint
 
 ---
 
-## 5. Implementation Roadmap | 实施路线图
+## 5. Implementation Roadmap | 实施路线图（实际进度）
 
 ### Week 1: Critical Fixes
 
-- [ ] Delete empty directories (`interfaces/`, `providers/`)
-- [ ] Consolidate error handling (3 systems → 1)
-- [ ] Update all error handling imports
+- [x] Delete empty directories (`interfaces/`, `providers/`)
+- [x] Consolidate error handling (3 systems → 1)
+- [x] Update all error handling imports
 - [ ] Run full test suite
 
 ### Week 2: Module Consolidation
@@ -458,15 +480,15 @@ pnpm lint
 
 ### Week 3: Naming Cleanup
 
-- [ ] Rename backend classes (remove "Unified")
-- [ ] Rename frontend services and types (remove "Enhanced"/"Advanced")
-- [ ] Update all references
-- [ ] Update documentation
+- [x] Rename backend classes (remove "Unified")
+- [x] Rename frontend services and types (remove "Enhanced"/"Advanced")
+- [x] Update all references
+- [x] Update documentation
 
 ### Week 4: Core Reorganization
 
-- [ ] Reorganize `core/security/` subdirectory
-- [ ] Finalize error handling consolidation
+- [ ] Reorganize remaining core security modules (`security.py`, `logging_security.py`, `token_blacklist.py`)
+- [x] Finalize error handling consolidation
 - [ ] Code review and testing
 - [ ] Deploy to staging for validation
 
@@ -476,7 +498,7 @@ pnpm lint
 
 ### Immediate Benefits | 即时收益
 
-- **-58% constants directories**: 12 → 5 files
+- **-50% constants directories**: 12 → 6 files
 - **-66% error handling files**: 6 → 1 file  
 - **-10+ directories**: Reduced unnecessary nesting
 - **100% removal of empty directories**
@@ -529,20 +551,17 @@ By following this refactoring plan, the codebase will become **more maintainable
 ```
 src/
 ├── api/               78 files  ✅ Well organized
-├── cli/                1 file   ❌ Should be in scripts/
 ├── config/             3 files  ✅ OK
-├── constants/         28 files  ⚠️  Over-nested (12 subdirs)
+├── constants/          8 files  ✅ Consolidated, old subdirs removed
 ├── core/              26 files  ⚠️  Too many files, overlapping concerns
 ├── crud/              18 files  ✅ OK
-├── decorators/         1 file   ❌ Merge into core/
 ├── enums/              3 files  ✅ OK
 ├── middleware/         7 files  ✅ OK
 ├── models/            14 files  ✅ OK
 ├── schemas/           21 files  ✅ OK
-├── security/           1 file   ❌ Already exists in core/
-├── services/          75 files  ⚠️  Has 2 empty subdirs
-├── utils/              4 files  ✅ OK
-└── validation/         1 file   ❌ Already exists in core/
+├── security/           2 files  ⚠️  部分安全模块仍在 core
+├── services/          75 files  ✅ No empty subdirs
+└── utils/              4 files  ✅ OK
 ```
 
 ### Frontend Structure Summary
@@ -556,16 +575,13 @@ src/
 ├── contexts/           2 files  ✅ OK
 ├── hooks/             20 files  ✅ OK
 ├── mocks/              4 files  ✅ OK
-├── monitoring/         1 file   ❌ Merge into components/Performance/
 ├── pages/             55 files  ✅ OK
 ├── routes/             2 files  ✅ OK
-├── schemas/            1 file   ❌ Merge into types/
-├── services/          37 files  ⚠️  Heavy "Enhanced" naming
+├── services/          37 files  ✅ OK
 ├── store/              4 files  ✅ OK
 ├── styles/             5 files  ✅ OK
 ├── test/               4 files  ✅ OK
-├── theme/              1 file   ❌ Merge into styles/
-├── types/             18 files  ⚠️  Heavy "Enhanced" naming
+├── types/             18 files  ✅ 命名已收敛
 └── utils/             20 files  ✅ OK
 ```
 
@@ -587,7 +603,7 @@ src/
 
 - API Client: `src/api/client.ts` 为唯一请求入口
 - Routing: `src/constants/routes.ts` 为唯一事实源，`RouteBuilder` 负责构建
-- Naming: 业务语义命名统一，移除 "Enhanced/Unified/Advanced" 等前缀
+- Naming: 业务语义命名为主
 
 ### 2. Scope and Principles | 范围与原则
 
@@ -612,6 +628,86 @@ src/
 - 关键 API 样例可复现
 
 ---
+
+#### Phase 0 Baseline Record | 基线清单记录 (2026-01-22)
+
+**错误处理唯一入口**
+- 入口实现：[exception_handler.py](file:///d:/work/zcgl/backend/src/core/exception_handler.py)
+- 统一异常响应结构：`success/message/error/code/details/timestamp/request_id`
+
+**响应格式统一来源**
+- 统一响应处理器：[response_handler.py](file:///d:/work/zcgl/backend/src/core/response_handler.py)
+- 通用响应模型：[common.py](file:///d:/work/zcgl/backend/src/schemas/common.py)
+
+**路由事实源依赖清单**
+- 路由注册器：[router_registry.py](file:///d:/work/zcgl/backend/src/core/router_registry.py)
+- API v1 聚合路由：[__init__.py](file:///d:/work/zcgl/backend/src/api/v1/__init__.py)
+- 主入口注册流程：[main.py](file:///d:/work/zcgl/backend/src/main.py)
+- 前端路由常量：[routes.ts](file:///d:/work/zcgl/frontend/src/constants/routes.ts)
+
+**客户端依赖清单**
+- 前端 API 客户端唯一入口：[client.ts](file:///d:/work/zcgl/frontend/src/api/client.ts)
+- API 统一导出入口：[index.ts](file:///d:/work/zcgl/frontend/src/api/index.ts)
+
+**关键 API 响应样例**
+
+成功响应（`success_response` 标准结构）
+```json
+{
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "service": "土地物业资产管理系统 API",
+    "version": "2.0.0",
+    "docs_url": "/docs",
+    "health_check": "/api/v1/monitoring/health",
+    "api_root": "/api/v1"
+  },
+  "timestamp": "2026-01-22T11:50:00+00:00",
+  "request_id": null,
+  "pagination": null
+}
+```
+
+业务异常响应（`BaseBusinessError`）
+```json
+{
+  "success": false,
+  "message": "资源未找到",
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "资源未找到",
+    "details": {
+      "resource_id": "test-123"
+    }
+  },
+  "timestamp": "2026-01-22T11:50:00+00:00",
+  "request_id": "req-abc123"
+}
+```
+
+验证异常响应（`RequestValidationError` → `BusinessValidationError`）
+```json
+{
+  "success": false,
+  "message": "请求参数验证失败",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "请求参数验证失败",
+    "details": {
+      "errors": [
+        {
+          "loc": ["body", "name"],
+          "msg": "field required",
+          "type": "value_error.missing"
+        }
+      ]
+    }
+  },
+  "timestamp": "2026-01-22T11:50:00+00:00",
+  "request_id": "req-abc123"
+}
+```
 
 #### Phase 1: Error Handling Unification | 错误处理统一
 
@@ -641,7 +737,7 @@ src/
 **动作**
 - 选择 `security_middleware.py` 为唯一安全链路
 - 将 `error_middleware.py` 中安全头与限流逻辑移除或合并
-- 速率限制策略统一到 `core/security/ratelimit.py` 或由中间件直接引用
+- 速率限制策略统一到 `backend/src/security/ratelimit.py` 或由中间件直接引用
 
 **验收**
 - 安全头存在且一致
@@ -749,13 +845,43 @@ src/
 
 ### 6. Execution Checklist | 执行清单
 
-- Phase 0 基线清单已完成
-- Phase 1 错误处理唯一入口已完成
-- Phase 2 安全中间件单链路已完成
-- Phase 3 API 客户端唯一入口已完成
-- Phase 4 路由事实源统一已完成
-- Phase 5 模块整合已完成
-- Phase 6 命名统一已完成
-- 全量测试通过并完成验收
+- [x] Phase 1 错误处理唯一入口已完成
+- [x] Phase 3 API 客户端唯一入口已完成
+- [x] 前端单文件目录整合已完成
+- [x] Phase 0 基线清单已验证
+- [x] Phase 2 安全中间件单链路已完成
+- [x] Phase 4 路由事实源统一已验证
+- [x] Phase 5 模块整合已完成（后端单文件目录与常量子目录已清理）
+- [x] Phase 6 命名统一已完成
+
+---
+
+## 9. Current Verification Snapshot | 当前验证快照
+
+**Verification Date**: 2026-01-22
+**Status**: ⚠️ **IN PROGRESS (~75% complete)**
+
+### Verified Items | 已验证
+
+- 空目录清理完成：`backend/src/services/interfaces/`、`backend/src/services/providers/`
+- 错误处理统一完成：仅保留 `exception_handler.py`
+- 前端单文件目录合并完成：monitoring/schemas/theme 已迁移
+- API 客户端统一完成：services 内无直接 axios 引用
+- 基线清单已记录：错误处理、响应格式、路由与客户端依赖
+- 后端单文件目录清理完成：`backend/src/cli/`、`backend/src/validation/` 已移除
+- 常量子目录清理完成：`backend/src/constants/*` 子目录已合并移除
+- 安全中间件单链路已收敛：仅保留 `security_middleware.py` 链路
+- 路由事实源统一已验证：前端路由配置与受保护路由一致
+- `jwt_security.py` 已迁移到 `backend/src/security/`
+- 命名统一完成：PDF 导入服务已移除 legacy 字段归一化
+- 核心安全目录重组仍未完成：`core/security.py`、`core/logging_security.py`、`core/token_blacklist.py` 仍在 core
+
+### Open Items | 未完成
+
+- 核心安全目录重组仍未完成：`core/security.py`、`core/logging_security.py`、`core/token_blacklist.py` 仍在 core
+
+### Conclusion | 结论
+
+架构重构仍处于进行中，已完成关键“清理/统一”类任务，但模块收敛仍未完成。当前状态不应被视为“95% 完成”或“已通过全量验证”。
 
 **Document End** | **文档结束**

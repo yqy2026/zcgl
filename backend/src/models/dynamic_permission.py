@@ -191,7 +191,7 @@ class PermissionTemplate(Base):  # type: ignore[misc, valid-type]
     # created_by_user = relationship("User", foreign_keys=[created_by])
 
 
-class DynamicPermissionAudit(Base):  # type: ignore[valid-type, misc]
+class DynamicPermissionAudit(Base):
     """动态权限审计日志模型"""
 
     __tablename__ = "dynamic_permission_audit"
@@ -236,7 +236,7 @@ class DynamicPermissionAudit(Base):  # type: ignore[valid-type, misc]
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
-class PermissionRequest(Base):  # type: ignore[valid-type, misc]
+class PermissionRequest(Base):
     """权限申请模型"""
 
     __tablename__ = "permission_requests"
@@ -291,7 +291,7 @@ class PermissionRequest(Base):  # type: ignore[valid-type, misc]
     # approved_by_user = relationship("User", foreign_keys=[approved_by])
 
 
-class PermissionDelegation(Base):  # type: ignore[valid-type, misc]
+class PermissionDelegation(Base):
     """权限委托模型"""
 
     __tablename__ = "permission_delegations"

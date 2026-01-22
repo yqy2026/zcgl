@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
 
@@ -12,7 +13,7 @@ from ..database import Base
 from ..enums.task import TaskStatus
 
 
-class AsyncTask(Base):  # type: ignore[valid-type, misc]
+class AsyncTask(Base):
     """异步任务模型"""
 
     __tablename__ = "async_tasks"
@@ -72,7 +73,7 @@ class AsyncTask(Base):  # type: ignore[valid-type, misc]
     @property
     def is_running(self) -> bool:
         """任务是否正在运行"""
-        return self.status == TaskStatus.RUNNING  # type: ignore[return-value]  # pragma: no cover
+        return cast(str, self.status) == TaskStatus.RUNNING  # pragma: no cover
 
     @property
     def success_rate(self) -> float:
@@ -80,22 +81,24 @@ class AsyncTask(Base):  # type: ignore[valid-type, misc]
         # Handle both None and 0 cases
         if not self.total_items:  # pragma: no cover
             return 0.0  # pragma: no cover
-        failed = self.failed_items or 0  # Handle None case  # pragma: no cover
-        return (
-            (self.processed_items - failed) / self.total_items * 100  # type: ignore[return-value]
-        )  # pragma: no cover
+        failed = (self.failed_items or 0) or 0  # Handle None case  # pragma: no cover
+        total = self.total_items or 1  # pragma: no cover
+        processed = (self.processed_items or 0) or 0  # pragma: no cover
+        return (processed - failed) / total * 100  # pragma: no cover
 
     @property
     def duration_seconds(self) -> float:
         """任务持续时间（秒）"""
-        if not self.started_at:  # pragma: no cover
+        started_at = self.started_at  # pragma: no cover
+        if not started_at:  # pragma: no cover
             return 0.0  # pragma: no cover
 
-        end_time = self.completed_at or datetime.now(UTC)  # pragma: no cover
-        return (end_time - self.started_at).total_seconds()  # type: ignore[no-any-return]  # pragma: no cover
+        completed_at = self.completed_at  # pragma: no cover
+        end_time = completed_at or datetime.now(UTC)  # pragma: no cover
+        return (end_time - started_at).total_seconds()  # pragma: no cover
 
 
-class TaskHistory(Base):  # type: ignore[valid-type, misc]
+class TaskHistory(Base):
     """任务历史记录模型"""
 
     __tablename__ = "task_history"
@@ -122,7 +125,7 @@ class TaskHistory(Base):  # type: ignore[valid-type, misc]
         )
 
 
-class ExcelTaskConfig(Base):  # type: ignore[valid-type, misc]
+class ExcelTaskConfig(Base):
     """Excel任务配置模型"""
 
     __tablename__ = "excel_task_configs"

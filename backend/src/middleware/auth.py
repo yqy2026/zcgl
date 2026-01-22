@@ -12,9 +12,9 @@ from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..core.config import settings
 from ..core.cookie_auth import cookie_manager
+from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..database import get_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData

@@ -25,7 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from src.constants.errors.error_ids import ErrorIDs
+from src.constants.message_constants import ErrorIDs
 
 from ...core.role_normalizer import RoleNormalizer
 from ...crud.auth import AuditLogCRUD

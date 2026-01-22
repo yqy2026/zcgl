@@ -11,7 +11,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text
 from ..database import Base
 
 
-class OperationLog(Base):  # type: ignore[valid-type, misc]
+class OperationLog(Base):
     """操作日志模型"""
 
     __tablename__ = "operation_logs"

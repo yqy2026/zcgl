@@ -19,7 +19,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         """通过名称获取项目"""
         return db.query(Project).filter(Project.name == name).first()
 
-    def get_multi(  # type: ignore[override]
+    def get_multi(
         self,
         db: Session,
         *,
@@ -27,6 +27,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
+        **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[Project]:
         """获取多个项目"""
         query = db.query(Project)

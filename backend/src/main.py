@@ -13,11 +13,7 @@ from fastapi.responses import JSONResponse
 
 # 核心依赖 - 严格导入（开发/生产环境必须存在）
 from .core.config import get_config, initialize_config, settings
-from .core.encoding_utils import (
-    safe_error_message,
-    safe_print,
-    setup_utf8_encoding,
-)
+from .core.encoding_utils import safe_print, setup_utf8_encoding
 from .core.environment import (
     get_dependency_policy,
     get_environment,
@@ -133,7 +129,7 @@ async def lifespan(app: FastAPI) -> Any:
     # JWT安全专项检查 - 重新启用安全验证
     logger.info("执行JWT安全配置检查...")
     try:
-        from .core.jwt_security import validate_current_jwt_config
+        from .security.jwt_security import validate_current_jwt_config
 
         jwt_config_result = validate_current_jwt_config()
 
@@ -261,18 +257,6 @@ else:
 logger.info("版本化API架构已启用 - 使用 /api/v1/* 端点")
 safe_print("版本化API架构已配置完成")
 
-# 设置文件上传安全中间件
-try:
-    from .middleware.file_upload_security import create_file_security_middleware
-
-    file_security_middleware = create_file_security_middleware(app)
-    # The middleware factory is already correctly configured by create_file_security_middleware
-    # No need to add it again
-except ImportError as e:
-    safe_print(
-        f"Warning: File upload security middleware not available - {safe_error_message(e)}"
-    )
-
 # 设置统一异常处理器
 setup_exception_handlers(app)
 
@@ -345,10 +329,11 @@ if not is_testing():
     db_status = get_database_status()
     logger.info(f"数据库状态: {db_status}")
 
-    if db_status.get("enhanced_active"):
-        logger.info("增强数据库管理器已激活 - 性能监控和连接池优化已启用")
+    health_check = db_status.get("health_check", {})
+    if isinstance(health_check, dict) and health_check.get("healthy"):
+        logger.info("数据库健康检查通过")
     else:
-        logger.info("使用基础数据库配置")
+        logger.info("数据库健康检查未通过或未返回状态")
 else:
     logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
 

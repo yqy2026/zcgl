@@ -5,7 +5,7 @@
  * @module services
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 
 /**
  * 联系人类型枚举
@@ -106,7 +106,7 @@ class ContactService {
    * 创建联系人
    */
   async createContact(data: ContactCreate): Promise<Contact> {
-    const response = await enhancedApiClient.post<Contact>(this.basePath, data);
+    const response = await apiClient.post<Contact>(this.basePath, data);
     return response.data!;
   }
 
@@ -114,7 +114,7 @@ class ContactService {
    * 获取联系人详情
    */
   async getContact(id: string): Promise<Contact> {
-    const response = await enhancedApiClient.get<Contact>(`${this.basePath}/${id}`);
+    const response = await apiClient.get<Contact>(`${this.basePath}/${id}`);
     return response.data!;
   }
 
@@ -127,7 +127,7 @@ class ContactService {
     page = 1,
     limit = 10
   ): Promise<ContactListResponse> {
-    const response = await enhancedApiClient.get<ContactListResponse>(
+    const response = await apiClient.get<ContactListResponse>(
       `${this.basePath}/entity/${entityType}/${entityId}`,
       { params: { page, limit } }
     );
@@ -139,7 +139,7 @@ class ContactService {
    */
   async getPrimaryContact(entityType: string, entityId: string): Promise<Contact | null> {
     try {
-      const response = await enhancedApiClient.get<Contact>(
+      const response = await apiClient.get<Contact>(
         `${this.basePath}/entity/${entityType}/${entityId}/primary`
       );
       return response.data ?? null;
@@ -153,7 +153,7 @@ class ContactService {
    * 更新联系人
    */
   async updateContact(id: string, data: ContactUpdate): Promise<Contact> {
-    const response = await enhancedApiClient.put<Contact>(`${this.basePath}/${id}`, data);
+    const response = await apiClient.put<Contact>(`${this.basePath}/${id}`, data);
     return response.data!;
   }
 
@@ -161,7 +161,7 @@ class ContactService {
    * 删除联系人（软删除）
    */
   async deleteContact(id: string): Promise<Contact> {
-    const response = await enhancedApiClient.delete<Contact>(`${this.basePath}/${id}`);
+    const response = await apiClient.delete<Contact>(`${this.basePath}/${id}`);
     return response.data!;
   }
 
@@ -173,7 +173,7 @@ class ContactService {
     entityId: string,
     contacts: ContactCreate[]
   ): Promise<Contact[]> {
-    const response = await enhancedApiClient.post<Contact[]>(
+    const response = await apiClient.post<Contact[]>(
       `${this.basePath}/batch/${entityType}/${entityId}`,
       contacts
     );

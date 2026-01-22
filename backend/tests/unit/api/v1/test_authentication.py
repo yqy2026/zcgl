@@ -810,27 +810,27 @@ class TestGetCurrentUserInfo:
 
 
 # ============================================================================
-# Test: GET /test-enhanced - Test Enhanced Endpoint
+# Test: GET /test-features - Test Features Endpoint
 # ============================================================================
 
 
-class TestTestEnhanced:
-    """Tests for GET /api/v1/auth/test-enhanced endpoint"""
+class TestTestFeatures:
+    """Tests for GET /api/v1/auth/test-features endpoint"""
 
     @patch.dict("os.environ", {"DEBUG": "true"})
     @pytest.mark.asyncio
-    async def test_test_enhanced(self):
-        """Test enhanced endpoint"""
+    async def test_test_features(self):
+        """Test features endpoint"""
         import os
 
         os.environ["DEBUG"] = "true"
 
-        from src.api.v1.auth_modules.authentication import test_enhanced
+        from src.api.v1.auth_modules.authentication import test_features
 
-        result = await test_enhanced()
+        result = await test_features()
 
         assert result["success"] is True
-        assert result["message"] == "增强功能测试正常"
+        assert result["message"] == "功能测试正常"
         assert "timestamp" in result
 
 

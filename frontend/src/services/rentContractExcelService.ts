@@ -2,10 +2,10 @@
  * 租金合同Excel导入导出服务
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { createLogger } from '@/utils/logger';
 
-const api = enhancedApiClient;
+const api = apiClient;
 const serviceLogger = createLogger('rentContractExcelService');
 
 export interface ExcelImportResult {

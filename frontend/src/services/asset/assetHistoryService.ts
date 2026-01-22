@@ -3,7 +3,7 @@
  * 资产历史记录相关操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import { ASSET_API } from '../../constants/api';
 import type {
@@ -28,7 +28,7 @@ export class AssetHistoryService {
     changeType?: string
   ): Promise<PaginatedApiResponse<AssetHistory>> {
     try {
-      const result = await enhancedApiClient.get<PaginatedApiResponse<AssetHistory>>(
+      const result = await apiClient.get<PaginatedApiResponse<AssetHistory>>(
         `${ASSET_API.DETAIL(assetId)}/history`,
         {
           params: { page, limit, change_type: changeType },
@@ -54,7 +54,7 @@ export class AssetHistoryService {
    */
   async getHistoryDetail(historyId: string): Promise<AssetHistory> {
     try {
-      const result = await enhancedApiClient.get<AssetHistory>(`/history/${historyId}`, {
+      const result = await apiClient.get<AssetHistory>(`/history/${historyId}`, {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -76,7 +76,7 @@ export class AssetHistoryService {
    */
   async compareHistory(historyId1: string, historyId2: string): Promise<HistoryComparisonResult> {
     try {
-      const result = await enhancedApiClient.get<HistoryComparisonResult>(
+      const result = await apiClient.get<HistoryComparisonResult>(
         `/history/compare/${historyId1}/${historyId2}`,
         {
           cache: true,
@@ -105,7 +105,7 @@ export class AssetHistoryService {
     limit = 10
   ): Promise<FieldHistoryRecord[]> {
     try {
-      const result = await enhancedApiClient.get<{ history: FieldHistoryRecord[] }>(
+      const result = await apiClient.get<{ history: FieldHistoryRecord[] }>(
         `${ASSET_API.DETAIL(assetId)}/field-history/${fieldName}`,
         {
           params: { limit },

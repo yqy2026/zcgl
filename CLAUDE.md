@@ -2,7 +2,7 @@
 
 本文件为 Claude Code 提供项目上下文，遵循 2026 最佳实践。详细文档请参阅 `docs/` 目录。
 
-**最后更新**: 2026-01-15
+**最后更新**: 2026-01-22
 
 ---
 
@@ -59,12 +59,12 @@ React UI → ApiClient → FastAPI (/api/v1/*) → Service → CRUD → SQLAlche
 
 | 需求 | 查看位置 |
 |-----|---------|
-| API 端点定义 | `backend/src/api/v1/` (41个文件) |
+| API 端点定义 | `backend/src/api/v1/` (65+个文件，含子模块) |
 | 业务逻辑实现 | `backend/src/services/` (19个子目录) |
-| 数据库模型 | `backend/src/models/` (16个文件) |
-| 前端组件 | `frontend/src/components/` (136个组件) |
-| 页面路由 | `frontend/src/pages/` (41个页面) |
-| 类型定义 | `frontend/src/types/` (18个文件) |
+| 数据库模型 | `backend/src/models/` (17个文件) |
+| 前端组件 | `frontend/src/components/` (247个.tsx组件) |
+| 页面路由 | `frontend/src/pages/` (目录结构) |
+| 类型定义 | `frontend/src/types/` (127个.ts文件) |
 
 ---
 

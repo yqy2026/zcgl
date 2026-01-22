@@ -895,12 +895,9 @@ export class DictionaryService {
   }
 }
 
-// 创建统一服务实例
 export const dictionaryService = new DictionaryService();
 
 // 向后兼容：导出默认实例
 export default dictionaryService;
 
-// 向后兼容：导出旧的接口名称
-export const unifiedDictionaryService = dictionaryService;
 export const enumFieldService = dictionaryManagerService;

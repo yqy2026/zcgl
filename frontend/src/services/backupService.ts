@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 import type { BackupInfo, BackupListResponse } from '@/types/api';
@@ -61,7 +61,7 @@ export class BackupService {
    */
   async createBackup(request: BackupRequest): Promise<BackupResponse> {
     try {
-      const result = await enhancedApiClient.post<BackupResponse>('/backup/create', request, {
+      const result = await apiClient.post<BackupResponse>('/backup/create', request, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -82,7 +82,7 @@ export class BackupService {
    */
   async listBackups(): Promise<BackupListResponse> {
     try {
-      const result = await enhancedApiClient.get<BackupListResponse>('/backup/list', {
+      const result = await apiClient.get<BackupListResponse>('/backup/list', {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -108,7 +108,7 @@ export class BackupService {
     info?: BackupInfo;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         success: boolean;
         message: string;
         info?: BackupInfo;
@@ -138,7 +138,7 @@ export class BackupService {
     deleted: boolean;
   }> {
     try {
-      const result = await enhancedApiClient.delete<{
+      const result = await apiClient.delete<{
         success: boolean;
         message: string;
         deleted: boolean;
@@ -167,7 +167,7 @@ export class BackupService {
     deleted_count: number;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         deleted_count: number;
@@ -198,7 +198,7 @@ export class BackupService {
    */
   async restoreBackup(request: RestoreRequest): Promise<RestoreResponse> {
     try {
-      const result = await enhancedApiClient.post<RestoreResponse>('/backup/restore', request, {
+      const result = await apiClient.post<RestoreResponse>('/backup/restore', request, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -221,7 +221,7 @@ export class BackupService {
    */
   async downloadBackup(filename: string): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`/backup/download/${filename}`, {
+      const result = await apiClient.get<Blob>(`/backup/download/${filename}`, {
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
@@ -246,7 +246,7 @@ export class BackupService {
     details?: Record<string, unknown>;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         valid: boolean;
         message: string;
         details?: Record<string, unknown>;
@@ -288,7 +288,7 @@ export class BackupService {
         formData.append('description', description);
       }
 
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         backup_info?: BackupInfo;
@@ -322,7 +322,7 @@ export class BackupService {
     status: SchedulerStatus;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         success: boolean;
         message: string;
         status: SchedulerStatus;
@@ -357,7 +357,7 @@ export class BackupService {
     updated: boolean;
   }> {
     try {
-      const result = await enhancedApiClient.put<{
+      const result = await apiClient.put<{
         success: boolean;
         message: string;
         updated: boolean;
@@ -386,7 +386,7 @@ export class BackupService {
     started: boolean;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         started: boolean;
@@ -419,7 +419,7 @@ export class BackupService {
     stopped: boolean;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         stopped: boolean;
@@ -450,7 +450,7 @@ export class BackupService {
    */
   async getBackupStatistics(): Promise<BackupStatistics> {
     try {
-      const result = await enhancedApiClient.get<BackupStatistics>('/backup/statistics', {
+      const result = await apiClient.get<BackupStatistics>('/backup/statistics', {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -482,7 +482,7 @@ export class BackupService {
     }>
   > {
     try {
-      const result = await enhancedApiClient.get<
+      const result = await apiClient.get<
         Array<{
           timestamp: string;
           action: 'created' | 'deleted' | 'restored' | 'uploaded';
@@ -594,7 +594,7 @@ export class BackupService {
    */
   async checkBackupExists(filename: string): Promise<boolean> {
     try {
-      const result = await enhancedApiClient.get<{ exists: boolean }>(`/backup/check/${filename}`, {
+      const result = await apiClient.get<{ exists: boolean }>(`/backup/check/${filename}`, {
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -623,7 +623,7 @@ export class BackupService {
     backup_count: number;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         total_space: number;
         used_space: number;
         available_space: number;
@@ -655,7 +655,7 @@ export class BackupService {
     test_backup?: string;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         test_backup?: string;

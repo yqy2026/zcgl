@@ -1,10 +1,43 @@
 """
-Performance monitoring thresholds.
+Performance and caching constants.
 
-All timing values are in milliseconds unless otherwise specified.
+Consolidated from:
+- performance/cache.py
+- performance/monitoring.py
+
+This module provides all performance-related constants including
+cache TTL and performance thresholds.
 """
 
 from typing import Final
+
+
+class CacheTTL:
+    """
+    Cache expiration time constants.
+
+    These constants define how long different types of data should
+    be cached before being refreshed.
+    """
+
+    SHORT_SECONDS: Final[int] = 300
+    MEDIUM_SECONDS: Final[int] = 600
+    LONG_SECONDS: Final[int] = 1800
+    EXTENDED_SECONDS: Final[int] = 3600
+    VERY_LONG_SECONDS: Final[int] = 7200
+
+
+class CacheLimits:
+    """
+    Cache size and behavior limits.
+
+    These constants define the maximum size and behavior constraints
+    for in-memory caches.
+    """
+
+    MAX_CRUD_ENTRIES: Final[int] = 100
+    MAX_QUERY_RESULTS: Final[int] = 500
+    MAX_STATS_ENTRIES: Final[int] = 50
 
 
 class PerformanceThresholds:
@@ -15,28 +48,17 @@ class PerformanceThresholds:
     performance as fast, normal, or slow.
     """
 
-    # Query performance thresholds (milliseconds)
-    FAST_QUERY_MS: Final[float] = 200.0  # Fast queries
-    NORMAL_QUERY_MS: Final[float] = 300.0  # Normal queries
-    SLOW_QUERY_MS: Final[float] = 500.0  # Slow queries (logged for optimization)
-
-    # Batch update thresholds
+    FAST_QUERY_MS: Final[float] = 200.0
+    NORMAL_QUERY_MS: Final[float] = 300.0
+    SLOW_QUERY_MS: Final[float] = 500.0
     BATCH_UPDATE_THRESHOLD_MS: Final[float] = 500.0
-
-    # List query thresholds
     LIST_QUERY_THRESHOLD_MS: Final[float] = 300.0
-
-    # Statistics query thresholds
     STATISTICS_QUERY_THRESHOLD_MS: Final[float] = 200.0
-
-    # API response times (milliseconds)
     FAST_RESPONSE_MS: Final[int] = 200
     ACCEPTABLE_RESPONSE_MS: Final[int] = 500
     SLOW_RESPONSE_MS: Final[int] = 1000
-
-    # Cache performance metrics
-    GOOD_CACHE_HIT_PERCENT: Final[int] = 80  # Target cache hit rate
-    MINIMUM_CACHE_HIT_PERCENT: Final[int] = 50  # Minimum acceptable cache hit rate
+    GOOD_CACHE_HIT_PERCENT: Final[int] = 80
+    MINIMUM_CACHE_HIT_PERCENT: Final[int] = 50
 
     @classmethod
     def classify_query(cls, duration_ms: float) -> str:
@@ -51,10 +73,9 @@ class PerformanceThresholds:
         """
         if duration_ms <= cls.FAST_QUERY_MS:
             return "fast"
-        elif duration_ms <= cls.NORMAL_QUERY_MS:
+        if duration_ms <= cls.NORMAL_QUERY_MS:
             return "normal"
-        else:
-            return "slow"
+        return "slow"
 
     @classmethod
     def is_slow_query(cls, duration_ms: float) -> bool:
@@ -70,6 +91,14 @@ class PerformanceThresholds:
         return duration_ms > cls.SLOW_QUERY_MS
 
 
-# Legacy compatibility aliases (deprecated, will be removed in v2.0)
+CACHE_TTL_DEFAULT = CacheTTL.SHORT_SECONDS
+CACHE_TIMEOUT = CacheTTL.SHORT_SECONDS
+MAX_CACHE_SIZE = CacheLimits.MAX_CRUD_ENTRIES
 SLOW_QUERY_THRESHOLD = PerformanceThresholds.SLOW_QUERY_MS
 FAST_RESPONSE_THRESHOLD = PerformanceThresholds.FAST_RESPONSE_MS
+
+__all__ = [
+    "CacheLimits",
+    "CacheTTL",
+    "PerformanceThresholds",
+]

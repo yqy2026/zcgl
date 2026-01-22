@@ -3,7 +3,7 @@
  * 资产统计相关操作
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import type {
   AssetSearchParams,
@@ -24,7 +24,7 @@ export class AssetStatisticsService {
    */
   async getAssetStats(filters?: AssetSearchParams): Promise<AssetStats> {
     try {
-      const result = await enhancedApiClient.get<AssetStats>('/statistics/basic', {
+      const result = await apiClient.get<AssetStats>('/statistics/basic', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -47,7 +47,7 @@ export class AssetStatisticsService {
    */
   async getOccupancyRateStats(filters?: AssetSearchParams): Promise<OccupancyRateStats> {
     try {
-      const result = await enhancedApiClient.get<OccupancyRateStats>('/statistics/occupancy-rate', {
+      const result = await apiClient.get<OccupancyRateStats>('/statistics/occupancy-rate', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -70,7 +70,7 @@ export class AssetStatisticsService {
    */
   async getAssetDistributionStats(filters?: AssetSearchParams): Promise<AssetDistributionStats> {
     try {
-      const result = await enhancedApiClient.get<AssetDistributionStats>(
+      const result = await apiClient.get<AssetDistributionStats>(
         '/statistics/distribution',
         {
           params: filters,
@@ -96,7 +96,7 @@ export class AssetStatisticsService {
    */
   async getAreaStatistics(filters?: AssetSearchParams): Promise<AreaStatistics> {
     try {
-      const result = await enhancedApiClient.get<AreaStatistics>('/statistics/area', {
+      const result = await apiClient.get<AreaStatistics>('/statistics/area', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -119,7 +119,7 @@ export class AssetStatisticsService {
    */
   async getComprehensiveStats(filters?: AssetSearchParams): Promise<ComprehensiveStats> {
     try {
-      const result = await enhancedApiClient.get<ComprehensiveStats>('/statistics/comprehensive', {
+      const result = await apiClient.get<ComprehensiveStats>('/statistics/comprehensive', {
         params: filters,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },

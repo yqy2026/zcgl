@@ -29,7 +29,7 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '../../config/excelConfig';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -77,7 +77,7 @@ const OptimizedAssetImport: React.FC = () => {
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      const response = await enhancedApiClient.get('/excel/template', {
+      const response = await apiClient.get('/excel/template', {
         responseType: 'blob',
       });
 
@@ -166,7 +166,7 @@ const OptimizedAssetImport: React.FC = () => {
 
       const endpoint = config.useOptimized ? '/excel/import/optimized' : '/excel/import';
 
-      const response = await enhancedApiClient.post(endpoint, formData, {
+      const response = await apiClient.post(endpoint, formData, {
         params: {
           sheet_name: STANDARD_SHEET_NAME,
           skip_errors: config.skipErrors,

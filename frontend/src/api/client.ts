@@ -667,7 +667,7 @@ export class ApiClient {
 // ==================== 默认实例 ====================
 
 /**
- * 创建默认的增强API客户端实例
+ * 创建默认的API客户端实例
  */
 export const createApiClient = (config?: ApiClientConfig): ApiClient => {
   return new ApiClient(config);
@@ -686,7 +686,5 @@ export const apiClient = new ApiClient({
     backoffMultiplier: 2,
   },
 });
-
-export const enhancedApiClient = apiClient;
 
 export default ApiClient;

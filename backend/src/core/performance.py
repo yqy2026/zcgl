@@ -15,7 +15,7 @@ from functools import wraps
 from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload
 
-from ..constants.performance.monitoring import PerformanceThresholds
+from ..constants.performance_constants import PerformanceThresholds
 from .config import get_config
 
 logger = logging.getLogger(__name__)

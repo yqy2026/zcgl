@@ -262,7 +262,7 @@
 
 2. 创建API服务 `frontend/src/services/propertyCertificateService.ts`
    - 参考 `pdfImportService.ts` 的封装方式
-   - 使用 `enhancedApiClient` 发送请求
+   - 使用 `apiClient` 发送请求
    - 定义所有API调用方法
 
 3. 创建上传识别页面 `PropertyCertificateImportPage.tsx`

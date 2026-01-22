@@ -54,7 +54,7 @@ class ProcessingStep(str, enum.Enum):
     FINAL_REVIEW = "final_review"  # 最终审核
 
 
-class PDFImportSession(Base):  # type: ignore[valid-type, misc]
+class PDFImportSession(Base):
     """PDF导入会话模型"""
 
     __tablename__ = "pdf_import_sessions"
@@ -144,7 +144,7 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
         return self.status == SessionStatus.READY_FOR_REVIEW  # pragma: no cover
 
 
-class SessionLog(Base):  # type: ignore[valid-type, misc]
+class SessionLog(Base):
     """会话操作日志"""
 
     __tablename__ = "pdf_import_session_logs"
@@ -173,7 +173,7 @@ class SessionLog(Base):  # type: ignore[valid-type, misc]
         return f"<SessionLog(session_id='{self.session_id}', step='{self.step}', status='{self.status}')>"  # pragma: no cover
 
 
-class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
+class ProcessingConfiguration(Base):
     """处理配置模型"""
 
     __tablename__ = "pdf_import_configurations"

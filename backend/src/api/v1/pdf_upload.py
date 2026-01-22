@@ -133,7 +133,9 @@ async def upload_pdf_file(
     # 获取session service（可选）
     session_service = optional.pdf_session_service
     if session_service is None:
-        raise service_unavailable("PDF会话服务不可用", service_name="pdf_session_service")
+        raise service_unavailable(
+            "PDF会话服务不可用", service_name="pdf_session_service"
+        )
 
     session = await session_service.create_session(
         db=db,

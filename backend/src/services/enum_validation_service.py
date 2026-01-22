@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
-from ..constants.strings.empty import EMPTY_STRING
+from ..constants.message_constants import EMPTY_STRING
 from ..models.enum_field import EnumFieldType, EnumFieldValue
 
 logger = logging.getLogger(__name__)

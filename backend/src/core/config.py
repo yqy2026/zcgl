@@ -5,7 +5,7 @@
 整合说明:
 - 保留原有 Pydantic Settings 配置
 - 添加 get_config() 和 initialize_config() 兼容函数
-- 合并自 config_manager.py, unified_config.py, enhanced_config.py 的功能
+- 合并自 config_manager.py, unified_config.py, legacy_config.py 的功能
 @lastModified 2025-12-24
 """
 

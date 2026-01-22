@@ -1,7 +1,7 @@
 // 统一导出所有服务
 
-// export { apiClient, ApiClient } from './api' // 已弃用，迁移到enhancedApiClient
-// export { api } from './api' // 已弃用，迁移到enhancedApiClient
+// export { apiClient, ApiClient } from './api' // 已弃用，迁移到 api/client
+// export { api } from './api' // 已弃用，迁移到 api/client
 
 // 现代化API客户端 - Re-exported from new api/ location
 export { apiClient, ApiClient, createApiClient } from '../api/client';

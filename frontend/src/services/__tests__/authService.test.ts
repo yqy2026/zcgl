@@ -47,7 +47,7 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login('testuser', 'password');
+    const result = await AuthService.login({ username: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([
@@ -85,7 +85,7 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login('testuser', 'password');
+    const result = await AuthService.login({ username: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([]);
@@ -116,7 +116,7 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login('testuser', 'password');
+    const result = await AuthService.login({ username: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([]);

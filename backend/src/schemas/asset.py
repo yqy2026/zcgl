@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ..constants.validation.lengths import FieldLengthLimits
+from ..constants.validation_constants import FieldLengthLimits
 
 
 class AssetBase(BaseModel):

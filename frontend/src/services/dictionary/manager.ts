@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import { DICTIONARY_CONFIGS } from './config';
 import { createLogger } from '../../utils/logger';
@@ -178,7 +178,7 @@ class DictionaryManagerService {
    */
   async getEnumFieldTypes(): Promise<EnumFieldType[]> {
     try {
-      const result = await enhancedApiClient.get<EnumFieldType[]>(`${this.baseUrl}/types`, {
+      const result = await apiClient.get<EnumFieldType[]>(`${this.baseUrl}/types`, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -255,7 +255,7 @@ class DictionaryManagerService {
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
     try {
-      const result = await enhancedApiClient.get<EnumFieldValue[]>(
+      const result = await apiClient.get<EnumFieldValue[]>(
         `${this.baseUrl}/${typeId}/options`,
         {
           cache: true,
@@ -414,7 +414,7 @@ class DictionaryManagerService {
         throw new Error(`代码验证失败: ${validation.errors.join(', ')}`);
       }
 
-      const result = await enhancedApiClient.post<EnumFieldType>(`${this.baseUrl}/types`, data, {
+      const result = await apiClient.post<EnumFieldType>(`${this.baseUrl}/types`, data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -447,7 +447,7 @@ class DictionaryManagerService {
         }
       }
 
-      const result = await enhancedApiClient.put<EnumFieldType>(
+      const result = await apiClient.put<EnumFieldType>(
         `${this.baseUrl}/types/${typeId}`,
         data,
         {
@@ -473,7 +473,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldType(typeId: string): Promise<boolean> {
     try {
-      const result = await enhancedApiClient.delete<{ success: boolean; message: string }>(
+      const result = await apiClient.delete<{ success: boolean; message: string }>(
         `${this.baseUrl}/types/${typeId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -501,7 +501,7 @@ class DictionaryManagerService {
     data: CreateEnumFieldValueRequest
   ): Promise<EnumFieldValue | null> {
     try {
-      const result = await enhancedApiClient.post<EnumFieldValue>(
+      const result = await apiClient.post<EnumFieldValue>(
         `${this.baseUrl}/${typeId}/values`,
         data,
         {
@@ -531,7 +531,7 @@ class DictionaryManagerService {
     data: UpdateEnumFieldValueRequest
   ): Promise<EnumFieldValue | null> {
     try {
-      const result = await enhancedApiClient.put<EnumFieldValue>(
+      const result = await apiClient.put<EnumFieldValue>(
         `${this.baseUrl}/${typeId}/values/${valueId}`,
         data,
         {
@@ -557,7 +557,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldValue(typeId: string, valueId: string): Promise<boolean> {
     try {
-      const result = await enhancedApiClient.delete<{ success: boolean; message: string }>(
+      const result = await apiClient.delete<{ success: boolean; message: string }>(
         `${this.baseUrl}/${typeId}/values/${valueId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -582,7 +582,7 @@ class DictionaryManagerService {
    */
   async getEnumFieldUsageStats(typeId: string): Promise<DictionaryUsageStats> {
     try {
-      const result = await enhancedApiClient.get<DictionaryUsageStats>(
+      const result = await apiClient.get<DictionaryUsageStats>(
         `${this.baseUrl}/${typeId}/usage`,
         {
           cache: true,
@@ -654,7 +654,7 @@ class DictionaryManagerService {
    */
   async exportEnumFieldData(typeId: string, format: 'json' | 'excel' = 'json'): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/${typeId}/export`, {
+      const result = await apiClient.get<Blob>(`${this.baseUrl}/${typeId}/export`, {
         params: { format },
         responseType: 'blob',
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
@@ -683,7 +683,7 @@ class DictionaryManagerService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const result = await enhancedApiClient.post<{ success: number; errors: string[] }>(
+      const result = await apiClient.post<{ success: number; errors: string[] }>(
         `${this.baseUrl}/${typeId}/import`,
         formData,
         {
@@ -933,7 +933,7 @@ class DictionaryManagerService {
         Object.assign(params, filters);
       }
 
-      const result = await enhancedApiClient.get<EnumFieldType[]>(`${this.baseUrl}/types/search`, {
+      const result = await apiClient.get<EnumFieldType[]>(`${this.baseUrl}/types/search`, {
         params,
         cache: true,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },

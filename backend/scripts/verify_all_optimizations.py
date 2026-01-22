@@ -18,8 +18,7 @@ def test_error_handling() -> tuple[bool, dict]:
     print("=" * 70)
 
     try:
-        from src.core.api_errors import bad_request, not_found
-        from src.core.exception_handler import BaseBusinessError
+        from src.core.exception_handler import BaseBusinessError, bad_request, not_found
 
         try:
             raise not_found("资产不存在")

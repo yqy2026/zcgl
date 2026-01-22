@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
 import {
   DictionaryConfig,
@@ -308,7 +308,7 @@ class BaseDictionaryService {
 
     // 尝试从API获取
     try {
-      const result = await enhancedApiClient.get<DictionaryOption[]>(config.apiEndpoint, {
+      const result = await apiClient.get<DictionaryOption[]>(config.apiEndpoint, {
         params: { is_active: isActive },
         timeout: this.REQUEST_TIMEOUT,
         cache: false, // 使用自定义缓存

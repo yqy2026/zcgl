@@ -1,12 +1,12 @@
 /**
- * 统一字典选择组件
+ * 字典选择组件
  * 自动从字典服务获取选项数据
  */
 
 import React from 'react';
 import { Select, Spin } from 'antd';
 import { useDictionary } from '../../hooks/useDictionary';
-import { unifiedDictionaryService } from '../../services/dictionary';
+import { dictionaryService } from '../../services/dictionary';
 
 interface DictionaryOption {
   value: string;
@@ -42,7 +42,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
   // Track data flow for debugging
 
   // 检查字典类型是否可用
-  const _isAvailable = unifiedDictionaryService.isTypeAvailable(dictType);
+  const _isAvailable = dictionaryService.isTypeAvailable(dictType);
 
   // If dictionary type is not available, show warning
 

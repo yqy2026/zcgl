@@ -1,7 +1,7 @@
 """
-Integration tests for unified error handling system (api_errors).
+Integration tests for unified error handling system (exception_handler).
 
-Tests the api_errors functions to ensure they:
+Tests the exception_handler functions to ensure they:
 1. Create correct BaseBusinessError exceptions with proper status codes
 2. Include appropriate error codes and metadata
 3. Are properly caught by the exception handler
@@ -12,7 +12,8 @@ Created: 2026-01-17 (Part of error handling unification)
 import pytest
 from fastapi import status
 
-from src.core.api_errors import (
+from src.core.exception_handler import (
+    BaseBusinessError,
     bad_request,
     conflict,
     forbidden,
@@ -23,7 +24,6 @@ from src.core.api_errors import (
     unauthorized,
     validation_error,
 )
-from src.core.exception_handler import BaseBusinessError
 
 
 class TestNotFoundError:

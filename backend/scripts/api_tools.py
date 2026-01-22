@@ -12,7 +12,7 @@ from pathlib import Path
 import click
 
 # 添加项目根目录到Python路径
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
@@ -296,12 +296,12 @@ jobs:
     - name: Generate API docs
       run: |
         cd backend
-        python -m src.cli.api_tools docs
+        python scripts/api_tools.py docs
 
     - name: Check API consistency
       run: |
         cd backend
-        python -m src.cli.api_tools check --severity high
+        python scripts/api_tools.py check --severity high
 
   deploy-docs:
     needs: api-docs

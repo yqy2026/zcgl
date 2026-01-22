@@ -334,10 +334,9 @@ const result = await dictionaryService.getOptions(dictType, {
 
 ## 向后兼容
 
-为了保持向后兼容性，统一服务导出了以下别名：
+为了保持向后兼容性，服务导出了以下别名：
 
 ```typescript
-export const unifiedDictionaryService = dictionaryService;
 export const enumFieldService = dictionaryManagerService;
 ```
 

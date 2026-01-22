@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from ..constants.errors.messages import ErrorMessages
+from ..constants.message_constants import ErrorMessages
 
 logger = logging.getLogger(__name__)
 
@@ -539,6 +539,7 @@ class ExceptionHandler:
 
 # 全局异常处理器实例
 exception_handler = ExceptionHandler()
+
 
 def not_found(
     message: str = "资源未找到",

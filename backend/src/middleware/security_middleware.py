@@ -15,8 +15,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from ..constants.errors.messages import ErrorMessages
-from ..constants.http.methods import HTTPMethods
+from ..constants.api_constants import HTTPMethods
+from ..constants.message_constants import ErrorMessages
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.exception_handler import (
     BusinessValidationError,

@@ -20,7 +20,7 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
-class EnumFieldType(Base):  # type: ignore[valid-type, misc]
+class EnumFieldType(Base):
     """枚举字段类型模型"""
 
     __tablename__ = "enum_field_types"
@@ -74,7 +74,7 @@ class EnumFieldType(Base):  # type: ignore[valid-type, misc]
         return f"<EnumFieldType(id={self.id}, name={self.name}, code={self.code})>"  # pragma: no cover
 
 
-class EnumFieldValue(Base):  # type: ignore[valid-type, misc]
+class EnumFieldValue(Base):
     """枚举字段值模型"""
 
     __tablename__ = "enum_field_values"
@@ -137,7 +137,7 @@ class EnumFieldValue(Base):  # type: ignore[valid-type, misc]
         return f"<EnumFieldValue(id={self.id}, label={self.label}, value={self.value})>"  # pragma: no cover
 
 
-class EnumFieldUsage(Base):  # type: ignore[valid-type, misc]
+class EnumFieldUsage(Base):
     """枚举字段使用记录模型"""
 
     __tablename__ = "enum_field_usage"
@@ -184,7 +184,7 @@ class EnumFieldUsage(Base):  # type: ignore[valid-type, misc]
         return f"<EnumFieldUsage(id={self.id}, table={self.table_name}, field={self.field_name})>"  # pragma: no cover
 
 
-class EnumFieldHistory(Base):  # type: ignore[valid-type, misc]
+class EnumFieldHistory(Base):
     """枚举字段变更历史模型"""
 
     __tablename__ = "enum_field_history"

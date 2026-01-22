@@ -3,7 +3,7 @@
  * 处理 Prompt 模板的 CRUD、版本管理、激活、回滚等 API 调用
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { createLogger } from '@/utils/logger';
 import type {
   PromptTemplate,
@@ -40,7 +40,7 @@ export class LLMPromptService {
    */
   async getPrompts(params?: PromptQueryParams): Promise<PromptTemplateListResponse> {
     try {
-      const response = await enhancedApiClient.get<PromptTemplateListResponse>(API_BASE, {
+      const response = await apiClient.get<PromptTemplateListResponse>(API_BASE, {
         params,
       });
       return extractData(response, '获取 Prompt 列表失败: 响应数据为空');
@@ -55,7 +55,7 @@ export class LLMPromptService {
    */
   async getPrompt(id: string): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.get<PromptTemplate>(`${API_BASE}/${id}`);
+      const response = await apiClient.get<PromptTemplate>(`${API_BASE}/${id}`);
       return extractData(response, `获取 Prompt 详情失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 详情失败: ${id}`, error);
@@ -68,7 +68,7 @@ export class LLMPromptService {
    */
   async createPrompt(data: PromptTemplateCreate): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.post<PromptTemplate>(API_BASE, data);
+      const response = await apiClient.post<PromptTemplate>(API_BASE, data);
       const result = extractData(response, '创建 Prompt 失败: 响应数据为空');
       logger.info(`创建 Prompt 成功: ${result.name}`);
       return result;
@@ -83,7 +83,7 @@ export class LLMPromptService {
    */
   async updatePrompt(id: string, data: PromptTemplateUpdate): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.put<PromptTemplate>(`${API_BASE}/${id}`, data);
+      const response = await apiClient.put<PromptTemplate>(`${API_BASE}/${id}`, data);
       const result = extractData(response, `更新 Prompt 失败: ${id}`);
       logger.info(`更新 Prompt 成功: ${result.name} -> v${result.version}`);
       return result;
@@ -98,7 +98,7 @@ export class LLMPromptService {
    */
   async activatePrompt(id: string): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.post<PromptTemplate>(
+      const response = await apiClient.post<PromptTemplate>(
         `${API_BASE}/${id}/activate`,
         {}
       );
@@ -116,7 +116,7 @@ export class LLMPromptService {
    */
   async rollbackPrompt(id: string, request: PromptRollbackRequest): Promise<PromptTemplate> {
     try {
-      const response = await enhancedApiClient.post<PromptTemplate>(
+      const response = await apiClient.post<PromptTemplate>(
         `${API_BASE}/${id}/rollback`,
         request
       );
@@ -134,7 +134,7 @@ export class LLMPromptService {
    */
   async getPromptVersions(id: string): Promise<PromptVersion[]> {
     try {
-      const response = await enhancedApiClient.get<PromptVersion[]>(`${API_BASE}/${id}/versions`);
+      const response = await apiClient.get<PromptVersion[]>(`${API_BASE}/${id}/versions`);
       return extractData(response, `获取 Prompt 版本历史失败: ${id}`);
     } catch (error) {
       logger.error(`获取 Prompt 版本历史失败: ${id}`, error);
@@ -147,7 +147,7 @@ export class LLMPromptService {
    */
   async getStatistics(): Promise<PromptStatistics> {
     try {
-      const response = await enhancedApiClient.get<PromptStatistics>(
+      const response = await apiClient.get<PromptStatistics>(
         `${API_BASE}/statistics/overview`
       );
       return extractData(response, '获取统计概览失败: 响应数据为空');
@@ -164,7 +164,7 @@ export class LLMPromptService {
     data: ExtractionFeedbackCreate
   ): Promise<{ success: boolean; feedback_id: string }> {
     try {
-      const response = await enhancedApiClient.post<{ success: boolean; feedback_id: string }>(
+      const response = await apiClient.post<{ success: boolean; feedback_id: string }>(
         `${API_BASE}/feedback`,
         data
       );
@@ -219,7 +219,7 @@ export class LLMPromptService {
       const formData = new FormData();
       formData.append('file', testFile);
 
-      const response = await enhancedApiClient.post<{ success: boolean; result: any }>(
+      const response = await apiClient.post<{ success: boolean; result: any }>(
         `${API_BASE}/${id}/test`,
         formData,
         {

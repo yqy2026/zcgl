@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
-from ..constants.performance.cache import CacheLimits, CacheTTL
+from ..constants.performance_constants import CacheLimits, CacheTTL
 from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
@@ -105,9 +105,19 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             raise self._handle_database_error(e, "获取记录")  # pragma: no cover
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+        **kwargs: Any,  # 允许子类传递额外参数（如 task_type, status 等）
     ) -> list[ModelType]:
-        """获取多个记录（支持缓存）"""
+        """获取多个记录（支持缓存）
+
+        子类可以通过 **kwargs 传递额外的筛选参数，例如：
+            task_crud.get_multi(db, skip=0, limit=10, task_type="import")
+        """
         cache_key = self._get_cache_key("get_multi", skip=skip, limit=limit)
 
         if use_cache and limit <= 50:  # 只对小结果集缓存
@@ -220,8 +230,14 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             db.rollback()  # pragma: no cover
             raise self._handle_database_error(e, "删除记录")  # pragma: no cover
 
-    def count(self, db: Session, filters: dict[str, Any] | None = None) -> int:
-        """获取记录总数（支持筛选条件）"""
+    def count(
+        self, db: Session, filters: dict[str, Any] | None = None, **kwargs: Any
+    ) -> int:
+        """获取记录总数（支持筛选条件）
+
+        子类可以通过 **kwargs 传递额外的筛选参数，例如：
+            task_crud.count(db, task_type="import")
+        """
         try:
             query = db.query(self.model)
             if filters:

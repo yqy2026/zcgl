@@ -137,6 +137,16 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         title: '资产分析',
         permissions: [{ resource: 'asset', action: 'view' }],
       },
+      {
+        path: ASSET_ROUTES.ANALYTICS_SIMPLE,
+        title: '简易分析',
+        permissions: [{ resource: 'asset', action: 'view' }],
+      },
+      {
+        path: ASSET_ROUTES.DETAIL_PATH,
+        title: '资产详情',
+        permissions: [{ resource: 'asset', action: 'view' }],
+      },
     ],
   },
   {
@@ -156,9 +166,29 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         permissions: [{ resource: 'rental', action: 'create' }],
       },
       {
+        path: RENTAL_ROUTES.CONTRACTS.CREATE,
+        title: '创建合同',
+        permissions: [{ resource: 'rental', action: 'create' }],
+      },
+      {
         path: RENTAL_ROUTES.CONTRACTS.PDF_IMPORT,
         title: 'PDF导入合同',
         permissions: [{ resource: 'rental', action: 'create' }],
+      },
+      {
+        path: RENTAL_ROUTES.CONTRACTS.RENEW_PATH,
+        title: '合同续签',
+        permissions: [{ resource: 'rental', action: 'edit' }],
+      },
+      {
+        path: RENTAL_ROUTES.CONTRACTS.DETAIL_PATH,
+        title: '合同详情',
+        permissions: [{ resource: 'rental', action: 'view' }],
+      },
+      {
+        path: RENTAL_ROUTES.CONTRACTS.EDIT_PATH,
+        title: '编辑合同',
+        permissions: [{ resource: 'rental', action: 'edit' }],
       },
       {
         path: RENTAL_ROUTES.LEDGER,
@@ -177,12 +207,44 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     title: '权属方管理',
     icon: 'team',
     breadcrumb: ['权属方管理'],
+    children: [
+      {
+        path: OWNERSHIP_ROUTES.LIST,
+        title: '权属方列表',
+      },
+      {
+        path: OWNERSHIP_ROUTES.DETAIL_PATH,
+        title: '权属方详情',
+      },
+      {
+        path: OWNERSHIP_ROUTES.EDIT_PATH,
+        title: '编辑权属方',
+      },
+    ],
   },
   {
     path: '/project',
     title: '项目管理',
     icon: 'project',
     breadcrumb: ['项目管理'],
+    children: [
+      {
+        path: PROJECT_ROUTES.LIST,
+        title: '项目列表',
+      },
+      {
+        path: PROJECT_ROUTES.DETAIL_PATH,
+        title: '项目详情',
+      },
+      {
+        path: PROJECT_ROUTES.EDIT_PATH,
+        title: '编辑项目',
+      },
+    ],
+  },
+  {
+    path: PROFILE_ROUTES.PROFILE,
+    title: '个人中心',
   },
   {
     path: '/system',

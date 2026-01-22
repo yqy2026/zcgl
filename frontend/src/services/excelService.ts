@@ -5,7 +5,7 @@
  * @author Claude Code
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
 import type { ExcelImportResponse, ExcelExportRequest, ExcelExportResponse } from '@/types/api';
@@ -113,7 +113,7 @@ export class ExcelService {
       formData.append('file', file);
       formData.append('sheet_name', sheetName);
 
-      const result = await enhancedApiClient.post<ExcelImportResponse>(
+      const result = await apiClient.post<ExcelImportResponse>(
         `${this.baseUrl}/import`,
         formData,
         {
@@ -149,7 +149,7 @@ export class ExcelService {
    */
   async getImportStatus(taskId: string): Promise<TaskStatusResponse> {
     try {
-      const result = await enhancedApiClient.get<TaskStatusResponse>(
+      const result = await apiClient.get<TaskStatusResponse>(
         `${this.baseUrl}/import/status/${taskId}`,
         {
           cache: false, // 需要实时状态
@@ -174,7 +174,7 @@ export class ExcelService {
    */
   async getImportTaskInfo(taskId: string): Promise<ImportTaskInfo> {
     try {
-      const result = await enhancedApiClient.get<ImportTaskInfo>(
+      const result = await apiClient.get<ImportTaskInfo>(
         `${this.baseUrl}/import/tasks/${taskId}`,
         {
           cache: true,
@@ -199,7 +199,7 @@ export class ExcelService {
    */
   async cancelImport(taskId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const result = await enhancedApiClient.post<{ success: boolean; message: string }>(
+      const result = await apiClient.post<{ success: boolean; message: string }>(
         `${this.baseUrl}/import/cancel/${taskId}`,
         {},
         {
@@ -226,7 +226,7 @@ export class ExcelService {
     taskId: string
   ): Promise<{ success: boolean; message: string; newTaskId?: string }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         newTaskId?: string;
@@ -257,7 +257,7 @@ export class ExcelService {
    */
   async exportExcel(request: ExcelExportRequest): Promise<ExcelExportResponse> {
     try {
-      const result = await enhancedApiClient.post<ExcelExportResponse>(
+      const result = await apiClient.post<ExcelExportResponse>(
         `${this.baseUrl}/export`,
         request,
         {
@@ -282,7 +282,7 @@ export class ExcelService {
    */
   async getExportStatus(taskId: string): Promise<TaskStatusResponse> {
     try {
-      const result = await enhancedApiClient.get<TaskStatusResponse>(
+      const result = await apiClient.get<TaskStatusResponse>(
         `${this.baseUrl}/export/status/${taskId}`,
         {
           cache: false, // 需要实时状态
@@ -307,7 +307,7 @@ export class ExcelService {
    */
   async getExportTaskInfo(taskId: string): Promise<ExportTaskInfo> {
     try {
-      const result = await enhancedApiClient.get<ExportTaskInfo>(
+      const result = await apiClient.get<ExportTaskInfo>(
         `${this.baseUrl}/export/tasks/${taskId}`,
         {
           cache: true,
@@ -332,7 +332,7 @@ export class ExcelService {
    */
   async cancelExport(taskId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const result = await enhancedApiClient.post<{ success: boolean; message: string }>(
+      const result = await apiClient.post<{ success: boolean; message: string }>(
         `${this.baseUrl}/export/cancel/${taskId}`,
         {},
         {
@@ -361,7 +361,7 @@ export class ExcelService {
         taskId !== undefined && taskId !== ''
           ? `${this.baseUrl}/download/${filename}?task_id=${taskId}`
           : `${this.baseUrl}/download/${filename}`;
-      const result = await enhancedApiClient.get<Blob>(url, {
+      const result = await apiClient.get<Blob>(url, {
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
@@ -398,7 +398,7 @@ export class ExcelService {
         formData.append('sheet_name', sheetName);
       }
 
-      const result = await enhancedApiClient.post<ExcelValidationResult>(
+      const result = await apiClient.post<ExcelValidationResult>(
         `${this.baseUrl}/validate`,
         formData,
         {
@@ -431,7 +431,7 @@ export class ExcelService {
    */
   async downloadTemplate(templateName = '资产导入模板.xlsx'): Promise<void> {
     try {
-      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/import/template`, {
+      const result = await apiClient.get<Blob>(`${this.baseUrl}/import/template`, {
         params: { template_name: templateName },
         responseType: 'blob',
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -461,7 +461,7 @@ export class ExcelService {
    */
   async getAvailableTemplates(): Promise<ExcelTemplate[]> {
     try {
-      const result = await enhancedApiClient.get<ExcelTemplate[]>(`${this.baseUrl}/templates`, {
+      const result = await apiClient.get<ExcelTemplate[]>(`${this.baseUrl}/templates`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -486,7 +486,7 @@ export class ExcelService {
    */
   async getImportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await enhancedApiClient.get<ImportExportHistory[]>(
+      const result = await apiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/import/history`,
         {
           params: { page, limit },
@@ -509,7 +509,7 @@ export class ExcelService {
    */
   async getExportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await enhancedApiClient.get<ImportExportHistory[]>(
+      const result = await apiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/export/history`,
         {
           params: { page, limit },
@@ -540,7 +540,7 @@ export class ExcelService {
     pageSize: number;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         items: ImportExportHistory[];
         total: number;
         page: number;
@@ -570,7 +570,7 @@ export class ExcelService {
    */
   async getFieldMapping(): Promise<FieldMapping> {
     try {
-      const result = await enhancedApiClient.get<FieldMapping>(`${this.baseUrl}/field-mapping`, {
+      const result = await apiClient.get<FieldMapping>(`${this.baseUrl}/field-mapping`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -593,7 +593,7 @@ export class ExcelService {
    */
   async updateFieldMapping(mapping: FieldMapping): Promise<{ success: boolean; message: string }> {
     try {
-      const result = await enhancedApiClient.post<{ success: boolean; message: string }>(
+      const result = await apiClient.post<{ success: boolean; message: string }>(
         `${this.baseUrl}/field-mapping`,
         { mapping },
         {
@@ -622,7 +622,7 @@ export class ExcelService {
     defaultMapping: FieldMapping;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         defaultMapping: FieldMapping;
@@ -653,7 +653,7 @@ export class ExcelService {
    */
   async getSupportedFormats(): Promise<SupportedFormats> {
     try {
-      const result = await enhancedApiClient.get<SupportedFormats>(`${this.baseUrl}/formats`, {
+      const result = await apiClient.get<SupportedFormats>(`${this.baseUrl}/formats`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -693,7 +693,7 @@ export class ExcelService {
     recommendedAction?: string;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         supported: boolean;
         reason?: string;
         recommendedAction?: string;
@@ -744,7 +744,7 @@ export class ExcelService {
    */
   async getExcelStatistics(): Promise<ExcelStatistics> {
     try {
-      const result = await enhancedApiClient.get<ExcelStatistics>(`${this.baseUrl}/statistics`, {
+      const result = await apiClient.get<ExcelStatistics>(`${this.baseUrl}/statistics`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -774,7 +774,7 @@ export class ExcelService {
     recommendations: string[];
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         periodDays: number;
         totalImports: number;
         successRate: number;
@@ -922,7 +922,7 @@ export class ExcelService {
       formData.append('file', file);
       formData.append('max_rows', maxRows.toString());
 
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         headers: string[];
         rows: string[][];
         totalRows: number;
@@ -956,7 +956,7 @@ export class ExcelService {
     freedSpace: number;
   }> {
     try {
-      const result = await enhancedApiClient.post<{
+      const result = await apiClient.post<{
         success: boolean;
         message: string;
         cleanedFiles: number;
@@ -993,7 +993,7 @@ export class ExcelService {
     enableAutoCleanup: boolean;
   }> {
     try {
-      const result = await enhancedApiClient.get<{
+      const result = await apiClient.get<{
         maxFileSize: number;
         allowedExtensions: string[];
         maxConcurrentTasks: number;

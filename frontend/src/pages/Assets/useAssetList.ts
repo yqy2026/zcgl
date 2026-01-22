@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/constants/api';
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -79,7 +79,7 @@ const fetchAssets = async (params: {
       }
     }
 
-    const result = await enhancedApiClient.get<{
+    const result = await apiClient.get<{
       items: AssetApiResponse[];
       total: number;
       page: number;
@@ -153,7 +153,7 @@ const fetchAssets = async (params: {
 
 const fetchAssetSummary = async (): Promise<AssetSummary> => {
   try {
-    const result = await enhancedApiClient.get<{
+    const result = await apiClient.get<{
       total_assets: number;
       usage_status: { rented: number; vacant: number; self_used: number };
     }>(API_ENDPOINTS.STATISTICS.BASIC, {
@@ -199,7 +199,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
 const deleteAssets = async (ids: string[]) => {
   const deletePromises = ids.map(
     id =>
-      enhancedApiClient
+      apiClient
         .delete(API_ENDPOINTS.ASSET.DETAIL(id), {
           retry: true,
           smartExtract: true,
@@ -240,7 +240,7 @@ const exportAssets = async (filters?: AssetFilters) => {
   }
 
   try {
-    const result = await enhancedApiClient.get<Blob>(API_ENDPOINTS.EXCEL.EXPORT, {
+    const result = await apiClient.get<Blob>(API_ENDPOINTS.EXCEL.EXPORT, {
       params: requestParams,
       responseType: 'blob',
       retry: true,

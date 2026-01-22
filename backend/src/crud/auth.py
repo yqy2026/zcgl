@@ -13,7 +13,7 @@ import bcrypt
 from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
 
-from ..constants.auth.fields import AuthFields
+from ..constants.validation_constants import AuthFields
 from ..models.auth import AuditLog, User, UserRole, UserSession
 from ..schemas.auth import UserCreate, UserUpdate
 

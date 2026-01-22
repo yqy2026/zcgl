@@ -20,7 +20,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { SearchOutlined } from '@ant-design/icons';
 import { COLORS } from '@/styles/colorMap';
-import { unifiedDictionaryService } from '../../services/dictionary';
+import { dictionaryService } from '../../services/dictionary';
 import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary';
 import type { SystemDictionary } from '@/types/dictionary';
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview';
@@ -67,11 +67,11 @@ const DictionaryPage: React.FC = () => {
   // 获取字典类型列表
   const fetchTypes = async () => {
     try {
-      const types = await unifiedDictionaryService.getTypes();
+      const types = await dictionaryService.getTypes();
       setDictTypes(types ?? []);
 
       // 同时获取枚举类型详细信息
-      const typesData = await unifiedDictionaryService.getEnumFieldTypes();
+      const typesData = await dictionaryService.getEnumFieldTypes();
       setEnumTypes(typesData ?? []);
     } catch (error) {
       pageLogger.error('获取字典类型失败:', error as Error);
@@ -82,7 +82,7 @@ const DictionaryPage: React.FC = () => {
   const fetchAllEnumData = async () => {
     setLoading(true);
     try {
-      const data = await unifiedDictionaryService.getEnumFieldData();
+      const data = await dictionaryService.getEnumFieldData();
       // Got enum data
       setAllEnumData(data);
     } catch (e: unknown) {
@@ -104,7 +104,7 @@ const DictionaryPage: React.FC = () => {
     setLoading(true);
     try {
       // 使用新的方法通过类型代码获取枚举值
-      const list = await unifiedDictionaryService.getEnumFieldValuesByTypeCode(type);
+      const list = await dictionaryService.getEnumFieldValuesByTypeCode(type);
       setData(list);
     } catch (e: unknown) {
       pageLogger.error('获取枚举值失败:', e as Error);
@@ -177,7 +177,7 @@ const DictionaryPage: React.FC = () => {
 
   const handleDelete = async (record: SystemDictionary) => {
     try {
-      const result = await unifiedDictionaryService.deleteEnumValue(record.id);
+      const result = await dictionaryService.deleteEnumValue(record.id);
       if (result.success === true) {
         MessageManager.success('删除成功');
         fetchList(activeType);
@@ -212,7 +212,7 @@ const DictionaryPage: React.FC = () => {
 
       if (editingRecord) {
         // 更新现有枚举值
-        const result = await unifiedDictionaryService.updateEnumValue(editingRecord.id, {
+        const result = await dictionaryService.updateEnumValue(editingRecord.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -229,7 +229,7 @@ const DictionaryPage: React.FC = () => {
         }
       } else {
         // 创建新的枚举值
-        const createResult = await unifiedDictionaryService.createEnumValue(targetType.id, {
+        const createResult = await dictionaryService.createEnumValue(targetType.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -265,7 +265,7 @@ const DictionaryPage: React.FC = () => {
 
   const handleToggleActive = async (record: SystemDictionary, checked: boolean) => {
     try {
-      const result = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked);
+      const result = await dictionaryService.toggleEnumValueActive(record.id, checked);
       if (result.success === true) {
         MessageManager.success('状态已更新');
         fetchList(activeType);

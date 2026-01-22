@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
-from ...constants.strings.empty import EMPTY_STRING
+from ...constants.message_constants import EMPTY_STRING
 from ...crud.custom_field import custom_field_crud
 from ...models.asset import AssetCustomField
 from ...schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate

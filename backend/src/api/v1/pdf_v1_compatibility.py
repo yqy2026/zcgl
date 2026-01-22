@@ -12,12 +12,12 @@ PDF V1兼容性API路由模块
 端点：
 - POST /extract: 从文本提取合同信息 (V1兼容，JSON)
 - POST /upload_and_extract: 上传PDF并提取 (V1兼容)
-- POST /extract: 从文本提取合同信息 (V2增强，Form)
+- POST /extract: 从文本提取合同信息 (V2版本，Form)
 
 注意：
 存在两个 /extract 端点，通过请求内容类型区分：
 - JSON body → V1 compatible version
-- Form data → V2 enhanced version
+- Form data → V2 form version
 """
 
 import logging
@@ -270,19 +270,19 @@ def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str,
 
 
 @router.post("/extract")
-async def extract_contract_info_v2_enhanced(
+async def extract_contract_info_v2_form(
     text: str = Form(...),
     validate_fields: bool = Form(default=True),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
-    直接从文本提取合同信息 (V2增强版本)
+    直接从文本提取合同信息 (V2版本)
 
-    使用Form数据，提供V2版本的增强功能。
+    使用Form数据，提供V2版本功能。
 
     注意：与上面的 /extract 端点通过请求内容类型区分：
     - JSON body (ExtractionRequest) → V1 compatible version
-    - Form data (text field) → V2 enhanced version (本端点)
+    - Form data (text field) → V2 form version (本端点)
 
     参数：
     - text: 合同文本内容

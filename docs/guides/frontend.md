@@ -342,14 +342,14 @@ export const useAppStore = create<AppState>()(
 ```typescript
 // services/assetService.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { enhancedApiClient } from './enhancedApiClient';
+import { apiClient } from '@/api/client';
 
 // 获取资产列表
 export function useAssets(filters?: AssetFilters) {
   return useQuery({
     queryKey: ['assets', filters],
     queryFn: async () => {
-      const response = await enhancedApiClient.get('/assets', { params: filters });
+      const response = await apiClient.get('/assets', { params: filters });
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
@@ -362,7 +362,7 @@ export function useCreateAsset() {
 
   return useMutation({
     mutationFn: async (data: AssetFormData) => {
-      const response = await enhancedApiClient.post('/assets', data);
+      const response = await apiClient.post('/assets', data);
       return response.data;
     },
     onSuccess: () => {
@@ -484,104 +484,50 @@ function withLazyLoading(Component: React.LazyExoticComponent<React.ComponentTyp
 ### API 客户端配置
 
 ```typescript
-// services/enhancedApiClient.ts
-import axios from 'axios';
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+// api/client.ts
+import { createApiClient, apiClient } from '@/api/client';
 
-class EnhancedApiClient {
-  private client: AxiosInstance;
+const customClient = createApiClient({
+  baseURL: '/api/v1',
+  enableAutoRetry: true,
+});
 
-  constructor() {
-    this.client = axios.create({
-      baseURL: '/api/v1', // Vite 代理到后端
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors() {
-    // 请求拦截器 - 添加认证 token
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // 响应拦截器 - 统一错误处理
-    this.client.interceptors.response.use(
-      (response: AxiosResponse) => response.data,
-      async (error) => {
-        // Token 过期自动刷新
-        if (error.response?.status === 401 && !error.config._retry) {
-          error.config._retry = true;
-          try {
-            const newToken = await this.refreshToken();
-            error.config.headers.Authorization = `Bearer ${newToken}`;
-            return this.client.request(error.config);
-          } catch {
-            // 刷新失败，跳转登录
-            window.location.href = '/login';
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    return this.client.get(url, config);
-  }
-
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    return this.client.post(url, data, config);
-  }
-
-  // ... 其他方法
-}
-
-export const enhancedApiClient = new EnhancedApiClient();
+const result = await apiClient.get('/assets', {
+  params: { page: 1, pageSize: 20 },
+});
 ```
 
 ### API 服务模块
 
 ```typescript
 // services/assetService.ts
-import { enhancedApiClient } from './enhancedApiClient';
+import { apiClient } from '@/api/client';
 import type { Asset, AssetFormData, AssetFilters, PaginatedResponse } from '@/types/asset';
 
 export const assetService = {
   // 获取资产列表
   getAssets: (filters?: AssetFilters): Promise<PaginatedResponse<Asset>> => {
-    return enhancedApiClient.get('/assets', { params: filters });
+    return apiClient.get('/assets', { params: filters });
   },
 
   // 获取单个资产
   getAsset: (id: string): Promise<Asset> => {
-    return enhancedApiClient.get(`/assets/${id}`);
+    return apiClient.get(`/assets/${id}`);
   },
 
   // 创建资产
   createAsset: (data: AssetFormData): Promise<Asset> => {
-    return enhancedApiClient.post('/assets', data);
+    return apiClient.post('/assets', data);
   },
 
   // 更新资产
   updateAsset: (id: string, data: Partial<AssetFormData>): Promise<Asset> => {
-    return enhancedApiClient.put(`/assets/${id}`, data);
+    return apiClient.put(`/assets/${id}`, data);
   },
 
   // 删除资产
   deleteAsset: (id: string): Promise<void> => {
-    return enhancedApiClient.delete(`/assets/${id}`);
+    return apiClient.delete(`/assets/${id}`);
   }
 };
 ```

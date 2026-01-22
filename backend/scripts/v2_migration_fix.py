@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import get_database_engine to ensure initialization
-from src.core.enhanced_database import initialize_enhanced_database
-from src.database import get_database_url
+from src.database import get_database_engine, get_database_url
 from src.models.rent_contract import ContractType, PaymentCycle
 
 
@@ -31,7 +30,7 @@ def run_migration():
     # Initialize the database engine explicitly
     db_url = get_database_url()
     logger.info(f"Connecting to database: {db_url}")
-    engine = initialize_enhanced_database(db_url)
+    engine = get_database_engine()
 
     with engine.begin() as conn:
         # 1. Update contract_type to 'lease_downstream' where null

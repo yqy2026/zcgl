@@ -4,7 +4,7 @@
  * 支持多引擎中文合同识别功能
  */
 
-import axios from 'axios';
+import { apiClient } from '@/api/client';
 import type {
   ProcessingOptions,
   PdfImportFileUploadResponse,
@@ -232,34 +232,6 @@ function isAxiosError(error: unknown): error is {
   );
 }
 
-type LegacyProcessingStatus = PdfImportSessionProgress['processing_status'];
-
-type LegacySessionStatus = SessionProgress & {
-  enhanced_status?: LegacyProcessingStatus;
-};
-
-const normalizeSessionStatus = (status: LegacySessionStatus): SessionProgress => {
-  const { enhanced_status: legacyStatus, ...rest } = status;
-  return {
-    ...rest,
-    processing_status: rest.processing_status ?? legacyStatus,
-  };
-};
-
-type LegacyUploadResponse = PdfImportFileUploadResponse & {
-  enhanced_status?: LegacyProcessingStatus;
-};
-
-const normalizeUploadResponse = (
-  response: LegacyUploadResponse
-): PdfImportFileUploadResponse => {
-  const { enhanced_status: legacyStatus, ...rest } = response;
-  return {
-    ...rest,
-    processing_status: rest.processing_status ?? legacyStatus,
-  };
-};
-
 class PDFImportService {
   /**
    * 上传PDF文件
@@ -275,7 +247,7 @@ class PDFImportService {
     formData.append('prefer_ocr', 'false');
 
     try {
-      const response = await axios.post<FileUploadResponse>(`${API_BASE_URL}/upload`, formData, {
+      const response = await apiClient.post<FileUploadResponse>(`${API_BASE_URL}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -292,7 +264,11 @@ class PDFImportService {
       });
 
       // 直接返回后端API响应
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('PDF上传失败:', error as Error);
 
@@ -347,12 +323,16 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         session_status?: SessionProgress;
         error?: string;
       }>(`${API_BASE_URL}/progress/${sessionId}`);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('获取进度失败:', error as Error);
       const errorDetail = isAxiosError(error)
@@ -478,12 +458,16 @@ class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
-      const response = await axios.post<ConfirmImportResponse>(`${API_BASE_URL}/confirm_import`, {
+      const response = await apiClient.post<ConfirmImportResponse>(`${API_BASE_URL}/confirm_import`, {
         session_id: sessionId,
         confirmed_data: confirmedData,
       });
 
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('确认导入失败:', error as Error);
       const errorDetail = isAxiosError(error)
@@ -512,12 +496,16 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.delete<{
+      const response = await apiClient.delete<{
         success: boolean;
         message: string;
         error?: string;
       }>(`${API_BASE_URL}/session/${sessionId}`);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('取消会话失败:', error as Error);
       const errorDetail = isAxiosError(error)
@@ -554,7 +542,7 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         active_sessions: Array<{
           session_id: string;
@@ -567,12 +555,16 @@ class PDFImportService {
         total_count: number;
         error?: string;
       }>(PDF_API.SESSIONS);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('获取会话列表失败:', error as Error);
 
       // 如果是404错误，提供空的会话列表
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
+      if (isAxiosError(error) && error.response?.status === 404) {
         logger.warn('PDF sessions API端点不存在，返回空会话列表');
         return {
           success: true,
@@ -600,7 +592,7 @@ class PDFImportService {
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
       // 使用PDF_API.INFO，如果404则使用备用方案
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         message: string;
         capabilities: SystemCapabilities;
@@ -613,8 +605,13 @@ class PDFImportService {
         validator_summary?: Record<string, unknown>;
       }>(PDF_API.INFO);
 
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+
       // 直接使用后端返回的能力信息，并添加多引擎功能检测
-      const capabilities: SystemCapabilities = response.data.capabilities ?? {
+      const capabilities: SystemCapabilities = responseData.capabilities ?? {
         pdfplumber_available: true,
         pymupdf_available: true,
         spacy_available: true,
@@ -636,7 +633,7 @@ class PDFImportService {
 
       return {
         success: true,
-        message: response.data.message ?? '多引擎PDF导入系统运行正常',
+        message: responseData.message ?? '多引擎PDF导入系统运行正常',
         capabilities: processingCapabilities,
         extractor_summary: {
           method: 'multi_engine',
@@ -655,7 +652,7 @@ class PDFImportService {
       logger.error('获取系统信息失败:', error as Error);
 
       // 如果是404错误，提供备用数据
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
+      if (isAxiosError(error) && error.response?.status === 404) {
         logger.warn('PDF API端点不存在，使用备用系统信息');
         return {
           success: true,
@@ -718,18 +715,22 @@ class PDFImportService {
     validator_summary?: Record<string, unknown>;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         extractor_summary?: Record<string, unknown>;
         validator_summary?: Record<string, unknown>;
       }>(`${API_BASE_URL}/capabilities`);
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
       return {
         spacy_available: true,
         ocr_available: true,
         supported_formats: ['.pdf', '.jpg', '.jpeg', '.png'],
         max_file_size_mb: 50,
         estimated_processing_time: '30-60秒',
-        extractor_summary: response.data.extractor_summary,
-        validator_summary: response.data.validator_summary,
+        extractor_summary: responseData.extractor_summary,
+        validator_summary: responseData.validator_summary,
       };
     } catch (error: unknown) {
       logger.error('获取系统信息失败:', error as Error);
@@ -753,14 +754,18 @@ class PDFImportService {
   }> {
     try {
       // 简单API使用 /info 端点来测试系统状态
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         message: string;
         features?: Record<string, unknown>;
       }>(`${API_BASE_URL}/info`);
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
       return {
         success: true,
-        message: response.data.message,
-        test_result: response.data.features,
+        message: responseData.message,
+        test_result: responseData.features,
         system_ready: true,
       };
     } catch (error: unknown) {
@@ -788,7 +793,7 @@ class PDFImportService {
   }> {
     try {
       // 使用/info端点作为健康检查
-      await axios.get(`${API_BASE_URL}/info`);
+      await apiClient.get(`${API_BASE_URL}/info`);
       return {
         status: 'healthy',
         components: {
@@ -896,8 +901,12 @@ class PDFImportService {
    */
   async getPdfImportSystemInfo(): Promise<SystemInfoResponse> {
     try {
-      const response = await axios.get<SystemInfoResponse>(`${PROCESSING_API_BASE}/info`);
-      return response.data;
+      const response = await apiClient.get<SystemInfoResponse>(`${PROCESSING_API_BASE}/info`);
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('获取系统信息失败:', error as Error);
       return {
@@ -942,7 +951,7 @@ class PDFImportService {
     formData.append('processing_options', JSON.stringify(defaultOptions));
 
     try {
-      const response = await axios.post<PdfImportFileUploadResponse>(
+      const response = await apiClient.post<PdfImportFileUploadResponse>(
         `${PROCESSING_API_BASE}/upload`,
         formData,
         {
@@ -962,7 +971,11 @@ class PDFImportService {
         }
       );
 
-      return normalizeUploadResponse(response.data as LegacyUploadResponse);
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('PDF上传失败:', error as Error);
 
@@ -1008,17 +1021,17 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         session_status?: SessionProgress;
         error?: string;
       }>(`${PROCESSING_API_BASE}/progress/${sessionId}`);
-      const normalizedSession = response.data.session_status
-        ? normalizeSessionStatus(response.data.session_status as LegacySessionStatus)
-        : undefined;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
       return {
-        ...response.data,
-        session_status: normalizedSession,
+        ...responseData,
       };
     } catch (error: unknown) {
       logger.error('获取进度失败:', error as Error);
@@ -1046,14 +1059,18 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.delete<{
+      const response = await apiClient.delete<{
         success: boolean;
         message: string;
         error?: string;
       }>(`${PROCESSING_API_BASE}/session/${sessionId}`, {
         params: { reason },
       });
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       logger.error('取消会话失败:', error as Error);
       const errorDetail = isAxiosError(error)
@@ -1266,7 +1283,7 @@ class PDFImportService {
     system_ready?: boolean;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         message: string;
         test_results?: Array<{
@@ -1278,7 +1295,11 @@ class PDFImportService {
         availability_rate?: number;
         system_ready?: boolean;
       }>(`${PROCESSING_API_BASE}/test/all`);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
       console.error('测试功能失败:', error);
@@ -1306,14 +1327,18 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         status: string;
         components: Record<string, boolean>;
         health_score?: number;
         timestamp: string;
         error?: string;
       }>(`${PROCESSING_API_BASE}/health`);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
       console.error('健康检查失败:', error);
@@ -1340,12 +1365,16 @@ class PDFImportService {
     data?: Record<string, unknown>;
   }> {
     try {
-      const response = await axios.get<{
+      const response = await apiClient.get<{
         success: boolean;
         message: string;
         data?: Record<string, unknown>;
       }>(`${PROCESSING_API_BASE}/performance/summary`);
-      return response.data;
+      const responseData = response.data;
+      if (!responseData) {
+        throw new Error('Empty response');
+      }
+      return responseData;
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
       console.error('获取性能摘要失败:', error);

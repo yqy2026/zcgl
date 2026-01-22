@@ -182,7 +182,7 @@ async def change_password(
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     try:
-        success = auth_service.change_password(  # type: ignore[no-untyped-call]
+        success = auth_service.change_password(
             user=user,
             current_password=password_data.current_password,
             new_password=password_data.new_password,
@@ -235,7 +235,7 @@ async def activate_user(
     """
     auth_service = AuthService(db)
 
-    success = auth_service.activate_user(user_id)  # type: ignore[no-untyped-call]
+    success = auth_service.activate_user(user_id)
     if not success:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -373,7 +373,7 @@ async def reset_user_password(
         setattr(
             user,
             "hashed_password",
-            auth_service.get_password_hash(reset_request.new_password),  # type: ignore[no-untyped-call]
+            auth_service.get_password_hash(reset_request.new_password),
         )
         setattr(user, "updated_at", datetime.now(UTC))
         db.commit()

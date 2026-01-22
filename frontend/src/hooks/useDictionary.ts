@@ -1,11 +1,11 @@
 /**
- * 统一字典Hook
+ * 字典Hook
  * 提供简单易用的字典数据获取和管理功能
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { unifiedDictionaryService } from '../services/dictionary';
+import { dictionaryService } from '../services/dictionary';
 import type { DictionaryOption, DictionaryServiceResult } from '../services/dictionary';
 import { createLogger } from '../utils/logger';
 
@@ -29,7 +29,7 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
     queryFn: async () => {
       if (!dictType) return { success: false, data: [], error: '字典类型不能为空' };
 
-      const result: DictionaryServiceResult = await unifiedDictionaryService.getOptions(dictType, {
+      const result: DictionaryServiceResult = await dictionaryService.getOptions(dictType, {
         useCache: true,
         useFallback: true,
         isActive,
@@ -71,7 +71,7 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
       queryKey: ['dictionary', dictType, true],
       queryFn: async () => {
         if (!dictType) return { success: false, data: [], error: '字典类型不能为空' };
-        const result: DictionaryServiceResult = await unifiedDictionaryService.getOptions(
+        const result: DictionaryServiceResult = await dictionaryService.getOptions(
           dictType,
           {
             useCache: true,
@@ -125,7 +125,7 @@ export const useDictionaryManager = () => {
   const loadTypes = useCallback(async () => {
     setLoading(true);
     try {
-      const configs = unifiedDictionaryService.getAvailableTypes();
+      const configs = dictionaryService.getAvailableTypes();
       const typeCodes = configs.map(config => config.code);
       setTypes(typeCodes);
     } catch (error) {
@@ -145,7 +145,7 @@ export const useDictionaryManager = () => {
       }>
     ) => {
       try {
-        const result = await unifiedDictionaryService.quickCreate(dictType, { options });
+        const result = await dictionaryService.quickCreate(dictType, { options });
         if (result.success === true) {
           await loadTypes(); // 刷新类型列表
         }
@@ -161,7 +161,7 @@ export const useDictionaryManager = () => {
   const deleteDictionary = useCallback(
     async (dictType: string) => {
       try {
-        const result = await unifiedDictionaryService.deleteType(dictType);
+        const result = await dictionaryService.deleteType(dictType);
         if (result.success === true) {
           await loadTypes(); // 刷新类型列表
         }

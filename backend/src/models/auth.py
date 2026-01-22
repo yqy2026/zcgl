@@ -21,7 +21,7 @@ class UserRole(str, Enum):
     USER = "user"
 
 
-class User(Base):  # type: ignore[valid-type, misc]
+class User(Base):
     """用户模型"""
 
     __tablename__ = "users"
@@ -180,7 +180,7 @@ class User(Base):  # type: ignore[valid-type, misc]
             return False  # pragma: no cover
 
 
-class UserSession(Base):  # type: ignore[valid-type, misc]
+class UserSession(Base):
     """用户会话模型"""
 
     __tablename__ = "user_sessions"
@@ -239,7 +239,7 @@ class UserSession(Base):  # type: ignore[valid-type, misc]
             return datetime.now() > expires_at_value  # pragma: no cover
 
 
-class AuditLog(Base):  # type: ignore[valid-type, misc]
+class AuditLog(Base):
     """审计日志模型"""
 
     __tablename__ = "audit_logs"

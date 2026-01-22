@@ -21,12 +21,12 @@ pnpm type-check         # TypeScript 类型检查
 
 ```typescript
 // ✅ 正确 - 使用新路径 (2025-12-24)
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { API_CONFIG } from '@/api/config';
 import { AssetForm, OwnershipForm } from '@/components/Forms';
 
 // ❌ 已废弃 - 不推荐使用
-import { enhancedApiClient } from '@/services';
+import { apiClient } from '@/services';
 import { AssetForm } from '@/components/Asset';
 ```
 
@@ -239,7 +239,7 @@ const initialValues = {
 // ✅ 正确 - 服务器数据用 React Query
 const { data: assets, isLoading } = useQuery({
   queryKey: ['assets'],
-  queryFn: () => enhancedApiClient.get('/assets'),
+  queryFn: () => apiClient.get('/assets'),
   staleTime: 5 * 60 * 1000,  // 5 分钟缓存
 });
 
@@ -254,7 +254,7 @@ useEffect(() => { fetch(...) }, []);
 
 ```
 src/
-├── api/            # API 客户端 (enhancedApiClient)
+├── api/            # API 客户端
 ├── components/     # 可复用组件
 │   ├── Forms/      # 统一表单组件 (AssetForm, etc.)
 │   ├── Asset/      # 资产相关组件

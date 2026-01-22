@@ -44,7 +44,7 @@ class CollectionStatus(str, enum.Enum):
     PARTIAL = "partial"  # 部分成功
 
 
-class CollectionRecord(Base):  # type: ignore[valid-type, misc]
+class CollectionRecord(Base):
     """催缴记录模型 - V2 新增"""
 
     __tablename__ = "collection_records"

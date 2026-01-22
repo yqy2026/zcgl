@@ -1,4 +1,3 @@
-// import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api';
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
@@ -25,7 +24,7 @@ export class AuthService {
     try {
       logger.debug('开始登录流程', { username: credentials.username });
 
-      // 使用增强型API客户端，自动处理响应提取和错误
+      // 使用API客户端，自动处理响应提取和错误
       const result = await apiClient.post(AUTH_API.LOGIN, credentials, {
         retry: {
           maxAttempts: 3,
@@ -82,13 +81,24 @@ export class AuthService {
 
       logger.debug('用户数据解析成功', { user });
 
-      // Backend returns tokens at root level in responseData.tokens
-      // Format: { user, tokens: { access_token, refresh_token, token_type, expires_in }, permissions, message }
-      const tokens = responseData.tokens;
+      const tokenPayload =
+        (responseData.tokens ?? responseData.data) as
+          | (AuthResponse['tokens'] & { permissions?: AuthResponse['permissions'] })
+          | undefined;
 
-      if (tokens?.access_token && tokens.refresh_token) {
-        const { access_token: accessToken, refresh_token: refreshToken } = tokens;
-        const permissions = responseData.permissions ?? [];
+      const accessToken =
+        tokenPayload?.access_token ??
+        (typeof responseData.token === 'string' && responseData.token !== ''
+          ? responseData.token
+          : undefined);
+      const refreshToken = tokenPayload?.refresh_token;
+      const permissions = (Array.isArray(responseData.permissions)
+        ? responseData.permissions
+        : Array.isArray(tokenPayload?.permissions)
+          ? tokenPayload?.permissions
+          : []) as AuthResponse['permissions'];
+
+      if (accessToken && refreshToken) {
 
         // Store in AuthStorage with permissions from API
         // Note: Tokens are in httpOnly cookies, but we keep metadata
@@ -120,8 +130,8 @@ export class AuthService {
             tokens: {
               access_token: accessToken,
               refresh_token: refreshToken,
-              token_type: tokens.token_type ?? 'Bearer',
-              expires_in: tokens.expires_in ?? 3600,
+              token_type: tokenPayload?.token_type ?? 'Bearer',
+              expires_in: tokenPayload?.expires_in ?? 3600,
             },
             permissions,
           },

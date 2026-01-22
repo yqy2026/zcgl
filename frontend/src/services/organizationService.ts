@@ -262,7 +262,7 @@ class OrganizationService {
   /**
    * 高级搜索组织
    */
-  async advancedSearchOrganizations(
+  async detailedSearchOrganizations(
     searchRequest: OrganizationSearchCriteria
   ): Promise<Organization[]> {
     try {

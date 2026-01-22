@@ -3,7 +3,7 @@
  * 产权证服务
  */
 
-import { enhancedApiClient } from '@/api/client';
+import { apiClient } from '@/api/client';
 import type {
   PropertyCertificate,
   PropertyCertificateCreate,
@@ -20,7 +20,7 @@ export const propertyCertificateService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const result = await enhancedApiClient.post<CertificateExtractionResult>(
+    const result = await apiClient.post<CertificateExtractionResult>(
       '/property-certificates/upload',
       formData,
       {
@@ -39,7 +39,7 @@ export const propertyCertificateService = {
   async confirmImport(
     confirmData: CertificateImportConfirm
   ): Promise<{ certificate_id: string; status: string }> {
-    const result = await enhancedApiClient.post<{ certificate_id: string; status: string }>(
+    const result = await apiClient.post<{ certificate_id: string; status: string }>(
       '/property-certificates/confirm-import',
       confirmData
     );
@@ -56,7 +56,7 @@ export const propertyCertificateService = {
     skip?: number;
     limit?: number;
   }): Promise<PropertyCertificate[]> {
-    const result = await enhancedApiClient.get<PropertyCertificate[]>('/property-certificates/', {
+    const result = await apiClient.get<PropertyCertificate[]>('/property-certificates/', {
       params,
     });
     return result.data ?? [];
@@ -66,7 +66,7 @@ export const propertyCertificateService = {
    * Get certificate by ID
    */
   async getCertificate(id: string): Promise<PropertyCertificate> {
-    const result = await enhancedApiClient.get<PropertyCertificate>(`/property-certificates/${id}`);
+    const result = await apiClient.get<PropertyCertificate>(`/property-certificates/${id}`);
     if (result.data == null) {
       throw new Error('Certificate not found');
     }
@@ -77,7 +77,7 @@ export const propertyCertificateService = {
    * Create certificate manually
    */
   async createCertificate(certificate: PropertyCertificateCreate): Promise<PropertyCertificate> {
-    const result = await enhancedApiClient.post<PropertyCertificate>(
+    const result = await apiClient.post<PropertyCertificate>(
       '/property-certificates/',
       certificate
     );
@@ -94,7 +94,7 @@ export const propertyCertificateService = {
     id: string,
     certificate: PropertyCertificateUpdate
   ): Promise<PropertyCertificate> {
-    const result = await enhancedApiClient.put<PropertyCertificate>(
+    const result = await apiClient.put<PropertyCertificate>(
       `/property-certificates/${id}`,
       certificate
     );
@@ -108,7 +108,7 @@ export const propertyCertificateService = {
    * Delete certificate
    */
   async deleteCertificate(id: string): Promise<{ status: string }> {
-    const result = await enhancedApiClient.delete<{ status: string }>(
+    const result = await apiClient.delete<{ status: string }>(
       `/property-certificates/${id}`
     );
     if (result.data == null) {

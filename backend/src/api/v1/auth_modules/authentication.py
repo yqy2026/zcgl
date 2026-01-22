@@ -365,7 +365,6 @@ async def get_current_user_info(
     """
     from datetime import datetime
 
-    # 直接构建最简单的增强响应
     return {
         "username": current_user.username,
         "email": current_user.email,
@@ -383,13 +382,13 @@ async def get_current_user_info(
 # Note: Consider removing debug endpoints from production code
 
 
-@router.get("/test-enhanced", summary="测试增强端点")
+@router.get("/test-features", summary="测试功能端点")
 @debug_only
-async def test_enhanced() -> dict[str, Any]:
-    """测试端点，验证增强功能"""
+async def test_features() -> dict[str, Any]:
+    """测试端点，验证功能可用性"""
     return {
         "success": True,
-        "message": "增强功能测试正常",
+        "message": "功能测试正常",
         "timestamp": "2025-10-29T01:26:00Z",
     }
 
@@ -466,8 +465,7 @@ async def test_me_debug(
     user_dict = current_user.model_dump()
     logger.debug(f"UserResponse fields: {len(user_dict.keys())} fields")
 
-    # 手动构建增强响应
-    enhanced_response = {
+    debug_response = {
         "username": current_user.username,
         "email": current_user.email,
         "full_name": current_user.full_name,
@@ -479,4 +477,4 @@ async def test_me_debug(
         "session_status": "active",
     }
 
-    return enhanced_response
+    return debug_response
