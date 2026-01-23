@@ -272,7 +272,7 @@ class RentContractService:
             deposit_balance -= deduction_amount
 
         # 退还剩余押金
-        if refund_deposit and deposit_balance > 0:
+        if should_refund_deposit and deposit_balance > 0:
             refund = RentDepositLedger(
                 contract_id=contract.id,
                 transaction_type=DepositTransactionType.REFUND,

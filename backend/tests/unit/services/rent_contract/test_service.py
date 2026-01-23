@@ -414,7 +414,7 @@ class TestRenewContract:
                     mock_db,
                     original_contract_id="contract_123",
                     new_contract_data=valid_contract_create_data,
-                    transfer_deposit=False,
+                    should_transfer_deposit=False,
                 )
 
                 assert result is not None
@@ -471,7 +471,7 @@ class TestRenewContract:
                     mock_db,
                     original_contract_id="contract_123",
                     new_contract_data=valid_contract_create_data,
-                    transfer_deposit=True,
+                    should_transfer_deposit=True,
                 )
 
                 assert result is not None
@@ -498,7 +498,7 @@ class TestRenewContract:
                     mock_db,
                     original_contract_id="contract_123",
                     new_contract_data=valid_contract_create_data,
-                    transfer_deposit=False,
+                    should_transfer_deposit=False,
                     operator="管理员",
                     operator_id="user_123",
                 )
@@ -608,7 +608,7 @@ class TestTerminateContract:
                 mock_db,
                 contract_id="contract_123",
                 termination_date=date(2025, 6, 30),
-                refund_deposit=False,
+                should_refund_deposit=False,
             )
 
             assert result is not None
