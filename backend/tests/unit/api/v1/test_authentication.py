@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import Response, status
 from jose import jwt
 
 pytestmark = pytest.mark.api
@@ -190,7 +190,12 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await login(request=mock_request, credentials=credentials, db=mock_db)
+        result = await login(
+            request=mock_request,
+            credentials=credentials,
+            response=Response(),
+            db=mock_db,
+        )
 
         assert result["message"] == "登录成功"
         assert result["user"]["username"] == "testuser"
@@ -214,6 +219,7 @@ class TestLogin:
     ):
         """Test login with invalid credentials"""
         from src.api.v1.auth_modules.authentication import login
+        from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="wronguser", password="wrongpass")
@@ -232,11 +238,16 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await login(request=mock_request, credentials=credentials, db=mock_db)
+        with pytest.raises(AuthenticationError) as exc_info:
+            await login(
+                request=mock_request,
+                credentials=credentials,
+                response=Response(),
+                db=mock_db,
+            )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "用户名或密码错误" in exc_info.value.detail
+        assert "用户名或密码错误" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.UserCRUD")
@@ -252,6 +263,7 @@ class TestLogin:
     ):
         """Test login with invalid credentials when user doesn't exist"""
         from src.api.v1.auth_modules.authentication import login
+        from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="nonexistent", password="wrongpass")
@@ -267,8 +279,13 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await login(request=mock_request, credentials=credentials, db=mock_db)
+        with pytest.raises(AuthenticationError) as exc_info:
+            await login(
+                request=mock_request,
+                credentials=credentials,
+                response=Response(),
+                db=mock_db,
+            )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -286,6 +303,7 @@ class TestLogin:
     ):
         """Test login with server error"""
         from src.api.v1.auth_modules.authentication import login
+        from src.core.exception_handler import InternalServerError
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="testuser", password="password123")
@@ -294,11 +312,16 @@ class TestLogin:
         mock_auth_service.authenticate_user.side_effect = Exception("Database error")
         mock_auth_service_class.return_value = mock_auth_service
 
-        with pytest.raises(HTTPException) as exc_info:
-            await login(request=mock_request, credentials=credentials, db=mock_db)
+        with pytest.raises(InternalServerError) as exc_info:
+            await login(
+                request=mock_request,
+                credentials=credentials,
+                response=Response(),
+                db=mock_db,
+            )
 
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "登录服务暂时不可用" in exc_info.value.detail
+        assert "登录服务暂时不可用" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.UserCRUD")
@@ -319,21 +342,22 @@ class TestLogin:
 
         credentials = LoginRequest(username="lockeduser", password="password123")
 
-        # Note: The actual implementation catches BusinessLogicError and raises HTTPException with 400
-        # But it's in an except block after Exception, so BusinessLogicError is caught by Exception first
-        # This test documents the actual behavior - BusinessLogicError is treated as a 500 error
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user.side_effect = BusinessLogicError(
             "账户已被锁定"
         )
         mock_auth_service_class.return_value = mock_auth_service
 
-        with pytest.raises(HTTPException) as exc_info:
-            await login(request=mock_request, credentials=credentials, db=mock_db)
+        with pytest.raises(BusinessLogicError) as exc_info:
+            await login(
+                request=mock_request,
+                credentials=credentials,
+                response=Response(),
+                db=mock_db,
+            )
 
-        # The actual behavior is that it returns 500 due to exception handling order
-        assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "登录服务暂时不可用" in exc_info.value.detail
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "账户已被锁定" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.UserCRUD")
@@ -376,7 +400,12 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await login(request=mock_request, credentials=credentials, db=mock_db)
+        result = await login(
+            request=mock_request,
+            credentials=credentials,
+            response=Response(),
+            db=mock_db,
+        )
 
         assert result["user"]["is_active"] is True
 
@@ -416,7 +445,10 @@ class TestLogout:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await logout(
-            request=mock_request, current_user=mock_admin_user, db=mock_db
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
         )
 
         assert result["message"] == "登出成功"
@@ -447,7 +479,10 @@ class TestLogout:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await logout(
-            request=mock_request, current_user=mock_admin_user, db=mock_db
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
         )
 
         assert result["message"] == "登出成功"
@@ -491,7 +526,10 @@ class TestLogout:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await logout(
-            request=mock_request, current_user=mock_admin_user, db=mock_db
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
         )
 
         assert result["message"] == "登出成功"
@@ -525,7 +563,10 @@ class TestLogout:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await logout(
-            request=mock_request, current_user=mock_admin_user, db=mock_db
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
         )
 
         assert result["message"] == "登出成功"
@@ -557,7 +598,10 @@ class TestLogout:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         result = await logout(
-            request=mock_request, current_user=mock_admin_user, db=mock_db
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
         )
 
         assert result["message"] == "登出成功"
@@ -615,6 +659,7 @@ class TestRefreshToken:
     ):
         """Test refresh with invalid token"""
         from src.api.v1.auth_modules.authentication import refresh_token
+        from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="invalid_refresh_token")
@@ -628,13 +673,13 @@ class TestRefreshToken:
             "src.api.v1.auth_modules.authentication.AuditLogCRUD",
             return_value=mock_audit_crud_class,
         ):
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(AuthenticationError) as exc_info:
                 await refresh_token(
                     request=mock_request, refresh_data=refresh_data, db=mock_db
                 )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "无效的刷新令牌" in exc_info.value.detail
+        assert "无效的刷新令牌" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.AuthService")
@@ -649,22 +694,24 @@ class TestRefreshToken:
     ):
         """Test refresh when user not found"""
         from src.api.v1.auth_modules.authentication import refresh_token
+        from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
 
         mock_auth_service = MagicMock()
-        mock_auth_service.validate_refresh_token.return_value = mock_session
-        mock_auth_service.get_user_by_id.return_value = None
+        # Updated: validate_refresh_token now returns User object directly
+        # For user not found case, it should return None
+        mock_auth_service.validate_refresh_token.return_value = None
         mock_auth_service_class.return_value = mock_auth_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(AuthenticationError) as exc_info:
             await refresh_token(
                 request=mock_request, refresh_data=refresh_data, db=mock_db
             )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "用户不存在或已被禁用" in exc_info.value.detail
+        assert "无效的刷新令牌" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.AuthService")
@@ -680,6 +727,7 @@ class TestRefreshToken:
     ):
         """Test refresh when user is inactive"""
         from src.api.v1.auth_modules.authentication import refresh_token
+        from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
@@ -687,17 +735,17 @@ class TestRefreshToken:
         mock_user_model.is_active = False
 
         mock_auth_service = MagicMock()
-        mock_auth_service.validate_refresh_token.return_value = mock_session
-        mock_auth_service.get_user_by_id.return_value = mock_user_model
+        # Updated: validate_refresh_token now returns User object directly
+        mock_auth_service.validate_refresh_token.return_value = mock_user_model
         mock_auth_service_class.return_value = mock_auth_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(AuthenticationError) as exc_info:
             await refresh_token(
                 request=mock_request, refresh_data=refresh_data, db=mock_db
             )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "用户不存在或已被禁用" in exc_info.value.detail
+        assert "用户不存在或已被禁用" in exc_info.value.message
 
     @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth_modules.authentication.AuthService")
