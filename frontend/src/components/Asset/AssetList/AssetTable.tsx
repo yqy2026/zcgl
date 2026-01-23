@@ -398,7 +398,7 @@ const AssetTable: React.FC<AssetTableProps> = ({
       rowSelection={rowSelection}
       pagination={{
         current: data?.page ?? 1,
-        pageSize: data?.limit ?? 20,
+        pageSize: data?.pageSize ?? 20,
         total: data?.total ?? 0,
         showSizeChanger: true,
         showQuickJumper: true,

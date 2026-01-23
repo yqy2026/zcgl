@@ -27,8 +27,8 @@ interface HealthSummary {
 const CRITICAL_ENDPOINTS = [
   { path: '/health', name: 'Health Check' },
   { path: '/assets', name: 'Assets API' },
-  { path: '/rent-contracts/contracts', name: 'Rent Contracts' },
-  { path: '/auth/users/me', name: 'User Info' },
+  { path: '/rental-contracts/contracts', name: 'Rent Contracts' },
+  { path: '/auth/me', name: 'User Info' },
   { path: '/analytics/dashboard', name: 'Analytics Dashboard' },
 ];
 

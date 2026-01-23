@@ -168,10 +168,11 @@ class TestAuthServiceValidateRefreshToken:
     """Tests for validate_refresh_token delegation"""
 
     def test_validate_refresh_token_delegates_to_auth_service(
-        self, auth_service, mock_session
+        self, auth_service, mock_session, mock_user
     ):
         """Test that validate_refresh_token delegates correctly"""
         refresh_token = "valid_refresh_token"
+        mock_session.user = mock_user
 
         with patch.object(
             auth_service.auth_service,
@@ -180,12 +181,15 @@ class TestAuthServiceValidateRefreshToken:
         ) as mock_validate:
             result = auth_service.validate_refresh_token(refresh_token)
 
-            assert result == mock_session
+            assert result == mock_user
             mock_validate.assert_called_once_with(refresh_token, None, None)
 
-    def test_validate_refresh_token_with_client_info(self, auth_service, mock_session):
+    def test_validate_refresh_token_with_client_info(
+        self, auth_service, mock_session, mock_user
+    ):
         """Test validate_refresh_token with client IP and user agent"""
         refresh_token = "valid_refresh_token"
+        mock_session.user = mock_user
 
         with patch.object(
             auth_service.auth_service,
@@ -198,7 +202,7 @@ class TestAuthServiceValidateRefreshToken:
                 user_agent="TestAgent",
             )
 
-            assert result == mock_session
+            assert result == mock_user
             mock_validate.assert_called_once_with(
                 refresh_token, "192.168.1.100", "TestAgent"
             )

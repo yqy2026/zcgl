@@ -500,7 +500,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
         <Pagination
           current={data?.page ?? 1}
-          pageSize={data?.limit ?? 20}
+          pageSize={data?.pageSize ?? 20}
           total={data?.total ?? 0}
           showSizeChanger={true}
           showQuickJumper={true}

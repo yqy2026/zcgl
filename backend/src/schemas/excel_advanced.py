@@ -20,7 +20,7 @@ class ExcelExportRequest(BaseModel):
         "xlsx", pattern="^(xlsx|xls|csv)$", description="导出格式"
     )
     sheet_name: str | None = Field(None, description="工作表名称")
-    include_headers: bool = Field(True, description="是否包含表头")
+    should_include_headers: bool = Field(True, description="是否包含表头")
     date_format: str = Field("%Y-%m-%d", description="日期格式")
     config_id: str | None = Field(None, description="使用配置ID")
 
@@ -31,10 +31,10 @@ class ExcelImportRequest(BaseModel):
     """Excel导入请求模型"""
 
     config_id: str | None = Field(None, description="使用配置ID")
-    validate_data: bool = Field(True, description="是否验证数据")
-    create_assets: bool = Field(True, description="是否创建资产")
-    update_existing: bool = Field(True, description="是否更新已存在资产")
-    skip_errors: bool = Field(False, description="是否跳过错误行")
+    should_validate_data: bool = Field(True, description="是否验证数据")
+    should_create_assets: bool = Field(True, description="是否创建资产")
+    should_update_existing: bool = Field(True, description="是否更新已存在资产")
+    should_skip_errors: bool = Field(False, description="是否跳过错误行")
     batch_size: int = Field(100, ge=1, le=1000, description="批处理大小")
 
     model_config = ConfigDict(json_schema_extra={})

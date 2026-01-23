@@ -104,7 +104,7 @@ export interface RentContractFormContextValue {
   form: FormInstance;
   termForm: FormInstance;
   mode: 'create' | 'edit';
-  loading: boolean;
+  isLoading: boolean;
   // Data
   assets: Asset[];
   ownerships: Ownership[];
@@ -142,7 +142,7 @@ interface RentContractFormProviderProps {
   initialData?: RentContractInitialData;
   onSubmit: (data: RentContractCreate) => Promise<void>;
   onCancel: () => void;
-  loading?: boolean;
+  isLoading?: boolean;
   mode?: 'create' | 'edit';
   children: React.ReactNode;
 }
@@ -153,7 +153,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
   initialData,
   onSubmit,
   onCancel,
-  loading = false,
+  isLoading = false,
   mode = 'create',
   children,
 }) => {
@@ -319,7 +319,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
     form,
     termForm,
     mode,
-    loading,
+    isLoading,
     assets,
     ownerships,
     rentTerms,

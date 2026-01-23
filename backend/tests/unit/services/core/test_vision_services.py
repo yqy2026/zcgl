@@ -113,6 +113,17 @@ def mock_openai_response():
     }
 
 
+@pytest.fixture
+def mock_httpx_async_client():
+    mock_client = AsyncMock()
+
+    def create_mock_client(*args, **kwargs):
+        return mock_client
+
+    with patch("httpx.AsyncClient", side_effect=create_mock_client):
+        yield mock_client
+
+
 # ============================================================================
 # Zhipu Vision Service Tests
 # ============================================================================
@@ -235,8 +246,9 @@ class TestZhipuVisionService:
     ):
         """Test extraction with HTTP 401 authentication error."""
         monkeypatch.setenv("ZHIPU_API_KEY", "invalid-key")
-
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 401
@@ -247,18 +259,8 @@ class TestZhipuVisionService:
                 "Authentication failed", request=Mock(), response=mock_response
             )
 
-            # Make raise_for_status() raise the error, not post()
-            # Track calls and verify error is raised
-            def track_raise(*args, **kwargs):
-                print(f"DEBUG: raise_for_status called, will raise: {error}")
-                raise error
-
-            mock_response.raise_for_status = Mock(side_effect=track_raise)
-            mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client.post = AsyncMock(side_effect=error)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -273,8 +275,9 @@ class TestZhipuVisionService:
     ):
         """Test extraction with HTTP 429 rate limit error (should be retryable)."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
-
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 429
@@ -285,17 +288,8 @@ class TestZhipuVisionService:
                 "Rate limit exceeded", request=Mock(), response=mock_response
             )
 
-            # Track calls and verify error is raised
-            def track_raise(*args, **kwargs):
-                print(f"DEBUG: raise_for_status called, will raise: {error}")
-                raise error
-
-            mock_response.raise_for_status = Mock(side_effect=track_raise)
-            mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client.post = AsyncMock(side_effect=error)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -311,8 +305,9 @@ class TestZhipuVisionService:
     ):
         """Test extraction with HTTP 500 server error (should be retryable)."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
-
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 500
@@ -323,10 +318,7 @@ class TestZhipuVisionService:
                 "Server error", request=Mock(), response=mock_response
             )
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -343,15 +335,15 @@ class TestZhipuVisionService:
         """Test extraction with network error."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
 
             error = httpx.ConnectError("Connection refused")
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -368,15 +360,15 @@ class TestZhipuVisionService:
         """Test extraction with timeout error."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
 
             error = httpx.ReadTimeout("Request timeout")
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -392,7 +384,9 @@ class TestZhipuVisionService:
         """Test extraction when API returns empty choices."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -400,10 +394,8 @@ class TestZhipuVisionService:
             mock_response.raise_for_status = Mock()
 
             mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -420,7 +412,9 @@ class TestZhipuVisionService:
         """Test extraction when API returns invalid choice format."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -428,10 +422,8 @@ class TestZhipuVisionService:
             mock_response.raise_for_status = Mock()
 
             mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -447,7 +439,9 @@ class TestZhipuVisionService:
         """Test extraction when API returns invalid message format."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 200
@@ -455,10 +449,8 @@ class TestZhipuVisionService:
             mock_response.raise_for_status = Mock()
 
             mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -474,15 +466,15 @@ class TestZhipuVisionService:
         """Test extraction with unexpected error."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
 
-        with patch("src.services.core.zhipu_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.zhipu_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
 
             error = Exception("Unexpected error")
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
 
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = ZhipuVisionService()
 
@@ -629,7 +621,9 @@ class TestDeepSeekVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.deepseek_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 401
@@ -639,15 +633,14 @@ class TestDeepSeekVisionService:
                 "Auth failed", request=Mock(), response=mock_response
             )
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = DeepSeekVisionService()
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(VisionAPIError) as exc_info:
                 await service.extract_from_images([temp_image_file], "Extract")
+            assert exc_info.value.status_code == 401
+            assert exc_info.value.retryable is False
 
     @pytest.mark.asyncio
     async def test_extract_from_images_network_error(
@@ -656,20 +649,21 @@ class TestDeepSeekVisionService:
         """Test extraction with network error."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
 
-        with patch("src.services.core.deepseek_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.deepseek_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
 
             error = httpx.ConnectError("Network error")
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = DeepSeekVisionService()
 
-            with pytest.raises(httpx.ConnectError):
+            with pytest.raises(VisionAPIError) as exc_info:
                 await service.extract_from_images([temp_image_file], "Extract")
+            assert exc_info.value.status_code is None
+            assert exc_info.value.retryable is True
 
     def test_singleton_getter(self, monkeypatch):
         """Test singleton pattern for service getter."""
@@ -808,7 +802,9 @@ class TestHunyuanVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
-        with patch("src.services.core.hunyuan_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.hunyuan_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 403
@@ -818,15 +814,14 @@ class TestHunyuanVisionService:
                 "Forbidden", request=Mock(), response=mock_response
             )
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = HunyuanVisionService()
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(VisionAPIError) as exc_info:
                 await service.extract_from_images([temp_image_file], "Extract")
+            assert exc_info.value.status_code == 403
+            assert exc_info.value.retryable is False
 
     def test_singleton_getter(self, monkeypatch):
         """Test singleton pattern for service getter."""
@@ -965,7 +960,9 @@ class TestQwenVisionService:
         """Test extraction with HTTP error."""
         monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
-        with patch("src.services.core.qwen_vision_service.httpx") as mock_httpx:
+        with patch(
+            "src.services.core.qwen_vision_service.httpx.AsyncClient"
+        ) as mock_client_class:
             mock_client = AsyncMock()
             mock_response = Mock()
             mock_response.status_code = 404
@@ -975,15 +972,14 @@ class TestQwenVisionService:
                 "Not found", request=Mock(), response=mock_response
             )
             mock_client.post = AsyncMock(side_effect=error)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock()
-
-            mock_httpx.AsyncClient = Mock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__.return_value = mock_client
 
             service = QwenVisionService()
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(VisionAPIError) as exc_info:
                 await service.extract_from_images([temp_image_file], "Extract")
+            assert exc_info.value.status_code == 404
+            assert exc_info.value.retryable is False
 
     def test_singleton_getter(self, monkeypatch):
         """Test singleton pattern for service getter."""

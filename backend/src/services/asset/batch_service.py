@@ -75,7 +75,7 @@ class AssetBatchService:
         self,
         asset_ids: list[str] | None = None,
         updates: dict[str, Any] | None = None,
-        update_all: bool = False,
+        should_update_all: bool = False,
         operator: str = "system",
     ) -> BatchOperationResult:
         """
@@ -90,14 +90,14 @@ class AssetBatchService:
         Args:
             asset_ids: 资产ID列表
             updates: 更新数据字典
-            update_all: 是否更新所有资产
+            should_update_all: 是否更新所有资产
             operator: 操作人
 
         Returns:
             BatchOperationResult
         """
         # 如果更新所有资产，获取所有资产ID
-        if update_all:
+        if should_update_all:
             all_assets, _ = asset_crud.get_multi_with_search(
                 db=self.db, skip=0, limit=10000
             )

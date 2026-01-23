@@ -415,7 +415,7 @@ class RentContractListResponse(BaseModel):
     items: list[RentContractResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
     pages: int
 
 
@@ -425,7 +425,7 @@ class RentLedgerListResponse(BaseModel):
     items: list[RentLedgerResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
     pages: int
 
 

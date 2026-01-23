@@ -1,0 +1,22 @@
+{
+  "id": "ws_a13fde24",
+  "name": "zcgl",
+  "slug": "zcgl",
+  "defaults": {
+    "model": "claude-opus-4-5-20251101",
+    "permissionMode": "safe",
+    "cyclablePermissionModes": [
+      "safe",
+      "ask",
+      "allow-all"
+    ],
+    "thinkingLevel": "max",
+    "enabledSourceSlugs": [],
+    "workingDirectory": "D:\\work\\zcgl"
+  },
+  "localMcpServers": {
+    "enabled": true
+  },
+  "createdAt": 1769074361004,
+  "updatedAt": 1769140109514
+}

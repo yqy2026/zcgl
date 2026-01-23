@@ -207,8 +207,10 @@ class ProjectListResponse(BaseModel):
     items: list[ProjectResponse]
     total: int
     page: int
-    size: int
+    page_size: int = Field(..., serialization_alias="pageSize")
     pages: int
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ProjectDeleteResponse(BaseModel):
@@ -230,7 +232,7 @@ class ProjectSearchRequest(BaseModel):
     ownership_id: str | None = Field(None, description="权属方ID")
     ownership_entity: str | None = Field(None, description="权属方名称")
     page: int = Field(1, ge=1, description="页码")
-    size: int = Field(10, ge=1, le=100, description="每页大小")
+    page_size: int = Field(10, ge=1, le=100, description="每页大小")
 
 
 class ProjectStatisticsResponse(BaseModel):

@@ -418,7 +418,7 @@ async def delete_excel_config(
 @router.get("/cleanup", summary="清理过期任务")
 async def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
-    dry_run: bool = Query(False, description="是否为试运行"),
+    is_dry_run: bool = Query(False, description="是否为试运行"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:

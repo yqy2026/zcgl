@@ -85,7 +85,7 @@ class Settings:
 
     # JWT配置
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
-        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120")
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
@@ -167,8 +167,8 @@ class RedisTaskStore:
                     import json
 
                     # Using json.loads() for safe deserialization
-                    parsed = json.loads(data.decode("utf-8"))
-                    return parsed  # type: ignore[no-any-return]
+                    parsed: dict[str, Any] = json.loads(data.decode("utf-8"))
+                    return parsed
             except Exception as e:
                 logger.error(f"获取任务状态失败: {e}")
         return None

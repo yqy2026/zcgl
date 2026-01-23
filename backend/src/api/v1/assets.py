@@ -14,9 +14,7 @@ class NotFoundError(Exception):
 """
 资产管理API路由 - 核心CRUD操作
 
-统计、附件、批量操作、导入功能已拆分到独立模块:
-- asset_statistics.py: 统计相关端点
-- asset_attachments.py: 附件管理端点
+批量操作、导入功能已拆分到独立模块:
 - asset_batch.py: 批量操作端点
 - asset_import.py: 导入功能端点
 """
@@ -49,7 +47,7 @@ from ...schemas.asset import (
 from ...services.asset.asset_service import AssetService
 
 # 导入子路由模块
-from . import asset_attachments, asset_batch, asset_import, asset_statistics
+from . import asset_attachments, asset_batch, asset_import
 
 # 获取开发模式配置，但不完全绕过认证
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
@@ -58,17 +56,18 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 router = APIRouter()
 
 # 包含子路由器
-router.include_router(asset_statistics.router, prefix="/statistics", tags=["资产统计"])
-router.include_router(asset_attachments.router, tags=["资产附件"])
 router.include_router(asset_batch.router, tags=["资产批量操作"])
 router.include_router(asset_import.router, tags=["资产导入"])
+router.include_router(asset_attachments.router, tags=["资产附件"])
 
 
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
 async def get_assets(
     page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
-    limit: int = Query(
+    # Best practice: use a single pagination contract.
+    page_size: int = Query(
         PaginationLimits.DEFAULT_PAGE_SIZE,
+        alias="pageSize",
         ge=PaginationLimits.MIN_PAGE_SIZE,
         le=PaginationLimits.MAX_PAGE_SIZE,
         description="每页记录数",
@@ -124,8 +123,8 @@ async def get_assets(
 
     asset_service = AssetService(db)
     assets, total = asset_service.get_assets(
-        skip=(page - 1) * limit,
-        limit=limit,
+        skip=(page - 1) * page_size,
+        limit=page_size,
         search=search,
         filters=filters,
         sort_field=sort_field,
@@ -141,8 +140,8 @@ async def get_assets(
         items=items,
         total=total,
         page=page,
-        limit=limit,
-        pages=(total + limit - 1) // limit,
+        page_size=page_size,
+        pages=(total + page_size - 1) // page_size,
     )
 
 

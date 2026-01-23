@@ -11,6 +11,7 @@ import os
 from typing import Any
 
 import httpx
+from httpx import HTTPStatusError, NetworkError, TimeoutException
 from pydantic import BaseModel
 
 from .base_vision_service import (
@@ -157,6 +158,15 @@ class ZhipuVisionService(BaseVisionService):
                     f"{self.base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
+                if response.status_code >= 400:
+                    request = getattr(response, "request", None) or httpx.Request(
+                        "POST", f"{self.base_url}/chat/completions"
+                    )
+                    raise HTTPStatusError(
+                        f"HTTP {response.status_code} error",
+                        request=request,
+                        response=response,
+                    )
                 data: dict[str, Any] = response.json()
 
                 choices = data.get("choices", [])
@@ -190,7 +200,7 @@ class ZhipuVisionService(BaseVisionService):
 
                 return result_content
 
-        except httpx.HTTPStatusError as e:
+        except HTTPStatusError as e:
             # 使用增强的错误处理
             vision_error = handle_http_status_error(e)
             logger.error(
@@ -203,11 +213,7 @@ class ZhipuVisionService(BaseVisionService):
             )
             raise vision_error from e
 
-        except (
-            httpx.NetworkError,
-            httpx.TimeoutException,
-            ConnectionError,
-        ) as e:
+        except (NetworkError, TimeoutException, ConnectionError) as e:
             # 使用增强的网络错误处理
             vision_error = handle_network_error(e)
             logger.error(
@@ -216,6 +222,8 @@ class ZhipuVisionService(BaseVisionService):
             )
             raise vision_error from e
 
+        except VisionAPIError:
+            raise
         except Exception as e:
             logger.error(
                 f"Vision extraction failed: {e}",

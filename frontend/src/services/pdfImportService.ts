@@ -322,29 +322,7 @@ class PDFImportService {
     session_status?: SessionProgress;
     error?: string;
   }> {
-    try {
-      const response = await apiClient.get<{
-        success: boolean;
-        session_status?: SessionProgress;
-        error?: string;
-      }>(`${API_BASE_URL}/progress/${sessionId}`);
-      const responseData = response.data;
-      if (!responseData) {
-        throw new Error('Empty response');
-      }
-      return responseData;
-    } catch (error: unknown) {
-      logger.error('获取进度失败:', error as Error);
-      const errorDetail = isAxiosError(error)
-        ? (error.response?.data?.detail ?? error.message)
-        : isError(error)
-          ? error.message
-          : 'Unknown error';
-      return {
-        success: false,
-        error: errorDetail,
-      };
-    }
+    return this.getPdfImportProgress(sessionId);
   }
 
   /**
@@ -356,98 +334,18 @@ class PDFImportService {
     processing_summary?: Record<string, unknown>;
     error?: string;
   }> {
-    try {
-      // 通过进度API获取结果
-      const progressResponse = await this.getProgress(sessionId);
-
-      if (progressResponse.success && progressResponse.session_status) {
-        const session = progressResponse.session_status;
-
-        if (session.status === 'ready_for_review' || session.status === 'completed') {
-          // 构建结果对象
-          const result: CompleteResult = {
-            success: true,
-            session_id: sessionId,
-            file_info: {
-              filename: session.file_name ?? 'unknown.pdf',
-              size: session.file_size ?? 0,
-              content_type: 'application/pdf',
-            },
-            extraction_result: {
-              success: true,
-              data: session.extracted_data ?? {},
-              confidence_score: session.confidence_score ?? 0.8,
-              extraction_method: session.processing_method ?? 'multi_engine',
-              processed_fields: Object.keys(session.extracted_data ?? {}).length,
-              total_fields: 15,
-            },
-            validation_result: {
-              success: true,
-              errors: [],
-              warnings: [],
-              validated_data: session.validated_data ?? {},
-              validation_score: 0.8,
-              processed_fields: Object.keys(session.validated_data ?? {}).length,
-              required_fields_count: 5,
-              missing_required_fields: [],
-            },
-            matching_result: {
-              matched_assets: session.matching_results?.matched_assets ?? [],
-              matched_ownerships: session.matching_results?.matched_ownerships ?? [],
-              duplicate_contracts: session.matching_results?.duplicate_contracts ?? [],
-              recommendations: (session.matching_results?.recommendations ?? {}) as Record<
-                string,
-                string
-              >,
-              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7,
-            },
-            summary: {
-              extraction_confidence: session.confidence_score ?? 0.8,
-              validation_score: 0.8,
-              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7,
-              total_confidence: 0.75,
-            },
-            recommendations: Object.values(session.matching_results?.recommendations ?? {}),
-            ready_for_import: true,
-          };
-
-          return {
-            success: true,
-            result: result,
-            processing_summary: {
-              total_processing_time: '30-60秒',
-              extraction_method: session.processing_method ?? 'multi_engine',
-            },
-          };
-        } else if (session.status === 'failed') {
-          return {
-            success: false,
-            error: session.error_message ?? '处理失败',
-          };
-        } else {
-          return {
-            success: false,
-            error: '处理尚未完成',
-          };
-        }
-      } else {
-        return {
-          success: false,
-          error: progressResponse.error ?? '获取进度失败',
-        };
-      }
-    } catch (error: unknown) {
-      logger.error('获取结果失败:', error as Error);
-      const errorDetail = isAxiosError(error)
-        ? (error.response?.data?.detail ?? error.message)
-        : isError(error)
-          ? error.message
-          : 'Unknown error';
+    const result = await this.getPdfImportResult(sessionId);
+    if (result.success) {
       return {
-        success: false,
-        error: errorDetail,
+        success: true,
+        result: result.result,
+        processing_summary: result.result?.processing_summary as Record<string, unknown> | undefined,
       };
     }
+    return {
+      success: false,
+      error: result.error ?? '获取进度失败',
+    };
   }
 
   /**
@@ -823,7 +721,7 @@ class PDFImportService {
   ): Promise<void> {
     const poll = async () => {
       try {
-        const result = await this.getProgress(sessionId);
+        const result = await this.getPdfImportProgress(sessionId);
 
         if (result.success && result.session_status) {
           onProgress(result.session_status);

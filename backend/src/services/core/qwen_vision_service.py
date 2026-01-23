@@ -18,6 +18,12 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from .base_vision_service import (
+    VisionAPIError,
+    handle_http_status_error,
+    handle_network_error,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -173,13 +179,38 @@ class QwenVisionService:
                 )
 
         except httpx.HTTPStatusError as e:
+            vision_error = handle_http_status_error(e)
             logger.error(
-                f"DashScope API error: {e.response.status_code} - {e.response.text}"
+                f"DashScope API error: {vision_error.status_code} - {vision_error}",
+                extra={
+                    "error_id": "QWEN_API_ERROR",
+                    "status_code": vision_error.status_code,
+                    "retryable": vision_error.retryable,
+                },
             )
-            raise
+            raise vision_error from e
+        except (
+            httpx.NetworkError,
+            httpx.TimeoutException,
+            ConnectionError,
+        ) as e:
+            vision_error = handle_network_error(e)
+            logger.error(
+                f"Qwen network error: {vision_error}",
+                extra={"error_id": "QWEN_NETWORK_ERROR"},
+            )
+            raise vision_error from e
         except Exception as e:
-            logger.error(f"Qwen vision extraction failed: {e}")
-            raise
+            logger.error(
+                f"Qwen vision extraction failed: {e}",
+                exc_info=True,
+                extra={"error_id": "QWEN_UNKNOWN_ERROR"},
+            )
+            raise VisionAPIError(
+                message=f"Unexpected error: {str(e)}",
+                status_code=None,
+                retryable=False,
+            ) from e
 
 
 # Singleton instance

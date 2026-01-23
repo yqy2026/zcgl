@@ -359,9 +359,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         return assets, total
 
-    def create_with_history(self, db: Session, obj_in: AssetCreate) -> Asset:
+    def create_with_history(
+        self, db: Session, obj_in: AssetCreate, commit: bool = True
+    ) -> Asset:
         """创建资产并记录历史"""
-        db_obj: Asset = self.create(db=db, obj_in=obj_in)
+        db_obj: Asset = self.create(db=db, obj_in=obj_in, commit=False)
 
         history = AssetHistory(
             asset_id=db_obj.id,
@@ -370,7 +372,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             operator="system",
         )
         db.add(history)
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
         return db_obj
 
     def update(
@@ -379,6 +384,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         *,
         db_obj: Asset,
         obj_in: AssetUpdate | dict[str, Any],
+        commit: bool = True,
     ) -> Asset:
         """
         更新资产，增加版本号并加密PII字段
@@ -402,11 +408,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             db_obj.version = current_version + 1
 
         # 调用父类方法更新记录
-        result: Asset = super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+        result: Asset = super().update(
+            db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
+        )
         return result
 
     def update_with_history(
-        self, db: Session, db_obj: Asset, obj_in: AssetUpdate
+        self, db: Session, db_obj: Asset, obj_in: AssetUpdate, commit: bool = True
     ) -> Asset:
         """更新资产并记录历史"""
         if hasattr(obj_in, "model_dump"):
@@ -429,7 +437,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     )
                     db.add(history)
 
-        return self.update(db=db, db_obj=db_obj, obj_in=obj_in)
+        return self.update(db=db, db_obj=db_obj, obj_in=obj_in, commit=commit)
 
     def get_multi_by_ids(self, db: Session, ids: list[str]) -> list[Asset]:
         """根据ID列表批量获取资产"""

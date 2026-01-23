@@ -44,13 +44,24 @@ class AuthService:
     def authenticate_user(self, username: str, password: str) -> User | None:
         return self.auth_service.authenticate_user(username, password)
 
-    def create_tokens(self, user: User, device_info: dict[str, Any] | str | None = None) -> TokenResponse:
+    def create_tokens(
+        self, user: User, device_info: dict[str, Any] | str | None = None
+    ) -> TokenResponse:
         # Accept both dict (new format) and str (legacy format) for compatibility
-        device_info_dict = device_info if isinstance(device_info, dict) else {"user_agent": device_info} if device_info else None
+        device_info_dict = (
+            device_info
+            if isinstance(device_info, dict)
+            else {"user_agent": device_info}
+            if device_info
+            else None
+        )
         return self.auth_service.create_tokens(user, device_info_dict)
 
     def validate_refresh_token(
-        self, refresh_token: str, client_ip: str | None = None, user_agent: str | None = None
+        self,
+        refresh_token: str,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
     ) -> User | None:
         from ...models.auth import UserSession
 
@@ -87,7 +98,9 @@ class AuthService:
     def unlock_user(self, user_id: str) -> bool:
         return self.user_service.unlock_user(user_id)
 
-    def change_password(self, user: User, current_password: str, new_password: str) -> bool:
+    def change_password(
+        self, user: User, current_password: str, new_password: str
+    ) -> bool:
         return self.user_service.change_password(user, current_password, new_password)
 
     # --- Session Delegate ---

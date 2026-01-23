@@ -135,7 +135,12 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
     def create(
-        self, db: Session, *, obj_in: CreateSchemaType | dict[str, Any], **kwargs: Any
+        self,
+        db: Session,
+        *,
+        obj_in: CreateSchemaType | dict[str, Any],
+        commit: bool = True,
+        **kwargs: Any,
     ) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
@@ -150,8 +155,12 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
             db.add(db_obj)
-            db.commit()
-            db.refresh(db_obj)
+            if commit:
+                db.commit()
+                db.refresh(db_obj)
+            else:
+                db.flush()
+                db.refresh(db_obj)
 
             # 清除相关缓存
             self._clear_cache_pattern("get_multi")
@@ -170,6 +179,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         *,
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
+        commit: bool = True,
     ) -> ModelType:
         """更新记录（支持事务回滚和缓存清理）"""
         try:
@@ -187,8 +197,12 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                     setattr(db_obj, field, update_data[field])
 
             db.add(db_obj)
-            db.commit()
-            db.refresh(db_obj)
+            if commit:
+                db.commit()
+                db.refresh(db_obj)
+            else:
+                db.flush()
+                db.refresh(db_obj)
 
             # 清除相关缓存
             cache_key = self._get_cache_key("get", id=getattr(db_obj, "id", None))
@@ -204,7 +218,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             db.rollback()  # pragma: no cover
             raise self._handle_database_error(e, "更新记录")  # pragma: no cover
 
-    def remove(self, db: Session, *, id: Any) -> ModelType:
+    def remove(self, db: Session, *, id: Any, commit: bool = True) -> ModelType:
         """删除记录（支持事务回滚和缓存清理）"""
         try:
             obj = db.query(self.model).get(id)
@@ -212,7 +226,10 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 raise ValueError(f"Record with id {id} not found")
 
             db.delete(obj)
-            db.commit()
+            if commit:
+                db.commit()
+            else:
+                db.flush()
 
             # 清除相关缓存
             cache_key = self._get_cache_key("get", id=id)

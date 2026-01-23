@@ -7,10 +7,10 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
-from ...core.token_blacklist import blacklist_manager
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
 from ...schemas.auth import TokenResponse
+from ...security.token_blacklist import blacklist_manager
 from .password_service import PasswordService
 from .session_service import SessionService
 from .user_management_service import UserManagementService
@@ -26,10 +26,6 @@ SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
-
-# 确保配置一致性
-if ACCESS_TOKEN_EXPIRE_MINUTES < 120:
-    ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
 
 class AuthenticationService:

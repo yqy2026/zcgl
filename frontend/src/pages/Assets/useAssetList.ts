@@ -55,7 +55,7 @@ const fetchAssets = async (params: {
   try {
     const requestParams: Record<string, string | number> = {
       page: params.page,
-      limit: params.pageSize,
+      pageSize: params.pageSize,
     };
 
     if (params.search !== undefined && params.search !== '') {
@@ -83,7 +83,7 @@ const fetchAssets = async (params: {
       items: AssetApiResponse[];
       total: number;
       page: number;
-      limit: number;
+      pageSize: number;
     }>(API_ENDPOINTS.ASSET.LIST, {
       params: requestParams,
       retry: true,
@@ -142,7 +142,7 @@ const fetchAssets = async (params: {
       data: transformedData,
       total: responseData.total,
       page: responseData.page,
-      pageSize: responseData.limit,
+      pageSize: responseData.pageSize,
     };
   } catch (error) {
     // 提供更详细的错误信息

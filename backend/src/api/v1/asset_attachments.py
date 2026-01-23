@@ -1,233 +1,190 @@
-"""
-资产附件管理API路由模块
-
-从 assets.py 中提取的附件管理相关端点
-"""
-
 import os
-import shutil
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Path, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import (
     BaseBusinessError,
+    InvalidRequestError,
     ResourceNotFoundError,
-    bad_request,
     internal_error,
-    not_found,
 )
 from ...crud.asset import asset_crud
 from ...database import get_db
-from ...middleware.auth import get_current_active_user, require_permission
+from ...middleware.auth import get_current_active_user
 from ...models.auth import User
+from ...utils import file_security
 
-# 创建附件路由器
 router = APIRouter()
 
 
-@router.post("/{asset_id}/attachments", summary="上传资产附件")
+@router.post(
+    "/{asset_id}/attachments",
+    response_model=dict[str, Any],
+    summary="上传资产附件",
+)
 async def upload_asset_attachments(
-    asset_id: str = Path(..., description="资产ID"),
-    files: list[UploadFile] = File(...),
+    asset_id: str,
+    files: list[UploadFile] = File(..., description="附件文件列表"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "update")),
+    current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
-    """
-    上传资产附件（PDF格式）
-
-    - **asset_id**: 资产ID
-    - **files**: 要上传的文件列表
-    """
     try:
-        # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
+            raise ResourceNotFoundError("asset", asset_id)
 
-        # 创建附件目录 - 安全处理
-        from ...utils.file_security import (
-            create_safe_upload_directory,
-            validate_upload_file,
+        upload_dir = file_security.create_safe_upload_directory(
+            "uploads/attachments", asset_id
         )
-
-        upload_dir = create_safe_upload_directory("uploads/attachments", asset_id)
-
-        success_files = []
-        failed_files = []
+        success: list[str] = []
+        failed: list[str] = []
 
         for file in files:
+            if not file.filename:
+                failed.append("文件名不能为空")
+                continue
+
             try:
-                # 综合验证文件安全性
-                file.file.seek(0, 2)  # 移动到文件末尾
+                file.file.seek(0, 2)
                 file_size = file.file.tell()
-                file.file.seek(0)  # 重置到文件开头
+                file.file.seek(0)
+            except Exception:
+                file_size = 0
 
-                # Ensure filename is not None
-                if file.filename is None:
-                    failed_files.append("unknown_filename: 文件名不能为空")
-                    continue
+            validation = file_security.validate_upload_file(
+                file.filename,
+                file.content_type,
+                file_size,
+                allowed_extensions=[".pdf"],
+                max_size=10 * 1024 * 1024,
+            )
 
-                validation_result = validate_upload_file(
-                    filename=file.filename,
-                    content_type=file.content_type,
-                    file_size=file_size,
-                    allowed_extensions=["pdf"],
-                    max_size=10 * 1024 * 1024,  # 10MB
-                )
+            if not validation["valid"]:
+                errors = validation.get("errors") or []
+                failed.append("; ".join(errors) if errors else "文件验证失败")
+                continue
 
-                if not validation_result["valid"]:
-                    failed_files.append(
-                        f"{file.filename}: {', '.join(validation_result['errors'])}"
-                    )
-                    continue
+            safe_filename = validation.get("safe_filename") or file.filename
+            file_path = upload_dir / safe_filename
 
-                # 生成安全的唯一文件名
-                unique_filename = validation_result["safe_filename"]
-                file_path = upload_dir / unique_filename
-
-                # 保存文件
-                with open(file_path, "wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-
-                success_files.append(file.filename)
-
+            try:
+                file.file.seek(0)
+                with open(file_path, "wb") as target:
+                    target.write(file.file.read())
+                success.append(safe_filename)
             except Exception as e:
-                failed_files.append(f"{file.filename}: {str(e)}")
+                failed.append(str(e))
 
-        return {
-            "success": success_files,
-            "failed": failed_files,
-            "message": f"成功上传 {len(success_files)} 个文件，失败 {len(failed_files)} 个文件",
-        }
+        if success and failed:
+            message = f"成功上传 {len(success)} 个文件，失败 {len(failed)} 个文件"
+        elif success:
+            message = f"成功上传 {len(success)} 个文件"
+        else:
+            message = "上传失败"
 
-    except ResourceNotFoundError:
+        return {"success": success, "failed": failed, "message": message}
+    except BaseBusinessError:
         raise
     except Exception as e:
         raise internal_error(f"上传附件失败: {str(e)}")
 
 
-@router.get("/{asset_id}/attachments", summary="获取资产附件列表")
+@router.get(
+    "/{asset_id}/attachments",
+    response_model=list[dict[str, Any]],
+    summary="获取资产附件列表",
+)
 async def get_asset_attachments(
-    asset_id: str = Path(..., description="资产ID"),
+    asset_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[dict[str, Any]]:
-    """
-    获取资产附件列表
-
-    - **asset_id**: 资产ID
-    """
     try:
-        # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
+            raise ResourceNotFoundError("asset", asset_id)
 
-        # 获取附件目录
-        upload_dir = f"uploads/attachments/{asset_id}"
-
-        if not os.path.exists(upload_dir):
+        base_dir = os.path.join("uploads", "attachments", asset_id)
+        if not os.path.exists(base_dir):
             return []
 
-        attachments = []
-        for filename in os.listdir(upload_dir):
-            if filename.lower().endswith(".pdf"):
-                file_path = os.path.join(upload_dir, filename)
-                file_stat = os.stat(file_path)
-
-                attachments.append(
-                    {
-                        "id": filename,
-                        "name": filename,
-                        "size": file_stat.st_size,
-                        "url": f"/api/v1/assets/{asset_id}/attachments/{filename}",
-                        "upload_time": file_stat.st_mtime,
-                    }
-                )
-
+        attachments: list[dict[str, Any]] = []
+        for filename in os.listdir(base_dir):
+            if not filename.lower().endswith(".pdf"):
+                continue
+            file_path = os.path.join(base_dir, filename)
+            stat = os.stat(file_path)
+            attachments.append(
+                {
+                    "id": filename,
+                    "name": filename,
+                    "size": stat.st_size,
+                    "url": f"/api/v1/assets/{asset_id}/attachments/{filename}",
+                    "upload_time": stat.st_mtime,
+                }
+            )
         return attachments
-
-    except ResourceNotFoundError:
+    except BaseBusinessError:
         raise
     except Exception as e:
         raise internal_error(f"获取附件列表失败: {str(e)}")
 
 
-@router.get("/{asset_id}/attachments/{filename}", summary="下载资产附件")
+@router.get(
+    "/{asset_id}/attachments/{filename}",
+    summary="下载资产附件",
+)
 async def download_asset_attachment(
-    asset_id: str = Path(..., description="资产ID"),
-    filename: str = Path(..., description="文件名"),
+    asset_id: str,
+    filename: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> FileResponse:
-    """
-    下载资产附件
-
-    - **asset_id**: 资产ID
-    - **filename**: 文件名
-    """
     try:
-        # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
+            raise ResourceNotFoundError("asset", asset_id)
 
-        # 验证文件路径
-        file_path = f"uploads/attachments/{asset_id}/{filename}"
-
-        if not os.path.exists(file_path):
-            raise not_found("文件不存在", resource_type="attachment")
-
-        # 验证文件类型
         if not filename.lower().endswith(".pdf"):
-            raise bad_request("仅支持PDF文件")
+            raise InvalidRequestError("仅支持PDF文件")
+
+        file_path = f"uploads/attachments/{asset_id}/{filename}"
+        if not os.path.exists(file_path):
+            raise ResourceNotFoundError("attachment", filename)
 
         return FileResponse(file_path, filename=filename, media_type="application/pdf")
-
-    except ResourceNotFoundError:
+    except BaseBusinessError:
         raise
     except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
         raise internal_error(f"下载附件失败: {str(e)}")
 
 
-@router.delete("/{asset_id}/attachments/{attachment_id}", summary="删除资产附件")
+@router.delete(
+    "/{asset_id}/attachments/{attachment_id}",
+    response_model=dict[str, str],
+    summary="删除资产附件",
+)
 async def delete_asset_attachment(
-    asset_id: str = Path(..., description="资产ID"),
-    attachment_id: str = Path(..., description="附件ID"),
+    asset_id: str,
+    attachment_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "delete")),
-) -> dict[str, Any]:
-    """
-    删除资产附件
-
-    - **asset_id**: 资产ID
-    - **attachment_id**: 附件ID（文件名）
-    """
+    current_user: User = Depends(get_current_active_user),
+) -> dict[str, str]:
     try:
-        # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
+            raise ResourceNotFoundError("asset", asset_id)
 
-        # 验证文件路径
         file_path = f"uploads/attachments/{asset_id}/{attachment_id}"
-
         if not os.path.exists(file_path):
-            raise not_found("文件不存在", resource_type="attachment")
+            raise ResourceNotFoundError("attachment", attachment_id)
 
-        # 删除文件
         os.remove(file_path)
-
         return {"message": "附件删除成功"}
-
-    except ResourceNotFoundError:
+    except BaseBusinessError:
         raise
     except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
         raise internal_error(f"删除附件失败: {str(e)}")

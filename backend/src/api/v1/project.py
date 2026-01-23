@@ -4,7 +4,7 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import bad_request, internal_error, not_found
@@ -50,23 +50,27 @@ async def list_projects(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: int = 1,
-    limit: int = 20,
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     keyword: str | None = None,
+    is_active: bool | None = None,
+    ownership_id: str | None = None,
     project_status: str | None = None,
 ) -> ProjectListResponse:
     """
     获取项目列表，支持分页和筛选
+
+    兼容：pageSize 参数
     """
     try:
         search_params = ProjectSearchRequest(
             page=page,
-            size=limit,
+            page_size=page_size,
             keyword=keyword,
-            is_active=None,
+            is_active=is_active,
             project_type=None,
             project_status=project_status,
             city=None,
-            ownership_id=None,
+            ownership_id=ownership_id,
             ownership_entity=None,
         )
         result = project_service.search_projects(db=db, search_params=search_params)
@@ -91,15 +95,31 @@ async def search_projects(
         raise internal_error(f"搜索项目失败: {str(e)}")
 
 
-@router.get("/options/dropdown", summary="获取项目下拉选项")
+@router.get("/dropdown-options", summary="获取项目下拉选项")
 async def get_project_options(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    is_active: bool | None = Query(True, description="是否仅返回启用项目"),
 ) -> list[dict[str, Any]]:
-    """
-    获取项目下拉列表选项
-    """
-    return project_crud.get_dropdown_options(db=db)
+    """获取项目下拉列表选项（标准端点）"""
+
+    from ...models.asset import Project as AssetProject
+
+    query = db.query(AssetProject)
+    if is_active is not None:
+        query = query.filter(AssetProject.is_active == is_active)
+
+    projects = query.order_by(AssetProject.name.asc()).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "code": p.code,
+            "short_name": p.short_name,
+            "is_active": p.is_active,
+        }
+        for p in projects
+    ]
 
 
 @router.get("/stats/overview", summary="获取项目统计")

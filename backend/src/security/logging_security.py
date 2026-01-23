@@ -5,13 +5,14 @@ from typing import Any
 提供敏感信息脱敏、结构化日志和安全审计功能
 """
 
-import hashlib
 import json
 import logging
 import re
 import uuid
+from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Lock
 
 from ..core.config import get_config
 
@@ -131,16 +132,21 @@ class SensitiveDataFilter(logging.Filter):
 
         # 应用正则模式过滤
         for pattern, replacement in self.sensitive_patterns:
-            filtered_text = re.sub(pattern, replacement, filtered_text, flags=re.IGNORECASE)
+            filtered_text = re.sub(
+                pattern, replacement, filtered_text, flags=re.IGNORECASE
+            )
 
         return filtered_text
+
+    def _is_sensitive_key(self, key: str) -> bool:
+        return key.lower() in self.sensitive_fields
 
     def filter_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """过滤字典中的敏感数据"""
         if not isinstance(data, dict):
             return data
 
-        filtered_data = {}
+        filtered_data: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(key, str) and key.lower() in self.sensitive_fields:
                 filtered_data[key] = "***"
@@ -160,7 +166,7 @@ class SensitiveDataFilter(logging.Filter):
         if not isinstance(data, list):
             return data
 
-        filtered_list = []
+        filtered_list: list[Any] = []
         for item in data:
             if isinstance(item, dict):
                 filtered_list.append(self.filter_dict(item))
@@ -193,9 +199,7 @@ class SecurityAuditor:
             log_dir.mkdir(parents=True, exist_ok=True)
 
             file_handler = logging.FileHandler(self.security_log_file)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             file_handler.setFormatter(formatter)
             file_handler.addFilter(SensitiveDataFilter())
 
@@ -242,9 +246,7 @@ class RequestLogger:
             log_dir.mkdir(parents=True, exist_ok=True)
 
             file_handler = logging.FileHandler(self.log_file)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             file_handler.setFormatter(formatter)
             file_handler.addFilter(SensitiveDataFilter())
 
@@ -276,7 +278,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_exception(self, exception: Exception, context: dict[str, Any] | None = None) -> None:
+    def log_exception(
+        self, exception: Exception, context: dict[str, Any] | None = None
+    ) -> None:
         """记录异常信息"""
         if not self.enabled:
             return
@@ -375,7 +379,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_data_access(self, user_id: str, resource: str, action: str, **kwargs: Any) -> None:
+    def log_data_access(
+        self, user_id: str, resource: str, action: str, **kwargs: Any
+    ) -> None:
         """记录数据访问"""
         if not self.enabled:
             return
@@ -421,7 +427,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_data_validation(self, validation_type: str, result: str, **kwargs: Any) -> None:
+    def log_data_validation(
+        self, validation_type: str, result: str, **kwargs: Any
+    ) -> None:
         """记录数据验证"""
         if not self.enabled:
             return
@@ -465,7 +473,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_api_access(self, endpoint: str, method: str, status_code: int, **kwargs: Any) -> None:
+    def log_api_access(
+        self, endpoint: str, method: str, status_code: int, **kwargs: Any
+    ) -> None:
         """记录API访问"""
         if not self.enabled:
             return
@@ -497,7 +507,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_permission_denied(self, user_id: str, permission: str, **kwargs: Any) -> None:
+    def log_permission_denied(
+        self, user_id: str, permission: str, **kwargs: Any
+    ) -> None:
         """记录权限拒绝"""
         if not self.enabled:
             return
@@ -568,7 +580,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_device_registration(self, user_id: str, device_id: str, **kwargs: Any) -> None:
+    def log_device_registration(
+        self, user_id: str, device_id: str, **kwargs: Any
+    ) -> None:
         """记录设备注册"""
         if not self.enabled:
             return
@@ -626,7 +640,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_role_change(self, user_id: str, old_role: str, new_role: str, **kwargs: Any) -> None:
+    def log_role_change(
+        self, user_id: str, old_role: str, new_role: str, **kwargs: Any
+    ) -> None:
         """记录角色变更"""
         if not self.enabled:
             return
@@ -716,7 +732,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.error(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_external_service_error(self, service: str, error: str, **kwargs: Any) -> None:
+    def log_external_service_error(
+        self, service: str, error: str, **kwargs: Any
+    ) -> None:
         """记录外部服务错误"""
         if not self.enabled:
             return
@@ -731,7 +749,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.error(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_file_upload(self, user_id: str, file_name: str, file_size: int, **kwargs: Any) -> None:
+    def log_file_upload(
+        self, user_id: str, file_name: str, file_size: int, **kwargs: Any
+    ) -> None:
         """记录文件上传"""
         if not self.enabled:
             return
@@ -837,7 +857,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_configuration_change(self, user_id: str, setting: str, **kwargs: Any) -> None:
+    def log_configuration_change(
+        self, user_id: str, setting: str, **kwargs: Any
+    ) -> None:
         """记录配置变更"""
         if not self.enabled:
             return
@@ -936,7 +958,9 @@ class RequestLogger:
 
         self.logger.warning(json.dumps(log_entry, ensure_ascii=False))
 
-    def log_security_scan_result(self, scan_type: str, result: str, **kwargs: Any) -> None:
+    def log_security_scan_result(
+        self, scan_type: str, result: str, **kwargs: Any
+    ) -> None:
         """记录安全扫描结果"""
         if not self.enabled:
             return
@@ -951,7 +975,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_access_attempt(self, user_id: str, resource: str, success: bool, **kwargs: Any) -> None:
+    def log_access_attempt(
+        self, user_id: str, resource: str, success: bool, **kwargs: Any
+    ) -> None:
         """记录访问尝试"""
         if not self.enabled:
             return
@@ -967,7 +993,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_suspicious_activity(self, ip_address: str, reason: str, **kwargs: Any) -> None:
+    def log_suspicious_activity(
+        self, ip_address: str, reason: str, **kwargs: Any
+    ) -> None:
         """记录可疑活动"""
         if not self.enabled:
             return
@@ -1011,7 +1039,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_resource_access(self, user_id: str, resource_type: str, resource_id: str, **kwargs: Any) -> None:
+    def log_resource_access(
+        self, user_id: str, resource_type: str, resource_id: str, **kwargs: Any
+    ) -> None:
         """记录资源访问"""
         if not self.enabled:
             return
@@ -1027,7 +1057,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_data_change(self, user_id: str, table: str, action: str, **kwargs: Any) -> None:
+    def log_data_change(
+        self, user_id: str, table: str, action: str, **kwargs: Any
+    ) -> None:
         """记录数据变更"""
         if not self.enabled:
             return
@@ -1043,7 +1075,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_permission_grant(self, user_id: str, permission: str, **kwargs: Any) -> None:
+    def log_permission_grant(
+        self, user_id: str, permission: str, **kwargs: Any
+    ) -> None:
         """记录权限授予"""
         if not self.enabled:
             return
@@ -1058,7 +1092,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_permission_revoke(self, user_id: str, permission: str, **kwargs: Any) -> None:
+    def log_permission_revoke(
+        self, user_id: str, permission: str, **kwargs: Any
+    ) -> None:
         """记录权限撤销"""
         if not self.enabled:
             return
@@ -1073,7 +1109,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_error_response(self, status_code: int, error_code: str, **kwargs: Any) -> None:
+    def log_error_response(
+        self, status_code: int, error_code: str, **kwargs: Any
+    ) -> None:
         """记录错误响应"""
         if not self.enabled:
             return
@@ -1173,7 +1211,9 @@ class RequestLogger:
         filtered_entry = self.sensitive_filter.filter_dict(log_entry)
         self.logger.info(json.dumps(filtered_entry, ensure_ascii=False))
 
-    def log_sensitive_operation(self, user_id: str, operation: str, **kwargs: Any) -> None:
+    def log_sensitive_operation(
+        self, user_id: str, operation: str, **kwargs: Any
+    ) -> None:
         """记录敏感操作"""
         if not self.enabled:
             return
@@ -1274,7 +1314,9 @@ class StructuredSecurityLogger:
         self.logger.setLevel(logging.INFO)
 
         if not self.logger.handlers:
-            log_file = get_config("security_structured_log_file", "logs/security_structured.log")
+            log_file = get_config(
+                "security_structured_log_file", "logs/security_structured.log"
+            )
             log_dir = Path(log_file).parent
             log_dir.mkdir(parents=True, exist_ok=True)
 

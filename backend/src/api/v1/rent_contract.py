@@ -132,7 +132,8 @@ def get_contracts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    # Best practice: single parameter name
+    page_size: int = Query(10, alias="pageSize", ge=1, le=100, description="每页数量"),
     contract_number: str | None = Query(None, description="合同编号筛选"),
     tenant_name: str | None = Query(None, description="承租方名称筛选"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
@@ -144,11 +145,11 @@ def get_contracts(
     """
     获取租金合同列表，支持分页和筛选
     """
-    skip = (page - 1) * limit
+    skip = (page - 1) * page_size
     contracts, total = rent_contract.get_multi_with_filters(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=effective_limit,
         contract_number=contract_number,
         tenant_name=tenant_name,
         asset_id=asset_id,
@@ -158,13 +159,17 @@ def get_contracts(
         end_date=end_date,
     )
 
-    pages = (total + limit - 1) // limit
+    pages = (total + effective_limit - 1) // effective_limit
 
     # Convert ORM models to response schemas
     contract_responses = [RentContractResponse.model_validate(c) for c in contracts]
 
     return RentContractListResponse(
-        items=contract_responses, total=total, page=page, limit=limit, pages=pages
+        items=contract_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
     )
 
 
@@ -247,7 +252,7 @@ def renew_contract(
     *,
     db: Session = Depends(get_db),
     new_contract_data: RentContractCreate,
-    transfer_deposit: bool = True,
+    should_transfer_deposit: bool = True,
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
@@ -281,7 +286,7 @@ def terminate_contract(
     *,
     db: Session = Depends(get_db),
     termination_date: date,
-    refund_deposit: bool = True,
+    should_refund_deposit: bool = True,
     deduction_amount: float = 0.0,
     termination_reason: str | None = None,
     current_user: User = Depends(get_current_active_user),
@@ -460,7 +465,7 @@ def get_rent_ledger(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, alias="pageSize", ge=1, le=100, description="每页数量"),
     contract_id: str | None = Query(None, description="合同ID筛选"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     ownership_id: str | None = Query(None, description="权属方ID筛选"),
@@ -472,11 +477,11 @@ def get_rent_ledger(
     """
     获取租金台账列表，支持分页和筛选
     """
-    skip = (page - 1) * limit
+    skip = (page - 1) * page_size
     ledgers, total = rent_ledger.get_multi_with_filters(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=effective_limit,
         contract_id=contract_id,
         asset_id=asset_id,
         ownership_id=ownership_id,
@@ -486,13 +491,17 @@ def get_rent_ledger(
         end_date=end_date,
     )
 
-    pages = (total + limit - 1) // limit
+    pages = (total + effective_limit - 1) // effective_limit
 
     # Convert ORM models to response schemas
     ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
     return RentLedgerListResponse(
-        items=ledger_responses, total=total, page=page, limit=limit, pages=pages
+        items=ledger_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
     )
 
 
@@ -813,9 +822,9 @@ def download_excel_template(
 def import_contracts_from_excel(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
-    import_terms: bool = Form(True, description="是否导入租金条款"),
-    import_ledger: bool = Form(False, description="是否导入台账数据"),
-    overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
+    should_import_terms: bool = Form(True, description="是否导入租金条款"),
+    should_import_ledger: bool = Form(False, description="是否导入台账数据"),
+    should_overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
 ) -> dict[str, Any]:
     """
     从Excel文件导入租金合同数据
@@ -854,8 +863,8 @@ def import_contracts_from_excel(
 def export_contracts_to_excel(
     contract_ids: list[str] | None = Query(None, description="要导出的合同ID列表"),
     current_user: User = Depends(get_current_active_user),
-    include_terms: bool = Query(True, description="是否包含租金条款"),
-    include_ledger: bool = Query(True, description="是否包含台账数据"),
+    should_include_terms: bool = Query(True, description="是否包含租金条款"),
+    should_include_ledger: bool = Query(True, description="是否包含台账数据"),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
 ) -> FileResponse:
@@ -865,8 +874,8 @@ def export_contracts_to_excel(
     try:
         result = rent_contract_excel_service.export_contracts_to_excel(
             contract_ids=contract_ids,
-            include_terms=include_terms,
-            include_ledger=include_ledger,
+            include_terms=should_include_terms,
+            include_ledger=should_include_ledger,
             start_date=start_date,
             end_date=end_date,
         )

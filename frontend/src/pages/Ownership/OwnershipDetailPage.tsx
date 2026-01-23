@@ -73,7 +73,7 @@ const OwnershipDetailPage: React.FC = () => {
       assetService.getAssets({
         ownership_id: id,
         page: 1,
-        limit: 100,
+        pageSize: 100,
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });
@@ -85,7 +85,7 @@ const OwnershipDetailPage: React.FC = () => {
       rentContractService.getContracts({
         ownership_id: id,
         page: 1,
-        limit: 100,
+        pageSize: 100,
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });

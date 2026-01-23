@@ -25,7 +25,7 @@ interface AssetFormProps {
   initialData?: Partial<Asset>;
   onSubmit?: (data: AssetCreateRequest) => Promise<void>;
   onCancel?: () => void;
-  loading?: boolean;
+  isLoading?: boolean;
   mode?: 'create' | 'edit';
 }
 
@@ -60,13 +60,13 @@ const FormCompletionProgress: React.FC = () => {
  * Form action buttons component
  */
 interface FormActionsProps {
-  loading: boolean;
+  isLoading: boolean;
   mode: 'create' | 'edit';
   onCancel?: () => void;
   onReset: () => void;
 }
 
-const FormActions: React.FC<FormActionsProps> = ({ loading, mode, onCancel, onReset }) => {
+const FormActions: React.FC<FormActionsProps> = ({ isLoading, mode, onCancel, onReset }) => {
   return (
     <Card>
       <Row justify="end">
@@ -75,7 +75,7 @@ const FormActions: React.FC<FormActionsProps> = ({ loading, mode, onCancel, onRe
             重置
           </Button>
           {onCancel && <Button onClick={onCancel}>取消</Button>}
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>
+          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={isLoading}>
             {mode === 'create' ? '创建资产' : '保存修改'}
           </Button>
         </Space>
@@ -91,7 +91,7 @@ interface AssetFormInnerProps {
   initialData?: Partial<Asset>;
   onSubmit?: (data: AssetCreateRequest) => Promise<void>;
   onCancel?: () => void;
-  loading: boolean;
+  isLoading: boolean;
   mode: 'create' | 'edit';
 }
 
@@ -99,7 +99,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   initialData,
   onSubmit,
   onCancel,
-  loading,
+  isLoading,
   mode,
 }) => {
   const {
@@ -270,7 +270,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         <AssetStatusSection />
         <AssetReceptionSection />
         <AssetDetailedSection />
-        <FormActions loading={loading} mode={mode} onCancel={onCancel} onReset={handleReset} />
+        <FormActions isLoading={isLoading} mode={mode} onCancel={onCancel} onReset={handleReset} />
       </Form>
     </div>
   );
@@ -284,18 +284,18 @@ const AssetForm: React.FC<AssetFormProps> = ({
   initialData,
   onSubmit,
   onCancel,
-  loading = false,
+  isLoading = false,
   mode = 'create',
 }) => {
   const [form] = Form.useForm();
 
   return (
-    <AssetFormProvider form={form} mode={mode} loading={loading}>
+    <AssetFormProvider form={form} mode={mode} isLoading={isLoading}>
       <AssetFormInner
         initialData={initialData}
         onSubmit={onSubmit}
         onCancel={onCancel}
-        loading={loading}
+        isLoading={isLoading}
         mode={mode}
       />
     </AssetFormProvider>

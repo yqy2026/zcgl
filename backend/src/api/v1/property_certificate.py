@@ -14,6 +14,7 @@ from starlette.requests import Request
 from ...core.router_registry import route_registry
 from ...database import get_db
 from ...middleware.auth import require_permission
+from ...models.auth import User
 from ...schemas.property_certificate import (
     CertificateImportConfirm,
     PropertyCertificateCreate,
@@ -30,11 +31,11 @@ router = APIRouter(prefix="/property-certificates", tags=["Property Certificates
 
 
 @router.post("/upload", response_model=PropertyCertificateUploadResponse)
-@require_permission("property_certificate", "create")
 async def upload_certificate(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "create")),
 ):
     """
     上传产权证文件并提取信息
@@ -146,8 +147,11 @@ async def upload_certificate(
 
 
 @router.post("/confirm-import")
-@require_permission("property_certificate", "create")
-async def confirm_import(data: CertificateImportConfirm, db: Session = Depends(get_db)):
+async def confirm_import(
+    data: CertificateImportConfirm,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "create")),
+):
     """
     确认导入，创建产权证
 
@@ -186,11 +190,11 @@ async def confirm_import(data: CertificateImportConfirm, db: Session = Depends(g
 
 
 @router.get("/", response_model=list[PropertyCertificateResponse])
-@require_permission("property_certificate", "read")
 def list_certificates(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "read")),
 ):
     """
     获取产权证列表
@@ -223,10 +227,10 @@ def list_certificates(
 
 
 @router.get("/{certificate_id}", response_model=PropertyCertificateResponse)
-@require_permission("property_certificate", "read")
 def get_certificate(
     certificate_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "read")),
 ):
     """
     获取产权证详情
@@ -264,10 +268,10 @@ def get_certificate(
 
 
 @router.post("/", response_model=PropertyCertificateResponse)
-@require_permission("property_certificate", "create")
 def create_certificate(
     certificate: PropertyCertificateCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "create")),
 ):
     """
     手动创建产权证
@@ -301,11 +305,11 @@ def create_certificate(
 
 
 @router.put("/{certificate_id}", response_model=PropertyCertificateResponse)
-@require_permission("property_certificate", "update")
 def update_certificate(
     certificate_id: str,
     certificate: PropertyCertificateUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "update")),
 ):
     """
     更新产权证
@@ -346,10 +350,10 @@ def update_certificate(
 
 
 @router.delete("/{certificate_id}")
-@require_permission("property_certificate", "delete")
 def delete_certificate(
     certificate_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("property_certificate", "delete")),
 ):
     """
     删除产权证

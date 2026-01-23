@@ -8,14 +8,17 @@ from .analytics import router as analytics_router
 from .assets import router as assets_router
 from .auth import router as auth_router
 from .backup import router as backup_router
+from .collection import router as collection_router
 from .contact import router as contact_router
 from .custom_fields import router as custom_fields_router
 from .dictionaries import router as dictionaries_router
 from .enum_field import router as enum_field_router
+from .error_recovery import router as error_recovery_router
 
 # 修复Excel模块导入 - 使用正确的router名称
 from .excel import router as excel_router
 from .history import router as history_router
+from .llm_prompts import router as llm_prompts_router
 
 # from .missing_apis import missing_apis_router  # Removed - module doesn't exist
 from .monitoring import router as monitoring_router
@@ -24,6 +27,7 @@ from .occupancy import router as occupancy_router
 from .operation_logs import router as operation_logs_router
 from .organization import router as organization_router
 from .ownership import router as ownership_router
+from .property_certificate import router as property_certificate_router
 
 # 尝试导入 PDF 批量路由，如果失败则跳过
 pdf_batch_router: APIRouter | None = None
@@ -56,21 +60,11 @@ system_settings_router: APIRouter | None = None
 try:
     from .system_settings import router as system_settings_router
 except ImportError:  # pragma: no cover
-    print("系统设置路由模块不存在，跳过")  # pragma: no cover
+    import logging
 
-# PDF导入API已统一到 pdf_import_unified.py，在main.py中直接注册
-# from .pdf_import_unified import router as pdf_import_router
-# from .organization_permissions import router as organization_permissions_router  # 已删除
-# from .rbac import router as rbac_router  # 已删除
-# from .dynamic_permissions import router as dynamic_permissions_router  # 已删除
-# from .audit_dashboard import router as audit_dashboard_router  # 已删除
-# from .permission_delegation import router as permission_delegation_router  # 已删除
-# from .multi_tenant import router as multi_tenant_router  # 已删除
-# from .dynamic_permission_api import router as dynamic_permission_api_router  # 已删除
-# from .audit_dashboard_api import router as audit_dashboard_api_router  # 已删除
-# from .test_assets import router as test_assets_router  # 已删除
-# from .security_monitor import router as security_monitor_router  # 已删除
-# from .ocr_analysis import router as ocr_analysis_router  # 已删除
+    logging.getLogger(__name__).debug(
+        "系统设置路由模块不存在，跳过"
+    )  # pragma: no cover
 
 # 创建统一API路由器 - 版本化架构
 api_router = APIRouter()
@@ -120,9 +114,6 @@ if system_settings_router is not None:
         system_settings_router, prefix="/system", tags=["系统设置"]
     )
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
-# test_coverage and test_performance routers removed
-# defect_tracking router removed - architecture violation (raw SQL in API layer)
-# missing_apis_router removed - was a temporary placeholder with broken imports
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
@@ -133,26 +124,15 @@ api_router.include_router(
     notifications_router, prefix="/notifications", tags=["通知管理"]
 )
 api_router.include_router(contact_router, prefix="/contacts", tags=["联系人管理"])
-
-# from .simple_pdf_import import router as pdf_import_router  # 已删除
-# api_router.include_router(
-#     pdf_import_router,
-#     prefix="/pdf_import",
-#     tags=["PDF合同导入"])
-# )
-# PDF智能导入API (统一版本，包含完整功能) - 已移至main.py注册
-#     tags=["PDF智能导入"]
-# 注释掉已删除的API路由器
-# api_router.include_router(organization_permissions_router, ...)  # 已删除
-# api_router.include_router(rbac_router, ...)  # 已删除
-# api_router.include_router(dynamic_permissions_router, ...)  # 已删除
-# api_router.include_router(audit_dashboard_router, ...)  # 已删除
-# api_router.include_router(permission_delegation_router, ...)  # 已删除
-# api_router.include_router(multi_tenant_router, ...)  # 已删除
-# api_router.include_router(dynamic_permission_api_router, ...)  # 已删除
-# api_router.include_router(audit_dashboard_api_router, ...)  # 已删除
-# api_router.include_router(test_assets_router, ...)  # 已删除
-# api_router.include_router(security_monitor_router, ...)  # 已删除
-# api_router.include_router(ocr_analysis_router, ...)  # 已删除
+api_router.include_router(collection_router, prefix="/collections", tags=["催缴管理"])
+api_router.include_router(
+    error_recovery_router, prefix="/error-recovery", tags=["错误恢复"]
+)
+api_router.include_router(
+    llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]
+)
+api_router.include_router(
+    property_certificate_router, prefix="/property-certificates", tags=["产权证管理"]
+)
 
 __all__ = ["api_router"]

@@ -50,13 +50,13 @@ class ProcessingResultEnvelope(BaseModel):
     提供稳定一致的顶层结构，便于持久化与API对齐。
     """
 
-    success: bool = True
+    is_success: bool = True
     text: str | None = None
     pages: list[dict[str, Any]] | None = None
     total_pages: int | None = None
     processing_method: str | None = None
     # DEPRECATED: OCR 已移除，保留用于历史数据兼容
-    ocr_used: bool | None = None
+    was_ocr_used: bool | None = None
     overall_confidence_score: float | None = None
 
     quality_assessment: QualityAssessment | None = None

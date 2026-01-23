@@ -12,7 +12,7 @@ import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
  * 适用于大部分后端API接口
  */
 export interface StandardApiResponse<T = unknown> {
-  success: boolean;
+  isSuccess: boolean;
   data: T;
   message?: string;
   code?: string;
@@ -24,7 +24,7 @@ export interface StandardApiResponse<T = unknown> {
  * 适用于列表类API接口
  */
 export interface PaginatedApiResponse<T = unknown> {
-  success: boolean;
+  isSuccess: boolean;
   data: {
     items: T[];
     pagination: {
@@ -49,7 +49,7 @@ export interface DirectResponse<T = unknown> {
  * 错误响应格式
  */
 export interface ErrorResponse {
-  success: false;
+  isSuccess: false;
   error: {
     code: string;
     message: string;
@@ -87,7 +87,7 @@ export interface AssetListResponse {
   items: unknown[];
   total: number;
   page: number;
-  limit: number;
+  pageSize: number;
   pages: number;
 }
 
@@ -220,7 +220,7 @@ export function isStandardApiResponse(response: unknown): response is StandardAp
   if (response === null || response === undefined) return false;
   if (typeof response !== 'object') return false;
   const obj = response as Record<string, unknown>;
-  return 'success' in obj && typeof obj.success === 'boolean';
+  return 'isSuccess' in obj && typeof obj.isSuccess === 'boolean';
 }
 
 /**
@@ -240,7 +240,7 @@ export function isErrorResponse(response: unknown): response is ErrorResponse {
   if (response === null || response === undefined) return false;
   if (typeof response !== 'object') return false;
   const obj = response as Record<string, unknown>;
-  return obj.success === false && 'error' in obj;
+  return obj.isSuccess === false && 'error' in obj;
 }
 
 /**
@@ -249,7 +249,7 @@ export function isErrorResponse(response: unknown): response is ErrorResponse {
 export function isDirectResponse<T>(response: unknown): response is DirectResponse<T> {
   if (response === null || response === undefined) return false;
   if (typeof response !== 'object') return false;
-  return !('success' in response);
+  return !('isSuccess' in response);
 }
 
 // ==================== 导出外部类型 ====================

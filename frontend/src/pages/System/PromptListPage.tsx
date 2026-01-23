@@ -86,7 +86,7 @@ const PromptListPage: React.FC = () => {
     try {
       const response = await llmPromptService.getPrompts({
         page: state.pagination.current,
-        limit: state.pagination.pageSize,
+        pageSize: state.pagination.pageSize,
         ...state.filters,
       });
 

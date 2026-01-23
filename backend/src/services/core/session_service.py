@@ -1,15 +1,18 @@
 import json
+import logging
 from datetime import datetime, timedelta
 
 from jose import jwt
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
-from ...core.token_blacklist import blacklist_manager
 from ...models.auth import UserSession
+from ...security.token_blacklist import blacklist_manager
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
+
+logger = logging.getLogger(__name__)
 
 
 class SessionService:
@@ -113,7 +116,7 @@ class SessionService:
 
             except Exception as e:  # pragma: no cover
                 # 记录错误但不影响撤销操作
-                print(f"添加令牌到黑名单失败: {e}")  # pragma: no cover
+                logger.warning(f"添加令牌到黑名单失败: {e}")  # pragma: no cover
 
             self.db.commit()
             return True

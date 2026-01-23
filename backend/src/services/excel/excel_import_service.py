@@ -68,10 +68,10 @@ class ExcelImportService:
         self,
         file_path: str,
         sheet_name: str = STANDARD_SHEET_NAME,
-        validate_data: bool = True,
-        create_assets: bool = True,
-        update_existing: bool = False,
-        skip_errors: bool = False,
+        should_validate_data: bool = True,
+        should_create_assets: bool = True,
+        should_update_existing: bool = False,
+        should_skip_errors: bool = False,
         batch_size: int = 100,
     ) -> dict[str, Any]:
         """
@@ -80,10 +80,10 @@ class ExcelImportService:
         Args:
             file_path: Excel文件路径
             sheet_name: 工作表名称
-            validate_data: 是否验证数据
-            create_assets: 是否创建资产
-            update_existing: 是否更新已存在的资产
-            skip_errors: 是否跳过错误行（启用时使用批量提交策略）
+            should_validate_data: 是否验证数据
+            should_create_assets: 是否创建资产
+            should_update_existing: 是否更新已存在的资产
+            should_skip_errors: 是否跳过错误行（启用时使用批量提交策略）
             batch_size: 批处理大小（每N行提交一次）
 
         Returns:
@@ -139,7 +139,7 @@ class ExcelImportService:
                         )
 
                     # 验证数据
-                    if validate_data:
+                    if should_validate_data:
                         (
                             is_valid,
                             errors,
@@ -157,7 +157,7 @@ class ExcelImportService:
                                 }
                             )
                             results["failed"] += 1
-                            if not skip_errors:
+                            if not should_skip_errors:
                                 raise BusinessValidationError(
                                     f"第{idx + 2}行数据验证失败"
                                 )
@@ -168,11 +168,11 @@ class ExcelImportService:
                         )
 
                     # 创建资产
-                    if create_assets and self.db:
+                    if should_create_assets and self.db:
                         # 检查是否已存在（根据物业名称和地址）
                         existing_asset = self._find_existing_asset(asset_data)
 
-                        if existing_asset and update_existing:
+                        if existing_asset and should_update_existing:
                             # 更新现有资产
                             from ...schemas.asset import AssetUpdate
 
@@ -198,8 +198,8 @@ class ExcelImportService:
 
                         current_batch_count += 1
 
-                        # 批量提交策略：每batch_size行提交一次（仅在skip_errors模式下）
-                        if skip_errors and current_batch_count >= batch_size:
+                        # 批量提交策略：每batch_size行提交一次（仅在should_skip_errors模式下）
+                        if should_skip_errors and current_batch_count >= batch_size:
                             self.db.commit()
                             results["committed_batches"] += 1
                             current_batch_count = 0
@@ -214,14 +214,14 @@ class ExcelImportService:
                     results["errors"].append({"row": idx + 2, "error": str(e)})
                     results["failed"] += 1
 
-                    if not skip_errors:
+                    if not should_skip_errors:
                         # 严格模式：回滚并抛出异常
                         if self.db:
                             self.db.rollback()
                         raise
 
             # 提交剩余事务
-            if create_assets and self.db:
+            if should_create_assets and self.db:
                 self.db.commit()
                 if current_batch_count > 0:
                     results["committed_batches"] += 1

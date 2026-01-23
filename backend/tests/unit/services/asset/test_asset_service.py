@@ -208,7 +208,7 @@ class TestCreateAsset:
 
         # Mock order must match the service's execution order
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
+            "src.services.asset.asset_service.get_enum_validation_service"
         ) as mock_validation:
             mock_validation_service = MagicMock()
             mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -224,28 +224,25 @@ class TestCreateAsset:
                     assert result == mock_asset
                     mock_create.assert_called_once()
 
-    def test_create_asset_enum_validation_fails(
-        self, service, asset_create_dict, mock_enum_validation_service
-    ):
+    def test_create_asset_enum_validation_fails(self, service, asset_create_dict):
         """测试枚举验证失败"""
-        # 修改全局 mock 返回验证失败
-        original_validate = mock_enum_validation_service.validate_asset_data
-        mock_enum_validation_service.validate_asset_data = lambda data: (
-            False,
-            ["物业性质无效"],
-        )
-
         asset_in = AssetCreate(**asset_create_dict)
 
-        try:
+        with patch(
+            "src.services.asset.asset_service.get_enum_validation_service"
+        ) as mock_validation:
+            mock_validation_service = MagicMock()
+            mock_validation_service.validate_asset_data.return_value = (
+                False,
+                ["物业性质无效"],
+            )
+            mock_validation.return_value = mock_validation_service
+
             with pytest.raises(BaseBusinessError) as excinfo:
                 service.create_asset(asset_in)
 
             assert excinfo.value.status_code == 422
             assert "枚举值验证失败" in str(excinfo.value.message)
-        finally:
-            # 恢复原始 mock
-            mock_enum_validation_service.validate_asset_data = original_validate
 
     def test_create_asset_duplicate_name(self, service, asset_create_dict, mock_asset):
         """测试资产名称重复"""
@@ -266,7 +263,7 @@ class TestCreateAsset:
         asset_in = AssetCreate(**invalid_data)
 
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
+            "src.services.asset.asset_service.get_enum_validation_service"
         ) as mock_validation:
             mock_validation_service = MagicMock()
             mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -287,7 +284,7 @@ class TestCreateAsset:
         user.id = TEST_USER_ID
 
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
+            "src.services.asset.asset_service.get_enum_validation_service"
         ) as mock_validation:
             mock_validation_service = MagicMock()
             mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -321,7 +318,7 @@ class TestUpdateAsset:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -348,33 +345,30 @@ class TestUpdateAsset:
             with pytest.raises(ResourceNotFoundError):
                 service.update_asset(TEST_ASSET_ID, asset_in)
 
-    def test_update_asset_enum_validation_fails(
-        self, service, mock_asset, mock_enum_validation_service
-    ):
+    def test_update_asset_enum_validation_fails(self, service, mock_asset):
         """测试更新时枚举验证失败"""
         update_data = {"property_nature": "无效性质"}
         asset_in = AssetUpdate(**update_data)
 
-        # 修改全局 mock 返回验证失败
-        original_validate = mock_enum_validation_service.validate_asset_data
-        mock_enum_validation_service.validate_asset_data = lambda data: (
-            False,
-            ["物业性质无效"],
-        )
-
-        try:
+        with patch(
+            "src.services.asset.asset_service.AssetService.get_asset",
+            return_value=mock_asset,
+        ):
             with patch(
-                "src.services.asset.asset_service.AssetService.get_asset",
-                return_value=mock_asset,
-            ):
+                "src.services.asset.asset_service.get_enum_validation_service"
+            ) as mock_validation:
+                mock_validation_service = MagicMock()
+                mock_validation_service.validate_asset_data.return_value = (
+                    False,
+                    ["物业性质无效"],
+                )
+                mock_validation.return_value = mock_validation_service
+
                 with pytest.raises(BaseBusinessError) as excinfo:
                     service.update_asset(TEST_ASSET_ID, asset_in)
 
                 assert excinfo.value.status_code == 422
                 assert "枚举值验证失败" in str(excinfo.value.message)
-        finally:
-            # 恢复原始 mock
-            mock_enum_validation_service.validate_asset_data = original_validate
 
     def test_update_asset_duplicate_name(self, service, mock_asset):
         """测试更新为重复的名称"""
@@ -390,7 +384,7 @@ class TestUpdateAsset:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -417,7 +411,7 @@ class TestUpdateAsset:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -464,7 +458,7 @@ class TestUpdateAsset:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -491,7 +485,7 @@ class TestUpdateAsset:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -593,7 +587,7 @@ class TestEdgeCases:
         asset_in = AssetCreate(**complete_data)
 
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service"
+            "src.services.asset.asset_service.get_enum_validation_service"
         ) as mock_validation:
             mock_validation_service = MagicMock()
             mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -618,7 +612,7 @@ class TestEdgeCases:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 mock_validation_service.validate_asset_data.return_value = (True, [])
@@ -666,7 +660,7 @@ class TestEdgeCases:
             return_value=mock_asset,
         ):
             with patch(
-                "src.services.enum_validation_service.get_enum_validation_service"
+                "src.services.asset.asset_service.get_enum_validation_service"
             ) as mock_validation:
                 mock_validation_service = MagicMock()
                 # 空数据应该验证通过

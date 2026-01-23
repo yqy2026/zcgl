@@ -355,8 +355,6 @@ async def get_current_user_info(
 
     企业级实现，包含完整的用户信息、权限状态、会话信息和时间戳
     """
-    from datetime import datetime
-
     return {
         "username": current_user.username,
         "email": current_user.email,
@@ -451,8 +449,6 @@ async def test_me_debug(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """调试ME端点，检查UserResponse内容"""
-    from datetime import datetime
-
     # 检查 UserResponse 的所有字段
     user_dict = current_user.model_dump()
     logger.debug(f"UserResponse fields: {len(user_dict.keys())} fields")

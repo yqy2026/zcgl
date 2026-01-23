@@ -163,7 +163,7 @@ class OrganizationSearchRequest(BaseModel):
     level: int | None = Field(None, ge=1, le=10, description="层级")
     parent_id: str | None = Field(None, description="上级组织ID")
     skip: int = Field(0, ge=0, description="跳过数量")
-    limit: int = Field(100, ge=1, le=1000, description="限制数量")
+    page_size: int = Field(100, ge=1, le=1000, description="每页大小")
 
 
 # 更新前向引用

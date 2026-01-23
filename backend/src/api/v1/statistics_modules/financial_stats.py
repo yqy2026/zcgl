@@ -30,7 +30,7 @@ router = APIRouter()
 @cache_statistics(expire=1800)  # 30分钟缓存  # type: ignore[misc]
 @router.get("/financial-summary", response_model=FinancialSummaryResponse)
 def get_financial_summary(
-    include_deleted: bool = False,
+    should_include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> FinancialSummaryResponse:
@@ -52,7 +52,7 @@ def get_financial_summary(
     """
     # 获取所有资产
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     assets, _ = asset_crud.get_multi_with_search(

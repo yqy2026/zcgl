@@ -17,9 +17,10 @@
 - Empty directory removal (backend services/interfaces, services/providers)
 - Error handling unified on `exception_handler.py`
 - Frontend single-file directories merged/relocated
+- Core security reorganization completed (security modules moved)
 
 **Still Pending**:
-- Core security reorganization (multiple files still in core/)
+- None
 
 ---
 
@@ -382,7 +383,7 @@ Merge from: `performance/` subdirectory (2 files)
 
 **当前状态**:
 - `jwt_security.py` 已迁移到 `backend/src/security/`
-- `security.py`、`logging_security.py`、`token_blacklist.py` 仍在 core/
+- `security.py`、`logging_security.py`、`token_blacklist.py` 已迁移到 `backend/src/security/`
 
 **目标结构**:
 ```
@@ -395,8 +396,7 @@ backend/src/security/
 ```
 
 **待处理**:
-- `security.py` 拆分或迁移到 `backend/src/security/`
-- `logging_security.py`、`token_blacklist.py` 迁移到 `backend/src/security/`
+- None
 
 #### Error Handling Files Consolidation  
 
@@ -473,10 +473,10 @@ pnpm lint
 
 ### Week 2: Module Consolidation
 
-- [ ] Merge single-file directories  
-- [ ] Consolidate constants hierarchy
-- [ ] Update import paths across codebase
-- [ ] Verify builds pass
+- [x] Merge single-file directories  
+- [x] Consolidate constants hierarchy
+- [x] Update import paths across codebase
+- [x] Verify builds pass
 
 ### Week 3: Naming Cleanup
 
@@ -487,7 +487,7 @@ pnpm lint
 
 ### Week 4: Core Reorganization
 
-- [ ] Reorganize remaining core security modules (`security.py`, `logging_security.py`, `token_blacklist.py`)
+- [x] Reorganize remaining core security modules (`security.py`, `logging_security.py`, `token_blacklist.py`)
 - [x] Finalize error handling consolidation
 - [ ] Code review and testing
 - [ ] Deploy to staging for validation
@@ -559,7 +559,7 @@ src/
 ├── middleware/         7 files  ✅ OK
 ├── models/            14 files  ✅ OK
 ├── schemas/           21 files  ✅ OK
-├── security/           2 files  ⚠️  部分安全模块仍在 core
+├── security/           5 files  ✅ Security modules consolidated
 ├── services/          75 files  ✅ No empty subdirs
 └── utils/              4 files  ✅ OK
 ```
@@ -873,12 +873,12 @@ src/
 - 安全中间件单链路已收敛：仅保留 `security_middleware.py` 链路
 - 路由事实源统一已验证：前端路由配置与受保护路由一致
 - `jwt_security.py` 已迁移到 `backend/src/security/`
-- 命名统一完成：PDF 导入服务已移除 legacy 字段归一化
-- 核心安全目录重组仍未完成：`core/security.py`、`core/logging_security.py`、`core/token_blacklist.py` 仍在 core
+- 命名统一已验证：PDF 导入服务已移除 legacy 字段归一化
+- 核心安全目录重组已完成：security 相关模块已迁移到 `backend/src/security/`
 
 ### Open Items | 未完成
 
-- 核心安全目录重组仍未完成：`core/security.py`、`core/logging_security.py`、`core/token_blacklist.py` 仍在 core
+- None
 
 ### Conclusion | 结论
 

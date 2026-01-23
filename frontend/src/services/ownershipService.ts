@@ -24,7 +24,7 @@ import type {
 } from '@/types/ownership';
 
 export class OwnershipService {
-  private baseUrl = API_ENDPOINTS.OWNERSHIP.LIST.replace(/^\//, '');
+  private baseUrl = API_ENDPOINTS.OWNERSHIP.LIST;
 
   // ==================== 基础CRUD操作 ====================
 
@@ -58,7 +58,7 @@ export class OwnershipService {
    */
   async getOwnership(id: string): Promise<Ownership> {
     try {
-      const result = await apiClient.get<Ownership>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.get<Ownership>(API_ENDPOINTS.OWNERSHIP.DETAIL(id), {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -83,7 +83,7 @@ export class OwnershipService {
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
-        size: params?.size ?? 10,
+        pageSize: params?.pageSize ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
       };
@@ -132,7 +132,7 @@ export class OwnershipService {
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
     try {
-      const result = await apiClient.put<Ownership>(`${this.baseUrl}/${id}`, data, {
+      const result = await apiClient.put<Ownership>(API_ENDPOINTS.OWNERSHIP.UPDATE(id), data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -154,7 +154,7 @@ export class OwnershipService {
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {
     try {
       const result = await apiClient.delete<OwnershipDeleteResponse>(
-        `${this.baseUrl}/${id}`,
+        API_ENDPOINTS.OWNERSHIP.DELETE(id),
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -179,8 +179,8 @@ export class OwnershipService {
    */
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
     try {
-      const result = await apiClient.post<Ownership>(
-        `${this.baseUrl}/${id}/toggle-status`,
+      const result = await apiClient.put<Ownership>(
+        `${this.baseUrl}/${id}/status`,
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -204,14 +204,11 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     try {
-      const result = await apiClient.get<OwnershipStatisticsResponse>(
-        `${this.baseUrl}/statistics/summary`,
-        {
+      const result = await apiClient.get<OwnershipStatisticsResponse>(`${this.baseUrl}/stats/overview`, {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
-      );
+        });
 
       if (!result.success) {
         throw new Error(`获取权属方统计失败: ${result.error}`);
@@ -290,7 +287,7 @@ export class OwnershipService {
    */
   async getOwnershipCount(params?: OwnershipSearchParams): Promise<number> {
     try {
-      const result = await this.getOwnerships({ ...params, size: 1 });
+      const result = await this.getOwnerships({ ...params, pageSize: 1 });
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -347,7 +344,7 @@ export class OwnershipService {
    */
   async searchOwnershipsByKeyword(keyword: string): Promise<Ownership[]> {
     try {
-      const result = await this.searchOwnerships({ keyword, page: 1, size: 100 });
+      const result = await this.searchOwnerships({ keyword, page: 1, pageSize: 100 });
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

@@ -29,7 +29,7 @@ export class AssetCoreService {
         params: {
           ...params,
           page: params?.page ?? 1,
-          limit: params?.limit ?? 20,
+          pageSize: params?.pageSize ?? 20,
         },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -45,7 +45,7 @@ export class AssetCoreService {
           items: [],
           total: 0,
           page: 1,
-          limit: 20,
+          pageSize: 20,
           pages: 0,
         }
       );
@@ -58,7 +58,7 @@ export class AssetCoreService {
   /**
    * 获取所有资产（不分页，用于导出等场景）
    */
-  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'limit'>): Promise<Asset[]> {
+  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'pageSize'>): Promise<Asset[]> {
     try {
       const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
@@ -230,10 +230,18 @@ export class AssetCoreService {
     errors: string[];
   }> {
     try {
-      const result = await apiClient.post<void>(`${ASSET_API.LIST}/validate`, data, {
-        retry: false,
-        smartExtract: true,
-      });
+      const result = await apiClient.post<{
+        is_valid: boolean;
+        errors: Array<{ field?: string; message?: string }>;
+        warnings: Array<{ field?: string; message?: string }>;
+      }>(
+        `${ASSET_API.LIST}/validate`,
+        { data },
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         return {
@@ -243,8 +251,8 @@ export class AssetCoreService {
       }
 
       return {
-        valid: true,
-        errors: [],
+        valid: Boolean(result.data?.is_valid),
+        errors: (result.data?.errors ?? []).map(e => e.message ?? '验证失败'),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

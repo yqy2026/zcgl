@@ -70,7 +70,7 @@ class PromptTemplateListResponse(BaseModel):
     items: list[PromptTemplateResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
 
 
 # ============================================================================

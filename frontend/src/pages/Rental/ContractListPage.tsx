@@ -85,7 +85,7 @@ const ContractListPage: React.FC = () => {
       try {
         const response = await rentContractService.getContracts({
           page: state.pagination.current,
-          limit: state.pagination.pageSize,
+          pageSize: state.pagination.pageSize,
           ...state.filters,
           ...params,
         });
@@ -128,7 +128,7 @@ const ContractListPage: React.FC = () => {
   const loadReferenceData = React.useCallback(async () => {
     try {
       const [assetsResponse, ownershipsData] = await Promise.all([
-        assetService.getAssets({ limit: 100 }),
+        assetService.getAssets({ pageSize: 100 }),
         ownershipService.getOwnershipOptions(true),
       ]);
       setAssets(assetsResponse.items);
@@ -156,7 +156,7 @@ const ContractListPage: React.FC = () => {
     }));
     loadContracts({
       page: pagination.current ?? 1,
-      limit: pagination.pageSize ?? 10,
+      pageSize: pagination.pageSize ?? 10,
     });
   };
 

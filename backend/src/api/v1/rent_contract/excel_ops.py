@@ -90,9 +90,9 @@ def download_excel_template(
 def import_contracts_from_excel(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
-    import_terms: bool = Form(True, description="是否导入租金条款"),
-    import_ledger: bool = Form(False, description="是否导入台账数据"),
-    overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
+    should_import_terms: bool = Form(True, description="是否导入租金条款"),
+    should_import_ledger: bool = Form(False, description="是否导入台账数据"),
+    should_overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
 ) -> dict[str, Any]:
     """
     从Excel文件导入租金合同数据
@@ -140,8 +140,8 @@ def import_contracts_from_excel(
 def export_contracts_to_excel(
     contract_ids: list[str] | None = Query(None, description="要导出的合同ID列表"),
     current_user: User = Depends(get_current_active_user),
-    include_terms: bool = Query(True, description="是否包含租金条款"),
-    include_ledger: bool = Query(True, description="是否包含台账数据"),
+    should_include_terms: bool = Query(True, description="是否包含租金条款"),
+    should_include_ledger: bool = Query(True, description="是否包含台账数据"),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
 ) -> FileResponse:
@@ -154,8 +154,8 @@ def export_contracts_to_excel(
     try:
         result = rent_contract_excel_service.export_contracts_to_excel(
             contract_ids=contract_ids,
-            include_terms=include_terms,
-            include_ledger=include_ledger,
+            include_terms=should_include_terms,
+            include_ledger=should_include_ledger,
             start_date=start_date,
             end_date=end_date,
         )

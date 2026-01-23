@@ -27,13 +27,13 @@ from .core.import_utils import (
     safe_import,
     safe_import_from,
 )
-from .core.logging_security import setup_logging_security
 from .core.response_handler import success_response
 from .database import (
     create_tables,
     get_database_status,
     init_db,
 )
+from .security.logging_security import setup_logging_security
 
 # 立即设置 UTF-8 编码
 setup_utf8_encoding()
@@ -107,16 +107,16 @@ async def lifespan(app: FastAPI) -> Any:
     try:
         from .core.secret_validator import SecretValidationError, secret_validator
 
-        print("\n🔐 Validating application secrets...")
+        logger.info("🔐 Validating application secrets...")
 
         if not secret_validator.validate_env_secrets():
-            print("\n⚠️  WARNING: Weak secrets detected!")
-            print("In production, the application will refuse to start.")
+            logger.warning("⚠️  WARNING: Weak secrets detected!")
+            logger.warning("In production, the application will refuse to start.")
             if is_production():
-                print("\n❌ Production mode requires strong secrets. Exiting.")
+                logger.error("❌ Production mode requires strong secrets. Exiting.")
                 raise SystemExit(1)
     except SecretValidationError as e:
-        print(f"\n❌ Secret validation failed: {e}")
+        logger.error(f"❌ Secret validation failed: {e}")
         if is_production():
             raise SystemExit(1)
     except ImportError:

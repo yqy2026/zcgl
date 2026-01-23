@@ -12,7 +12,7 @@ Note: Redis caching will be added in Phase 4 with proper async handling.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -113,8 +113,6 @@ class SecurityEventLogger:
                     )
                 db = SessionLocal()
                 should_close = True
-
-            db = cast(Session, db)  # type: ignore[redundant-cast]
 
             try:
                 event = SecurityEvent(
@@ -382,8 +380,6 @@ class SecurityEventLogger:
                 db = SessionLocal()
                 should_close = True
 
-            db = cast(Session, db)  # type: ignore[redundant-cast]
-
             try:
                 # Calculate time window
                 window_start = datetime.now() - timedelta(
@@ -441,8 +437,6 @@ class SecurityEventLogger:
                     )
                 db = SessionLocal()
                 should_close = True
-
-            db = cast(Session, db)  # type: ignore[redundant-cast]
 
             try:
                 # Calculate time window

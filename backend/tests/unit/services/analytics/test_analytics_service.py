@@ -85,7 +85,7 @@ class TestAnalyticsService:
         mock_generate_key.return_value = "test_key"
 
         result = analytics_service.get_comprehensive_analytics(
-            filters={}, use_cache=True
+            filters={}, should_use_cache=True
         )
 
         # 应该返回缓存数据
@@ -126,7 +126,7 @@ class TestAnalyticsService:
                 analytics_service.db.query.return_value.filter.return_value.all.return_value = mock_assets
 
                 result = analytics_service.get_comprehensive_analytics(
-                    filters={}, use_cache=False
+                    filters={}, should_use_cache=False
                 )
 
                 # 验证结果结构
@@ -253,7 +253,7 @@ class TestAnalyticsService:
 
         # 调用时使用缓存
         result = analytics_service.get_comprehensive_analytics(
-            filters={}, use_cache=True
+            filters={}, should_use_cache=True
         )
 
         # 验证缓存被设置

@@ -549,5 +549,5 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 运行测试  # pragma: no cover
     result = extract_fixed_rent_contract_info(test_text)  # pragma: no cover
-    print("固定租金提取器测试结果:")  # pragma: no cover
-    print(json.dumps(result, ensure_ascii=False, indent=2))  # pragma: no cover
+    logger.debug("固定租金提取器测试结果:")  # pragma: no cover
+    logger.debug(json.dumps(result, ensure_ascii=False, indent=2))  # pragma: no cover

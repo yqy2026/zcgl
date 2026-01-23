@@ -1,7 +1,7 @@
 export interface LoginFormData {
   username: string;
   password: string;
-  remember: boolean;
+  shouldRemember: boolean;
 }
 
 export interface LoginCredentials {
@@ -28,14 +28,10 @@ export interface User {
   locked_until?: string;
   employee_id?: string;
   default_organization_id?: string;
-  // 向后兼容的属性
-  fullName?: string;
+  // 关联数据
   roles?: Role[];
   organization?: Organization;
   permissions?: Permission[];
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Role {
@@ -43,9 +39,9 @@ export interface Role {
   name: string;
   description: string;
   permissions: Permission[];
-  isSystem: boolean;
-  createdAt: string;
-  updatedAt: string;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Permission {
@@ -54,14 +50,14 @@ export interface Permission {
   resource: string;
   action: string;
   description: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Organization {
   id: string;
   name: string;
-  parentId?: string;
+  parent_id?: string;
   level: number;
   path: string;
 }

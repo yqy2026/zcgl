@@ -32,10 +32,10 @@ router = APIRouter()
 @router.get("/comprehensive", summary="获取综合统计分析数据")
 async def get_comprehensive_analytics(
     request: Request,
-    include_deleted: bool = False,
+    should_include_deleted: bool = False,
     date_from: str | None = None,
     date_to: str | None = None,
-    use_cache: bool = True,
+    should_use_cache: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
@@ -54,7 +54,7 @@ async def get_comprehensive_analytics(
     try:
         # 构建筛选条件
         filters: dict[str, Any] = {
-            "include_deleted": include_deleted,
+            "include_deleted": should_include_deleted,
         }
 
         if date_from is not None:
@@ -66,7 +66,7 @@ async def get_comprehensive_analytics(
         service = AnalyticsService(db)
         result = service.get_comprehensive_analytics(
             filters=filters,
-            use_cache=use_cache,
+            should_use_cache=should_use_cache,
             current_user=current_user,
         )
 
@@ -184,7 +184,7 @@ async def get_trend_data(
     time_dimension: str = Query(
         "monthly", description="时间维度: daily, weekly, monthly, quarterly, yearly"
     ),
-    include_deleted: bool = False,
+    should_include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
@@ -194,10 +194,10 @@ async def get_trend_data(
     Args:
         trend_type: 趋势类型 (occupancy, area, financial)
         time_dimension: 时间维度
-        include_deleted: 是否包含已删除数据
+        should_include_deleted: 是否包含已删除数据
     """
     try:
-        filters = {"include_deleted": include_deleted}
+        filters = {"include_deleted": should_include_deleted}
 
         service = AnalyticsService(db)
         trend_data = service.calculate_trend(
@@ -230,7 +230,7 @@ async def get_distribution_data(
     distribution_type: str = Query(
         ..., description="分布类型: property_nature, business_category, usage_status"
     ),
-    include_deleted: bool = False,
+    should_include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
@@ -239,10 +239,10 @@ async def get_distribution_data(
 
     Args:
         distribution_type: 分布类型 (property_nature, business_category, usage_status)
-        include_deleted: 是否包含已删除数据
+        should_include_deleted: 是否包含已删除数据
     """
     try:
-        filters = {"include_deleted": include_deleted}
+        filters = {"include_deleted": should_include_deleted}
 
         service = AnalyticsService(db)
         distribution = service.calculate_distribution(
@@ -268,7 +268,7 @@ async def get_distribution_data(
 async def export_analytics(
     request: Request,
     export_format: str = Query("excel", description="导出格式: excel, csv, pdf"),
-    include_deleted: bool = False,
+    should_include_deleted: bool = False,
     date_from: str | None = None,
     date_to: str | None = None,
     db: Session = Depends(get_db),
@@ -283,7 +283,7 @@ async def export_analytics(
     try:
         # 构建筛选条件
         filters: dict[str, Any] = {
-            "include_deleted": include_deleted,
+            "include_deleted": should_include_deleted,
         }
 
         if date_from is not None:
@@ -295,7 +295,7 @@ async def export_analytics(
         service = AnalyticsService(db)
         result = service.get_comprehensive_analytics(
             filters=filters,
-            use_cache=False,  # 导出时不使用缓存
+            should_use_cache=False,  # 导出时不使用缓存
             current_user=current_user,
         )
 

@@ -61,7 +61,7 @@ def test_upload_extract_confirm_flow(db_session: Session):
                     "asset_link_id": None,
                     "create_new_asset": False,
                     "owners": [],
-                    "verified": True,
+                    "is_verified": True,
                 }
 
                 response = client.post(

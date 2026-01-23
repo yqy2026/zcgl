@@ -137,7 +137,7 @@ async def download_backup(backup_name: str) -> FileResponse:
 @router.post("/restore/{backup_name}", summary="恢复数据备份")
 async def restore_backup(
     backup_name: str,
-    confirm: bool = Query(False, description="确认恢复操作"),
+    should_confirm: bool = Query(False, description="确认恢复操作"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
@@ -145,14 +145,14 @@ async def restore_backup(
 
     Args:
         backup_name: 备份名称
-        confirm: 确认恢复操作
+        should_confirm: 确认恢复操作
         db: 数据库会话
 
     Returns:
         恢复结果信息
     """
     try:
-        if not confirm:
+        if not should_confirm:
             raise bad_request("请确认恢复操作，这将覆盖当前数据")
 
         # 使用BackupService恢复备份

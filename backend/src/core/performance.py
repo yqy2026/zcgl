@@ -189,14 +189,14 @@ class QueryOptimizer:
                 query_name=query_name, duration_ms=duration_ms
             )
 
-    def optimize_asset_query(self, include_related: bool = False) -> Any:
+    def optimize_asset_query(self, should_include_related: bool = False) -> Any:
         """优化资产查询"""
         with self.query_with_monitoring("optimized_asset_query"):
             from ..models.asset import Asset
 
             query = self.db.query(Asset)
 
-            if include_related:
+            if should_include_related:
                 # 使用joinedload避免N+1查询
                 query = query.options(
                     joinedload(Asset.project), joinedload(Asset.ownership)
@@ -298,7 +298,7 @@ class CacheManager:
         """检查缓存是否过期"""
         if not cache_item:
             return True
-        return datetime.now(UTC) > cache_item["expires_at"]  # type: ignore[no-any-return]
+        return bool(datetime.now(UTC) > cache_item["expires_at"])
 
     def _cleanup_expired(self) -> None:
         """清理过期缓存"""

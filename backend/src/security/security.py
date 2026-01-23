@@ -313,7 +313,9 @@ class FileValidator:
                 if signature in file_content.lower():
                     raise BusinessValidationError(
                         "检测到可疑文件内容",
-                        details={"signature": signature.decode("utf-8", errors="ignore")},
+                        details={
+                            "signature": signature.decode("utf-8", errors="ignore")
+                        },
                     )
 
             # 额外检查：文件内容是否为空
@@ -429,7 +431,7 @@ class RateLimiter:
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or RateLimitConfig.DEFAULT_LIMITS
-        self.request_times: dict[str, deque] = defaultdict(deque)
+        self.request_times: dict[str, deque[float]] = defaultdict(deque)
         self.blocked_ips: dict[str, float] = {}
         self.lock = Lock()
 
@@ -450,7 +452,10 @@ class RateLimiter:
         with self.lock:
             # 检查自动封禁
             if client_ip in self.blocked_ips:
-                if current_time - self.blocked_ips[client_ip] < RateLimitConfig.AUTO_BLOCK_DURATION:
+                if (
+                    current_time - self.blocked_ips[client_ip]
+                    < RateLimitConfig.AUTO_BLOCK_DURATION
+                ):
                     return False
                 else:
                     del self.blocked_ips[client_ip]
@@ -492,7 +497,7 @@ class TokenBucketRateLimiter:
     def __init__(self, rate: float = 10.0, capacity: int = 100) -> None:
         self.rate = rate  # 令牌生成速率 (tokens/sec)
         self.capacity = capacity  # 桶容量
-        self.tokens = capacity  # 当前令牌数
+        self.tokens: float = float(capacity)  # 当前令牌数
         self.last_update = time()
         self.lock = Lock()
 
@@ -523,7 +528,7 @@ class AdaptiveRateLimiter:
         )
         self.lock = Lock()
 
-    def check_rate_limit(self, client_ip: str) -> bool:
+    def check_rate_limit(self, client_ip: str, is_suspicious: bool = False) -> bool:
         """基于错误率的自适应限流"""
         with self.lock:
             stats = self.request_stats[client_ip]
@@ -538,12 +543,13 @@ class AdaptiveRateLimiter:
             stats["count"] += 1
 
             # 计算错误率
-            error_rate = (
-                stats["errors"] / stats["count"] if stats["count"] > 0 else 0
-            )
+            error_rate = stats["errors"] / stats["count"] if stats["count"] > 0 else 0
 
             # 如果错误率过高，限制请求
-            max_error_rate = self.config.get("max_error_rate", 0.3)
+            if is_suspicious:
+                max_error_rate = self.config.get("suspicious_max_error_rate", 0.1)
+            else:
+                max_error_rate = self.config.get("max_error_rate", 0.3)
             if error_rate > max_error_rate:
                 return False
 
@@ -560,8 +566,8 @@ class RequestLimiter:
 
     def __init__(self) -> None:
         self.config = get_config("request_limit", {})
-        self.request_counts: dict[str, dict[str, Any]] = defaultdict(
-            lambda: {"count": 0, "last_reset": time()}
+        self.request_counts: dict[str, dict[str, float]] = defaultdict(
+            lambda: {"count": 0.0, "last_reset": time()}
         )
         self.lock = Lock()
 
@@ -579,7 +585,12 @@ class RequestLimiter:
             request_info["count"] += 1
 
             # 获取限制配置
-            max_requests = self.config.get("max_requests_per_minute", 100)
+            max_requests_raw = self.config.get("max_requests_per_minute", 100)
+            max_requests = (
+                float(max_requests_raw)
+                if isinstance(max_requests_raw, (int, float))
+                else 100.0
+            )
 
             return request_info["count"] <= max_requests
 
@@ -822,17 +833,8 @@ class RequestSecurity:
         if not isinstance(input_data, str):
             return input_data
 
-        # 移除潜在的危险字符
-        sanitized = re.sub(r'[<>"\'&]', "", input_data)
-
-        # 防止SQL注入
-        sanitized = re.sub(
-            r"(\s|^)(select|insert|update|delete|drop|alter|exec|script)\s",
-            "",
-            sanitized,
-            flags=re.IGNORECASE,
-        )
-
+        sanitized = input_data.replace("\x00", "")
+        sanitized = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", "", sanitized)
         return sanitized.strip()
 
     @staticmethod
@@ -919,8 +921,10 @@ class FieldValidator:
         if not model_class:
             raise InvalidRequestError(
                 f"未知的模型: {model_name}",
-                model_name=model_name,
-                details={"available_models": list(MODEL_REGISTRY.keys())},
+                details={
+                    "model_name": model_name,
+                    "available_models": list(MODEL_REGISTRY.keys()),
+                },
             )
 
         return model_class
@@ -961,6 +965,27 @@ class FieldValidator:
         return is_valid
 
     @staticmethod
+    def validate_filter_fields(
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
+    ) -> tuple[list[str], list[str]]:
+        valid_fields: list[str] = []
+        invalid_fields: list[str] = []
+
+        for field in fields:
+            if FieldValidator.validate_field(model_name, field, raise_on_invalid=False):
+                valid_fields.append(field)
+            else:
+                invalid_fields.append(field)
+
+        if invalid_fields and raise_on_invalid:
+            raise InvalidRequestError(
+                "不允许按字段查询",
+                details={"invalid_fields": invalid_fields},
+            )
+
+        return valid_fields, invalid_fields
+
+    @staticmethod
     def validate_sort_field(
         model_name: str, field: str, raise_on_invalid: bool = True
     ) -> bool:
@@ -994,6 +1019,29 @@ class FieldValidator:
             )
 
         return is_valid
+
+    @staticmethod
+    def validate_search_fields(
+        model_name: str, fields: list[str], raise_on_invalid: bool = True
+    ) -> tuple[list[str], list[str]]:
+        valid_fields: list[str] = []
+        invalid_fields: list[str] = []
+
+        for field in fields:
+            if FieldValidator.validate_search_field(
+                model_name, field, raise_on_invalid=False
+            ):
+                valid_fields.append(field)
+            else:
+                invalid_fields.append(field)
+
+        if invalid_fields and raise_on_invalid:
+            raise InvalidRequestError(
+                "不允许按字段搜索",
+                details={"invalid_fields": invalid_fields},
+            )
+
+        return valid_fields, invalid_fields
 
     @staticmethod
     def validate_search_field(
@@ -1064,6 +1112,43 @@ class FieldValidator:
             )
 
         return is_valid
+
+    @staticmethod
+    def sanitize_filters(
+        model_name: str, filters: dict[str, Any], strict: bool = False
+    ) -> dict[str, Any]:
+        valid_fields, invalid_fields = FieldValidator.validate_filter_fields(
+            model_name, list(filters.keys()), raise_on_invalid=False
+        )
+
+        if invalid_fields and strict:
+            raise InvalidRequestError(
+                "不允许按字段查询",
+                details={"invalid_fields": invalid_fields},
+            )
+
+        return {
+            field: value for field, value in filters.items() if field in valid_fields
+        }
+
+    @staticmethod
+    def get_allowed_fields(model_name: str, field_type: str) -> list[str]:
+        model_class = FieldValidator._get_model_class(model_name)
+        whitelist = get_whitelist_for_model(model_class)
+
+        if field_type == "filter":
+            fields = whitelist.filter_fields
+        elif field_type == "search":
+            fields = whitelist.search_fields
+        elif field_type == "sort":
+            fields = whitelist.sort_fields
+        else:
+            raise InvalidRequestError(
+                f"未知的字段类型: {field_type}",
+                details={"field_type": field_type},
+            )
+
+        return sorted(fields)
 
 
 # 创建全局实例

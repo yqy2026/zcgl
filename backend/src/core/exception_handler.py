@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from ..constants.message_constants import ErrorMessages
 
@@ -539,6 +540,23 @@ class ExceptionHandler:
 
 # 全局异常处理器实例
 exception_handler = ExceptionHandler()
+
+
+def handle_service_exception(
+    error: Exception, service_name: str, operation: str
+) -> None:
+    logger.error(f"{service_name} - {operation} failed", exc_info=error)
+
+    if isinstance(error, IntegrityError):
+        error_message = str(error).lower()
+        if "unique constraint" in error_message or "unique violation" in error_message:
+            raise DuplicateResourceError(service_name, "id", "duplicate")
+        raise BusinessValidationError("数据完整性错误")
+
+    if isinstance(error, ValueError | TypeError):
+        raise BusinessValidationError("数据验证失败")
+
+    raise error
 
 
 def not_found(

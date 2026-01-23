@@ -12,7 +12,7 @@ const componentLogger = createLogger('AssetFormContext');
 export interface AssetFormContextValue {
   form: FormInstance;
   mode: 'create' | 'edit';
-  loading: boolean;
+  isLoading: boolean;
   showAdvanced: boolean;
   setShowAdvanced: (show: boolean) => void;
   completionRate: number;
@@ -42,14 +42,14 @@ export function useAssetFormContext(): AssetFormContextValue {
 interface AssetFormProviderProps {
   form: FormInstance;
   mode: 'create' | 'edit';
-  loading: boolean;
+  isLoading: boolean;
   children: React.ReactNode;
 }
 
 export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
   form,
   mode,
-  loading,
+  isLoading,
   children,
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -117,7 +117,7 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
   const value: AssetFormContextValue = {
     form,
     mode,
-    loading,
+    isLoading,
     showAdvanced,
     setShowAdvanced,
     completionRate,

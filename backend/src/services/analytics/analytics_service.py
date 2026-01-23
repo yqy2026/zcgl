@@ -39,7 +39,7 @@ class AnalyticsService:
     def get_comprehensive_analytics(
         self,
         filters: dict[str, Any] | None = None,
-        use_cache: bool = True,
+        should_use_cache: bool = True,
         current_user: "User | None" = None,
     ) -> dict[str, Any]:
         """
@@ -49,7 +49,7 @@ class AnalyticsService:
 
         Args:
             filters: 筛选条件
-            use_cache: 是否使用缓存
+            should_use_cache: 是否使用缓存
             current_user: 当前用户（用于权限控制）
 
         Returns:
@@ -60,7 +60,7 @@ class AnalyticsService:
 
         # 尝试从缓存获取
         cache_key = self._generate_cache_key(validated_filters)
-        if use_cache:
+        if should_use_cache:
             cached_result = self.cache.get(cache_key)
             if cached_result is not None:
                 logger.info(f"从缓存返回分析结果: {cache_key}")
@@ -70,7 +70,7 @@ class AnalyticsService:
         result = self._calculate_analytics(validated_filters)
 
         # 存入缓存
-        if use_cache:
+        if should_use_cache:
             self.cache.set(cache_key, result, ttl=3600)  # 1小时缓存
 
         return result

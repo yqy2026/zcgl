@@ -233,7 +233,7 @@ async def get_dashboard_data(
 
 @router.get("/comprehensive", summary="获取综合统计")
 async def get_comprehensive_statistics(
-    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
@@ -250,7 +250,7 @@ async def get_comprehensive_statistics(
     """
     # 构建筛选条件
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 获取资产数据

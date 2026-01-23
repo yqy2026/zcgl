@@ -29,16 +29,16 @@ class BackupInfo(BaseModel):
 class BackupResponse(BaseModel):
     """备份响应模型"""
 
-    success: bool = Field(..., description="操作是否成功")
+    is_success: bool = Field(..., description="操作是否成功")
     message: str = Field(..., description="响应消息")
     backup_info: BackupInfo | None = Field(None, description="备份信息")
-    async_backup: bool = Field(False, description="是否异步备份")
+    is_async_backup: bool = Field(False, description="是否异步备份")
 
 
 class BackupListResponse(BaseModel):
     """备份列表响应模型"""
 
-    success: bool = Field(..., description="操作是否成功")
+    is_success: bool = Field(..., description="操作是否成功")
     message: str = Field(..., description="响应消息")
     backups: list[BackupInfo] = Field(..., description="备份文件列表")
     total_count: int = Field(..., description="备份文件总数")
@@ -47,7 +47,7 @@ class BackupListResponse(BaseModel):
 class BackupInfoResponse(BaseModel):
     """备份信息响应模型"""
 
-    success: bool = Field(..., description="操作是否成功")
+    is_success: bool = Field(..., description="操作是否成功")
     message: str = Field(..., description="响应消息")
     info: BackupInfo | None = Field(None, description="备份详细信息")
 
@@ -56,15 +56,15 @@ class RestoreRequest(BaseModel):
     """恢复请求模型"""
 
     backup_filename: str = Field(..., description="要恢复的备份文件名")
-    confirm: bool = Field(False, description="确认恢复操作")
+    should_confirm: bool = Field(False, description="确认恢复操作")
 
 
 class RestoreResponse(BaseModel):
     """恢复响应模型"""
 
-    success: bool = Field(..., description="操作是否成功")
+    is_success: bool = Field(..., description="操作是否成功")
     message: str = Field(..., description="响应消息")
-    restored: bool = Field(..., description="是否已恢复")
+    is_restored: bool = Field(..., description="是否已恢复")
     safety_backup: str | None = Field(None, description="安全备份文件路径")
 
 
@@ -73,8 +73,8 @@ class BackupConfig(BaseModel):
 
     backup_dir: str = Field(..., description="备份目录")
     max_backups: int = Field(..., description="最大备份数量")
-    compress: bool = Field(..., description="是否压缩")
-    auto_backup_enabled: bool = Field(..., description="是否启用自动备份")
+    should_compress: bool = Field(..., description="是否压缩")
+    is_auto_backup_enabled: bool = Field(..., description="是否启用自动备份")
     backup_interval_hours: int = Field(..., description="自动备份间隔（小时）")
     backup_retention_days: int = Field(..., description="备份保留天数")
 
@@ -84,7 +84,7 @@ class SchedulerStatus(BaseModel):
 
     is_running: bool = Field(..., description="是否运行中")
     last_backup_time: str | None = Field(None, description="上次备份时间")
-    auto_backup_enabled: bool = Field(..., description="是否启用自动备份")
+    is_auto_backup_enabled: bool = Field(..., description="是否启用自动备份")
     backup_interval_hours: int = Field(..., description="备份间隔（小时）")
     backup_retention_days: int = Field(..., description="备份保留天数")
     max_backups: int = Field(..., description="最大备份数量")
@@ -93,6 +93,6 @@ class SchedulerStatus(BaseModel):
 class SchedulerStatusResponse(BaseModel):
     """调度器状态响应模型"""
 
-    success: bool = Field(..., description="操作是否成功")
+    is_success: bool = Field(..., description="操作是否成功")
     message: str = Field(..., description="响应消息")
     status: SchedulerStatus = Field(..., description="调度器状态")

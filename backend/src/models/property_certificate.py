@@ -147,8 +147,8 @@ class PropertyCertificate(Base):
     extraction_source: Mapped[str] = mapped_column(
         String(20), default="manual", comment="数据来源：llm/manual"
     )
-    verified: Mapped[bool] = mapped_column(
-        Boolean, default=False, comment="是否人工审核"
+    is_verified: Mapped[bool] = mapped_column(
+        "verified", Boolean, default=False, comment="是否人工审核"
     )
 
     # Basic information

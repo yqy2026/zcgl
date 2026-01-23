@@ -6,7 +6,7 @@ Token Blacklist Manager 单元测试
 import time
 from datetime import datetime, timedelta
 
-from src.core.token_blacklist import TokenBlacklistManager, blacklist_manager
+from src.security.token_blacklist import TokenBlacklistManager, blacklist_manager
 
 
 class TestTokenBlacklistManager:

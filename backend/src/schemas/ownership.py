@@ -86,7 +86,7 @@ class OwnershipListResponse(BaseModel):
     items: list[OwnershipResponse]
     total: int
     page: int
-    size: int
+    page_size: int
     pages: int
 
 
@@ -104,7 +104,7 @@ class OwnershipSearchRequest(BaseModel):
     keyword: str | None = Field(None, title="搜索关键词")
     is_active: bool | None = Field(None, title="状态")
     page: int = Field(1, title="页码", ge=1)
-    size: int = Field(10, title="页面大小", ge=1, le=100)
+    page_size: int = Field(10, title="每页大小", ge=1, le=100)
 
 
 class OwnershipStatisticsResponse(BaseModel):

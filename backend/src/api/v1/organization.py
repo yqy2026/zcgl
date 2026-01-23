@@ -117,7 +117,7 @@ async def get_organization(
 @router.get("/{org_id}/children", response_model=list[OrganizationResponse])
 async def get_organization_children(
     org_id: str,
-    recursive: bool = Query(False, description="是否递归获取所有子组织"),
+    is_recursive: bool = Query(False, description="是否递归获取所有子组织"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:

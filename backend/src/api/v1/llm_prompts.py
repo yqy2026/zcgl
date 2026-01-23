@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ...core.middleware.auth import get_current_active_user
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
 from ...models.auth import User
 from ...models.llm_prompt import PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import (
@@ -296,7 +296,7 @@ def get_statistics(
 @router.post("/feedback")
 async def collect_feedback(
     *,
-    db: Session,
+    db: Session = Depends(get_db),
     template_id: str,
     field_name: str,
     original_value: str,

@@ -3,7 +3,7 @@
  * 提供测试覆盖率数据的API调用封装
  */
 
-import { ApiResponse } from '@/types/api';
+import { StandardApiResponse } from '@/types/apiResponse';
 
 // 类型定义
 export interface CoverageMetrics {
@@ -125,7 +125,7 @@ class TestCoverageService {
   /**
    * 获取当前测试覆盖率报告
    */
-  async getCurrentCoverageReport(): Promise<ApiResponse<CoverageReport>> {
+  async getCurrentCoverageReport(): Promise<StandardApiResponse<CoverageReport>> {
     const response = await fetch(`${this.baseUrl}/report`);
     if (!response.ok) {
       throw new Error(`获取覆盖率报告失败: ${response.statusText}`);
@@ -140,7 +140,7 @@ class TestCoverageService {
   /**
    * 获取覆盖率趋势数据
    */
-  async getCoverageTrend(days: number = 30): Promise<ApiResponse<CoverageTrend[]>> {
+  async getCoverageTrend(days: number = 30): Promise<StandardApiResponse<CoverageTrend[]>> {
     const response = await fetch(`${this.baseUrl}/trend?days=${days}`);
     if (!response.ok) {
       throw new Error(`获取覆盖率趋势失败: ${response.statusText}`);
@@ -158,7 +158,7 @@ class TestCoverageService {
   async getModuleCoverage(
     minCoverage: number = 0,
     maxCoverage: number = 100
-  ): Promise<ApiResponse<CoverageMetrics[]>> {
+  ): Promise<StandardApiResponse<CoverageMetrics[]>> {
     const params = new URLSearchParams({
       min_coverage: minCoverage.toString(),
       max_coverage: maxCoverage.toString(),
@@ -177,7 +177,7 @@ class TestCoverageService {
   /**
    * 获取覆盖率阈值配置
    */
-  async getCoverageThresholds(): Promise<ApiResponse<CoverageThreshold>> {
+  async getCoverageThresholds(): Promise<StandardApiResponse<CoverageThreshold>> {
     const response = await fetch(`${this.baseUrl}/thresholds`);
     if (!response.ok) {
       throw new Error(`获取覆盖率阈值失败: ${response.statusText}`);
@@ -194,7 +194,7 @@ class TestCoverageService {
    */
   async updateCoverageThresholds(
     thresholds: CoverageThreshold
-  ): Promise<ApiResponse<CoverageThreshold>> {
+  ): Promise<StandardApiResponse<CoverageThreshold>> {
     const response = await fetch(`${this.baseUrl}/thresholds`, {
       method: 'PUT',
       headers: {
@@ -215,7 +215,7 @@ class TestCoverageService {
   /**
    * 检查质量门禁状态
    */
-  async checkQualityGate(): Promise<ApiResponse<QualityGateResult>> {
+  async checkQualityGate(): Promise<StandardApiResponse<QualityGateResult>> {
     const response = await fetch(`${this.baseUrl}/quality-gate`);
     if (!response.ok) {
       throw new Error(`检查质量门禁失败: ${response.statusText}`);
@@ -232,7 +232,7 @@ class TestCoverageService {
    */
   async createCoverageReport(
     report: Omit<CoverageReport, 'generated_at'>
-  ): Promise<ApiResponse<{ report_id: number }>> {
+  ): Promise<StandardApiResponse<{ report_id: number }>> {
     const response = await fetch(`${this.baseUrl}/report`, {
       method: 'POST',
       headers: {
@@ -253,7 +253,7 @@ class TestCoverageService {
   /**
    * 删除覆盖率报告
    */
-  async deleteCoverageReport(reportId: number): Promise<ApiResponse<null>> {
+  async deleteCoverageReport(reportId: number): Promise<StandardApiResponse<null>> {
     const response = await fetch(`${this.baseUrl}/reports/${reportId}`, {
       method: 'DELETE',
     });
@@ -269,7 +269,7 @@ class TestCoverageService {
   /**
    * 获取测试执行报告
    */
-  async getTestExecutionReport(executionId?: string): Promise<ApiResponse<TestExecutionReport[]>> {
+  async getTestExecutionReport(executionId?: string): Promise<StandardApiResponse<TestExecutionReport[]>> {
     const url =
       executionId !== null && executionId !== undefined && executionId !== ''
         ? `${this.baseUrl}/test-execution/${executionId}`
@@ -295,7 +295,7 @@ class TestCoverageService {
     module?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ApiResponse<{ defects: DefectReport[]; total: number }>> {
+  }): Promise<StandardApiResponse<{ defects: DefectReport[]; total: number }>> {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -321,7 +321,7 @@ class TestCoverageService {
    */
   async createDefectReport(
     defect: Omit<DefectReport, 'defect_id' | 'created_at' | 'updated_at'>
-  ): Promise<ApiResponse<DefectReport>> {
+  ): Promise<StandardApiResponse<DefectReport>> {
     const response = await fetch(`${this.baseUrl}/defects`, {
       method: 'POST',
       headers: {
@@ -345,7 +345,7 @@ class TestCoverageService {
   async updateDefectReport(
     defectId: string,
     updates: Partial<DefectReport>
-  ): Promise<ApiResponse<DefectReport>> {
+  ): Promise<StandardApiResponse<DefectReport>> {
     const response = await fetch(`${this.baseUrl}/defects/${defectId}`, {
       method: 'PUT',
       headers: {
@@ -367,7 +367,7 @@ class TestCoverageService {
    * 获取测试覆盖率统计摘要
    */
   async getCoverageSummary(): Promise<
-    ApiResponse<{
+    StandardApiResponse<{
       overall_coverage: number;
       backend_coverage: number;
       frontend_coverage: number;
@@ -410,7 +410,7 @@ class TestCoverageService {
     time_range?: string;
     sort_by?: 'execution_time' | 'memory_usage' | 'cpu_usage';
   }): Promise<
-    ApiResponse<{
+    StandardApiResponse<{
       slow_tests: TestPerformanceMetrics[];
       memory_intensive_tests: TestPerformanceMetrics[];
       cpu_intensive_tests: TestPerformanceMetrics[];
@@ -461,7 +461,7 @@ class TestCoverageService {
     specific_modules?: string[];
     parallel?: boolean;
   }): Promise<
-    ApiResponse<{
+    StandardApiResponse<{
       scan_id: string;
       status: 'started' | 'queued';
       estimated_duration: number;
@@ -492,7 +492,7 @@ class TestCoverageService {
    * 获取扫描状态
    */
   async getScanStatus(scanId: string): Promise<
-    ApiResponse<{
+    StandardApiResponse<{
       scan_id: string;
       status: 'running' | 'completed' | 'failed' | 'cancelled';
       progress: number;

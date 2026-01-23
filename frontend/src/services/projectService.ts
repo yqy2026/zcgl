@@ -24,7 +24,7 @@ import type {
 } from '@/types/project';
 
 export class ProjectService {
-  private baseUrl = API_ENDPOINTS.PROJECT.LIST.replace(/^\//, '');
+  private baseUrl = API_ENDPOINTS.PROJECT.LIST;
 
   // ==================== 基础CRUD操作 ====================
 
@@ -33,7 +33,7 @@ export class ProjectService {
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
     try {
-      const result = await apiClient.post<ProjectListResponse>('search', searchParams, {
+      const result = await apiClient.post<ProjectListResponse>(`${this.baseUrl}/search`, searchParams, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -54,7 +54,7 @@ export class ProjectService {
    */
   async getProject(id: string): Promise<Project> {
     try {
-      const result = await apiClient.get<Project>(`${this.baseUrl}/${id}`, {
+      const result = await apiClient.get<Project>(API_ENDPOINTS.PROJECT.DETAIL(id), {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -79,7 +79,7 @@ export class ProjectService {
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
-        size: params?.size ?? 10,
+        pageSize: params?.pageSize ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
         ownership_id: params?.ownership_id,
@@ -129,7 +129,7 @@ export class ProjectService {
    */
   async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
     try {
-      const result = await apiClient.put<Project>(`${this.baseUrl}/${id}`, data, {
+      const result = await apiClient.put<Project>(API_ENDPOINTS.PROJECT.UPDATE(id), data, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
       });
@@ -151,7 +151,7 @@ export class ProjectService {
   async deleteProject(id: string): Promise<ProjectDeleteResponse> {
     try {
       const result = await apiClient.delete<ProjectDeleteResponse>(
-        `${this.baseUrl}/${id}`,
+        API_ENDPOINTS.PROJECT.DELETE(id),
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -176,8 +176,8 @@ export class ProjectService {
    */
   async toggleProjectStatus(id: string): Promise<Project> {
     try {
-      const result = await apiClient.post<Project>(
-        `${this.baseUrl}/${id}/toggle-status`,
+      const result = await apiClient.put<Project>(
+        `${this.baseUrl}/${id}/status`,
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -201,7 +201,7 @@ export class ProjectService {
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
     try {
-      const result = await apiClient.get<ProjectStatisticsResponse>('statistics/summary', {
+      const result = await apiClient.get<ProjectStatisticsResponse>(`${this.baseUrl}/stats/overview`, {
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -321,7 +321,7 @@ export class ProjectService {
    */
   async getProjectCount(params?: ProjectSearchParams): Promise<number> {
     try {
-      const result = await this.getProjects({ ...params, size: 1 });
+      const result = await this.getProjects({ ...params, pageSize: 1 });
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

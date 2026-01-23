@@ -162,8 +162,8 @@ class ProjectService:
             "items": items,
             "total": total,
             "page": search_params.page,
-            "size": search_params.size,
-            "pages": (total + search_params.size - 1) // search_params.size,
+            "page_size": search_params.page_size,
+            "pages": (total + search_params.page_size - 1) // search_params.page_size,
         }
 
 

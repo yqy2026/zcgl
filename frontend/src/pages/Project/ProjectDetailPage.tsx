@@ -69,7 +69,7 @@ const ProjectDetailPage: React.FC = () => {
       assetService.getAssets({
         project_id: id,
         page: 1,
-        limit: 100,
+        pageSize: 100,
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });

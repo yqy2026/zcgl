@@ -86,7 +86,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查用户是否激活
-  if (user !== undefined && user !== null && user.isActive === false) {
+  if (user !== undefined && user !== null && user.is_active === false) {
     return (
       <Result
         status="403"

@@ -41,7 +41,7 @@ class TestBatchUpdateAssets:
         update_request = {
             "asset_ids": ["id1", "id2", "id3"],
             "updates": {"status": "active"},
-            "update_all": False,
+            "should_update_all": False,
         }
 
         response = client.post("/api/v1/assets/batch-update", json=update_request)
@@ -70,7 +70,7 @@ class TestBatchUpdateAssets:
 
         update_request = {
             "updates": {"status": "active"},
-            "update_all": True,
+            "should_update_all": True,
         }
 
         response = client.post("/api/v1/assets/batch-update", json=update_request)
@@ -87,7 +87,7 @@ class TestBatchUpdateAssets:
         update_request = {
             "asset_ids": [],
             "updates": {"status": "active"},
-            "update_all": False,
+            "should_update_all": False,
         }
 
         response = client.post("/api/v1/assets/batch-update", json=update_request)

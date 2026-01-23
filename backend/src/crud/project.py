@@ -71,11 +71,6 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
         # 部门筛选 - Schema doesn't have it. Removed.
 
-        # 日期范围 - Schema doesn't have it directly? No start_date_from in helper schema I viewed.
-        # But maybe I missed it.
-        # Viewed schema ProjectSearchRequest (lines 221-233) has: keyword, is_active, project_type, project_status, city, ownership_id, ownership_entity, page, size.
-        # No date params!
-
         # Ownership filter
         if search_params.ownership_id:
             # Complex join might be needed? Or simplified text check if ownership_entity is stored text.
@@ -91,8 +86,8 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         query = query.order_by(desc(Project.created_at))
 
         # 分页
-        skip = (search_params.page - 1) * search_params.size
-        items = query.offset(skip).limit(search_params.size).all()
+        skip = (search_params.page - 1) * search_params.page_size
+        items = query.offset(skip).limit(search_params.page_size).all()
 
         return items, total
 

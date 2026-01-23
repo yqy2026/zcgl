@@ -155,7 +155,7 @@ class RentContractService:
         *,
         original_contract_id: str,
         new_contract_data: RentContractCreate,
-        transfer_deposit: bool = True,
+        should_transfer_deposit: bool = True,
         operator: str | None = None,
         operator_id: str | None = None,
     ) -> RentContract:
@@ -233,7 +233,7 @@ class RentContractService:
         *,
         contract_id: str,
         termination_date: date,
-        refund_deposit: bool = True,
+        should_refund_deposit: bool = True,
         deduction_amount: Decimal = Decimal("0"),
         termination_reason: str | None = None,
         operator: str | None = None,

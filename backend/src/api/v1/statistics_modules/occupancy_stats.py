@@ -36,8 +36,8 @@ router = APIRouter()
 
 @router.get("/occupancy-rate/overall", response_model=OccupancyRateStatsResponse)
 def get_overall_occupancy_rate(
-    include_deleted: bool = False,
-    use_aggregation: bool = True,
+    should_include_deleted: bool = False,
+    should_use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> OccupancyRateStatsResponse:
@@ -50,7 +50,7 @@ def get_overall_occupancy_rate(
     - 占用率百分比
 
     Args:
-        include_deleted: 是否包含已删除的资产
+        should_include_deleted: 是否包含已删除的资产
         use_aggregation: 是否使用数据库聚合查询（推荐，性能更好）
         db: 数据库会话
 
@@ -58,12 +58,12 @@ def get_overall_occupancy_rate(
         整体出租率统计信息
     """
     logger.info(
-        f"开始计算整体出租率，包含已删除: {include_deleted}, 使用聚合: {use_aggregation}"
+        f"开始计算整体出租率，包含已删除: {should_include_deleted}, 使用聚合: {use_aggregation}"
     )
 
     # 构建筛选条件
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 使用 OccupancyService 计算占用率
@@ -86,8 +86,8 @@ def get_overall_occupancy_rate(
 )
 def get_occupancy_rate_by_category(
     category_field: str = "business_category",
-    include_deleted: bool = False,
-    use_aggregation: bool = True,
+    should_include_deleted: bool = False,
+    should_use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> CategoryOccupancyRateListResponse:
@@ -125,7 +125,7 @@ def get_occupancy_rate_by_category(
 
     # 构建筛选条件
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 使用 OccupancyService 计算分类占用率

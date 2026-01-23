@@ -93,7 +93,7 @@ const RentLedgerPage: React.FC = () => {
       try {
         const response = await rentContractService.getRentLedgers({
           page: state.pagination.current,
-          limit: state.pagination.pageSize,
+          pageSize: state.pagination.pageSize,
           ...state.filters,
           ...params,
         });
@@ -143,7 +143,7 @@ const RentLedgerPage: React.FC = () => {
   const loadReferenceData = useCallback(async () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ limit: 100 }),
+        assetService.getAssets({ pageSize: 100 }),
         ownershipService.getOwnerships({ size: 100 }),
       ]);
 
@@ -178,7 +178,7 @@ const RentLedgerPage: React.FC = () => {
     }));
     void loadLedgers({
       page: pagination.current ?? 1,
-      limit: pagination.pageSize ?? 10,
+      pageSize: pagination.pageSize ?? 10,
     });
   };
 

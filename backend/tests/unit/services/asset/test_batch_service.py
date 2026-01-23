@@ -428,7 +428,7 @@ class TestBatchUpdateAll:
 
     @patch("src.services.asset.batch_service.asset_crud")
     def test_batch_update_all_flag(self, mock_asset_crud, batch_service, mock_db):
-        """测试 update_all=True 标志"""
+        """测试 should_update_all=True 标志"""
         mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, None)
         mock_asset_crud.get.side_effect = mock_assets
@@ -438,7 +438,7 @@ class TestBatchUpdateAll:
             result = batch_service.batch_update(
                 asset_ids=None,
                 updates={"usage_status": "出租"},
-                update_all=True,
+                should_update_all=True,
             )
 
             assert result.total_count == 3
@@ -454,7 +454,7 @@ class TestBatchUpdateAll:
         result = batch_service.batch_update(
             asset_ids=None,
             updates={"usage_status": "出租"},
-            update_all=True,
+            should_update_all=True,  # Updated parameter name: update_all -> should_update_all
         )
 
         assert result.total_count == 0

@@ -89,7 +89,7 @@ class ContactListResponse(BaseModel):
     items: list[ContactResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
     pages: int
 
 

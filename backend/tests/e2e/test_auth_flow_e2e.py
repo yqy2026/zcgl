@@ -46,10 +46,10 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
 
     # Debug: print response if not successful
     if login_response.status_code != 200:
-        print(f"\n=== Login Failed ===")
+        print("\n=== Login Failed ===")
         print(f"Status: {login_response.status_code}")
         print(f"Response: {login_response.text}")
-        print(f"===================\n")
+        print("===================\n")
 
     assert login_response.status_code == 200
     data = login_response.json()
@@ -72,10 +72,10 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     me_response = client.get("/api/v1/auth/me", headers=headers)
 
     if me_response.status_code != 200:
-        print(f"\n=== /me endpoint failed ===")
+        print("\n=== /me endpoint failed ===")
         print(f"Status: {me_response.status_code}")
         print(f"Response: {me_response.text}")
-        print(f"===================\n")
+        print("===================\n")
 
     assert me_response.status_code == 200, (
         f"Failed to access protected endpoint: {me_response.text}"

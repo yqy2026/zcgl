@@ -332,7 +332,7 @@ class TestSearchProjects:
         search_params = ProjectSearchRequest(
             keyword="测试",
             page=1,
-            size=10,
+            page_size=10,
         )
 
         mock_items = [MagicMock(), MagicMock()]
@@ -344,7 +344,7 @@ class TestSearchProjects:
             assert result is not None
             assert result["total"] == 2
             assert result["page"] == 1
-            assert result["size"] == 10
+            assert result["page_size"] == 10
             assert result["pages"] == 1
 
     def test_search_projects_pagination(self, project_service, mock_db):
@@ -352,7 +352,7 @@ class TestSearchProjects:
         search_params = ProjectSearchRequest(
             keyword="",
             page=2,
-            size=20,
+            page_size=20,
         )
 
         mock_items = [MagicMock()]
@@ -369,7 +369,7 @@ class TestSearchProjects:
         search_params = ProjectSearchRequest(
             keyword="不存在",
             page=1,
-            size=10,
+            page_size=10,
         )
 
         with patch("src.crud.project.project_crud.search", return_value=([], 0)):

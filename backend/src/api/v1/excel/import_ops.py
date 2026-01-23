@@ -13,8 +13,6 @@ from sqlalchemy.orm import Session
 from ....config.excel_config import STANDARD_SHEET_NAME
 from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import BusinessValidationError
-from ....core.logging_security import security_auditor
-from ....core.security import security_middleware
 from ....crud.task import task_crud
 from ....database import get_db
 from ....enums.task import TaskStatus, TaskType
@@ -22,6 +20,8 @@ from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.excel_advanced import ExcelImportRequest
 from ....schemas.task import TaskCreate, TaskUpdate
+from ....security.logging_security import security_auditor
+from ....security.security import security_middleware
 from ....services.excel import ExcelImportService
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ router = APIRouter()
 @router.post("/import", summary="导入Excel数据（同步）")
 async def import_excel(
     file: UploadFile = File(...),
-    skip_errors: bool = Query(False, description="是否跳过错误行"),
+    should_skip_errors: bool = Query(False, description="是否跳过错误行"),
     sheet_name: str = Query(STANDARD_SHEET_NAME, description="Excel工作表名称"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -41,7 +41,7 @@ async def import_excel(
     从Excel文件导入资产数据（同步版本）
 
     - **file**: Excel文件
-    - **skip_errors**: 是否跳过错误行继续导入
+    - **should_skip_errors**: 是否跳过错误行继续导入
     - **sheet_name**: Excel工作表名称
     """
     # 安全验证文件
@@ -66,7 +66,7 @@ async def import_excel(
             "filename": file.filename,
             "size": file.size,
             "sheet_name": sheet_name,
-            "skip_errors": skip_errors,
+            "skip_errors": should_skip_errors,
         },
     )
 
@@ -85,7 +85,7 @@ async def import_excel(
         result = await import_service.import_assets_from_excel(
             file_path=tmp_file_path,
             sheet_name=sheet_name,
-            skip_errors=skip_errors,
+            should_skip_errors=should_skip_errors,
         )
 
         # 转换结果格式以匹配前端期望
@@ -216,10 +216,10 @@ async def _process_excel_import_async(
         result = await import_service.import_assets_from_excel(
             file_path=file_path,
             sheet_name=STANDARD_SHEET_NAME,
-            validate_data=request.validate_data,
-            create_assets=request.create_assets,
-            update_existing=request.update_existing,
-            skip_errors=request.skip_errors,
+            should_validate_data=request.should_validate_data,
+            should_create_assets=request.should_create_assets,
+            should_update_existing=request.should_update_existing,
+            should_skip_errors=request.should_skip_errors,
             batch_size=request.batch_size,
         )
 

@@ -181,6 +181,7 @@ export class ResponseExtractor {
       // 获取响应数据
       const responseData = response.data as ApiResponseData;
 
+
       // 开发模式下启用响应格式验证
       if (process.env.NODE_ENV === 'development' && finalOptions.detection?.strict !== false) {
         const validation = validateApiResponse(responseData);

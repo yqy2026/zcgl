@@ -9,6 +9,7 @@ FastAPI安全中间件
 import logging
 import time
 from collections import defaultdict
+from ipaddress import ip_address, ip_network
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -24,12 +25,12 @@ from ..core.exception_handler import (
     RateLimitError,
 )
 from ..core.ip_whitelist import ip_whitelist
-from ..core.logging_security import security_auditor
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
-from ..core.security import RateLimiter
+from ..security.logging_security import security_auditor
+from ..security.security import RateLimiter
 
 try:
-    from ..core.security import AdaptiveRateLimiter, adaptive_limiter
+    from ..security.security import AdaptiveRateLimiter, adaptive_limiter
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
@@ -76,6 +77,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self.request_count: dict[str, int] = defaultdict(int)
         self.blocked_ips: dict[str, float] = {}
         self.ip_whitelist = ip_whitelist
+        self.trusted_proxy_networks = self._load_trusted_proxies()
 
         # Initialize circuit breaker and rate limit strategy
         self.rate_limit_config = RateLimitConfig.from_env()
@@ -177,19 +179,54 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     def _get_client_ip(self, request: Request) -> str:
         """获取客户端真实IP"""
-        # 检查代理头部
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
+        client_host = request.client.host if request.client else None
+        if client_host and self._is_trusted_proxy(client_host):
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if forwarded_for:
+                forwarded_ip = forwarded_for.split(",")[0].strip()
+                if self._is_valid_ip(forwarded_ip):
+                    return forwarded_ip
 
-        real_ip = request.headers.get("X-Real-IP")
-        if real_ip:
-            return real_ip.strip()
+            real_ip = request.headers.get("X-Real-IP")
+            if real_ip and self._is_valid_ip(real_ip.strip()):
+                return real_ip.strip()
 
-        # 确保返回默认IP而不是None
-        if request.client:
-            return request.client.host
+        if client_host:
+            return client_host
         return "unknown"
+
+    def _is_trusted_proxy(self, ip: str) -> bool:
+        try:
+            client_ip = ip_address(ip)
+        except ValueError:
+            return False
+        return any(client_ip in network for network in self.trusted_proxy_networks)
+
+    def _is_valid_ip(self, ip: str) -> bool:
+        try:
+            ip_address(ip)
+            return True
+        except ValueError:
+            return False
+
+    def _load_trusted_proxies(self) -> list[Any]:
+        raw = self.config.get("trusted_proxies")
+        if not raw:
+            raw = [
+                "10.0.0.0/8",
+                "172.16.0.0/12",
+                "192.168.0.0/16",
+                "127.0.0.1/32",
+                "::1/128",
+            ]
+
+        networks: list[Any] = []
+        for entry in raw:
+            try:
+                networks.append(ip_network(entry))
+            except ValueError:
+                continue
+        return networks
 
     def _is_ip_blocked(self, ip: str) -> bool:
         """检查IP是否被封禁或不在白名单中"""

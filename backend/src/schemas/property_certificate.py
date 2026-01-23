@@ -118,7 +118,7 @@ class CertificateImportConfirm(BaseModel):
     session_id: str = Field(description="会话ID")
     extracted_data: dict[str, Any] = Field(description="提取的字段数据")
     asset_link_id: str | None = Field(default=None, description="关联的资产ID")
-    create_new_asset: bool = Field(default=False, description="是否创建新资产")
+    should_create_new_asset: bool = Field(default=False, description="是否创建新资产")
     owners: list[dict[str, Any]] = Field(default_factory=list, description="权利人列表")
 
     class Config:
@@ -156,7 +156,7 @@ class PropertyCertificateCreate(PropertyCertificateBase):
         default=None, description="LLM提取置信度"
     )
     extraction_source: str = Field(default="manual", description="数据来源")
-    verified: bool = Field(default=False, description="是否人工审核")
+    is_verified: bool = Field(default=False, description="是否人工审核")
 
 
 class PropertyCertificateUpdate(BaseModel):
@@ -180,7 +180,7 @@ class PropertyCertificateUpdate(BaseModel):
         default=None, description="LLM提取置信度"
     )
     extraction_source: str | None = Field(default=None, description="数据来源")
-    verified: bool | None = Field(default=None, description="是否人工审核")
+    is_verified: bool | None = Field(default=None, description="是否人工审核")
 
 
 class PropertyCertificateResponse(PropertyCertificateBase):
@@ -191,7 +191,7 @@ class PropertyCertificateResponse(PropertyCertificateBase):
         default=None, description="LLM提取置信度"
     )
     extraction_source: str = Field(description="数据来源")
-    verified: bool = Field(description="是否人工审核")
+    is_verified: bool = Field(description="是否人工审核")
     created_at: datetime = Field(description="创建时间")
     updated_at: datetime = Field(description="更新时间")
     created_by: str | None = Field(default=None, description="创建人ID")

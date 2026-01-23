@@ -83,8 +83,8 @@ class Settings(BaseSettings):
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=120, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
-    )  # 设置为120分钟以确保用户体验
+        default=30, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
+    )
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
         default=7, json_schema_extra={"env": "REFRESH_TOKEN_EXPIRE_DAYS"}
     )
@@ -620,7 +620,18 @@ settings = Settings()  # type: ignore[call-arg]
 if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover
     settings.DEBUG = False  # pragma: no cover
     settings.DATABASE_ECHO = False  # pragma: no cover
-    settings.CORS_ORIGINS = ["https://your-production-domain.com"]  # pragma: no cover
+    # 从环境变量读取生产域名，如未设置则使用默认值并记录警告
+    prod_origins = os.getenv("CORS_ORIGINS", "")  # pragma: no cover
+    if prod_origins:  # pragma: no cover
+        settings.CORS_ORIGINS = [
+            o.strip() for o in prod_origins.split(",")
+        ]  # pragma: no cover
+    else:  # pragma: no cover
+        import logging  # pragma: no cover
+
+        logging.getLogger(__name__).warning(  # pragma: no cover
+            "CORS_ORIGINS not set for production. Set CORS_ORIGINS env var."
+        )  # pragma: no cover
 elif os.getenv("ENVIRONMENT") == "development":  # pragma: no cover
     settings.DEBUG = True  # pragma: no cover
     settings.RELOAD = True  # pragma: no cover

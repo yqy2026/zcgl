@@ -204,7 +204,7 @@ class BackupService:
         self,
         backup_name: str,
         db_path: str | None = None,
-        create_current_backup: bool = True,
+        should_create_current_backup: bool = True,
     ) -> dict[str, Any]:
         """
         从备份文件恢复数据
@@ -233,7 +233,7 @@ class BackupService:
 
             # 如果提供了数据库路径，进行真正的恢复
             if db_path:
-                if create_current_backup:
+                if should_create_current_backup:
                     # 创建当前状态的备份
                     current_backup = (
                         f"current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"

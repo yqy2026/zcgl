@@ -10,9 +10,9 @@ Created: 2026-01-17
 """
 
 import pytest
-from fastapi import HTTPException
 
-from src.core.security import FieldValidator
+from src.core.exception_handler import InvalidRequestError
+from src.security.security import FieldValidator
 
 
 class TestFieldFilteringValidation:
@@ -43,14 +43,14 @@ class TestFieldFilteringValidation:
         assert len(invalid) == 3
 
     def test_validate_asset_filter_fields_raise_exception(self):
-        """Test that invalid fields raise HTTPException in strict mode"""
-        with pytest.raises(HTTPException) as exc_info:
+        """Test that invalid fields raise InvalidRequestError in strict mode"""
+        with pytest.raises(InvalidRequestError) as exc_info:
             FieldValidator.validate_filter_fields(
                 "Asset", ["manager_name"], raise_on_invalid=True
             )
 
         assert exc_info.value.status_code == 400
-        assert "不允许查询字段" in exc_info.value.detail["message"]
+        assert "不允许按字段查询" in exc_info.value.message
 
     def test_validate_group_by_field_allowed(self):
         """Test that allowed group_by fields pass validation"""
@@ -71,14 +71,14 @@ class TestFieldFilteringValidation:
         assert is_valid is False
 
     def test_validate_group_by_field_raise_exception(self):
-        """Test that invalid group_by field raises HTTPException"""
-        with pytest.raises(HTTPException) as exc_info:
+        """Test that invalid group_by field raises InvalidRequestError"""
+        with pytest.raises(InvalidRequestError) as exc_info:
             FieldValidator.validate_group_by_field(
                 "Asset", "manager_name", raise_on_invalid=True
             )
 
         assert exc_info.value.status_code == 400
-        assert "不允许按字段分组" in exc_info.value.detail["message"]
+        assert "不允许按字段分组" in exc_info.value.message
 
     def test_sanitize_filters(self):
         """Test filter sanitization removes unauthorized fields"""
@@ -104,7 +104,7 @@ class TestFieldFilteringValidation:
             "manager_name": "张三",  # Blocked
         }
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(InvalidRequestError):
             FieldValidator.sanitize_filters("Asset", filters, strict=True)
 
     def test_get_allowed_fields(self):
@@ -124,12 +124,12 @@ class TestFieldFilteringValidation:
 
     def test_validate_unknown_model(self):
         """Test that unknown model raises ValueError"""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             FieldValidator.validate_filter_fields(
                 "UnknownModel", ["field1"], raise_on_invalid=False
             )
 
-        assert "Unknown model" in str(exc_info.value)
+        assert "未知的模型" in str(exc_info.value)
 
     def test_validate_search_fields_allowed(self):
         """Test search field validation for allowed fields"""
@@ -174,7 +174,7 @@ class TestProductionConfigValidation:
 
     def test_weak_secret_key_patterns_detected(self):
         """Test that weak SECRET_KEY patterns are detected"""
-        from src.core.jwt_security import jwt_security
+        from src.security.jwt_security import jwt_security
 
         weak_keys = [
             "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
@@ -189,7 +189,7 @@ class TestProductionConfigValidation:
 
     def test_strong_secret_key_passes_validation(self):
         """Test that strong SECRET_KEY passes validation"""
-        from src.core.jwt_security import jwt_security
+        from src.security.jwt_security import jwt_security
 
         # Generate a strong key
         strong_key = jwt_security.generate_secure_secret()
@@ -200,7 +200,7 @@ class TestProductionConfigValidation:
 
     def test_short_secret_key_rejected(self):
         """Test that short SECRET_KEY is rejected"""
-        from src.core.jwt_security import jwt_security
+        from src.security.jwt_security import jwt_security
 
         short_key = "short"
 

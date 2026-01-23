@@ -14,8 +14,8 @@ class ExtractionRequest(BaseModel):
     """PDF信息提取请求模型 (V1兼容)"""
 
     text: str
-    include_raw_text: bool = Field(default=False, description="是否包含原始文本")
-    validate_fields: bool = Field(default=True, description="是否验证字段有效性")
+    should_include_raw_text: bool = Field(default=False, description="是否包含原始文本")
+    should_validate_fields: bool = Field(default=True, description="是否验证字段有效性")
 
 
 class ExtractionResponse(BaseModel):

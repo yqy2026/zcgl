@@ -13,7 +13,7 @@ const dictLogger = createLogger('useDictionary');
 
 interface UseDictionaryResult {
   options: DictionaryOption[];
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
@@ -55,7 +55,7 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
 
   return {
     options,
-    loading: isLoading,
+    isLoading: isLoading,
     error: errorMessage,
     refresh,
   };
@@ -103,7 +103,7 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
 
     results[dictType] = {
       options,
-      loading: isLoading,
+      isLoading: isLoading,
       error: errorMessage,
       refresh: async () => {
         // This is a limitation - individual refresh not supported with useQueries
@@ -120,10 +120,10 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
  */
 export const useDictionaryManager = () => {
   const [types, setTypes] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const loadTypes = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const configs = dictionaryService.getAvailableTypes();
       const typeCodes = configs.map(config => config.code);
@@ -131,7 +131,7 @@ export const useDictionaryManager = () => {
     } catch (error) {
       dictLogger.error('获取字典类型失败:', error as Error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
@@ -180,7 +180,7 @@ export const useDictionaryManager = () => {
 
   return {
     types,
-    loading,
+    isLoading,
     createDictionary,
     deleteDictionary,
     refresh: loadTypes,

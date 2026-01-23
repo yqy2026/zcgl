@@ -21,7 +21,7 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LoggerConfig {
-  enabled: boolean;
+  isEnabled: boolean;
   level: LogLevel;
   prefix?: string;
   useTimestamp?: boolean;
@@ -40,7 +40,7 @@ class Logger {
     const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.DEV;
 
     this.config = {
-      enabled: isDevelopment,
+      isEnabled: isDevelopment,
       level: isDevelopment ? 'debug' : 'error',
       useTimestamp: isDevelopment,
       ...config,
@@ -48,7 +48,7 @@ class Logger {
   }
 
   private shouldLog(level: LogLevel): boolean {
-    if (this.config.enabled === false) return false;
+    if (this.config.isEnabled === false) return false;
     return this.levels[level] >= this.levels[this.config.level];
   }
 
@@ -133,8 +133,8 @@ class Logger {
   /**
    * 临时启用/禁用日志
    */
-  setEnabled(enabled: boolean): void {
-    this.config.enabled = enabled;
+  setEnabled(isEnabled: boolean): void {
+    this.config.isEnabled = isEnabled;
   }
 
   /**

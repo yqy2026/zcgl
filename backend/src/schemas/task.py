@@ -81,7 +81,7 @@ class TaskListResponse(BaseModel):
     items: list[TaskResponse] = Field(..., description="任务列表")
     total: int = Field(..., description="总数")
     page: int = Field(..., description="页码")
-    limit: int = Field(..., description="每页数量")
+    page_size: int = Field(..., description="每页大小")
     pages: int = Field(..., description="总页数")
 
     model_config = ConfigDict(

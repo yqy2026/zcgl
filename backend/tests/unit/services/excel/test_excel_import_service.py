@@ -70,9 +70,9 @@ class TestExcelImportServiceErrorHandling:
 
             result = await excel_service.import_assets_from_excel(
                 file_path="test.xlsx",
-                validate_data=True,
-                create_assets=False,
-                skip_errors=True,
+                should_validate_data=True,
+                should_create_assets=False,
+                should_skip_errors=True,
             )
 
             assert result["total"] == 2
@@ -113,9 +113,9 @@ class TestExcelImportServiceErrorHandling:
             with pytest.raises(BusinessValidationError) as excinfo:
                 await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
-                    validate_data=True,
-                    create_assets=False,
-                    skip_errors=False,
+                    should_validate_data=True,
+                    should_create_assets=False,
+                    should_skip_errors=False,
                 )
 
             assert "验证失败" in str(excinfo.value)
@@ -146,9 +146,9 @@ class TestExcelImportServiceErrorHandling:
 
             result = await excel_service.import_assets_from_excel(
                 file_path="test.xlsx",
-                validate_data=True,
-                create_assets=True,
-                update_existing=False,
+                should_validate_data=True,
+                should_create_assets=True,
+                should_update_existing=False,
             )
 
             assert result["success"] == 1
@@ -199,9 +199,9 @@ class TestExcelImportServiceErrorHandling:
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
-                    validate_data=True,
-                    create_assets=True,
-                    skip_errors=True,
+                    should_validate_data=True,
+                    should_create_assets=True,
+                    should_skip_errors=True,
                     batch_size=50,
                 )
 
@@ -270,9 +270,9 @@ class TestExcelImportServiceErrorHandling:
                 with pytest.raises(Exception) as excinfo:
                     await excel_service.import_assets_from_excel(
                         file_path="test.xlsx",
-                        validate_data=True,
-                        create_assets=True,
-                        skip_errors=False,
+                        should_validate_data=True,
+                        should_create_assets=True,
+                        should_skip_errors=False,
                     )
 
                 assert "创建失败" in str(excinfo.value)
@@ -308,8 +308,8 @@ class TestExcelImportServiceErrorHandling:
 
             result = await excel_service.import_assets_from_excel(
                 file_path="test.xlsx",
-                validate_data=True,
-                create_assets=False,
+                should_validate_data=True,
+                should_create_assets=False,
             )
 
             # 日期解析失败不应导致整行失败
@@ -612,9 +612,9 @@ class TestUpdateExistingAssets:
             ) as mock_crud:
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
-                    validate_data=True,
-                    create_assets=True,
-                    update_existing=True,
+                    should_validate_data=True,
+                    should_create_assets=True,
+                    should_update_existing=True,
                 )
 
                 assert result["updated_assets"] == 1
@@ -651,9 +651,9 @@ class TestUpdateExistingAssets:
             ) as mock_crud:
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
-                    validate_data=True,
-                    create_assets=True,
-                    update_existing=False,
+                    should_validate_data=True,
+                    should_create_assets=True,
+                    should_update_existing=False,
                 )
 
                 assert result["updated_assets"] == 0
@@ -836,8 +836,8 @@ class TestWarningsCollection:
 
             result = await excel_service.import_assets_from_excel(
                 file_path="test.xlsx",
-                validate_data=True,
-                create_assets=False,
+                should_validate_data=True,
+                should_create_assets=False,
             )
 
             assert len(result["warnings"]) == 1

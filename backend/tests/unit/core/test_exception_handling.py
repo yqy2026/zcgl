@@ -10,8 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from src.core.exception_handler import (
     BusinessValidationError,
     DuplicateResourceError,
+    handle_service_exception,
 )
-from src.core.exception_helpers import handle_service_exception
 
 
 class TestExceptionHelpers:

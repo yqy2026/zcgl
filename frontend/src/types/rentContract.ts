@@ -293,6 +293,7 @@ export interface RentStatisticsQuery {
 export interface RentContractQueryParams {
   page?: number;
   limit?: number;
+  pageSize?: number;
   contract_number?: string;
   tenant_name?: string;
   asset_id?: string;
@@ -305,6 +306,7 @@ export interface RentContractQueryParams {
 export interface RentLedgerQueryParams {
   page?: number;
   limit?: number;
+  pageSize?: number;
   contract_id?: string;
   asset_id?: string;
   ownership_id?: string;
@@ -319,7 +321,7 @@ export interface PaginatedResponse<T> {
   items: T[];
   total: number;
   page: number;
-  limit: number;
+  pageSize: number;
   pages: number;
 }
 

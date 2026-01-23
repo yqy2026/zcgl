@@ -128,7 +128,7 @@ class PropertyCertificateService:
                 "certificate_type": extraction_data.get("certificate_type", "房产证"),
                 "extraction_confidence": extraction_data.get("confidence", 0.0),
                 "extraction_source": "llm",
-                "verified": False,  # 需要人工审核
+                "is_verified": False,  # 需要人工审核
                 # 基本信息
                 "registration_date": self._parse_date(
                     extraction_data.get("registration_date")

@@ -17,12 +17,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.security import FieldValidator
 from ....crud.asset import asset_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.statistics import ChartDataItem, DistributionResponse
+from ....security.security import FieldValidator
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ async def get_usage_status_distribution(
 @router.get("/asset-distribution", summary="获取资产分布统计")
 async def get_asset_distribution(
     group_by: str = Query("ownership_status", description="分组字段"),
-    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
@@ -237,7 +237,7 @@ async def get_asset_distribution(
 
     # 构建筛选条件
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 获取资产数据

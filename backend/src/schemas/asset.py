@@ -64,7 +64,9 @@ class AssetBase(BaseModel):
         None, ge=0, description="非经营物业面积（平方米）"
     )
     # occupancy_rate 已移除，改为计算字段
-    include_in_occupancy_rate: bool = Field(True, description="是否计入出租率统计")
+    should_include_in_occupancy_rate: bool = Field(
+        True, description="是否计入出租率统计"
+    )
 
     # 用途相关字段
     certificated_usage: str | None = Field(None, max_length=100, description="证载用途")
@@ -214,7 +216,7 @@ class AssetUpdate(BaseModel):
         None, ge=0, description="非经营物业面积（平方米）"
     )
     # occupancy_rate 已移除，改为计算字段
-    include_in_occupancy_rate: bool | None = Field(
+    should_include_in_occupancy_rate: bool | None = Field(
         None, description="是否计入出租率统计"
     )
 
@@ -331,7 +333,9 @@ class AssetResponseBase(BaseModel):
     non_commercial_area: Decimal | None = Field(
         None, description="非经营物业面积（平方米）"
     )
-    include_in_occupancy_rate: bool = Field(True, description="是否计入出租率统计")
+    should_include_in_occupancy_rate: bool = Field(
+        True, description="是否计入出租率统计"
+    )
 
     # 用途相关字段
     certificated_usage: str | None = Field(None, description="证载用途")
@@ -397,8 +401,10 @@ class AssetListResponse(BaseModel):
     items: list[AssetResponse] = Field(..., description="资产列表")
     total: int = Field(..., description="总记录数")
     page: int = Field(..., description="当前页码")
-    limit: int = Field(..., description="每页记录数")
+    page_size: int = Field(..., serialization_alias="pageSize", description="每页记录数")
     pages: int = Field(..., description="总页数")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class AssetHistoryResponse(BaseModel):
@@ -539,7 +545,7 @@ class AssetBatchUpdateRequest(BaseModel):
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
     updates: dict[str, Any] = Field(..., description="更新数据")
-    update_all: bool = Field(False, description="是否更新所有资产")
+    should_update_all: bool = Field(False, description="是否更新所有资产")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -589,8 +595,8 @@ class AssetImportRequest(BaseModel):
 
     data: list[dict[str, Any]] = Field(..., description="待导入的资产数据列表")
     import_mode: str = Field("create", description="导入模式：create/merge/update")
-    skip_errors: bool = Field(False, description="是否跳过错误数据")
-    dry_run: bool = Field(False, description="是否仅验证不实际导入")
+    should_skip_errors: bool = Field(False, description="是否跳过错误数据")
+    is_dry_run: bool = Field(False, description="是否仅验证不实际导入")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 

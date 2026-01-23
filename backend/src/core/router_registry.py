@@ -30,8 +30,8 @@ class RouteRegistry:
         version: str | None = "v1",
         middleware: list[Callable[..., Any]] | None = None,
         dependencies: list[Any] | None = None,
-        include_in_schema: bool = True,
-        deprecated: bool = False,
+        should_include_in_schema: bool = True,
+        is_deprecated: bool = False,
     ) -> None:
         """
         注册路由器
@@ -43,8 +43,8 @@ class RouteRegistry:
             version: API版本
             middleware: 中间件列表
             dependencies: 依赖注入列表
-            include_in_schema: 是否包含在API文档中
-            deprecated: 是否已废弃
+            should_include_in_schema: 是否包含在API文档中
+            is_deprecated: 是否已废弃
         """
         router_config = {
             "router": router,
@@ -52,8 +52,8 @@ class RouteRegistry:
             "tags": tags,
             "middleware": middleware or [],
             "dependencies": dependencies or [],
-            "include_in_schema": include_in_schema,
-            "deprecated": deprecated,
+            "include_in_schema": should_include_in_schema,
+            "deprecated": is_deprecated,
             "version": version,
         }
 

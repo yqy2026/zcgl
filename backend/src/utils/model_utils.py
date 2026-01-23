@@ -14,13 +14,15 @@ from sqlalchemy.orm import Mapper, class_mapper
 SQLAlchemyModel = Any
 
 
-def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any] | None:
+def model_to_dict(
+    model: Any, should_include_relations: bool = False
+) -> dict[str, Any] | None:
     """
     通用的模型转字典工具函数
 
     Args:
         model: SQLAlchemy模型实例
-        include_relations: 是否包含关联关系数据
+        should_include_relations: 是否包含关联关系数据
 
     Returns:
         转换后的字典，如果model为None则返回None
@@ -44,7 +46,7 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
             result[column] = value
 
     # 处理关联关系
-    if include_relations:
+    if should_include_relations:
         for rel in mapper.relationships:
             rel_value = getattr(model, rel.key)
             if rel_value is not None:
@@ -65,14 +67,14 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
 
 
 def batch_to_dict(
-    models: list[Any], include_relations: bool = False
+    models: list[Any], should_include_relations: bool = False
 ) -> list[dict[str, Any]]:
     """
     批量转换模型为字典
 
     Args:
         models: SQLAlchemy模型实例列表
-        include_relations: 是否包含关联关系数据
+        should_include_relations: 是否包含关联关系数据
 
     Returns:
         转换后的字典列表
@@ -80,7 +82,7 @@ def batch_to_dict(
     return [
         model_dict
         for model in models
-        if (model_dict := model_to_dict(model, include_relations)) is not None
+        if (model_dict := model_to_dict(model, should_include_relations)) is not None
     ]
 
 

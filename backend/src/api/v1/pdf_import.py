@@ -16,24 +16,30 @@ import logging
 
 from fastapi import APIRouter
 
-from . import (
-    pdf_sessions,
-    pdf_system,
-    pdf_upload,
-    pdf_v1_compatibility,
-)
-
 logger = logging.getLogger(__name__)
+from . import pdf_system, pdf_upload
+
+pdf_sessions = None
+try:
+    from . import pdf_sessions
+except ImportError as exc:
+    logger.warning("PDF会话模块不可用: %s", exc)
+
+pdf_v1_compatibility = None
+try:
+    from . import pdf_v1_compatibility
+except ImportError as exc:
+    logger.warning("PDF兼容模块不可用: %s", exc)
 
 # 创建主路由器
 router = APIRouter()
 
 # 包含子路由器
 router.include_router(pdf_upload.router, tags=["PDF上传"])
-router.include_router(pdf_sessions.router, tags=["PDF会话管理"])
-# router.include_router(pdf_quality_routes.router, tags=["PDF质量评估"])  # 模块不存在
-router.include_router(pdf_v1_compatibility.router, tags=["PDF兼容性"])
-# router.include_router(pdf_performance_routes.router, tags=["PDF性能监控"])  # 模块不存在
+if pdf_sessions is not None:
+    router.include_router(pdf_sessions.router, tags=["PDF会话管理"])
+if pdf_v1_compatibility is not None:
+    router.include_router(pdf_v1_compatibility.router, tags=["PDF兼容性"])
 router.include_router(pdf_system.router, tags=["PDF系统信息"])
 
 logger.info("PDF导入API主路由初始化完成，包含4个子模块")

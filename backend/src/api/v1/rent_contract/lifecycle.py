@@ -29,7 +29,7 @@ def renew_contract(
     *,
     db: Session = Depends(get_db),
     new_contract_data: RentContractCreate,
-    transfer_deposit: bool = True,
+    should_transfer_deposit: bool = True,
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
@@ -63,7 +63,7 @@ def terminate_contract(
     *,
     db: Session = Depends(get_db),
     termination_date: date,
-    refund_deposit: bool = True,
+    should_refund_deposit: bool = True,
     deduction_amount: float = 0.0,
     termination_reason: str | None = None,
     current_user: User = Depends(get_current_active_user),

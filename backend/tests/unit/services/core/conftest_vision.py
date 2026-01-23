@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_httpx_async_client():
     """Auto-mock httpx.AsyncClient for all vision service tests"""
     # Create mock client that can be used as async context manager

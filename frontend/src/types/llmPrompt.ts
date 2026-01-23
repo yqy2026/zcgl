@@ -108,7 +108,7 @@ export interface PromptTemplateListResponse {
   items: PromptTemplate[];
   total: number;
   page: number;
-  limit: number;
+  pageSize: number;
   pages: number;
 }
 

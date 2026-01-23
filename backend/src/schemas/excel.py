@@ -46,7 +46,7 @@ class ExcelImportStatus(BaseModel):
 class ExcelValidationResponse(BaseModel):
     """Excel验证响应模型"""
 
-    valid: bool = Field(..., description="文件是否有效")
+    is_valid: bool = Field(..., description="文件是否有效")
     total_rows: int = Field(..., description="总行数")
     total_columns: int = Field(..., description="总列数")
     errors: list[str] = Field(default_factory=list[Any], description="验证错误列表")
@@ -60,7 +60,7 @@ class ExcelExportRequest(BaseModel):
     filters: dict[str, Any] | None = Field(None, description="筛选条件")
     columns: list[str] | None = Field(None, description="要导出的列")
     format: str = Field("xlsx", description="导出格式", pattern="^(xlsx|xls|csv)$")
-    include_headers: bool = Field(True, description="是否包含表头")
+    should_include_headers: bool = Field(True, description="是否包含表头")
 
 
 class ExcelExportResponse(BaseModel):
@@ -108,13 +108,13 @@ class ImportConfiguration(BaseModel):
     sheet_name: str = Field("土地物业资产数据", description="工作表名称")
     start_row: int = Field(1, description="开始行号（从1开始）")
     header_row: int = Field(1, description="表头行号")
-    skip_empty_rows: bool = Field(True, description="是否跳过空行")
+    should_skip_empty_rows: bool = Field(True, description="是否跳过空行")
     max_errors: int = Field(100, description="最大错误数")
     batch_size: int = Field(1000, description="批处理大小")
     mapping_rules: list[DataMappingRule] = Field(
         default_factory=list[Any], description="字段映射规则"
     )
-    validation_enabled: bool = Field(True, description="是否启用数据验证")
+    is_validation_enabled: bool = Field(True, description="是否启用数据验证")
     duplicate_handling: str = Field(
         "skip", description="重复数据处理方式", pattern="^(skip|update|error)$"
     )

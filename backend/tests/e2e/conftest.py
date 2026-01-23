@@ -32,9 +32,9 @@ def create_test_user(
     This function creates users directly in the database, bypassing the API
     to avoid the chicken-and-egg problem of needing authentication to create users.
     """
+    from src.database import Base
     from src.models.auth import User
     from src.services.core.password_service import PasswordService
-    from src.database import Base
 
     # Ensure tables exist (for in-memory databases)
     Base.metadata.create_all(bind=db_session.bind)

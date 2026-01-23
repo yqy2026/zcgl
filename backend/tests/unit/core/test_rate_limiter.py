@@ -6,7 +6,7 @@
 
 import time
 
-from src.core.security import RateLimiter
+from src.security.security import RateLimiter
 
 
 class TestRateLimiterBasics:

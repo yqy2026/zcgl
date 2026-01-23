@@ -250,7 +250,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         analytics_service.cache.get = MagicMock(return_value=mock_cache_data)
 
         result = analytics_service.get_comprehensive_analytics(
-            filters={}, use_cache=True
+            filters={}, should_use_cache=True
         )
 
         assert result == mock_cache_data
@@ -285,7 +285,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         )
 
         result = analytics_service.get_comprehensive_analytics(
-            filters={}, use_cache=True
+            filters={}, should_use_cache=True
         )
 
         assert "total_assets" in result
@@ -320,7 +320,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
         filters = {"include_deleted": False, "date_from": "2024-01-01"}
         result = analytics_service.get_comprehensive_analytics(
-            filters=filters, use_cache=False
+            filters=filters, should_use_cache=False
         )
 
         assert "total_assets" in result
@@ -354,7 +354,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
                 filters = {"include_deleted": True}
                 result = analytics_service.get_comprehensive_analytics(
-                    filters=filters, use_cache=False
+                    filters=filters, should_use_cache=False
                 )
 
                 assert result["total_assets"] == 2
@@ -940,7 +940,7 @@ class TestServiceIntegration:
         )
 
         result = analytics_service.get_comprehensive_analytics(
-            filters={}, use_cache=True
+            filters={}, should_use_cache=True
         )
 
         # Verify integration
@@ -974,7 +974,7 @@ class TestServiceIntegration:
                 analytics_service.db.query.return_value.filter.return_value.all.return_value = mock_assets
 
                 result = analytics_service.get_comprehensive_analytics(
-                    filters={}, use_cache=True
+                    filters={}, should_use_cache=True
                 )
 
                 # Verify cache.set was called

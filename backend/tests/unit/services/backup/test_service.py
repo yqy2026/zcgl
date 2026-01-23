@@ -350,7 +350,9 @@ class TestRestoreBackup:
         backup_service.create_backup(backup_name="to_restore")
 
         result = backup_service.restore_backup(
-            backup_name="to_restore", db_path=None, create_current_backup=False
+            backup_name="to_restore",
+            db_path=None,
+            should_create_current_backup=False
         )
 
         assert result["restored_backup"] == "to_restore"
@@ -370,7 +372,7 @@ class TestRestoreBackup:
         result = backup_service.restore_backup(
             backup_name="restore_test",
             db_path=str(target_db),
-            create_current_backup=False,
+            should_create_current_backup=False,
         )
 
         assert result["restored_backup"] == "restore_test"
@@ -391,7 +393,7 @@ class TestRestoreBackup:
         result = backup_service.restore_backup(
             backup_name="restore_source",
             db_path=str(target_db),
-            create_current_backup=True,
+            should_create_current_backup=True,
         )
 
         assert result["restored_backup"] == "restore_source"
@@ -733,7 +735,7 @@ class TestBackupServiceIntegration:
         backup_service.restore_backup(
             backup_name="prod_snapshot",
             db_path=str(target_db),
-            create_current_backup=False,
+            should_create_current_backup=False,
         )
 
         # 验证已恢复

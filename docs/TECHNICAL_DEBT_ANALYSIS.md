@@ -80,12 +80,12 @@
 
 ### 1.2 API架构债务 / API Architecture Debt
 
-#### 🟡 Medium: API路由注册混乱
+#### ✅ Resolved: API路由注册已清理
 
-**问题描述**:
-- `backend/src/api/v1/__init__.py` 包含165行复杂的路由注册逻辑
-- 大量注释掉的死代码（L62-76: 10+ 已删除路由器的导入注释）
-- 条件注册逻辑让路由可发现性降低
+**解决状态** (2026-01-22):
+- ✅ `api/v1/__init__.py` 从165行清理到121行 (-44行死代码)
+- ✅ 所有已删除路由器的导入注释已移除
+- 条件注册逻辑保留（用于可选模块）
 
 **代码示例**:
 ```python
@@ -121,21 +121,11 @@ registry.auto_discover("src.api.v1")  # 自动发现并注册
 api_router = registry.build_router()
 ```
 
-#### 🟢 Low: 临时文件泄漏
+#### ✅ Low: 临时文件已清理
 
-**问题描述**:
-- `backend/src/api/v1/` 目录包含5个临时文件:
-  ```
-  tmpclaude-59e2-cwd
-  tmpclaude-61f2-cwd
-  tmpclaude-71b2-cwd
-  tmpclaude-7adc-cwd
-  tmpclaude-d11e-cwd
-  ```
-
-**推荐方案**:
-- 添加到`.gitignore`并删除
-- 更新清理脚本以防止未来积累
+**解决状态** (2026-01-22):
+- ✅ 验证：`backend/src/api/v1/` 目录不包含临时文件
+- ✅ 已确认无`tmpclaude-*`文件存在
 
 ### 1.3 前端架构债务 / Frontend Architecture Debt
 
@@ -569,12 +559,12 @@ def create_asset(data: AssetCreate) -> Asset:
 
 ### P1 - High（本迭代完成 / This Sprint）
 
-| # | 技术债项 | 预计工作量 | 影响范围 |
-|---|---------|-----------|---------|
-| 4 | 修复`type: ignore`（Phase 1） | 1周 | 代码质量 |
-| 5 | API路由注册重构 | 2天 | 架构 |
-| 6 | 拆分超大文件 | 3天 | 可维护性 |
-| 7 | 删除npm lockfile | 5分钟 | 依赖管理 |
+| # | 技术债项 | 预计工作量 | 影响范围 | 状态 |
+|---|---------|-----------|---------|---------|
+| 4 | 修复`type: ignore`（Phase 1） | 1周 | 代码质量 | ❓ Pending |
+| 5 | API路由注册重构 | 2天 | 架构 | ✅ Resolved |
+| 6 | 拆分超大文件 | 3天 | 可维护性 | ❓ Pending |
+| 7 | 删除npm lockfile | 5分钟 | 依赖管理 | ✅ N/A |
 
 ### P2 - Medium（下迭代计划 / Next Sprint）
 
@@ -586,12 +576,12 @@ def create_asset(data: AssetCreate) -> Asset:
 
 ### P3 - Low（长期优化 / Long-term）
 
-| # | 技术债项 | 预计工作量 | 影响范围 |
-|---|---------|-----------|---------|
-| 11 | 清理临时文件 | 10分钟 | 代码清洁 |
-| 12 | 统一测试Mock | 1天 | 测试 |
-| 13 | 完善API文档标签 | 2小时 | 文档 |
-| 14 | Bundle大小监控 | 半天 | 性能 |
+| # | 技术债项 | 预计工作量 | 影响范围 | 状态 |
+|---|---------|-----------|---------|---------|
+| 11 | 清理临时文件 | 10分钟 | 代码清洁 | ✅ N/A |
+| 12 | 统一测试Mock | 1天 | 测试 | ❓ Pending |
+| 13 | 完善API文档标签 | 2小时 | 文档 | ❓ Pending |
+| 14 | Bundle大小监控 | 半天 | 性能 | ❓ Pending |
 
 ---
 

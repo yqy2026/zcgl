@@ -11,7 +11,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from ..core.logging_security import SensitiveDataFilter, log_request_info
+from ..security.logging_security import SensitiveDataFilter, log_request_info
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

@@ -23,7 +23,7 @@ const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState<AssetSearchParams>({
     page: 1,
-    limit: 20,
+    pageSize: 20,
   });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -48,7 +48,7 @@ const AssetListPage: React.FC = () => {
   const handleReset = () => {
     setSearchParams({
       page: 1,
-      limit: 20,
+      pageSize: 20,
     });
   };
 
@@ -61,7 +61,7 @@ const AssetListPage: React.FC = () => {
     setSearchParams(prev => ({
       ...prev,
       page: pagination.current,
-      limit: pagination.pageSize,
+      pageSize: pagination.pageSize,
       sort_by: sorter.field,
       sort_order: sorter.order === 'ascend' ? 'asc' : 'desc',
     }));

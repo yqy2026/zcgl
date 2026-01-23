@@ -32,8 +32,8 @@ router = APIRouter()
 @cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]
 @router.get("/area-summary", response_model=AreaSummaryResponse)
 def get_area_summary(
-    include_deleted: bool = False,
-    use_aggregation: bool = True,
+    should_include_deleted: bool = False,
+    should_use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> AreaSummaryResponse:
@@ -54,7 +54,7 @@ def get_area_summary(
 
     # 构建筛选条件
     filters: dict[str, Any] = {}
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 使用 AreaService 计算面积汇总
@@ -77,7 +77,7 @@ async def get_area_statistics(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
-    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
@@ -108,7 +108,7 @@ async def get_area_statistics(
         filters["property_nature"] = property_nature
     if usage_status:
         filters["usage_status"] = usage_status
-    if not include_deleted:
+    if not should_include_deleted:
         filters["data_status"] = "正常"
 
     # 获取资产数据

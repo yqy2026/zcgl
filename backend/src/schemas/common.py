@@ -15,7 +15,7 @@ T = TypeVar("T")
 class BaseResponse[T](BaseModel):
     """基础响应模式"""
 
-    success: bool = Field(..., description="请求是否成功")
+    is_success: bool = Field(..., description="请求是否成功")
     message: str | None = Field(None, description="响应消息")
     data: T | None = Field(None, description="响应数据")
     timestamp: datetime = Field(
@@ -27,7 +27,7 @@ class BaseResponse[T](BaseModel):
 class ErrorResponse(BaseModel):
     """错误响应模式"""
 
-    success: bool = Field(False, description="请求失败")
+    is_success: bool = Field(False, description="请求失败")
     error: dict[str, Any] = Field(..., description="错误详情")
     message: str = Field(..., description="错误消息")
     timestamp: datetime = Field(
@@ -50,7 +50,7 @@ class PaginationInfo(BaseModel):
 class PaginatedResponse[T](BaseModel):
     """分页响应模式"""
 
-    success: bool = Field(True, description="请求是否成功")
+    is_success: bool = Field(True, description="请求是否成功")
     message: str | None = Field(None, description="响应消息")
     data: list[T] = Field(..., description="数据列表")
     pagination: PaginationInfo = Field(..., description="分页信息")
@@ -63,7 +63,7 @@ class PaginatedResponse[T](BaseModel):
 class BusinessValidationErrorResponse(BaseModel):
     """验证错误响应模式"""
 
-    success: bool = Field(False, description="请求失败")
+    is_success: bool = Field(False, description="请求失败")
     error: str = Field("validation_error", description="错误类型")
     message: str = Field("数据验证失败", description="错误消息")
     details: dict[str, list[str]] = Field(..., description="字段验证错误详情")
@@ -76,7 +76,7 @@ class BusinessValidationErrorResponse(BaseModel):
 class SuccessResponse[T](BaseModel):
     """成功响应模式"""
 
-    success: bool = Field(True, description="请求成功")
+    is_success: bool = Field(True, description="请求成功")
     message: str | None = Field("操作成功", description="成功消息")
     data: T | None = Field(None, description="响应数据")
     timestamp: datetime = Field(
@@ -88,7 +88,7 @@ class SuccessResponse[T](BaseModel):
 class CreatedResponse[T](BaseModel):
     """创建成功响应模式"""
 
-    success: bool = Field(True, description="创建成功")
+    is_success: bool = Field(True, description="创建成功")
     message: str = Field("创建成功", description="成功消息")
     data: T = Field(..., description="创建的数据")
     timestamp: datetime = Field(
@@ -100,7 +100,7 @@ class CreatedResponse[T](BaseModel):
 class UpdatedResponse[T](BaseModel):
     """更新成功响应模式"""
 
-    success: bool = Field(True, description="更新成功")
+    is_success: bool = Field(True, description="更新成功")
     message: str = Field("更新成功", description="成功消息")
     data: T | None = Field(None, description="更新后的数据")
     timestamp: datetime = Field(
@@ -112,7 +112,7 @@ class UpdatedResponse[T](BaseModel):
 class DeletedResponse(BaseModel):
     """删除成功响应模式"""
 
-    success: bool = Field(True, description="删除成功")
+    is_success: bool = Field(True, description="删除成功")
     message: str = Field("删除成功", description="成功消息")
     data: dict[str, Any] | None = Field(None, description="删除相关信息")
     timestamp: datetime = Field(
@@ -124,7 +124,7 @@ class DeletedResponse(BaseModel):
 class BatchOperationResponse(BaseModel):
     """批量操作响应模式"""
 
-    success: bool = Field(True, description="批量操作是否成功")
+    is_success: bool = Field(True, description="批量操作是否成功")
     message: str = Field("批量操作完成", description="操作消息")
     total_count: int = Field(..., ge=0, description="总操作数量")
     success_count: int = Field(..., ge=0, description="成功数量")
@@ -160,7 +160,7 @@ class ResponseBuilder:
     def success(data: Any | None = None, message: str | None = None) -> dict[str, Any]:
         """构建成功响应"""
         return {  # pragma: no cover
-            "success": True,  # pragma: no cover
+            "is_success": True,  # pragma: no cover
             "message": message or "操作成功",  # pragma: no cover
             "data": data,  # pragma: no cover
             "timestamp": datetime.now(UTC).isoformat(),  # pragma: no cover
@@ -174,7 +174,7 @@ class ResponseBuilder:
     ) -> dict[str, Any]:
         """构建错误响应"""
         return {  # pragma: no cover
-            "success": False,  # pragma: no cover
+            "is_success": False,  # pragma: no cover
             "message": message,  # pragma: no cover
             "error": {"code": error_code, "details": details or {}},  # pragma: no cover
             "timestamp": datetime.now(UTC).isoformat(),  # pragma: no cover
@@ -184,7 +184,7 @@ class ResponseBuilder:
     def validation_error(field_errors: dict[str, list[str]]) -> dict[str, Any]:
         """构建验证错误响应"""
         return {  # pragma: no cover
-            "success": False,  # pragma: no cover
+            "is_success": False,  # pragma: no cover
             "message": "数据验证失败",  # pragma: no cover
             "error": {
                 "code": "validation_error",
@@ -204,7 +204,7 @@ class ResponseBuilder:
         """构建分页响应"""
         total_pages = (total + page_size - 1) // page_size  # pragma: no cover
         return {  # pragma: no cover
-            "success": True,  # pragma: no cover
+            "is_success": True,  # pragma: no cover
             "message": message or "数据获取成功",  # pragma: no cover
             "data": data,  # pragma: no cover
             "pagination": {  # pragma: no cover
@@ -228,7 +228,7 @@ class ResponseBuilder:
     ) -> dict[str, Any]:
         """构建批量操作响应"""
         return {  # pragma: no cover
-            "success": failed_count == 0,  # pragma: no cover
+            "is_success": failed_count == 0,  # pragma: no cover
             "message": f"批量操作完成：成功 {success_count}，失败 {failed_count}",  # pragma: no cover
             "total_count": total_count,  # pragma: no cover
             "success_count": success_count,  # pragma: no cover
@@ -254,7 +254,7 @@ def create_error_response(
 ) -> ErrorResponse:
     """创建错误响应"""
     return ErrorResponse(  # pragma: no cover
-        success=False,
+        is_success=False,
         error={"code": error_code, "details": details or {}},
         message=message,
         request_id=None,  # pragma: no cover
@@ -275,7 +275,7 @@ def create_paginated_response[T](
         has_prev=page > 1,  # pragma: no cover
     )  # pragma: no cover
     return PaginatedResponse(
-        success=True,
+        is_success=True,
         data=data,
         pagination=pagination,
         message=message,

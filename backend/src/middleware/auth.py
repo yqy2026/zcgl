@@ -12,6 +12,7 @@ from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
 from ..core.cookie_auth import cookie_manager
 from ..core.exception_handler import bad_request, forbidden, unauthorized
@@ -33,19 +34,27 @@ def _is_token_blacklisted(jti: str) -> bool:
     检查token是否在黑名单中
     未来可以扩展为Redis缓存或数据库表
     """
-    try:
-        # 尝试从token黑名单模块导入
-        from ..core.token_blacklist import blacklist_manager
+    if not _token_blacklist_circuit.allow_request():
+        logger.warning("Token blacklist check degraded, allowing token")
+        return False
 
-        return blacklist_manager.is_blacklisted(jti)
+    try:
+        from ..security.token_blacklist import blacklist_manager
+
+        result = blacklist_manager.is_blacklisted(jti)
+        _token_blacklist_circuit.record_success()
+        return result
     except ImportError:
-        # 如果没有实现token黑名单，返回False
         logger.debug(f"Token blacklist not implemented, allowing token {jti}")
+        _token_blacklist_circuit.record_success()
         return False
     except Exception as e:
-        logger.error(f"Error checking token blacklist: {e}")
-        # 安全优先：出错时视为token在黑名单中，拒绝访问（fail-closed策略）
-        return True
+        _token_blacklist_circuit.record_failure()
+        logger.warning(f"Error checking token blacklist: {e}")
+        return False
+
+
+_token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
 
 
 # JWT配置
@@ -56,8 +65,8 @@ ALGORITHM = "HS256"
 def safe_role_compare(role_value: Any, target_role: Any) -> bool:
     """安全地比较角色值，支持字符串和枚举类型"""
     if isinstance(role_value, str):
-        return role_value == target_role.value  # type: ignore[no-any-return]
-    return role_value == target_role  # type: ignore[no-any-return]
+        return bool(role_value == target_role.value)
+    return bool(role_value == target_role)
 
 
 def get_current_user(

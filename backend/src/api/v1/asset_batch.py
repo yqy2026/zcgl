@@ -44,7 +44,7 @@ async def batch_update_assets(
 
     - **asset_ids**: 资产ID列表
     - **updates**: 更新数据字典
-    - **update_all**: 是否更新所有资产
+    - **should_update_all**: 是否更新所有资产
     """
     try:
         # 使用新的Service层
@@ -52,7 +52,7 @@ async def batch_update_assets(
         result = service.batch_update(
             asset_ids=request.asset_ids,
             updates=request.updates,
-            update_all=request.update_all,
+            should_update_all=request.should_update_all,
             operator=str(current_user.username) if current_user else "system",
         )
 

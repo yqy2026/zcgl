@@ -46,7 +46,7 @@ export interface NotificationListResponse {
   items: Notification[];
   total: number;
   page: number;
-  limit: number;
+  pageSize: number;
   pages: number;
   unread_count: number;
 }

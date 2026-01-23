@@ -12,6 +12,9 @@ PDF文件上传API路由模块
 端点：
 - POST /upload: 上传PDF并开始处理
 - POST /upload_and_extract: V1兼容的上传和提取
+
+Best practice (breaking change):
+- 仅保留 /upload 作为上传入口，不再提供 /process 等别名。
 """
 
 import logging
@@ -20,24 +23,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    File,
-    Form,
-    UploadFile,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
-    bad_request,
-    internal_error,
-    service_unavailable,
-)
+from ...core.exception_handler import bad_request, internal_error
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
+from ...utils.file_security import generate_safe_filename
 from .dependencies import get_optional_services, get_pdf_import_service
 
 logger = logging.getLogger(__name__)
@@ -55,25 +48,8 @@ async def upload_pdf_file(
     pdf_service: PDFImportService = Depends(get_pdf_import_service),
     optional: Any = Depends(get_optional_services),
 ) -> FileUploadResponse:
-    """
-    上传PDF文件并开始处理
+    """上传PDF文件并开始处理"""
 
-    功能：
-    - 文件类型验证（仅支持PDF）
-    - 文件大小验证（最大50MB）
-    - 流式文件保存（避免内存耗尽）
-    - 安全文件名处理（防止路径遍历攻击）
-    - 创建处理会话
-    - 异步处理文件
-
-    处理选项：
-    - prefer_markitdown: 优先使用Markdown处理
-    - prefer_ocr: 优先使用OCR处理
-    - organization_id: 组织ID（可选）
-
-    返回：
-    - FileUploadResponse: 包含会话ID和预计处理时间
-    """
     # 验证文件类型
     if file.content_type != "application/pdf" and not (
         file.filename and file.filename.lower().endswith(".pdf")
@@ -85,133 +61,96 @@ async def upload_pdf_file(
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
 
-    # 安全文件名处理 - 防止路径遍历攻击
-    from src.utils.file_security import generate_safe_filename
-
     file_id = str(uuid.uuid4())
-    safe_filename = generate_safe_filename(file.filename or "upload", file_id)
+    safe_filename = generate_safe_filename(file.filename or "upload.pdf", prefix=file_id)
     temp_file_path = temp_dir / safe_filename
 
-    # 使用流式保存，同时验证文件大小
     total_size = 0
-    chunk_size = 64 * 1024  # 64KB chunks
+    chunk_size = 64 * 1024
 
     try:
         with open(temp_file_path, "wb") as temp_file:
             while chunk := await file.read(chunk_size):
                 total_size += len(chunk)
                 if total_size > max_size:
-                    # 清理部分写入的文件
-                    temp_file.close()
                     temp_file_path.unlink(missing_ok=True)
-
-                    raise bad_request(
-                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-                    )
+                    raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
                 temp_file.write(chunk)
 
-        logger.info(f"PDF文件已流式保存: {temp_file_path}, 大小: {total_size} bytes")
+        logger.info("PDF文件已保存: %s, size=%s", temp_file_path, total_size)
 
     except Exception as e:
-        # 清理临时文件
         temp_file_path.unlink(missing_ok=True)
-
         raise internal_error(f"文件处理失败: {str(e)}")
 
-    # 创建会话
-    processing_options = {
-        "prefer_ocr": prefer_ocr,
-        "prefer_markitdown": prefer_markitdown,
-        "max_pages": 100,
-        "dpi": 300 if prefer_ocr else 150,
-        "validate_fields": True,
-        "enable_asset_matching": True,
-        "enable_ownership_matching": True,
-        "enable_duplicate_check": True,
-    }
+    # 创建会话记录（不依赖可选服务）
+    from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 
-    # 获取session service（可选）
-    session_service = optional.pdf_session_service
-    if session_service is None:
-        raise service_unavailable(
-            "PDF会话服务不可用", service_name="pdf_session_service"
-        )
-
-    session = await session_service.create_session(
-        db=db,
-        filename=file.filename,
-        file_size=total_size,  # 使用流式计算的大小
+    session_id = f"session-{uuid.uuid4().hex[:12]}"
+    session = PDFImportSession(
+        session_id=session_id,
+        original_filename=file.filename or "upload.pdf",
+        file_size=total_size,
         file_path=str(temp_file_path),
         content_type=file.content_type or "application/pdf",
         organization_id=organization_id,
-        processing_options=processing_options,
+        status=SessionStatus.UPLOADED,
+        current_step=ProcessingStep.FILE_UPLOAD,
+        progress_percentage=0.0,
+        processing_options={
+            "prefer_ocr": prefer_ocr,
+            "prefer_markitdown": prefer_markitdown,
+            "max_pages": 100,
+            "dpi": 300 if prefer_ocr else 150,
+            "validate_fields": True,
+            "enable_asset_matching": True,
+            "enable_ownership_matching": True,
+            "enable_duplicate_check": True,
+        },
     )
+    db.add(session)
+    db.commit()
 
-    # 开始异步处理（带性能优化和错误处理）
+    # 开始处理
     try:
-        process_result = await pdf_service.process_pdf_file(
+        await pdf_service.process_pdf_file(
             db=db,
             session_id=session.session_id,
             organization_id=organization_id,
-            file_size=total_size,  # 使用流式计算的大小
+            file_size=total_size,
             file_path=str(temp_file_path),
             content_type=file.content_type or "application/pdf",
-            processing_options=processing_options,
+            processing_options=session.processing_options or {},
         )
-
     except Exception as e:
-        logger.error(f"PDF处理失败: {str(e)}")
+        logger.error("PDF处理失败: %s", e)
         raise internal_error(f"PDF处理失败: {str(e)}")
 
-    # 返回优化后的结果
-    if process_result["success"]:
-        return FileUploadResponse(
-            success=True,
-            message="PDF文件上传成功，正在处理中（优化版）",
-            session_id=session.session_id,
-            estimated_time="30-60秒",
-        )
-    else:
-        return FileUploadResponse(
-            success=False,
-            message=f"处理启动失败: {process_result.get('error_message', '未知错误')}",
-            session_id=session.session_id,
-            estimated_time="60-120秒",
-        )
+    return FileUploadResponse(
+        success=True,
+        message="PDF文件上传成功，正在处理中",
+        session_id=session.session_id,
+        estimated_time="30-60秒",
+    )
 
 
 @router.post("/upload_and_extract", response_model=ExtractionResponse)
 async def upload_and_extract_pdf_v1_compatible(
     file: UploadFile = File(...),
-    include_raw_text: bool = Form(default=False),
-    validate_fields: bool = Form(default=True),
+    should_include_raw_text: bool = Form(default=False),
+    should_validate_fields: bool = Form(default=True),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     optional: Any = Depends(get_optional_services),
 ) -> ExtractionResponse:
-    """
-    上传PDF文件并提取信息（V1兼容版本）
+    """上传PDF文件并提取信息（V1兼容端点；如不需要可后续移除）"""
 
-    这是一个V1兼容端点，用于向后兼容旧的客户端。
-
-    功能：
-    - 同步上传并提取PDF信息
-    - 返回提取的字段和验证结果
-    - 支持V1响应格式
-
-    参数：
-    - file: PDF文件
-    - include_raw_text: 是否包含原始文本
-    - validate_fields: 是否验证字段
-    """
     start_time = datetime.now()
     pdf_processing_service = optional.pdf_processing_service
 
-    # 验证文件类型
-    if not file.content_type == "application/pdf":
+    if file.content_type != "application/pdf":
         raise bad_request("只支持PDF文件上传")
 
-    # 验证文件大小（50MB限制）
-    max_size = 50 * 1024 * 1024  # 50MB
+    max_size = 50 * 1024 * 1024
     file_content = await file.read()
     if len(file_content) > max_size:
         raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
@@ -225,19 +164,11 @@ async def upload_and_extract_pdf_v1_compatible(
         )
 
     try:
-        # 使用V2的文件管理服务
-        from ...services.document.pdf_import_service import PDFImportService
-
         pdf_import_service_instance = PDFImportService()
         filename = file.filename or "uploaded_file.pdf"
-        file_info = await pdf_import_service_instance.upload_file(
-            file_content, filename
-        )
+        file_info = await pdf_import_service_instance.upload_file(file_content, filename)
 
-        # 使用V2的处理服务提取文本
-        text_result = await pdf_processing_service.extract_text_from_pdf(
-            file_info["file_path"],
-        )
+        text_result = await pdf_processing_service.extract_text_from_pdf(file_info["file_path"])
 
         if not text_result.get("success"):
             return ExtractionResponse(
@@ -247,22 +178,20 @@ async def upload_and_extract_pdf_v1_compatible(
                 real_data_verified=False,
             )
 
-        # 使用V1的提取器处理文本
-        from src.services.contract_extractor import extract_contract_info
+        # Best practice: import from backend service module, not "src.*"
+        from ...services.document.contract_extractor import ContractExtractor
 
-        extraction_result = extract_contract_info(text_result.get("text", ""))
+        extraction_result = ContractExtractor().extract_contract_info(text_result.get("text", ""))
 
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
         if extraction_result.get("success"):
-            # 字段验证
             validation_results = {}
-            if validate_fields:
+            if should_validate_fields:
                 validation_results = _validate_extracted_fields_v1(
                     extraction_result.get("extracted_fields", {})
                 )
 
-            # 构建V1兼容响应
             response = ExtractionResponse(
                 success=True,
                 confidence=extraction_result.get("overall_confidence", 0.0),
@@ -272,24 +201,20 @@ async def upload_and_extract_pdf_v1_compatible(
                 real_data_verified=extraction_result.get("validation_passed", False),
             )
 
-            # 如果需要，包含原始文本
-            if include_raw_text:
+            if should_include_raw_text:
                 response.extracted_fields["_raw_text"] = text_result.get("text", "")
 
-            logger.info(
-                f"V1兼容模式PDF处理完成，置信度: {extraction_result.get('overall_confidence', 0):.2f}"
-            )
             return response
-        else:
-            return ExtractionResponse(
-                success=False,
-                error=extraction_result.get("error", "PDF内容提取失败"),
-                processing_time_ms=processing_time,
-                real_data_verified=False,
-            )
+
+        return ExtractionResponse(
+            success=False,
+            error=extraction_result.get("error", "PDF内容提取失败"),
+            processing_time_ms=processing_time,
+            real_data_verified=False,
+        )
 
     except Exception as e:
-        logger.error(f"V1兼容模式PDF处理异常: {e}")
+        logger.error("V1兼容模式PDF处理异常: %s", e)
         return ExtractionResponse(
             success=False,
             error=f"PDF处理异常: {str(e)}",
@@ -299,28 +224,16 @@ async def upload_and_extract_pdf_v1_compatible(
 
 
 def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str, Any]:
-    """
-    V1兼容的字段验证函数
+    """V1兼容的字段验证函数"""
 
-    对提取的字段进行基本验证：
-    - 检查字段是否为空
-    - 分配默认置信度
+    validation_results: dict[str, Any] = {}
 
-    参数：
-    - extracted_fields: 提取的字段字典
-
-    返回：
-    - 验证结果字典
-    """
-    validation_results = {}
-
-    # 基本字段验证
     for field_name, field_value in extracted_fields.items():
         if field_value and str(field_value).strip():
             validation_results[field_name] = {
                 "is_valid": True,
                 "validation_errors": [],
-                "confidence": 0.8,  # 默认置信度
+                "confidence": 0.8,
             }
         else:
             validation_results[field_name] = {
