@@ -79,7 +79,7 @@ export class ProjectService {
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
-        pageSize: params?.pageSize ?? 10,
+        page_size: params?.page_size ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
         ownership_id: params?.ownership_id,
@@ -321,7 +321,7 @@ export class ProjectService {
    */
   async getProjectCount(params?: ProjectSearchParams): Promise<number> {
     try {
-      const result = await this.getProjects({ ...params, pageSize: 1 });
+      const result = await this.getProjects({ ...params, page_size: 1 });
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

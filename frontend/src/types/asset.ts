@@ -228,7 +228,7 @@ export interface AssetListResponse {
   items: Asset[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 

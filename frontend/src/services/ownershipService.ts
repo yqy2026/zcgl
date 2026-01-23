@@ -83,7 +83,7 @@ export class OwnershipService {
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
-        pageSize: params?.pageSize ?? 10,
+        page_size: params?.page_size ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
       };
@@ -287,7 +287,7 @@ export class OwnershipService {
    */
   async getOwnershipCount(params?: OwnershipSearchParams): Promise<number> {
     try {
-      const result = await this.getOwnerships({ ...params, pageSize: 1 });
+      const result = await this.getOwnerships({ ...params, page_size: 1 });
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -344,7 +344,7 @@ export class OwnershipService {
    */
   async searchOwnershipsByKeyword(keyword: string): Promise<Ownership[]> {
     try {
-      const result = await this.searchOwnerships({ keyword, page: 1, pageSize: 100 });
+      const result = await this.searchOwnerships({ keyword, page: 1, page_size: 100 });
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

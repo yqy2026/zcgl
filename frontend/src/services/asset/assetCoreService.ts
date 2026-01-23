@@ -29,7 +29,7 @@ export class AssetCoreService {
         params: {
           ...params,
           page: params?.page ?? 1,
-          pageSize: params?.pageSize ?? 20,
+          page_size: params?.page_size ?? 20,
         },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -45,7 +45,7 @@ export class AssetCoreService {
           items: [],
           total: 0,
           page: 1,
-          pageSize: 20,
+          page_size: 20,
           pages: 0,
         }
       );
@@ -58,7 +58,7 @@ export class AssetCoreService {
   /**
    * 获取所有资产（不分页，用于导出等场景）
    */
-  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'pageSize'>): Promise<Asset[]> {
+  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'page_size'>): Promise<Asset[]> {
     try {
       const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {

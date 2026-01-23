@@ -50,7 +50,7 @@ export interface ProjectListResponse {
   items: ProjectResponse[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -63,7 +63,7 @@ export interface ProjectSearchRequest {
   keyword?: string;
   is_active?: boolean;
   page?: number;
-  pageSize?: number;
+  page_size?: number;
 }
 
 export interface ProjectStatisticsResponse {
@@ -78,7 +78,7 @@ export interface ProjectSearchParams {
   is_active?: boolean;
   ownership_id?: string;
   page?: number;
-  pageSize?: number;
+  page_size?: number;
 }
 
 // 项目选项类型（用于下拉选择）

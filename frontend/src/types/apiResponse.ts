@@ -29,7 +29,7 @@ export interface PaginatedApiResponse<T = unknown> {
     items: T[];
     pagination: {
       page: number;
-      pageSize: number;
+      page_size: number;
       total: number;
       totalPages: number;
     };
@@ -87,7 +87,7 @@ export interface AssetListResponse {
   items: unknown[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 

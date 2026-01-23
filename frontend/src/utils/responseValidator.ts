@@ -212,7 +212,7 @@ export function isPaginatedApiResponse<T = unknown>(
   const pagination = nestedData.pagination as Record<string, unknown>;
 
   // pagination 必须有特定字段
-  const requiredPaginationFields = ['page', 'pageSize', 'total', 'totalPages'];
+  const requiredPaginationFields = ['page', 'page_size', 'total', 'totalPages'];
   for (const field of requiredPaginationFields) {
     if (!(field in pagination)) {
       return false;
@@ -301,7 +301,7 @@ export function validatePaginatedResponse<T = unknown>(
     if (strict) {
       const allowedPaginationFields = [
         'page',
-        'pageSize',
+        'page_size',
         'total',
         'totalPages',
         'hasNext',

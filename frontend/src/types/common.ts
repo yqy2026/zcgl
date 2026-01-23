@@ -39,7 +39,7 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 // 分页相关类型
 export interface PaginationConfig {
   current: number;
-  pageSize: number;
+  page_size: number;
   total: number;
   showSizeChanger?: boolean;
   showQuickJumper?: boolean;
@@ -146,7 +146,7 @@ export type SortDirection = 'asc' | 'desc' | 'ascend' | 'descend';
 // 查询参数类型
 export interface QueryParams {
   page?: number;
-  pageSize?: number;
+  page_size?: number;
   search?: string;
   sortBy?: string;
   sortOrder?: SortDirection;
@@ -163,7 +163,7 @@ export interface PaginatedResponse<T> {
   items: T[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   totalPages: number;
 }
 

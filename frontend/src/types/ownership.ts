@@ -39,7 +39,7 @@ export interface OwnershipListResponse {
   items: Ownership[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -47,7 +47,7 @@ export interface OwnershipSearchRequest {
   keyword?: string;
   is_active?: boolean;
   page: number;
-  pageSize: number;
+  page_size: number;
 }
 
 export interface OwnershipStatisticsResponse {
@@ -73,7 +73,7 @@ export interface OwnershipSearchParams {
   keyword?: string;
   is_active?: boolean;
   page?: number;
-  pageSize?: number;
+  page_size?: number;
 }
 
 export interface OwnershipDropdownOption {

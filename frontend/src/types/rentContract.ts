@@ -293,7 +293,7 @@ export interface RentStatisticsQuery {
 export interface RentContractQueryParams {
   page?: number;
   limit?: number;
-  pageSize?: number;
+  page_size?: number;
   contract_number?: string;
   tenant_name?: string;
   asset_id?: string;
@@ -306,7 +306,7 @@ export interface RentContractQueryParams {
 export interface RentLedgerQueryParams {
   page?: number;
   limit?: number;
-  pageSize?: number;
+  page_size?: number;
   contract_id?: string;
   asset_id?: string;
   ownership_id?: string;
@@ -321,7 +321,7 @@ export interface PaginatedResponse<T> {
   items: T[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -455,7 +455,7 @@ export interface RentContractPageState {
   contracts: RentContract[];
   pagination: {
     current: number;
-    pageSize: number;
+    page_size: number;
     total: number;
     pages?: number;
   };
@@ -470,7 +470,7 @@ export interface RentLedgerPageState {
   ledgers: RentLedger[];
   pagination: {
     current: number;
-    pageSize: number;
+    page_size: number;
     total: number;
   };
   filters: RentLedgerSearchFilters;

@@ -182,7 +182,7 @@ class ExcelPaths:
 # 数据备份API路径
 class BackupPaths:
     CREATE = "/backup/create"
-    LIST = "/backup/list[Any]"
+    LIST = "/backup/list"
     INFO = "/backup/info/{filename}"
     RESTORE = "/backup/restore"
     DELETE = "/backup/{filename}"

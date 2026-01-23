@@ -45,7 +45,7 @@ class RentContractService {
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
       const result = await apiClient.get<RentContractListResponse>(this.baseUrl, {
-        params: { ...params, page: params?.page ?? 1, pageSize: params?.pageSize ?? 10 },
+        params: { ...params, page: params?.page ?? 1, page_size: params?.page_size ?? 10 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -66,7 +66,7 @@ class RentContractService {
         items: [],
         total: 0,
         page: 1,
-        pageSize: 10,
+        page_size: 10,
         pages: 0,
       };
     }
@@ -227,7 +227,7 @@ class RentContractService {
       const result = await apiClient.get<RentLedgerListResponse>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST,
         {
-          params: { ...params, page: params?.page ?? 1, pageSize: params?.pageSize ?? 10 },
+          params: { ...params, page: params?.page ?? 1, page_size: params?.page_size ?? 10 },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -249,7 +249,7 @@ class RentContractService {
         items: [],
         total: 0,
         page: 1,
-        pageSize: 10,
+        page_size: 10,
         pages: 0,
       };
     }
@@ -786,7 +786,7 @@ class RentContractService {
    * 验证合同编号唯一�?   */
   async validateContractNumber(contractNumber: string): Promise<{ exists: boolean }> {
     try {
-      const contracts = await this.getContracts({ contract_number: contractNumber, pageSize: 1 });
+      const contracts = await this.getContracts({ contract_number: contractNumber, page_size: 1 });
       return { exists: contracts.items.length > 0 };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -861,7 +861,7 @@ class RentContractService {
       const response = await this.getContracts({
         tenant_name: query,
         contract_number: query,
-        pageSize: 10,
+        page_size: 10,
       });
       return response.items;
     } catch (error) {
@@ -877,7 +877,7 @@ class RentContractService {
   async searchLedgers(_query: string): Promise<RentLedger[]> {
     try {
       const response = await this.getRentLedgers({
-        pageSize: 10,
+        page_size: 10,
         // 可以添加更多搜索条件
       });
       return response.items;
@@ -897,7 +897,7 @@ class RentContractService {
     try {
       const response = await this.getRentLedgers({
         payment_status: '逾期',
-        pageSize: 100,
+        page_size: 100,
       });
       return response.items;
     } catch (error) {
@@ -918,7 +918,7 @@ class RentContractService {
         start_date: today.toISOString().split('T')[0],
         end_date: futureDate.toISOString().split('T')[0],
         payment_status: '未支付',
-        pageSize: 100,
+        page_size: 100,
       });
       return response.items;
     } catch (error) {
