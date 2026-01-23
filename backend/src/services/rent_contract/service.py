@@ -180,7 +180,7 @@ class RentContractService:
         new_contract = self.create_contract(db, obj_in=new_contract_data)
 
         # 转移押金
-        if transfer_deposit and original.total_deposit > 0:
+        if should_transfer_deposit and original.total_deposit > 0:
             deposit_amount = original.total_deposit
 
             # 原合同押金转出

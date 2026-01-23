@@ -158,7 +158,7 @@ class TestContractRenewalSuccess:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id=operator_id,
         )
@@ -186,7 +186,7 @@ class TestContractRenewalSuccess:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id="user_001",
         )
@@ -233,7 +233,7 @@ class TestContractRenewalSuccess:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id="user_001",
         )
@@ -257,12 +257,12 @@ class TestDepositTransfer:
         original_contract: RentContract,
         renewal_contract_data: RentContractCreate,
     ):
-        """TC-REN-004: No deposit transfer when transfer_deposit=False"""
+        """TC-REN-004: No deposit transfer when should_transfer_deposit=False"""
         new_contract = rent_contract_service.renew_contract(
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=False,  # Don't transfer
+            should_transfer_deposit=False,  # Don't transfer
             operator="测试用户",
             operator_id="user_001",
         )
@@ -305,7 +305,7 @@ class TestDepositTransfer:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id="user_001",
         )
@@ -352,7 +352,7 @@ class TestRentTermsAdjustment:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id="user_001",
         )
@@ -376,7 +376,7 @@ class TestRentTermsAdjustment:
             db=test_db,
             original_contract_id=original_contract.id,
             new_contract_data=renewal_contract_data,
-            transfer_deposit=True,
+            should_transfer_deposit=True,
             operator="测试用户",
             operator_id="user_001",
         )
@@ -408,7 +408,7 @@ class TestRenewalErrorHandling:
                 db=test_db,
                 original_contract_id="nonexistent_id",
                 new_contract_data=renewal_contract_data,
-                transfer_deposit=True,
+                should_transfer_deposit=True,
                 operator="测试用户",
                 operator_id="user_001",
             )
@@ -446,7 +446,7 @@ class TestRenewalErrorHandling:
                 db=test_db,
                 original_contract_id=original_contract.id,
                 new_contract_data=renewal_data,
-                transfer_deposit=True,
+                should_transfer_deposit=True,
                 operator="测试用户",
                 operator_id="user_001",
             )

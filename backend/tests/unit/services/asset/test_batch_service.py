@@ -495,7 +495,7 @@ class TestBatchDelete:
         assert result.success_count == 1
         assert result.failed_count == 0
         mock_db.commit.assert_called_once()
-        mock_asset_crud.remove.assert_called_once_with(db=mock_db, id="asset_1")
+        mock_asset_crud.remove.assert_called_once_with(db=mock_db, id="asset_1", commit=False)
 
     @patch("src.services.asset.batch_service.asset_crud")
     def test_batch_delete_multiple_assets_success(
