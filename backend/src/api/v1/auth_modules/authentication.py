@@ -225,7 +225,7 @@ async def logout(
             exp = payload.get("exp")
 
             if jti and exp:
-                from ....core.token_blacklist import blacklist_manager
+                from ....security.token_blacklist import blacklist_manager
 
                 blacklist_manager.add_token(jti, exp)
         except Exception as e:
@@ -293,7 +293,9 @@ async def refresh_token(
         raise unauthorized("无效的刷新令牌")
 
     # 获取用户
-    user = auth_service.get_user_by_id(str(session.user_id))  # type: ignore[no-untyped-call]
+    # Note: validate_refresh_token returns User object, not UserSession
+    # User object has 'id' field, not 'user_id'
+    user = session  # session is already the User object from validate_refresh_token
     user_active = getattr(user, "is_active", False) if user else False
     if not user or not user_active:
         # 撤销无效会话
