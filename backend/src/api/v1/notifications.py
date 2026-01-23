@@ -70,7 +70,7 @@ class UnreadCountResponse(BaseModel):
 @router.get("/", response_model=NotificationListResponse)
 async def get_notifications(
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     is_read: bool | None = Query(None, description="筛选已读/未读"),
     type: str | None = Query(None, description="通知类型筛选"),
     current_user: User = Depends(get_current_active_user),
@@ -110,8 +110,8 @@ async def get_notifications(
     )
 
     # 分页
-    offset = (page - 1) * limit
-    notifications = query.offset(offset).limit(limit).all()
+    offset = (page - 1) * page_size
+    notifications = query.offset(offset).limit(page_size).all()
 
     return NotificationListResponse(
         items=[NotificationResponse.model_validate(n) for n in notifications],

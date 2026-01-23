@@ -501,7 +501,7 @@ class TestLogout:
     ):
         """Test logout successfully blacklists token"""
         from src.api.v1.auth_modules.authentication import logout
-        from src.middleware.auth import ALGORITHM, SECRET_KEY
+        from src.core.config import settings
 
         mock_request.headers = {
             "Authorization": "Bearer valid_token",
@@ -515,7 +515,7 @@ class TestLogout:
             "jti": "test-jti",
             "iat": 1736996400,
         }
-        valid_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+        valid_token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
         mock_request.headers["Authorization"] = f"Bearer {valid_token}"
 
         mock_auth_service = MagicMock()

@@ -39,7 +39,7 @@ const NotificationCenter: React.FC = () => {
     try {
       const response = await notificationService.getNotifications({
         page,
-        limit: pagination.pageSize,
+        page_size: pagination.pageSize,
         type: type === 'all' ? undefined : type,
       });
 

@@ -119,7 +119,7 @@ describe('AssetList - 基础渲染测试', () => {
     items: [mockAsset],
     total: 1,
     page: 1,
-    limit: 20,
+    page_size: 20,
     pages: 1,
   };
 
@@ -177,7 +177,7 @@ describe('AssetList - 基础渲染测试', () => {
 
     render(
       React.createElement(AssetList, {
-        data: { items: [], total: 0, page: 1, limit: 20, pages: 0 },
+        data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
         loading: false,
         ...mockHandlers,
       })
@@ -234,7 +234,7 @@ describe('AssetList - 数据渲染测试', () => {
     items: mockAssets,
     total: 2,
     page: 1,
-    limit: 20,
+    page_size: 20,
     pages: 1,
   };
 
@@ -285,7 +285,7 @@ describe('AssetList - 交互操作测试', () => {
     items: [mockAsset],
     total: 1,
     page: 1,
-    limit: 20,
+    page_size: 20,
     pages: 1,
   };
 
@@ -346,7 +346,7 @@ describe('AssetList - 行选择测试', () => {
     items: mockAssets,
     total: 2,
     page: 1,
-    limit: 20,
+    page_size: 20,
     pages: 1,
   };
 
@@ -402,7 +402,7 @@ describe('AssetList - 分页测试', () => {
     items: [],
     total: 100,
     page: 2,
-    limit: 20,
+    page_size: 20,
     pages: 5,
   };
 
@@ -472,7 +472,7 @@ describe('AssetList - 汇总行测试', () => {
     items: mockAssets,
     total: 2,
     page: 1,
-    limit: 20,
+    page_size: 20,
     pages: 1,
   };
 
@@ -510,7 +510,7 @@ describe('AssetList - 汇总行测试', () => {
     expect(() => {
       render(
         React.createElement(AssetList, {
-          data: { items: [], total: 0, page: 1, limit: 20, pages: 0 },
+          data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
           loading: false,
           ...mockHandlers,
         })
@@ -528,7 +528,7 @@ describe('AssetList - 属性传递测试', () => {
       items: [],
       total: 0,
       page: 1,
-      limit: 20,
+      page_size: 20,
       pages: 0,
     };
 

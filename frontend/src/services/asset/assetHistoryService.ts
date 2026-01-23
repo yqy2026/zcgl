@@ -24,14 +24,14 @@ export class AssetHistoryService {
   async getAssetHistory(
     assetId: string,
     page = 1,
-    limit = 20,
+    pageSize = 20,
     changeType?: string
   ): Promise<PaginatedApiResponse<AssetHistory>> {
     try {
       const result = await apiClient.get<PaginatedApiResponse<AssetHistory>>(
         `${ASSET_API.DETAIL(assetId)}/history`,
         {
-          params: { page, limit, change_type: changeType },
+          params: { page, page_size: pageSize, change_type: changeType },
           cache: true,
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
           smartExtract: true,
@@ -102,13 +102,13 @@ export class AssetHistoryService {
   async getFieldHistory(
     assetId: string,
     fieldName: string,
-    limit = 10
+    pageSize = 10
   ): Promise<FieldHistoryRecord[]> {
     try {
       const result = await apiClient.get<{ history: FieldHistoryRecord[] }>(
         `${ASSET_API.DETAIL(assetId)}/field-history/${fieldName}`,
         {
-          params: { limit },
+          params: { page_size: pageSize },
           cache: true,
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
           smartExtract: true,

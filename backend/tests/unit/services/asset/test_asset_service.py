@@ -519,7 +519,9 @@ class TestDeleteAsset:
             with patch("src.crud.asset.asset_crud.remove") as mock_remove:
                 service.delete_asset(TEST_ASSET_ID)
 
-                mock_remove.assert_called_once_with(db=service.db, id=TEST_ASSET_ID)
+                mock_remove.assert_called_once_with(
+                    db=service.db, id=TEST_ASSET_ID, commit=False
+                )
 
     def test_delete_asset_not_found(self, service):
         """测试删除不存在的资产"""
@@ -539,7 +541,9 @@ class TestDeleteAsset:
             with patch("src.crud.asset.asset_crud.remove") as mock_remove:
                 service.delete_asset(TEST_ASSET_ID, current_user=mock_user)
 
-                mock_remove.assert_called_once_with(db=service.db, id=TEST_ASSET_ID)
+                mock_remove.assert_called_once_with(
+                    db=service.db, id=TEST_ASSET_ID, commit=False
+                )
 
 
 # ============================================================================

@@ -92,7 +92,7 @@ export interface ContactListResponse {
   items: Contact[];
   total: number;
   page: number;
-  limit: number;
+  page_size: number;
   pages: number;
 }
 
@@ -125,11 +125,11 @@ class ContactService {
     entityType: string,
     entityId: string,
     page = 1,
-    limit = 10
+    pageSize = 10
   ): Promise<ContactListResponse> {
     const response = await apiClient.get<ContactListResponse>(
       `${this.basePath}/entity/${entityType}/${entityId}`,
-      { params: { page, limit } }
+      { params: { page, page_size: pageSize } }
     );
     return response.data!;
   }

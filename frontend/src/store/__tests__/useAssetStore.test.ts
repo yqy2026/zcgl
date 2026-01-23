@@ -58,7 +58,7 @@ describe('useAssetStore - 初始化状态', () => {
 
     expect(result.current.searchParams).toEqual({
       page: 1,
-      limit: 20,
+      page_size: 20,
       sort_field: 'created_at',
       sort_order: 'desc',
     });
@@ -172,12 +172,12 @@ describe('useAssetStore - 搜索参数', () => {
     act(() => {
       result.current.setSearchParams({
         page: 2,
-        limit: 50,
+        page_size: 50,
       });
     });
 
     expect(result.current.searchParams.page).toBe(2);
-    expect(result.current.searchParams.limit).toBe(50);
+    expect(result.current.searchParams.page_size).toBe(50);
   });
 
   it('应该合并现有参数', () => {
@@ -188,7 +188,7 @@ describe('useAssetStore - 搜索参数', () => {
     });
 
     expect(result.current.searchParams.page).toBe(3);
-    expect(result.current.searchParams.limit).toBe(20); // 保持原值
+    expect(result.current.searchParams.page_size).toBe(20); // 保持原值
     expect(result.current.searchParams.sort_field).toBe('created_at'); // 保持原值
   });
 
@@ -254,7 +254,7 @@ describe('useAssetStore - 重置功能', () => {
       result.current.setSelectedAsset(mockAsset);
       result.current.setSelectedIds(['asset-001', 'asset-002']);
       result.current.setViewMode('card');
-      result.current.setSearchParams({ page: 5, limit: 50 });
+      result.current.setSearchParams({ page: 5, page_size: 50 });
     });
 
     // 验证状态已修改
@@ -273,7 +273,7 @@ describe('useAssetStore - 重置功能', () => {
     expect(result.current.viewMode).toBe('table');
     expect(result.current.searchParams).toEqual({
       page: 1,
-      limit: 20,
+      page_size: 20,
       sort_field: 'created_at',
       sort_order: 'desc',
     });

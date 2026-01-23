@@ -39,7 +39,7 @@ const initialState = {
   selectedIds: [],
   searchParams: {
     page: 1,
-    pageSize: 20,
+    page_size: 20,
     sort_field: 'created_at',
     sort_order: 'desc' as const,
   },

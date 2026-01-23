@@ -10,7 +10,7 @@ from typing import Any
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from ..constants.validation_constants import FieldLengthLimits
 
@@ -64,8 +64,13 @@ class AssetBase(BaseModel):
         None, ge=0, description="非经营物业面积（平方米）"
     )
     # occupancy_rate 已移除，改为计算字段
-    should_include_in_occupancy_rate: bool = Field(
-        True, description="是否计入出租率统计"
+    include_in_occupancy_rate: bool = Field(
+        True,
+        description="是否计入出租率统计",
+        validation_alias=AliasChoices(
+            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
+        ),
+        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -216,8 +221,13 @@ class AssetUpdate(BaseModel):
         None, ge=0, description="非经营物业面积（平方米）"
     )
     # occupancy_rate 已移除，改为计算字段
-    should_include_in_occupancy_rate: bool | None = Field(
-        None, description="是否计入出租率统计"
+    include_in_occupancy_rate: bool | None = Field(
+        None,
+        description="是否计入出租率统计",
+        validation_alias=AliasChoices(
+            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
+        ),
+        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -333,8 +343,13 @@ class AssetResponseBase(BaseModel):
     non_commercial_area: Decimal | None = Field(
         None, description="非经营物业面积（平方米）"
     )
-    should_include_in_occupancy_rate: bool = Field(
-        True, description="是否计入出租率统计"
+    include_in_occupancy_rate: bool = Field(
+        True,
+        description="是否计入出租率统计",
+        validation_alias=AliasChoices(
+            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
+        ),
+        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -401,10 +416,8 @@ class AssetListResponse(BaseModel):
     items: list[AssetResponse] = Field(..., description="资产列表")
     total: int = Field(..., description="总记录数")
     page: int = Field(..., description="当前页码")
-    page_size: int = Field(..., serialization_alias="pageSize", description="每页记录数")
+    page_size: int = Field(..., description="每页记录数")
     pages: int = Field(..., description="总页数")
-
-    model_config = ConfigDict(populate_by_name=True)
 
 
 class AssetHistoryResponse(BaseModel):

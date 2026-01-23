@@ -7,6 +7,7 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Query as QueryParam
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -137,7 +138,10 @@ async def download_backup(backup_name: str) -> FileResponse:
 @router.post("/restore/{backup_name}", summary="恢复数据备份")
 async def restore_backup(
     backup_name: str,
-    should_confirm: bool = Query(False, description="确认恢复操作"),
+    confirm: bool = Query(False, description="确认恢复操作"),
+    should_confirm: bool | None = Query(
+        None, description="确认恢复操作", alias="should_confirm"
+    ),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
@@ -152,7 +156,11 @@ async def restore_backup(
         恢复结果信息
     """
     try:
-        if not should_confirm:
+        if isinstance(should_confirm, QueryParam):
+            confirm_value = confirm
+        else:
+            confirm_value = confirm if should_confirm is None else should_confirm
+        if not confirm_value:
             raise bad_request("请确认恢复操作，这将覆盖当前数据")
 
         # 使用BackupService恢复备份

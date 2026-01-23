@@ -277,7 +277,7 @@ class AssetBatchService:
                         result.failed_count += 1
                         continue
 
-                    asset_crud.remove(db=self.db, id=asset_id)
+                    asset_crud.remove(db=self.db, id=asset_id, commit=False)
                     result.success_count += 1
 
                 except Exception as e:

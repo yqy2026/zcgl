@@ -299,7 +299,7 @@ class TestGetExcelConfigs:
         assert result["total"] == 5
         assert len(result["items"]) == 5
         mock_crud.get_multi.assert_called_once_with(
-            db=mock_db, limit=50, config_type=None, task_type=None
+            db=mock_db, page_size=50, config_type=None, task_type=None
         )
 
     @patch("src.crud.task.excel_task_config_crud")
@@ -323,7 +323,7 @@ class TestGetExcelConfigs:
         assert result["total"] == 2
         mock_crud.get_multi.assert_called_once_with(
             db=mock_db,
-            limit=50,
+            page_size=50,
             config_type="import",
             task_type="excel_import",
         )
@@ -1395,15 +1395,15 @@ class TestGetExcelHistory:
         result = await get_excel_history(
             task_type=None,
             status=None,
-            limit=20,
-            skip=0,
+            page_size=20,
+            page=0,
             db=mock_db,
         )
 
         assert result["total"] == 5
         assert len(result["items"]) == 5
         assert result["skip"] == 0
-        assert result["limit"] == 20
+        assert result["page_size"] == 20
 
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
@@ -1429,16 +1429,16 @@ class TestGetExcelHistory:
         result = await get_excel_history(
             task_type="excel_import",
             status="completed",
-            limit=10,
-            skip=0,
+            page_size=10,
+            page=0,
             db=mock_db,
         )
 
         assert result["total"] == 3
         mock_task_crud.get_multi.assert_called_once_with(
             db=mock_db,
-            skip=0,
-            limit=10,
+            page=0,
+            page_size=10,
             task_type="excel_import",
             status="completed",
             order_by="created_at",
@@ -1467,13 +1467,13 @@ class TestGetExcelHistory:
         result = await get_excel_history(
             task_type=None,
             status=None,
-            limit=10,
-            skip=5,
+            page_size=10,
+            page=5,
             db=mock_db,
         )
 
         assert result["skip"] == 5
-        assert result["limit"] == 10
+        assert result["page_size"] == 10
 
     @patch("src.api.v1.excel.task_crud")
     @pytest.mark.asyncio
@@ -1486,8 +1486,8 @@ class TestGetExcelHistory:
         result = await get_excel_history(
             task_type=None,
             status=None,
-            limit=20,
-            skip=0,
+            page_size=20,
+            page=0,
             db=mock_db,
         )
 

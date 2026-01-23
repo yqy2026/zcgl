@@ -54,7 +54,7 @@ export const propertyCertificateService = {
    */
   async listCertificates(params?: {
     skip?: number;
-    limit?: number;
+    page_size?: number;
   }): Promise<PropertyCertificate[]> {
     const result = await apiClient.get<PropertyCertificate[]>('/property-certificates/', {
       params,

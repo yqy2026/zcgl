@@ -82,7 +82,7 @@ export class AssetService {
     return assetCoreService.getAssets(params);
   }
 
-  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'limit'>): Promise<Asset[]> {
+  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'page_size'>): Promise<Asset[]> {
     return assetCoreService.getAllAssets(params);
   }
 
@@ -137,10 +137,10 @@ export class AssetService {
   async getAssetHistory(
     assetId: string,
     page?: number,
-    limit?: number,
+    page_size?: number,
     changeType?: string
   ): Promise<PaginatedApiResponse<AssetHistory>> {
-    return assetHistoryService.getAssetHistory(assetId, page, limit, changeType);
+    return assetHistoryService.getAssetHistory(assetId, page, page_size, changeType);
   }
 
   async getHistoryDetail(historyId: string): Promise<AssetHistory> {
@@ -154,9 +154,9 @@ export class AssetService {
   async getFieldHistory(
     assetId: string,
     fieldName: string,
-    limit?: number
+    page_size?: number
   ): Promise<FieldHistoryRecord[]> {
-    return assetHistoryService.getFieldHistory(assetId, fieldName, limit);
+    return assetHistoryService.getFieldHistory(assetId, fieldName, page_size);
   }
 
   // ===== Statistics Operations =====

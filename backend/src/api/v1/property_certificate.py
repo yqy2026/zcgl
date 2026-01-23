@@ -287,8 +287,27 @@ def create_certificate(
         HTTPException: 创建失败
     """
     from ...crud.property_certificate import property_certificate_crud
+    from ...models.property_certificate import CertificateType
+    from ...services.property_certificate.validator import PropertyCertificateValidator
 
     try:
+        try:
+            cert_type = CertificateType(certificate.certificate_type)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"证书类型不正确: {str(e)}",
+            )
+
+        validation = PropertyCertificateValidator.validate_extracted_fields(
+            certificate.model_dump(), cert_type
+        )
+        if not validation.is_valid():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"errors": validation.errors},
+            )
+
         result = property_certificate_crud.create(db, obj_in=certificate)
         logger.info(
             "Created certificate %s (number: %r)",
@@ -296,6 +315,8 @@ def create_certificate(
             certificate.certificate_number,
         )
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating certificate: {e}", exc_info=True)
         raise HTTPException(

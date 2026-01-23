@@ -78,7 +78,7 @@ def get_prompts(
     db: Session,
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页记录数"),
     doc_type: str | None = Query(None, description="文档类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     provider: str | None = Query(None, description="提供商筛选"),
@@ -102,16 +102,16 @@ def get_prompts(
     total = query.count()
 
     # 分页
-    skip = (page - 1) * limit
-    prompts = query.offset(skip).limit(limit).all()
+    skip = (page - 1) * page_size
+    prompts = query.offset(skip).limit(page_size).all()
 
-    pages = (total + limit - 1) // limit
+    pages = (total + page_size - 1) // page_size
 
     return PromptTemplateListResponse(
         items=[PromptTemplateResponse.model_validate(p) for p in prompts],
         total=total,
         page=page,
-        limit=limit,
+        page_size=page_size,
         pages=pages,
     )
 

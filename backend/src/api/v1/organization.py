@@ -31,14 +31,17 @@ router = APIRouter(tags=["组织架构管理"])
 @router.get("", response_model=list[OrganizationResponse])
 @router.get("/", response_model=list[OrganizationResponse])
 async def get_organizations(
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """获取组织列表"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
-    organizations = organization_crud.get_multi_with_filters(db, skip=skip, limit=limit)
+    skip = (page - 1) * page_size
+    organizations = organization_crud.get_multi_with_filters(
+        db, skip=skip, limit=page_size
+    )
     return list(organizations)
 
 
@@ -76,15 +79,16 @@ async def get_organization_tree(
 @router.get("/search", response_model=list[OrganizationResponse])
 async def search_organizations(
     keyword: str = Query(..., min_length=1, description="搜索关键词"),
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
+    skip = (page - 1) * page_size
     organizations = organization_crud.search(
-        db, keyword=keyword, skip=skip, limit=limit
+        db, keyword=keyword, skip=skip, limit=page_size
     )
     return list(organizations)
 
@@ -127,7 +131,9 @@ async def get_organization_children(
     if not parent:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
-    children = organization_crud.get_children(db, parent_id=org_id, recursive=recursive)
+    children = organization_crud.get_children(
+        db, parent_id=org_id, recursive=is_recursive
+    )
     return list(children)
 
 
@@ -150,8 +156,8 @@ async def get_organization_path(
 @router.get("/{org_id}/history", response_model=list[OrganizationHistoryResponse])
 async def get_organization_history(
     org_id: str,
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationHistoryResponse]:
@@ -161,8 +167,9 @@ async def get_organization_history(
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
+    skip = (page - 1) * page_size
     history = organization_service.get_history(
-        db, org_id=org_id, skip=skip, limit=limit
+        db, org_id=org_id, skip=skip, limit=page_size
     )
     return list(history)
 

@@ -31,6 +31,7 @@ from ...core.role_normalizer import RoleNormalizer
 from ...crud.auth import AuditLogCRUD
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
+from ...middleware.security_middleware import get_client_ip
 from ...schemas.auth import UserResponse
 
 # 创建系统设置路由器
@@ -280,7 +281,7 @@ def create_audit_log_with_fallback(
     from fastapi import HTTPException
 
     try:
-        ip_address = request.client.host if request.client else None
+        ip_address = get_client_ip(request)
         user_agent = str(request.headers.get("user-agent", ""))
 
         audit_crud = AuditLogCRUD()
@@ -348,7 +349,7 @@ async def get_security_events(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     skip: int = 0,
-    limit: int = 100,
+    page_size: int = 100,
 ) -> dict[str, Any]:
     """
     获取安全事件日志
@@ -373,14 +374,14 @@ async def get_security_events(
         db.query(SecurityEvent)
         .order_by(SecurityEvent.created_at.desc())
         .offset(skip)
-        .limit(limit)
+        .limit(page_size)
         .all()
     )
 
     return {
         "total": total,
         "skip": skip,
-        "limit": limit,
+        "page_size": page_size,
         "events": [
             {
                 "id": e.id,

@@ -194,3 +194,24 @@ def test_regular_user(db_session, db_tables):
         full_name="Regular User",
         role="user",
     )
+
+
+@pytest.fixture
+def create_test_user_factory(db_session, db_tables):
+    def _create_test_user(
+        username: str,
+        email: str,
+        password: str,
+        full_name: str,
+        role: str = "user",
+    ):
+        return create_test_user(
+            db_session,
+            username=username,
+            email=email,
+            password=password,
+            full_name=full_name,
+            role=role,
+        )
+
+    return _create_test_user

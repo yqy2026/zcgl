@@ -484,12 +484,12 @@ export class ExcelService {
   /**
    * 获取导入历史记录
    */
-  async getImportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
+  async getImportHistory(page = 1, pageSize = 20): Promise<ImportExportHistory[]> {
     try {
       const result = await apiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/import/history`,
         {
-          params: { page, limit },
+          params: { page, page_size: pageSize },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -507,12 +507,12 @@ export class ExcelService {
   /**
    * 获取导出历史记录
    */
-  async getExportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
+  async getExportHistory(page = 1, pageSize = 20): Promise<ImportExportHistory[]> {
     try {
       const result = await apiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/export/history`,
         {
-          params: { page, limit },
+          params: { page, page_size: pageSize },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -532,7 +532,7 @@ export class ExcelService {
    */
   async getAllHistory(
     page = 1,
-    limit = 20
+    pageSize = 20
   ): Promise<{
     items: ImportExportHistory[];
     total: number;
@@ -546,7 +546,7 @@ export class ExcelService {
         page: number;
         pageSize: number;
       }>(`${this.baseUrl}/history`, {
-        params: { page, limit },
+        params: { page, page_size: pageSize },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,

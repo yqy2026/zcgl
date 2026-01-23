@@ -34,7 +34,7 @@ interface _Asset {
 
 vi.mock('@/services/assetService', () => ({
   assetService: {
-    getAssets: vi.fn(() => Promise.resolve({ items: [], total: 0, page: 1, limit: 20 })),
+    getAssets: vi.fn(() => Promise.resolve({ items: [], total: 0, page: 1, page_size: 20 })),
     getAsset: vi.fn(() => Promise.resolve({ id: '1', propertyName: 'Test' })),
     createAsset: vi.fn(() => Promise.resolve({ id: 'new-1', propertyName: 'New' })),
     updateAsset: vi.fn(() => Promise.resolve({ id: '1', propertyName: 'Updated' })),

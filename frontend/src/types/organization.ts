@@ -138,8 +138,8 @@ export interface OrganizationSearchRequest {
   keyword?: string;
   level?: number;
   parent_id?: string;
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
 }
 
 export interface OrganizationBatchResult {

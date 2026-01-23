@@ -108,7 +108,7 @@ export interface PromptTemplateListResponse {
   items: PromptTemplate[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -185,7 +185,7 @@ export interface PromptStatistics {
  */
 export interface PromptQueryParams {
   page?: number;
-  limit?: number;
+  page_size?: number;
   doc_type?: DocType;
   status?: PromptStatus;
   provider?: LLMProvider;

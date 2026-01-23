@@ -292,7 +292,6 @@ export interface RentStatisticsQuery {
 // 查询参数类型
 export interface RentContractQueryParams {
   page?: number;
-  limit?: number;
   page_size?: number;
   contract_number?: string;
   tenant_name?: string;
@@ -305,7 +304,6 @@ export interface RentContractQueryParams {
 
 export interface RentLedgerQueryParams {
   page?: number;
-  limit?: number;
   page_size?: number;
   contract_id?: string;
   asset_id?: string;

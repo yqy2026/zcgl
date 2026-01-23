@@ -70,8 +70,8 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         # 这里为了兼容性保持返回 dict 结构
         # 但 logic should use query_builder logic
 
-        skip = (search_params.page - 1) * search_params.size
-        limit = search_params.size
+        skip = (search_params.page - 1) * search_params.page_size
+        limit = search_params.page_size
 
         filters = {}
         if search_params.is_active is not None:

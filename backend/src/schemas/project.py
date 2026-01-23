@@ -207,10 +207,8 @@ class ProjectListResponse(BaseModel):
     items: list[ProjectResponse]
     total: int
     page: int
-    page_size: int = Field(..., serialization_alias="pageSize")
+    page_size: int
     pages: int
-
-    model_config = ConfigDict(populate_by_name=True)
 
 
 class ProjectDeleteResponse(BaseModel):

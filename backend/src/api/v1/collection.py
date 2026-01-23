@@ -121,7 +121,7 @@ async def list_collection_records(
     contract_id: str | None = Query(None, description="合同ID"),
     collection_status: CollectionStatus | None = Query(None, description="催缴状态"),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> CollectionRecordListResponse:
@@ -141,22 +141,22 @@ async def list_collection_records(
     total = query.count()
 
     # 分页
-    offset = (page - 1) * limit
+    offset = (page - 1) * page_size
     records = (
         query.order_by(CollectionRecord.created_at.desc())
         .offset(offset)
-        .limit(limit)
+        .limit(page_size)
         .all()
     )
 
     # 计算总页数
-    pages = (total + limit - 1) // limit if total > 0 else 0
+    pages = (total + page_size - 1) // page_size if total > 0 else 0
 
     return CollectionRecordListResponse(
         items=records,  # type: ignore[arg-type]  # FastAPI handles ORM to response model conversion
         total=total,
         page=page,
-        limit=limit,
+        page_size=page_size,
         pages=pages,
     )
 

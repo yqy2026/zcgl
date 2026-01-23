@@ -168,13 +168,13 @@ async def get_ownerships(
     current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
     page: int = Query(1, ge=1, description="页码"),
-    size: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     keyword: str | None = Query(None, description="搜索关键词"),
     is_active: bool | None = Query(None, description="是否启用"),
 ) -> OwnershipListResponse:
     """获取权属方列表"""
     search_params = OwnershipSearchRequest(
-        page=page, size=size, keyword=keyword, is_active=is_active
+        page=page, page_size=page_size, keyword=keyword, is_active=is_active
     )
 
     result = ownership.search(db, search_params)

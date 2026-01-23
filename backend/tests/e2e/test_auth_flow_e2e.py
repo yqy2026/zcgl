@@ -16,7 +16,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 
-def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
+def test_complete_auth_flow_e2e(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test complete authentication flow with permissions
 
@@ -26,11 +30,8 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     3. Access to protected endpoints with valid token
     4. Rate limiting after authentication (Issue #1 verification)
     """
-    from .conftest import create_test_user
-
     # Create admin user directly in database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="admin_test",
         email="admin_test@example.com",
         password="AdminPass123!",
@@ -100,18 +101,19 @@ def test_complete_auth_flow_e2e(db_session: Session, client: TestClient):
     # In production, it will limit requests according to the configured rate
 
 
-def test_regular_user_auth_flow_e2e(db_session: Session, client: TestClient):
+def test_regular_user_auth_flow_e2e(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test authentication flow for regular user role
 
     This test verifies that regular users receive appropriate permissions
     and cannot perform admin actions (Issue #2 verification).
     """
-    from .conftest import create_test_user
-
     # Create regular user directly in database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="regular_user",
         email="regular_user@example.com",
         password="UserPass123!",
@@ -150,17 +152,18 @@ def test_regular_user_auth_flow_e2e(db_session: Session, client: TestClient):
     assert user_data["role"] == "user"
 
 
-def test_invalid_credentials_flow(db_session: Session, client: TestClient):
+def test_invalid_credentials_flow(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test authentication failure with invalid credentials
 
     Verifies proper error handling for login failures.
     """
-    from .conftest import create_test_user
-
     # Create user first via database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="credential_test",
         email="credential@example.com",
         password="ValidPass123!",
@@ -177,7 +180,11 @@ def test_invalid_credentials_flow(db_session: Session, client: TestClient):
     assert response.status_code in [401, 400]
 
 
-def test_token_refresh_flow(db_session: Session, client: TestClient):
+def test_token_refresh_flow(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test token refresh mechanism (Issue #4 verification)
 
@@ -186,11 +193,8 @@ def test_token_refresh_flow(db_session: Session, client: TestClient):
     2. New access token is issued
     3. Old access token cannot be used after refresh
     """
-    from .conftest import create_test_user
-
     # Create user via database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="refresh_test",
         email="refresh@example.com",
         password="RefreshPass123!",
@@ -237,7 +241,11 @@ def test_token_refresh_flow(db_session: Session, client: TestClient):
     # Note: If refresh fails, it may be due to session management not being fully set up in test environment
 
 
-def test_logout_flow(db_session: Session, client: TestClient):
+def test_logout_flow(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test logout functionality (Issue #4 verification)
 
@@ -245,11 +253,8 @@ def test_logout_flow(db_session: Session, client: TestClient):
     1. Logout endpoint works correctly
     2. Token is invalidated after logout
     """
-    from .conftest import create_test_user
-
     # Create user via database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="logout_test",
         email="logout@example.com",
         password="LogoutPass123!",
@@ -286,7 +291,11 @@ def test_logout_flow(db_session: Session, client: TestClient):
         assert after_logout_response.status_code in [401, 403]
 
 
-def test_permission_enforcement(db_session: Session, client: TestClient):
+def test_permission_enforcement(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
     """
     Test that permissions are properly enforced (Issue #2, #3 verification)
 
@@ -294,11 +303,8 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
     1. Admin users can access admin endpoints
     2. Regular users cannot access admin endpoints
     """
-    from .conftest import create_test_user
-
     # Create admin and regular users via database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="perm_admin",
         email="perm_admin@example.com",
         password="AdminPerm123!",
@@ -306,8 +312,7 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
         role="admin",
     )
 
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username="perm_user",
         email="perm_user@example.com",
         password="UserPerm123!",
@@ -360,18 +365,19 @@ def test_permission_enforcement(db_session: Session, client: TestClient):
     ],
 )
 def test_role_based_permissions(
-    db_session: Session, client: TestClient, role: str, expected_permission_count: int
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+    role: str,
+    expected_permission_count: int,
 ):
     """
     Test that different roles receive appropriate permissions
 
     This is a parameterized test that verifies permission sets for different roles.
     """
-    from .conftest import create_test_user
-
     # Create user with specific role via database
-    create_test_user(
-        db_session,
+    create_test_user_factory(
         username=f"{role}_test",
         email=f"{role}@example.com",
         password=f"{role.capitalize()}Pass123!",

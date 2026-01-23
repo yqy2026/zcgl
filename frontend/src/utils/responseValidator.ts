@@ -276,14 +276,14 @@ export function validatePaginatedResponse<T = unknown>(
   } else {
     // 验证 pagination 子字段
     const pagination = nestedData.pagination as Record<string, unknown>;
-    const requiredFields = ['page', 'pageSize', 'total', 'totalPages'];
+    const requiredFields = ['page', 'page_size', 'total', 'totalPages'];
 
     for (const field of requiredFields) {
       if (!(field in pagination)) {
         result.missingFields.push(`data.pagination.${field}`);
       } else if (
         field === 'page' ||
-        field === 'pageSize' ||
+        field === 'page_size' ||
         field === 'total' ||
         field === 'totalPages'
       ) {

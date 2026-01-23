@@ -25,8 +25,8 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
 
+from src.core.exception_handler import BaseBusinessError
 from src.models.collection import CollectionStatus
 from src.schemas.collection import (
     CollectionRecordCreate,
@@ -158,7 +158,7 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=None,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -166,7 +166,7 @@ class TestListCollectionRecords:
         assert len(result.items) == 20
         assert result.total == 100
         assert result.page == 1
-        assert result.limit == 20
+        assert result.page_size == 20
         assert result.pages == 5
 
     @pytest.mark.asyncio
@@ -190,7 +190,7 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=None,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -219,7 +219,7 @@ class TestListCollectionRecords:
             contract_id="contract-123",
             collection_status=None,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -247,7 +247,7 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=CollectionStatus.SUCCESS,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -275,7 +275,7 @@ class TestListCollectionRecords:
             contract_id="contract-123",
             collection_status=CollectionStatus.PENDING,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -303,14 +303,14 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=None,
             page=2,
-            limit=10,
+            page_size=10,
             db=mock_db,
             current_user=mock_current_user,
         )
 
         assert result.total == 25
         assert result.page == 2
-        assert result.limit == 10
+        assert result.page_size == 10
         assert result.pages == 3  # (25 + 10 - 1) // 10 = 3
         assert len(result.items) == 10
 
@@ -331,7 +331,7 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=None,
             page=1,
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -359,7 +359,7 @@ class TestListCollectionRecords:
             contract_id=None,
             collection_status=None,
             page=1,  # Minimum valid page
-            limit=20,
+            page_size=20,
             db=mock_db,
             current_user=mock_current_user,
         )
@@ -403,13 +403,14 @@ class TestGetCollectionRecord:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_collection_record(
                 record_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "催缴记录不存在" in exc_info.value.detail
+        assert "collection_record" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -535,13 +536,14 @@ class TestCreateCollectionRecord:
 
         mock_db.query.side_effect = mock_query
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await create_collection_record(
                 record_data=record_data, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "租金台账不存在" in exc_info.value.detail
+        assert "rent_ledger" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_create_record_with_all_fields(
@@ -662,7 +664,7 @@ class TestUpdateCollectionRecord:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_collection_record(
                 record_id="nonexistent",
                 update_data=update_data,
@@ -671,7 +673,8 @@ class TestUpdateCollectionRecord:
             )
 
         assert exc_info.value.status_code == 404
-        assert "催缴记录不存在" in exc_info.value.detail
+        assert "collection_record" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_update_record_status_to_failed(
@@ -765,13 +768,14 @@ class TestDeleteCollectionRecord:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_collection_record(
                 record_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "催缴记录不存在" in exc_info.value.detail
+        assert "collection_record" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -803,12 +807,12 @@ class TestCollectionEdgeCases:
             contract_id=None,
             collection_status=None,
             page=1,
-            limit=100,  # Maximum allowed limit
+            page_size=100,  # Maximum allowed limit
             db=mock_db,
             current_user=mock_current_user,
         )
 
-        assert result.limit == 100
+        assert result.page_size == 100
         assert len(result.items) == 100
 
     @pytest.mark.asyncio

@@ -170,7 +170,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
     const loadAssets = async () => {
       setLoadingAssets(true);
       try {
-        const response = await assetService.getAssets({ limit: 100 });
+        const response = await assetService.getAssets({ page_size: 100 });
         setAssets(response.items);
       } catch (error) {
         componentLogger.error('加载资产列表失败:', error as Error);
@@ -183,7 +183,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
     const loadOwnerships = async () => {
       setLoadingOwnerships(true);
       try {
-        const response = await ownershipService.getOwnerships({ size: 100 });
+        const response = await ownershipService.getOwnerships({ page_size: 100 });
         setOwnerships(response.items);
       } catch (error) {
         componentLogger.error('加载权属方列表失败:', error as Error);

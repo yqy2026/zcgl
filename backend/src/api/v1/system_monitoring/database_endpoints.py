@@ -109,7 +109,7 @@ async def get_database_health_metrics(
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
 async def get_slow_queries(
-    limit: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
+    page_size: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """获取数据库慢查询列表"""
@@ -118,7 +118,7 @@ async def get_slow_queries(
         if not db_manager:
             raise service_unavailable("数据库管理器不可用")
 
-        slow_queries = db_manager.get_slow_queries(limit=limit)
+        slow_queries = db_manager.get_slow_queries(limit=page_size)
 
         return {
             "slow_queries": slow_queries,

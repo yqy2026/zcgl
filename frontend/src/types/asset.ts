@@ -248,7 +248,7 @@ export interface AssetSummary {
 // 搜索参数
 export interface AssetSearchParams {
   page?: number;
-  limit?: number;
+  page_size?: number;
   search?: string;
   search_keyword?: string; // 添加搜索关键字字段
   ownership_status?: OwnershipStatus;

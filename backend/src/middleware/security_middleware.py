@@ -42,6 +42,51 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_TRUSTED_PROXY_NETWORKS = [
+    ip_network("10.0.0.0/8"),
+    ip_network("172.16.0.0/12"),
+    ip_network("192.168.0.0/16"),
+    ip_network("127.0.0.1/32"),
+    ip_network("::1/128"),
+]
+
+
+def _is_valid_ip_value(ip: str) -> bool:
+    try:
+        ip_address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_trusted_proxy_ip(ip: str, trusted_proxy_networks: list[Any]) -> bool:
+    try:
+        client_ip = ip_address(ip)
+    except ValueError:
+        return False
+    return any(client_ip in network for network in trusted_proxy_networks)
+
+
+def get_client_ip(
+    request: Request, trusted_proxy_networks: list[Any] | None = None
+) -> str:
+    client_host = request.client.host if request.client else None
+    networks = trusted_proxy_networks or _DEFAULT_TRUSTED_PROXY_NETWORKS
+    if client_host and _is_trusted_proxy_ip(client_host, networks):
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            forwarded_ip = forwarded_for.split(",")[0].strip()
+            if _is_valid_ip_value(forwarded_ip):
+                return forwarded_ip
+
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip and _is_valid_ip_value(real_ip.strip()):
+            return real_ip.strip()
+
+    if client_host:
+        return client_host
+    return "unknown"
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """安全头部中间件"""

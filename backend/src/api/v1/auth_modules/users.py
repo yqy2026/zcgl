@@ -8,7 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -25,6 +25,7 @@ from ....crud.auth import AuditLogCRUD, UserCRUD
 from ....database import get_db
 from ....exceptions import BusinessLogicError
 from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import (
     PasswordChangeRequest,
     UserCreate,
@@ -248,6 +249,7 @@ async def activate_user(
 @router.post("/{user_id}/lock", summary="锁定用户")
 async def lock_user(
     user_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -272,12 +274,12 @@ async def lock_user(
         audit_crud = AuditLogCRUD()
         audit_crud.create(
             db=db,
-            user_id=user_id,
+            user_id=current_user.id,
             action="user_locked",
             resource_type="user",
             resource_id=user_id,
-            ip_address="system",
-            user_agent="admin_action",
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
         )
 
         return {"success": True, "message": f"用户 {user.username} 已锁定"}
@@ -291,6 +293,7 @@ async def lock_user(
 @router.post("/{user_id}/unlock", summary="解锁用户账户")
 async def unlock_user_account(
     user_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -318,12 +321,12 @@ async def unlock_user_account(
         audit_crud = AuditLogCRUD()
         audit_crud.create(
             db=db,
-            user_id=user_id,
+            user_id=current_user.id,
             action="user_unlocked",
             resource_type="user",
             resource_id=user_id,
-            ip_address="system",
-            user_agent="admin_action",
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
         )
 
         return {"success": True, "message": f"用户 {user.username} 已解锁"}
@@ -338,6 +341,7 @@ async def unlock_user_account(
 async def reset_user_password(
     user_id: str,
     password_data: dict[str, Any],
+    request: Request,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -383,12 +387,12 @@ async def reset_user_password(
         audit_crud = AuditLogCRUD()
         audit_crud.create(
             db=db,
-            user_id=user_id,
+            user_id=current_user.id,
             action="password_reset",
             resource_type="user",
             resource_id=user_id,
-            ip_address="system",
-            user_agent="admin_action",
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
         )
 
         return {

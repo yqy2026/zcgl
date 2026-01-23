@@ -58,7 +58,7 @@ export const getAssetsHandler = http.get(`${API_BASE_URL}/assets`, async ({ requ
 
   const params = getSearchParams(request);
   const _page = parseInt(params.page || '1');
-  const _limit = parseInt(params.limit || '20');
+  const _pageSize = parseInt(params.page_size || '20');
 
   // 模拟搜索过滤
   if (params.search != null && params.search.length > 0) {

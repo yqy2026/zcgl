@@ -7,7 +7,7 @@
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from fastapi import HTTPException, Request, Response
+from fastapi import Request, Response
 
 
 def create_mock_request(url_path: str = "/api/test", method: str = "GET") -> Mock:
@@ -98,7 +98,9 @@ class TestRequestValidationMiddleware:
             return Response(content="test")
 
         # 调用中间件（应该记录可疑User-Agent）
-        with patch("src.middleware.security_middleware.security_auditor") as mock_auditor:
+        with patch(
+            "src.middleware.security_middleware.security_auditor"
+        ) as mock_auditor:
             await middleware.dispatch(request, mock_call_next)
 
             # 验证安全审计器被调用了
@@ -211,7 +213,6 @@ class TestSecurityMiddlewareIntegration:
         """测试所有安全中间件按顺序执行"""
         from src.middleware.security_middleware import (
             FileUploadSecurityMiddleware,
-            RequestValidationMiddleware,
             SecurityHeadersMiddleware,
         )
 
@@ -234,7 +235,6 @@ class TestSecurityMiddlewareIntegration:
         response1 = await file_upload_middleware.dispatch(request, final_call_next)
 
         # 2. RequestValidationMiddleware
-        request_validation_middleware = RequestValidationMiddleware(app=None)
         # 由于我们已经通过了file_upload，现在模拟通过request_validation
         # 实际上在FastAPI中这些会自动链式调用
 
@@ -272,7 +272,9 @@ class TestSecurityLogging:
             return Response(content="test")
 
         # 验证可疑活动被记录 - 使用security_auditor而不是logger
-        with patch("src.middleware.security_middleware.security_auditor") as mock_auditor:
+        with patch(
+            "src.middleware.security_middleware.security_auditor"
+        ) as mock_auditor:
             await middleware.dispatch(request, call_next)
 
             # 应该记录可疑User-Agent（因为长度<10）
@@ -301,7 +303,9 @@ class TestSecurityLogging:
             return Response(content="test")
 
         # 验证日志包含error_id - 使用security_auditor
-        with patch("src.middleware.security_middleware.security_auditor") as mock_auditor:
+        with patch(
+            "src.middleware.security_middleware.security_auditor"
+        ) as mock_auditor:
             await middleware.dispatch(request, call_next)
 
             # 验证调用了log_security_event方法
@@ -372,7 +376,6 @@ class TestSecurityMiddlewareErrorHandling:
     @pytest.mark.asyncio
     async def test_request_validation_handles_malformed_input(self):
         """测试请求验证处理格式错误的输入"""
-        from src.core.exception_handler import PermissionDeniedError
         from src.middleware.security_middleware import RequestValidationMiddleware
 
         middleware = RequestValidationMiddleware(app=None)

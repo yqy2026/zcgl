@@ -122,5 +122,5 @@ export interface DictionaryQueryParams {
   is_active?: boolean;
   search?: string;
   page?: number;
-  limit?: number;
+  page_size?: number;
 }

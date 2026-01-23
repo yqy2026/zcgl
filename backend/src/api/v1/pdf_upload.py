@@ -28,6 +28,11 @@ from sqlalchemy.orm import Session
 
 from ...core.exception_handler import bad_request, internal_error
 from ...database import get_db
+from ...models.pdf_import_session import (
+    PDFImportSession,
+    ProcessingStep,
+    SessionStatus,
+)
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
 from ...utils.file_security import generate_safe_filename
@@ -62,7 +67,9 @@ async def upload_pdf_file(
     temp_dir.mkdir(exist_ok=True)
 
     file_id = str(uuid.uuid4())
-    safe_filename = generate_safe_filename(file.filename or "upload.pdf", prefix=file_id)
+    safe_filename = generate_safe_filename(
+        file.filename or "upload.pdf", prefix=file_id
+    )
     temp_file_path = temp_dir / safe_filename
 
     total_size = 0
@@ -74,7 +81,9 @@ async def upload_pdf_file(
                 total_size += len(chunk)
                 if total_size > max_size:
                     temp_file_path.unlink(missing_ok=True)
-                    raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
+                    raise bad_request(
+                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
+                    )
                 temp_file.write(chunk)
 
         logger.info("PDF文件已保存: %s, size=%s", temp_file_path, total_size)
@@ -82,9 +91,6 @@ async def upload_pdf_file(
     except Exception as e:
         temp_file_path.unlink(missing_ok=True)
         raise internal_error(f"文件处理失败: {str(e)}")
-
-    # 创建会话记录（不依赖可选服务）
-    from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 
     session_id = f"session-{uuid.uuid4().hex[:12]}"
     session = PDFImportSession(
@@ -166,9 +172,13 @@ async def upload_and_extract_pdf_v1_compatible(
     try:
         pdf_import_service_instance = PDFImportService()
         filename = file.filename or "uploaded_file.pdf"
-        file_info = await pdf_import_service_instance.upload_file(file_content, filename)
+        file_info = await pdf_import_service_instance.upload_file(
+            file_content, filename
+        )
 
-        text_result = await pdf_processing_service.extract_text_from_pdf(file_info["file_path"])
+        text_result = await pdf_processing_service.extract_text_from_pdf(
+            file_info["file_path"]
+        )
 
         if not text_result.get("success"):
             return ExtractionResponse(
@@ -181,7 +191,9 @@ async def upload_and_extract_pdf_v1_compatible(
         # Best practice: import from backend service module, not "src.*"
         from ...services.document.contract_extractor import ContractExtractor
 
-        extraction_result = ContractExtractor().extract_contract_info(text_result.get("text", ""))
+        extraction_result = ContractExtractor().extract_contract_info(
+            text_result.get("text", "")
+        )
 
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 

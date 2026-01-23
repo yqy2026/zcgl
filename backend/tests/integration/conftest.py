@@ -180,8 +180,11 @@ def test_data(db_session):
     from src.models.auth import User
     from src.models.organization import Organization
     from src.services.core.password_service import PasswordService
+    from src.services.enum_data_init import init_enum_data
 
     password_service = PasswordService()
+
+    init_enum_data(db_session, created_by="integration_test")
 
     # Create test organization
     test_org = Organization(

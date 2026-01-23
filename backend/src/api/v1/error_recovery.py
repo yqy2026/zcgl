@@ -326,8 +326,8 @@ async def get_recovery_history(
     current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
     category: Annotated[str | None, Query(None, description="按错误类别筛选")] = None,
     success: Annotated[bool | None, Query(None, description="按是否成功筛选")] = None,
-    limit: Annotated[int, Query(50, ge=1, le=1000, description="每页记录数")] = 50,
-    offset: Annotated[int, Query(0, ge=0, description="偏移量")] = 0,
+    page: Annotated[int, Query(1, ge=1, description="页码")] = 1,
+    page_size: Annotated[int, Query(50, ge=1, le=1000, description="每页记录数")] = 50,
 ) -> dict[str, Any]:
     """获取错误恢复历史"""
 
@@ -344,12 +344,13 @@ async def get_recovery_history(
 
         # 分页
         total = len(history)
-        history_page = history[offset : offset + limit]
+        offset = (page - 1) * page_size
+        history_page = history[offset : offset + page_size]
 
         return {
             "total": total,
-            "offset": offset,
-            "limit": limit,
+            "page": page,
+            "page_size": page_size,
             "records": history_page,
         }
 

@@ -11,7 +11,7 @@ def test_login_returns_permissions(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        data={
+        json={
             "username": admin_user.username,
             "password": "Admin123!@#",  # Matches the password in conftest.py
         },
@@ -29,7 +29,7 @@ def test_permission_structure(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"username": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200

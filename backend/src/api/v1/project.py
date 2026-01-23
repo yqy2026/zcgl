@@ -50,7 +50,7 @@ async def list_projects(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: int = 1,
-    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=100),
     keyword: str | None = None,
     is_active: bool | None = None,
     ownership_id: str | None = None,
@@ -59,7 +59,7 @@ async def list_projects(
     """
     获取项目列表，支持分页和筛选
 
-    兼容：pageSize 参数
+    分页参数使用 page/page_size
     """
     try:
         search_params = ProjectSearchRequest(

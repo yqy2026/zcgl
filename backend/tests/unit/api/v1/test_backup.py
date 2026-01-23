@@ -28,8 +28,9 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 from fastapi.responses import FileResponse
+
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -227,12 +228,12 @@ class TestCreateBackup:
         mock_service.create_backup.side_effect = Exception("Backup failed: Disk full")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await create_backup(backup_name="error_backup", db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "创建数据备份失败" in exc_info.value.detail
-        assert "Disk full" in exc_info.value.detail
+        assert "创建数据备份失败" in exc_info.value.message
+        assert "Disk full" in exc_info.value.message
 
 
 # ============================================================================
@@ -303,11 +304,11 @@ class TestListBackups:
         mock_service.list_backups.side_effect = Exception("Permission denied")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await list_backups()
 
         assert exc_info.value.status_code == 500
-        assert "获取备份列表失败" in exc_info.value.detail
+        assert "获取备份列表失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -356,11 +357,12 @@ class TestDownloadBackup:
         mock_service.get_backup.return_value = None
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await download_backup(backup_name="nonexistent")
 
         assert exc_info.value.status_code == 404
-        assert "备份文件不存在" in exc_info.value.detail
+        assert "backup" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
@@ -372,11 +374,11 @@ class TestDownloadBackup:
         mock_service.get_backup.side_effect = Exception("Service error")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await download_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "下载备份文件失败" in exc_info.value.detail
+        assert "下载备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -420,11 +422,11 @@ class TestRestoreBackup:
         """Test restore without confirmation parameter"""
         from src.api.v1.backup import restore_backup
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
 
         assert exc_info.value.status_code == 400
-        assert "请确认恢复操作" in exc_info.value.detail
+        assert "请确认恢复操作" in exc_info.value.message
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
@@ -438,11 +440,12 @@ class TestRestoreBackup:
         )
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 404
-        assert "备份文件不存在" in exc_info.value.detail
+        assert "backup" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
@@ -456,11 +459,11 @@ class TestRestoreBackup:
         )
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "恢复数据备份失败" in exc_info.value.detail
+        assert "恢复数据备份失败" in exc_info.value.message
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
@@ -527,11 +530,12 @@ class TestDeleteBackup:
         )
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_backup(backup_name="nonexistent")
 
         assert exc_info.value.status_code == 404
-        assert "备份文件不存在" in exc_info.value.detail
+        assert "backup" in exc_info.value.message
+        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.backup.BackupService")
     @pytest.mark.asyncio
@@ -543,11 +547,11 @@ class TestDeleteBackup:
         mock_service.delete_backup.side_effect = Exception("Permission denied")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "删除备份文件失败" in exc_info.value.detail
+        assert "删除备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -613,11 +617,11 @@ class TestGetBackupStats:
         mock_service.get_backup_stats.side_effect = Exception("Stats error")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_backup_stats()
 
         assert exc_info.value.status_code == 500
-        assert "获取备份统计失败" in exc_info.value.detail
+        assert "获取备份统计失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -679,11 +683,11 @@ class TestValidateBackup:
         mock_service.validate_backup.side_effect = Exception("Validation error")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await validate_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "验证备份文件失败" in exc_info.value.detail
+        assert "验证备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -766,11 +770,11 @@ class TestCleanupOldBackups:
         mock_service.cleanup_old_backups.side_effect = Exception("Cleanup failed")
         mock_service_class.return_value = mock_service
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await cleanup_old_backups(keep_count=10)
 
         assert exc_info.value.status_code == 500
-        assert "清理旧备份失败" in exc_info.value.detail
+        assert "清理旧备份失败" in exc_info.value.message
 
 
 # ============================================================================

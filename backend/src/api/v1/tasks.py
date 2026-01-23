@@ -55,8 +55,8 @@ async def create_task(
 @router.get("", response_model=TaskListResponse, summary="获取任务列表")
 @router.get("/", response_model=TaskListResponse, summary="获取任务列表")
 async def get_tasks(
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(20, ge=1, le=100, description="每页记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     task_type: str | None = Query(None, description="任务类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     user_id: str | None = Query(None, description="用户ID筛选"),
@@ -79,10 +79,11 @@ async def get_tasks(
         if created_before:
             created_before_dt = datetime.fromisoformat(created_before)
 
+        skip = (page - 1) * page_size
         tasks = task_crud.get_multi(
             db=db,
             skip=skip,
-            limit=limit,
+            limit=page_size,
             task_type=task_type,
             status=status,
             user_id=user_id,
@@ -101,9 +102,9 @@ async def get_tasks(
         return TaskListResponse(
             items=task_responses,
             total=total,
-            page=skip // limit + 1,
-            limit=limit,
-            pages=(total + limit - 1) // limit,
+            page=page,
+            page_size=page_size,
+            pages=(total + page_size - 1) // page_size,
         )
     except Exception as e:
         raise internal_error(f"获取任务列表失败: {str(e)}")
@@ -426,6 +427,6 @@ async def cleanup_old_tasks(
     清理过期的任务记录
     """
     try:
-        return task_service.cleanup_old_tasks(db=db, days=days, dry_run=dry_run)
+        return task_service.cleanup_old_tasks(db=db, days=days, dry_run=is_dry_run)
     except Exception as e:
         raise internal_error(f"清理任务失败: {str(e)}")

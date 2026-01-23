@@ -112,10 +112,10 @@ export const useBatchDeleteAssets = () => {
 /**
  * 资产历史查询 Hook
  */
-export const useAssetHistory = (assetId: string, page = 1, limit = 20, changeType?: string) => {
+export const useAssetHistory = (assetId: string, page = 1, pageSize = 20, changeType?: string) => {
   return useQuery({
-    queryKey: ['asset-history', assetId, page, limit, changeType],
-    queryFn: () => assetService.getAssetHistory(assetId, page, limit, changeType),
+    queryKey: ['asset-history', assetId, page, pageSize, changeType],
+    queryFn: () => assetService.getAssetHistory(assetId, page, pageSize, changeType),
     enabled: !!assetId,
   });
 };

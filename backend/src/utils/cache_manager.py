@@ -243,7 +243,7 @@ def cache_key_builder(func_name: str, **kwargs: Any) -> str:
     filtered_kwargs = {
         k: v
         for k, v in kwargs.items()
-        if k not in ["db", "current_user", "skip", "limit"]
+        if k not in ["db", "current_user", "skip", "page_size"]
     }
 
     # 将参数转换为字符串

@@ -57,7 +57,7 @@ class OperationLogListResponse(BaseModel):
     items: list[OperationLogResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
     pages: int
 
 
@@ -75,7 +75,7 @@ class OperationLogStatisticsResponse(BaseModel):
 @router.get("", response_model=OperationLogListResponse, summary="获取操作日志列表")
 async def get_operation_logs(
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     user_id: str | None = Query(None, description="用户ID"),
     action: str | None = Query(None, description="操作类型"),
     module: str | None = Query(None, description="操作模块"),
@@ -101,7 +101,7 @@ async def get_operation_logs(
     """
     try:
         log_crud = OperationLogCRUD()
-        skip = (page - 1) * limit
+        skip = (page - 1) * page_size
 
         # 解析日期
         start_dt = None
@@ -121,7 +121,7 @@ async def get_operation_logs(
         logs, total = log_crud.get_multi(
             db=db,
             skip=skip,
-            limit=limit,
+            limit=page_size,
             user_id=user_id,
             action=action,
             module=module,
@@ -131,13 +131,13 @@ async def get_operation_logs(
             search=search,
         )
 
-        pages = (total + limit - 1) // limit
+        pages = (total + page_size - 1) // page_size
 
         return OperationLogListResponse(
             items=[OperationLogResponse.model_validate(log) for log in logs],
             total=total,
             page=page,
-            limit=limit,
+            page_size=page_size,
             pages=pages,
         )
     except Exception as e:

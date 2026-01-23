@@ -192,7 +192,12 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         )
 
     def create(
-        self, db: Session, *, obj_in: AssetCreate | dict[str, Any], **kwargs: Any
+        self,
+        db: Session,
+        *,
+        obj_in: AssetCreate | dict[str, Any],
+        commit: bool = True,
+        **kwargs: Any,
     ) -> Asset:
         """
         创建资产（加密PII字段）
@@ -211,7 +216,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         # 调用父类方法创建记录
-        return super().create(db=db, obj_in=encrypted_data)
+        return super().create(db=db, obj_in=encrypted_data, commit=commit)
 
     def get(self, db: Session, id: Any, use_cache: bool = True) -> Asset | None:
         """

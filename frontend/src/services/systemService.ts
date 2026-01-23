@@ -27,7 +27,7 @@ export interface UserListResponse {
   items: User[];
   total: number;
   page: number;
-  limit: number;
+  page_size: number;
   pages: number;
 }
 
@@ -65,7 +65,7 @@ export const userService = {
   // 获取用户列表
   async getUsers(params?: {
     page?: number;
-    limit?: number;
+    page_size?: number;
     search?: string;
     status?: string;
     role?: string;
@@ -87,7 +87,7 @@ export const userService = {
         items: data as User[],
         total: data.length,
         page: 1,
-        limit: data.length,
+        page_size: data.length,
         pages: 1,
       };
     }
@@ -97,7 +97,7 @@ export const userService = {
       items: [],
       total: 0,
       page: 1,
-      limit: 20,
+      page_size: 20,
       pages: 0,
     };
   },
@@ -183,7 +183,7 @@ export interface UpdateRoleData {
 
 export const roleService = {
   // 获取角色列表
-  async getRoles(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+  async getRoles(params?: { page?: number; page_size?: number; search?: string; status?: string }) {
     const response = await api.get(SYSTEM_API.ROLES, { params });
     return response.data;
   },
@@ -272,7 +272,7 @@ export const logService = {
   // 获取操作日志列表
   async getLogs(params?: {
     page?: number;
-    limit?: number;
+    page_size?: number;
     search?: string;
     user_id?: string;
     module?: string;

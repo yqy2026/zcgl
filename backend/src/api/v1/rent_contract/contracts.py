@@ -98,7 +98,7 @@ def get_contracts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     contract_number: str | None = Query(None, description="合同编号筛选"),
     tenant_name: str | None = Query(None, description="承租方名称筛选"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
@@ -110,11 +110,11 @@ def get_contracts(
     """
     获取租金合同列表，支持分页和筛选
     """
-    skip = (page - 1) * limit
+    skip = (page - 1) * page_size
     contracts, total = rent_contract.get_multi_with_filters(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=page_size,
         contract_number=contract_number,
         tenant_name=tenant_name,
         asset_id=asset_id,
@@ -124,11 +124,15 @@ def get_contracts(
         end_date=end_date,
     )
 
-    pages = (total + limit - 1) // limit
+    pages = (total + page_size - 1) // page_size
     contract_responses = [RentContractResponse.model_validate(c) for c in contracts]
 
     return RentContractListResponse(
-        items=contract_responses, total=total, page=page, limit=limit, pages=pages
+        items=contract_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
     )
 
 

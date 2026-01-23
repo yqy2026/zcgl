@@ -57,12 +57,19 @@ interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 class MemoryCache {
   private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
   private maxSize: number;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(maxSize: number = 100) {
     this.maxSize = maxSize;
   }
 
   set(key: string, data: unknown, ttl: number): void {
+    if (!this.cleanupInterval) {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanup();
+      }, 60000);
+    }
+
     // 如果缓存已满，删除最旧的条目
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
@@ -93,8 +100,21 @@ class MemoryCache {
     return item.data;
   }
 
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now - item.timestamp > item.ttl) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   clear(): void {
     this.cache.clear();
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 
   delete(key: string): void {
@@ -624,8 +644,30 @@ export class ApiClient {
    * 生成缓存键
    */
   private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
-    const paramsStr = params ? JSON.stringify(params) : '';
+    const paramsStr = params ? JSON.stringify(this.normalizeParams(params)) : '';
     return `${method}:${url}:${paramsStr}`;
+  }
+
+  private normalizeParams(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map(item => this.normalizeParams(item));
+    }
+
+    if (value && typeof value === 'object') {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+
+      const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+        a.localeCompare(b)
+      );
+      return entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
+        acc[key] = this.normalizeParams(val);
+        return acc;
+      }, {});
+    }
+
+    return value;
   }
 
   /**

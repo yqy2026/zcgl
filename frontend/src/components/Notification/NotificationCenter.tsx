@@ -34,7 +34,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   // 获取通知列表
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['notifications', 'list'],
-    queryFn: () => notificationService.getNotifications({ limit: 10 }),
+    queryFn: () => notificationService.getNotifications({ page_size: 10 }),
     refetchInterval: 60000, // 每分钟刷新一次
   });
 

@@ -31,6 +31,7 @@ from ....middleware.auth import (
     SECRET_KEY,
     get_current_active_user,
 )
+from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
 from ....schemas.auth import (
     LoginRequest,
@@ -64,7 +65,7 @@ async def login(
     user_crud = UserCRUD()
 
     # 获取客户端信息
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
     try:
@@ -202,7 +203,7 @@ async def logout(
     audit_crud = AuditLogCRUD()
 
     # 获取客户端信息
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
     # Clear httpOnly cookie

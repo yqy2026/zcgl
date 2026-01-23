@@ -15,27 +15,15 @@ from src.core.security_event_logger import (
 from src.models.security_event import SecurityEvent
 
 
-def setup_mock_cache(mock_cache, set_return=True, get_return=None):
-    """Helper to set up mock cache_manager with sync functions"""
-
-    def mock_set(prefix, key, value, expire):
-        return set_return
-
-    def mock_get(prefix, key):
-        # If get_return is a dict with just 'count', add 'events' key
-        if (
-            get_return
-            and isinstance(get_return, dict)
-            and "count" in get_return
-            and "events" not in get_return
-        ):
-            return {"count": get_return["count"], "events": []}
-        # Handle the case where get_return is explicitly set to a return value
-        return get_return
-
-    mock_cache.set = mock_set
-    mock_cache.get = mock_get
-    mock_cache.get.is_coroutine = False  # Mark as not a coroutine
+def setup_mock_db_counts(mock_sessionlocal, counts):
+    mock_db = Mock()
+    mock_query = Mock()
+    mock_filtered = Mock()
+    mock_filtered.count.side_effect = counts
+    mock_query.filter.return_value = mock_filtered
+    mock_db.query.return_value = mock_query
+    mock_sessionlocal.return_value = mock_db
+    return mock_db
 
 
 class TestSecurityEventLoggerBasics:
@@ -80,11 +68,8 @@ class TestSecurityEventLoggerBasics:
 class TestAuthFailureLogging:
     """Test authentication failure logging"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_auth_failure_basic(self, mock_cache):
+    def test_log_auth_failure_basic(self):
         """Test logging basic auth failure"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -101,11 +86,8 @@ class TestAuthFailureLogging:
             assert result.event_type == "auth_failure"
             assert result.ip_address == "192.168.1.1"
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_auth_failure_without_username(self, mock_cache):
+    def test_log_auth_failure_without_username(self):
         """Test logging auth failure without username"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -118,11 +100,8 @@ class TestAuthFailureLogging:
             # Should still log even without username
             assert result is not None
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_auth_failure_with_ipv6(self, mock_cache):
+    def test_log_auth_failure_with_ipv6(self):
         """Test logging auth failure with IPv6 address"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -140,11 +119,8 @@ class TestAuthFailureLogging:
 class TestPermissionDeniedLogging:
     """Test permission denied logging"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_permission_denied(self, mock_cache):
+    def test_log_permission_denied(self):
         """Test logging permission denied event"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -161,11 +137,8 @@ class TestPermissionDeniedLogging:
             assert result.event_type == "permission_denied"
             assert result.user_id == "user123"
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_permission_denied_with_details(self, mock_cache):
+    def test_log_permission_denied_with_details(self):
         """Test logging permission denied with additional details"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -183,11 +156,8 @@ class TestPermissionDeniedLogging:
 class TestRateLimitExceededLogging:
     """Test rate limit exceeded logging"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_rate_limit_exceeded(self, mock_cache):
+    def test_log_rate_limit_exceeded(self):
         """Test logging rate limit exceeded"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -203,50 +173,50 @@ class TestRateLimitExceededLogging:
 class TestThresholdChecking:
     """Test threshold-based alerting"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_should_alert_below_threshold(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_should_alert_below_threshold(self, mock_sessionlocal):
         """Test should not alert when below threshold"""
-        setup_mock_cache(mock_cache, get_return={"count": 3})
+        setup_mock_db_counts(mock_sessionlocal, [3])
 
         logger = SecurityEventLogger(alert_threshold=5)
         should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is False
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_should_alert_at_threshold(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_should_alert_at_threshold(self, mock_sessionlocal):
         """Test should alert when at threshold"""
-        setup_mock_cache(mock_cache, get_return={"count": 5})
+        setup_mock_db_counts(mock_sessionlocal, [5])
 
         logger = SecurityEventLogger(alert_threshold=5)
         should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is True
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_should_alert_above_threshold(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_should_alert_above_threshold(self, mock_sessionlocal):
         """Test should alert when above threshold"""
-        setup_mock_cache(mock_cache, get_return={"count": 10})
+        setup_mock_db_counts(mock_sessionlocal, [10])
 
         logger = SecurityEventLogger(alert_threshold=5)
         should_alert = logger.should_alert("192.168.1.1")
 
         assert should_alert is True
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_should_alert_custom_threshold(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_should_alert_custom_threshold(self, mock_sessionlocal):
         """Test should alert with custom threshold"""
-        setup_mock_cache(mock_cache, get_return={"count": 8})
+        setup_mock_db_counts(mock_sessionlocal, [8])
 
         logger = SecurityEventLogger(alert_threshold=10)
         should_alert = logger.should_alert("192.168.1.1", threshold=10)
 
         assert should_alert is False
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_should_alert_zero_count(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_should_alert_zero_count(self, mock_sessionlocal):
         """Test should not alert when count is zero"""
-        setup_mock_cache(mock_cache, get_return={"count": 0})
+        setup_mock_db_counts(mock_sessionlocal, [0])
 
         logger = SecurityEventLogger(alert_threshold=5)
         should_alert = logger.should_alert("192.168.1.1")
@@ -257,30 +227,30 @@ class TestThresholdChecking:
 class TestEventCounting:
     """Test event counting functionality"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_get_event_count(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_get_event_count(self, mock_sessionlocal):
         """Test getting event count"""
-        setup_mock_cache(mock_cache, get_return={"count": 7})
+        setup_mock_db_counts(mock_sessionlocal, [7])
 
         logger = SecurityEventLogger()
         count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
 
         assert count == 7
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_get_event_count_zero(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_get_event_count_zero(self, mock_sessionlocal):
         """Test getting event count when no events"""
-        setup_mock_cache(mock_cache, get_return=None)
+        setup_mock_db_counts(mock_sessionlocal, [0])
 
         logger = SecurityEventLogger()
         count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
 
         assert count == 0
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_get_event_count_different_types(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_get_event_count_different_types(self, mock_sessionlocal):
         """Test counting different event types"""
-        setup_mock_cache(mock_cache, get_return={"count": 5})
+        setup_mock_db_counts(mock_sessionlocal, [5, 5])
 
         logger = SecurityEventLogger()
 
@@ -298,11 +268,8 @@ class TestEventCounting:
 class TestDatabaseStorage:
     """Test database storage functionality"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_database_storage_on_log(self, mock_cache):
+    def test_database_storage_on_log(self):
         """Test events are stored in database"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -323,11 +290,8 @@ class TestDatabaseStorage:
 class TestAllEventTypes:
     """Test all security event types"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_auth_success(self, mock_cache):
+    def test_log_auth_success(self):
         """Test logging auth success"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -339,11 +303,8 @@ class TestAllEventTypes:
             assert result is not None
             assert result.event_type == "auth_success"
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_suspicious_activity(self, mock_cache):
+    def test_log_suspicious_activity(self):
         """Test logging suspicious activity"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -356,11 +317,8 @@ class TestAllEventTypes:
 
             assert result is not None
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_log_account_locked(self, mock_cache):
+    def test_log_account_locked(self):
         """Test logging account locked"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -397,31 +355,15 @@ class TestSeverityLevels:
 class TestErrorHandling:
     """Test error handling"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_redis_failure_graceful_handling(self, mock_cache):
-        """Test graceful handling when Redis fails"""
-
-        def mock_set(prefix, key, value, expire):
-            raise Exception("Redis connection failed")
-
-        mock_cache.set = mock_set
-
+    @patch("src.database.SessionLocal", side_effect=Exception("DB failure"))
+    def test_event_count_db_failure_returns_zero(self, mock_sessionlocal):
+        """Test graceful handling when database fails"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database") as mock_db_log:
-            mock_event = Mock(spec=SecurityEvent)
-            mock_db_log.return_value = mock_event
+        count = logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+        assert count == 0
 
-            # Should not raise exception
-            result = logger.log_auth_failure("192.168.1.1", "testuser")
-
-            # Should still return event from database
-            assert result is not None
-
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_invalid_ip_address(self, mock_cache):
+    def test_invalid_ip_address(self):
         """Test handling of invalid IP address"""
-        setup_mock_cache(mock_cache)
-
         logger = SecurityEventLogger()
         with patch.object(logger, "_log_to_database") as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
@@ -435,10 +377,10 @@ class TestErrorHandling:
 class TestIntegrationScenarios:
     """Test integration scenarios"""
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_multiple_auth_failures_trigger_alert(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_multiple_auth_failures_trigger_alert(self, mock_sessionlocal):
         """Test multiple auth failures trigger alert"""
-        setup_mock_cache(mock_cache, get_return={"count": 5})
+        setup_mock_db_counts(mock_sessionlocal, [5])
 
         logger = SecurityEventLogger(alert_threshold=5)
 
@@ -455,10 +397,10 @@ class TestIntegrationScenarios:
 
             assert should_alert is True
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_different_ips_separate_tracking(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_different_ips_separate_tracking(self, mock_sessionlocal):
         """Test different IPs are tracked separately"""
-        setup_mock_cache(mock_cache, get_return={"count": 5})
+        setup_mock_db_counts(mock_sessionlocal, [5, 2])
 
         logger = SecurityEventLogger(alert_threshold=5)
 
@@ -476,17 +418,12 @@ class TestIntegrationScenarios:
             # First IP should trigger alert
             assert logger.should_alert("192.168.1.1") is True
 
-            # Second IP should not trigger alert (update mock to return 2)
-            def mock_get_2(prefix, key):
-                return {"count": 2, "events": []}
-
-            mock_cache.get = mock_get_2
             assert logger.should_alert("192.168.1.2") is False
 
-    @patch("src.core.security_event_logger.cache_manager")
-    def test_mixed_event_types_separate_counts(self, mock_cache):
+    @patch("src.database.SessionLocal")
+    def test_mixed_event_types_separate_counts(self, mock_sessionlocal):
         """Test mixed event types are counted separately"""
-        setup_mock_cache(mock_cache, get_return={"count": 3})
+        setup_mock_db_counts(mock_sessionlocal, [3, 3])
 
         logger = SecurityEventLogger(alert_threshold=5)
 

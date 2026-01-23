@@ -37,7 +37,7 @@ export enum NotificationPriority {
 
 export interface NotificationQueryParams {
   page?: number;
-  limit?: number;
+  page_size?: number;
   is_read?: boolean;
   type?: string;
 }
@@ -46,7 +46,7 @@ export interface NotificationListResponse {
   items: Notification[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
   unread_count: number;
 }

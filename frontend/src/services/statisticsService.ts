@@ -457,14 +457,14 @@ export class StatisticsService {
    */
   async getAssetRankings(
     metric: 'area' | 'rent' | 'occupancy_rate',
-    limit: number = 10,
+    pageSize: number = 10,
     filters?: Filters
   ): Promise<Array<{ name: string; value: number; rank: number }>> {
     try {
       const result = await apiClient.get<
         Array<{ name: string; value: number; rank: number }>
       >(`/statistics/rankings/asset/${metric}`, {
-        params: { limit, ...filters },
+        params: { page_size: pageSize, ...filters },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,

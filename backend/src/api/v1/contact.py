@@ -72,7 +72,7 @@ def get_entity_contacts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
 ) -> Any:
     """
     获取指定实体的所有联系人
@@ -81,19 +81,19 @@ def get_entity_contacts(
     - entity_id: 实体ID
     - 返回结果按主要联系人优先，然后按创建时间倒序
     """
-    skip = (page - 1) * limit
+    skip = (page - 1) * page_size
     contacts, total = contact_crud.get_multi(
         db=db,
         entity_type=entity_type,
         entity_id=entity_id,
         skip=skip,
-        limit=limit,
+        limit=page_size,
     )
 
-    pages = (total + limit - 1) // limit
+    pages = (total + page_size - 1) // page_size
 
     return ContactListResponse(
-        items=list(contacts), total=total, page=page, limit=limit, pages=pages
+        items=list(contacts), total=total, page=page, page_size=page_size, pages=pages
     )
 
 

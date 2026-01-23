@@ -127,7 +127,7 @@ def get_rent_ledger(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     contract_id: str | None = Query(None, description="合同ID筛选"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     ownership_id: str | None = Query(None, description="权属方ID筛选"),
@@ -139,11 +139,11 @@ def get_rent_ledger(
     """
     获取租金台账列表，支持分页和筛选
     """
-    skip = (page - 1) * limit
+    skip = (page - 1) * page_size
     ledgers, total = rent_ledger.get_multi_with_filters(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=page_size,
         contract_id=contract_id,
         asset_id=asset_id,
         ownership_id=ownership_id,
@@ -153,11 +153,15 @@ def get_rent_ledger(
         end_date=end_date,
     )
 
-    pages = (total + limit - 1) // limit
+    pages = (total + page_size - 1) // page_size
     ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
     return RentLedgerListResponse(
-        items=ledger_responses, total=total, page=page, limit=limit, pages=pages
+        items=ledger_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
     )
 
 

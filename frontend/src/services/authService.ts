@@ -360,10 +360,10 @@ export class AuthService {
   }
 
   // 获取用户活动记录
-  static async getUserActivity(limit: number = 20): Promise<UserActivity[]> {
+  static async getUserActivity(pageSize: number = 20): Promise<UserActivity[]> {
     try {
       const result = await apiClient.get(AUTH_API.SESSIONS, {
-        params: { limit },
+        params: { page_size: pageSize },
         cache: true,
       });
 

@@ -50,7 +50,7 @@ def get_area_summary(
     Returns:
         面积汇总统计信息
     """
-    logger.info(f"开始计算面积汇总，聚合模式: {use_aggregation}")
+    logger.info(f"开始计算面积汇总，聚合模式: {should_use_aggregation}")
 
     # 构建筛选条件
     filters: dict[str, Any] = {}

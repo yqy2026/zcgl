@@ -246,7 +246,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --cov-fail-under=70 --junitxml=junit-report.xml"
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --cov-fail-under=85 --junitxml=junit-report.xml"
 norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build", "node_modules", "__pycache__", ".pytest_cache"]
 log_cli = true
 log_cli_level = "INFO"
@@ -287,7 +287,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 70  # Match pytest command line threshold (与pytest命令行阈值一致)
+fail_under = 85  # Match pytest command line threshold (与pytest命令行阈值一致)
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

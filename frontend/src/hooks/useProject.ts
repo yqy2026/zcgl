@@ -31,8 +31,8 @@ interface ProjectQueryParams {
   keyword?: string;
   is_active?: boolean;
   ownership_id?: string;
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
 }
 
 interface UseProjectOptionsResult {
@@ -156,7 +156,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
 
   const pagination = {
     current: data?.page ?? 1,
-    pageSize: data?.size ?? 10,
+    pageSize: data?.page_size ?? 10,
     total: data?.total ?? 0,
     onChange: (_page: number, _size: number) => {
       // 这里可以触发重新查询

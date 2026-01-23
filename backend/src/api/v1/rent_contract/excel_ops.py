@@ -112,9 +112,9 @@ def import_contracts_from_excel(
 
         result = rent_contract_excel_service.import_contracts_from_excel(
             file_path=file_path,
-            import_terms=import_terms,
-            import_ledger=import_ledger,
-            overwrite_existing=overwrite_existing,
+            import_terms=should_import_terms,
+            import_ledger=should_import_ledger,
+            overwrite_existing=should_overwrite_existing,
         )
 
         rent_contract_excel_service.cleanup_file(file_path)

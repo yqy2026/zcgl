@@ -160,7 +160,7 @@ async def get_all_assets(
     business_category: str | None = Query(None, description="业态类别"),
     sort_by: str | None = Query("created_at", description="排序字段"),
     sort_order: str | None = Query("desc", description="排序顺序"),
-    limit: int = Query(10000, ge=1, le=50000, description="最大返回数量"),
+    max_export: int = Query(10000, ge=1, le=50000, description="最大导出数量"),
 ) -> dict[str, Any]:
     """
     获取所有资产列表，不分页，用于导出等场景
@@ -173,7 +173,7 @@ async def get_all_assets(
     - **business_category**: 业态类别过滤
     - **sort_by**: 排序字段
     - **sort_order**: 排序顺序（asc/desc）
-    - **limit**: 最大返回数量限制
+    - **max_export**: 最大导出数量限制
     """
     try:
         # 构建查询过滤器
@@ -203,7 +203,7 @@ async def get_all_assets(
             search=search,
             order_by=sort_by,
             order_desc=bool(sort_order and sort_order.lower() == "desc"),
-            limit=limit,
+            limit=max_export,
         )
 
         # 转换为响应格式 - 使用Pydantic的from_attributes模式

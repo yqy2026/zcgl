@@ -40,7 +40,7 @@ class RoleListResponse(BaseModel):
     items: list[RoleResponse]
     total: int
     page: int
-    limit: int
+    page_size: int
     pages: int
 
 
@@ -84,7 +84,7 @@ class RoleUserListResponse(BaseModel):
 @router.get("", response_model=RoleListResponse, summary="获取角色列表")
 async def get_roles(
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     search: str | None = Query(None, description="搜索关键词"),
     category: str | None = Query(None, description="角色类别"),
     is_active: bool | None = Query(None, description="是否激活"),
@@ -103,13 +103,13 @@ async def get_roles(
     - **organization_id**: 按组织筛选
     """
     try:
-        skip = (page - 1) * limit
+        skip = (page - 1) * page_size
 
         # Using CRUD for read operations
         roles = role_crud.get_multi_with_filters(
             db=db,
             skip=skip,
-            limit=limit,
+            limit=page_size,
             search=search,
             category=category,
             is_active=is_active,
@@ -130,13 +130,13 @@ async def get_roles(
         # Correct way: role_crud.count(db, filters)
         total = role_crud.count(db)  # This is total in DB, not filtered.
 
-        pages = (total + limit - 1) // limit
+        pages = (total + page_size - 1) // page_size
 
         return RoleListResponse(
             items=[RoleResponse.model_validate(role) for role in roles],
             total=total,
             page=page,
-            limit=limit,
+            page_size=page_size,
             pages=pages,
         )
     except Exception as e:
@@ -334,7 +334,7 @@ async def set_role_permissions(
 async def get_role_users(
     role_id: str,
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> RoleUserListResponse:
@@ -359,8 +359,8 @@ async def get_role_users(
         # Let's assume it works.
 
         user_crud = UserCRUD()
-        skip = (page - 1) * limit
-        users, total = user_crud.get_users_by_role(db, role_id, skip, limit)
+        skip = (page - 1) * page_size
+        users, total = user_crud.get_users_by_role(db, role_id, skip, page_size)
 
         return RoleUserListResponse(
             users=[

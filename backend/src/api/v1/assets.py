@@ -64,10 +64,8 @@ router.include_router(asset_attachments.router, tags=["资产附件"])
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
 async def get_assets(
     page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
-    # Best practice: use a single pagination contract.
     page_size: int = Query(
         PaginationLimits.DEFAULT_PAGE_SIZE,
-        alias="pageSize",
         ge=PaginationLimits.MIN_PAGE_SIZE,
         le=PaginationLimits.MAX_PAGE_SIZE,
         description="每页记录数",

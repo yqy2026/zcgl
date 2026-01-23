@@ -25,7 +25,7 @@ router = APIRouter()
 @router.get("/", summary="获取历史记录列表")
 async def get_history_list(
     page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(20, ge=1, le=100, description="每页记录数"),
+    page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -47,28 +47,28 @@ async def get_history_list(
             history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
 
             # 简单分页
-            start = (page - 1) * limit
-            end = start + limit
+            start = (page - 1) * page_size
+            end = start + page_size
             paginated_records = history_records[start:end]
 
             return {
                 "items": paginated_records,
                 "total": len(history_records),
                 "page": page,
-                "limit": limit,
-                "pages": (len(history_records) + limit - 1) // limit,
+                "page_size": page_size,
+                "pages": (len(history_records) + page_size - 1) // page_size,
             }
         else:
             # 获取所有历史记录
-            skip = (page - 1) * limit
-            history_records = history_crud.get_multi(db=db, skip=skip, limit=limit)
+            skip = (page - 1) * page_size
+            history_records = history_crud.get_multi(db=db, skip=skip, limit=page_size)
 
             # 这里简化处理，实际应该有总数统计
             return {
                 "items": history_records,
                 "total": len(history_records),
                 "page": page,
-                "limit": limit,
+                "page_size": page_size,
                 "pages": 1,  # 简化处理
             }
 

@@ -74,7 +74,7 @@ const PromptDashboard: React.FC = () => {
     try {
       // 加载 Prompt 列表和统计
       const [promptsRes, statsRes] = await Promise.all([
-        llmPromptService.getPrompts({ limit: 100 }),
+        llmPromptService.getPrompts({ page_size: 100 }),
         llmPromptService.getStatistics(),
       ]);
 

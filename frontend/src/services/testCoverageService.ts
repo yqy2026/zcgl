@@ -293,7 +293,7 @@ class TestCoverageService {
     status?: string;
     category?: string;
     module?: string;
-    limit?: number;
+    page_size?: number;
     offset?: number;
   }): Promise<StandardApiResponse<{ defects: DefectReport[]; total: number }>> {
     const queryParams = new URLSearchParams();

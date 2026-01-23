@@ -76,7 +76,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
         keyword,
         is_active: isActive,
         page: current,
-        size: pageSize,
+        page_size: pageSize,
       });
       setOwnerships(response.items);
       setTotal(response.total);

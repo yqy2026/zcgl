@@ -27,7 +27,8 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
+
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -189,7 +190,7 @@ class TestGetCustomFields:
 
         mock_crud.get_multi_with_filters.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_custom_fields(
                 asset_id=None,
                 field_type=None,
@@ -200,7 +201,7 @@ class TestGetCustomFields:
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取自定义字段列表失败" in exc_info.value.detail
+        assert "获取自定义字段列表失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -239,13 +240,14 @@ class TestGetCustomField:
 
         mock_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_custom_field(
                 field_id="nonexistent-id", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "字段 nonexistent-id 不存在" in exc_info.value.detail
+        assert "custom_field不存在" in exc_info.value.message
+        assert "nonexistent-id" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_crud")
     @pytest.mark.asyncio
@@ -257,13 +259,13 @@ class TestGetCustomField:
 
         mock_crud.get.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_custom_field(
                 field_id="test-field-id", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取自定义字段详情失败" in exc_info.value.detail
+        assert "获取自定义字段详情失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -321,20 +323,20 @@ class TestCreateCustomField:
             "字段名 existing_field 已存在"
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await create_custom_field(
                 field_in=field_data, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 400
-        assert "字段名 existing_field 已存在" in exc_info.value.detail
+        assert "字段名 existing_field 已存在" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
     async def test_create_custom_field_http_exception(
         self, mock_service, mock_db, mock_current_user
     ):
-        """Test creating custom field with HTTP exception from service"""
+        """Test creating custom field with business exception from service"""
         from src.api.v1.custom_fields import create_custom_field
         from src.schemas.asset import AssetCustomFieldCreate
 
@@ -342,16 +344,19 @@ class TestCreateCustomField:
             field_name="new_field", display_name="New Field", field_type="text"
         )
 
-        mock_service.create_custom_field.side_effect = HTTPException(
-            status_code=403, detail="Permission denied"
+        mock_service.create_custom_field.side_effect = BaseBusinessError(
+            message="Permission denied",
+            code="PERMISSION_DENIED",
+            status_code=403,
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await create_custom_field(
                 field_in=field_data, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 403
+        assert "Permission denied" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
@@ -368,13 +373,13 @@ class TestCreateCustomField:
 
         mock_service.create_custom_field.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await create_custom_field(
                 field_in=field_data, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "创建自定义字段失败" in exc_info.value.detail
+        assert "创建自定义字段失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -425,7 +430,7 @@ class TestUpdateCustomField:
             "字段 nonexistent-id 不存在"
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_custom_field(
                 field_id="nonexistent-id",
                 field_in=update_data,
@@ -434,7 +439,7 @@ class TestUpdateCustomField:
             )
 
         assert exc_info.value.status_code == 404
-        assert "字段 nonexistent-id 不存在" in exc_info.value.detail
+        assert "custom_field不存在" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
@@ -451,7 +456,7 @@ class TestUpdateCustomField:
             "字段名 existing_field 已存在"
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_custom_field(
                 field_id="test-field-id",
                 field_in=update_data,
@@ -460,7 +465,7 @@ class TestUpdateCustomField:
             )
 
         assert exc_info.value.status_code == 400
-        assert "字段名 existing_field 已存在" in exc_info.value.detail
+        assert "字段名 existing_field 已存在" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
@@ -475,7 +480,7 @@ class TestUpdateCustomField:
 
         mock_service.update_custom_field.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_custom_field(
                 field_id="test-field-id",
                 field_in=update_data,
@@ -484,7 +489,7 @@ class TestUpdateCustomField:
             )
 
         assert exc_info.value.status_code == 500
-        assert "更新自定义字段失败" in exc_info.value.detail
+        assert "更新自定义字段失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -526,13 +531,14 @@ class TestDeleteCustomField:
             "字段 nonexistent-id 不存在"
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_custom_field(
                 field_id="nonexistent-id", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "字段 nonexistent-id 不存在" in exc_info.value.detail
+        assert "custom_field不存在" in exc_info.value.message
+        assert "nonexistent-id" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
@@ -544,13 +550,13 @@ class TestDeleteCustomField:
 
         mock_service.delete_custom_field.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await delete_custom_field(
                 field_id="test-field-id", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "删除自定义字段失败" in exc_info.value.detail
+        assert "删除自定义字段失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -620,7 +626,7 @@ class TestValidateCustomFieldValue:
 
         mock_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await validate_custom_field_value(
                 field_id="nonexistent-id",
                 value="test",
@@ -629,7 +635,8 @@ class TestValidateCustomFieldValue:
             )
 
         assert exc_info.value.status_code == 404
-        assert "字段 nonexistent-id 不存在" in exc_info.value.detail
+        assert "custom_field不存在" in exc_info.value.message
+        assert "nonexistent-id" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_crud")
     @patch("src.api.v1.custom_fields.custom_field_service")
@@ -643,7 +650,7 @@ class TestValidateCustomFieldValue:
         mock_crud.get.return_value = mock_custom_field
         mock_service.validate_field_value.side_effect = Exception("Validation error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await validate_custom_field_value(
                 field_id="test-field-id",
                 value="test",
@@ -652,7 +659,7 @@ class TestValidateCustomFieldValue:
             )
 
         assert exc_info.value.status_code == 500
-        assert "验证字段值失败" in exc_info.value.detail
+        assert "验证字段值失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -758,13 +765,13 @@ class TestGetAssetCustomFieldValues:
 
         mock_crud.get_asset_field_values.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_asset_custom_field_values(
                 asset_id="asset-123", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取资产自定义字段值失败" in exc_info.value.detail
+        assert "获取资产自定义字段值失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -827,7 +834,7 @@ class TestUpdateAssetCustomFieldValues:
             "字段值验证失败"
         )
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_asset_custom_field_values(
                 asset_id="asset-123",
                 values_update=values_update,
@@ -836,7 +843,7 @@ class TestUpdateAssetCustomFieldValues:
             )
 
         assert exc_info.value.status_code == 400
-        assert "字段值验证失败" in exc_info.value.detail
+        assert "字段值验证失败" in exc_info.value.message
 
     @patch("src.api.v1.custom_fields.custom_field_service")
     @pytest.mark.asyncio
@@ -851,7 +858,7 @@ class TestUpdateAssetCustomFieldValues:
 
         mock_service.update_asset_field_values.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await update_asset_custom_field_values(
                 asset_id="asset-123",
                 values_update=values_update,
@@ -860,7 +867,7 @@ class TestUpdateAssetCustomFieldValues:
             )
 
         assert exc_info.value.status_code == 500
-        assert "更新资产自定义字段值失败" in exc_info.value.detail
+        assert "更新资产自定义字段值失败" in exc_info.value.message
 
 
 # ============================================================================

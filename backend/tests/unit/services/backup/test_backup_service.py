@@ -350,9 +350,7 @@ class TestRestoreBackup:
         backup_service.create_backup(backup_name="to_restore")
 
         result = backup_service.restore_backup(
-            backup_name="to_restore",
-            db_path=None,
-            should_create_current_backup=False
+            backup_name="to_restore", db_path=None, should_create_current_backup=False
         )
 
         assert result["restored_backup"] == "to_restore"

@@ -926,8 +926,8 @@ async def get_excel_task_status(
 async def get_excel_history(
     task_type: str | None = Query(None, description="任务类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
-    limit: int = Query(20, ge=1, le=100, description="返回数量"),
-    skip: int = Query(0, ge=0, description="跳过数量"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
@@ -935,13 +935,16 @@ async def get_excel_history(
 
     - **task_type**: 按任务类型筛选
     - **status**: 按状态筛选
-    - **limit**: 返回数量
-    - **skip**: 跳过数量
+    - **page**: 页码
+    - **page_size**: 每页记录数
     """
+    # 转换 page 到 skip (offset)
+    skip = (page - 1) * page_size
+
     tasks = task_crud.get_multi(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=page_size,
         task_type=task_type,
         status=status,
         order_by="created_at",
@@ -976,8 +979,8 @@ async def get_excel_history(
     return {
         "items": history_items,
         "total": len(history_items),
-        "skip": skip,
-        "limit": limit,
+        "page": page,
+        "page_size": page_size,
     }
 
 

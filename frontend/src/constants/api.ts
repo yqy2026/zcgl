@@ -207,7 +207,7 @@ export const EXCEL_API = {
 export const PDF_API = {
   // PDF处理
   UPLOAD: '/pdf-import/upload',
-  PROCESS: '/pdf-import/process',
+  // Best practice: only keep canonical endpoint(s) that exist on backend
   PREVIEW: '/pdf-import/preview',
 
   // 系统信息

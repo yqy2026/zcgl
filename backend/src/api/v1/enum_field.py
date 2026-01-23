@@ -48,8 +48,8 @@ async def debug_endpoint() -> dict[str, str]:
 # 枚举字段类型管理
 @router.get("/types", response_model=list[EnumFieldTypeResponse])
 async def get_enum_field_types(
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     category: str | None = Query(None, description="类别筛选"),
     status: str | None = Query(None, description="状态筛选"),
     is_system: bool | None = Query(None, description="是否系统内置"),
@@ -62,8 +62,8 @@ async def get_enum_field_types(
 
     # 确保Query对象被正确转换为实际值
     # 处理可能的Query对象问题
-    actual_skip = int(skip) if skip is not None else 0
-    actual_limit = int(limit) if limit is not None else 100
+    actual_skip = (page - 1) * page_size
+    actual_limit = page_size
 
     # 对于Optional参数，确保None值被正确传递
     actual_category = (
@@ -447,17 +447,18 @@ async def delete_enum_field_usage(
 @router.get("/types/{type_id}/history", response_model=list[EnumFieldHistoryResponse])
 async def get_enum_field_type_history(
     type_id: str,
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段类型变更历史"""
+    skip = (page - 1) * page_size
     history_records = (
         db.query(EnumFieldHistory)
         .filter(EnumFieldHistory.enum_type_id == type_id)
         .order_by(EnumFieldHistory.created_at.desc())
         .offset(skip)
-        .limit(limit)
+        .limit(page_size)
         .all()
     )
 
@@ -467,17 +468,18 @@ async def get_enum_field_type_history(
 @router.get("/values/{value_id}/history", response_model=list[EnumFieldHistoryResponse])
 async def get_enum_field_value_history(
     value_id: str,
-    skip: int = Query(0, ge=0, description="跳过记录数"),
-    limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段值变更历史"""
+    skip = (page - 1) * page_size
     history_records = (
         db.query(EnumFieldHistory)
         .filter(EnumFieldHistory.enum_value_id == value_id)
         .order_by(EnumFieldHistory.created_at.desc())
         .offset(skip)
-        .limit(limit)
+        .limit(page_size)
         .all()
     )
 

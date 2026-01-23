@@ -95,7 +95,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     try {
       const params: ProjectQueryParams = {
         page: pagination.current,
-        size: pagination.pageSize,
+        page_size: pagination.pageSize,
       };
 
       if (searchKeyword !== undefined && searchKeyword !== null) {
@@ -121,7 +121,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           ...prev,
           total: response.total ?? 0,
           current: response.page ?? prev.current,
-          pageSize: response.size ?? prev.pageSize,
+          pageSize: response.page_size ?? prev.pageSize,
         }));
       } else if (
         response != null &&
@@ -135,7 +135,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           ...prev,
           total: nestedResponse.data.total ?? nestedResponse.data.total_count ?? 0,
           current: nestedResponse.data.page ?? prev.current,
-          pageSize: nestedResponse.data.size ?? prev.pageSize,
+          pageSize: nestedResponse.data.page_size ?? prev.pageSize,
         }));
       } else {
         // eslint-disable-next-line no-console

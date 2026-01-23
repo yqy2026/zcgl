@@ -58,7 +58,7 @@ def get_overall_occupancy_rate(
         整体出租率统计信息
     """
     logger.info(
-        f"开始计算整体出租率，包含已删除: {should_include_deleted}, 使用聚合: {use_aggregation}"
+        f"开始计算整体出租率，包含已删除: {should_include_deleted}, 使用聚合: {should_use_aggregation}"
     )
 
     # 构建筛选条件

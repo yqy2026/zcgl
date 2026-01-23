@@ -470,7 +470,7 @@ export class BackupService {
   /**
    * 获取备份历史记录
    */
-  async getBackupHistory(limit: number = 50): Promise<
+  async getBackupHistory(pageSize: number = 50): Promise<
     Array<{
       timestamp: string;
       action: 'created' | 'deleted' | 'restored' | 'uploaded';
@@ -493,7 +493,7 @@ export class BackupService {
           size?: number;
         }>
       >('/backup/history', {
-        params: { limit },
+        params: { page_size: pageSize },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,

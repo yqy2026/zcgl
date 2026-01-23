@@ -63,7 +63,7 @@ export class AssetCoreService {
       const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
           ...params,
-          limit: 10000,
+          page_size: 10000,
         },
         cache: true,
         retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },

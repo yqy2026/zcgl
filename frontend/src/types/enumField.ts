@@ -184,8 +184,8 @@ export interface EnumFieldUsageListResponse {
 
 // 查询参数类型
 export interface EnumFieldTypeQueryParams {
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
   category?: string;
   status?: 'active' | 'inactive';
   is_system?: boolean;
@@ -204,6 +204,6 @@ export interface EnumFieldUsageQueryParams {
 }
 
 export interface EnumFieldHistoryQueryParams {
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
 }

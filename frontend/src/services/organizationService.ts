@@ -41,10 +41,10 @@ class OrganizationService {
   /**
    * 获取组织列表
    */
-  async getOrganizations(params?: { skip?: number; limit?: number }): Promise<Organization[]> {
+  async getOrganizations(params?: { page?: number; page_size?: number }): Promise<Organization[]> {
     try {
       const result = await apiClient.get<Organization[]>(this.baseUrl, {
-        params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 100 },
+        params: { ...params, page: params?.page ?? 1, page_size: params?.page_size ?? 100 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -238,11 +238,16 @@ class OrganizationService {
    */
   async searchOrganizations(
     keyword: string,
-    params?: { skip?: number; limit?: number }
+    params?: { page?: number; page_size?: number }
   ): Promise<Organization[]> {
     try {
       const result = await apiClient.get<Organization[]>(`${this.baseUrl}/search`, {
-        params: { keyword, ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
+        params: {
+          keyword,
+          ...params,
+          page: params?.page ?? 1,
+          page_size: params?.page_size ?? 20
+        },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -318,13 +323,17 @@ class OrganizationService {
    */
   async getOrganizationHistory(
     id: string,
-    params?: { skip?: number; limit?: number }
+    params?: { page?: number; page_size?: number }
   ): Promise<OrganizationHistory[]> {
     try {
       const result = await apiClient.get<OrganizationHistory[]>(
         `${this.baseUrl}/${id}/history`,
         {
-          params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
+          params: {
+            ...params,
+            page: params?.page ?? 1,
+            page_size: params?.page_size ?? 20
+          },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -626,7 +635,7 @@ class OrganizationService {
    * 验证组织编码唯一�?   */
   async validateOrganizationCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
     try {
-      const organizations = await this.getOrganizations({ limit: 1000 });
+      const organizations = await this.getOrganizations({ page_size: 1000 });
       const existingOrg = organizations.find(org => org.code === code && org.id !== excludeId);
       return { exists: !!existingOrg };
     } catch (error) {
@@ -657,7 +666,7 @@ class OrganizationService {
    */
   async findOrganizationByName(name: string): Promise<Organization | null> {
     try {
-      const organizations = await this.getOrganizations({ limit: 1000 });
+      const organizations = await this.getOrganizations({ page_size: 1000 });
       return organizations.find(org => org.name === name) || null;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

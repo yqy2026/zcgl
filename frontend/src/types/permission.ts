@@ -199,7 +199,7 @@ export interface PermissionRequestListResponse {
   items: PermissionRequest[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -207,7 +207,7 @@ export interface PermissionDelegationListResponse {
   items: PermissionDelegation[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -215,7 +215,7 @@ export interface PermissionTemplateListResponse {
   items: PermissionTemplate[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }
 
@@ -223,6 +223,6 @@ export interface DynamicPermissionAuditListResponse {
   items: DynamicPermissionAudit[];
   total: number;
   page: number;
-  pageSize: number;
+  page_size: number;
   pages: number;
 }

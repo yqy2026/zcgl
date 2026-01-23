@@ -10,9 +10,14 @@
 | 层级 | 命名风格 | 示例 |
 |------|---------|------|
 | **Python 后端** | `snake_case` | `page_size`, `created_at`, `user_id` |
-| **TypeScript 前端** | `camelCase` | `pageSize`, `createdAt`, `userId` |
+| **TypeScript 前端 (API 相关)** | `snake_case` | `page_size`, `is_active`, `created_at` |
+| **TypeScript 前端 (纯 UI 逻辑)** | `camelCase` | `isLoading`, `handleSubmit` |
 | **数据库字段** | `snake_case` | `page_size`, `created_at` |
-| **API 响应字段** | `snake_case` | 后端返回 `snake_case`，前端自动转换 |
+| **API 请求/响应字段** | `snake_case` | 前后端统一，零转换 |
+
+### 设计理念
+
+**全栈统一 `snake_case`** - API 相关的类型、参数、响应字段全部使用 `snake_case`，消除前后端命名转换的心智负担。
 
 ---
 
@@ -62,9 +67,9 @@ class ListRequest(BaseModel):
     page_size: int = Field(20, ge=1, le=100)  # 统一标准
 
 # ❌ 禁止使用
-limit: int       # 错误
-size: int        # 错误
-pageSize: int    # 错误
+# limit: int       # 错误 - 应使用 page_size
+# size: int        # 错误 - 应使用 page_size
+# pageSize: int    # 错误 - 应使用 page_size
 ```
 
 ---
@@ -78,33 +83,50 @@ const AssetForm: React.FC = () => {};
 // 文件名: AssetForm.tsx
 ```
 
-### 3.2 接口与类型
+### 3.2 接口与类型（API 相关）
 ```typescript
-// ✅ 正确 - PascalCase
-interface AssetFormProps {}
-interface User {}
-type PermissionScope = 'global' | 'organization';
+// ✅ 正确 - 字段使用 snake_case（与后端一致）
+interface AssetQueryParams {
+  page: number;
+  page_size: number;  // 统一标准
+  is_active?: boolean;
+}
+
+interface AssetListResponse {
+  items: Asset[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+// ❌ 禁止使用
+// pageSize: number;  // 错误 - 应使用 page_size
+// limit: number;     // 错误 - 应使用 page_size
+// size: number;      // 错误 - 应使用 page_size
 ```
 
 ### 3.3 函数与变量
 ```typescript
-// ✅ 正确 - camelCase
-const pageSize = 20;
+// ✅ 纯 UI 逻辑使用 camelCase
 const isLoading = true;
-function handleSubmit() {}
+const handleSubmit = () => {};
+
+// ✅ API 交互时的命名转换见「第 4 节 分页字段统一标准」
 ```
 
-### 3.4 分页类型定义
-```typescript
-// ✅ 正确 - camelCase
-interface PaginationParams {
-  page: number;
-  pageSize: number;  // 统一标准
+### 3.4 ESLint 配置
+```javascript
+// .eslintrc.js - 允许 snake_case
+rules: {
+  '@typescript-eslint/naming-convention': [
+    'error',
+    {
+      selector: 'variable',
+      format: ['camelCase', 'snake_case', 'UPPER_CASE'],
+    },
+  ],
 }
-
-// ❌ 禁止使用
-limit: number;    // 错误
-size: number;     // 错误
 ```
 
 ---
@@ -113,15 +135,15 @@ size: number;     // 错误
 
 ### 后端标准
 ```python
-page: int = Field(1, ge=1, description="页码")
-page_size: int = Field(20, ge=1, le=100, description="每页大小")
+page: int = Query(1, ge=1, description="页码")
+page_size: int = Query(20, ge=1, le=100, description="每页大小")
 ```
 
 ### 前端标准
 ```typescript
 interface PaginationParams {
   page: number;
-  pageSize: number;
+  page_size: number;  // 与后端完全一致
 }
 ```
 
@@ -132,8 +154,19 @@ interface PaginationParams {
   "total": 100,
   "page": 1,
   "page_size": 20,
-  "total_pages": 5
+  "pages": 5
 }
+```
+
+### 前端使用
+```typescript
+// ✅ 正确 - React state 使用 camelCase，API 交互使用 snake_case
+const [pageSize, setPageSize] = useState(20);
+const params = { page, page_size: pageSize };  // 发送时映射
+
+// 读取响应 - 保持 snake_case 或按需转换
+const { items, total, page_size } = response;
+const displayPageSize = page_size;  // 可赋值给 camelCase 变量用于 UI
 ```
 
 ---
@@ -164,12 +197,12 @@ POST /api/v1/user-permissions
 
 ## 7. 布尔值命名规范
 
-| 前缀 | 用途 | Python 示例 | TypeScript 示例 |
-|------|------|-------------|-----------------|
-| `is_` / `is` | 状态判断 | `is_active`, `is_deleted` | `isActive`, `isDeleted` |
-| `has_` / `has` | 拥有判断 | `has_permission`, `has_children` | `hasPermission`, `hasChildren` |
-| `can_` / `can` | 能力判断 | `can_edit`, `can_delete` | `canEdit`, `canDelete` |
-| `should_` / `should` | 建议判断 | `should_notify` | `shouldNotify` |
+| 前缀 | 用途 | 示例 |
+|------|------|------|
+| `is_` | 状态判断 | `is_active`, `is_deleted` |
+| `has_` | 拥有判断 | `has_permission`, `has_children` |
+| `can_` | 能力判断 | `can_edit`, `can_delete` |
+| `should_` | 建议判断 | `should_notify` |
 
 ```python
 # ✅ 正确
@@ -178,8 +211,8 @@ has_attachments: bool = False
 can_approve: bool = check_permission(user)
 
 # ❌ 错误
-active: bool          # 缺少前缀，语义不明确
-enabled: bool         # 建议用 is_enabled
+active = True         # 缺少前缀，语义不明确
+enabled = False       # 建议用 is_enabled
 ```
 
 ---
@@ -206,12 +239,13 @@ class AssetType(str, Enum):
 // ✅ 正确 - 推荐使用 Union Type
 type ContractStatus = 'draft' | 'active' | 'expired' | 'terminated';
 
-// ✅ 也可以 - Enum 成员 PascalCase
+// ✅ 也可以 - Enum 成员使用 PascalCase（TypeScript 惯例）
 enum AssetType {
   Land = 'land',
   Building = 'building',
   Equipment = 'equipment',
 }
+// 注意：TypeScript 使用 PascalCase，Python 使用 UPPER_SNAKE_CASE
 ```
 
 ---
@@ -223,7 +257,7 @@ enum AssetType {
 | **Python 模块** | `snake_case.py` | `rent_contract.py`, `asset_service.py` |
 | **React 组件** | `PascalCase.tsx` | `AssetForm.tsx`, `ContractList.tsx` |
 | **TypeScript 工具** | `camelCase.ts` | `apiClient.ts`, `formatDate.ts` |
-| **类型定义** | `camelCase.ts` 或 `PascalCase.ts` | `asset.ts`, `Contract.ts` |
+| **类型定义** | `camelCase.ts` | `assetType.ts`, `contractDetail.ts`, `rentContract.ts` |
 | **常量文件** | `camelCase.ts` | `constants.ts`, `config.ts` |
 | **样式文件** | `PascalCase.module.css` | `AssetForm.module.css` |
 
@@ -232,10 +266,11 @@ enum AssetType {
 ## 10. 检查清单
 
 - ✓ 后端 Python 代码使用 `snake_case`
-- ✓ 前端 TypeScript 代码使用 `camelCase`
-- ✓ 分页字段: 后端 `page_size` / 前端 `pageSize`
+- ✓ 前端 API 相关字段使用 `snake_case`（与后端统一）
+- ✓ 分页字段: 全栈统一 `page_size`
 - ✓ 类名使用 `PascalCase`
 - ✓ 常量使用 `UPPER_SNAKE_CASE`
 - ✓ API 路径使用 `kebab-case`
 - ✓ 布尔值使用语义前缀 (`is_`, `has_`, `can_`)
-- ✓ 枚举成员使用 `UPPER_SNAKE_CASE` (Python)
+- ✓ 枚举成员: Python 使用 `UPPER_SNAKE_CASE`，TypeScript 使用 `PascalCase`
+- ✓ React state setter 使用 `camelCase` (如 `setPageSize`)

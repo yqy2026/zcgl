@@ -44,7 +44,7 @@ interface AssetHistoryProps {
 
 const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [changeType, setChangeType] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedHistory, setSelectedHistory] = useState<AssetHistory | null>(null);
@@ -57,8 +57,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['asset-history', assetId, page, limit, changeType, dateRange],
-    queryFn: () => assetService.getAssetHistory(assetId, page, limit, changeType),
+    queryKey: ['asset-history', assetId, page, pageSize, changeType, dateRange],
+    queryFn: () => assetService.getAssetHistory(assetId, page, pageSize, changeType),
     enabled: !!assetId,
   });
 
@@ -284,18 +284,18 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Timeline>
 
               {/* 分页 */}
-              {(historyData?.data?.pagination?.total ?? 0) > limit && (
+              {(historyData?.data?.pagination?.total ?? 0) > pageSize && (
                 <div style={{ textAlign: 'center', marginTop: 24 }}>
                   <Pagination
                     current={page}
-                    pageSize={limit}
+                    pageSize={pageSize}
                     total={historyData?.data?.pagination?.total ?? 0}
                     showSizeChanger
                     showQuickJumper
                     showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
                     onChange={(newPage, newPageSize) => {
                       setPage(newPage);
-                      setLimit(newPageSize || limit);
+                      setPageSize(newPageSize || pageSize);
                     }}
                   />
                 </div>

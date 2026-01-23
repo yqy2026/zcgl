@@ -193,7 +193,7 @@ export class LLMPromptService {
 
       const response = await this.getPrompts({
         ...params,
-        limit: 1,
+        page_size: 1,
       });
 
       return response.items[0] ?? null;
