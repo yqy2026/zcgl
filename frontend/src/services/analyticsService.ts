@@ -163,12 +163,13 @@ export class AnalyticsService {
     // BusinessCategoryDistribution 需要 percentage 字段
     const rawBusinessCategories =
       apiData.business_category_distribution ?? apiData.data?.business_category_distribution ?? [];
-    const business_category_distribution = rawBusinessCategories.map(
-      (item: RawBusinessCategoryItem) => ({
-        ...item,
-        percentage: item.percentage ?? 0, // 确保有 percentage 字段
-      })
-    ) as unknown as AnalyticsData['business_category_distribution'];
+    const business_category_distribution: AnalyticsData['business_category_distribution'] =
+      rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
+        category: typeof item.category === 'string' ? item.category : '未分类',
+        count: typeof item.count === 'number' ? item.count : 0,
+        occupancy_rate: typeof item.occupancy_rate === 'number' ? item.occupancy_rate : 0,
+        avg_annual_income: typeof item.avg_annual_income === 'number' ? item.avg_annual_income : 0,
+      }));
 
     // 提取趋势数据
     const occupancy_trend = (apiData.occupancy_trend ??
@@ -209,10 +210,7 @@ export class AnalyticsService {
       occupancy_distribution,
     };
 
-    serviceLogger.debug(
-      'Adapted AnalyticsData:',
-      adaptedData as unknown as Record<string, unknown>
-    );
+    serviceLogger.debug('Adapted AnalyticsData:', { data: adaptedData });
     return adaptedData;
   }
 

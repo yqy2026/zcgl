@@ -147,7 +147,7 @@ class TestAnalyticsAPIIntegration:
 
     def test_router_registration(self):
         """测试路由正确注册"""
-        from src.api.v1.analytics import router
+        from src.api.v1.analytics.analytics import router
 
         # 检查路由定义
         routes = [route.path for route in router.routes]

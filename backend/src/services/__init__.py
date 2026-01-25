@@ -59,11 +59,12 @@ try:
 
     __all__.append("ErrorRecoveryEngine")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    # Provide a minimal stub to ensure import success
-    class ErrorRecoveryEngine:  # type: ignore
-        def __init__(self, *args, **kwargs):  # type: ignore
+
+    class _ErrorRecoveryEngine:
+        def __init__(self, *args, **kwargs):
             pass
 
+    ErrorRecoveryEngine = _ErrorRecoveryEngine
     __all__.append("ErrorRecoveryEngine")
 
 # Asset services

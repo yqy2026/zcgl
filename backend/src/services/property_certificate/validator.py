@@ -5,6 +5,7 @@ Property Certificate Validator
 
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 from src.models.property_certificate import CertificateType
 
@@ -33,7 +34,7 @@ class PropertyCertificateValidator:
 
     @classmethod
     def validate_extracted_fields(
-        cls, data: dict, cert_type: CertificateType
+        cls, data: dict[str, Any], cert_type: CertificateType
     ) -> ValidationResult:
         """验证提取的字段"""
         errors = []
@@ -77,7 +78,7 @@ class PropertyCertificateValidator:
         return True
 
     @staticmethod
-    def _validate_date(date_value: any) -> bool:
+    def _validate_date(date_value: Any) -> bool:
         """验证日期格式"""
         if isinstance(date_value, date):
             return True
@@ -90,7 +91,7 @@ class PropertyCertificateValidator:
         return False
 
     @staticmethod
-    def _validate_area(area: any) -> bool:
+    def _validate_area(area: Any) -> bool:
         """验证面积格式"""
         try:
             float(area)

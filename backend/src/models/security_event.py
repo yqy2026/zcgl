@@ -6,7 +6,7 @@ permission denials, rate limiting, and other security events.
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -73,7 +73,7 @@ class SecurityEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.now,
+        default=lambda: datetime.now(UTC),
         index=True,
         comment="Event timestamp",
     )

@@ -149,6 +149,27 @@ export class OwnershipService {
   }
 
   /**
+   * 更新权属方关联项目
+   */
+  async updateOwnershipProjects(id: string, projectIds: string[]): Promise<Ownership> {
+    try {
+      const result = await apiClient.put<Ownership>(`${this.baseUrl}/${id}/projects`, projectIds, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success) {
+        throw new Error(`更新权属方关联项目失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
    * 删除权属方
    */
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {

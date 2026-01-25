@@ -1,6 +1,12 @@
 import React from 'react';
 import { Form, DatePicker, InputNumber, Row, Col, Card } from 'antd';
 
+const parseCurrency = (value: string | undefined) => {
+  const normalized = value?.replace(/¥\s?|(,*)/g, '') ?? '';
+  const numeric = Number(normalized);
+  return normalized === '' || Number.isNaN(numeric) ? NaN : numeric;
+};
+
 /**
  * RentContractForm - Contract Period Section
  * Fields: start date, end date, deposit
@@ -35,9 +41,7 @@ const ContractPeriodSection: React.FC = () => {
               min={0}
               precision={2}
               formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value: string | undefined) =>
-                value?.replace(/¥\s?|(,*)/g, '') as unknown as number
-              }
+              parser={parseCurrency}
             />
           </Form.Item>
         </Col>

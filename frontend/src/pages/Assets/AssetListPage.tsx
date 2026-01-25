@@ -4,7 +4,8 @@ import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import { MessageManager } from '@/utils/messageManager';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { PaginationConfig, FilterConfig, SorterConfig } from '@/types/common';
+import type { FilterConfig, SorterConfig } from '@/types/common';
+import type { TablePaginationConfig } from 'antd/es/table/interface';
 import { assetService } from '../../services/assetService';
 import { analyticsService } from '../../services/analyticsService';
 import { useAssets } from '../../hooks/useAssets';
@@ -23,7 +24,7 @@ const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState<AssetSearchParams>({
     page: 1,
-    pageSize: 20,
+    page_size: 20,
   });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -48,20 +49,20 @@ const AssetListPage: React.FC = () => {
   const handleReset = () => {
     setSearchParams({
       page: 1,
-      pageSize: 20,
+      page_size: 20,
     });
   };
 
   // 处理表格变化
   const handleTableChange = (
-    pagination: PaginationConfig,
+    pagination: TablePaginationConfig,
     _filters: FilterConfig,
     sorter: SorterConfig
   ) => {
     setSearchParams(prev => ({
       ...prev,
-      page: pagination.current,
-      pageSize: pagination.pageSize,
+      page: pagination.current ?? 1,
+      page_size: pagination.pageSize ?? 20,
       sort_by: sorter.field,
       sort_order: sorter.order === 'ascend' ? 'asc' : 'desc',
     }));

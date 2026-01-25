@@ -6,7 +6,7 @@ from typing import Any
 
 import logging
 
-from fastapi import Cookie, Depends, Header
+from fastapi import Cookie, Depends, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import and_
@@ -437,10 +437,35 @@ class AuditLogger:
         self.resource_type = resource_type
 
     def __call__(
-        self, current_user: User | None = Depends(get_optional_current_user)
+        self,
+        request: Request,
+        current_user: User | None = Depends(get_optional_current_user),
+        db: Session = Depends(get_db),
     ) -> User | None:
         """记录审计日志"""
-        # 这个装饰器不阻止操作，只是记录日志
+        if not current_user:
+            return current_user
+
+        try:
+            from ..middleware.security_middleware import get_client_ip
+
+            ip_address = get_client_ip(request)
+            user_agent = request.headers.get("user-agent", "")
+            request_params = (
+                str(request.query_params) if request.query_params else None
+            )
+
+            self.log_action(
+                db=db,
+                user=current_user,
+                api_endpoint=request.url.path,
+                http_method=request.method,
+                request_params=request_params,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        except Exception as e:
+            logger.warning(f"审计日志记录失败: {e}")
         return current_user
 
     def log_action(

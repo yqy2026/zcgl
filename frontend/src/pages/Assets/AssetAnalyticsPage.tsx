@@ -57,6 +57,16 @@ interface BusinessCategoryAreaDistribution {
   avg_annual_income?: number;
 }
 
+const isAnalyticsResponse = (
+  value: unknown
+): value is { success: boolean; data: AnalyticsData } => {
+  return value != null && typeof value === 'object' && 'success' in value && 'data' in value;
+};
+
+const isAnalyticsData = (value: unknown): value is AnalyticsData => {
+  return value != null && typeof value === 'object' && 'area_summary' in value;
+};
+
 const AssetAnalyticsPage: React.FC = () => {
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
@@ -72,7 +82,7 @@ const AssetAnalyticsPage: React.FC = () => {
     queryKey: ['asset-analytics', filters],
     queryFn: async () => {
       const result = await analyticsService.getComprehensiveAnalytics(filters);
-      pageLogger.debug('Analytics API Result:', result as unknown as Record<string, unknown>);
+      pageLogger.debug('Analytics API Result:', { result });
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
@@ -83,16 +93,13 @@ const AssetAnalyticsPage: React.FC = () => {
   // analyticsService 已经处理了数据适配，这里直接使用
   let analyticsData: AnalyticsData | null = null;
   if (analyticsResponse) {
-    if ('success' in analyticsResponse && 'data' in analyticsResponse) {
+    if (isAnalyticsResponse(analyticsResponse)) {
       analyticsData = analyticsResponse.data;
-    } else if ('area_summary' in analyticsResponse) {
+    } else if (isAnalyticsData(analyticsResponse)) {
       // 兼容直接返回 AnalyticsData 的情况
-      analyticsData = analyticsResponse as unknown as AnalyticsData;
+      analyticsData = analyticsResponse;
     } else {
-      pageLogger.warn(
-        'Unexpected analytics response format:',
-        analyticsResponse as unknown as Record<string, unknown>
-      );
+      pageLogger.warn('Unexpected analytics response format:', analyticsResponse);
     }
   }
 

@@ -654,26 +654,27 @@ class PDFImportService:
             # 创建合同记录
             from datetime import date
 
-            contract = RentContract(
-                contract_number=contract_data["contract_number"],
-                ownership_id=contract_data.get("ownership_id", ""),
-                contract_type=contract_type,
-                tenant_name=contract_data["tenant_name"],
-                tenant_contact=contract_data.get("tenant_contact"),
-                tenant_phone=contract_data.get("tenant_phone"),
-                tenant_address=contract_data.get("tenant_address"),
-                tenant_usage=contract_data.get("tenant_usage"),
-                sign_date=contract_data.get("sign_date", date.today()),
-                start_date=self._parse_date(contract_data["start_date"]),
-                end_date=self._parse_date(contract_data["end_date"]),
-                total_deposit=contract_data.get("total_deposit", 0),
-                monthly_rent_base=contract_data.get("monthly_rent", 0),
-                payment_cycle=payment_cycle,
-                payment_terms=contract_data.get("payment_terms"),
-                contract_notes=contract_data.get("contract_notes"),
-                service_fee_rate=contract_data.get("service_fee_rate"),
-                source_session_id=session_id,
+            contract = RentContract()
+            contract.contract_number = contract_data["contract_number"]
+            contract.ownership_id = contract_data.get("ownership_id", "")
+            contract.contract_type = contract_type
+            contract.tenant_name = contract_data["tenant_name"]
+            contract.tenant_contact = contract_data.get("tenant_contact")
+            contract.tenant_phone = contract_data.get("tenant_phone")
+            contract.tenant_address = contract_data.get("tenant_address")
+            contract.tenant_usage = contract_data.get("tenant_usage")
+            contract.sign_date = (
+                self._parse_date(contract_data.get("sign_date")) or date.today()
             )
+            contract.start_date = self._parse_date(contract_data["start_date"])
+            contract.end_date = self._parse_date(contract_data["end_date"])
+            contract.total_deposit = contract_data.get("total_deposit", 0)
+            contract.monthly_rent_base = contract_data.get("monthly_rent", 0)
+            contract.payment_cycle = payment_cycle
+            contract.payment_terms = contract_data.get("payment_terms")
+            contract.contract_notes = contract_data.get("contract_notes")
+            contract.service_fee_rate = contract_data.get("service_fee_rate")
+            contract.source_session_id = session_id
 
             db.add(contract)
             db.flush()  # 获取 ID 但不提交

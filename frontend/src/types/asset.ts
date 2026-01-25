@@ -29,7 +29,6 @@ export interface Asset {
   // 租户相关字段
   tenant_name?: string;
   tenant_type?: TenantType;
-  // tenant_contact 字段已删除
 
   // 合同相关字段
   lease_contract_number?: string;
@@ -46,9 +45,6 @@ export interface Asset {
   business_model?: BusinessModel; // 接收模式
   operation_status?: OperationStatus;
 
-  // 财务相关字段已删除
-  // annual_income, annual_expense, net_income 字段已删除
-
   // 接收相关字段
   operation_agreement_start_date?: string;
   operation_agreement_end_date?: string;
@@ -59,9 +55,6 @@ export interface Asset {
 
   // 项目相关字段
   project_id?: string;
-
-  // 向后兼容字段
-  wuyang_project_name?: string; // 用于向后兼容
   ownership_id?: string;
 
   // 项目相关字段已移至基本信息部分
@@ -72,15 +65,12 @@ export interface Asset {
   updated_by?: string;
   version?: number;
   tags?: string;
-
-  // 审核相关字段已删除
-  // last_audit_date, audit_status, auditor 字段已删除
   audit_notes?: string;
 
   // 其他字段
   is_litigated: boolean; // 优化为boolean类型
   notes?: string;
-  description?: string; // 资产描述
+  description?: string;
 
   // 时间戳
   created_at: string;
@@ -161,6 +151,7 @@ export enum DataStatus {
   NORMAL = '正常',
   DELETED = '已删除',
   ARCHIVED = '已归档',
+  ABNORMAL = '异常',  // 对齐后端
 }
 
 export enum AuditStatus {
@@ -175,6 +166,8 @@ export enum ContractStatus {
   TERMINATED = '已终止',
   PENDING = '待生效',
   SUSPENDED = '暂停',
+  DRAFT = '草稿',  // 对齐后端
+  PENDING_RENEWAL = '待续签',  // 对齐后端
 }
 
 export enum BusinessCategory {
@@ -400,6 +393,19 @@ export interface AreaStatistics {
   by_property_nature?: PropertyNatureStat[];
   by_ownership_entity?: OwnershipEntityStat[];
   area_ranges?: AreaRangeStat[];
+  by_usage_status?: Array<{
+    usage_status: string;
+    total_area: number;
+    asset_count: number;
+    average_area: number;
+  }>;
+  top_assets_by_area?: Array<{
+    property_name: string;
+    property_area: number;
+    rentable_area: number;
+    rented_area: number;
+    occupancy_rate: number;
+  }>;
   total_statistics?: TotalStatistics;
 }
 
@@ -423,6 +429,8 @@ export interface OwnershipEntityStat {
 export interface AreaRangeStat {
   range: string;
   count: number;
+  total_area?: number;
+  percentage?: number;
 }
 
 // 总体统计数据

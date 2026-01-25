@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from ..database import Base
 
@@ -64,14 +64,18 @@ class Organization(Base):
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    parent = relationship("Organization", remote_side=[id], back_populates="children")
-    children = relationship(
+    parent: Mapped["Organization | None"] = relationship(
+        "Organization", remote_side=[id], back_populates="children"
+    )
+    children: Mapped[list["Organization"]] = relationship(
         "Organization", back_populates="parent", cascade="all, delete-orphan"
     )
-    positions = relationship(
+    positions: Mapped[list["Position"]] = relationship(
         "Position", back_populates="organization", cascade="all, delete-orphan"
     )
-    employees = relationship("Employee", back_populates="organization")
+    employees: Mapped[list["Employee"]] = relationship(
+        "Employee", back_populates="organization"
+    )
 
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name={self.name})>"  # pragma: no cover
@@ -121,8 +125,12 @@ class Position(Base):
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    organization = relationship("Organization", back_populates="positions")
-    employees = relationship("Employee", back_populates="position")
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="positions"
+    )
+    employees: Mapped[list["Employee"]] = relationship(
+        "Employee", back_populates="position"
+    )
 
     def __repr__(self) -> str:
         return f"<Position(id={self.id}, name={self.name})>"  # pragma: no cover
@@ -194,12 +202,18 @@ class Employee(Base):
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    organization = relationship("Organization", back_populates="employees")
-    position = relationship("Position", back_populates="employees")
-    direct_supervisor = relationship(
+    organization: Mapped["Organization"] = relationship(
+        "Organization", back_populates="employees"
+    )
+    position: Mapped["Position | None"] = relationship(
+        "Position", back_populates="employees"
+    )
+    direct_supervisor: Mapped["Employee | None"] = relationship(
         "Employee", remote_side=[id], back_populates="subordinates"
     )
-    subordinates = relationship("Employee", back_populates="direct_supervisor")
+    subordinates: Mapped[list["Employee"]] = relationship(
+        "Employee", back_populates="direct_supervisor"
+    )
     # 暂时移除双向关系以避免循环依赖问题
     # user = relationship("User", back_populates="employee", uselist=False)
 
@@ -233,7 +247,7 @@ class OrganizationHistory(Base):
     created_by = Column(String(100), comment="操作人")
 
     # 关系
-    organization = relationship("Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
 
     def __repr__(self) -> str:
         return f"<OrganizationHistory(id={self.id}, action={self.action})>"  # pragma: no cover

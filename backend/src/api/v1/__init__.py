@@ -3,62 +3,62 @@
 from fastapi import APIRouter
 
 # 导入各个模块的路由
-from .admin import router as admin_router
-from .analytics import router as analytics_router
-from .assets import router as assets_router
-from .auth import router as auth_router
-from .backup import router as backup_router
-from .collection import router as collection_router
-from .contact import router as contact_router
-from .custom_fields import router as custom_fields_router
-from .dictionaries import router as dictionaries_router
-from .enum_field import router as enum_field_router
-from .error_recovery import router as error_recovery_router
+from .auth.admin import router as admin_router
+from .analytics.analytics import router as analytics_router
+from .assets.assets import router as assets_router
+from .auth.auth import router as auth_router
+from .system.backup import router as backup_router
+from .system.collection import router as collection_router
+from .system.contact import router as contact_router
+from .assets.custom_fields import router as custom_fields_router
+from .system.dictionaries import router as dictionaries_router
+from .system.enum_field import router as enum_field_router
+from .system.error_recovery import router as error_recovery_router
 
 # 修复Excel模块导入 - 使用正确的router名称
-from .excel import router as excel_router
-from .history import router as history_router
+from .documents.excel import router as excel_router
+from .system.history import router as history_router
 from .llm_prompts import router as llm_prompts_router
 
 # from .missing_apis import missing_apis_router  # Removed - module doesn't exist
-from .monitoring import router as monitoring_router
-from .notifications import router as notifications_router
-from .occupancy import router as occupancy_router
-from .operation_logs import router as operation_logs_router
-from .organization import router as organization_router
-from .ownership import router as ownership_router
-from .property_certificate import router as property_certificate_router
+from .system.monitoring import router as monitoring_router
+from .system.notifications import router as notifications_router
+from .assets.occupancy import router as occupancy_router
+from .system.operation_logs import router as operation_logs_router
+from .auth.organization import router as organization_router
+from .assets.ownership import router as ownership_router
+from .assets.property_certificate import router as property_certificate_router
 
 # 尝试导入 PDF 批量路由，如果失败则跳过
 pdf_batch_router: APIRouter | None = None
 try:
-    from .pdf_batch_routes import router as pdf_batch_router
+    from .documents.pdf_batch_routes import router as pdf_batch_router
 except ImportError as e:
     import logging
 
     logging.warning(f"PDF batch routes not available: {e}")
 
-from .pdf_import import router as pdf_import_router
-from .project import router as project_router
+from .documents.pdf_import import router as pdf_import_router
+from .assets.project import router as project_router
 from .rent_contract import router as rent_contract_router
-from .roles import router as roles_router
+from .auth.roles import router as roles_router
 
 # 修复statistics模块导入 - 使用正确的router名称
-from .statistics import router as statistics_router
+from .analytics.statistics import router as statistics_router
 
 # 系统设置模块可能不存在，需要检查
-# from .system_settings import router as system_settings_router
+# from .system.system_settings import router as system_settings_router
 # test_coverage.py and test_performance.py removed - test files should be in tests/ directory
 # missing_apis.py removed - had broken imports and was a temporary placeholder file
 # 导入新创建的统一路由模块
-from .system import router as system_router
-from .system_dictionaries import router as system_dictionaries_router
-from .tasks import router as tasks_router
+from .system.system import router as system_router
+from .system.system_dictionaries import router as system_dictionaries_router
+from .system.tasks import router as tasks_router
 
 # 尝试导入系统设置路由，如果不存在则跳过
 system_settings_router: APIRouter | None = None
 try:
-    from .system_settings import router as system_settings_router
+    from .system.system_settings import router as system_settings_router
 except ImportError:  # pragma: no cover
     import logging
 
@@ -86,7 +86,7 @@ api_router.include_router(
 )  # Remove prefix - router defines its own paths
 api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
 api_router.include_router(backup_router, prefix="/backup", tags=["数据备份和恢复"])
-api_router.include_router(admin_router, prefix="/admin", tags=["系统管理"])
+api_router.include_router(admin_router, tags=["系统管理"])
 api_router.include_router(
     system_dictionaries_router, prefix="/system/dictionaries", tags=["系统字典管理"]
 )

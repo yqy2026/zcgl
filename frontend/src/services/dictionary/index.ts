@@ -313,7 +313,7 @@ export class DictionaryService {
           averageResponseTime: responseTime,
           cacheHitRate:
             cacheStats.status === 'fulfilled'
-              ? ((cacheStats.value as unknown as Record<string, number>)?.cacheHitRate ?? 0)
+              ? (cacheStats.value.cacheHitRate ?? 0)
               : 0,
           errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0,
         },

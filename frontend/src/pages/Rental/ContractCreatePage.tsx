@@ -272,7 +272,7 @@ const ContractCreatePage: React.FC = () => {
           initialData={contract ?? undefined}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          loading={loading}
+          isLoading={loading}
         />
       </Card>
 

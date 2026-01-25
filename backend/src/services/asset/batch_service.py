@@ -131,7 +131,9 @@ class AssetBatchService:
                 if updates is None:
                     updates = {}
                 update_schema = AssetUpdate(**updates)
-                asset_crud.update(db=self.db, db_obj=asset, obj_in=update_schema)
+                asset_crud.update(
+                    db=self.db, db_obj=asset, obj_in=update_schema, commit=False
+                )
 
                 # 记录历史
                 history_crud.create(
@@ -140,6 +142,7 @@ class AssetBatchService:
                     operation_type="批量更新",
                     description=f"批量更新字段: {', '.join(updates.keys())}",
                     operator=operator,
+                    commit=False,
                 )
 
                 # 提交 SAVEPOINT
@@ -269,19 +272,18 @@ class AssetBatchService:
         try:
             for asset_id in asset_ids:
                 try:
-                    asset = asset_crud.get(db=self.db, id=asset_id)
-                    if not asset:
-                        result.errors.append(
-                            {"asset_id": asset_id, "error": "资产不存在"}
-                        )
-                        result.failed_count += 1
-                        continue
+                    with self.db.begin_nested():
+                        asset = asset_crud.get(db=self.db, id=asset_id)
+                        if not asset:
+                            result.errors.append(
+                                {"asset_id": asset_id, "error": "资产不存在"}
+                            )
+                            result.failed_count += 1
+                            continue
 
-                    asset_crud.remove(db=self.db, id=asset_id, commit=False)
-                    result.success_count += 1
-
+                        asset_crud.remove(db=self.db, id=asset_id, commit=False)
+                        result.success_count += 1
                 except Exception as e:
-                    # 不再静默失败
                     result.errors.append(
                         {
                             "asset_id": asset_id,
@@ -290,8 +292,6 @@ class AssetBatchService:
                         }
                     )
                     result.failed_count += 1
-                    # 抛出异常，触发事务回滚
-                    raise
 
             # 提交事务
             self.db.commit()

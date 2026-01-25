@@ -145,7 +145,8 @@ export class ApiErrorHandler {
     };
 
     // 使用logger
-    errorLogger.error('API Error', logData as unknown as Error);
+    const logMeta: Record<string, unknown> = { ...logData };
+    errorLogger.error('API Error', undefined, logMeta);
 
     // 在开发环境下打印详细错误
     if (process.env.NODE_ENV === 'development') {

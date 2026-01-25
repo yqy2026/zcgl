@@ -5,6 +5,7 @@ Excel导出服务
 """
 
 import io
+import json
 import logging
 import os
 from datetime import UTC, datetime
@@ -128,6 +129,40 @@ class ExcelExportService:
 
         except Exception as e:
             logger.error(f"导出Excel文件失败: {str(e)}")
+            raise
+
+    def export_analytics_to_excel(self, analytics_data: dict[str, Any]) -> io.BytesIO:
+        try:
+            rows: list[dict[str, Any]] = []
+            for key, value in analytics_data.items():
+                if isinstance(value, (str, int, float, bool)) or value is None:
+                    rows.append({"metric": key, "value": value})
+                else:
+                    rows.append(
+                        {
+                            "metric": key,
+                            "value": json.dumps(value, ensure_ascii=False),
+                        }
+                    )
+
+            if not rows:
+                rows = [
+                    {
+                        "metric": "data",
+                        "value": json.dumps(analytics_data, ensure_ascii=False),
+                    }
+                ]
+
+            df = pd.DataFrame(rows)
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                df.to_excel(writer, sheet_name="analytics", index=False)
+                self._set_column_widths(writer.sheets["analytics"])
+
+            buffer.seek(0)
+            return buffer
+        except Exception as e:
+            logger.error(f"导出分析Excel文件失败: {str(e)}")
             raise
 
     def export_assets_to_file(

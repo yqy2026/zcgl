@@ -1,12 +1,7 @@
 import React from 'react';
 import { Form, Input, Select, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '../../Dictionary';
-import GroupedSelectSingle from '../../Common/GroupedSelect';
-import {
-  PropertyNatureGroups,
-  UsageStatusGroups,
-  OwnershipStatusOptions,
-} from '../../../utils/enumHelpers';
+import { useDictionary } from '../../../hooks/useDictionary';
 
 const { Option } = Select;
 
@@ -24,11 +19,7 @@ const AssetStatusSection: React.FC = () => {
             name="ownership_status"
             rules={[{ required: true, message: '请选择确权状态' }]}
           >
-            <GroupedSelectSingle
-              groups={[{ label: '确权状态', options: OwnershipStatusOptions }]}
-              placeholder="请选择确权状态"
-              showGroupLabel={false}
-            />
+            <DictionarySelect dictType="ownership_status" placeholder="请选择确权状态" />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -55,12 +46,7 @@ const AssetStatusSection: React.FC = () => {
             name="usage_status"
             rules={[{ required: true, message: '请选择使用状态' }]}
           >
-            <GroupedSelectSingle
-              groups={UsageStatusGroups}
-              placeholder="请选择使用状态"
-              showSearch={true}
-              maxDisplayCount={20}
-            />
+            <DictionarySelect dictType="usage_status" placeholder="请选择使用状态" />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -80,12 +66,7 @@ const AssetStatusSection: React.FC = () => {
             name="property_nature"
             rules={[{ required: true, message: '请选择物业性质' }]}
           >
-            <GroupedSelectSingle
-              groups={PropertyNatureGroups}
-              placeholder="请选择物业性质"
-              showSearch={true}
-              maxDisplayCount={25}
-            />
+            <DictionarySelect dictType="property_nature" placeholder="请选择物业性质" />
           </Form.Item>
         </Col>
         <Col span={8}>

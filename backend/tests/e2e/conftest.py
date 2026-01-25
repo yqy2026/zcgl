@@ -99,6 +99,7 @@ def db_tables(engine):
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
         command.upgrade(alembic_cfg, "head")
+        Base.metadata.create_all(bind=engine)
     else:
         Base.metadata.create_all(bind=engine)
 

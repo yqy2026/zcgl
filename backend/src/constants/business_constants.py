@@ -83,10 +83,10 @@ class DataStatusValues:
     USAGE_SELF_USE: Final[str] = "自用"
     USAGE_VACANT: Final[str] = "空置"
     USAGE_OTHER: Final[str] = "其他"
-    CONTRACT_ACTIVE: Final[str] = "生效"
-    CONTRACT_EXPIRED: Final[str] = "过期"
-    CONTRACT_TERMINATED: Final[str] = "终止"
-    CONTRACT_PENDING: Final[str] = "待生效"
+    CONTRACT_ACTIVE: Final[str] = "ACTIVE"
+    CONTRACT_EXPIRED: Final[str] = "EXPIRED"
+    CONTRACT_TERMINATED: Final[str] = "TERMINATED"
+    CONTRACT_PENDING: Final[str] = "PENDING"
 
     @classmethod
     def get_active_asset_statuses(cls) -> list[str]:

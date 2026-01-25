@@ -6,7 +6,7 @@
 import React from 'react';
 import { Form } from 'antd';
 
-import { RentContractCreate } from '../../types/rentContract';
+import { RentContractCreate, ContractStatus } from '../../types/rentContract';
 
 // Import section components
 import {
@@ -26,7 +26,7 @@ interface RentContractFormProps {
   initialData?: RentContractInitialData;
   onSubmit: (data: RentContractCreate) => Promise<void>;
   onCancel: () => void;
-  loading?: boolean;
+  isLoading?: boolean;
   mode?: 'create' | 'edit';
 }
 
@@ -56,7 +56,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
   initialData,
   onSubmit,
   onCancel,
-  loading = false,
+  isLoading = false,
   mode = 'create',
 }) => {
   const [form] = Form.useForm();
@@ -69,14 +69,14 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
       initialData={initialData}
       onSubmit={onSubmit}
       onCancel={onCancel}
-      loading={loading}
+      isLoading={isLoading}
       mode={mode}
     >
       <Form
         form={form}
         layout="vertical"
         initialValues={{
-          contract_status: '有效',
+          contract_status: ContractStatus.ACTIVE,
         }}
       >
         <RentContractFormInner />

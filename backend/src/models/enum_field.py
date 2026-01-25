@@ -3,7 +3,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from ..database import Base
 
@@ -53,20 +53,20 @@ class EnumFieldType(Base):
 
     # 时间信息
     created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at = Column(
         DateTime,
         nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    enum_values = relationship(
+    enum_values: Mapped[list["EnumFieldValue"]] = relationship(
         "EnumFieldValue", back_populates="enum_type", cascade="all, delete-orphan"
     )
 
@@ -114,22 +114,26 @@ class EnumFieldValue(Base):
 
     # 时间信息
     created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at = Column(
         DateTime,
         nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    enum_type = relationship("EnumFieldType", back_populates="enum_values")
-    parent = relationship("EnumFieldValue", remote_side=[id], back_populates="children")
-    children = relationship(
+    enum_type: Mapped["EnumFieldType"] = relationship(
+        "EnumFieldType", back_populates="enum_values"
+    )
+    parent: Mapped["EnumFieldValue | None"] = relationship(
+        "EnumFieldValue", remote_side=[id], back_populates="children"
+    )
+    children: Mapped[list["EnumFieldValue"]] = relationship(
         "EnumFieldValue", back_populates="parent", cascade="all, delete-orphan"
     )
 
@@ -165,20 +169,20 @@ class EnumFieldUsage(Base):
 
     # 时间信息
     created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at = Column(
         DateTime,
         nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
     # 关系定义
-    enum_type = relationship("EnumFieldType")
+    enum_type: Mapped["EnumFieldType"] = relationship("EnumFieldType")
 
     def __repr__(self) -> str:
         return f"<EnumFieldUsage(id={self.id}, table={self.table_name}, field={self.field_name})>"  # pragma: no cover
@@ -218,8 +222,8 @@ class EnumFieldHistory(Base):
     user_agent = Column(Text, comment="用户代理")
 
     # 关系定义
-    enum_type = relationship("EnumFieldType")
-    enum_value = relationship("EnumFieldValue")
+    enum_type: Mapped["EnumFieldType | None"] = relationship("EnumFieldType")
+    enum_value: Mapped["EnumFieldValue | None"] = relationship("EnumFieldValue")
 
     def __repr__(self) -> str:
         return f"<EnumFieldHistory(id={self.id}, action={self.action}, target_type={self.target_type})>"  # pragma: no cover

@@ -10,8 +10,9 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
+from weakref import WeakKeyDictionary
 
-from sqlalchemy import and_, not_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ..constants.message_constants import EMPTY_STRING
@@ -92,7 +93,7 @@ class EnumValidationService:
                 .filter(
                     and_(
                         EnumFieldType.code == enum_type_code,
-                        not_(EnumFieldType.is_deleted),
+                        EnumFieldType.is_deleted.is_(False),
                         EnumFieldType.status == "active",
                     )
                 )
@@ -109,8 +110,8 @@ class EnumValidationService:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        not_(EnumFieldValue.is_deleted),
-                        EnumFieldValue.is_active,
+                        EnumFieldValue.is_deleted.is_(False),
+                        EnumFieldValue.is_active.is_(True),
                     )
                 )
                 .order_by(EnumFieldValue.sort_order)
@@ -281,9 +282,17 @@ class EnumValidationService:
         return len(errors) == 0, errors
 
 
+_SERVICE_CACHE: WeakKeyDictionary[Session, EnumValidationService] = WeakKeyDictionary()
+
+
 def get_enum_validation_service(db: Session) -> EnumValidationService:
     """获取枚举验证服务实例"""
-    return EnumValidationService(db)
+    cached = _SERVICE_CACHE.get(db)
+    if cached:
+        return cached
+    service = EnumValidationService(db)
+    _SERVICE_CACHE[db] = service
+    return service
 
 
 # ==================== 便捷函数 ====================
@@ -295,8 +304,7 @@ def get_valid_enum_values(db: Session, enum_type_code: str) -> list[str]:
 
     用于前端下拉框选项获取等场景
     """
-    service = EnumValidationService(db)
-    return service.get_valid_values(enum_type_code)
+    return get_enum_validation_service(db).get_valid_values(enum_type_code)
 
 
 def validate_enum_value(
@@ -319,8 +327,9 @@ def validate_enum_value(
     Returns:
         (是否有效, 错误信息)
     """
-    service = EnumValidationService(db)
-    return service.validate_value(enum_type_code, value, allow_empty, context)
+    return get_enum_validation_service(db).validate_value(
+        enum_type_code, value, allow_empty, context
+    )
 
 
 def get_enum_validation_stats(
@@ -336,5 +345,4 @@ def get_enum_validation_stats(
     Returns:
         统计信息字典
     """
-    service = EnumValidationService(db)
-    return service.get_validation_stats(enum_type_code)
+    return get_enum_validation_service(db).get_validation_stats(enum_type_code)

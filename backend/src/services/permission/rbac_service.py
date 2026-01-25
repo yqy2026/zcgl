@@ -17,7 +17,6 @@ class DuplicateAssetError(Exception):
 RBAC服务层
 """
 
-import json
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, or_
@@ -59,18 +58,17 @@ class RBACService:
         if existing_role:
             raise BusinessLogicError("角色名称已存在")
 
-        role = Role(
-            name=role_data.name,
-            display_name=role_data.display_name,
-            description=role_data.description,
-            level=role_data.level,
-            category=role_data.category,
-            is_system_role=role_data.is_system_role,
-            organization_id=role_data.organization_id,
-            scope=role_data.scope,
-            scope_id=role_data.scope_id,
-            created_by=created_by,
-        )
+        role = Role()
+        role.name = role_data.name
+        role.display_name = role_data.display_name
+        role.description = role_data.description
+        role.level = role_data.level
+        role.category = role_data.category
+        role.is_system_role = role_data.is_system_role
+        role.organization_id = role_data.organization_id
+        role.scope = role_data.scope
+        role.scope_id = role_data.scope_id
+        role.created_by = created_by
 
         self.db.add(role)
         self.db.commit()
@@ -227,20 +225,17 @@ class RBACService:
         if existing_permission:
             raise BusinessLogicError("权限名称已存在")
 
-        permission = Permission(
-            name=permission_data.name,
-            display_name=permission_data.display_name,
-            description=permission_data.description,
-            resource=permission_data.resource,
-            action=permission_data.action,
-            max_level=permission_data.max_level,
-            conditions=json.dumps(permission_data.conditions)
-            if permission_data.conditions
-            else None,
-            is_system_permission=permission_data.is_system_permission,
-            requires_approval=permission_data.requires_approval,
-            created_by=created_by,
-        )
+        permission = Permission()
+        permission.name = permission_data.name
+        permission.display_name = permission_data.display_name
+        permission.description = permission_data.description
+        permission.resource = permission_data.resource
+        permission.action = permission_data.action
+        permission.max_level = permission_data.max_level
+        permission.conditions = permission_data.conditions
+        permission.is_system_permission = permission_data.is_system_permission
+        permission.requires_approval = permission_data.requires_approval
+        permission.created_by = created_by
 
         self.db.add(permission)
         self.db.commit()
@@ -328,17 +323,14 @@ class RBACService:
         if existing_assignment:
             raise BusinessLogicError("用户已分配此角色")
 
-        assignment = UserRoleAssignment(
-            user_id=assignment_data.user_id,
-            role_id=assignment_data.role_id,
-            assigned_by=assigned_by,
-            expires_at=assignment_data.expires_at,
-            reason=assignment_data.reason,
-            notes=assignment_data.notes,
-            context=json.dumps(assignment_data.context)
-            if assignment_data.context
-            else None,
-        )
+        assignment = UserRoleAssignment()
+        assignment.user_id = assignment_data.user_id
+        assignment.role_id = assignment_data.role_id
+        assignment.assigned_by = assigned_by
+        assignment.expires_at = assignment_data.expires_at
+        assignment.reason = assignment_data.reason
+        assignment.notes = assignment_data.notes
+        assignment.context = assignment_data.context
 
         self.db.add(assignment)
         self.db.commit()
@@ -668,17 +660,16 @@ class RBACService:
         user_agent: str | None = None,
     ) -> None:
         """创建权限审计日志"""
-        audit_log = PermissionAuditLog(
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            operator_id=operator_id,
-            old_permissions=json.dumps(old_permissions) if old_permissions else None,
-            new_permissions=json.dumps(new_permissions) if new_permissions else None,
-            reason=reason,
-            ip_address=ip_address,
-            user_agent=user_agent,
-        )
+        audit_log = PermissionAuditLog()
+        audit_log.action = action
+        audit_log.resource_type = resource_type
+        audit_log.resource_id = resource_id
+        audit_log.operator_id = operator_id
+        audit_log.old_permissions = old_permissions
+        audit_log.new_permissions = new_permissions
+        audit_log.reason = reason
+        audit_log.ip_address = ip_address
+        audit_log.user_agent = user_agent
 
         self.db.add(audit_log)
         self.db.commit()

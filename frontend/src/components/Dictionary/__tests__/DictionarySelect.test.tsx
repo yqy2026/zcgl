@@ -13,7 +13,7 @@ vi.mock('../../hooks/useDictionary', () => ({
       { label: '选项1', value: 'opt1' },
       { label: '选项2', value: 'opt2' },
     ],
-    loading: false,
+    isLoading: false,
     error: null,
   })),
 }));

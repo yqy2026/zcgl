@@ -44,8 +44,9 @@ class RentContractService {
    */
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
+      const { pageSize, page_size, ...rest } = params ?? {};
       const result = await apiClient.get<RentContractListResponse>(this.baseUrl, {
-        params: { ...params, page: params?.page ?? 1, page_size: params?.page_size ?? 10 },
+        params: { ...rest, page: params?.page ?? 1, page_size: page_size ?? pageSize ?? 10 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -224,10 +225,11 @@ class RentContractService {
    */
   async getRentLedgers(params?: RentLedgerQueryParams): Promise<RentLedgerListResponse> {
     try {
+      const { pageSize, page_size, ...rest } = params ?? {};
       const result = await apiClient.get<RentLedgerListResponse>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST,
         {
-          params: { ...params, page: params?.page ?? 1, page_size: params?.page_size ?? 10 },
+          params: { ...rest, page: params?.page ?? 1, page_size: page_size ?? pageSize ?? 10 },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,

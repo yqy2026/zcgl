@@ -13,23 +13,30 @@ export const useAuth = () => {
 
   // 初始化认证状态
   useEffect(() => {
+    let isMounted = true;
     const initAuth = async () => {
       try {
         if (AuthService.isAuthenticated()) {
           const currentUser = AuthService.getLocalUser();
           const _permissions = AuthService.getLocalPermissions();
 
-          setUser(currentUser);
-          // Authorization header now handled by httpOnly cookie
+          if (isMounted) {
+            setUser(currentUser);
+          }
         }
       } catch (error) {
         authLogger.error('初始化认证状态失败:', error as Error);
-        // 清除可能损坏的本地存储
-        await AuthService.logout();
+        if (isMounted) {
+          await AuthService.logout();
+        }
       }
     };
 
     initAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(async (credentials: LoginCredentials) => {

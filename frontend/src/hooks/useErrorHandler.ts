@@ -106,11 +106,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
 
       // 记录错误日志
       if (logErrors) {
-        errorLogger.error(
-          'Error handled:',
-          undefined,
-          errorInfo as unknown as Record<string, unknown>
-        );
+        errorLogger.error('Error handled:', undefined, { ...errorInfo });
 
         // 发送错误报告到监控服务
         reportError(errorInfo);
@@ -150,11 +146,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       }
 
       if (logErrors) {
-        errorLogger.error(
-          'Validation errors:',
-          undefined,
-          errors as unknown as Record<string, unknown>
-        );
+        errorLogger.error('Validation errors:', undefined, { errors });
       }
 
       return errors;
@@ -172,11 +164,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       };
 
       if (logErrors) {
-        errorLogger.error(
-          'Business error:',
-          undefined,
-          errorInfo as unknown as Record<string, unknown>
-        );
+        errorLogger.error('Business error:', undefined, { ...errorInfo });
       }
 
       if (showNotification) {
@@ -213,11 +201,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       };
 
       if (logErrors) {
-        errorLogger.error(
-          'Upload error:',
-          undefined,
-          errorInfo as unknown as Record<string, unknown>
-        );
+        errorLogger.error('Upload error:', undefined, { ...errorInfo });
       }
 
       if (showNotification) {

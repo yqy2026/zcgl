@@ -3,6 +3,8 @@
  * 资产服务相关的接口定义
  */
 
+import type { AreaStatistics } from '../../types/asset';
+
 // Re-export types from asset.ts for convenience
 export type {
   Asset,
@@ -14,6 +16,7 @@ export type {
   SystemDictionary,
   AssetCustomField,
   CustomFieldValue,
+  AreaStatistics,
 } from '../../types/asset';
 
 export type { StandardApiResponse, PaginatedApiResponse } from '../../types/apiResponse';
@@ -204,27 +207,6 @@ export interface AssetDistributionStats {
     total_assets: number;
     by_nature_count: Record<string, number>;
     commercial_area?: number;
-  };
-}
-
-/** 面积统计接口 */
-export interface AreaStatistics {
-  totalLandArea: number;
-  totalPropertyArea: number;
-  totalRentableArea: number;
-  totalRentedArea: number;
-  averageOccupancyRate: number;
-  breakdown: {
-    byProject: Record<
-      string,
-      {
-        landArea: number;
-        propertyArea: number;
-        rentableArea: number;
-        rentedArea: number;
-        occupancyRate: number;
-      }
-    >;
   };
 }
 

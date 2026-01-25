@@ -263,7 +263,7 @@ describe('AssetForm - Props类型测试', () => {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
-      loading: false,
+      isLoading: false,
     };
 
     const element = React.createElement(AssetForm, props);
@@ -294,11 +294,11 @@ describe('AssetForm - Props类型测试', () => {
   it('应该支持loading状态变化', async () => {
     const AssetForm = (await import('../AssetForm')).default;
 
-    const loadingElement = React.createElement(AssetForm, { loading: true });
-    const notLoadingElement = React.createElement(AssetForm, { loading: false });
+    const loadingElement = React.createElement(AssetForm, { isLoading: true });
+    const notLoadingElement = React.createElement(AssetForm, { isLoading: false });
 
-    expect(loadingElement.props.loading).toBe(true);
-    expect(notLoadingElement.props.loading).toBe(false);
+    expect(loadingElement.props.isLoading).toBe(true);
+    expect(notLoadingElement.props.isLoading).toBe(false);
   });
 });
 
@@ -457,7 +457,7 @@ describe('AssetForm - 完整场景测试', () => {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
-      loading: false,
+      isLoading: false,
     };
 
     const element = React.createElement(AssetForm, props);
@@ -485,7 +485,7 @@ describe('AssetForm - 完整场景测试', () => {
       initialData,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
-      loading: false,
+      isLoading: false,
     };
 
     const element = React.createElement(AssetForm, props);
@@ -500,11 +500,11 @@ describe('AssetForm - 完整场景测试', () => {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
-      loading: true,
+      isLoading: true,
     };
 
     const element = React.createElement(AssetForm, props);
-    expect(element.props.loading).toBe(true);
+    expect(element.props.isLoading).toBe(true);
   });
 });
 

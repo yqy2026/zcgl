@@ -5,13 +5,16 @@
 """
 
 import uuid
-from datetime import datetime
-from typing import Any, cast
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .auth import User
 
 
 class NotificationType:
@@ -75,14 +78,25 @@ class Notification(Base):
     # 额外数据（JSON格式存储）
     extra_data = Column(Text, comment="额外数据（JSON格式）")
 
+    created_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
+    )
+
     # 关系
-    recipient = relationship("User", back_populates="notifications")
+    recipient: Mapped["User"] = relationship("User", back_populates="notifications")
 
     def mark_as_read(self) -> None:
         """标记通知为已读"""
         if not cast(bool, self.is_read):
             object.__setattr__(self, "is_read", True)
-            object.__setattr__(self, "read_at", datetime.utcnow())
+            object.__setattr__(self, "read_at", datetime.now(UTC))
 
     def mark_as_unread(self) -> None:
         """标记通知为未读"""

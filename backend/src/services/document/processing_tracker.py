@@ -352,14 +352,13 @@ class ProcessingTracker:
             bool: 是否成功
         """
         try:
-            log = SessionLog(
-                session_id=self.session_id,
-                step=step,
-                status=status,
-                message=message,
-                details=details,
-                duration_ms=duration_ms,
-            )
+            log = SessionLog()
+            log.session_id = self.session_id
+            log.step = step
+            log.status = status
+            log.message = message
+            log.details = details
+            log.duration_ms = duration_ms
             self.db.add(log)
             self.db.commit()
             return True

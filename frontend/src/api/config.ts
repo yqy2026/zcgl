@@ -230,7 +230,11 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
-        const errorData = (await response.json()) as unknown as Record<string, unknown>;
+        const rawErrorData = await response.json();
+        const errorData =
+          rawErrorData != null && typeof rawErrorData === 'object'
+            ? (rawErrorData as Record<string, unknown>)
+            : {};
 
         const rawMessage = errorData.message as unknown;
         const rawDetail = errorData.detail as unknown;
@@ -247,7 +251,7 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
       throw new ApiError(errorMessage, response.status, response);
     }
 
-    const data = (await response.json()) as unknown as T;
+    const data = (await response.json()) as T;
     return data;
   } catch (error) {
     if (error instanceof ApiError) {

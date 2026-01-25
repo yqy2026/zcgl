@@ -8,13 +8,13 @@ import { useRentContractFormContext } from './RentContractFormContext';
  * Submit and cancel buttons
  */
 const FormActionsSection: React.FC = () => {
-  const { mode, loading, onCancel } = useRentContractFormContext();
+  const { mode, isLoading, onCancel } = useRentContractFormContext();
 
   return (
     <div style={{ textAlign: 'right', marginTop: 24 }}>
       <Space>
         <Button onClick={onCancel}>取消</Button>
-        <Button type="primary" htmlType="submit" loading={loading} icon={<SaveOutlined />}>
+        <Button type="primary" htmlType="submit" loading={isLoading} icon={<SaveOutlined />}>
           {mode === 'create' ? '创建合同' : '更新合同'}
         </Button>
       </Space>

@@ -5,8 +5,8 @@
 
 import functools
 import os
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, ParamSpec, TypeVar
 
 from .exception_handler import not_found
 
@@ -16,7 +16,11 @@ def is_debug_mode() -> bool:
     return os.getenv("DEBUG", "false").lower() == "true"
 
 
-def debug_only(func: Callable[..., Any]) -> Callable[..., Any]:
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def debug_only(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """
     装饰器：仅在调试模式下允许访问端点
 
@@ -31,7 +35,7 @@ def debug_only(func: Callable[..., Any]) -> Callable[..., Any]:
     """
 
     @functools.wraps(func)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         if not is_debug_mode():
             raise not_found("Not Found")  # 故意模糊响应，不暴露端点存在
         return await func(*args, **kwargs)
@@ -39,14 +43,14 @@ def debug_only(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def require_debug_mode(func: Callable[..., Any]) -> Callable[..., Any]:
+def require_debug_mode(func: Callable[P, R]) -> Callable[P, R]:
     """
     同步版本的调试模式装饰器
     用于非async函数
     """
 
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         if not is_debug_mode():
             raise not_found("Not Found")
         return func(*args, **kwargs)

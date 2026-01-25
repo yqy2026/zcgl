@@ -13,7 +13,7 @@ import {
   DollarOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
-import { RentContract } from '../../../types/rentContract';
+import { RentContract, ContractStatus, ContractStatusLabels, ContractStatusColors } from '../../../types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 
 const { Text } = Typography;
@@ -38,13 +38,10 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
 
   // 获取合同状态标签
   const getContractStatusLabel = (status: string): { text: string; color: string } => {
-    const statusMap: Record<string, { text: string; color: string }> = {
-      有效: { text: '有效', color: 'green' },
-      已到期: { text: '已到期', color: 'orange' },
-      已终止: { text: '已终止', color: 'red' },
-      已续签: { text: '已续签', color: 'blue' },
+    return {
+      text: ContractStatusLabels[status as ContractStatus] || status,
+      color: ContractStatusColors[status as ContractStatus] || 'default'
     };
-    return statusMap[status] ?? { text: status, color: 'default' };
   };
 
   const statusInfo = getContractStatusLabel(contract.contract_status || '');

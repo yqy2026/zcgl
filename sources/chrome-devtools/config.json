@@ -1,0 +1,25 @@
+{
+  "id": "4646e6cb-1f79-4b46-a651-696ad5cc5ba6",
+  "name": "Chrome DevTools",
+  "slug": "chrome-devtools",
+  "enabled": true,
+  "type": "mcp",
+  "provider": "chrome-devtools",
+  "mcp": {
+    "transport": "stdio",
+    "command": "cmd.exe",
+    "args": [
+      "/c",
+      "npx",
+      "-y",
+      "@modelcontextprotocol/server-chrome"
+    ],
+    "authType": "none"
+  },
+  "icon": "🌐",
+  "createdAt": 1769317200000,
+  "updatedAt": 1769317483171,
+  "lastTestedAt": 1769317483171,
+  "connectionStatus": "failed",
+  "connectionError": "Process error: npm notice Access token expired or revoked. Please try logging in again."
+}

@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { rentContractService } from '@/services/rentContractService';
 import ContractDetailInfo from '@/components/Rental/ContractDetailInfo';
 import ContractTerminateModal from '@/components/Rental/ContractTerminateModal';
+import { ContractStatus } from '@/types/rentContract';
 
 const { Title } = Typography;
 
@@ -115,7 +116,7 @@ const ContractDetailPage: React.FC = () => {
           <Col>
             <Space>
               {/* 只有合同状态为"有效"时才显示续签和终止按钮 */}
-              {contract.contract_status === '有效' && (
+              {contract.contract_status === ContractStatus.ACTIVE && (
                 <>
                   <Button
                     type="default"

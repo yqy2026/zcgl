@@ -7,7 +7,8 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
@@ -212,6 +213,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         obj_in_data.update(kwargs)
 
+        # 移除计算字段（这些字段在模型中是@property，不能设置）
+        # unrented_area 和 occupancy_rate 是自动计算的，不应该从 API 输入
+        obj_in_data.pop("unrented_area", None)
+        obj_in_data.pop("occupancy_rate", None)
+
         # 加密PII字段
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
@@ -234,7 +240,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return result
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+        **kwargs: Any,
     ) -> list[Asset]:
         """
         获取多个资产（解密PII字段）
@@ -242,7 +254,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         Override CRUDBase.get_multi() to decrypt PII fields after retrieval.
         """
         # 调用父类方法获取记录
-        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        results = super().get_multi(
+            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
+        )
 
         # 解密所有记录的PII字段
         for asset in results:
@@ -339,6 +353,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         # 使用 CRUDBase (QueryBuilder) 获取数据
         # 注意：QueryBuilder 默认处理 skip/limit
+        base_query = select(Asset).options(
+            joinedload(Asset.project), joinedload(Asset.ownership)
+        )
         assets: list[Asset] = self.get_with_filters(
             db,
             filters=qb_filters,
@@ -348,6 +365,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             limit=limit,
             order_by=sort_field,
             order_desc=(sort_order.lower() == "desc"),
+            base_query=base_query,
         )
 
         # 获取总数 (用于分页)
@@ -365,17 +383,26 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return assets, total
 
     def create_with_history(
-        self, db: Session, obj_in: AssetCreate, commit: bool = True
+        self,
+        db: Session,
+        obj_in: AssetCreate,
+        commit: bool = True,
+        operator: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
     ) -> Asset:
         """创建资产并记录历史"""
         db_obj: Asset = self.create(db=db, obj_in=obj_in, commit=False)
 
-        history = AssetHistory(
-            asset_id=db_obj.id,
-            operation_type="CREATE",
-            description=f"创建资产: {db_obj.property_name}",
-            operator="system",
-        )
+        history = AssetHistory()
+        history.asset_id = db_obj.id
+        history.operation_type = "CREATE"
+        history.description = f"创建资产: {db_obj.property_name}"
+        history.operator = operator
+        history.ip_address = ip_address
+        history.user_agent = user_agent
+        history.session_id = session_id
         db.add(history)
         if commit:
             db.commit()
@@ -404,6 +431,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
 
+        # 移除计算字段（这些字段在模型中是@property，不能设置）
+        update_data.pop("unrented_area", None)
+        update_data.pop("occupancy_rate", None)
+
         # 加密PII字段
         encrypted_data = self._encrypt_update_data(update_data)
 
@@ -419,7 +450,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return result
 
     def update_with_history(
-        self, db: Session, db_obj: Asset, obj_in: AssetUpdate, commit: bool = True
+        self,
+        db: Session,
+        db_obj: Asset,
+        obj_in: AssetUpdate,
+        commit: bool = True,
+        operator: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
     ) -> Asset:
         """更新资产并记录历史"""
         if hasattr(obj_in, "model_dump"):
@@ -431,15 +470,23 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             if hasattr(db_obj, field):
                 old_value = getattr(db_obj, field)
                 if old_value != new_value:
-                    history = AssetHistory(
-                        asset_id=db_obj.id,
-                        operation_type="UPDATE",
-                        field_name=field,
-                        old_value=str(old_value) if old_value is not None else None,
-                        new_value=str(new_value) if new_value is not None else None,
-                        description=f"更新字段 {field}: {old_value} -> {new_value}",
-                        operator="system",
+                    history = AssetHistory()
+                    history.asset_id = db_obj.id
+                    history.operation_type = "UPDATE"
+                    history.field_name = field
+                    history.old_value = (
+                        str(old_value) if old_value is not None else None
                     )
+                    history.new_value = (
+                        str(new_value) if new_value is not None else None
+                    )
+                    history.description = (
+                        f"更新字段 {field}: {old_value} -> {new_value}"
+                    )
+                    history.operator = operator
+                    history.ip_address = ip_address
+                    history.user_agent = user_agent
+                    history.session_id = session_id
                     db.add(history)
 
         return self.update(db=db, db_obj=db_obj, obj_in=obj_in, commit=commit)

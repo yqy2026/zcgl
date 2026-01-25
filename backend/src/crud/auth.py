@@ -103,16 +103,16 @@ class UserCRUD:
             "utf-8"
         )
 
-        # 创建用户对象
-        db_user = User(
-            username=obj_in.username,
-            email=obj_in.email,
-            full_name=obj_in.full_name,
-            password_hash=hashed_password,
-            role=obj_in.role,
-            employee_id=obj_in.employee_id,
-            default_organization_id=obj_in.default_organization_id,
-        )
+        role_value = obj_in.role.value if hasattr(obj_in.role, "value") else obj_in.role
+
+        db_user = User()
+        db_user.username = obj_in.username
+        db_user.email = obj_in.email
+        db_user.full_name = obj_in.full_name
+        db_user.password_hash = hashed_password
+        db_user.role = role_value
+        db_user.employee_id = obj_in.employee_id
+        db_user.default_organization_id = obj_in.default_organization_id
 
         db.add(db_user)
         db.commit()
@@ -127,9 +127,10 @@ class UserCRUD:
         如需完整的用户更新逻辑（包括唯一性检查等），
         请使用 UserManagementService.update_user()
         """
-        # 更新字段
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
+            if field == "role" and value is not None:
+                value = value.value if hasattr(value, "value") else value
             setattr(db_obj, field, value)
 
         db_obj.updated_at = datetime.now()
@@ -221,14 +222,13 @@ class UserSessionCRUD:
         user_agent: str | None = None,
     ) -> UserSession:
         """创建用户会话"""
-        user_session = UserSession(
-            user_id=user_id,
-            refresh_token=refresh_token,
-            device_info=device_info,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            expires_at=datetime.now() + timedelta(days=7),  # 7天过期
-        )
+        user_session = UserSession()
+        user_session.user_id = user_id
+        user_session.refresh_token = refresh_token
+        user_session.device_info = device_info
+        user_session.ip_address = ip_address
+        user_session.user_agent = user_agent
+        user_session.expires_at = datetime.now() + timedelta(days=7)
         db.add(user_session)
         db.commit()
         db.refresh(user_session)
@@ -342,24 +342,25 @@ class AuditLogCRUD:
         if not user:
             return None
 
-        audit_log = AuditLog(
-            user_id=user_id,
-            username=user.username,
-            user_role=user.role.value if hasattr(user.role, "value") else user.role,
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            resource_name=resource_name,
-            api_endpoint=api_endpoint,
-            http_method=http_method,
-            request_params=request_params,
-            request_body=request_body,
-            response_status=response_status,
-            response_message=response_message,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            session_id=session_id,
+        audit_log = AuditLog()
+        audit_log.user_id = user_id
+        audit_log.username = user.username
+        audit_log.user_role = (
+            user.role.value if hasattr(user.role, "value") else user.role
         )
+        audit_log.action = action
+        audit_log.resource_type = resource_type
+        audit_log.resource_id = resource_id
+        audit_log.resource_name = resource_name
+        audit_log.api_endpoint = api_endpoint
+        audit_log.http_method = http_method
+        audit_log.request_params = request_params
+        audit_log.request_body = request_body
+        audit_log.response_status = response_status
+        audit_log.response_message = response_message
+        audit_log.ip_address = ip_address
+        audit_log.user_agent = user_agent
+        audit_log.session_id = session_id
 
         db.add(audit_log)
         db.commit()

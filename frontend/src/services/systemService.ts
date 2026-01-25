@@ -365,11 +365,22 @@ export interface SystemSettings {
   };
 }
 
+export interface SystemInfo {
+  version: string;
+  build_time: string;
+  database_status: string;
+  api_version: string;
+  environment: string;
+}
+
 export const systemService = {
   // 获取系统设置
-  async getSettings() {
-    const response = await api.get(SYSTEM_API.SETTINGS);
-    return response.data;
+  async getSettings(): Promise<SystemSettings> {
+    const result = await api.get<SystemSettings>(SYSTEM_API.SETTINGS);
+    if (!result.success) {
+      throw new Error(result.error ?? '获取系统设置失败');
+    }
+    return result.data!;
   },
 
   // 更新系统设置
@@ -379,9 +390,12 @@ export const systemService = {
   },
 
   // 获取系统信息
-  async getSystemInfo() {
-    const response = await api.get(SYSTEM_API.HEALTH);
-    return response.data;
+  async getSystemInfo(): Promise<SystemInfo> {
+    const result = await api.get<SystemInfo>(SYSTEM_API.HEALTH);
+    if (!result.success) {
+      throw new Error(result.error ?? '获取系统信息失败');
+    }
+    return result.data!;
   },
 
   // 备份系统数据

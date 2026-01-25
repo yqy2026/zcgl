@@ -75,17 +75,19 @@ class SystemDictionaryService:
             sort_order = item.get("sort_order")
 
             if dictionary_id and sort_order is not None:
-                dictionary = system_dictionary_crud.get(db, dictionary_id)
+                dictionary_obj: SystemDictionary | None = system_dictionary_crud.get(
+                    db, dictionary_id
+                )
                 # Verify type matches to prevent cross-type accidental sorts if IDs valid
-                if dictionary and dictionary.dict_type == dict_type:
-                    dictionary.sort_order = sort_order
-                    db.add(dictionary)
-                    updated_items.append(dictionary)
+                if dictionary_obj and dictionary_obj.dict_type == dict_type:
+                    dictionary_obj.sort_order = sort_order
+                    db.add(dictionary_obj)
+                    updated_items.append(dictionary_obj)
 
         db.commit()
         # Refresh all?
-        for item in updated_items:
-            db.refresh(item)
+        for updated_item in updated_items:
+            db.refresh(updated_item)
 
         return updated_items
 

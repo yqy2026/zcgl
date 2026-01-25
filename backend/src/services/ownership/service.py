@@ -155,9 +155,10 @@ class OwnershipService:
 
         # 创建新关联
         for project_id in project_ids:
-            relation = ProjectOwnershipRelation(
-                project_id=project_id, ownership_id=ownership_id, is_active=True
-            )
+            relation = ProjectOwnershipRelation()
+            relation.project_id = project_id
+            relation.ownership_id = ownership_id
+            relation.is_active = True
             db.add(relation)
 
         db.commit()

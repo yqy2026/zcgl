@@ -174,7 +174,7 @@ export const useWebSocketUpdates = (
         };
 
         wsRef.current.onerror = error => {
-          rtLogger.error('WebSocket error:', error as unknown as Error);
+          rtLogger.error('WebSocket error:', error);
           onError?.(error);
         };
 

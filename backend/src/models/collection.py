@@ -4,8 +4,9 @@
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     DECIMAL,
@@ -17,9 +18,13 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .rent_contract import RentContract
+    from .rent_ledger import RentLedger
 
 
 class CollectionMethod(str, enum.Enum):
@@ -66,13 +71,13 @@ class CollectionRecord(Base):
     )
 
     # 催缴信息
-    collection_method: Column[CollectionMethod] = Column(
+    collection_method: Mapped[CollectionMethod] = mapped_column(
         Enum(CollectionMethod),
         nullable=False,
         comment="催缴方式：电话/短信/邮件/企业微信/上门/催缴函",
     )
     collection_date = Column(Date, nullable=False, comment="催缴日期")
-    collection_status: Column[CollectionStatus] = Column(
+    collection_status: Mapped[CollectionStatus] = mapped_column(
         Enum(CollectionStatus),
         default=CollectionStatus.PENDING,
         comment="催缴状态",
@@ -83,9 +88,11 @@ class CollectionRecord(Base):
     contact_phone = Column(String(20), comment="联系电话")
 
     # 催缴结果
-    promised_amount: Column[Decimal] = Column(DECIMAL(15, 2), comment="承诺付款金额")
+    promised_amount: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2), comment="承诺付款金额"
+    )
     promised_date = Column(Date, comment="承诺付款日期")
-    actual_payment_amount: Column[Decimal] = Column(
+    actual_payment_amount: Mapped[Decimal | None] = mapped_column(
         DECIMAL(15, 2), comment="实际付款金额"
     )
 
@@ -98,14 +105,17 @@ class CollectionRecord(Base):
     operator_id = Column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), comment="创建时间")
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 关联关系
-    ledger = relationship("RentLedger")
-    contract = relationship("RentContract")
+    ledger: Mapped["RentLedger"] = relationship("RentLedger")
+    contract: Mapped["RentContract"] = relationship("RentContract")
 
     def __repr__(self) -> str:
         return f"<CollectionRecord(ledger_id={self.ledger_id}, method={self.collection_method}, status={self.collection_status})>"  # pragma: no cover

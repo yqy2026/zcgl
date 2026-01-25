@@ -37,7 +37,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
   placeholder,
   ...props
 }) => {
-  const { options, loading, error: _error } = useDictionary(dictType, isActive);
+  const { options, isLoading, error: _error } = useDictionary(dictType, isActive);
 
   // Track data flow for debugging
 
@@ -83,9 +83,9 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
   return (
     <Select
       {...props}
-      loading={loading}
+      loading={isLoading}
       placeholder={placeholder ?? (`请选择${dictType.replace('_', '')}` as string)}
-      notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
+      notFoundContent={isLoading ? <Spin size="small" /> : '暂无数据'}
       options={options}
       filterOption={(input, option) => {
         // 处理React元素类型的label

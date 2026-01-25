@@ -40,7 +40,7 @@ def renew_contract(
             db=db,
             original_contract_id=contract_id,
             new_contract_data=new_contract_data,
-            transfer_deposit=should_transfer_deposit,
+            should_transfer_deposit=should_transfer_deposit,
             operator=current_user.username if current_user else None,
             operator_id=current_user.id if current_user else None,
         )
@@ -76,7 +76,7 @@ def terminate_contract(
             db=db,
             contract_id=contract_id,
             termination_date=termination_date,
-            refund_deposit=should_refund_deposit,
+            should_refund_deposit=should_refund_deposit,
             deduction_amount=Decimal(str(deduction_amount)),
             termination_reason=termination_reason,
             operator=current_user.username if current_user else None,

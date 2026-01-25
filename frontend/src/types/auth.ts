@@ -1,7 +1,7 @@
 export interface LoginFormData {
   username: string;
   password: string;
-  shouldRemember: boolean;
+  remember: boolean;
 }
 
 export interface LoginCredentials {

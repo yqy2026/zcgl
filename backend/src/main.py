@@ -45,23 +45,28 @@ logger = logging.getLogger(__name__)
 env = get_environment()
 logger.info(f"当前环境: {env.value}")
 logger.info(f"依赖策略: {get_dependency_policy().value}")
+allow_mock_registry = settings.ALLOW_MOCK_REGISTRY or is_testing()
 
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
 router_registry_module = safe_import(
     "src.core.router_registry",
     critical=True,
-    mock_factory=create_mock_registry,
+    mock_factory=create_mock_registry if allow_mock_registry else None,
 )
 if hasattr(router_registry_module, "route_registry"):
     route_registry = router_registry_module.route_registry
-else:
+elif allow_mock_registry:
     route_registry = create_mock_registry()
+else:
+    raise RuntimeError("缺少 route_registry 且未启用 ALLOW_MOCK_REGISTRY")
 
 if hasattr(router_registry_module, "register_api_routes"):
     register_api_routes = router_registry_module.register_api_routes
-else:
+elif allow_mock_registry:
     register_api_routes = create_lambda_none
+else:
+    raise RuntimeError("缺少 register_api_routes 且未启用 ALLOW_MOCK_REGISTRY")
 
 # 安全中间件 - 关键依赖
 setup_security_middleware = safe_import_from(

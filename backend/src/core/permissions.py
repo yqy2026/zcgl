@@ -130,11 +130,19 @@ def role_required(role_code: str) -> Callable[[Callable[..., Any]], Callable[...
             if not current_user:
                 raise unauthorized("未认证用户")
 
-            # 检查用户是否具有指定角色
-            user_roles = (
-                [role.code for role in current_user.roles] if current_user.roles else []
-            )
-            if role_code not in user_roles:
+            db = kwargs.get("db")
+            if not db:
+                raise internal_error("数据库会话未找到")
+
+            rbac_service = RBACService(db)
+            user_id_value: str = getattr(current_user, "id", "")
+            roles = rbac_service.get_user_roles(user_id_value)
+            role_names = {role.name for role in roles}
+            current_role = getattr(current_user, "role", None)
+            if current_role is not None:
+                role_names.add(str(current_role))
+
+            if role_code not in role_names:
                 raise forbidden(f"权限不足，需要 {role_code} 角色")
 
             return await func(*args, **kwargs)
@@ -284,8 +292,13 @@ class PermissionChecker:
 
     def has_role(self, role_code: str) -> bool:
         """检查用户是否具有指定角色"""
-        user_roles = [role.code for role in self.user.roles] if self.user.roles else []
-        return role_code in user_roles
+        user_id_value: str = getattr(self.user, "id", "")
+        roles = self.rbac_service.get_user_roles(user_id_value)
+        role_names = {role.name for role in roles}
+        current_role = getattr(self.user, "role", None)
+        if current_role is not None:
+            role_names.add(str(current_role))
+        return role_code in role_names
 
     def is_admin(self) -> bool:
         """检查用户是否是管理员"""

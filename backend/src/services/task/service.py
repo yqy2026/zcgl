@@ -259,7 +259,7 @@ class TaskService:
                     AsyncTask.status.in_(
                         [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
                     ),
-                    AsyncTask.is_active,
+                    AsyncTask.is_active.is_(True),
                 )
             )
             .all()
@@ -295,7 +295,7 @@ class TaskService:
                 and_(
                     ExcelTaskConfig.config_type == obj_in.config_type,
                     ExcelTaskConfig.task_type == obj_in.task_type,
-                    ExcelTaskConfig.is_default,
+                    ExcelTaskConfig.is_default.is_(True),
                 )
             ).update({"is_default": False})
 

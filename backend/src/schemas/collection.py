@@ -9,7 +9,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CollectionMethodEnum(str, Enum):
+class CollectionMethod(str, Enum):
     """催缴方式枚举"""
 
     PHONE = "phone"
@@ -21,7 +21,7 @@ class CollectionMethodEnum(str, Enum):
     OTHER = "other"
 
 
-class CollectionStatusEnum(str, Enum):
+class CollectionStatus(str, Enum):
     """催缴状态枚举"""
 
     PENDING = "pending"
@@ -36,10 +36,10 @@ class CollectionRecordBase(BaseModel):
 
     ledger_id: str = Field(..., description="关联的租金台账ID")
     contract_id: str = Field(..., description="关联合同ID")
-    collection_method: CollectionMethodEnum = Field(..., description="催缴方式")
+    collection_method: CollectionMethod = Field(..., description="催缴方式")
     collection_date: date = Field(..., description="催缴日期")
-    collection_status: CollectionStatusEnum = Field(
-        CollectionStatusEnum.PENDING, description="催缴状态"
+    collection_status: CollectionStatus = Field(
+        CollectionStatus.PENDING, description="催缴状态"
     )
     contacted_person: str | None = Field(None, description="被联系人")
     contact_phone: str | None = Field(None, description="联系电话")
@@ -62,7 +62,7 @@ class CollectionRecordCreate(CollectionRecordBase):
 class CollectionRecordUpdate(BaseModel):
     """更新催缴记录Schema"""
 
-    collection_status: CollectionStatusEnum | None = Field(None, description="催缴状态")
+    collection_status: CollectionStatus | None = Field(None, description="催缴状态")
     contacted_person: str | None = Field(None, description="被联系人")
     contact_phone: str | None = Field(None, description="联系电话")
     promised_amount: Decimal | None = Field(None, ge=0, description="承诺付款金额")

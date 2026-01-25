@@ -3,7 +3,7 @@
 """
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -57,6 +57,9 @@ class Asset(Base):
     )
     usage_status: Mapped[str] = mapped_column(
         String(50), nullable=False, comment="使用状态"
+    )
+    management_entity: Mapped[str | None] = mapped_column(
+        String(200), comment="经营管理单位"
     )
     business_category: Mapped[str | None] = mapped_column(
         String(100), comment="业态类别"
@@ -162,10 +165,13 @@ class Asset(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 多租户支持
@@ -245,7 +251,7 @@ class AssetHistory(Base):
     new_value: Mapped[str | None] = mapped_column(Text, comment="新值")
     operator: Mapped[str | None] = mapped_column(String(100), comment="操作人")
     operation_time: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="操作时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="操作时间"
     )
     description: Mapped[str | None] = mapped_column(Text, comment="操作描述")
 
@@ -283,7 +289,7 @@ class AssetDocument(Base):
     file_size: Mapped[int | None] = mapped_column(Integer, comment="文件大小(字节)")
     mime_type: Mapped[str | None] = mapped_column(String(100), comment="文件MIME类型")
     upload_time: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="上传时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="上传时间"
     )
     uploader: Mapped[str | None] = mapped_column(String(100), comment="上传人")
     description: Mapped[str | None] = mapped_column(Text, comment="文档描述")
@@ -322,13 +328,13 @@ class SystemDictionary(Base):
         Boolean, nullable=False, default=True, comment="是否启用"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
 
@@ -368,13 +374,13 @@ class AssetCustomField(Base):
     help_text: Mapped[str | None] = mapped_column(Text, comment="帮助文本")
     description: Mapped[str | None] = mapped_column(Text, comment="描述")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
 
@@ -402,13 +408,13 @@ class ProjectOwnershipRelation(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -510,13 +516,13 @@ class Project(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -566,13 +572,13 @@ class Ownership(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")

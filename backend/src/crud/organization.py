@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import and_, not_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ..crud.asset import SensitiveDataHandler
@@ -45,10 +45,18 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         return result
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+        **kwargs: Any,
     ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
-        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        results = super().get_multi(
+            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
+        )
         for item in results:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
         return results
@@ -59,6 +67,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         *,
         db_obj: Organization,
         obj_in: OrganizationUpdate | dict[str, Any],
+        commit: bool = True,
     ) -> Organization:
         """更新组织 - 加密新的敏感字段值"""
         if isinstance(obj_in, dict):
@@ -68,7 +77,9 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
 
         # 加密敏感字段
         encrypted_data = self._encrypt_update_data(update_data)
-        return super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+        return super().update(
+            db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
+        )
 
     def _encrypt_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
         """加密更新数据中的敏感字段"""
@@ -92,7 +103,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         keyword: str | None = None,
     ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
-        query = db.query(Organization).filter(not_(Organization.is_deleted))
+        query = db.query(Organization).filter(Organization.is_deleted.is_(False))
         filters: dict[str, Any] = {}
 
         if parent_id:
@@ -124,7 +135,9 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
     def get_tree(self, db: Session, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构 - 解密敏感字段"""
         query = db.query(Organization).filter(
-            and_(not_(Organization.is_deleted), Organization.parent_id == parent_id)
+            and_(
+                Organization.is_deleted.is_(False), Organization.parent_id == parent_id
+            )
         )
         result: list[Organization] = query.order_by(
             Organization.sort_order, Organization.name
@@ -146,7 +159,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
                 .filter(
                     and_(
                         Organization.parent_id == parent_id,
-                        not_(Organization.is_deleted),
+                        Organization.is_deleted.is_(False),
                     )
                 )
                 .order_by(Organization.sort_order, Organization.name)

@@ -59,24 +59,35 @@ class MemoryCache(CacheBackend):
         self.max_size = max_size
         self._cache: dict[str, dict[str, Any]] = {}
 
+    def _cleanup_expired(self) -> None:
+        now = datetime.now(UTC)
+        expired_keys = [
+            key for key, item in self._cache.items() if item["expires_at"] <= now
+        ]
+        for key in expired_keys:
+            del self._cache[key]
+
     def get(self, key: str) -> Any | None:
         """获取缓存值"""
+        self._cleanup_expired()
         if key in self._cache:
             item = self._cache[key]
             if item["expires_at"] > datetime.now(UTC):
+                item["last_accessed_at"] = datetime.now(UTC)
+                self._cache[key] = item
                 return item["value"]
             else:
-                # 过期了，删除
                 del self._cache[key]
         return None
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """设置缓存值"""
         try:
+            self._cleanup_expired()
             # 如果缓存已满，删除最旧的条目
             if len(self._cache) >= self.max_size:
                 oldest_key = min(
-                    self._cache.keys(), key=lambda k: self._cache[k]["created_at"]
+                    self._cache.keys(), key=lambda k: self._cache[k]["last_accessed_at"]
                 )
                 del self._cache[oldest_key]
 
@@ -87,6 +98,7 @@ class MemoryCache(CacheBackend):
             self._cache[key] = {
                 "value": value,
                 "created_at": datetime.now(UTC),
+                "last_accessed_at": datetime.now(UTC),
                 "expires_at": expires_at,
             }
             return True
@@ -117,6 +129,7 @@ class MemoryCache(CacheBackend):
 
     def get_ttl(self, key: str) -> int | None:
         """获取缓存剩余时间"""
+        self._cleanup_expired()
         if key in self._cache:
             expires_at = self._cache[key]["expires_at"]
             remaining = (expires_at - datetime.now(UTC)).total_seconds()

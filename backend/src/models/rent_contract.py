@@ -4,7 +4,7 @@
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -23,6 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..core.enums import ContractStatus
 from ..database import Base
 
 
@@ -61,7 +62,12 @@ rent_contract_assets = Table(
     Base.metadata,
     Column("contract_id", String, ForeignKey("rent_contracts.id"), primary_key=True),
     Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
-    Column("created_at", DateTime, default=datetime.utcnow, comment="关联创建时间"),
+    Column(
+        "created_at",
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        comment="关联创建时间",
+    ),
 )
 
 
@@ -136,15 +142,11 @@ class RentContract(Base):
     )
 
     # 合同日期信息
-    sign_date: Mapped[datetime] = mapped_column(
-        Date, nullable=False, comment="签订日期"
-    )
-    start_date: Mapped[datetime] = mapped_column(
+    sign_date: Mapped[date] = mapped_column(Date, nullable=False, comment="签订日期")
+    start_date: Mapped[date] = mapped_column(
         Date, nullable=False, comment="租期开始日期"
     )
-    end_date: Mapped[datetime] = mapped_column(
-        Date, nullable=False, comment="租期结束日期"
-    )
+    end_date: Mapped[date] = mapped_column(Date, nullable=False, comment="租期结束日期")
 
     # 金额信息
     total_deposit: Mapped[Decimal] = mapped_column(
@@ -163,7 +165,7 @@ class RentContract(Base):
 
     # 合同状态
     contract_status = Column(
-        String(20), default="有效", comment="合同状态：有效/到期/终止"
+        String(20), default=ContractStatus.ACTIVE.value, comment="合同状态：有效/到期/终止"
     )
 
     # 其他信息
@@ -175,9 +177,12 @@ class RentContract(Base):
     version = Column(Integer, default=1, comment="版本号")
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), comment="创建时间")
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 多租户支持
@@ -250,7 +255,7 @@ class RentDepositLedger(Base):
     )
 
     # 交易日期
-    transaction_date: Mapped[datetime] = mapped_column(
+    transaction_date: Mapped[date] = mapped_column(
         Date, nullable=False, comment="交易日期"
     )
 
@@ -271,7 +276,7 @@ class RentDepositLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
 
     # 关联关系
@@ -299,12 +304,10 @@ class RentTerm(Base):
     )
 
     # 时间段
-    start_date: Mapped[datetime] = mapped_column(
+    start_date: Mapped[date] = mapped_column(
         Date, nullable=False, comment="条款开始日期"
     )
-    end_date: Mapped[datetime] = mapped_column(
-        Date, nullable=False, comment="条款结束日期"
-    )
+    end_date: Mapped[date] = mapped_column(Date, nullable=False, comment="条款结束日期")
 
     # 租金信息
     monthly_rent: Mapped[Decimal] = mapped_column(
@@ -327,10 +330,13 @@ class RentTerm(Base):
 
     # 系统字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 关联关系
@@ -364,7 +370,7 @@ class RentLedger(Base):
     year_month: Mapped[str] = mapped_column(
         String(7), nullable=False, comment="年月，格式：YYYY-MM"
     )
-    due_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="应缴日期")
+    due_date: Mapped[date] = mapped_column(Date, nullable=False, comment="应缴日期")
 
     # 金额信息
     due_amount: Mapped[Decimal] = mapped_column(
@@ -381,7 +387,7 @@ class RentLedger(Base):
     payment_status: Mapped[str] = mapped_column(
         String(20), default="未支付", comment="支付状态：未支付/部分支付/已支付/逾期"
     )
-    payment_date: Mapped[datetime | None] = mapped_column(Date, comment="支付日期")
+    payment_date: Mapped[date | None] = mapped_column(Date, comment="支付日期")
     payment_method: Mapped[str | None] = mapped_column(String(50), comment="支付方式")
     payment_reference: Mapped[str | None] = mapped_column(
         String(100), comment="支付参考号"
@@ -404,10 +410,13 @@ class RentLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 关联关系
@@ -460,7 +469,7 @@ class ServiceFeeLedger(Base):
     settlement_status: Mapped[str] = mapped_column(
         String(20), default="待结算", comment="结算状态：待结算/已结算"
     )
-    settlement_date: Mapped[datetime | None] = mapped_column(Date, comment="结算日期")
+    settlement_date: Mapped[date | None] = mapped_column(Date, comment="结算日期")
 
     # 备注
     notes: Mapped[str | None] = mapped_column(Text, comment="备注")
@@ -471,10 +480,13 @@ class ServiceFeeLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # 关联关系
@@ -515,7 +527,7 @@ class RentContractHistory(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
 
     # 关联关系
@@ -561,7 +573,7 @@ class RentContractAttachment(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="上传时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="上传时间"
     )
 
     # 关联关系

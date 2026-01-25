@@ -33,7 +33,12 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
-import type { Project, ProjectStatisticsResponse } from '@/types/project';
+import type {
+  Project,
+  ProjectStatisticsResponse,
+  ProjectListApiResponse,
+  NestedProjectListResponse,
+} from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
@@ -42,22 +47,29 @@ import ProjectDetail from './ProjectDetail';
 // 项目查询参数接口
 interface ProjectQueryParams {
   page: number;
-  size: number;
+  page_size: number;
   keyword?: string;
   is_active?: boolean;
   ownership_id?: string;
 }
 
-// 嵌套响应格式（API兼容）
-interface NestedProjectListResponse {
-  data: {
-    items: Project[];
-    total?: number;
-    total_count?: number;
-    page?: number;
-    size?: number;
-  };
-}
+const isNestedProjectListResponse = (value: unknown): value is NestedProjectListResponse => {
+  if (value == null || typeof value !== 'object') {
+    return false;
+  }
+  const data = (value as { data?: unknown }).data;
+  if (data == null || typeof data !== 'object') {
+    return false;
+  }
+  return 'items' in data;
+};
+
+const extractProjectItems = (response: ProjectListApiResponse): Project[] => {
+  if ('items' in response) {
+    return response.items ?? [];
+  }
+  return response.data.items ?? [];
+};
 
 const { Search } = Input;
 const { Option } = Select;
@@ -123,19 +135,14 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           current: response.page ?? prev.current,
           pageSize: response.page_size ?? prev.pageSize,
         }));
-      } else if (
-        response != null &&
-        'data' in (response as Record<string, unknown>) &&
-        ((response as Record<string, unknown>).data as Record<string, unknown>)?.items != null
-      ) {
+      } else if (isNestedProjectListResponse(response)) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        const nestedResponse = response as NestedProjectListResponse;
-        setProjects(nestedResponse.data.items ?? []);
+        setProjects(response.data.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: nestedResponse.data.total ?? nestedResponse.data.total_count ?? 0,
-          current: nestedResponse.data.page ?? prev.current,
-          pageSize: nestedResponse.data.page_size ?? prev.pageSize,
+          total: response.data.total ?? response.data.total_count ?? 0,
+          current: response.data.page ?? prev.current,
+          pageSize: response.data.page_size ?? response.data.size ?? prev.pageSize,
         }));
       } else {
         // eslint-disable-next-line no-console
@@ -148,12 +155,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects =
-        response?.items ??
-        ('data' in (response as unknown as Record<string, unknown>)
-          ? ((((response as unknown as Record<string, unknown>).data as Record<string, unknown>)
-              ?.items as Project[]) ?? [])
-          : []);
+      const loadedProjects = extractProjectItems(response);
       const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 

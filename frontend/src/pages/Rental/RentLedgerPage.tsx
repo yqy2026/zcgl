@@ -144,7 +144,7 @@ const RentLedgerPage: React.FC = () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
         assetService.getAssets({ pageSize: 100 }),
-        ownershipService.getOwnerships({ size: 100 }),
+        ownershipService.getOwnerships({ page_size: 100 }),
       ]);
 
       // 安全检查：确保响应和items存在

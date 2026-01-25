@@ -29,7 +29,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[AsyncTask]:
         """获取任务列表"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active)
+        query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
 
         # 应用筛选条件
         if task_type:
@@ -55,15 +55,17 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         return query.offset(skip).limit(limit).all()
 
     def count(
-        self,
-        db: Session,
-        *,
-        task_type: str | None = None,
-        status: str | None = None,
-        **kwargs: Any,  # 扩展参数，与基类兼容
+        self, db: Session, filters: dict[str, Any] | None = None, **kwargs: Any
     ) -> int:
         """统计任务数量"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active)
+        task_type = kwargs.pop("task_type", None)
+        status = kwargs.pop("status", None)
+        query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
+
+        if filters:
+            for field, value in filters.items():
+                if hasattr(AsyncTask, field) and value is not None:
+                    query = query.filter(getattr(AsyncTask, field) == value)
 
         if task_type:
             query = query.filter(AsyncTask.task_type == task_type)
@@ -74,7 +76,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
 
     def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
         """获取任务统计信息"""
-        base_query = db.query(AsyncTask).filter(AsyncTask.is_active)
+        base_query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
 
         if user_id:
             base_query = base_query.filter(AsyncTask.user_id == user_id)
@@ -82,43 +84,50 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         total_tasks = base_query.count()
         # Simplified counting mainly for read operations
         running_tasks = base_query.filter(
-            AsyncTask.status == TaskStatus.RUNNING
+            AsyncTask.status == TaskStatus.RUNNING.value
         ).count()
         completed_tasks = base_query.filter(
-            AsyncTask.status == TaskStatus.COMPLETED
+            AsyncTask.status == TaskStatus.COMPLETED.value
         ).count()
-        failed_tasks = base_query.filter(AsyncTask.status == TaskStatus.FAILED).count()
+        failed_tasks = base_query.filter(
+            AsyncTask.status == TaskStatus.FAILED.value
+        ).count()
 
         # 按类型统计
         by_type = {}
         for task_type in TaskType:
-            count = base_query.filter(AsyncTask.task_type == task_type).count()
+            count = base_query.filter(AsyncTask.task_type == task_type.value).count()
             if count > 0:
                 by_type[task_type.value] = count
 
         # 按状态统计
         by_status = {}
         for status in TaskStatus:
-            count = base_query.filter(AsyncTask.status == status).count()
+            count = base_query.filter(AsyncTask.status == status.value).count()
             if count > 0:
                 by_status[status.value] = count
 
         # 平均持续时间
         completed_tasks_query = base_query.filter(
             and_(
-                AsyncTask.status == TaskStatus.COMPLETED,
+                AsyncTask.status == TaskStatus.COMPLETED.value,
                 AsyncTask.started_at.isnot(None),
                 AsyncTask.completed_at.isnot(None),
             )
         )
 
-        avg_duration = 0
-        if completed_tasks_query.count() > 0:
-            total_duration = sum(
-                (task.completed_at - task.started_at).total_seconds()
-                for task in completed_tasks_query.all()
-            )
-            avg_duration = total_duration / completed_tasks_query.count()
+        avg_duration: float = 0
+        completed_tasks_rows = completed_tasks_query.all()
+        if completed_tasks_rows:
+            durations = []
+            for task in completed_tasks_rows:
+                started_at = task.started_at
+                completed_at = task.completed_at
+                if started_at is None or completed_at is None:
+                    continue
+                durations.append((completed_at - started_at).total_seconds())
+            if durations:
+                avg_duration = sum(durations) / len(durations)
 
         return {
             "total_tasks": total_tasks,
@@ -155,8 +164,8 @@ class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, TaskU
                 and_(
                     ExcelTaskConfig.config_type == config_type,
                     ExcelTaskConfig.task_type == task_type,
-                    ExcelTaskConfig.is_default,
-                    ExcelTaskConfig.is_active,
+                    ExcelTaskConfig.is_default.is_(True),
+                    ExcelTaskConfig.is_active.is_(True),
                 )
             )
             .first()

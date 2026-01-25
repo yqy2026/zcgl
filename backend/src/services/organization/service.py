@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, not_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ...crud.organization import organization as organization_crud
@@ -24,7 +24,7 @@ class OrganizationService:
             parent = organization_crud.get(db, obj_in.parent_id)
             if not parent:
                 raise ValueError(f"上级组织 {obj_in.parent_id} 不存在")
-            parent_level: int = getattr(parent, "level")
+            parent_level: int = getattr(parent, "level") or 0
             level = parent_level + 1
             # path will be set after ID is generated or we need to generate ID first?
             # Organization model ID is UUID default.
@@ -91,7 +91,7 @@ class OrganizationService:
 
                     parent = organization_crud.get(db, new_parent_id)
                     if parent:
-                        object.__setattr__(db_obj, "level", parent.level + 1)
+                        object.__setattr__(db_obj, "level", (parent.level or 0) + 1)
                         object.__setattr__(
                             db_obj,
                             "path",
@@ -156,7 +156,9 @@ class OrganizationService:
 
     def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取组织统计信息"""
-        total = db.query(Organization).filter(not_(Organization.is_deleted)).count()
+        total = (
+            db.query(Organization).filter(Organization.is_deleted.is_(False)).count()
+        )
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0
 
@@ -164,7 +166,7 @@ class OrganizationService:
         level_stats = {}
         levels = (
             db.query(Organization.level)
-            .filter(not_(Organization.is_deleted))
+            .filter(Organization.is_deleted.is_(False))
             .distinct()
             .all()
         )
@@ -173,7 +175,9 @@ class OrganizationService:
             count = (
                 db.query(Organization)
                 .filter(
-                    and_(not_(Organization.is_deleted), Organization.level == level)
+                    and_(
+                        Organization.is_deleted.is_(False), Organization.level == level
+                    )
                 )
                 .count()
             )

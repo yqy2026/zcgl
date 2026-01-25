@@ -37,6 +37,8 @@ interface PDFImportProviderProps {
   onUploadError: (error: string) => void;
 }
 
+type UploadFileWithUid = File & { uid?: string };
+
 // 初始化处理步骤
 const initializeProcessingSteps = (): ProcessingStep[] => [
   {
@@ -251,8 +253,10 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
           }
 
           onSuccess?.(response);
+          const fileWithUid = file as UploadFileWithUid;
+          const fallbackUid = `${Date.now()}-${file.name}`;
           onUploadSuccess(response.session_id!, {
-            uid: (file as unknown as { uid: string }).uid,
+            uid: fileWithUid.uid ?? fallbackUid,
             name: file.name,
             status: 'done',
             size: file.size,

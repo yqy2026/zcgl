@@ -26,15 +26,16 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=sqlite:///./database/data/zcgl.db
+      - DATABASE_URL=postgresql://zcgl_user:zcgl_password@postgres:5432/zcgl
       - REDIS_URL=redis://redis:6379/0
       - CORS_ORIGINS=http://localhost:3000,http://frontend:80
       - API_PORT=8002
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./database/data:/app/database/data
       - ./logs:/app/logs
       - ./config:/app/config
     healthcheck:
@@ -64,6 +65,28 @@ services:
     networks:
       - zcgl-network
 
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: zcgl-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=zcgl
+      - POSTGRES_USER=zcgl_user
+      - POSTGRES_PASSWORD=zcgl_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zcgl_user -d zcgl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - zcgl-network
+
   # Nginx反向代理
   nginx:
     image: nginx:alpine
@@ -83,6 +106,8 @@ services:
 
 volumes:
   redis_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:

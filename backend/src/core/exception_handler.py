@@ -502,20 +502,8 @@ class ExceptionHandler:
             },
         )
 
-        # 根据环境决定是否暴露详细错误信息
-        from .config import get_config
-
-        debug_mode = get_config("debug", True)
-
-        if debug_mode:
-            message = f"内部服务器错误: {str(exc)}"
-            details = {
-                "exception_type": type(exc).__name__,
-                "traceback": traceback.format_exc(),
-            }
-        else:
-            message = "内部服务器错误"
-            details = {}
+        message = "内部服务器错误"
+        details: dict[str, Any] = {}
 
         business_exc = BaseBusinessError(
             message=message,

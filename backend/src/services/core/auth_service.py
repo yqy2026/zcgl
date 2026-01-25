@@ -8,7 +8,7 @@ Please use specialized services in this directory:
 - audit_service.py
 """
 
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -70,8 +70,10 @@ class AuthService:
         )
         # Extract User from UserSession if needed
         if isinstance(result, UserSession):
-            return cast(User, result.user)
-        return cast(User | None, result)
+            return result.user
+        if isinstance(result, User):
+            return result
+        return None
 
     # --- User Management Delegate ---
     def create_user(self, user_data: UserCreate) -> User:

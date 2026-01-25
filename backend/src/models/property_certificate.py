@@ -1,8 +1,9 @@
 """Property Certificate Models - 产权证管理数据模型"""
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -19,6 +20,10 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .asset import Asset
+    from .organization import Organization
 
 # Certificate ↔ Owners association table
 property_certificate_owners = Table(
@@ -107,15 +112,18 @@ class PropertyOwner(Base):
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
 
     # Relationships
-    organization = relationship("Organization")
-    certificates = relationship(
+    organization: Mapped["Organization | None"] = relationship("Organization")
+    certificates: Mapped[list["PropertyCertificate"]] = relationship(
         "PropertyCertificate",
         secondary="property_certificate_owners",
         back_populates="owners",
@@ -187,20 +195,23 @@ class PropertyCertificate(Base):
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")
 
     # Relationships (many-to-many)
-    owners = relationship(
+    owners: Mapped[list["PropertyOwner"]] = relationship(
         "PropertyOwner",
         secondary="property_certificate_owners",
         back_populates="certificates",
     )
-    assets = relationship(
+    assets: Mapped[list["Asset"]] = relationship(
         "Asset",
         secondary="property_cert_assets",
         back_populates="certificates",

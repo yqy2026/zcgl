@@ -8,6 +8,37 @@ import { Ownership } from './ownership';
 // V2 枚举类型
 export type ContractType = 'lease_upstream' | 'lease_downstream' | 'entrusted';
 export type PaymentCycle = 'monthly' | 'quarterly' | 'semi_annual' | 'annual';
+
+export enum ContractStatus {
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  EXPIRING = 'EXPIRING',
+  EXPIRED = 'EXPIRED',
+  TERMINATED = 'TERMINATED',
+  RENEWED = 'RENEWED',
+}
+
+export const ContractStatusLabels: Record<ContractStatus, string> = {
+  [ContractStatus.DRAFT]: '草稿',
+  [ContractStatus.PENDING]: '待审核',
+  [ContractStatus.ACTIVE]: '执行中',
+  [ContractStatus.EXPIRING]: '即将到期',
+  [ContractStatus.EXPIRED]: '已到期',
+  [ContractStatus.TERMINATED]: '已终止',
+  [ContractStatus.RENEWED]: '已续签',
+};
+
+export const ContractStatusColors: Record<ContractStatus, string> = {
+  [ContractStatus.DRAFT]: 'default',
+  [ContractStatus.PENDING]: 'orange',
+  [ContractStatus.ACTIVE]: 'success',
+  [ContractStatus.EXPIRING]: 'warning',
+  [ContractStatus.EXPIRED]: 'error',
+  [ContractStatus.TERMINATED]: 'magenta',
+  [ContractStatus.RENEWED]: 'blue',
+};
+
 export type DepositTransactionType =
   | 'receipt'
   | 'refund'
@@ -28,6 +59,14 @@ export interface RentTerm {
   total_monthly_amount: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface RentContractAsset {
+  id: string;
+  property_name: string;
+  address?: string;
+  ownership_entity?: string;
+  management_entity?: string;
 }
 
 export interface RentContract {
@@ -51,7 +90,7 @@ export interface RentContract {
   total_deposit: number;
   monthly_rent_base?: number;
   payment_cycle?: PaymentCycle; // V2
-  contract_status: string;
+  contract_status: ContractStatus;
   payment_terms?: string;
   contract_notes?: string;
   data_status: string;
@@ -61,7 +100,7 @@ export interface RentContract {
   tenant_id?: string;
   rent_terms: RentTerm[];
   // V2: 关联资产列表
-  assets?: Asset[];
+  assets?: RentContractAsset[];
   ownership?: Ownership;
 }
 
@@ -292,6 +331,7 @@ export interface RentStatisticsQuery {
 // 查询参数类型
 export interface RentContractQueryParams {
   page?: number;
+  pageSize?: number;
   page_size?: number;
   contract_number?: string;
   tenant_name?: string;
@@ -304,6 +344,7 @@ export interface RentContractQueryParams {
 
 export interface RentLedgerQueryParams {
   page?: number;
+  pageSize?: number;
   page_size?: number;
   contract_id?: string;
   asset_id?: string;
@@ -453,7 +494,7 @@ export interface RentContractPageState {
   contracts: RentContract[];
   pagination: {
     current: number;
-    page_size: number;
+    pageSize: number;
     total: number;
     pages?: number;
   };
@@ -468,7 +509,7 @@ export interface RentLedgerPageState {
   ledgers: RentLedger[];
   pagination: {
     current: number;
-    page_size: number;
+    pageSize: number;
     total: number;
   };
   filters: RentLedgerSearchFilters;

@@ -9,9 +9,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
+from ..core.enums import ContractStatus
+
 
 # V2 Enums
-class ContractTypeEnum(str, Enum):
+class ContractType(str, Enum):
     """合同类型枚举"""
 
     LEASE_UPSTREAM = "lease_upstream"
@@ -19,7 +21,7 @@ class ContractTypeEnum(str, Enum):
     ENTRUSTED = "entrusted"
 
 
-class PaymentCycleEnum(str, Enum):
+class PaymentCycle(str, Enum):
     """付款周期枚举"""
 
     MONTHLY = "monthly"
@@ -114,8 +116,8 @@ class RentContractBase(BaseModel):
     )
     ownership_id: str = Field(..., description="权属方ID")
     # V2: 合同类型
-    contract_type: ContractTypeEnum = Field(
-        ContractTypeEnum.LEASE_DOWNSTREAM, description="合同类型"
+    contract_type: ContractType = Field(
+        ContractType.LEASE_DOWNSTREAM, description="合同类型"
     )
     # V2: 上游合同关联（可选）
     upstream_contract_id: str | None = Field(None, description="上游合同ID")
@@ -139,10 +141,10 @@ class RentContractBase(BaseModel):
     total_deposit: Decimal = Field(Decimal("0"), ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
     # V2: 付款周期
-    payment_cycle: PaymentCycleEnum | None = Field(
-        PaymentCycleEnum.MONTHLY, description="付款周期"
+    payment_cycle: PaymentCycle | None = Field(
+        PaymentCycle.MONTHLY, description="付款周期"
     )
-    contract_status: str = Field("有效", description="合同状态")
+    contract_status: ContractStatus = Field(ContractStatus.ACTIVE, description="合同状态")
     payment_terms: str | None = Field(None, description="支付条款")
     contract_notes: str | None = Field(None, description="合同备注")
 
@@ -205,7 +207,7 @@ class RentContractUpdate(BaseModel):
     contract_number: str | None = Field(None, description="合同编号")
     asset_ids: list[str] | None = Field(None, description="关联资产ID列表")
     ownership_id: str | None = Field(None, description="权属方ID")
-    contract_type: ContractTypeEnum | None = Field(None, description="合同类型")
+    contract_type: ContractType | None = Field(None, description="合同类型")
     upstream_contract_id: str | None = Field(None, description="上游合同ID")
     service_fee_rate: Decimal | None = Field(None, ge=0, le=1, description="服务费率")
     tenant_name: str | None = Field(None, description="承租方名称")
@@ -218,8 +220,8 @@ class RentContractUpdate(BaseModel):
     end_date: date | None = Field(None, description="租期结束日期")
     total_deposit: Decimal | None = Field(None, ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
-    payment_cycle: PaymentCycleEnum | None = Field(None, description="付款周期")
-    contract_status: str | None = Field(None, description="合同状态")
+    payment_cycle: PaymentCycle | None = Field(None, description="付款周期")
+    contract_status: ContractStatus | None = Field(None, description="合同状态")
     payment_terms: str | None = Field(None, description="支付条款")
     contract_notes: str | None = Field(None, description="合同备注")
     rent_terms: list[RentTermUpdate] | None = Field(None, description="租金条款列表")
@@ -231,6 +233,8 @@ class AssetSimpleResponse(BaseModel):
     id: str
     property_name: str
     address: str | None = None
+    ownership_entity: str | None = None
+    management_entity: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -254,7 +258,9 @@ class RentLedgerBase(BaseModel):
     """租金台账基础Schema"""
 
     contract_id: str = Field(..., description="关联合同ID")
-    asset_id: str = Field(..., description="关联资产ID")
+    asset_id: str | None = Field(
+        None, description="关联资产ID"
+    )  # 对齐Model: nullable=True
     ownership_id: str = Field(..., description="权属方ID")
     year_month: str = Field(..., description="年月，格式：YYYY-MM")
     due_date: date = Field(..., description="应缴日期")
@@ -343,7 +349,7 @@ class RentStatisticsQuery(BaseModel):
     end_date: date | None = Field(None, description="结束日期")
     ownership_ids: list[str] | None = Field(None, description="权属方ID列表")
     asset_ids: list[str] | None = Field(None, description="资产ID列表")
-    contract_status: str | None = Field(None, description="合同状态")
+    contract_status: ContractStatus | None = Field(None, description="合同状态")
 
 
 class OwnershipRentStatistics(BaseModel):

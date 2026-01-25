@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = Field(default=False, json_schema_extra={"env": "DEBUG"})
     API_V1_STR: str = "/api/v1"
+    ALLOW_MOCK_REGISTRY: bool = Field(
+        default=False, json_schema_extra={"env": "ALLOW_MOCK_REGISTRY"}
+    )
 
     # 服务器配置
     HOST: str = Field(default="0.0.0.0", json_schema_extra={"env": "HOST"})  # nosec - B104: Dev default, override in prod

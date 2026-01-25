@@ -1,0 +1,60 @@
+"""
+RBAC Service 测试配置
+使用简化的数据库设置，避免alembic迁移冲突
+"""
+
+import os
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# 设置测试数据库URL为内存数据库
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+from src.database import Base
+
+
+@pytest.fixture(scope="session")
+def test_database_url():
+    """覆盖root conftest的数据库URL"""
+    return "sqlite:///:memory:"
+
+
+@pytest.fixture(scope="session")
+def engine(test_database_url):
+    """创建内存数据库引擎，不使用alembic迁移"""
+    engine = create_engine(test_database_url, connect_args={"check_same_thread": False})
+    # 直接创建所有表，跳过alembic迁移
+    Base.metadata.create_all(bind=engine)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def db_tables(engine):
+    """覆盖root conftest的db_tables fixture，跳过迁移"""
+    yield
+    # 空实现，表已经在engine fixture中创建
+
+
+@pytest.fixture(scope="function")
+def db_session(engine):
+    """创建数据库会话"""
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    session = session_local()
+
+    # 开始事务
+    connection = engine.connect()
+    transaction = connection.begin()
+    session.bind = connection
+
+    yield session
+
+    # 回滚事务
+    try:
+        session.close()
+        transaction.rollback()
+        connection.close()
+    except Exception:
+        pass

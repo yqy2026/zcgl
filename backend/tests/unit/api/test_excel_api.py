@@ -24,7 +24,7 @@ from fastapi.testclient import TestClient
 class TestDownloadTemplate:
     """Tests for GET /excel/template endpoint"""
 
-    @patch("src.api.v1.excel.ExcelTemplateService")
+    @patch("src.api.v1.documents.excel.ExcelTemplateService")
     def test_download_template_success(self, mock_template_service, client):
         """Test successful template download"""
         # Mock buffer with Excel data
@@ -90,8 +90,8 @@ class TestExcelImportSync:
 class TestExcelImportAsync:
     """Tests for POST /excel/import/async endpoint"""
 
-    @patch("src.api.v1.excel.ExcelImportService")
-    @patch("src.api.v1.excel.task_crud")
+    @patch("src.api.v1.documents.excel.ExcelImportService")
+    @patch("src.api.v1.documents.excel.task_crud")
     def test_async_import_success(
         self, mock_task_crud, mock_import_service, client, mock_excel_file
     ):
@@ -116,10 +116,10 @@ class TestExcelImportAsync:
         # Should return task ID or 202
         assert response.status_code in [200, 201, 202, 400]
 
-    @patch("src.api.v1.excel.ExcelImportService")
+    @patch("src.api.v1.documents.excel.ExcelImportService")
     def test_async_import_creates_background_task(self, mock_import_service, client):
         """Test that async import creates a background task"""
-        with patch("src.api.v1.excel.BackgroundTasks"):
+        with patch("src.api.v1.documents.excel.BackgroundTasks"):
             file_content = b"fake excel content"
             files = {
                 "file": (
@@ -201,7 +201,7 @@ class TestDownloadExportedFile:
 class TestExcelOperationHistory:
     """Tests for GET /excel/history endpoint"""
 
-    @patch("src.api.v1.excel.task_crud")
+    @patch("src.api.v1.documents.excel.task_crud")
     def test_get_history_success(self, mock_task_crud, client):
         """Test successful retrieval of operation history"""
         # Mock task history
@@ -218,7 +218,7 @@ class TestExcelOperationHistory:
         data = response.json()
         assert "items" in data or "history" in data
 
-    @patch("src.api.v1.excel.task_crud")
+    @patch("src.api.v1.documents.excel.task_crud")
     def test_get_history_with_pagination(self, mock_task_crud, client):
         """Test history with pagination parameters"""
         mock_task_crud.get_multi.return_value = []
@@ -228,7 +228,7 @@ class TestExcelOperationHistory:
 
         assert response.status_code == 200
 
-    @patch("src.api.v1.excel.task_crud")
+    @patch("src.api.v1.documents.excel.task_crud")
     def test_get_history_with_filters(self, mock_task_crud, client):
         """Test history with type and status filters"""
         mock_task_crud.get_multi.return_value = []

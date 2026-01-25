@@ -3,7 +3,7 @@
  * 使用@tanstack/react-virtual实现高性能表格
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -73,6 +73,8 @@ interface VirtualTableProps {
     sorter: SorterResult<Asset> | SorterResult<Asset>[],
     extra: TableCurrentDataSource<Asset>
   ) => void;
+  /** 表格列定义 (可选，如果不传则使用内部默认定义) */
+  columns?: ColumnsType<Asset>;
 }
 
 /**
@@ -335,9 +337,11 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   summary,
   rowHeight = 55,
   height = 600,
+  columns: propColumns,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
-  const columns = getColumns(onView, onEdit, onDelete, onViewHistory);
+  const defaultColumns = useMemo(() => getColumns(onView, onEdit, onDelete, onViewHistory), [onView, onEdit, onDelete, onViewHistory]);
+  const columns = propColumns || defaultColumns;
   const items = data?.items ?? [];
 
   // 虚拟滚动配置
@@ -500,7 +504,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
         <Pagination
           current={data?.page ?? 1}
-          pageSize={data?.pageSize ?? 20}
+          pageSize={data?.page_size ?? 20}
           total={data?.total ?? 0}
           showSizeChanger={true}
           showQuickJumper={true}

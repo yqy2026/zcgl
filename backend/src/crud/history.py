@@ -38,12 +38,18 @@ class HistoryCRUD:
             .all()
         )
 
-    def create(self, db: Session, **kwargs: Any) -> AssetHistory:
+    def create(
+        self, db: Session, *, commit: bool = True, **kwargs: Any
+    ) -> AssetHistory:
         """创建历史记录"""
         db_obj = AssetHistory(**kwargs)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        if commit:
+            db.commit()
+            db.refresh(db_obj)
+        else:
+            db.flush()
+            db.refresh(db_obj)
         return db_obj
 
     def remove(self, db: Session, id: str) -> AssetHistory | None:

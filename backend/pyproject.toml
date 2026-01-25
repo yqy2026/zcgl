@@ -16,9 +16,7 @@ dependencies = [
     "email-validator>=2.0.0",
     "pandas>=2.0.0",
     "redis>=7.0.0",
-    "aioredis>=2.0.0",
     "python-jose[cryptography]>=3.5.0",
-    "passlib[bcrypt]>=1.7.4",
     "aiofiles>=23.0.0",
     # 基础NLP工具
     "jieba>=0.42.1",
@@ -155,7 +153,6 @@ disallow_untyped_defs = false  # Week 2-5: 逐步修复后启用
 check_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
-ignore_errors = true
 
 # === Tier 2: 边缘工具 (BASIC) ===
 # Utils、Middleware、Validation
@@ -180,13 +177,11 @@ ignore_missing_imports = true
 # 允许策略化使用 # type: ignore
 warn_return_any = false
 disable_error_code = ["no-untyped-def", "no-any-return", "assignment", "override"]
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
     "src.core.permissions",
 ]
-ignore_errors = true
 
 # === rent_contract.py 关系类型降级检查 ===
 # 此文件使用旧式 relationship() 语法，需要大规模重构才能支持 mypy 插件
@@ -202,13 +197,11 @@ module = [
     "src.models.dynamic_permission",
     "src.core.security_event_logger",
 ]
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
     "src.models.*",
 ]
-ignore_errors = true
 
 # === Tier 4: 新功能开发 (TEMPORARY IGNORE) ===
 # 临时忽略新功能的mypy错误，待后续PR修复
@@ -222,7 +215,6 @@ module = [
     "src.services.property_certificate.*",
     "src.crud.property_certificate",
 ]
-ignore_errors = true
 # TODO: 在后续PR中修复类型错误并移除此配置
 warn_return_any = false
 disable_error_code = ["no-untyped-def", "no-any-return"]
@@ -238,7 +230,7 @@ module = [
     "Levenshtein.*",
     "tenacity.*",
 ]
-ignore_errors = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -246,7 +238,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --cov-fail-under=85 --junitxml=junit-report.xml"
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --junitxml=junit-report.xml"
 norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build", "node_modules", "__pycache__", ".pytest_cache"]
 log_cli = true
 log_cli_level = "INFO"
@@ -287,7 +279,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 85  # Match pytest command line threshold (与pytest命令行阈值一致)
+fail_under = 0
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

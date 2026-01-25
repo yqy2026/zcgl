@@ -53,15 +53,17 @@ class UserManagementService:
 
         # 创建新用户
         hashed_password = self.password_service.get_password_hash(user_data.password)
-        db_user = User(
-            username=user_data.username,
-            email=user_data.email,
-            full_name=user_data.full_name,
-            password_hash=hashed_password,
-            role=user_data.role,
-            employee_id=user_data.employee_id,
-            default_organization_id=user_data.default_organization_id,
+        role_value = (
+            user_data.role.value if hasattr(user_data.role, "value") else user_data.role
         )
+        db_user = User()
+        db_user.username = user_data.username
+        db_user.email = user_data.email
+        db_user.full_name = user_data.full_name
+        db_user.password_hash = hashed_password
+        db_user.role = role_value
+        db_user.employee_id = user_data.employee_id
+        db_user.default_organization_id = user_data.default_organization_id
 
         # 将密码添加到历史记录
         self.password_service.add_password_to_history(db_user, hashed_password)
@@ -94,6 +96,8 @@ class UserManagementService:
         # 更新字段
         update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
+            if field == "role" and value is not None:
+                value = value.value if hasattr(value, "value") else value
             setattr(user, field, value)
 
         user.updated_at = datetime.now()

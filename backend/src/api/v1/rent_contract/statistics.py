@@ -8,7 +8,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import BaseBusinessError, internal_error
+from ....core.enums import ContractStatus
+from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -36,12 +37,19 @@ def get_rent_statistics(
     """
     获取租金统计概览信息
     """
+    parsed_contract_status = None
+    if contract_status:
+        try:
+            parsed_contract_status = ContractStatus(contract_status)
+        except ValueError:
+            raise bad_request("合同状态不合法", field="contract_status")
+
     query_params = RentStatisticsQuery(
         start_date=start_date,
         end_date=end_date,
         ownership_ids=ownership_ids,
         asset_ids=asset_ids,
-        contract_status=contract_status,
+        contract_status=parsed_contract_status,
     )
 
     try:

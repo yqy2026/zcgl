@@ -70,8 +70,9 @@ class MemoryCache {
       }, 60000);
     }
 
-    // 如果缓存已满，删除最旧的条目
-    if (this.cache.size >= this.maxSize) {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey !== undefined) {
         this.cache.delete(firstKey);
@@ -96,6 +97,13 @@ class MemoryCache {
       this.cache.delete(key);
       return null;
     }
+
+    this.cache.delete(key);
+    this.cache.set(key, {
+      data: item.data,
+      timestamp: item.timestamp,
+      ttl: item.ttl,
+    });
 
     return item.data;
   }
@@ -242,16 +250,6 @@ export class ApiClient {
         // 添加请求ID
         if (config.headers != null) {
           config.headers.set('X-Request-ID', this.generateRequestId());
-        }
-
-        // 添加时间戳防止缓存
-        if (config.method === 'get') {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          const params = ((config.params as unknown) || {}) as Record<string, unknown>;
-          config.params = {
-            ...params,
-            _t: Date.now(),
-          };
         }
 
         // 执行自定义请求拦截器

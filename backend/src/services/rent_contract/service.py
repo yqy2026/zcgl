@@ -1,10 +1,11 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from ...core.enums import ContractStatus
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
 from ...models.asset import Asset, Ownership
 from ...models.rent_contract import (
@@ -16,6 +17,7 @@ from ...models.rent_contract import (
     RentLedger,
     RentTerm,
     ServiceFeeLedger,
+    rent_contract_assets,
 )
 from ...schemas.rent_contract import (
     GenerateLedgerRequest,
@@ -68,7 +70,7 @@ class RentContractService:
         # V2: 关联资产
         if asset_ids:
             assets = db.query(Asset).filter(Asset.id.in_(asset_ids)).all()
-            db_contract.assets = assets
+            setattr(db_contract, "assets", assets)
 
         db.add(db_contract)
         db.flush()  # 获取ID
@@ -119,7 +121,7 @@ class RentContractService:
         # V2: 更新资产关联
         if obj_in.asset_ids is not None:
             assets = db.query(Asset).filter(Asset.id.in_(obj_in.asset_ids)).all()
-            db_obj.assets = assets
+            setattr(db_obj, "assets", assets)
 
         # 更新租金条款
         if obj_in.rent_terms is not None:
@@ -173,7 +175,7 @@ class RentContractService:
         )
         if not original:
             raise ValueError(f"原合同不存在: {original_contract_id}")
-        if original.contract_status != "有效":
+        if original.contract_status != ContractStatus.ACTIVE:
             raise ValueError(f"原合同状态不可续签: {original.contract_status}")
 
         # 创建新合同
@@ -184,33 +186,31 @@ class RentContractService:
             deposit_amount = original.total_deposit
 
             # 原合同押金转出
-            transfer_out = RentDepositLedger(
-                contract_id=original.id,
-                transaction_type=DepositTransactionType.TRANSFER_OUT,
-                amount=-deposit_amount,
-                transaction_date=date.today(),
-                related_contract_id=new_contract.id,
-                notes=f"续签转出至新合同 {new_contract.contract_number}",
-                operator=operator,
-                operator_id=operator_id,
-            )
+            transfer_out = RentDepositLedger()
+            transfer_out.contract_id = original.id
+            transfer_out.transaction_type = DepositTransactionType.TRANSFER_OUT
+            transfer_out.amount = -deposit_amount
+            transfer_out.transaction_date = date.today()
+            transfer_out.related_contract_id = new_contract.id
+            transfer_out.notes = f"续签转出至新合同 {new_contract.contract_number}"
+            transfer_out.operator = operator
+            transfer_out.operator_id = operator_id
             db.add(transfer_out)
 
             # 新合同押金转入
-            transfer_in = RentDepositLedger(
-                contract_id=new_contract.id,
-                transaction_type=DepositTransactionType.TRANSFER_IN,
-                amount=deposit_amount,
-                transaction_date=date.today(),
-                related_contract_id=original.id,
-                notes=f"从原合同 {original.contract_number} 续签转入",
-                operator=operator,
-                operator_id=operator_id,
-            )
+            transfer_in = RentDepositLedger()
+            transfer_in.contract_id = new_contract.id
+            transfer_in.transaction_type = DepositTransactionType.TRANSFER_IN
+            transfer_in.amount = deposit_amount
+            transfer_in.transaction_date = date.today()
+            transfer_in.related_contract_id = original.id
+            transfer_in.notes = f"从原合同 {original.contract_number} 续签转入"
+            transfer_in.operator = operator
+            transfer_in.operator_id = operator_id
             db.add(transfer_in)
 
         # 结束原合同
-        setattr(original, "contract_status", "已续签")
+        setattr(original, "contract_status", ContractStatus.RENEWED)
         db.add(original)
 
         # 记录历史
@@ -247,7 +247,7 @@ class RentContractService:
         contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
         if not contract:
             raise ValueError(f"合同不存在: {contract_id}")
-        if contract.contract_status not in ["有效"]:
+        if contract.contract_status not in [ContractStatus.ACTIVE]:
             raise ValueError(f"合同状态不可终止: {contract.contract_status}")
 
         deposit_balance = contract.total_deposit
@@ -259,38 +259,32 @@ class RentContractService:
                     f"抵扣金额 {deduction_amount} 超过押金余额 {deposit_balance}"
                 )
 
-            deduction = RentDepositLedger(
-                contract_id=contract.id,
-                transaction_type=DepositTransactionType.DEDUCTION,
-                amount=-deduction_amount,
-                transaction_date=termination_date,
-                notes=f"终止抵扣: {termination_reason or '欠租等'}",
-                operator=operator,
-                operator_id=operator_id,
-            )
+            deduction = RentDepositLedger()
+            deduction.contract_id = contract.id
+            deduction.transaction_type = DepositTransactionType.DEDUCTION
+            deduction.amount = -deduction_amount
+            deduction.transaction_date = termination_date
+            deduction.notes = f"终止抵扣: {termination_reason or '欠租等'}"
+            deduction.operator = operator
+            deduction.operator_id = operator_id
             db.add(deduction)
             deposit_balance -= deduction_amount
 
         # 退还剩余押金
         if should_refund_deposit and deposit_balance > 0:
-            refund = RentDepositLedger(
-                contract_id=contract.id,
-                transaction_type=DepositTransactionType.REFUND,
-                amount=-deposit_balance,
-                transaction_date=termination_date,
-                notes="终止退还押金",
-                operator=operator,
-                operator_id=operator_id,
-            )
+            refund = RentDepositLedger()
+            refund.contract_id = contract.id
+            refund.transaction_type = DepositTransactionType.REFUND
+            refund.amount = -deposit_balance
+            refund.transaction_date = termination_date
+            refund.notes = "终止退还押金"
+            refund.operator = operator
+            refund.operator_id = operator_id
             db.add(refund)
 
         # 更新合同状态
-        setattr(contract, "contract_status", "已终止")
-        setattr(
-            contract,
-            "end_date",
-            datetime.combine(termination_date, datetime.min.time()),
-        )
+        setattr(contract, "contract_status", ContractStatus.TERMINATED)
+        setattr(contract, "end_date", termination_date)
         db.add(contract)
 
         # 记录历史
@@ -354,20 +348,16 @@ class RentContractService:
                 due_amount = term.total_monthly_amount or term.monthly_rent
                 due_date = self._calculate_due_date(month_date, contract)
 
-                ledger_data = {
-                    "contract_id": request.contract_id,
-                    # V2: asset_id is nullable in RentLedger, contract has M2M assets
-                    "asset_id": None,
-                    "ownership_id": contract.ownership_id,
-                    "year_month": year_month,
-                    "due_date": due_date,
-                    "due_amount": due_amount,
-                    "paid_amount": Decimal("0"),
-                    "overdue_amount": Decimal("0"),
-                    "payment_status": "未支付",
-                }
-
-                db_ledger = RentLedger(**ledger_data)
+                db_ledger = RentLedger()
+                db_ledger.contract_id = request.contract_id
+                db_ledger.asset_id = None
+                db_ledger.ownership_id = contract.ownership_id
+                db_ledger.year_month = year_month
+                db_ledger.due_date = due_date
+                db_ledger.due_amount = due_amount
+                db_ledger.paid_amount = Decimal("0")
+                db_ledger.overdue_amount = Decimal("0")
+                db_ledger.payment_status = "未支付"
                 db.add(db_ledger)
                 created_ledgers.append(db_ledger)
 
@@ -387,11 +377,7 @@ class RentContractService:
             if request.payment_status is not None:
                 ledger.payment_status = request.payment_status
             if request.payment_date is not None:
-                setattr(
-                    ledger,
-                    "payment_date",
-                    datetime.combine(request.payment_date, datetime.min.time()),
-                )
+                setattr(ledger, "payment_date", request.payment_date)
             if request.payment_method is not None:
                 ledger.payment_method = request.payment_method
             if request.payment_reference is not None:
@@ -588,7 +574,8 @@ class RentContractService:
                 func.sum(RentLedger.paid_amount).label("total_paid_amount"),
                 func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
             )
-            .join(RentContract, RentContract.asset_id == Asset.id)
+            .join(rent_contract_assets, rent_contract_assets.c.asset_id == Asset.id)
+            .join(RentContract, RentContract.id == rent_contract_assets.c.contract_id)
             .join(RentLedger, RentLedger.contract_id == RentContract.id)
             .group_by(Asset.id, Asset.property_name, Asset.address)
         )
@@ -707,17 +694,22 @@ class RentContractService:
         conflicts = []
 
         # Build conditions for and_()
-        conditions = [RentContract.contract_status == "有效"]
+        conditions = [RentContract.contract_status == ContractStatus.ACTIVE]
         if exclude_contract_id:
             conditions.append(RentContract.id != exclude_contract_id)
 
         # 查询与指定资产相关的所有有效合同
-        existing_contracts = db.query(RentContract).filter(and_(*conditions)).all()
+        existing_contracts = (
+            db.query(RentContract)
+            .options(selectinload(RentContract.assets))
+            .filter(and_(*conditions))
+            .all()
+        )
 
         # 检查每个现有合同是否与新合同时间段重叠
         for contract in existing_contracts:
             # 获取该合同的资产
-            contract_assets = [a.id for a in contract.assets]
+            contract_assets = [a.id for a in cast(list[Asset], contract.assets)]
 
             # 检查是否有资产重叠
             overlapping_assets = set(asset_ids) & set(contract_assets)
@@ -728,7 +720,9 @@ class RentContractService:
                 if start_date <= contract.end_date and end_date >= contract.start_date:
                     # 获取重叠资产的名称
                     overlapping_asset_names = [
-                        a.name for a in contract.assets if a.id in overlapping_assets
+                        a.property_name
+                        for a in cast(list[Asset], contract.assets)
+                        if a.id in overlapping_assets
                     ]
 
                     conflicts.append(
@@ -748,7 +742,7 @@ class RentContractService:
 
     def _generate_contract_number(self, db: Session) -> str:
         """生成合同编号"""
-        today = datetime.now()
+        today = datetime.now(UTC)
         date_str = today.strftime("%Y%m%d")
 
         today_count = (
@@ -771,15 +765,14 @@ class RentContractService:
         operator_id: str | None = None,
     ) -> RentContractHistory:
         """创建合同历史记录"""
-        history = RentContractHistory(
-            contract_id=contract_id,
-            change_type=change_type,
-            change_description=change_description,
-            old_data=old_data,
-            new_data=new_data,
-            operator=operator,
-            operator_id=operator_id,
-        )
+        history = RentContractHistory()
+        history.contract_id = contract_id
+        history.change_type = change_type
+        history.change_description = change_description
+        history.old_data = old_data
+        history.new_data = new_data
+        history.operator = operator
+        history.operator_id = operator_id
         db.add(history)
         db.commit()
         return history
@@ -854,15 +847,16 @@ class RentContractService:
         fee_amount = ledger.paid_amount * contract.service_fee_rate
 
         # 创建服务费记录
-        service_fee = ServiceFeeLedger(
-            contract_id=contract.id,
-            source_ledger_id=ledger.id,
-            year_month=ledger.year_month,
-            paid_rent_amount=ledger.paid_amount,
-            fee_rate=contract.service_fee_rate,
-            fee_amount=fee_amount,
-            settlement_status="待结算",
-            notes=f"自动生成：基于租金台账 {ledger.year_month} 实收 {ledger.paid_amount}",
+        service_fee = ServiceFeeLedger()
+        service_fee.contract_id = contract.id
+        service_fee.source_ledger_id = ledger.id
+        service_fee.year_month = ledger.year_month
+        service_fee.paid_rent_amount = ledger.paid_amount
+        service_fee.fee_rate = contract.service_fee_rate
+        service_fee.fee_amount = fee_amount
+        service_fee.settlement_status = "待结算"
+        service_fee.notes = (
+            f"自动生成：基于租金台账 {ledger.year_month} 实收 {ledger.paid_amount}"
         )
         db.add(service_fee)
         return service_fee
@@ -882,9 +876,15 @@ class RentContractService:
         # we will aggregate total rent of downstream contracts and divide by total area of assets linked to them.
 
         # 1. Filter valid downstream contracts
-        query = db.query(RentContract).filter(
-            RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
-            RentContract.contract_status == "有效",
+        query = (
+            db.query(RentContract)
+            .options(
+                selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
+            )
+            .filter(
+                RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
+                RentContract.contract_status == ContractStatus.ACTIVE,
+            )
         )
 
         if query_params.start_date:
@@ -915,7 +915,8 @@ class RentContractService:
 
             # Asset Area
             # Sum area of all associated assets
-            area = sum((asset.area or Decimal("0")) for asset in contract.assets)
+            assets = cast(list[Asset], contract.assets)
+            area = sum((asset.rentable_area or Decimal("0")) for asset in assets)
 
             if area > 0:
                 total_rent += rent
@@ -932,7 +933,7 @@ class RentContractService:
         """
         Calculates renewal rate.
         Formula: Renewed Contracts / (Renewed + Expired + Terminated)
-        Renewal Rate = '已续签' / ('已续签' + '已到期' + '已终止')
+        Renewal Rate = 'RENEWED' / ('RENEWED' + 'EXPIRED' + 'TERMINATED')
         """
         query = db.query(
             RentContract.contract_status, func.count(RentContract.id)
@@ -953,9 +954,9 @@ class RentContractService:
 
         stats = {row[0]: row[1] for row in query.all()}
 
-        renewed = stats.get("已续签", 0)
-        expired = stats.get("已到期", 0)
-        terminated = stats.get("已终止", 0)
+        renewed = stats.get(ContractStatus.RENEWED, 0)
+        expired = stats.get(ContractStatus.EXPIRED, 0)
+        terminated = stats.get(ContractStatus.TERMINATED, 0)
 
         total_ended = renewed + expired + terminated
         if total_ended == 0:

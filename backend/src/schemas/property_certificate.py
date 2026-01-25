@@ -29,8 +29,12 @@ class PropertyCertificateFields(BaseModel):
     # 不动产信息
     property_address: str | None = Field(default=None, description="坐落地址")
     property_type: str | None = Field(default=None, description="用途 (住宅/商业/工业)")
-    building_area: Decimal | None = Field(default=None, description="建筑面积 (㎡)")
-    land_area: Decimal | None = Field(default=None, description="土地使用面积 (㎡)")
+    building_area: str | None = Field(
+        default=None, description="建筑面积 (㎡)"
+    )  # 对齐Model: String类型
+    land_area: str | None = Field(
+        default=None, description="土地使用面积 (㎡)"
+    )  # 对齐Model: String类型
     floor_info: str | None = Field(default=None, description="楼层信息")
 
     # 土地信息
@@ -95,6 +99,7 @@ class PropertyCertificateUploadResponse(BaseModel):
     """产权证上传响应"""
 
     session_id: str = Field(description="会话ID")
+    asset_ids: list[str] = []
     certificate_type: str = Field(default="property_cert", description="证书类型")
     extracted_data: dict[str, Any] = Field(
         default_factory=dict, description="提取的字段数据"
@@ -116,6 +121,7 @@ class CertificateImportConfirm(BaseModel):
     """产权证导入确认"""
 
     session_id: str = Field(description="会话ID")
+    asset_ids: list[str] = Field(default_factory=list, description="关联资产ID列表")
     extracted_data: dict[str, Any] = Field(description="提取的字段数据")
     asset_link_id: str | None = Field(default=None, description="关联的资产ID")
     should_create_new_asset: bool = Field(default=False, description="是否创建新资产")
@@ -158,6 +164,10 @@ class PropertyCertificateCreate(PropertyCertificateBase):
     extraction_source: str = Field(default="manual", description="数据来源")
     is_verified: bool = Field(default=False, description="是否人工审核")
 
+    @property
+    def verified(self) -> bool:
+        return self.is_verified
+
 
 class PropertyCertificateUpdate(BaseModel):
     """更新产权证"""
@@ -182,16 +192,26 @@ class PropertyCertificateUpdate(BaseModel):
     extraction_source: str | None = Field(default=None, description="数据来源")
     is_verified: bool | None = Field(default=None, description="是否人工审核")
 
+    @property
+    def verified(self) -> bool:
+        return bool(self.is_verified)
+
 
 class PropertyCertificateResponse(PropertyCertificateBase):
     """产权证响应"""
 
     id: str = Field(description="证书ID")
+    asset_ids: list[str] = []
     extraction_confidence: float | None = Field(
         default=None, description="LLM提取置信度"
     )
     extraction_source: str = Field(description="数据来源")
     is_verified: bool = Field(description="是否人工审核")
+
+    @property
+    def verified(self) -> bool:
+        return self.is_verified
+
     created_at: datetime = Field(description="创建时间")
     updated_at: datetime = Field(description="更新时间")
     created_by: str | None = Field(default=None, description="创建人ID")
@@ -211,6 +231,7 @@ class PropertyOwnerBase(BaseModel):
     phone: str | None = Field(default=None, description="联系电话（加密存储）")
     address: str | None = Field(default=None, description="地址")
     organization_id: str | None = Field(default=None, description="关联单位ID")
+    asset_ids: list[str] = []
 
 
 class PropertyOwnerCreate(PropertyOwnerBase):
@@ -229,12 +250,14 @@ class PropertyOwnerUpdate(BaseModel):
     phone: str | None = Field(default=None, description="联系电话")
     address: str | None = Field(default=None, description="地址")
     organization_id: str | None = Field(default=None, description="关联单位ID")
+    asset_ids: list[str] = []
 
 
 class PropertyOwnerResponse(PropertyOwnerBase):
     """权利人响应"""
 
     id: str = Field(description="权利人ID")
+    asset_ids: list[str] = []
     created_at: datetime = Field(description="创建时间")
     updated_at: datetime = Field(description="更新时间")
 

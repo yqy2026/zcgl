@@ -6,7 +6,7 @@ Supports environment-specific behavior (production vs development).
 """
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 
 from src.core.environment import get_environment
@@ -19,7 +19,7 @@ class IPRange:
         self.network = ip_network(cidr, strict=False)
         self.cidr = cidr
         self.added_by = added_by
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(UTC)
 
 
 class IPWhitelistManager:

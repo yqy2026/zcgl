@@ -13,7 +13,7 @@ def pytest_configure(config):
     """
     os.environ["DATABASE_URL"] = "sqlite:///test.db"
     # 使用强密钥，不包含任何弱模式（如 "test", "secret", "key" 等）
-    os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6"
+    os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6!@#"
     os.environ["DEBUG"] = "False"  # Must be False (capital F) or 0 for pydantic bool
     os.environ["ENVIRONMENT"] = "test"
 

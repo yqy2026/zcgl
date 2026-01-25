@@ -85,6 +85,7 @@ class CRUDPropertyOwner(
         skip: int = 0,
         limit: int = 100,
         use_cache: bool = False,
+        **kwargs: Any,
     ) -> list[PropertyOwner]:
         """
         获取多个权利人 - 解密敏感字段
@@ -98,7 +99,9 @@ class CRUDPropertyOwner(
         Returns:
             list[PropertyOwner]: 权利人对象列表
         """
-        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        results = super().get_multi(
+            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
+        )
         for item in results:
             # 🔒 安全修复: 解密敏感字段
             self.sensitive_data_handler.decrypt_data(item.__dict__)
@@ -110,6 +113,7 @@ class CRUDPropertyOwner(
         *,
         db_obj: PropertyOwner,
         obj_in: PropertyOwnerUpdate | dict[str, Any],
+        commit: bool = True,
     ) -> PropertyOwner:
         """
         更新权利人 - 加密敏感字段
@@ -129,7 +133,9 @@ class CRUDPropertyOwner(
 
         # 🔒 安全修复: 加密敏感字段
         encrypted_data = self.sensitive_data_handler.encrypt_data(update_data)
-        return super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+        return super().update(
+            db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
+        )
 
     def search_by_id_number(
         self, db: Session, id_number: str, skip: int = 0, limit: int = 100
@@ -147,7 +153,9 @@ class CRUDPropertyOwner(
             list[PropertyOwner]: 匹配的权利人列表
         """
         # 🔒 安全修复: 使用加密值进行搜索
-        encrypted_id_number = self.sensitive_data_handler.encrypt_value(id_number)
+        encrypted_id_number = self.sensitive_data_handler.encrypt_field(
+            "id_number", id_number
+        )
 
         query = (
             db.query(self.model)

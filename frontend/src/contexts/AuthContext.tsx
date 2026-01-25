@@ -61,14 +61,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      logger.debug('开始登录', credentials as unknown as Record<string, unknown>);
+      logger.debug('开始登录', { username: credentials.username });
       setLoading(true);
       setError(null);
 
       // 调用 AuthService 的登录方法
       const response = await AuthService.login(credentials);
 
-      logger.debug('AuthContext收到登录响应', response as unknown as Record<string, unknown>);
+      logger.debug('AuthContext收到登录响应', {
+        success: response.success,
+        hasData: Boolean(response.data),
+      });
 
       if (Boolean(response.success) && Boolean(response.data)) {
         setUser(response.data.user);

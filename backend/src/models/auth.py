@@ -3,7 +3,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
@@ -12,6 +12,11 @@ from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .notification import Notification
+    from .organization import Organization
+    from .rbac import UserRoleAssignment
 
 
 class UserRole(str, Enum):
@@ -69,7 +74,7 @@ class User(Base):
         DateTime, comment="锁定到期时间"
     )
     password_last_changed: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now, comment="密码最后修改时间"
+        DateTime, default=lambda: datetime.now(UTC), comment="密码最后修改时间"
     )
 
     # 组织关联
@@ -82,13 +87,13 @@ class User(Base):
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -97,14 +102,18 @@ class User(Base):
     # 关系
     # 暂时移除双向关系以避免循环依赖问题
     # employee = relationship("Employee", back_populates="user", foreign_keys=[employee_id])
-    default_organization = relationship("Organization")
-    user_sessions = relationship(
+    default_organization: Mapped["Organization | None"] = relationship("Organization")
+    user_sessions: Mapped[list["UserSession"]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
     )
-    audit_logs = relationship("AuditLog", back_populates="user")
-    role_assignments = relationship("UserRoleAssignment", back_populates="user")
+    audit_logs: Mapped[list["AuditLog"]] = relationship(
+        "AuditLog", back_populates="user"
+    )
+    role_assignments: Mapped[list["UserRoleAssignment"]] = relationship(
+        "UserRoleAssignment", back_populates="user"
+    )
     # 使用字符串引用避免循环依赖 - Notification模型在notification.py中定义
-    notifications = relationship(
+    notifications: Mapped[list["Notification"]] = relationship(
         "Notification",
         back_populates="recipient",
         cascade="all, delete-orphan",
@@ -163,10 +172,13 @@ class User(Base):
 
             # 检查锁定时间
             locked_until_value = cast("datetime", self.locked_until)  # pragma: no cover
-            if (
-                locked_until_value is not None and locked_until_value > datetime.now()
-            ):  # pragma: no cover
-                return True  # pragma: no cover
+            if locked_until_value is not None:
+                if locked_until_value.tzinfo is None:
+                    locked_until_value = locked_until_value.replace(tzinfo=UTC)
+                else:
+                    locked_until_value = locked_until_value.astimezone(UTC)
+                if locked_until_value > datetime.now(UTC):
+                    return True
 
             # 如果锁定时间已过，自动解锁（安全地设置字段）
             try:  # pragma: no cover
@@ -215,14 +227,17 @@ class UserSession(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
     last_accessed_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now, comment="最后访问时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        comment="最后访问时间",
     )
 
     # 关系
-    user = relationship("User", back_populates="user_sessions")
+    user: Mapped["User"] = relationship("User", back_populates="user_sessions")
 
     def __repr__(self) -> str:
         return f"<UserSession(id={self.id}, user_id={self.user_id}, active={self.is_active})>"
@@ -236,7 +251,7 @@ class UserSession(Base):
             expires_at_value = cast("datetime", self.expires_at)  # pragma: no cover
             if expires_at_value is None:  # pragma: no cover
                 return True  # pragma: no cover
-            return datetime.now() > expires_at_value  # pragma: no cover
+            return datetime.now(UTC) > expires_at_value  # pragma: no cover
 
 
 class AuditLog(Base):
@@ -281,11 +296,11 @@ class AuditLog(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
     )
 
     # 关系
-    user = relationship("User", back_populates="audit_logs")
+    user: Mapped["User"] = relationship("User", back_populates="audit_logs")
 
     def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action={self.action}, user={self.username})>"

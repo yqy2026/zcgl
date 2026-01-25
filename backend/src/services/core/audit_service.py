@@ -31,24 +31,26 @@ class AuditService:
         if not user:
             return None
 
-        audit_log = AuditLog(
-            user_id=user_id,
-            username=user.username,
-            user_role=user.role.value if hasattr(user.role, "value") else user.role,
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            resource_name=resource_name,
-            api_endpoint=api_endpoint,
-            http_method=http_method,
-            request_params=request_params,
-            request_body=request_body,
-            response_status=response_status,
-            response_message=response_message,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            session_id=session_id,
+        audit_log = AuditLog()
+        audit_log.user_id = user_id
+        audit_log.username = user.username
+        audit_log.user_role = (
+            user.role.value if hasattr(user.role, "value") else user.role
         )
+        audit_log.user_organization = getattr(user, "default_organization_id", None)
+        audit_log.action = action
+        audit_log.resource_type = resource_type
+        audit_log.resource_id = resource_id
+        audit_log.resource_name = resource_name
+        audit_log.api_endpoint = api_endpoint
+        audit_log.http_method = http_method
+        audit_log.request_params = request_params
+        audit_log.request_body = request_body
+        audit_log.response_status = response_status
+        audit_log.response_message = response_message
+        audit_log.ip_address = ip_address
+        audit_log.user_agent = user_agent
+        audit_log.session_id = session_id
 
         self.db.add(audit_log)
         self.db.commit()

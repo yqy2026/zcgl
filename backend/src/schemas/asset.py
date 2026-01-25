@@ -13,6 +13,8 @@ from decimal import Decimal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from ..constants.validation_constants import FieldLengthLimits
+from .ownership import OwnershipResponse
+from .project import ProjectResponse
 
 
 class AssetBase(BaseModel):
@@ -46,6 +48,9 @@ class AssetBase(BaseModel):
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
+    management_entity: str | None = Field(
+        None, max_length=200, description="经营管理单位"
+    )
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
@@ -59,6 +64,12 @@ class AssetBase(BaseModel):
         None, ge=0, description="可出租面积（平方米）"
     )
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
+    unrented_area: Decimal | None = Field(
+        None, ge=0, description="未出租面积（平方米）"
+    )
+    occupancy_rate: Decimal | None = Field(
+        None, ge=0, le=100, description="出租率（%）"
+    )
     # unrented_area 已移除，改为计算字段
     non_commercial_area: Decimal | None = Field(
         None, ge=0, description="非经营物业面积（平方米）"
@@ -70,7 +81,6 @@ class AssetBase(BaseModel):
         validation_alias=AliasChoices(
             "include_in_occupancy_rate", "should_include_in_occupancy_rate"
         ),
-        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -216,6 +226,12 @@ class AssetUpdate(BaseModel):
         None, ge=0, description="可出租面积（平方米）"
     )
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
+    unrented_area: Decimal | None = Field(
+        None, ge=0, description="未出租面积（平方米）"
+    )
+    occupancy_rate: Decimal | None = Field(
+        None, ge=0, le=100, description="出租率（%）"
+    )
     # unrented_area 已移除，改为计算字段
     non_commercial_area: Decimal | None = Field(
         None, ge=0, description="非经营物业面积（平方米）"
@@ -227,7 +243,6 @@ class AssetUpdate(BaseModel):
         validation_alias=AliasChoices(
             "include_in_occupancy_rate", "should_include_in_occupancy_rate"
         ),
-        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -328,6 +343,9 @@ class AssetResponseBase(BaseModel):
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
+    management_entity: str | None = Field(
+        None, max_length=200, description="经营管理单位"
+    )
 
     business_category: str | None = Field(None, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
@@ -349,7 +367,6 @@ class AssetResponseBase(BaseModel):
         validation_alias=AliasChoices(
             "include_in_occupancy_rate", "should_include_in_occupancy_rate"
         ),
-        serialization_alias="should_include_in_occupancy_rate",
     )
 
     # 用途相关字段
@@ -404,6 +421,10 @@ class AssetResponse(AssetResponseBase):
     """资产响应模型"""
 
     id: str = Field(..., description="资产ID")
+    project_id: str | None = Field(None, description="项目ID")  # 对齐Model
+    ownership_id: str | None = Field(None, description="权属ID")  # 对齐Model
+    project: ProjectResponse | None = Field(None, description="关联项目")
+    ownership: OwnershipResponse | None = Field(None, description="关联权属方")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
@@ -432,6 +453,11 @@ class AssetHistoryResponse(BaseModel):
     operator: str | None = Field(None, description="操作人")
     operation_time: datetime = Field(..., description="操作时间")
     description: str | None = Field(None, description="操作描述")
+    # 审计字段 - 对齐Model
+    change_reason: str | None = Field(None, description="变更原因")
+    ip_address: str | None = Field(None, description="IP地址")
+    user_agent: str | None = Field(None, description="用户代理")
+    session_id: str | None = Field(None, description="会话ID")
 
     model_config = ConfigDict(from_attributes=True)
 

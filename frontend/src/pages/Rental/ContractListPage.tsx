@@ -40,6 +40,9 @@ import {
   RentContractQueryParams,
   RentContractPageState,
   RentStatisticsOverview,
+  ContractStatus,
+  ContractStatusLabels,
+  ContractStatusColors,
 } from '../../types/rentContract';
 import { Asset } from '../../types/asset';
 import { Ownership } from '../../types/ownership';
@@ -326,17 +329,12 @@ const ContractListPage: React.FC = () => {
       title: '合同状态',
       dataIndex: 'contract_status',
       key: 'contract_status',
-      render: (status: string) => {
-        // V2: 扩展状态
-        const statusConfig: Record<string, { color: string; text: string }> = {
-          有效: { color: 'green', text: '有效' },
-          到期: { color: 'orange', text: '到期' },
-          终止: { color: 'red', text: '终止' },
-          已终止: { color: 'red', text: '已终止' },
-          已续签: { color: 'blue', text: '已续签' },
-        };
-        const config = statusConfig[status] ?? { color: 'default', text: status };
-        return <Tag color={config.color}>{config.text}</Tag>;
+      render: (status: ContractStatus) => {
+        return (
+          <Tag color={ContractStatusColors[status] || 'default'}>
+            {ContractStatusLabels[status] || status}
+          </Tag>
+        );
       },
     },
     {
@@ -364,7 +362,7 @@ const ContractListPage: React.FC = () => {
               onClick={() => handleGenerateLedger(record.id)}
             />
           </Tooltip>
-          {record.contract_status === '有效' && (
+          {record.contract_status === ContractStatus.ACTIVE && (
             <>
               <Tooltip title="续签">
                 <Button type="text" icon={<SyncOutlined />} onClick={() => handleRenew(record)} />
@@ -493,10 +491,11 @@ const ContractListPage: React.FC = () => {
               allowClear
               onChange={value => handleSearch({ contract_status: value })}
             >
-              <Option value="有效">有效</Option>
-              <Option value="到期">到期</Option>
-              <Option value="已续签">已续签</Option>
-              <Option value="已终止">已终止</Option>
+              {Object.values(ContractStatus).map(status => (
+                <Option key={status} value={status}>
+                  {ContractStatusLabels[status]}
+                </Option>
+              ))}
             </Select>
           </Col>
           <Col span={4}>

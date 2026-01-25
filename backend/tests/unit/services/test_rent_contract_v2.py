@@ -15,8 +15,8 @@ from decimal import Decimal
 import pytest
 
 from src.schemas.rent_contract import (
-    ContractTypeEnum,
-    PaymentCycleEnum,
+    ContractType,
+    PaymentCycle,
     RentContractCreate,
     RentTermCreate,
 )
@@ -44,26 +44,26 @@ class TestContractTypes:
         """TC-CON-001: Create upstream lease contract schema"""
         contract_in = RentContractCreate(
             contract_number="UP2026001",
-            contract_type=ContractTypeEnum.LEASE_UPSTREAM,
+            contract_type=ContractType.LEASE_UPSTREAM,
             tenant_name="运营方公司",
             asset_ids=["asset_001", "asset_002"],
             ownership_id="ownership_001",
             sign_date=date(2026, 1, 1),
             start_date=date(2026, 1, 1),
             end_date=date(2026, 12, 31),
-            payment_cycle=PaymentCycleEnum.QUARTERLY,
+            payment_cycle=PaymentCycle.QUARTERLY,
             rent_terms=[default_term],
         )
 
-        assert contract_in.contract_type == ContractTypeEnum.LEASE_UPSTREAM
-        assert contract_in.payment_cycle == PaymentCycleEnum.QUARTERLY
+        assert contract_in.contract_type == ContractType.LEASE_UPSTREAM
+        assert contract_in.payment_cycle == PaymentCycle.QUARTERLY
         assert len(contract_in.asset_ids) == 2
 
     def test_create_downstream_with_upstream_reference(self, default_term):
         """TC-CON-002: Create downstream contract linked to upstream"""
         contract_in = RentContractCreate(
             contract_number="DN2026001",
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractType.LEASE_DOWNSTREAM,
             upstream_contract_id="upstream_001",
             tenant_name="终端租户A",
             tenant_usage="零售商铺",
@@ -72,11 +72,11 @@ class TestContractTypes:
             sign_date=date(2026, 1, 1),
             start_date=date(2026, 1, 1),
             end_date=date(2026, 12, 31),
-            payment_cycle=PaymentCycleEnum.MONTHLY,
+            payment_cycle=PaymentCycle.MONTHLY,
             rent_terms=[default_term],
         )
 
-        assert contract_in.contract_type == ContractTypeEnum.LEASE_DOWNSTREAM
+        assert contract_in.contract_type == ContractType.LEASE_DOWNSTREAM
         assert contract_in.upstream_contract_id == "upstream_001"
         assert contract_in.tenant_usage == "零售商铺"
 
@@ -84,7 +84,7 @@ class TestContractTypes:
         """TC-CON-003: Create entrusted contract with service fee rate"""
         contract_in = RentContractCreate(
             contract_number="EN2026001",
-            contract_type=ContractTypeEnum.ENTRUSTED,
+            contract_type=ContractType.ENTRUSTED,
             service_fee_rate=Decimal("0.0500"),
             tenant_name="权属方委托",
             asset_ids=["asset_001"],
@@ -95,7 +95,7 @@ class TestContractTypes:
             rent_terms=[default_term],
         )
 
-        assert contract_in.contract_type == ContractTypeEnum.ENTRUSTED
+        assert contract_in.contract_type == ContractType.ENTRUSTED
         assert contract_in.service_fee_rate == Decimal("0.0500")
 
 
@@ -109,7 +109,7 @@ class TestMultiAssetContracts:
         """TC-CON-006: Contract associated with multiple assets"""
         contract_in = RentContractCreate(
             contract_number="MA2026001",
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractType.LEASE_DOWNSTREAM,
             tenant_name="多资产租户",
             asset_ids=["asset_001", "asset_002", "asset_003"],
             ownership_id="ownership_001",
@@ -133,27 +133,27 @@ class TestPaymentCycle:
 
     def test_payment_cycle_enum_values(self):
         """Verify payment cycle enum values"""
-        assert PaymentCycleEnum.MONTHLY.value == "monthly"
-        assert PaymentCycleEnum.QUARTERLY.value == "quarterly"
-        assert PaymentCycleEnum.SEMI_ANNUAL.value == "semi_annual"
-        assert PaymentCycleEnum.ANNUAL.value == "annual"
+        assert PaymentCycle.MONTHLY.value == "monthly"
+        assert PaymentCycle.QUARTERLY.value == "quarterly"
+        assert PaymentCycle.SEMI_ANNUAL.value == "semi_annual"
+        assert PaymentCycle.ANNUAL.value == "annual"
 
     def test_contract_with_annual_payment(self, default_term):
         """Test contract with annual payment cycle"""
         contract_in = RentContractCreate(
             contract_number="AN2026001",
-            contract_type=ContractTypeEnum.LEASE_UPSTREAM,
+            contract_type=ContractType.LEASE_UPSTREAM,
             tenant_name="年付租户",
             asset_ids=["asset_001"],
             ownership_id="ownership_001",
             sign_date=date(2026, 1, 1),
             start_date=date(2026, 1, 1),
             end_date=date(2026, 12, 31),
-            payment_cycle=PaymentCycleEnum.ANNUAL,
+            payment_cycle=PaymentCycle.ANNUAL,
             rent_terms=[default_term],
         )
 
-        assert contract_in.payment_cycle == PaymentCycleEnum.ANNUAL
+        assert contract_in.payment_cycle == PaymentCycle.ANNUAL
 
 
 # ==================== Schema Validation Tests ====================
@@ -173,12 +173,12 @@ class TestSchemaValidation:
             rent_terms=[default_term],
         )
 
-        assert contract_in.contract_type == ContractTypeEnum.LEASE_DOWNSTREAM
+        assert contract_in.contract_type == ContractType.LEASE_DOWNSTREAM
 
     def test_service_fee_rate_validation(self, default_term):
         """Service fee rate should be between 0 and 1"""
         contract_in = RentContractCreate(
-            contract_type=ContractTypeEnum.ENTRUSTED,
+            contract_type=ContractType.ENTRUSTED,
             service_fee_rate=Decimal("0.15"),  # 15%
             tenant_name="委托方",
             ownership_id="ownership_001",
@@ -193,7 +193,7 @@ class TestSchemaValidation:
     def test_tenant_usage_field(self, default_term):
         """Downstream contract should accept tenant_usage"""
         contract_in = RentContractCreate(
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractType.LEASE_DOWNSTREAM,
             tenant_name="终端租户",
             tenant_usage="餐饮用途",
             ownership_id="ownership_001",
@@ -254,16 +254,16 @@ class TestContractTypeEnum:
 
     def test_contract_type_enum_values(self):
         """Verify contract type enum values"""
-        assert ContractTypeEnum.LEASE_UPSTREAM.value == "lease_upstream"
-        assert ContractTypeEnum.LEASE_DOWNSTREAM.value == "lease_downstream"
-        assert ContractTypeEnum.ENTRUSTED.value == "entrusted"
+        assert ContractType.LEASE_UPSTREAM.value == "lease_upstream"
+        assert ContractType.LEASE_DOWNSTREAM.value == "lease_downstream"
+        assert ContractType.ENTRUSTED.value == "entrusted"
 
     def test_all_contract_types_supported(self, default_term):
         """All contract types should be valid"""
         for ct in [
-            ContractTypeEnum.LEASE_UPSTREAM,
-            ContractTypeEnum.LEASE_DOWNSTREAM,
-            ContractTypeEnum.ENTRUSTED,
+            ContractType.LEASE_UPSTREAM,
+            ContractType.LEASE_DOWNSTREAM,
+            ContractType.ENTRUSTED,
         ]:
             contract = RentContractCreate(
                 contract_type=ct,

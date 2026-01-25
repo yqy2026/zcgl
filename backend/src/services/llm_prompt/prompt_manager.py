@@ -4,7 +4,7 @@ Prompt管理服务
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
@@ -77,33 +77,31 @@ class PromptManager:
         version = "v1.0.0"
 
         # 3. 创建Prompt模板
-        template = PromptTemplate(
-            id=str(uuid4()),
-            name=data.name,
-            doc_type=data.doc_type,
-            provider=data.provider,
-            description=data.description,
-            system_prompt=data.system_prompt,
-            user_prompt_template=data.user_prompt_template,
-            few_shot_examples=data.few_shot_examples or {},
-            version=version,
-            status=PromptStatus.DRAFT,
-            tags=data.tags or [],
-            created_by=user_id,
-        )
+        template = PromptTemplate()
+        template.id = str(uuid4())
+        template.name = data.name
+        template.doc_type = data.doc_type
+        template.provider = data.provider
+        template.description = data.description
+        template.system_prompt = data.system_prompt
+        template.user_prompt_template = data.user_prompt_template
+        template.few_shot_examples = data.few_shot_examples or {}
+        template.version = version
+        template.status = PromptStatus.DRAFT
+        template.tags = data.tags or []
+        template.created_by = user_id
 
         # 4. 创建初始版本
-        version_record = PromptVersion(
-            id=str(uuid4()),
-            template_id=template.id,
-            version=version,
-            system_prompt=data.system_prompt,
-            user_prompt_template=data.user_prompt_template,
-            few_shot_examples=data.few_shot_examples or {},
-            change_description="初始版本",
-            change_type="created",
-            created_by=user_id,
-        )
+        version_record = PromptVersion()
+        version_record.id = str(uuid4())
+        version_record.template_id = template.id
+        version_record.version = version
+        version_record.system_prompt = data.system_prompt
+        version_record.user_prompt_template = data.user_prompt_template
+        version_record.few_shot_examples = data.few_shot_examples or {}
+        version_record.change_description = "初始版本"
+        version_record.change_type = "created"
+        version_record.created_by = user_id
 
         db.add(template)
         db.add(version_record)
@@ -149,17 +147,16 @@ class PromptManager:
         )
 
         # 3. 创建版本记录
-        version_record = PromptVersion(
-            id=str(uuid4()),
-            template_id=template_id,
-            version=new_version,
-            system_prompt=new_system_prompt,
-            user_prompt_template=new_user_prompt,
-            few_shot_examples=new_examples,
-            change_description=data.change_description or "手动更新",
-            change_type="optimized",
-            created_by=user_id,
-        )
+        version_record = PromptVersion()
+        version_record.id = str(uuid4())
+        version_record.template_id = template_id
+        version_record.version = new_version
+        version_record.system_prompt = new_system_prompt
+        version_record.user_prompt_template = new_user_prompt
+        version_record.few_shot_examples = new_examples
+        version_record.change_description = data.change_description or "手动更新"
+        version_record.change_type = "optimized"
+        version_record.created_by = user_id
 
         # 4. 更新模板
         template.system_prompt = new_system_prompt
@@ -167,7 +164,7 @@ class PromptManager:
         template.few_shot_examples = new_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.utcnow()
+        template.updated_at = datetime.now(UTC)
 
         if data.tags is not None:
             template.tags = data.tags
@@ -201,11 +198,11 @@ class PromptManager:
             PromptTemplate.doc_type == template.doc_type,
             PromptTemplate.status == PromptStatus.ACTIVE,
             PromptTemplate.id != template_id,
-        ).update({"status": PromptStatus.ARCHIVED, "updated_at": datetime.utcnow()})
+        ).update({"status": PromptStatus.ARCHIVED, "updated_at": datetime.now(UTC)})
 
         # 2. 激活目标Prompt
         template.status = PromptStatus.ACTIVE
-        template.updated_at = datetime.utcnow()
+        template.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(template)
 
@@ -240,17 +237,16 @@ class PromptManager:
         new_version = self._increment_version(template.version)
 
         # 3. 创建回滚版本
-        version_record = PromptVersion(
-            id=str(uuid4()),
-            template_id=template_id,
-            version=new_version,
-            system_prompt=target_version.system_prompt,
-            user_prompt_template=target_version.user_prompt_template,
-            few_shot_examples=target_version.few_shot_examples,
-            change_description=f"回滚到版本{target_version.version}",
-            change_type="rollback",
-            created_by=user_id,
-        )
+        version_record = PromptVersion()
+        version_record.id = str(uuid4())
+        version_record.template_id = template_id
+        version_record.version = new_version
+        version_record.system_prompt = target_version.system_prompt
+        version_record.user_prompt_template = target_version.user_prompt_template
+        version_record.few_shot_examples = target_version.few_shot_examples
+        version_record.change_description = f"回滚到版本{target_version.version}"
+        version_record.change_type = "rollback"
+        version_record.created_by = user_id
 
         # 4. 更新模板
         template.system_prompt = target_version.system_prompt
@@ -258,7 +254,7 @@ class PromptManager:
         template.few_shot_examples = target_version.few_shot_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.utcnow()
+        template.updated_at = datetime.now(UTC)
 
         db.add(version_record)
         db.commit()

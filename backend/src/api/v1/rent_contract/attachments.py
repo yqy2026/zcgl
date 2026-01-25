@@ -68,17 +68,16 @@ async def upload_contract_attachment(
     except Exception as e:
         raise internal_error(f"文件保存失败: {str(e)}")
 
-    attachment = RentContractAttachment(
-        contract_id=contract_id,
-        file_name=file.filename or "unnamed",
-        file_path=str(file_path),
-        file_size=file_size,
-        mime_type=file.content_type,
-        file_type=file_type,
-        description=description,
-        uploader=current_user.full_name or current_user.username,
-        uploader_id=current_user.id,
-    )
+    attachment = RentContractAttachment()
+    attachment.contract_id = contract_id
+    attachment.file_name = file.filename or "unnamed"
+    attachment.file_path = str(file_path)
+    attachment.file_size = file_size
+    attachment.mime_type = file.content_type
+    attachment.file_type = file_type
+    attachment.description = description
+    attachment.uploader = current_user.full_name or current_user.username
+    attachment.uploader_id = current_user.id
 
     db.add(attachment)
     db.commit()

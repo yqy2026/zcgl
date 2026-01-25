@@ -552,3 +552,22 @@ test*.db
 # 构建产物
 *-report.json
 *-report.xml
+
+
+# 智能清理脚本建议的规则
+# 日志文件
+frontend/*.log
+# 临时和备份文件
+# 临时上传目录
+temp_uploads/
+backend/temp_uploads/
+# 临时报告文件
+TEST_*.md
+FINAL_*.md
+RALPH_*.md
+*_ACHIEVEMENT.md
+*_ANALYSIS.md
+*_SUMMARY.md
+*_REPORT.md
+# 旧会话文件（保留最近）
+sessions/[0-9][0-9][0-9][0-9][0-9][0-9]-*

@@ -324,7 +324,7 @@ const ContractRenewPage: React.FC = () => {
           initialData={initialFormData}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          loading={loading}
+          isLoading={loading}
         />
       </Card>
     </div>

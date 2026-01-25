@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Form, Button, Space, Card, Row, Col, Progress, Typography } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -104,6 +104,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 }) => {
   const {
     form,
+    completionRate,
     setCompletionRate,
     fileList,
     setFileList,
@@ -189,40 +190,81 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   }, [initialData?.id, form, loadRentContracts]);
 
   // Handle form values change for completion rate calculation
+  const valuesChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (valuesChangeTimer.current) {
+        clearTimeout(valuesChangeTimer.current);
+        valuesChangeTimer.current = null;
+      }
+    };
+  }, []);
+
   const handleValuesChange = (
     _changedValues: Record<string, unknown>,
     allValues: Record<string, unknown>
   ) => {
-    const requiredFields = [
-      'property_name',
-      'ownership_entity',
-      'address',
-      'ownership_status',
-      'property_nature',
-      'usage_status',
-    ];
-
-    const filledFields = requiredFields.filter(field => allValues[field] != null);
-    const rate = (filledFields.length / requiredFields.length) * 100;
-    setCompletionRate(rate);
-
-    // Auto-calculate occupancy
-    const rentableArea = Number(allValues.rentable_area) ?? 0;
-    const rentedArea = Number(allValues.rented_area) ?? 0;
-
-    if (rentableArea > 0) {
-      const occupancyRate = ((rentedArea / rentableArea) * 100).toFixed(2);
-      const unrentedArea = rentableArea - rentedArea;
-
-      form.setFieldsValue({
-        occupancy_rate: parseFloat(occupancyRate),
-        unrented_area: unrentedArea,
-      });
+    if (valuesChangeTimer.current) {
+      clearTimeout(valuesChangeTimer.current);
     }
+
+    valuesChangeTimer.current = setTimeout(() => {
+      const requiredFields = [
+        'property_name',
+        'ownership_entity',
+        'address',
+        'ownership_status',
+        'property_nature',
+        'usage_status',
+      ];
+
+      const filledFields = requiredFields.filter(field => allValues[field] != null);
+      const rate = (filledFields.length / requiredFields.length) * 100;
+      if (rate !== completionRate) {
+        setCompletionRate(rate);
+      }
+
+      const rentableArea = Number(allValues.rentable_area) ?? 0;
+      const rentedArea = Number(allValues.rented_area) ?? 0;
+
+      if (rentableArea > 0) {
+        const occupancyRate = Number(((rentedArea / rentableArea) * 100).toFixed(2));
+        const unrentedArea = rentableArea - rentedArea;
+        const currentOccupancy = form.getFieldValue('occupancy_rate');
+        const currentUnrented = form.getFieldValue('unrented_area');
+
+        if (currentOccupancy !== occupancyRate || currentUnrented !== unrentedArea) {
+          form.setFieldsValue({
+            occupancy_rate: occupancyRate,
+            unrented_area: unrentedArea,
+          });
+        }
+      }
+    }, 120);
   };
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
+      const toBoolean = (value: unknown) =>
+        value === true || value === 'true' || value === 1 || value === '1';
+
+      const isAssetCreateRequest = (
+        value: Record<string, unknown>
+      ): value is AssetCreateRequest => {
+        const requiredFields = [
+          'property_name',
+          'ownership_entity',
+          'address',
+          'ownership_status',
+          'property_nature',
+          'usage_status',
+        ];
+        return requiredFields.every(
+          field => typeof value[field] === 'string' && value[field] !== ''
+        );
+      };
+
       const formatDate = (val: unknown): string | undefined => {
         if (val == null) return undefined;
         if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD');
@@ -232,6 +274,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
       const submitData = {
         ...values,
+        include_in_occupancy_rate: toBoolean(values.include_in_occupancy_rate),
+        is_sublease: toBoolean(values.is_sublease),
+        is_litigated: toBoolean(values.is_litigated),
         contract_start_date: formatDate(values.contract_start_date),
         contract_end_date: formatDate(values.contract_end_date),
         operation_agreement_start_date: formatDate(values.operation_agreement_start_date),
@@ -241,7 +286,11 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       };
 
       if (onSubmit !== undefined && onSubmit !== null) {
-        await onSubmit(submitData as unknown as AssetCreateRequest);
+        if (isAssetCreateRequest(submitData)) {
+          await onSubmit(submitData);
+        } else {
+          MessageManager.error('表单数据不完整，请检查必填字段');
+        }
       }
     } catch {
       MessageManager.error('提交失败，请重试');

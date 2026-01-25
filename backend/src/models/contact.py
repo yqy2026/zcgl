@@ -5,11 +5,12 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 
 from sqlalchemy import Boolean, Column, DateTime, String, Text
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
 
@@ -58,7 +59,7 @@ class Contact(Base):
     address = Column(String(500), comment="地址")
 
     # 联系人分类
-    contact_type: "Column[ContactType]" = Column(
+    contact_type: Mapped[ContactType] = mapped_column(
         SQLEnum(ContactType),
         default=ContactType.GENERAL,
         nullable=False,
@@ -79,9 +80,12 @@ class Contact(Base):
     is_active = Column(Boolean, default=True, nullable=False, comment="是否启用")
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), comment="创建时间")
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="更新时间",
     )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")

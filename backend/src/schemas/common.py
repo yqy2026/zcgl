@@ -19,7 +19,7 @@ class BaseResponse[T](BaseModel):
     message: str | None = Field(None, description="响应消息")
     data: T | None = Field(None, description="响应数据")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -31,7 +31,7 @@ class ErrorResponse(BaseModel):
     error: dict[str, Any] = Field(..., description="错误详情")
     message: str = Field(..., description="错误消息")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -55,7 +55,7 @@ class PaginatedResponse[T](BaseModel):
     data: list[T] = Field(..., description="数据列表")
     pagination: PaginationInfo = Field(..., description="分页信息")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -68,7 +68,7 @@ class BusinessValidationErrorResponse(BaseModel):
     message: str = Field("数据验证失败", description="错误消息")
     details: dict[str, list[str]] = Field(..., description="字段验证错误详情")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -80,7 +80,7 @@ class SuccessResponse[T](BaseModel):
     message: str | None = Field("操作成功", description="成功消息")
     data: T | None = Field(None, description="响应数据")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -92,7 +92,7 @@ class CreatedResponse[T](BaseModel):
     message: str = Field("创建成功", description="成功消息")
     data: T = Field(..., description="创建的数据")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -104,7 +104,7 @@ class UpdatedResponse[T](BaseModel):
     message: str = Field("更新成功", description="成功消息")
     data: T | None = Field(None, description="更新后的数据")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -116,7 +116,7 @@ class DeletedResponse(BaseModel):
     message: str = Field("删除成功", description="成功消息")
     data: dict[str, Any] | None = Field(None, description="删除相关信息")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -134,7 +134,7 @@ class BatchOperationResponse(BaseModel):
     )
     data: dict[str, Any] | None = Field(None, description="操作结果数据")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="响应时间戳"
+        default_factory=lambda: datetime.now(UTC), description="响应时间戳"
     )
     request_id: str | None = Field(None, description="请求ID")
 
@@ -143,7 +143,9 @@ class HealthCheckResponse(BaseModel):
     """健康检查响应模式"""
 
     status: str = Field(..., description="服务状态")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="检查时间")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="检查时间"
+    )
     version: str = Field(..., description="服务版本")
     services: dict[str, str] = Field(
         default_factory=dict[str, Any], description="依赖服务状态"

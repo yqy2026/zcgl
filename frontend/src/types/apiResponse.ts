@@ -12,7 +12,8 @@ import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
  * 适用于大部分后端API接口
  */
 export interface StandardApiResponse<T = unknown> {
-  isSuccess: boolean;
+  isSuccess?: boolean;
+  success?: boolean;
   data: T;
   message?: string;
   code?: string;
@@ -24,7 +25,8 @@ export interface StandardApiResponse<T = unknown> {
  * 适用于列表类API接口
  */
 export interface PaginatedApiResponse<T = unknown> {
-  isSuccess: boolean;
+  isSuccess?: boolean;
+  success?: boolean;
   data: {
     items: T[];
     pagination: {
@@ -49,7 +51,8 @@ export interface DirectResponse<T = unknown> {
  * 错误响应格式
  */
 export interface ErrorResponse {
-  isSuccess: false;
+  isSuccess?: false;
+  success?: false;
   error: {
     code: string;
     message: string;

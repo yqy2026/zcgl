@@ -110,7 +110,7 @@ const AssetCreatePage: React.FC = () => {
         initialData={asset}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
-        loading={createMutation.isPending || updateMutation.isPending}
+        isLoading={createMutation.isPending || updateMutation.isPending}
         mode={isEdit ? 'edit' : 'create'}
       />
     </div>

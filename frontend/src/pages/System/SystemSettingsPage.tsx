@@ -8,21 +8,13 @@ import {
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import { systemService } from '../../services/systemService';
-import type { SystemSettings } from '../../services/systemService';
+import type { SystemInfo, SystemSettings } from '../../services/systemService';
 import { createLogger } from '../../utils/logger';
 
 const pageLogger = createLogger('SystemSettings');
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
-
-interface SystemInfo {
-  version: string;
-  build_time: string;
-  database_status: string;
-  api_version: string;
-  environment: string;
-}
 
 const SystemSettingsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -36,7 +28,7 @@ const SystemSettingsPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await systemService.getSystemInfo();
-      setSystemInfo(response as unknown as SystemInfo);
+      setSystemInfo(response);
     } catch (error: unknown) {
       pageLogger.error('获取系统信息失败:', error as Error);
       const errorMsg = error instanceof Error ? error.message : '未知错误';
@@ -51,7 +43,7 @@ const SystemSettingsPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await systemService.getSettings();
-      setSettings(response as unknown as SystemSettings);
+      setSettings(response);
       form.setFieldsValue(response);
     } catch (error: unknown) {
       pageLogger.error('获取系统设置失败:', error as Error);

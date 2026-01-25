@@ -151,7 +151,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
             loading={!ownerships.length}
             optionFilterProp="children"
             filterOption={(input, option) =>
-              (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? option?.value ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
             }
             onSelect={value => {
               const ownership = ownerships.find(o => o.id === value);

@@ -34,7 +34,7 @@ class SessionService:
         # 检查是否已有活跃会话
         existing_sessions = (
             self.db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active)
+            .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .all()
         )
 
@@ -65,18 +65,21 @@ class SessionService:
                 # 如果解析失败，将整个device_info作为device_info字段存储
                 pass  # pragma: no cover
 
-        user_session = UserSession(
-            user_id=user_id,
-            refresh_token=refresh_token,
-            session_id=session_id,
-            device_info=device_info
+        user_session = UserSession()
+        user_session.user_id = user_id
+        user_session.refresh_token = refresh_token
+        user_session.session_id = session_id
+        user_session.device_info = (
+            device_info
             if not isinstance(device_info, dict)
-            else json.dumps(device_info),
-            device_id=device_id,
-            platform=platform,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            expires_at=datetime.now() + timedelta(days=settings.SESSION_EXPIRE_DAYS),
+            else json.dumps(device_info)
+        )
+        user_session.device_id = device_id
+        user_session.platform = platform
+        user_session.ip_address = ip_address
+        user_session.user_agent = user_agent
+        user_session.expires_at = datetime.now() + timedelta(
+            days=settings.SESSION_EXPIRE_DAYS
         )
 
         self.db.add(user_session)
@@ -127,7 +130,7 @@ class SessionService:
         """撤销用户的所有会话"""
         count = (
             self.db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active)
+            .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .update({"is_active": False})
         )
 

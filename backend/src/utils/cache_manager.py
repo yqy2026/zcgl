@@ -1,5 +1,5 @@
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, overload
 
 """
 缓存管理模块
@@ -18,6 +18,9 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
     redis = None  # type: ignore
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -266,6 +269,12 @@ class CacheDecorator:
         self.prefix = prefix
         self.expire = expire
         self.key_builder = key_builder or cache_key_builder
+
+    @overload
+    def __call__(self, func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
+
+    @overload
+    def __call__(self, func: Callable[P, R]) -> Callable[P, R]: ...
 
     def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         # 检测函数是否为异步函数

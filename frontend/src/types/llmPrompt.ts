@@ -185,6 +185,7 @@ export interface PromptStatistics {
  */
 export interface PromptQueryParams {
   page?: number;
+  pageSize?: number;
   page_size?: number;
   doc_type?: DocType;
   status?: PromptStatus;

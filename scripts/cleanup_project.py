@@ -74,6 +74,48 @@ FILE_PATTERNS = {
     'debug_artifacts': [
         r'\.playwright-mcp$',  # 目录
     ],
+
+    # 日志文件
+    'log_files': [
+        r'.*\.log$',
+        r'logs/.*$',
+        r'backend/logs/.*$',
+        r'frontend.*\.log$',
+    ],
+
+    # 临时报告和文档文件
+    'temp_reports': [
+        r'^TEST_.*\.md$',
+        r'^FINAL_.*\.md$',
+        r'^RALPH_.*\.md$',
+        r'^PUSH_TO_.*\.md$',
+        r'.*_ACHIEVEMENT\.md$',
+        r'.*_ANALYSIS\.md$',
+        r'.*_SUMMARY\.md$',
+        r'.*_REPORT\.md$',
+        r'.*_COMPLETE\.md$',
+    ],
+
+    # 旧会话文件（保留最近3天）
+    'old_sessions': [
+        r'^sessions/\d{6}-',  # sessions/YYMMDD-*
+    ],
+
+    # 临时上传文件
+    'temp_uploads': [
+        r'backend/temp_uploads$',
+        r'temp_uploads$',
+    ],
+
+    # 备份和临时文件
+    'backup_files': [
+        r'.*\.bak$',
+        r'.*\.backup$',
+        r'.*\.old$',
+        r'.*~$',
+        r'.*\.tmp$',
+        r'.*\.temp$',
+    ],
 }
 
 # 目录扫描规则
@@ -84,6 +126,7 @@ SCAN_DIRECTORIES = [
     'docs',
     'scripts',
     'tools',
+    'sessions',
 ]
 
 # 排除的目录（不扫描）
@@ -391,6 +434,11 @@ class SmartCleanupScript:
             'cache_dirs': '缓存目录',
             'build_artifacts': '构建产物',
             'debug_artifacts': '调试产物',
+            'log_files': '日志文件',
+            'temp_reports': '临时报告',
+            'old_sessions': '旧会话',
+            'temp_uploads': '临时上传',
+            'backup_files': '备份文件',
         }
 
         for category, files in found_files.items():
@@ -549,6 +597,36 @@ class SmartCleanupScript:
             "# 构建产物",
             "*-report.json",
             "*-report.xml",
+            "",
+            "# 日志文件",
+            "*.log",
+            "logs/",
+            "backend/logs/",
+            "frontend/*.log",
+            "",
+            "# 临时和备份文件",
+            "*.bak",
+            "*.backup",
+            "*.old",
+            "*~",
+            "*.tmp",
+            "*.temp",
+            "",
+            "# 临时上传目录",
+            "temp_uploads/",
+            "backend/temp_uploads/",
+            "",
+            "# 临时报告文件",
+            "TEST_*.md",
+            "FINAL_*.md",
+            "RALPH_*.md",
+            "*_ACHIEVEMENT.md",
+            "*_ANALYSIS.md",
+            "*_SUMMARY.md",
+            "*_REPORT.md",
+            "",
+            "# 旧会话文件（保留最近）",
+            "sessions/[0-9][0-9][0-9][0-9][0-9][0-9]-*",
         ]
         return rules
 

@@ -21,8 +21,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { COLORS } from '@/styles/colorMap';
 import { UploadOutlined, DeleteOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
-import GroupedSelectSingle from '../../Common/GroupedSelect';
-import { TenantTypeOptions } from '../../../utils/enumHelpers';
+import { DictionarySelect } from '../../Dictionary';
 import { useAssetFormContext } from './AssetFormContext';
 
 const { Option } = Select;
@@ -96,8 +95,8 @@ const AssetDetailedSection: React.FC = () => {
                   optionFilterProp="children"
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.children as unknown as string)
-                      ?.toLowerCase()
+                    String(option?.children ?? '')
+                      .toLowerCase()
                       .includes(input.toLowerCase())
                   }
                 >
@@ -124,11 +123,10 @@ const AssetDetailedSection: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item label="租户类型" name="tenant_type">
-                <GroupedSelectSingle
-                  groups={[{ label: '租户类型', options: TenantTypeOptions }]}
+                <DictionarySelect
+                  dictType="tenant_type"
                   placeholder="自动从合同获取"
                   disabled
-                  showGroupLabel={false}
                 />
               </Form.Item>
             </Col>

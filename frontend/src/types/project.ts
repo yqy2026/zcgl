@@ -54,6 +54,19 @@ export interface ProjectListResponse {
   pages: number;
 }
 
+export interface NestedProjectListResponse {
+  data: {
+    items: ProjectResponse[];
+    total?: number;
+    total_count?: number;
+    page?: number;
+    page_size?: number;
+    size?: number;
+  };
+}
+
+export type ProjectListApiResponse = ProjectListResponse | NestedProjectListResponse;
+
 export interface ProjectDeleteResponse {
   message: string;
   deleted_id: string;
@@ -70,6 +83,11 @@ export interface ProjectStatisticsResponse {
   total_count: number;
   active_count: number;
   inactive_count: number;
+  projects?: Array<{
+    id: string;
+    asset_count?: number;
+    total_area?: number;
+  }>;
 }
 
 // 项目搜索参数类型

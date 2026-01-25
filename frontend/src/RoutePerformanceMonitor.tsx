@@ -32,6 +32,22 @@ interface RoutePerformanceConfig {
   enableAutoReporting: boolean;
 }
 
+type PerformanceWithMemory = Performance & {
+  memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
+};
+
+type PerformanceWindow = Window & {
+  __ROUTE_PERFORMANCE__?: {
+    getMetrics: () => RoutePerformanceMetrics[];
+    getAggregatedMetrics: () => ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+    exportData: () => {
+      metrics: RoutePerformanceMetrics[];
+      aggregated: ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+      timestamp: number;
+    };
+  };
+};
+
 class RoutePerformanceMonitor {
   private config: RoutePerformanceConfig;
   private metrics: RoutePerformanceMetrics[];
@@ -82,11 +98,8 @@ class RoutePerformanceMonitor {
       this.observeResourceTiming();
     }
 
-    if (
-      this.config.enableMemoryTracking &&
-      (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } })
-        .memory
-    ) {
+    const perfWithMemory = performance as PerformanceWithMemory;
+    if (this.config.enableMemoryTracking && perfWithMemory.memory) {
       this.observeMemory();
     }
   }
@@ -151,7 +164,7 @@ class RoutePerformanceMonitor {
     try {
       const resourceObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
-        const resourceTimes = entries.map(entry => ({
+        const resourceTimes: RoutePerformanceMetrics['resourceLoadTimes'] = entries.map(entry => ({
           name: entry.name,
           duration: entry.duration,
           size: (entry as PerformanceResourceTiming).transferSize || 0,
@@ -168,9 +181,7 @@ class RoutePerformanceMonitor {
   private observeMemory() {
     try {
       const memoryObserver = new PerformanceObserver(() => {
-        const memory = (
-          performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }
-        ).memory;
+        const memory = (performance as PerformanceWithMemory).memory;
         if (memory) {
           this.updateCurrentMetric('memoryUsage', memory.usedJSHeapSize);
           this.updateCurrentMetric('jsHeapSize', memory.totalJSHeapSize);
@@ -183,11 +194,14 @@ class RoutePerformanceMonitor {
     }
   }
 
-  private updateCurrentMetric(key: keyof RoutePerformanceMetrics, value: unknown) {
+  private updateCurrentMetric<K extends keyof RoutePerformanceMetrics>(
+    key: K,
+    value: RoutePerformanceMetrics[K]
+  ) {
     if (this.metrics.length === 0) return;
 
     const currentMetric = this.metrics[this.metrics.length - 1];
-    (currentMetric as unknown as Record<string, unknown>)[key] = value;
+    currentMetric[key] = value;
   }
 
   startRouteMonitoring(route: string, navigationType: string) {
@@ -473,19 +487,8 @@ export const usePerformanceDebug = () => {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      (
-        window as unknown as {
-          __ROUTE_PERFORMANCE__?: {
-            getMetrics: () => RoutePerformanceMetrics[];
-            getAggregatedMetrics: () => ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
-            exportData: () => {
-              metrics: RoutePerformanceMetrics[];
-              aggregated: ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
-              timestamp: number;
-            };
-          };
-        }
-      ).__ROUTE_PERFORMANCE__ = {
+      const performanceWindow = window as PerformanceWindow;
+      performanceWindow.__ROUTE_PERFORMANCE__ = {
         getMetrics,
         getAggregatedMetrics,
         exportData: () => ({

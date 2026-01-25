@@ -32,6 +32,7 @@ import {
   type AssetMatch,
   type OwnershipMatch,
 } from '../../services/pdfImportService';
+import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 
 const { Title } = Typography;
@@ -107,7 +108,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           : undefined,
       total_deposit:
         validatedData.total_deposit != null ? parseFloat(String(validatedData.total_deposit)) : 0,
-      contract_status: validatedData.contract_status ?? '有效',
+      contract_status: validatedData.contract_status ?? ContractStatus.ACTIVE,
       payment_terms: validatedData.payment_terms ?? '',
       contract_notes: validatedData.contract_notes ?? '',
       rent_terms: validatedData.rent_terms ?? [],
@@ -248,11 +249,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             name="contract_status"
           >
             <Select placeholder="请选择合同状态">
-              <Select.Option value="有效">有效</Select.Option>
-              <Select.Option value="生效">生效</Select.Option>
-              <Select.Option value="到期">到期</Select.Option>
-              <Select.Option value="终止">终止</Select.Option>
-              <Select.Option value="暂停">暂停</Select.Option>
+              {Object.values(ContractStatus).map(status => (
+                <Select.Option key={status} value={status}>
+                  {ContractStatusLabels[status]}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
         </Col>

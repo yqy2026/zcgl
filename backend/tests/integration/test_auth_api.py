@@ -247,7 +247,7 @@ class TestRouterStructure:
 
     def test_no_duplicate_routes(self):
         """测试没有真正重复的路由（不同方法的路由可以有相同路径）"""
-        from src.api.v1.auth import router
+        from src.api.v1.auth.auth import router
 
         # 收集所有路由路径和方法
         route_signatures = []
@@ -267,7 +267,7 @@ class TestRouterStructure:
 
     def test_router_includes_all_sub_routers(self):
         """测试主路由器包含所有子路由器"""
-        from src.api.v1.auth import router
+        from src.api.v1.auth.auth import router
 
         # 主路由器应该有多个子路由
         # 24个路由 = 7个认证 + 14个用户 + 2个会话 + 1个审计 + 1个安全
@@ -303,7 +303,7 @@ class TestModuleImports:
 
     def test_auth_router_imports(self):
         """测试认证路由器可以正确导入"""
-        from src.api.v1.auth import router
+        from src.api.v1.auth.auth import router
 
         assert router is not None
         assert len(router.routes) > 0

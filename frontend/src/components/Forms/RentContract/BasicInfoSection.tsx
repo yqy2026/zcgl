@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, InputNumber } from 'antd';
+import { ContractStatus, ContractStatusLabels } from '../../../types/rentContract';
 
 const { Option } = Select;
 
@@ -48,9 +49,11 @@ const BasicInfoSection: React.FC = () => {
             rules={[{ required: true, message: '请选择合同状态' }]}
           >
             <Select>
-              <Option value="有效">有效</Option>
-              <Option value="到期">到期</Option>
-              <Option value="终止">终止</Option>
+              {Object.values(ContractStatus).map(status => (
+                <Option key={status} value={status}>
+                  {ContractStatusLabels[status]}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
         </Col>

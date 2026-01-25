@@ -52,7 +52,12 @@ class AssetService:
         return asset
 
     def create_asset(
-        self, asset_in: AssetCreate, current_user: User | None = None
+        self,
+        asset_in: AssetCreate,
+        current_user: User | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
     ) -> Asset:
         """
         创建新资产
@@ -88,9 +93,21 @@ class AssetService:
 
         calculated_asset_in = AssetCreate(**final_data)
 
+        operator = (
+            getattr(current_user, "username", None)
+            or getattr(current_user, "id", None)
+            or "system"
+        )
+
         try:
             asset = asset_crud.create_with_history(
-                db=self.db, obj_in=calculated_asset_in, commit=False
+                db=self.db,
+                obj_in=calculated_asset_in,
+                commit=False,
+                operator=str(operator) if operator is not None else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                session_id=session_id,
             )
             self.db.commit()
             return asset
@@ -99,7 +116,13 @@ class AssetService:
             raise
 
     def update_asset(
-        self, asset_id: str, asset_in: AssetUpdate, current_user: User | None = None
+        self,
+        asset_id: str,
+        asset_in: AssetUpdate,
+        current_user: User | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
     ) -> Asset:
         """
         更新资产
@@ -157,9 +180,22 @@ class AssetService:
         }
         calculated_asset_in = AssetUpdate(**final_update)
 
+        operator = (
+            getattr(current_user, "username", None)
+            or getattr(current_user, "id", None)
+            or "system"
+        )
+
         try:
             updated = asset_crud.update_with_history(
-                db=self.db, db_obj=asset, obj_in=calculated_asset_in, commit=False
+                db=self.db,
+                db_obj=asset,
+                obj_in=calculated_asset_in,
+                commit=False,
+                operator=str(operator) if operator is not None else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                session_id=session_id,
             )
             self.db.commit()
             return updated
@@ -187,4 +223,5 @@ class AssetService:
 
         常用于搜索筛选下拉框，如权属方、业态类别等
         """
-        return asset_crud.get_distinct_field_values(self.db, field_name)
+        values = asset_crud.get_distinct_field_values(self.db, field_name)
+        return [str(value) for value in values]

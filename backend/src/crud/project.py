@@ -11,6 +11,27 @@ from .base import CRUDBase
 class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     """项目管理CRUD操作类"""
 
+    def create(
+        self,
+        db: Session,
+        *,
+        obj_in: ProjectCreate | dict[str, Any],
+        commit: bool = True,
+        **kwargs: Any,
+    ) -> Project:
+        """创建项目（过滤关系字段）"""
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            obj_in_data = obj_in.model_dump()
+
+        # 移除关系字段（这些字段通过 SQLAlchemy relationship 管理）
+        obj_in_data.pop("assets", None)
+        obj_in_data.pop("ownership_relations", None)
+        obj_in_data.pop("ownership_ids", None)
+
+        return super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
+
     def get_by_code(self, db: Session, code: str) -> Project | None:
         """通过编码获取项目"""
         return db.query(Project).filter(Project.code == code).first()
@@ -18,6 +39,27 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     def get_by_name(self, db: Session, name: str) -> Project | None:
         """通过名称获取项目"""
         return db.query(Project).filter(Project.name == name).first()
+
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: Project,
+        obj_in: ProjectUpdate | dict[str, Any],
+        commit: bool = True,
+    ) -> Project:
+        """更新项目（过滤关系字段）"""
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        # 移除关系字段
+        update_data.pop("assets", None)
+        update_data.pop("ownership_relations", None)
+        update_data.pop("ownership_ids", None)
+
+        return super().update(db, db_obj=db_obj, obj_in=update_data, commit=commit)
 
     def get_multi(
         self,
@@ -109,9 +151,11 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         """获取统计信息"""
         total = db.query(func.count(Project.id)).scalar() or 0
         active = (
-            db.query(func.count(Project.id)).filter(Project.status == "doing").scalar()
+            db.query(func.count(Project.id))
+            .filter(Project.project_status == "doing")
+            .scalar()
             or 0
-        )  # assuming 'doing' is active
+        )
         # ... logic reduced for brevity, keeping simpler stats in CRUD is okay or move to service?
         # Keeping minimal here.
         return {"total_projects": total, "active_projects": active or 0}

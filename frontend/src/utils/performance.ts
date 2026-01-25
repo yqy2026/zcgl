@@ -183,34 +183,42 @@ class PerformanceMonitor {
 
     // First Input Delay
     this.observeMetric('first-input', entry => {
-      const entryRecord = entry as unknown as Record<string, unknown>;
-      const fid = (entryRecord.processingStart as number) - entry.startTime;
-      this.metrics.set('fid', fid);
+      if ('processingStart' in entry) {
+        const processingStart = (entry as PerformanceEventTiming).processingStart;
+        const fid = processingStart - entry.startTime;
+        this.metrics.set('fid', fid);
 
-      if (fid > this.config.thresholds.fid) {
-        perfLogger.warn(`FID is slow: ${fid}ms (threshold: ${this.config.thresholds.fid}ms)`);
+        if (fid > this.config.thresholds.fid) {
+          perfLogger.warn(`FID is slow: ${fid}ms (threshold: ${this.config.thresholds.fid}ms)`);
+        }
       }
     });
 
     // Cumulative Layout Shift
     this.observeMetric('layout-shift', entry => {
-      const entryRecord = entry as unknown as Record<string, unknown>;
-      if (entryRecord.hadRecentInput === false) {
+      if ('hadRecentInput' in entry && 'value' in entry) {
+        const layoutShiftEntry = entry as PerformanceEntry & {
+          hadRecentInput: boolean;
+          value: number;
+        };
+        if (layoutShiftEntry.hadRecentInput === false) {
         const currentCLS = this.metrics.get('cls') ?? 0;
-        const newCLS = currentCLS + (entryRecord.value as number);
+        const newCLS = currentCLS + layoutShiftEntry.value;
         this.metrics.set('cls', newCLS);
 
         if (newCLS > this.config.thresholds.cls) {
           perfLogger.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`);
         }
       }
+      }
     });
   }
 
   private observeResourceTiming() {
     this.observeMetric('resource', entry => {
-      const entryRecord = entry as unknown as Record<string, unknown>;
-      const duration = (entryRecord.responseEnd as number) - entry.startTime;
+      const responseEnd =
+        'responseEnd' in entry ? (entry as PerformanceResourceTiming).responseEnd : null;
+      const duration = responseEnd != null ? responseEnd - entry.startTime : 0;
 
       // 记录慢资源
       if (duration > 1000) {

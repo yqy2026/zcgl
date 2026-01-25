@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Column, DualAxes } from '@ant-design/plots';
 
 import { assetService } from '@/services/assetService';
-import type { AssetSearchParams } from '@/types/asset';
+import type { AssetSearchParams, AreaStatistics } from '@/types/asset';
 import type {
   ChartDataPoint,
   DualAxesDataPoint,
@@ -14,53 +14,6 @@ import type {
   TooltipCustomContentProps,
   ChartColorFunction,
 } from '@/types/charts';
-
-// Local interface matching the actual API response structure
-interface AreaStatisticsData {
-  total_statistics: {
-    total_land_area: number;
-    total_property_area: number;
-    total_rentable_area: number;
-    total_rented_area: number;
-    total_vacant_area: number;
-    total_non_commercial_area: number;
-  };
-  by_property_nature: Array<{
-    property_nature: string;
-    land_area: number;
-    property_area: number;
-    rentable_area: number;
-    rented_area: number;
-    vacant_area: number;
-    non_commercial_area: number;
-  }>;
-  by_ownership_entity: Array<{
-    ownership_entity: string;
-    total_area: number;
-    rentable_area: number;
-    rented_area: number;
-    occupancy_rate: number;
-  }>;
-  by_usage_status: Array<{
-    usage_status: string;
-    total_area: number;
-    asset_count: number;
-    average_area: number;
-  }>;
-  area_ranges: Array<{
-    range: string;
-    count: number;
-    total_area: number;
-    percentage: number;
-  }>;
-  top_assets_by_area: Array<{
-    property_name: string;
-    property_area: number;
-    rentable_area: number;
-    rented_area: number;
-    occupancy_rate: number;
-  }>;
-}
 
 const { Text } = Typography;
 
@@ -71,12 +24,9 @@ interface AreaStatisticsChartProps {
 
 const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, height = 400 }) => {
   // 获取面积统计数据
-  const { data, isLoading, error } = useQuery<AreaStatisticsData>({
+  const { data, isLoading, error } = useQuery<AreaStatistics>({
     queryKey: ['area-statistics', filters],
-    queryFn: async (): Promise<AreaStatisticsData> => {
-      const result = await assetService.getAreaStatistics(filters);
-      return result as unknown as AreaStatisticsData;
-    },
+    queryFn: async (): Promise<AreaStatistics> => assetService.getAreaStatistics(filters),
     refetchInterval: 5 * 60 * 1000, // 5分钟刷新一次
   });
 
@@ -225,8 +175,8 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
         (item): AreaRangeDataPoint => ({
           range: item.range,
           count: item.count,
-          total_area: item.total_area,
-          percentage: item.percentage,
+          total_area: item.total_area ?? 0,
+          percentage: item.percentage ?? 0,
         })
       ) ?? [],
     xField: 'range' as const,

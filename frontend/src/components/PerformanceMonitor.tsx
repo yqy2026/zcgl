@@ -88,9 +88,12 @@ const PerformanceMonitor: React.FC = () => {
     jsHeapSizeLimit: number;
   }
 
+type NavigatorWithConnection = Navigator & { connection?: NetworkConnection };
+type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
+
   const collectNetworkInfo = useCallback(() => {
     if ('connection' in navigator) {
-      const connection = (navigator as unknown as { connection?: NetworkConnection }).connection;
+      const connection = (navigator as NavigatorWithConnection).connection;
       if (connection !== undefined && connection !== null) {
         setMetrics(prev => ({
           ...prev,
@@ -105,11 +108,13 @@ const PerformanceMonitor: React.FC = () => {
 
   const collectMemoryInfo = useCallback(() => {
     if ('memory' in performance) {
-      const memory = (performance as unknown as { memory: MemoryInfo }).memory;
-      setMetrics(prev => ({
-        ...prev,
-        memoryUsage: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100,
-      }));
+      const memory = (performance as PerformanceWithMemory).memory;
+      if (memory != null && memory.jsHeapSizeLimit > 0) {
+        setMetrics(prev => ({
+          ...prev,
+          memoryUsage: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100,
+        }));
+      }
     }
   }, []);
 

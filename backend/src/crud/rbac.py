@@ -26,6 +26,25 @@ from ..schemas.rbac import (
 class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
     """角色CRUD操作"""
 
+    def create(
+        self,
+        db: Session,
+        *,
+        obj_in: RoleCreate | dict[str, Any],
+        commit: bool = True,
+        **kwargs: Any,
+    ) -> Role:
+        """创建角色（过滤permission_ids字段）"""
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            obj_in_data = obj_in.model_dump()
+
+        # 移除permission_ids字段（这不是Role模型的字段）
+        obj_in_data.pop("permission_ids", None)
+
+        return super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
+
     def get_by_name(self, db: Session, name: str) -> Role | None:
         """根据名称获取角色"""
         return db.query(Role).filter(Role.name == name).first()

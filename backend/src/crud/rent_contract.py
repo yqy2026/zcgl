@@ -56,10 +56,18 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         return result
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+        **kwargs: Any,
     ) -> list[RentContract]:
         """获取多个合同 - 解密敏感字段"""
-        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        results = super().get_multi(
+            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
+        )
         for item in results:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
         return results
@@ -70,6 +78,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         *,
         db_obj: RentContract,
         obj_in: RentContractUpdate | dict[str, Any],
+        commit: bool = True,
     ) -> RentContract:
         """更新合同 - 加密新的敏感字段值"""
         if isinstance(obj_in, dict):
@@ -79,7 +88,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
         # 加密敏感字段
         encrypted_data = self._encrypt_update_data(update_data)
-        return super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+        return super().update(
+            db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
+        )
 
     def _encrypt_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
         """加密更新数据中的敏感字段"""

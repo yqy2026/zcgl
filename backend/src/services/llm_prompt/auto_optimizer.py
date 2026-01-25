@@ -5,7 +5,7 @@
 
 import logging
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -87,7 +87,7 @@ class AutoOptimizer:
             (是否需要优化, 原因)
         """
         # 1. 检查最近7天的反馈数量
-        week_ago = datetime.utcnow() - timedelta(days=7)
+        week_ago = datetime.now(UTC) - timedelta(days=7)
         feedback_count = (
             db.query(ExtractionFeedback)
             .filter(
@@ -168,23 +168,24 @@ class AutoOptimizer:
         # 5. 创建新版本
         new_version = self.prompt_manager._increment_version(template.version)
 
-        version_record = PromptVersion(
-            id=str(uuid4()),
-            template_id=template_id,
-            version=new_version,
-            system_prompt=updated_system_prompt,
-            user_prompt_template=template.user_prompt_template,
-            few_shot_examples=template.few_shot_examples,
-            change_description=f"自动优化: 新增{len(new_rules)}条规则 (基于{len(feedbacks)}个反馈)",
-            change_type="optimized",
-            auto_generated=True,
+        version_record = PromptVersion()
+        version_record.id = str(uuid4())
+        version_record.template_id = template_id
+        version_record.version = new_version
+        version_record.system_prompt = updated_system_prompt
+        version_record.user_prompt_template = template.user_prompt_template
+        version_record.few_shot_examples = template.few_shot_examples
+        version_record.change_description = (
+            f"自动优化: 新增{len(new_rules)}条规则 (基于{len(feedbacks)}个反馈)"
         )
+        version_record.change_type = "optimized"
+        version_record.auto_generated = True
 
         # 6. 更新模板
         template.system_prompt = updated_system_prompt
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.utcnow()
+        template.updated_at = datetime.now(UTC)
 
         db.add(version_record)
         db.commit()
@@ -214,7 +215,7 @@ class AutoOptimizer:
         Returns:
             错误模式字典
         """
-        patterns = {
+        patterns: dict[str, Any] = {
             "by_field": Counter(),
             "by_error_type": Counter(),
             "examples": defaultdict(list),

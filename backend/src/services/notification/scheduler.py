@@ -14,6 +14,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ...constants.business_constants import DataStatusValues
+from ...core.enums import ContractStatus
 from ...database import get_db
 from ...models.auth import User
 
@@ -51,18 +52,18 @@ class NotificationSchedulerService:
             success = await wecom_service.send_notification(message=message)
 
             # 更新通知状态
-            notification.is_sent_wecom = success  # type: ignore[assignment]
+            notification.is_sent_wecom = success
             if success:
-                notification.wecom_sent_at = datetime.now()  # type: ignore[assignment]
+                notification.wecom_sent_at = datetime.now()
             else:
-                notification.wecom_send_error = "企业微信返回失败"  # type: ignore[assignment]
+                notification.wecom_send_error = "企业微信返回失败"
 
             self.db.commit()
             return success
 
         except Exception as e:
             # 记录错误但不影响主流程
-            notification.wecom_send_error = f"企业微信发送异常: {str(e)}"  # type: ignore[assignment]
+            notification.wecom_send_error = f"企业微信发送异常: {str(e)}"
             self.db.commit()
             return False
 
@@ -116,7 +117,7 @@ class NotificationSchedulerService:
                     loop.close()
             except Exception as e:
                 # 推送失败不影响通知创建
-                notification.wecom_send_error = f"企业微信推送失败: {str(e)}"  # type: ignore[assignment]
+                notification.wecom_send_error = f"企业微信推送失败: {str(e)}"
 
         return notification
 
@@ -138,7 +139,7 @@ class NotificationSchedulerService:
             self.db.query(RentContract)
             .filter(
                 and_(
-                    RentContract.contract_status == "有效",
+                    RentContract.contract_status == ContractStatus.ACTIVE,
                     RentContract.end_date <= warning_date,
                     RentContract.end_date >= today,
                 )
@@ -259,9 +260,11 @@ class NotificationSchedulerService:
                 priority = NotificationPriority.NORMAL
                 title = f"租金逾期（{days_overdue}天）"
 
+            contract_number = getattr(ledger.contract, "contract_number", "")
+            tenant_name = getattr(ledger.contract, "tenant_name", "")
             content = (
-                f"合同 {ledger.contract.contract_number} "
-                f"（{ledger.contract.tenant_name}）的{ledger.year_month}月租金 "
+                f"合同 {contract_number} "
+                f"（{tenant_name}）的{ledger.year_month}月租金 "
                 f"应收{ledger.due_amount}元，逾期{days_overdue}天未支付"
             )
 
@@ -349,9 +352,11 @@ class NotificationSchedulerService:
                 priority = NotificationPriority.NORMAL
                 title = f"租金即将到期（{days_remaining}天）"
 
+            contract_number = getattr(ledger.contract, "contract_number", "")
+            tenant_name = getattr(ledger.contract, "tenant_name", "")
             content = (
-                f"合同 {ledger.contract.contract_number} "
-                f"（{ledger.contract.tenant_name}）的{ledger.year_month}月租金 "
+                f"合同 {contract_number} "
+                f"（{tenant_name}）的{ledger.year_month}月租金 "
                 f"应收{ledger.due_amount}元，将于{days_remaining}天后到期"
             )
 

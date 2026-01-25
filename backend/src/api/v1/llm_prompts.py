@@ -25,32 +25,10 @@ from ...services.llm_prompt.prompt_manager import PromptManager
 
 router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
 
-# ============================================================================
-# 工具函数
-# ============================================================================
-
-
-def get_db_or_error(func):
-    """包装器：获取数据库或抛出错误"""
-
-    def wrapper(*args, db: Session = Depends(get_db), **kwargs):
-        if not db:
-            raise HTTPException(status_code=500, detail="数据库连接失败")
-        return func(*args, db=db, **kwargs)
-
-    return wrapper
-
-
-# ============================================================================
-# CRUD操作
-# ============================================================================
-
-
 @router.post("/", response_model=PromptTemplateResponse)
-@get_db_or_error
 def create_prompt(
     *,
-    db: Session,
+    db: Session = Depends(get_db),
     prompt_in: PromptTemplateCreate,
     current_user: User = Depends(get_current_active_user),
 ):
@@ -73,9 +51,8 @@ def create_prompt(
 
 
 @router.get("/", response_model=PromptTemplateListResponse)
-@get_db_or_error
 def get_prompts(
-    db: Session,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页记录数"),
@@ -117,10 +94,9 @@ def get_prompts(
 
 
 @router.get("/{prompt_id}", response_model=PromptTemplateResponse)
-@get_db_or_error
 def get_prompt(
     prompt_id: str,
-    db: Session,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """获取Prompt模板详情"""
@@ -131,11 +107,10 @@ def get_prompt(
 
 
 @router.put("/{prompt_id}", response_model=PromptTemplateResponse)
-@get_db_or_error
 def update_prompt(
     prompt_id: str,
     *,
-    db: Session,
+    db: Session = Depends(get_db),
     prompt_in: PromptTemplateUpdate,
     current_user: User = Depends(get_current_active_user),
 ):
@@ -160,11 +135,10 @@ def update_prompt(
 
 
 @router.post("/{prompt_id}/activate", response_model=PromptTemplateResponse)
-@get_db_or_error
 def activate_prompt(
     prompt_id: str,
     *,
-    db: Session,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
@@ -182,11 +156,10 @@ def activate_prompt(
 
 
 @router.post("/{prompt_id}/rollback", response_model=PromptTemplateResponse)
-@get_db_or_error
 def rollback_prompt(
     prompt_id: str,
     *,
-    db: Session,
+    db: Session = Depends(get_db),
     request: PromptRollbackRequest,
     current_user: User = Depends(get_current_active_user),
 ):
@@ -208,10 +181,9 @@ def rollback_prompt(
 
 
 @router.get("/{prompt_id}/versions", response_model=list[PromptVersionResponse])
-@get_db_or_error
 def get_prompt_versions(
     prompt_id: str,
-    db: Session,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
@@ -235,9 +207,8 @@ def get_prompt_versions(
 
 
 @router.get("/statistics/overview")
-@get_db_or_error
 def get_statistics(
-    db: Session,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
@@ -332,20 +303,19 @@ async def collect_feedback(
     current_version_id = template.current_version_id
 
     # 创建反馈记录（包含用户ID用于审计）
-    feedback = ExtractionFeedback(
-        id=str(uuid4()),
-        template_id=template_id,
-        version_id=current_version_id,
-        doc_type=doc_type,
-        file_path=file_path,
-        session_id=session_id,
-        field_name=field_name,
-        original_value=original_value,
-        corrected_value=corrected_value,
-        confidence_before=confidence_before,
-        user_action=user_action,
-        user_id=current_user.id,  # 🔒 记录提交反馈的用户ID
-    )
+    feedback = ExtractionFeedback()
+    feedback.id = str(uuid4())
+    feedback.template_id = template_id
+    feedback.version_id = current_version_id
+    feedback.doc_type = doc_type
+    feedback.file_path = file_path
+    feedback.session_id = session_id
+    feedback.field_name = field_name
+    feedback.original_value = original_value
+    feedback.corrected_value = corrected_value
+    feedback.confidence_before = confidence_before
+    feedback.user_action = user_action
+    feedback.user_id = current_user.id
 
     db.add(feedback)
     db.commit()

@@ -353,7 +353,7 @@ export class ResponseExtractor {
       // 如果数据已经是期望的类型，直接返回
       const expectedType = options.expectedType as new (...args: unknown[]) => T;
       if (data instanceof expectedType) {
-        return data as unknown as T;
+        return data as T;
       }
 
       // 尝试构造新实例（适用于简单对象）

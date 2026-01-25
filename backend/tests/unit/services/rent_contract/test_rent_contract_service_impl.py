@@ -10,14 +10,19 @@ import pytest
 from sqlalchemy.orm import Session
 
 from src.models.rent_contract import (
-    ContractType,
+    ContractType as ContractTypeModel,
+)
+from src.core.enums import ContractStatus
+from src.models.rent_contract import (
     RentContract,
     RentLedger,
     RentTerm,
     ServiceFeeLedger,
 )
 from src.schemas.rent_contract import (
-    ContractTypeEnum,
+    ContractType as ContractTypeSchema,
+)
+from src.schemas.rent_contract import (
     GenerateLedgerRequest,
     RentContractCreate,
     RentContractUpdate,
@@ -50,8 +55,8 @@ def mock_contract():
     contract = MagicMock(spec=RentContract)
     contract.id = "contract_123"
     contract.contract_number = "CT2025001"
-    contract.contract_status = "有效"
-    contract.contract_type = ContractType.LEASE_DOWNSTREAM
+    contract.contract_status = ContractStatus.ACTIVE
+    contract.contract_type = ContractTypeModel.LEASE_DOWNSTREAM
     contract.start_date = date(2025, 1, 1)
     contract.end_date = date(2025, 12, 31)
     contract.total_deposit = Decimal("5000")
@@ -98,7 +103,7 @@ def valid_contract_create_data():
     """有效的合同创建数据"""
     return RentContractCreate(
         contract_number="CT2025001",
-        contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+        contract_type=ContractTypeSchema.LEASE_DOWNSTREAM,
         ownership_id="ownership_123",
         tenant_name="测试租户",
         sign_date=date(2025, 1, 1),
@@ -123,8 +128,8 @@ def mock_entrusted_contract():
     contract = MagicMock(spec=RentContract)
     contract.id = "contract_456"
     contract.contract_number = "CT2025002"
-    contract.contract_status = "有效"
-    contract.contract_type = ContractType.ENTRUSTED
+    contract.contract_status = ContractStatus.ACTIVE
+    contract.contract_type = ContractTypeModel.ENTRUSTED
     contract.start_date = date(2025, 1, 1)
     contract.end_date = date(2025, 12, 31)
     contract.total_deposit = Decimal("5000")
@@ -169,7 +174,7 @@ class TestCreateContract:
         """测试自动生成合同编号"""
         obj_in = RentContractCreate(
             contract_number=None,  # Should be auto-generated
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractTypeSchema.LEASE_DOWNSTREAM,
             ownership_id="ownership_123",
             tenant_name="测试租户",
             sign_date=date(2025, 1, 1),
@@ -219,7 +224,7 @@ class TestCreateContract:
 
         obj_in = RentContractCreate(
             contract_number="CT2025001",
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractTypeSchema.LEASE_DOWNSTREAM,
             ownership_id="ownership_123",
             tenant_name="测试租户",
             sign_date=date(2025, 1, 1),
@@ -244,7 +249,7 @@ class TestCreateContract:
         """测试资产冲突检测"""
         obj_in = RentContractCreate(
             contract_number="CT2025001",
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractTypeSchema.LEASE_DOWNSTREAM,
             ownership_id="ownership_123",
             tenant_name="测试租户",
             sign_date=date(2025, 1, 1),
@@ -286,7 +291,7 @@ class TestCreateContract:
         """测试自动计算月总金额"""
         obj_in = RentContractCreate(
             contract_number="CT2025001",
-            contract_type=ContractTypeEnum.LEASE_DOWNSTREAM,
+            contract_type=ContractTypeSchema.LEASE_DOWNSTREAM,
             ownership_id="ownership_123",
             tenant_name="测试租户",
             sign_date=date(2025, 1, 1),
@@ -438,7 +443,7 @@ class TestRenewContract:
         self, contract_service, mock_db, mock_contract, valid_contract_create_data
     ):
         """测试原合同状态无效"""
-        mock_contract.contract_status = "已终止"
+        mock_contract.contract_status = ContractStatus.TERMINATED
 
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -547,7 +552,7 @@ class TestTerminateContract:
         self, contract_service, mock_db, mock_contract
     ):
         """测试无效状态"""
-        mock_contract.contract_status = "已终止"
+        mock_contract.contract_status = ContractStatus.TERMINATED
 
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -966,7 +971,7 @@ class TestCalculateServiceFee:
         self, contract_service, mock_db, mock_ledger, mock_contract
     ):
         """测试非委托运营合同"""
-        mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
+        mock_contract.contract_type = ContractTypeModel.LEASE_DOWNSTREAM
 
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_contract
@@ -1034,12 +1039,12 @@ class TestCalculateAverageUnitPrice:
         self, contract_service, mock_db, mock_contract
     ):
         """测试基本计算"""
-        mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
+        mock_contract.contract_type = ContractTypeModel.LEASE_DOWNSTREAM
         mock_contract.monthly_rent_base = Decimal("5000")
 
         # Mock asset with area
         mock_asset = MagicMock()
-        mock_asset.area = Decimal("100")
+        mock_asset.rentable_area = Decimal("100")
         mock_contract.assets = [mock_asset]
 
         mock_query = MagicMock()
@@ -1068,7 +1073,7 @@ class TestCalculateAverageUnitPrice:
         self, contract_service, mock_db, mock_contract
     ):
         """测试零面积"""
-        mock_contract.contract_type = ContractType.LEASE_DOWNSTREAM
+        mock_contract.contract_type = ContractTypeModel.LEASE_DOWNSTREAM
         mock_contract.monthly_rent_base = Decimal("5000")
         mock_contract.assets = []  # No assets
 

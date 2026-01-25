@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
+    PropertyCertificateCreate,
     PropertyOwnerCreate,
 )
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
@@ -69,7 +70,7 @@ class PropertyCertificateService:
             return {
                 "success": result.get("success", False),
                 "data": result.get("extracted_fields", {}),
-                "confidence": result.get("confidence", 0.0),
+                "confidence": result.get("confidence") or 0.0,
                 "raw_response": result.get("raw_response"),
                 "extraction_method": result.get("extraction_method", "unknown"),
                 "filename": filename,
@@ -171,9 +172,10 @@ class PropertyCertificateService:
                 owner_ids.append(owner.id)
 
             # 4. 创建产权证记录
+            certificate_create = PropertyCertificateCreate(**certificate_create_data)
             certificate = property_certificate_crud.create_with_owners(
                 self.db,
-                obj_in=certificate_create_data,
+                obj_in=certificate_create,
                 owner_ids=owner_ids if owner_ids else None,
             )
 

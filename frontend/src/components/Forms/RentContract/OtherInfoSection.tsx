@@ -3,6 +3,12 @@ import { Form, Input, InputNumber, Row, Col, Card } from 'antd';
 
 const { TextArea } = Input;
 
+const parseCurrency = (value: string | undefined) => {
+  const normalized = value?.replace(/¥\s?|(,*)/g, '') ?? '';
+  const numeric = Number(normalized);
+  return normalized === '' || Number.isNaN(numeric) ? NaN : numeric;
+};
+
 /**
  * RentContractForm - Other Info Section
  * Fields: monthly rent base, payment terms, notes
@@ -23,9 +29,7 @@ const OtherInfoSection: React.FC = () => {
               min={0}
               precision={2}
               formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value: string | undefined) =>
-                value?.replace(/¥\s?|(,*)/g, '') as unknown as number
-              }
+              parser={parseCurrency}
             />
           </Form.Item>
         </Col>

@@ -38,37 +38,37 @@ class TestCollectionSchemas:
     def test_collection_record_create_schema(self):
         """TC-COL-003: 创建催缴记录 Schema 验证"""
         from src.schemas.collection import (
-            CollectionMethodEnum,
+            CollectionMethod,
             CollectionRecordCreate,
         )
 
         schema = CollectionRecordCreate(
             ledger_id="ledger_123",
             contract_id="contract_123",
-            collection_method=CollectionMethodEnum.PHONE,
+            collection_method=CollectionMethod.PHONE,
             collection_date=date.today(),
             contacted_person="John Doe",
             contact_phone="13800138000",
         )
 
         assert schema.ledger_id == "ledger_123"
-        assert schema.collection_method == CollectionMethodEnum.PHONE
+        assert schema.collection_method == CollectionMethod.PHONE
         assert schema.contacted_person == "John Doe"
 
     def test_collection_record_update_schema(self):
         """TC-COL-004: 更新催缴记录 Schema 验证"""
         from src.schemas.collection import (
             CollectionRecordUpdate,
-            CollectionStatusEnum,
+            CollectionStatus,
         )
 
         schema = CollectionRecordUpdate(
-            collection_status=CollectionStatusEnum.SUCCESS,
+            collection_status=CollectionStatus.SUCCESS,
             promised_amount=Decimal("10000.00"),
             promised_date=date.today() + timedelta(days=7),
         )
 
-        assert schema.collection_status == CollectionStatusEnum.SUCCESS
+        assert schema.collection_status == CollectionStatus.SUCCESS
         assert schema.promised_amount == Decimal("10000.00")
 
     def test_collection_task_summary_schema(self):

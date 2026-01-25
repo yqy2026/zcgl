@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any
+from typing import Any, TypedDict
 
 from sqlalchemy.orm import Session
 
@@ -20,8 +20,21 @@ def _set_attr(obj: Any, attr: str, value: Any) -> None:
     object.__setattr__(obj, attr, value)
 
 
+class EnumValueConfig(TypedDict):
+    value: str
+    label: str
+    sort_order: int
+
+
+class EnumTypeConfig(TypedDict):
+    name: str
+    category: str
+    description: str
+    values: list[EnumValueConfig]
+
+
 # 标准枚举定义 - 与 schemas/asset.py 中的 Enum 类保持一致
-STANDARD_ENUMS = {
+STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
     "ownership_status": {
         "name": "确权状态",
         "category": "资产管理",
@@ -188,7 +201,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
 
             # 处理枚举值
             for value_config in enum_config["values"]:
-                value_dict: dict[str, Any] = value_config
+                value_dict: EnumValueConfig = value_config
                 existing_value = (
                     db.query(EnumFieldValue)
                     .filter(
@@ -241,7 +254,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
     这些值可能来自旧系统导入的数据，需要添加到枚举管理中以避免验证错误
     """
     # 遗留值映射：旧值 -> 添加到哪个枚举类型
-    legacy_values: dict[str, list[dict[str, Any]]] = {
+    legacy_values: dict[str, list[EnumValueConfig]] = {
         "ownership_status": [
             {"value": "正常", "label": "正常 (遗留)", "sort_order": 99},
         ],
@@ -269,7 +282,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
                 continue
 
             for value_config in values:
-                value_dict: dict[str, Any] = value_config
+                value_dict: EnumValueConfig = value_config
                 existing = (
                     db.query(EnumFieldValue)
                     .filter(

@@ -115,14 +115,13 @@ class SecurityEventLogger:
                 should_close = True
 
             try:
-                event = SecurityEvent(
-                    event_type=event_type.value,
-                    severity=severity.value,
-                    user_id=user_id,
-                    ip_address=ip,
-                    event_metadata=metadata,
-                    created_at=datetime.now(),
-                )
+                event = SecurityEvent()
+                event.event_type = event_type.value
+                event.severity = severity.value
+                event.user_id = user_id
+                event.ip_address = ip
+                event.event_metadata = metadata
+                event.created_at = datetime.now()
 
                 db.add(event)
                 db.commit()

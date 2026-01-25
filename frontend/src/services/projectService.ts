@@ -21,10 +21,34 @@ import type {
   ProjectDeleteResponse,
   ProjectSearchParams,
   ProjectDropdownOption,
+  ProjectListApiResponse,
 } from '@/types/project';
 
 export class ProjectService {
   private baseUrl = API_ENDPOINTS.PROJECT.LIST;
+
+  private normalizeProjectListResponse(
+    response: ProjectListApiResponse,
+    params?: ProjectSearchParams
+  ): ProjectListResponse {
+    if ('items' in response) {
+      return response;
+    }
+
+    const data = response.data;
+    const pageSize = data.page_size ?? data.size ?? params?.page_size ?? 10;
+    const total = data.total ?? data.total_count ?? 0;
+    const page = data.page ?? params?.page ?? 1;
+    const pages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+
+    return {
+      items: data.items ?? [],
+      total,
+      page,
+      page_size: pageSize,
+      pages,
+    };
+  }
 
   // ==================== 基础CRUD操作 ====================
 
@@ -74,7 +98,7 @@ export class ProjectService {
   /**
    * 获取项目列表
    */
-  async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
+  async getProjects(params?: ProjectSearchParams): Promise<ProjectListApiResponse> {
     try {
       // 确保提供必需的分页参数
       const requestParams = {
@@ -85,7 +109,7 @@ export class ProjectService {
         ownership_id: params?.ownership_id,
       };
 
-      const result = await apiClient.get<ProjectListResponse>(this.baseUrl, {
+      const result = await apiClient.get<ProjectListApiResponse>(this.baseUrl, {
         params: requestParams,
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -292,7 +316,8 @@ export class ProjectService {
   async validateProjectCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: code });
-      return !result.items.some(item => item.code === code && item.id !== excludeId);
+      const normalized = this.normalizeProjectListResponse(result, { keyword: code });
+      return !normalized.items.some(item => item.code === code && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目编码失败:', undefined, { error: enhancedError.message });
@@ -306,7 +331,8 @@ export class ProjectService {
   async validateProjectName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: name });
-      return !result.items.some(item => item.name === name && item.id !== excludeId);
+      const normalized = this.normalizeProjectListResponse(result, { keyword: name });
+      return !normalized.items.some(item => item.name === name && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目名称失败:', undefined, { error: enhancedError.message });
@@ -322,7 +348,8 @@ export class ProjectService {
   async getProjectCount(params?: ProjectSearchParams): Promise<number> {
     try {
       const result = await this.getProjects({ ...params, page_size: 1 });
-      return result.total;
+      const normalized = this.normalizeProjectListResponse(result, params);
+      return normalized.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('获取项目数量失败:', undefined, { error: enhancedError.message });
@@ -392,7 +419,8 @@ export class ProjectService {
   async getProjectsByOwnership(ownershipId: string): Promise<Project[]> {
     try {
       const result = await this.getProjects({ ownership_id: ownershipId });
-      return result.items;
+      const normalized = this.normalizeProjectListResponse(result, { ownership_id: ownershipId });
+      return normalized.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('根据权属方获取项目失败:', undefined, { error: enhancedError.message });
@@ -406,7 +434,8 @@ export class ProjectService {
   async getActiveProjects(): Promise<Project[]> {
     try {
       const result = await this.getProjects({ is_active: true });
-      return result.items;
+      const normalized = this.normalizeProjectListResponse(result, { is_active: true });
+      return normalized.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('获取活跃项目失败:', undefined, { error: enhancedError.message });
@@ -420,7 +449,8 @@ export class ProjectService {
   async getInactiveProjects(): Promise<Project[]> {
     try {
       const result = await this.getProjects({ is_active: false });
-      return result.items;
+      const normalized = this.normalizeProjectListResponse(result, { is_active: false });
+      return normalized.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('获取非活跃项目失败:', undefined, { error: enhancedError.message });
@@ -508,11 +538,7 @@ export class ProjectService {
       ]);
 
       // 从统计中查找当前项目的数据
-      // 从统计中查找当前项目的数据 - 这里使用了类型保护或明确的类型转换
-      const stats = statistics as unknown as {
-        projects?: Array<{ id: string; asset_count: number; total_area: number }>;
-      };
-      const projectStats = stats.projects?.find(p => p.id === id) || {
+      const projectStats = statistics.projects?.find(p => p.id === id) || {
         asset_count: 0,
         total_area: 0,
       };

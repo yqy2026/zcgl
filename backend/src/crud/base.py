@@ -170,7 +170,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             )
             return db_obj
         except Exception as e:  # pragma: no cover
-            db.rollback()  # pragma: no cover
+            if commit:
+                db.rollback()
             raise self._handle_database_error(e, "创建记录")  # pragma: no cover
 
     def update(
@@ -215,7 +216,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             )
             return db_obj
         except Exception as e:  # pragma: no cover
-            db.rollback()  # pragma: no cover
+            if commit:
+                db.rollback()
             raise self._handle_database_error(e, "更新记录")  # pragma: no cover
 
     def remove(self, db: Session, *, id: Any, commit: bool = True) -> ModelType:
@@ -244,7 +246,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         except ValueError:
             raise
         except Exception as e:  # pragma: no cover
-            db.rollback()  # pragma: no cover
+            if commit:
+                db.rollback()
             raise self._handle_database_error(e, "删除记录")  # pragma: no cover
 
     def count(
@@ -276,6 +279,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         limit: int = 100,
         order_by: str | None = None,
         order_desc: bool = False,
+        base_query: Select[Any] | None = None,
     ) -> list[ModelType]:
         """高级查询方法（支持筛选、搜索、排序）"""
         try:
@@ -290,6 +294,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 sort_desc=order_desc,
                 skip=skip,
                 limit=limit,
+                base_query=base_query,
             )
             result = db.execute(query).scalars().all()
             return list(result)

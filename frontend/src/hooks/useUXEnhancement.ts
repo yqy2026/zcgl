@@ -343,9 +343,15 @@ export const useNetworkStatus = (enabled = true) => {
       recordAction('networkOffline');
     };
 
+    const getConnection = () =>
+      'connection' in navigator
+        ? (navigator as Navigator & {
+            connection?: { effectiveType?: string };
+          }).connection
+        : undefined;
+
     const handleConnectionChange = () => {
-      const connection = (navigator as unknown as { connection?: { effectiveType?: string } })
-        .connection;
+      const connection = getConnection();
       if (connection != null) {
         setConnectionType(connection.effectiveType ?? 'unknown');
         recordAction('connectionChange', { type: connection.effectiveType });
@@ -356,15 +362,16 @@ export const useNetworkStatus = (enabled = true) => {
     window.addEventListener('offline', handleOffline);
 
     // 监听连接类型变化
-    const connection = (
-      navigator as unknown as {
-        connection?: {
-          effectiveType?: string;
-          addEventListener?: (type: string, handler: () => void) => void;
-          removeEventListener?: (type: string, handler: () => void) => void;
-        };
-      }
-    ).connection;
+    const connection =
+      'connection' in navigator
+        ? (navigator as Navigator & {
+            connection?: {
+              effectiveType?: string;
+              addEventListener?: (type: string, handler: () => void) => void;
+              removeEventListener?: (type: string, handler: () => void) => void;
+            };
+          }).connection
+        : undefined;
     if (connection != null) {
       connection.addEventListener?.('change', handleConnectionChange);
       setConnectionType(connection.effectiveType ?? 'unknown');

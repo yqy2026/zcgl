@@ -15,7 +15,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         ownership_obj = super().get(db, id=id)
         if ownership_obj:
             # 临时禁用项目关联数据查询
-            ownership_obj.project_relations_data = []
+            setattr(ownership_obj, "project_relations_data", [])
 
         return ownership_obj
 
@@ -104,7 +104,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             "items": items,
             "total": total,
             "page": search_params.page,
-            "size": limit,
+            "page_size": limit,
             "pages": pages,
         }
 
