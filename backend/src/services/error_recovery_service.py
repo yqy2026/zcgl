@@ -5,10 +5,13 @@
 This is a minimal stub to make error_recovery.py importable
 """
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class ErrorCategory(str, Enum):
@@ -170,11 +173,13 @@ class ErrorRecoveryEngine:
         )
 
 
-def with_error_recovery(error_category: ErrorCategory) -> Any:
+def with_error_recovery(
+    error_category: ErrorCategory,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """错误恢复装饰器"""
 
-    def decorator(func: Any) -> Any:
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             return await func(*args, **kwargs)
 
         return wrapper

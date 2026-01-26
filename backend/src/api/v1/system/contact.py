@@ -7,12 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import internal_error, not_found
-from ...crud.contact import contact_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.contact import (
+from ....core.exception_handler import internal_error, not_found
+from ....crud.contact import contact_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.contact import (
     ContactCreate,
     ContactListResponse,
     ContactResponse,

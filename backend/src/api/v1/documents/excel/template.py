@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....services.excel import ExcelTemplateService
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.services.excel import ExcelTemplateService
 
 router = APIRouter()
 

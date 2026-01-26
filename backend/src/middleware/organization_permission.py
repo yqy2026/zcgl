@@ -11,8 +11,8 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from ..core.exception_handler import bad_request, forbidden
-from ..core.role_normalizer import RoleNormalizer
-from ..core.security_event_logger import SecurityEventLogger
+from ..security.roles import RoleNormalizer
+from ..security.audit_logger import SecurityEventLogger
 from ..database import get_db
 from ..models.auth import User
 from ..services.organization_permission_service import OrganizationPermissionService

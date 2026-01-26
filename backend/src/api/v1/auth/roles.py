@@ -10,24 +10,24 @@ from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
+from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
     not_found,
 )
-from ...crud.rbac import permission_crud, role_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user, require_admin
-from ...models.auth import User
-from ...models.rbac import Role
-from ...schemas.rbac import (
+from ....crud.rbac import permission_crud, role_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user, require_admin
+from ....models.auth import User
+from ....models.rbac import Role
+from ....schemas.rbac import (
     PermissionResponse,
     RoleCreate,
     RoleResponse,
     RoleUpdate,
 )
-from ...services.rbac import rbac_service
+from ....services.rbac import rbac_service
 
 router = APIRouter(tags=["角色管理"])
 
@@ -345,7 +345,7 @@ async def get_role_users(
         if not role:
             raise not_found("角色不存在", resource_type="role", resource_id=role_id)
 
-        from ...crud.auth import UserCRUD
+        from ....crud.auth import UserCRUD
         # Assuming UserCRUD is compatible or we should use UserRoleAssignmentCRUD?
         # The original code invoked UserCRUD.get_users_by_role (which might use join).
         # Let's verify if that exists or if we should use assignments.

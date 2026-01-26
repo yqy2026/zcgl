@@ -7,12 +7,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import internal_error, not_found
-from ....crud.auth import UserSessionCRUD
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....schemas.auth import UserResponse, UserSessionResponse
-from ....services import AuthService
+from .....core.exception_handler import internal_error, not_found
+from .....crud.auth import UserSessionCRUD
+from .....database import get_db
+from .....middleware.auth import get_current_active_user
+from .....schemas.auth import UserResponse, UserSessionResponse
+from .....services import AuthService
 
 router = APIRouter(prefix="/sessions", tags=["会话管理"])
 

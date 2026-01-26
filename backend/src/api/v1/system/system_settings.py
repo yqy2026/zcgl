@@ -27,12 +27,12 @@ from sqlalchemy.orm import Session
 
 from src.constants.message_constants import ErrorIDs
 
-from ...core.role_normalizer import RoleNormalizer
-from ...crud.auth import AuditLogCRUD
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...middleware.security_middleware import get_client_ip
-from ...schemas.auth import UserResponse
+from ....security.roles import RoleNormalizer
+from ....crud.auth import AuditLogCRUD
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....middleware.security_middleware import get_client_ip
+from ....schemas.auth import UserResponse
 
 # 创建系统设置路由器
 router = APIRouter()
@@ -328,7 +328,7 @@ async def test_security_alert(
     if not RoleNormalizer.is_admin(current_user.role):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    from ...core.security_event_logger import SecurityEventLogger
+    from ....core.security_event_logger import SecurityEventLogger
 
     logger_instance = SecurityEventLogger(db)
 
@@ -364,7 +364,7 @@ async def get_security_events(
     if not RoleNormalizer.is_admin(current_user.role):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    from ...models.security_event import SecurityEvent
+    from ....models.security_event import SecurityEvent
 
     # Get total count
     total = db.query(SecurityEvent).count()

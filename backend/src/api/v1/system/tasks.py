@@ -4,18 +4,18 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
+from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
     not_found,
 )
-from ...crud.task import excel_task_config_crud, task_crud
-from ...database import get_db
-from ...enums.task import TaskStatus
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.task import (
+from ....crud.task import excel_task_config_crud, task_crud
+from ....database import get_db
+from ....enums.task import TaskStatus
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.task import (
     ExcelTaskConfigCreate,
     ExcelTaskConfigResponse,
     TaskCancelRequest,
@@ -26,7 +26,7 @@ from ...schemas.task import (
     TaskStatistics,
     TaskUpdate,
 )
-from ...services.task import task_service
+from ....services.task import task_service
 
 
 class BusinessLogicError(Exception):

@@ -7,12 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import bad_request, not_found
-from ...crud.organization import organization as organization_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.organization import (
+from ....core.exception_handler import bad_request, not_found
+from ....crud.organization import organization as organization_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.organization import (
     OrganizationBatchRequest,
     OrganizationCreate,
     OrganizationHistoryResponse,
@@ -23,7 +23,7 @@ from ...schemas.organization import (
     OrganizationTree,
     OrganizationUpdate,
 )
-from ...services.organization import organization_service
+from ....services.organization import organization_service
 
 router = APIRouter(tags=["组织架构管理"])
 
@@ -110,7 +110,7 @@ async def get_organization(
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationResponse:
     """根据ID获取组织详情"""
-    from ...models.organization import Organization
+    from ....models.organization import Organization
 
     organization: Organization | None = organization_crud.get(db, id=org_id)
     if not organization:

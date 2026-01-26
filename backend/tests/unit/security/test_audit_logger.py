@@ -7,7 +7,7 @@ threshold checking, Redis integration, and database storage.
 
 from unittest.mock import Mock, patch
 
-from src.core.security_event_logger import (
+from src.security.audit_logger import (
     SecurityEventLogger,
     SecurityEventType,
     SecuritySeverity,

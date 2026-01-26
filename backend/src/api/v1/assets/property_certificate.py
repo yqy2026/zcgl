@@ -12,19 +12,19 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from ...core.router_registry import route_registry
-from ...database import get_db
-from ...middleware.auth import require_permission
-from ...models.auth import User
-from ...schemas.property_certificate import (
+from ....core.router_registry import route_registry
+from ....database import get_db
+from ....middleware.auth import require_permission
+from ....models.auth import User
+from ....schemas.property_certificate import (
     CertificateImportConfirm,
     PropertyCertificateCreate,
     PropertyCertificateResponse,
     PropertyCertificateUpdate,
     PropertyCertificateUploadResponse,
 )
-from ...services.property_certificate.service import PropertyCertificateService
-from ...utils.file_security import generate_safe_filename, validate_file_extension
+from ....services.property_certificate.service import PropertyCertificateService
+from ....utils.file_security import generate_safe_filename, validate_file_extension
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ def list_certificates(
     Returns:
         List[PropertyCertificateResponse]: 产权证列表
     """
-    from ...crud.property_certificate import property_certificate_crud
+    from ....crud.property_certificate import property_certificate_crud
 
     try:
         certificates = property_certificate_crud.get_multi(db, skip=skip, limit=limit)
@@ -218,7 +218,10 @@ def list_certificates(
             skip,
             limit,
         )
-        return certificates
+        return [
+            PropertyCertificateResponse.model_validate(certificate)
+            for certificate in certificates
+        ]
     except Exception as e:
         logger.error(f"Error listing certificates: {e}", exc_info=True)
         raise HTTPException(
@@ -246,7 +249,7 @@ def get_certificate(
     Raises:
         HTTPException: 产权证不存在
     """
-    from ...crud.property_certificate import property_certificate_crud
+    from ....crud.property_certificate import property_certificate_crud
 
     try:
         cert = property_certificate_crud.get(db, certificate_id)
@@ -287,9 +290,9 @@ def create_certificate(
     Raises:
         HTTPException: 创建失败
     """
-    from ...crud.property_certificate import property_certificate_crud
-    from ...models.property_certificate import CertificateType
-    from ...services.property_certificate.validator import PropertyCertificateValidator
+    from ....crud.property_certificate import property_certificate_crud
+    from ....models.property_certificate import CertificateType
+    from ....services.property_certificate.validator import PropertyCertificateValidator
 
     try:
         try:
@@ -347,7 +350,7 @@ def update_certificate(
     Raises:
         HTTPException: 产权证不存在或更新失败
     """
-    from ...crud.property_certificate import property_certificate_crud
+    from ....crud.property_certificate import property_certificate_crud
 
     try:
         cert = property_certificate_crud.get(db, certificate_id)
@@ -390,7 +393,7 @@ def delete_certificate(
     Raises:
         HTTPException: 产权证不存在或删除失败
     """
-    from ...crud.property_certificate import property_certificate_crud
+    from ....crud.property_certificate import property_certificate_crud
 
     try:
         cert = property_certificate_crud.get(db, certificate_id)

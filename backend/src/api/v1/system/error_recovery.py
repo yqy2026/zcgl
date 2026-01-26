@@ -11,16 +11,16 @@ from fastapi import APIRouter, Body, Depends, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ...core.exception_handler import (
+from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
     not_found,
 )
-from ...middleware.auth import PermissionChecker
-from ...middleware.error_recovery_middleware import api_error_recovery
-from ...models.auth import User
-from ...services.error_recovery_service import (
+from ....middleware.auth import PermissionChecker
+from ....middleware.error_recovery_middleware import api_error_recovery
+from ....models.auth import User
+from ....services.error_recovery_service import (
     ErrorCategory,
     ErrorSeverity,
     error_recovery_engine,
@@ -77,7 +77,7 @@ class ErrorStatisticsResponse(BaseModel):
     success_rate: float = Field(..., description="成功率(%)")
     average_attempts: float = Field(..., description="平均尝试次数")
     average_time: float = Field(..., description="平均恢复时间(秒)")
-    by_category: dict[str, dict[str, Any]] = Field(..., description="按类别分组的统计")
+    by_category: dict[str, Any] = Field(..., description="按类别分组的统计")
 
 
 class CircuitBreakerStatus(BaseModel):
@@ -116,9 +116,9 @@ class RecoveryConfigResponse(BaseModel):
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_statistics(
     current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
-    category: Annotated[str | None, Query(None, description="按错误类别筛选")] = None,
-    start_time: Annotated[datetime | None, Query(None, description="开始时间")] = None,
-    end_time: Annotated[datetime | None, Query(None, description="结束时间")] = None,
+    category: str | None = Query(None, description="按错误类别筛选"),
+    start_time: datetime | None = Query(None, description="开始时间"),
+    end_time: datetime | None = Query(None, description="结束时间"),
 ) -> ErrorStatisticsResponse:
     """获取错误恢复统计信息"""
 
@@ -324,10 +324,10 @@ async def reset_circuit_breaker(
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_history(
     current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
-    category: Annotated[str | None, Query(None, description="按错误类别筛选")] = None,
-    success: Annotated[bool | None, Query(None, description="按是否成功筛选")] = None,
-    page: Annotated[int, Query(1, ge=1, description="页码")] = 1,
-    page_size: Annotated[int, Query(50, ge=1, le=1000, description="每页记录数")] = 50,
+    category: str | None = Query(None, description="按错误类别筛选"),
+    success: bool | None = Query(None, description="按是否成功筛选"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(50, ge=1, le=1000, description="每页记录数"),
 ) -> dict[str, Any]:
     """获取错误恢复历史"""
 
@@ -365,8 +365,8 @@ async def get_recovery_history(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def test_error_recovery(
-    category: Annotated[str, Body(..., description="错误类别")],
-    simulate_error: Annotated[bool, Body(True, description="是否模拟错误")] = True,
+    category: str = Body(..., description="错误类别"),
+    simulate_error: bool = Body(True, description="是否模拟错误"),
     current_user: User = Depends(PermissionChecker(["system:error_recovery:test"])),
 ) -> dict[str, Any]:
     """测试错误恢复"""
@@ -388,7 +388,7 @@ async def test_error_recovery(
                 raise Exception(f"模拟 {category} 错误")
             return {"test": "success"}
 
-        from ...services.error_recovery_service import ErrorContext
+        from ....services.error_recovery_service import ErrorContext
 
         error_context = ErrorContext(
             error_id="test_" + str(int(datetime.now().timestamp())),
@@ -431,9 +431,7 @@ async def test_error_recovery(
 @api_error_recovery(ErrorCategory.DATABASE)
 async def clear_recovery_history(
     current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
-    before_time: Annotated[
-        datetime | None, Query(None, description="清理此时间之前的记录")
-    ] = None,
+    before_time: datetime | None = Query(None, description="清理此时间之前的记录"),
 ) -> dict[str, Any]:
     """清理错误恢复历史"""
 

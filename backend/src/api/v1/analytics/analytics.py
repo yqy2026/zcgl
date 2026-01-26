@@ -18,11 +18,11 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
-from ...core.response_handler import ResponseHandler, get_request_id
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...services.analytics.analytics_service import AnalyticsService
+from ....core.response_handler import ResponseHandler, get_request_id
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....services.analytics.analytics_service import AnalyticsService
 
 logger = logging.getLogger(__name__)
 
@@ -70,20 +70,20 @@ async def get_comprehensive_analytics(
             current_user=current_user,
         )
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data=result,
             message="统计分析数据获取成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"获取综合分析数据失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"获取分析数据失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.get("/cache/stats", summary="获取缓存统计信息")
@@ -101,20 +101,20 @@ async def get_cache_stats(
         service = AnalyticsService(db)
         stats = service.get_cache_stats()
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data=stats,
             message="缓存统计信息获取成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"获取缓存统计失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"获取缓存统计失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
@@ -132,20 +132,20 @@ async def clear_cache(
         service = AnalyticsService(db)
         result = service.clear_cache()
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data=result,
             message="缓存清除成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"清除缓存失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"清除缓存失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.get("/debug/cache", summary="调试缓存状态")
@@ -169,20 +169,20 @@ async def debug_cache_status(
             "request_path": str(request.url),
         }
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data=debug_info,
             message="缓存调试信息获取成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"获取缓存调试信息失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"获取调试信息失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.get("/trend", summary="获取趋势数据")
@@ -214,7 +214,7 @@ async def get_trend_data(
             filters=filters,
         )
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data={
                 "trend_type": trend_type,
                 "time_dimension": time_dimension,
@@ -223,15 +223,15 @@ async def get_trend_data(
             message="趋势数据获取成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"获取趋势数据失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"获取趋势数据失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.get("/distribution", summary="获取分布数据")
@@ -260,20 +260,20 @@ async def get_distribution_data(
             filters=filters,
         )
 
-        response: JSONResponse = ResponseHandler.success(
+        success_response: JSONResponse = ResponseHandler.success(
             data=distribution,
             message="分布数据获取成功",
             request_id=get_request_id(request),
         )
-        return response
+        return success_response
 
     except Exception as e:
         logger.error(f"获取分布数据失败: {str(e)}")
-        response: JSONResponse = ResponseHandler.error(
+        error_response: JSONResponse = ResponseHandler.error(
             message=f"获取分布数据失败: {str(e)}",
             request_id=get_request_id(request),
         )
-        return response
+        return error_response
 
 
 @router.post("/export", summary="导出分析数据")

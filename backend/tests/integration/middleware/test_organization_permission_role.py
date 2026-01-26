@@ -1,4 +1,4 @@
-from src.core.role_normalizer import RoleNormalizer
+from src.security.roles import RoleNormalizer
 
 
 def test_admin_role_lowercase_recognized():

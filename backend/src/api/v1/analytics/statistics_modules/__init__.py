@@ -1,7 +1,7 @@
 """
 统计模块导出
 
-导出所有子模块的路由器，用于在主 statistics.py 中聚合
+导出所有子模块的路由器，用于在 statistics.py 中聚合
 """
 
 from .area_stats import router as area_stats_router

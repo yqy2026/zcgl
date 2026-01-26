@@ -2,24 +2,24 @@
 项目管理API路由
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import bad_request, internal_error, not_found
-from ...crud.project import project_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.project import (
+from ....core.exception_handler import bad_request, internal_error, not_found
+from ....crud.project import project_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.project import (
     ProjectCreate,
     ProjectListResponse,
     ProjectResponse,
     ProjectSearchRequest,
     ProjectUpdate,
 )
-from ...services.project import project_service
+from ....services.project import project_service
 
 router = APIRouter()
 
@@ -102,24 +102,8 @@ async def get_project_options(
     is_active: bool | None = Query(True, description="是否仅返回启用项目"),
 ) -> list[dict[str, Any]]:
     """获取项目下拉列表选项（标准端点）"""
-
-    from ...models.asset import Project as AssetProject
-
-    query = db.query(AssetProject)
-    if is_active is not None:
-        query = query.filter(AssetProject.is_active == is_active)
-
-    projects = query.order_by(AssetProject.name.asc()).all()
-    return [
-        {
-            "id": p.id,
-            "name": p.name,
-            "code": p.code,
-            "short_name": p.short_name,
-            "is_active": p.is_active,
-        }
-        for p in projects
-    ]
+    
+    return project_service.get_project_dropdown_options(db, is_active=is_active)
 
 
 @router.get("/stats/overview", summary="获取项目统计")
@@ -130,7 +114,8 @@ async def get_project_statistics(
     """
     获取项目统计概览
     """
-    return project_crud.get_statistics(db=db)
+    stats = project_crud.get_statistics(db=db)
+    return cast(dict[str, Any], stats)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")

@@ -7,20 +7,22 @@ from typing import Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
+from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
     not_found,
 )
-from ...crud.system_dictionary import system_dictionary_crud
-from ...database import get_db
-from ...schemas.asset import (
+from ....crud.system_dictionary import system_dictionary_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user, require_admin
+from ....models.auth import User
+from ....schemas.asset import (
     SystemDictionaryCreate,
     SystemDictionaryResponse,
     SystemDictionaryUpdate,
 )
-from ...services.system_dictionary import system_dictionary_service
+from ....services.system_dictionary import system_dictionary_service
 
 # 创建系统字典路由器
 router = APIRouter()
@@ -72,7 +74,7 @@ async def get_system_dictionary(
     - **dictionary_id**: 字典ID
     """
     try:
-        from ...models.asset import SystemDictionary
+        from ....models.asset import SystemDictionary
 
         dictionary: SystemDictionary | None = system_dictionary_crud.get(
             db=db, id=dictionary_id
@@ -98,7 +100,8 @@ async def get_system_dictionary(
     status_code=201,
 )
 async def create_system_dictionary(
-    dictionary_in: SystemDictionaryCreate, db: Session = Depends(get_db)
+    dictionary_in: SystemDictionaryCreate, db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ) -> SystemDictionaryResponse:
     """
     创建新的系统字典项
@@ -126,6 +129,7 @@ async def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
     """
     更新系统字典信息
@@ -151,7 +155,9 @@ async def update_system_dictionary(
 
 @router.delete("/{dictionary_id}", summary="删除系统字典")
 async def delete_system_dictionary(
-    dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
+    dictionary_id: str = Path(..., description="字典ID"), 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ) -> dict[str, str]:
     """
     删除系统字典项
@@ -178,7 +184,9 @@ async def delete_system_dictionary(
     summary="批量更新系统字典",
 )
 async def batch_update_system_dictionaries(
-    updates: list[dict[str, Any]], db: Session = Depends(get_db)
+    updates: list[dict[str, Any]], 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ) -> list[SystemDictionaryResponse]:
     """
     批量更新系统字典

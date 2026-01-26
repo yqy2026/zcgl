@@ -13,10 +13,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....schemas.statistics import TimeSeriesDataPoint, TrendDataResponse
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.schemas.statistics import TimeSeriesDataPoint, TrendDataResponse
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,8 @@ async def get_trend_data(
     获取指标趋势数据
 
     支持多种指标的历史趋势分析，包括占用率、收入、支出等。
-
     Args:
-        metric: 指标名称 (occupancy_rate, income, expense等)
+        metric: 指标名称 (occupancy_rate, income, expense)
         period: 时间周期 (daily, weekly, monthly, yearly)
         db: 数据库会话
         current_user: 当前用户

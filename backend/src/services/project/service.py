@@ -166,5 +166,27 @@ class ProjectService:
             "pages": (total + search_params.page_size - 1) // search_params.page_size,
         }
 
+    def get_project_dropdown_options(
+        self, db: Session, is_active: bool | None = True
+    ) -> list[dict[str, Any]]:
+        """获取项目下拉选项列表"""
+        from ...models.asset import Project as AssetProject
+
+        query = db.query(AssetProject)
+        if is_active is not None:
+            query = query.filter(AssetProject.is_active == is_active)
+
+        projects = query.order_by(AssetProject.name.asc()).all()
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "code": p.code,
+                "short_name": p.short_name,
+                "is_active": p.is_active,
+            }
+            for p in projects
+        ]
+
 
 project_service = ProjectService()

@@ -52,14 +52,14 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...config.excel_config import STANDARD_SHEET_NAME
-from ...core.exception_handler import BusinessValidationError, bad_request, not_found
-from ...core.route_guards import debug_only
-from ...crud.task import task_crud
-from ...database import get_db
-from ...enums.task import TaskStatus, TaskType
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.excel_advanced import (
+from ....core.exception_handler import BusinessValidationError, bad_request, not_found
+from ....security.route_guards import debug_only
+from ....crud.task import task_crud
+from ....database import get_db
+from ....enums.task import TaskStatus, TaskType
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.excel_advanced import (
     ExcelConfigCreate,
     ExcelExportRequest,
     ExcelImportRequest,
@@ -67,10 +67,10 @@ from ...schemas.excel_advanced import (
     ExcelPreviewResponse,
     ExcelStatusResponse,
 )
-from ...schemas.task import TaskCreate, TaskUpdate
+from ....schemas.task import TaskCreate, TaskUpdate
 from ...security.logging_security import security_auditor
 from ...security.security import security_middleware
-from ...services.excel import (
+from ....services.excel import (
     ExcelExportService,
     ExcelImportService,
     ExcelTemplateService,
@@ -130,7 +130,7 @@ async def create_excel_config(
 
     - **config_in**: 配置信息
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
     return {
@@ -153,7 +153,7 @@ async def get_excel_configs(
     - **config_type**: 按配置类型筛选
     - **task_type**: 按任务类型筛选
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     configs = excel_task_config_crud.get_multi(
         db=db, limit=50, config_type=config_type, task_type=task_type
@@ -173,7 +173,7 @@ async def get_default_excel_config(
     - **config_type**: 配置类型
     - **task_type**: 任务类型
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     config = excel_task_config_crud.get_default(
         db=db, config_type=config_type, task_type=task_type
@@ -194,7 +194,7 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
     - **config_id**: 配置ID
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
@@ -214,7 +214,7 @@ async def update_excel_config(
     - **config_id**: 配置ID
     - **config_in**: 更新数据
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
@@ -237,7 +237,7 @@ async def delete_excel_config(
 
     - **config_id**: 配置ID
     """
-    from ...crud.task import excel_task_config_crud
+    from ....crud.task import excel_task_config_crud
 
     excel_task_config_crud.remove(db=db, id=config_id)
     return {"message": "配置删除成功"}

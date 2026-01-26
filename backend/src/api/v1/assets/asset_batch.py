@@ -9,13 +9,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import bad_request, internal_error
-from ...crud.asset import asset_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user, require_permission
-from ...models.asset import Asset
-from ...models.auth import User
-from ...schemas.asset import (
+from ....core.exception_handler import bad_request, internal_error
+from ....crud.asset import asset_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user, require_permission
+from ....models.asset import Asset
+from ....models.auth import User
+from ....schemas.asset import (
     AssetBatchUpdateRequest,
     AssetBatchUpdateResponse,
     AssetResponse,
@@ -24,8 +24,8 @@ from ...schemas.asset import (
     BatchCustomFieldUpdateRequest,
     BatchCustomFieldUpdateResponse,
 )
-from ...services.asset.batch_service import AssetBatchService
-from ...services.enum_validation_service import get_enum_validation_service
+from ....services.asset.batch_service import AssetBatchService
+from ....services.enum_validation_service import get_enum_validation_service
 
 # 创建批量操作路由器
 router = APIRouter()

@@ -14,11 +14,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import internal_error
-from ...core.permissions import permission_required
-from ...database import get_db
-from ...middleware.auth import get_current_user
-from ...models.auth import User
+from ....core.exception_handler import internal_error
+from ....security.permissions import permission_required
+from ....database import get_db
+from ....middleware.auth import get_current_user
+from ....models.auth import User
 
 T = TypeVar("T")
 

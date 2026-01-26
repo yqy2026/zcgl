@@ -7,12 +7,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import bad_request, internal_error, not_found
-from ...crud.ownership import ownership
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.ownership import (
+from ....core.exception_handler import bad_request, internal_error, not_found
+from ....crud.ownership import ownership
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.ownership import (
     OwnershipCreate,
     OwnershipDeleteResponse,
     OwnershipListResponse,
@@ -21,7 +21,7 @@ from ...schemas.ownership import (
     OwnershipStatisticsResponse,
     OwnershipUpdate,
 )
-from ...services.ownership import ownership_service
+from ....services.ownership import ownership_service
 
 router = APIRouter()
 
@@ -34,26 +34,18 @@ async def get_ownership_dropdown_options(
 ) -> list[OwnershipResponse]:
     """获取权属方选项列表（用于下拉选择等）- V2修复is_active过滤"""
     try:
-        # V2: 使用基础查询并手动过滤，因为CRUD.get_multi不支持is_active参数
-
-        from ...models import Ownership
-
-        query = db.query(Ownership).filter(Ownership.data_status == "正常")
-        if is_active is not None:
-            # 使用is_active字段过滤（如果存在）或通过data_status推断
-            if hasattr(Ownership, "is_active"):
-                query = query.filter(Ownership.is_active == is_active)
-
-        ownerships = query.order_by(Ownership.created_at.desc()).limit(1000).all()
-
-        # 为下拉选项添加关联计数
+        # 调用服务层获取下拉选项
+        dropdown_data = ownership_service.get_ownership_dropdown_options(db, is_active=is_active)
+        
+        # 转换为响应格式
         responses = []
-        for item in ownerships:
-            response = OwnershipResponse.model_validate(item)
-            # 获取关联资产数量
-            response.asset_count = ownership_service.get_asset_count(db, item.id)
-            # 获取关联项目数量
-            response.project_count = ownership_service.get_project_count(db, item.id)
+        for item_data in dropdown_data:
+            # 创建临时Ownership对象以便model_validate使用
+            temp_ownership = Ownership(**{k: v for k, v in item_data.items() if k not in ['asset_count', 'project_count']})
+            response = OwnershipResponse.model_validate(temp_ownership)
+            # 设置额外的计数字段
+            response.asset_count = item_data['asset_count']
+            response.project_count = item_data['project_count']
             responses.append(response)
         return responses
     except Exception as e:
@@ -294,7 +286,7 @@ async def get_ownership_financial_summary(
 
     from sqlalchemy import and_, func
 
-    from ...models.rent_contract import RentContract, RentLedger
+    from ....models.rent_contract import RentContract, RentLedger
 
     # 验证权属方是否存在
     ownership_obj = ownership.get(db, id=ownership_id)

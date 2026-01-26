@@ -11,7 +11,7 @@ from unittest.mock import patch
 # Set test environment before importing
 os.environ["TESTING_MODE"] = "true"
 
-from src.core.ip_whitelist import IPRange, IPWhitelistManager, ip_whitelist
+from src.security.ip_whitelist import IPRange, IPWhitelistManager, ip_whitelist
 
 
 class TestIPRange:

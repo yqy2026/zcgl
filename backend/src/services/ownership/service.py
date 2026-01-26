@@ -216,5 +216,36 @@ class OwnershipService:
         )
         return self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
 
+    def get_ownership_dropdown_options(
+        self, db: Session, is_active: bool | None = True
+    ) -> list[dict[str, Any]]:
+        """获取权属方下拉选项列表"""
+        query = db.query(Ownership).filter(Ownership.data_status == "正常")
+        if is_active is not None:
+            # 使用is_active字段过滤（如果存在）或通过data_status推断
+            if hasattr(Ownership, "is_active"):
+                query = query.filter(Ownership.is_active == is_active)
+
+        ownerships = query.order_by(Ownership.created_at.desc()).limit(1000).all()
+
+        # 为下拉选项添加关联计数
+        responses = []
+        for item in ownerships:
+            # 获取关联资产数量
+            asset_count = self.get_asset_count(db, item.id)
+            # 获取关联项目数量
+            project_count = self.get_project_count(db, item.id)
+            responses.append({
+                "id": item.id,
+                "name": item.name,
+                "code": item.code,
+                "short_name": item.short_name,
+                "is_active": item.is_active,
+                "data_status": item.data_status,
+                "asset_count": asset_count,
+                "project_count": project_count,
+            })
+        return responses
+
 
 ownership_service = OwnershipService()

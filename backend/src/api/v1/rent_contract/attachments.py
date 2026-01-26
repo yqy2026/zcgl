@@ -10,19 +10,21 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from typing import Any as AnyType
 
 from ....core.exception_handler import bad_request, internal_error, not_found
 from ....crud.rent_contract import rent_contract
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....services.rent_contract import rent_contract_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post(
-    "/{contract_id}/attachments", response_model=dict[str, Any], summary="上传合同附件"
+    "/{contract_id}/attachments", response_model=dict[str, AnyType], summary="上传合同附件"
 )
 async def upload_contract_attachment(
     contract_id: str,
@@ -31,7 +33,7 @@ async def upload_contract_attachment(
     description: str | None = Form(None, description="附件描述"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-) -> dict[str, Any]:
+) -> dict[str, AnyType]:
     """
     上传合同附件
 
@@ -40,57 +42,21 @@ async def upload_contract_attachment(
     - 图片 (.jpg, .jpeg, .png)
     - Word文档 (.doc, .docx)
     """
-    from ....models.rent_contract import RentContractAttachment
-
-    contract = rent_contract.get(db, id=contract_id)
-    if not contract:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
-    allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
-    file_ext = Path(file.filename).suffix.lower() if file.filename else ""
-
-    if file_ext not in allowed_extensions:
-        raise bad_request(
-            f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}"
-        )
-
-    upload_dir = Path("uploads/contracts")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = upload_dir / unique_filename
-
     try:
-        contents = await file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        file_size = len(contents)
+        result = rent_contract_service.upload_contract_attachment(
+            db,
+            contract_id=contract_id,
+            file=file,
+            file_type=file_type,
+            description=description,
+            uploader_id=current_user.id,
+            uploader_name=current_user.full_name or current_user.username
+        )
+        return result
+    except ValueError as e:
+        raise bad_request(str(e))
     except Exception as e:
-        raise internal_error(f"文件保存失败: {str(e)}")
-
-    attachment = RentContractAttachment()
-    attachment.contract_id = contract_id
-    attachment.file_name = file.filename or "unnamed"
-    attachment.file_path = str(file_path)
-    attachment.file_size = file_size
-    attachment.mime_type = file.content_type
-    attachment.file_type = file_type
-    attachment.description = description
-    attachment.uploader = current_user.full_name or current_user.username
-    attachment.uploader_id = current_user.id
-
-    db.add(attachment)
-    db.commit()
-    db.refresh(attachment)
-
-    return {
-        "id": attachment.id,
-        "file_name": attachment.file_name,
-        "file_size": attachment.file_size,
-        "file_type": attachment.file_type,
-        "description": attachment.description,
-        "uploaded_at": attachment.created_at.isoformat(),
-    }
+        raise internal_error(f"上传合同附件失败: {str(e)}")
 
 
 @router.get(

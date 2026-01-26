@@ -2,9 +2,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 
-from ...core.exception_handler import internal_error
-from ...database import create_tables, drop_tables
-from ...middleware.auth import require_admin
+from ....core.exception_handler import internal_error
+from ....database import create_tables, drop_tables
+from ....middleware.auth import require_admin
 
 """
 管理员API路由

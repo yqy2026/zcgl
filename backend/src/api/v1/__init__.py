@@ -13,14 +13,14 @@ from .system.contact import router as contact_router
 from .assets.custom_fields import router as custom_fields_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
-from .system.error_recovery import router as error_recovery_router
+# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
+# from .system.error_recovery import router as error_recovery_router
 
 # 修复Excel模块导入 - 使用正确的router名称
 from .documents.excel import router as excel_router
 from .system.history import router as history_router
 from .llm_prompts import router as llm_prompts_router
 
-# from .missing_apis import missing_apis_router  # Removed - module doesn't exist
 from .system.monitoring import router as monitoring_router
 from .system.notifications import router as notifications_router
 from .assets.occupancy import router as occupancy_router
@@ -46,13 +46,9 @@ from .auth.roles import router as roles_router
 # 修复statistics模块导入 - 使用正确的router名称
 from .analytics.statistics import router as statistics_router
 
-# 系统设置模块可能不存在，需要检查
-# from .system.system_settings import router as system_settings_router
-# test_coverage.py and test_performance.py removed - test files should be in tests/ directory
-# missing_apis.py removed - had broken imports and was a temporary placeholder file
 # 导入新创建的统一路由模块
 from .system.system import router as system_router
-from .system.system_dictionaries import router as system_dictionaries_router
+# from .system.system_dictionaries import router as system_dictionaries_router # Removed to avoid conflict
 from .system.tasks import router as tasks_router
 
 # 尝试导入系统设置路由，如果不存在则跳过
@@ -87,9 +83,12 @@ api_router.include_router(
 api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
 api_router.include_router(backup_router, prefix="/backup", tags=["数据备份和恢复"])
 api_router.include_router(admin_router, tags=["系统管理"])
-api_router.include_router(
-    system_dictionaries_router, prefix="/system/dictionaries", tags=["系统字典管理"]
-)
+
+# REMOVED CONFLICTING ROUTER
+# api_router.include_router(
+#     system_dictionaries_router, prefix="/system/dictionaries", tags=["系统字典管理"]
+# )
+
 api_router.include_router(
     custom_fields_router, prefix="/asset-custom-fields", tags=["自定义字段管理"]
 )
@@ -97,7 +96,10 @@ api_router.include_router(
     organization_router, prefix="/organizations", tags=["组织架构管理"]
 )
 api_router.include_router(enum_field_router, tags=["枚举字段管理"])
-api_router.include_router(dictionaries_router, tags=["统一字典管理"])
+
+# dictionaries_router 自带 prefix="/system/dictionaries"，此处直接 include
+api_router.include_router(dictionaries_router)  # Unified dictionary API
+
 api_router.include_router(ownership_router, prefix="/ownerships", tags=["权属方管理"])
 api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
 api_router.include_router(
@@ -125,9 +127,10 @@ api_router.include_router(
 )
 api_router.include_router(contact_router, prefix="/contacts", tags=["联系人管理"])
 api_router.include_router(collection_router, prefix="/collections", tags=["催缴管理"])
-api_router.include_router(
-    error_recovery_router, prefix="/error-recovery", tags=["错误恢复"]
-)
+# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
+# api_router.include_router(
+#     error_recovery_router, prefix="/error-recovery", tags=["错误恢复"]
+# )
 api_router.include_router(
     llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]
 )

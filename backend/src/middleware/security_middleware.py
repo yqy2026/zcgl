@@ -24,7 +24,7 @@ from ..core.exception_handler import (
     PermissionDeniedError,
     RateLimitError,
 )
-from ..core.ip_whitelist import ip_whitelist
+from ..security.ip_whitelist import ip_whitelist
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
 from ..security.logging_security import security_auditor
 from ..security.security import RateLimiter

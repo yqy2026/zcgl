@@ -110,26 +110,28 @@ async def lifespan(app: FastAPI) -> Any:
     # Secret validation - NEW: Validate SECRET_KEY and DATA_ENCRYPTION_KEY on startup
     logger.info("Validating application secrets...")
     try:
-        from .core.secret_validator import SecretValidationError, secret_validator
+        # Correct import path: src.security.secret_validator
+        from .security.secret_validator import SecretValidationError, secret_validator
 
-        logger.info("🔐 Validating application secrets...")
+        try:
+            logger.info("🔐 Validating application secrets...")
 
-        if not secret_validator.validate_env_secrets():
-            logger.warning("⚠️  WARNING: Weak secrets detected!")
-            logger.warning("In production, the application will refuse to start.")
+            if not secret_validator.validate_env_secrets():
+                logger.warning("⚠️  WARNING: Weak secrets detected!")
+                logger.warning("In production, the application will refuse to start.")
+                if is_production():
+                    logger.error("❌ Production mode requires strong secrets. Exiting.")
+                    raise SystemExit(1)
+        except SecretValidationError as e:
+            logger.error(f"❌ Secret validation failed: {e}")
             if is_production():
-                logger.error("❌ Production mode requires strong secrets. Exiting.")
                 raise SystemExit(1)
-    except SecretValidationError as e:
-        logger.error(f"❌ Secret validation failed: {e}")
-        if is_production():
-            raise SystemExit(1)
+
     except ImportError:
         logger.warning("Secret validator module not available, skipping validation")
 
-    # 安全配置检查
-    logger.info("开始安全配置检查...")
-    settings.log_security_status()
+    # 安全配置检查 (已在配置加载时自动完成)
+    logger.info("安全配置检查已完成")
 
     # JWT安全专项检查 - 重新启用安全验证
     logger.info("执行JWT安全配置检查...")

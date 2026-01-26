@@ -10,12 +10,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import forbidden, not_found
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...models.notification import Notification
-from ...services.notification.scheduler import run_notification_tasks
+from ....core.exception_handler import forbidden, not_found
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....models.notification import Notification
+from ....services.notification.scheduler import run_notification_tasks
 
 router = APIRouter(tags=["Notifications"])
 

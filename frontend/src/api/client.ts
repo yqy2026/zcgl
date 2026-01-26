@@ -655,14 +655,20 @@ export class ApiClient {
       if (value instanceof Date) {
         return value.toISOString();
       }
-
-      const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-        a.localeCompare(b)
-      );
-      return entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
-        acc[key] = this.normalizeParams(val);
-        return acc;
-      }, {});
+      
+      // 检查是否为普通对象
+      if (Object.prototype.toString.call(value) === '[object Object]') {
+        const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+          a.localeCompare(b)
+        );
+        return entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
+          acc[key] = this.normalizeParams(val);
+          return acc;
+        }, {});
+      }
+      
+      // 如果是其他类型的对象（如Map, Set等），转换为字符串
+      return value.toString();
     }
 
     return value;

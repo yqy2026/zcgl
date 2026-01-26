@@ -7,11 +7,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import not_found
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....schemas.excel_advanced import ExcelConfigCreate
+from src.core.exception_handler import not_found
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.schemas.excel_advanced import ExcelConfigCreate
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ async def create_excel_config(
 
     - **config_in**: 配置信息
     """
-    from ....crud.task import excel_task_config_crud
+    from src.crud.task import excel_task_config_crud
 
     config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
     return {

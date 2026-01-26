@@ -18,17 +18,17 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....crud.asset import asset_crud
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....schemas.statistics import (
+from src.crud.asset import asset_crud
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.schemas.statistics import (
     BasicStatisticsResponse,
     ChartDataItem,
     DashboardDataResponse,
 )
-from ....utils.cache_manager import cache_statistics, get_cache_manager
-from ....utils.numeric import to_float
+from src.utils.cache_manager import cache_statistics, get_cache_manager
+from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +51,12 @@ async def get_basic_statistics(
     获取基础统计数据
 
     支持多维度筛选的基础统计，包括资产总数和各类分布。
-
     Args:
         ownership_status: 确权状态筛选
         property_nature: 物业性质筛选
         usage_status: 使用状态筛选
         ownership_entity: 权属方筛选
         db: 数据库会话
-
     Returns:
         基础统计数据
     """
@@ -138,7 +136,6 @@ async def get_statistics_summary(
     获取统计摘要（无筛选条件）
 
     快速获取所有资产的统计概览。
-
     Returns:
         统计摘要数据
     """
@@ -162,9 +159,7 @@ async def get_dashboard_data(
 ) -> DashboardDataResponse:
     """
     获取仪表板综合数据
-
     汇总所有关键统计指标，用于仪表板显示。
-
     Returns:
         仪表板综合数据
     """
@@ -215,7 +210,7 @@ async def get_dashboard_data(
     # 这需要从其他服务获取数据
     # 注意：BasicStatisticsResponse的schema与原有实现不匹配
     # 需要重构整个endpoint以匹配正确的schema
-    from ....core.exception_handler import service_unavailable
+    from src.core.exception_handler import service_unavailable
 
     raise service_unavailable(
         "仪表板数据的财务汇总和详细出租率统计尚未实现，需要重构schema"
@@ -241,7 +236,6 @@ async def get_comprehensive_statistics(
     获取综合统计数据
 
     包含所有维度的统计信息，用于全面的数据分析。
-
     Args:
         include_deleted: 是否包含已删除的资产
 
@@ -305,7 +299,6 @@ async def clear_statistics_cache() -> dict[str, Any]:
     清除统计数据缓存
 
     清除所有统计相关的缓存条目。
-
     Returns:
         清除结果
     """
@@ -327,7 +320,6 @@ async def get_cache_info() -> dict[str, Any]:
     获取缓存信息
 
     返回统计缓存的使用情况。
-
     Returns:
         缓存信息
     """

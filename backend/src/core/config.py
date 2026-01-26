@@ -137,60 +137,6 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", json_schema_extra={"env": "LOG_LEVEL"})
     LOG_FILE: str | None = Field(default=None, json_schema_extra={"env": "LOG_FILE"})
 
-    def validate_security_config(self) -> list[str]:
-        """
-        验证安全配置
-        返回安全警告列表
-        注意: 此方法保留向后兼容性，实际验证由 model_validator 处理
-        """
-        warnings = []
-
-        # 检查 JWT 密钥安全性
-        if self.SECRET_KEY in [
-            "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
-            "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
-            "dev-secret-key-change-in-production",
-            "your-secret-key-change-in-production",
-            "secret-key",
-        ]:
-            warnings.append(
-                "严重安全风险: 使用了默认或不安全的 JWT 密钥！"
-                "请立即设置环境变量 SECRET_KEY 为强随机密钥。"
-            )
-
-        if len(self.SECRET_KEY) < 32:
-            warnings.append(
-                f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，"
-                "建议使用至少 32 字符的密钥。"
-            )
-
-        # 检查是否在调试模式运行
-        if self.DEBUG:
-            warnings.append("警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。")
-
-        # 检查数据库是否为 SQLite（生产环境推荐 PostgreSQL）
-        if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            warnings.append(
-                "提醒: 使用默认 SQLite 数据库路径，生产环境建议使用 PostgreSQL。"
-            )
-
-        return warnings
-
-    def log_security_status(self) -> None:
-        """
-        记录安全配置状态
-        注意: 保留向后兼容性，实际验证在 model_validator 中完成
-        """
-        warnings = self.validate_security_config()
-
-        if warnings and not os.getenv("TESTING_MODE", "false").lower() == "true":
-            logger.warning("=" * 60)
-            logger.warning("安全配置检查发现以下问题:")
-            for warning in warnings:
-                logger.warning(f"  {warning}")
-            logger.warning("=" * 60)
-        else:
-            logger.info("安全配置检查通过")
 
     # 性能监控
     ENABLE_METRICS: bool = Field(
@@ -572,45 +518,62 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_configuration(self) -> "Settings":
-        """验证安全配置"""
+        """
+        统一安全配置验证
+        处理所有安全检查并根据环境记录警告或抛出错误
+        """
         warnings = []
+        is_testing = os.getenv("TESTING_MODE", "false").lower() == "true"
+        is_production = os.getenv("ENVIRONMENT", "production") == "production"
 
-        # 检查 JWT 密钥安全性
-        if self.SECRET_KEY in [
+        # 1. JWT 密钥安全性检查
+        insecure_keys = [
             "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
             "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
             "dev-secret-key-change-in-production",
             "your-secret-key-change-in-production",
             "secret-key",
-        ]:
-            warnings.append(
-                "严重安全风险: 使用了默认或不安全的 JWT 密钥！"
-                "请立即设置环境变量 SECRET_KEY 为强随机密钥。"
-            )
+        ]
+
+        if self.SECRET_KEY in insecure_keys:
+            msg = "严重安全风险: 使用了默认或不安全的 JWT 密钥！请立即设置环境变量 SECRET_KEY 为强随机密钥。"
+            if is_production and not is_testing:
+                raise ValueError(msg)
+            warnings.append(msg)
 
         if len(self.SECRET_KEY) < 32:
-            warnings.append(
-                f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，"
-                "建议使用至少 32 字符的密钥。"
-            )
+            msg = f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，建议使用至少 32 字符的密钥。"
+            if is_production and not is_testing:
+                raise ValueError(f"生产环境要求 SECRET_KEY 至少 32 字符")
+            warnings.append(msg)
 
-        # 检查调试模式
+        # 2. DATA_ENCRYPTION_KEY 检查
+        if not self.DATA_ENCRYPTION_KEY:
+            msg = "未设置 DATA_ENCRYPTION_KEY。PII 字段加密将不可用。"
+            if is_production and not is_testing:
+                # 生产环境记录错误日志
+                logger.error(f"配置缺失: {msg}")
+            warnings.append(f"提醒: {msg}")
+
+        # 3. 调试模式检查
         if self.DEBUG:
-            warnings.append("警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。")
+            msg = "警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。"
+            warnings.append(msg)
 
-        # 检查数据库
+        # 4. 数据库配置检查
         if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            warnings.append(
-                "提醒: 使用默认 SQLite 数据库路径，生产环境建议使用 PostgreSQL。"
-            )
+            if is_production:
+                warnings.append("提醒: 生产环境建议使用 PostgreSQL 而非默认 SQLite。")
 
-        # 记录警告
-        if warnings and not os.getenv("TESTING_MODE", "false").lower() == "true":
+        # 5. 记录警告
+        if warnings and not is_testing:
             logger.warning("=" * 60)
             logger.warning("安全配置检查发现以下问题:")
             for warning in warnings:
                 logger.warning(f"  {warning}")
             logger.warning("=" * 60)
+        elif not is_testing:
+            logger.info("安全配置检查通过")
 
         return self
 
@@ -777,8 +740,6 @@ def initialize_config() -> None:
         logger.error(f"Configuration validation failed: {e}")
         raise
 
-    # 记录安全状态
-    settings.log_security_status()
 
     logger.info("Configuration initialized successfully")
 

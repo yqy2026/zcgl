@@ -11,7 +11,7 @@ Tests secret validation logic including:
 
 import pytest
 
-from src.core.secret_validator import (
+from src.security.secret_validator import (
     SecretValidationError,
     SecretValidator,
     secret_validator,

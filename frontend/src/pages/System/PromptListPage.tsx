@@ -389,7 +389,7 @@ const PromptListPage: React.FC = () => {
   };
 
   // 处理筛选变化
-  const handleFilterChange = (key: keyof PromptQueryParams, value: any) => {
+  const handleFilterChange = (key: keyof PromptQueryParams, value: string | boolean | number | null | undefined) => {
     setState(prev => ({
       ...prev,
       filters: {

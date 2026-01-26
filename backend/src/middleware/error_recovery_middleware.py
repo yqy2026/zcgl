@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 """
 错误恢复中间件
@@ -29,6 +29,9 @@ from ..services.error_recovery_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
@@ -384,22 +387,22 @@ def create_error_recovery_middleware(
 # API路由错误恢复装饰器
 def api_error_recovery(
     error_category: ErrorCategory,
-    fallback_response: dict[str, Any] | None = None,
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    fallback_response: R | None = None,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """API错误恢复装饰器"""
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @with_error_recovery(error_category)  # type: ignore[misc]
-        async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        @with_error_recovery(error_category)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             try:
                 result = await func(*args, **kwargs)
-                return {"success": True, "data": result}
+                return result
             except Exception as e:
-                if fallback_response:
+                if fallback_response is not None:
                     logger.warning(f"API函数 {func.__name__} 执行fallback响应")
                     return fallback_response
                 raise e
 
-        return wrapper  # type: ignore[no-any-return]
+        return wrapper
 
     return decorator

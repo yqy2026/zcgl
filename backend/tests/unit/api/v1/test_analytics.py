@@ -18,14 +18,10 @@ from fastapi import status
 # ============================================================================
 
 @pytest.fixture
-def admin_user_headers(client, admin_user):
+def admin_user_headers():
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"}
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # Since client fixture mocks authentication, we don't need real token
+    return {"Authorization": "Bearer mocked_token"}
 
 
 # ============================================================================
@@ -77,9 +73,9 @@ class TestComprehensiveAnalytics:
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_get_comprehensive_analytics_unauthorized(self, client):
+    def test_get_comprehensive_analytics_unauthorized(self, unauthenticated_client):
         """测试未授权获取分析数据"""
-        response = client.get("/api/v1/analytics/comprehensive")
+        response = unauthenticated_client.get("/api/v1/analytics/comprehensive")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -104,9 +100,9 @@ class TestCacheStatistics:
         assert data["success"] is True
         assert "data" in data
 
-    def test_get_cache_stats_unauthorized(self, client):
+    def test_get_cache_stats_unauthorized(self, unauthenticated_client):
         """测试未授权获取缓存统计"""
-        response = client.get("/api/v1/analytics/cache/stats")
+        response = unauthenticated_client.get("/api/v1/analytics/cache/stats")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -130,9 +126,9 @@ class TestCacheManagement:
         assert "success" in data
         assert data["success"] is True
 
-    def test_clear_cache_unauthorized(self, client):
+    def test_clear_cache_unauthorized(self, unauthenticated_client):
         """测试未授权清除缓存"""
-        response = client.post("/api/v1/analytics/cache/clear")
+        response = unauthenticated_client.post("/api/v1/analytics/cache/clear")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -157,9 +153,9 @@ class TestDebugEndpoints:
             status.HTTP_404_NOT_FOUND
         ]
 
-    def test_debug_cache_status_unauthorized(self, client):
+    def test_debug_cache_status_unauthorized(self, unauthenticated_client):
         """测试未授权访问调试端点"""
-        response = client.get("/api/v1/analytics/debug/cache")
+        response = unauthenticated_client.get("/api/v1/analytics/debug/cache")
 
         # 调试端点可能允许未认证访问
         assert response.status_code in [

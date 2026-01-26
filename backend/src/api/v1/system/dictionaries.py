@@ -1,56 +1,38 @@
-from typing import Any
-
 """
 统一的字典管理API
 整合系统字典和枚举字段功能，提供简化的使用接口
+
+重构说明：
+- API 层只负责路由转发和参数验证
+- 所有业务逻辑已下沉至 Service 层
+- 使用类型安全的 Schema 替代 dict[str, Any]
+- 操作人信息从当前用户获取，不再硬编码
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
-    BaseBusinessError,
-    conflict,
-    internal_error,
-    not_found,
+from ....core.exception_handler import BaseBusinessError, internal_error
+from ....database import get_db
+from ....models.enum_field import EnumFieldType
+from ....models.auth import User
+from ....middleware.auth import get_current_active_user
+from ....schemas.dictionary import (
+    DictionaryOptionResponse,
+    DictionaryValueCreate,
+    SimpleDictionaryCreate,
 )
-from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
-from ...database import get_db
-from ...models.asset import SystemDictionary
-from ...models.enum_field import EnumFieldType
-from ...schemas.enum_field import EnumFieldTypeCreate, EnumFieldValueCreate
+from ....services.common_dictionary_service import common_dictionary_service
 
 # 创建logger
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/dictionaries", tags=["统一字典管理"])
+router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
 
-
-def fix_chinese_label(dict_type: str, value: str, original_label: str) -> str:
-    """Simplified version - just return original label"""
-    return original_label
-
-
-class DictionaryOptionResponse(BaseModel):
-    """字典选项响应模型"""
-
-    label: str
-    value: str
-    code: str | None = None
-    sort_order: int = 0
-    color: str | None = None
-    icon: str | None = None
-
-
-class SimpleDictionaryCreate(BaseModel):
-    """简单字典创建模型"""
-
-    options: list[dict[str, Any]]
-    description: str | None = None
 
 
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])
@@ -62,61 +44,14 @@ async def get_dictionary_options(
     """
     获取字典选项（统一接口）
     支持从枚举字段和系统字典两个来源获取数据
+
+    重构：业务逻辑已下沉至 Service 层
     """
     try:
-        # 优先从枚举字段获取
-        enum_type_crud = get_enum_field_type_crud(db)
-        enum_type = enum_type_crud.get_by_code(dict_type)
-
-        if enum_type:  # pragma: no cover
-            # 从枚举字段获取
-            enum_value_crud = get_enum_field_value_crud(db)  # pragma: no cover
-            enum_type_id_str = str(enum_type.id)  # pragma: no cover
-            enum_values = enum_value_crud.get_by_type(  # pragma: no cover
-                enum_type_id_str,
-                is_active=is_active
-                if is_active is not None
-                else None,  # pragma: no cover
-            )  # pragma: no cover
-
-            return [  # pragma: no cover
-                DictionaryOptionResponse(
-                    label=fix_chinese_label(
-                        dict_type, str(value.value), str(value.label)
-                    ),
-                    value=str(value.value),
-                    code=str(value.code) if value.code is not None else None,
-                    sort_order=int(value.sort_order or 0),
-                    color=str(value.color) if value.color is not None else None,
-                    icon=str(value.icon) if value.icon is not None else None,
-                )
-                for value in enum_values
-            ]
-
-        # 兜底：从系统字典获取（向后兼容）
-        system_dicts_query = db.query(SystemDictionary).filter(
-            SystemDictionary.dict_type == dict_type
+        result: list[DictionaryOptionResponse] = (
+            common_dictionary_service.get_combined_options(db, dict_type, is_active)
         )
-
-        if is_active is not None:
-            system_dicts_query = system_dicts_query.filter(
-                SystemDictionary.is_active == is_active
-            )
-
-        system_dicts = system_dicts_query.order_by(
-            SystemDictionary.sort_order, SystemDictionary.created_at
-        ).all()
-
-        return [
-            DictionaryOptionResponse(
-                label=item.dict_label,
-                value=item.dict_value,
-                code=item.dict_code,
-                sort_order=item.sort_order,
-            )
-            for item in system_dicts
-        ]  # pragma: no cover
-
+        return result
     except Exception as e:  # pragma: no cover
         raise internal_error(f"获取字典选项失败: {str(e)}")  # pragma: no cover
 
@@ -126,69 +61,22 @@ async def quick_create_dictionary(
     dict_type: str = Path(..., description="字典类型"),
     dictionary_data: SimpleDictionaryCreate = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
     快速创建字典（兼容原系统字典功能）
     自动创建枚举类型和枚举值
+
+    重构：
+    - 业务逻辑已下沉至 Service 层
+    - 操作人从当前用户获取，不再硬编码
+    - 使用类型安全的 Schema
     """
     try:
-        enum_type_crud = get_enum_field_type_crud(db)
-
-        # 检查是否已存在
-        existing_type = enum_type_crud.get_by_code(dict_type)
-        if existing_type:
-            raise conflict(f"字典类型 {dict_type} 已存在", resource_type="dictionary")
-
-        # 创建枚举类型
-        enum_type_create = EnumFieldTypeCreate(
-            name=dict_type.replace("_", " ").title(),
-            code=dict_type,
-            category="简单字典",
-            description=dictionary_data.description or f"{dict_type} 字典",
-            is_system=False,
-            is_hierarchical=False,
-            is_multiple=False,
-            created_by="系统",
-            default_value=None,
-            validation_rules=None,
-            display_config=None,
+        result = common_dictionary_service.quick_create_enum_dictionary(
+            db, dict_type, dictionary_data, operator=current_user.name or "系统"
         )
-
-        enum_type = enum_type_crud.create(enum_type_create)
-
-        # 批量创建枚举值
-        enum_value_crud = get_enum_field_value_crud(db)
-        created_values = []
-        enum_type_id_str = str(enum_type.id)
-
-        for i, option in enumerate(dictionary_data.options):
-            enum_value_create = EnumFieldValueCreate(
-                enum_type_id=enum_type_id_str,
-                label=option.get("label", ""),
-                value=option.get("value", ""),
-                code=option.get("code"),
-                description=option.get("description"),
-                sort_order=option.get("sort_order", i + 1),
-                color=option.get("color"),
-                icon=option.get("icon"),
-                is_active=option.get("is_active", True),
-                created_by="系统",
-                parent_id=None,
-                extra_properties=None,
-            )
-
-            created_value = enum_value_crud.create(enum_value_create)
-            created_values.append(created_value)
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "message": f"字典 {dict_type} 创建成功",
-                "type_id": str(enum_type.id),
-                "values_count": len(created_values),
-            },
-        )
-
+        return JSONResponse(status_code=200, content=result)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -232,7 +120,7 @@ async def get_validation_statistics(
     - 某个用户经常提交无效值，可能需要培训
     - 某个API端点频繁失败，可能需要前端修复
     """
-    from ...services.enum_validation_service import get_enum_validation_service
+    from ....services.enum_validation_service import get_enum_validation_service
 
     enum_service = get_enum_validation_service(db)
     stats = enum_service.get_validation_stats(enum_type)
@@ -264,52 +152,23 @@ async def get_validation_statistics(
 @router.post("/{dict_type}/values")
 async def add_dictionary_value(
     dict_type: str = Path(..., description="字典类型"),
-    value_data: dict[str, Any] = Body(...),
+    value_data: DictionaryValueCreate = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
-    """为指定字典类型添加新的选项值"""
+    """
+    为指定字典类型添加新的选项值
+
+    重构：
+    - 业务逻辑已下沉至 Service 层
+    - 使用类型安全的 Schema
+    - 操作人从当前用户获取
+    """
     try:
-        enum_type_crud = get_enum_field_type_crud(db)
-        enum_type = enum_type_crud.get_by_code(dict_type)
-
-        if not enum_type:
-            raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
-
-        enum_value_crud = get_enum_field_value_crud(db)
-
-        # 检查值是否已存在
-        enum_type_id_str = str(enum_type.id)
-        existing_value = enum_value_crud.get_by_type_and_value(
-            enum_type_id_str, value_data.get("value", "")
-        )  # pragma: no cover
-        if existing_value:  # pragma: no cover
-            raise conflict(  # pragma: no cover
-                f"值 {value_data.get('value')} 已存在",
-                resource_type="dictionary_value",  # pragma: no cover
-            )  # pragma: no cover
-
-        enum_value_create = EnumFieldValueCreate(
-            enum_type_id=enum_type_id_str,
-            label=value_data.get("label", ""),
-            value=value_data.get("value", ""),
-            code=value_data.get("code"),
-            description=value_data.get("description"),
-            sort_order=value_data.get("sort_order", 999),
-            color=value_data.get("color"),
-            icon=value_data.get("icon"),
-            is_active=value_data.get("is_active", True),
-            created_by="系统",
-            parent_id=None,
-            extra_properties=None,
+        result = common_dictionary_service.add_dictionary_value(
+            db, dict_type, value_data, operator=current_user.name or "系统"
         )
-
-        created_value = enum_value_crud.create(enum_value_create)
-
-        return JSONResponse(
-            status_code=200,
-            content={"message": "字典值添加成功", "value_id": str(created_value.id)},
-        )
-
+        return JSONResponse(status_code=200, content=result)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -320,29 +179,18 @@ async def add_dictionary_value(
 async def delete_dictionary_type(
     dict_type: str = Path(..., description="字典类型"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
-    """删除字典类型及其所有值"""
+    """
+    删除字典类型及其所有值
+
+    重构：业务逻辑已下沉至 Service 层
+    """
     try:
-        enum_type_crud = get_enum_field_type_crud(db)
-        enum_type = enum_type_crud.get_by_code(dict_type)
-
-        if not enum_type:
-            raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
-
-        # 软删除枚举类型（会级联删除枚举值）
-        enum_type_id_str = str(enum_type.id)
-        success = enum_type_crud.delete(
-            enum_type_id_str, deleted_by="系统"
-        )  # pragma: no cover
-
-        if not success:  # pragma: no cover
-            raise internal_error("删除失败")  # pragma: no cover
-
-        return JSONResponse(
-            status_code=200,
-            content={"message": f"字典类型 {dict_type} 删除成功"},  # pragma: no cover
-        )  # pragma: no cover
-
+        result = common_dictionary_service.delete_dictionary_type(
+            db, dict_type, operator=current_user.name or "系统"
+        )
+        return JSONResponse(status_code=200, content=result)
     except Exception as e:  # pragma: no cover
         if isinstance(e, BaseBusinessError):  # pragma: no cover
             raise  # pragma: no cover

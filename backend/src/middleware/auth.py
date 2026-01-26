@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
-from ..core.cookie_auth import cookie_manager
+from ..security.cookie_manager import cookie_manager
 from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..database import get_db
 from ..models.auth import User, UserRole

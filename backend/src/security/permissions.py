@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any
+from typing import Any, ParamSpec, TypeVar, cast
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -33,10 +33,13 @@ class DuplicateAssetError(Exception):
 
 logger = logging.getLogger(__name__)
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 
 def permission_required(
     resource: str, action: str, resource_id_param: str | None = None
-) -> Callable[..., Any]:
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     权限验证装饰器
 
@@ -46,25 +49,27 @@ def permission_required(
         resource_id_param: 资源ID参数名 (用于特定资源权限检查)
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             # 获取当前用户
             current_user = kwargs.get("current_user")
             if not current_user:
                 raise unauthorized("未认证用户")
+            current_user = cast(User, current_user)
 
             # 获取数据库会话
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
+            db = cast(Session, db)
 
             try:
                 # 初始化RBAC服务
                 rbac_service = RBACService(db)
 
                 # 检查基础权限
-                user_id_value: str = getattr(current_user, "id", "")
+                user_id_value: str = str(getattr(current_user, "id", ""))
                 has_permission = await rbac_service.check_user_permission(
                     user_id=user_id_value, resource=resource, action=action
                 )
@@ -72,11 +77,12 @@ def permission_required(
                 # 如果有资源ID参数，检查特定资源权限
                 if resource_id_param and has_permission:
                     resource_id = kwargs.get(resource_id_param)
-                    if resource_id:
+                    if resource_id is not None:
+                        resource_id_value = str(resource_id)
                         has_permission = await rbac_service.check_resource_access(
                             user_id=user_id_value,
                             resource=resource,
-                            resource_id=resource_id,
+                            resource_id=resource_id_value,
                             action=action,
                         )
 
@@ -108,14 +114,16 @@ def permission_required(
     return decorator
 
 
-def admin_required(func: Callable[..., Any]) -> Callable[..., Any]:
+def admin_required(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """
     管理员权限装饰器
     """
-    return permission_required("system", "admin")(func)  # type: ignore
+    return permission_required("system", "admin")(func)
 
 
-def role_required(role_code: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def role_required(
+    role_code: str,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     角色要求装饰器
 
@@ -123,19 +131,21 @@ def role_required(role_code: str) -> Callable[[Callable[..., Any]], Callable[...
         role_code: 角色代码 (如: 'admin', 'manager', 'user')
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             current_user = kwargs.get("current_user")
             if not current_user:
                 raise unauthorized("未认证用户")
+            current_user = cast(User, current_user)
 
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
+            db = cast(Session, db)
 
             rbac_service = RBACService(db)
-            user_id_value: str = getattr(current_user, "id", "")
+            user_id_value: str = str(getattr(current_user, "id", ""))
             roles = rbac_service.get_user_roles(user_id_value)
             role_names = {role.name for role in roles}
             current_role = getattr(current_user, "role", None)
@@ -154,7 +164,7 @@ def role_required(role_code: str) -> Callable[[Callable[..., Any]], Callable[...
 
 def organization_required(
     organization_id_param: str = "organization_id",
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     组织权限验证装饰器
 
@@ -162,26 +172,29 @@ def organization_required(
         organization_id_param: 组织ID参数名
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             current_user = kwargs.get("current_user")
             if not current_user:
                 raise unauthorized("未认证用户")
+            current_user = cast(User, current_user)
 
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
+            db = cast(Session, db)
 
             # 获取目标组织ID
             target_org_id = kwargs.get(organization_id_param)
-            if not target_org_id:
+            if target_org_id is None:
                 target_org_id = current_user.organization_id
+            target_org_id_value = str(target_org_id)
 
             # 检查组织访问权限
             rbac_service = RBACService(db)
             has_access = await rbac_service.check_organization_access(
-                user_id=current_user.id, organization_id=target_org_id
+                user_id=str(current_user.id), organization_id=target_org_id_value
             )
 
             if not has_access:
@@ -209,7 +222,7 @@ def get_current_user_with_permissions(
             raise unauthorized("未认证用户")
 
         rbac_service = RBACService(db)
-        user_id_value: str = getattr(current_user, "id", "")
+        user_id_value: str = str(getattr(current_user, "id", ""))
         has_permission = await rbac_service.check_user_permission(
             user_id=user_id_value, resource=resource, action=action
         )

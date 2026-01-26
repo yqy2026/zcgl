@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import (
+from .....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     forbidden,
@@ -21,22 +21,22 @@ from ....core.exception_handler import (
 
 logger = logging.getLogger(__name__)
 
-from ....crud.auth import AuditLogCRUD, UserCRUD
-from ....database import get_db
-from ....exceptions import BusinessLogicError
-from ....middleware.auth import get_current_active_user, require_admin
-from ....middleware.security_middleware import get_client_ip
-from ....schemas.auth import (
+from .....crud.auth import AuditLogCRUD, UserCRUD
+from .....database import get_db
+from .....exceptions import BusinessLogicError
+from .....middleware.auth import get_current_active_user, require_admin
+from .....middleware.security_middleware import get_client_ip
+from .....schemas.auth import (
     PasswordChangeRequest,
     UserCreate,
     UserListResponse,
     UserResponse,
     UserUpdate,
 )
-from ....schemas.auth import (
+from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
-from ....services import AuthService
+from .....services import AuthService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
@@ -420,7 +420,7 @@ async def get_user_statistics(
     try:
         from sqlalchemy import func
 
-        from ....models.auth import User
+        from .....models.auth import User
 
         total_users = db.query(func.count(User.id)).scalar()
         active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()

@@ -15,7 +15,7 @@ import type { Asset, AssetSearchParams } from '@/types/asset';
 interface AssetUIState {
   // 选择状态
   selectedAsset: Asset | null;
-  selectedIds: string[];
+  selectedIds: Set<string>;
 
   // 搜索/筛选参数
   searchParams: AssetSearchParams;
@@ -25,7 +25,7 @@ interface AssetUIState {
 
   // Actions
   setSelectedAsset: (asset: Asset | null) => void;
-  setSelectedIds: (ids: string[]) => void;
+  setSelectedIds: (ids: string[] | Set<string>) => void;
   toggleSelectedId: (id: string) => void;
   setSearchParams: (params: Partial<AssetSearchParams>) => void;
   setViewMode: (mode: 'table' | 'card') => void;
@@ -36,7 +36,7 @@ interface AssetUIState {
 
 const initialState = {
   selectedAsset: null,
-  selectedIds: [],
+  selectedIds: new Set<string>(),
   searchParams: {
     page: 1,
     page_size: 20,
@@ -53,14 +53,18 @@ export const useAssetStore = create<AssetUIState>()(
 
       setSelectedAsset: asset => set({ selectedAsset: asset }),
 
-      setSelectedIds: ids => set({ selectedIds: ids }),
+      setSelectedIds: ids => set({ selectedIds: Array.isArray(ids) ? new Set(ids) : ids }),
 
       toggleSelectedId: id =>
-        set(state => ({
-          selectedIds: state.selectedIds.includes(id)
-            ? state.selectedIds.filter(i => i !== id)
-            : [...state.selectedIds, id],
-        })),
+        set(state => {
+          const newSet = new Set(state.selectedIds);
+          if (newSet.has(id)) {
+            newSet.delete(id);
+          } else {
+            newSet.add(id);
+          }
+          return { selectedIds: newSet };
+        }),
 
       setSearchParams: params =>
         set(state => ({
@@ -69,7 +73,7 @@ export const useAssetStore = create<AssetUIState>()(
 
       setViewMode: mode => set({ viewMode: mode }),
 
-      reset: () => set(initialState),
+      reset: () => set({ ...initialState }),
     }),
     {
       name: 'asset-ui-store',

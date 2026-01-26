@@ -8,19 +8,19 @@ import asyncio
 import logging
 import os
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from ...core.config import settings
-from ...core.exception_handler import bad_request, not_found, service_unavailable
-from ...core.response_handler import success_response
-from ...database import get_db
-from ...models.pdf_import_session import PDFImportSession, SessionStatus
-from ...services.document.pdf_import_service import PDFImportService
-from ...services.document.processing_tracker import BatchStatusTracker
+from ....core.config import settings
+from ....core.exception_handler import bad_request, not_found, service_unavailable
+from ....core.response_handler import success_response
+from ....database import get_db
+from ....models.pdf_import_session import PDFImportSession, SessionStatus
+from ....services.document.pdf_import_service import PDFImportService
+from ....services.document.processing_tracker import BatchStatusTracker
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def _get_batch_status(batch_id: str) -> dict[str, Any] | None:
     """获取批处理状态"""
     tracker = _get_batch_tracker()
     result = tracker.get_status(batch_id)
-    return result
+    return result if isinstance(result, dict) else None
 
 
 def _update_batch_status(batch_id: str, status: str, **updates: Any) -> None:
@@ -551,7 +551,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 
     注意: db 参数仅用于创建新的会话上下文，不直接使用传入的会话
     """
-    from ...database import _get_database_manager
+    from ....database import _get_database_manager
 
     service = PDFImportService()
     db_manager = _get_database_manager()

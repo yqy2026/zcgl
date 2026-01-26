@@ -14,14 +14,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....crud.asset import asset_crud
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....schemas.statistics import AreaSummaryResponse
-from ....services.analytics import AreaService
-from ....utils.cache_manager import cache_statistics
-from ....utils.numeric import to_float
+from src.crud.asset import asset_crud
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.schemas.statistics import AreaSummaryResponse
+from src.services.analytics import AreaService
+from src.utils.cache_manager import cache_statistics
+from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,11 @@ def get_area_summary(
 ) -> AreaSummaryResponse:
     """
     获取面积汇总统计
-
     使用数据库聚合查询计算总面积、可租面积、已租面积等。
-
     Args:
         include_deleted: 是否包含已删除的资产
         use_aggregation: 是否使用数据库聚合查询（推荐，性能更好）
         db: 数据库会话
-
     Returns:
         面积汇总统计信息
     """
@@ -90,13 +87,11 @@ async def get_area_statistics(
     - 已出租面积
     - 未出租面积
     - 占用率
-
     Args:
         ownership_status: 确权状态筛选
         property_nature: 物业性质筛选
         usage_status: 使用状态筛选
         include_deleted: 是否包含已删除资产
-
     Returns:
         面积统计数据
     """

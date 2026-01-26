@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from jose import jwt
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import (
+from .....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
@@ -21,27 +21,27 @@ from ....core.exception_handler import (
 
 logger = logging.getLogger(__name__)
 
-from ....core.cookie_auth import cookie_manager
-from ....core.route_guards import debug_only
-from ....crud.auth import AuditLogCRUD, UserCRUD
-from ....database import get_db
-from ....exceptions import BusinessLogicError
-from ....middleware.auth import (
+from .....security.cookie_manager import cookie_manager
+from .....security.route_guards import debug_only
+from .....crud.auth import AuditLogCRUD, UserCRUD
+from .....database import get_db
+from .....exceptions import BusinessLogicError
+from .....middleware.auth import (
     ALGORITHM,
     SECRET_KEY,
     get_current_active_user,
 )
-from ....middleware.security_middleware import get_client_ip
-from ....models.auth import User
-from ....schemas.auth import (
+from .....middleware.security_middleware import get_client_ip
+from .....models.auth import User
+from .....schemas.auth import (
     LoginRequest,
     PermissionSchema,
     RefreshTokenRequest,
     TokenResponse,
     UserResponse,
 )
-from ....services import AuthService
-from ....services.permission.rbac_service import RBACService
+from .....services import AuthService
+from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["认证管理"])
 
@@ -283,7 +283,7 @@ async def refresh_token(
     )
     if not user:
         # 记录失败的刷新尝试
-        from ....crud.auth import AuditLogCRUD
+        from .....crud.auth import AuditLogCRUD
 
         audit_crud = AuditLogCRUD()
         audit_crud.create(
@@ -328,7 +328,7 @@ async def refresh_token(
     db.commit()
 
     # 记录成功的刷新操作
-    from ....crud.auth import AuditLogCRUD
+    from .....crud.auth import AuditLogCRUD
 
     audit_crud = AuditLogCRUD()
     audit_crud.create(

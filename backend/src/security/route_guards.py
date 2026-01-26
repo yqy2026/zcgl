@@ -8,7 +8,7 @@ import os
 from collections.abc import Awaitable, Callable
 from typing import Any, ParamSpec, TypeVar
 
-from .exception_handler import not_found
+from ..core.exception_handler import not_found
 
 
 def is_debug_mode() -> bool:

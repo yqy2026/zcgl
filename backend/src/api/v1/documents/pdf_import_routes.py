@@ -5,7 +5,7 @@ PDF导入专用路由模块
 
 from fastapi import APIRouter
 
-from ...core.response_handler import success_response
+from ....core.response_handler import success_response
 
 router = APIRouter(tags=["PDF智能导入"])
 

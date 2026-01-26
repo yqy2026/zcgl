@@ -5,6 +5,7 @@
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -195,10 +196,10 @@ class Asset(Base):
         back_populates="assets",
     )
     project_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("projects.id"), comment="项目ID"
+        String, ForeignKey("projects.id"), index=True, comment="项目ID"
     )
     ownership_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("ownerships.id"), comment="权属方ID"
+        String, ForeignKey("ownerships.id"), index=True, comment="权属方ID"
     )
 
     # 关系定义
@@ -206,30 +207,36 @@ class Asset(Base):
     ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 
     # 计算属性 - 未出租面积（自动计算，不存储）
-    @property
+    @cached_property
     def unrented_area(self) -> Decimal:
         """计算未出租面积"""
-        rentable = self.rentable_area or Decimal("0")  # pragma: no cover
-        rented = self.rented_area or Decimal("0")  # pragma: no cover
-        return max(rentable - rented, Decimal("0"))  # pragma: no cover
+        rentable = self.rentable_area or Decimal("0")
+        rented = self.rented_area or Decimal("0")
+        return max(rentable - rented, Decimal("0"))
 
     # 计算属性 - 出租率（自动计算，不存储）
-    @property
+    @cached_property
     def occupancy_rate(self) -> Decimal:
         """计算出租率（百分比）"""
-        if not self.include_in_occupancy_rate:  # pragma: no cover
-            return Decimal("0")  # pragma: no cover
+        if not self.include_in_occupancy_rate:
+            return Decimal("0")
 
-        rentable = self.rentable_area or Decimal("0")  # pragma: no cover
-        if rentable == 0:  # pragma: no cover
-            return Decimal("0")  # pragma: no cover
+        rentable = self.rentable_area or Decimal("0")
+        if rentable == 0:
+            return Decimal("0")
 
-        rented = self.rented_area or Decimal("0")  # pragma: no cover
-        rate = (rented / rentable) * Decimal("100")  # pragma: no cover
-        return round(rate, 2)  # pragma: no cover
+        rented = self.rented_area or Decimal("0")
+        rate = (rented / rentable) * Decimal("100")
+        return round(rate, 2)
 
     def __repr__(self) -> str:
         return f"<Asset(id={self.id}, name={self.property_name})>"
+
+    def clear_cached_properties(self):
+        """清除缓存的计算属性"""
+        # 对于cached_property，需要手动处理缓存清除
+        self.__dict__.pop('unrented_area', None)
+        self.__dict__.pop('occupancy_rate', None)
 
 
 class AssetHistory(Base):
@@ -241,7 +248,7 @@ class AssetHistory(Base):
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
     asset_id: Mapped[str] = mapped_column(
-        String, ForeignKey("assets.id"), nullable=False, comment="资产ID"
+        String, ForeignKey("assets.id"), index=True, nullable=False, comment="资产ID"
     )
     operation_type: Mapped[str] = mapped_column(
         String(50), nullable=False, comment="操作类型"
@@ -277,7 +284,7 @@ class AssetDocument(Base):
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
     asset_id: Mapped[str] = mapped_column(
-        String, ForeignKey("assets.id"), nullable=False, comment="资产ID"
+        String, ForeignKey("assets.id"), index=True, nullable=False, comment="资产ID"
     )
     document_name: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="文档名称"
@@ -310,16 +317,16 @@ class SystemDictionary(Base):
         String(50), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     dict_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="字典类型"
+        String(50), nullable=False, index=True, comment="字典类型"
     )
     dict_code: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="字典编码"
+        String(50), nullable=False, index=True, comment="字典编码"
     )
     dict_label: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="字典标签"
+        String(100), nullable=False, index=True, comment="字典标签"
     )
     dict_value: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="字典值"
+        String(100), nullable=False, index=True, comment="字典值"
     )
     sort_order: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="排序"
@@ -397,10 +404,10 @@ class ProjectOwnershipRelation(Base):
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
     project_id: Mapped[str] = mapped_column(
-        String, ForeignKey("projects.id"), nullable=False, comment="项目ID"
+        String, ForeignKey("projects.id"), index=True, nullable=False, comment="项目ID"
     )
     ownership_id: Mapped[str] = mapped_column(
-        String, ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"
+        String, ForeignKey("ownerships.id"), index=True, nullable=False, comment="权属方ID"
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否有效"

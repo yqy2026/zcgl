@@ -9,10 +9,10 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....crud.auth import AuditLogCRUD
-from ....database import get_db
-from ....middleware.auth import require_admin
-from ....schemas.auth import UserResponse
+from .....crud.auth import AuditLogCRUD
+from .....database import get_db
+from .....middleware.auth import require_admin
+from .....schemas.auth import UserResponse
 
 router = APIRouter(prefix="/audit", tags=["审计日志"])
 

@@ -7,23 +7,23 @@ from typing import Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import (
+from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
     internal_error,
     not_found,
 )
-from ...crud.custom_field import custom_field_crud
-from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
-from ...schemas.asset import (
+from ....crud.custom_field import custom_field_crud
+from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
+from ....schemas.asset import (
     AssetCustomFieldCreate,
     AssetCustomFieldResponse,
     AssetCustomFieldUpdate,
     CustomFieldValueUpdate,
 )
-from ...services.custom_field import custom_field_service
+from ....services.custom_field import custom_field_service
 
 # 创建自定义字段路由器
 router = APIRouter()
@@ -81,7 +81,7 @@ async def get_custom_field(
     - **field_id**: 字段ID
     """
     try:
-        from ...models.asset import AssetCustomField
+        from ....models.asset import AssetCustomField
 
         field: AssetCustomField | None = custom_field_crud.get(db=db, id=field_id)
         if not field:

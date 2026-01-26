@@ -33,20 +33,20 @@ from fastapi import (
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
-from ...constants.api_constants import PaginationLimits
-from ...constants.business_constants import DateTimeFields
-from ...crud.history import history_crud
-from ...database import get_db
-from ...middleware.auth import audit_action, get_current_active_user, require_permission
-from ...middleware.security_middleware import get_client_ip
-from ...models.auth import User
-from ...schemas.asset import (
+from ....constants.api_constants import PaginationLimits
+from ....constants.business_constants import DateTimeFields
+from ....crud.history import history_crud
+from ....database import get_db
+from ....middleware.auth import audit_action, get_current_active_user, require_permission
+from ....middleware.security_middleware import get_client_ip
+from ....models.auth import User
+from ....schemas.asset import (
     AssetCreate,
     AssetListResponse,
     AssetResponse,
     AssetUpdate,
 )
-from ...services.asset.asset_service import AssetService
+from ....services.asset.asset_service import AssetService
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import
@@ -132,7 +132,7 @@ async def get_assets(
     )
 
     # Convert Asset models to AssetResponse
-    from ...schemas.asset import AssetResponse
+    from ....schemas.asset import AssetResponse
 
     items = [AssetResponse.model_validate(asset) for asset in assets]
 
@@ -154,7 +154,10 @@ async def get_ownership_entities(
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
     asset_service = AssetService(db)
-    return asset_service.get_distinct_field_values("ownership_entity")
+    return [
+        str(value)
+        for value in asset_service.get_distinct_field_values("ownership_entity")
+    ]
 
 
 @router.get(
@@ -165,7 +168,10 @@ async def get_business_categories(
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
     asset_service = AssetService(db)
-    return asset_service.get_distinct_field_values("business_category")
+    return [
+        str(value)
+        for value in asset_service.get_distinct_field_values("business_category")
+    ]
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
@@ -174,7 +180,9 @@ async def get_usage_statuses(
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
     asset_service = AssetService(db)
-    return asset_service.get_distinct_field_values("usage_status")
+    return [
+        str(value) for value in asset_service.get_distinct_field_values("usage_status")
+    ]
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
@@ -183,7 +191,10 @@ async def get_property_natures(
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
     asset_service = AssetService(db)
-    return asset_service.get_distinct_field_values("property_nature")
+    return [
+        str(value)
+        for value in asset_service.get_distinct_field_values("property_nature")
+    ]
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
@@ -192,7 +203,10 @@ async def get_ownership_statuses(
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
     asset_service = AssetService(db)
-    return asset_service.get_distinct_field_values("ownership_status")
+    return [
+        str(value)
+        for value in asset_service.get_distinct_field_values("ownership_status")
+    ]
 
 
 # ===== 单个资产操作接口 =====

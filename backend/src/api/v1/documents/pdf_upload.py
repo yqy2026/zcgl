@@ -26,16 +26,16 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import bad_request, internal_error
-from ...database import get_db
-from ...models.pdf_import_session import (
+from ....core.exception_handler import bad_request, internal_error
+from ....database import get_db
+from ....models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
     SessionStatus,
 )
-from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
-from ...services.document.pdf_import_service import PDFImportService
-from ...utils.file_security import generate_safe_filename
+from ....schemas.pdf_import import ExtractionResponse, FileUploadResponse
+from ....services.document.pdf_import_service import PDFImportService
+from ....utils.file_security import generate_safe_filename
 from ..dependencies import get_optional_services, get_pdf_import_service
 
 logger = logging.getLogger(__name__)
@@ -188,7 +188,7 @@ async def upload_and_extract_pdf_v1_compatible(
             )
 
         # Best practice: import from backend service module, not "src.*"
-        from ...services.document.contract_extractor import ContractExtractor
+        from ....services.document.contract_extractor import ContractExtractor
 
         extraction_result = ContractExtractor().extract_contract_info(
             text_result.get("text", "")

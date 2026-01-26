@@ -13,13 +13,13 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....crud.asset import asset_crud
-from ....database import get_db
-from ....middleware.auth import get_current_active_user
-from ....models.auth import User
-from ....schemas.statistics import FinancialSummaryResponse
-from ....utils.cache_manager import cache_statistics
-from ....utils.numeric import to_float
+from src.crud.asset import asset_crud
+from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
+from src.schemas.statistics import FinancialSummaryResponse
+from src.utils.cache_manager import cache_statistics
+from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,6 @@ def get_financial_summary(
 ) -> FinancialSummaryResponse:
     """
     获取财务汇总统计
-
     计算所有资产的财务汇总数据，包括：
     - 总年收入
     - 总年支出
@@ -46,7 +45,6 @@ def get_financial_summary(
     Args:
         include_deleted: 是否包含已删除的资产
         db: 数据库会话
-
     Returns:
         财务汇总统计信息
     """

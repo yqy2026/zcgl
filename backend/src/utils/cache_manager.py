@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, overload
 
 """
 缓存管理模块
@@ -276,7 +276,7 @@ class CacheDecorator:
     @overload
     def __call__(self, func: Callable[P, R]) -> Callable[P, R]: ...
 
-    def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
+    def __call__(self, func: Callable[P, Any]) -> Callable[P, Any]:
         # 检测函数是否为异步函数
         import asyncio
 
@@ -284,7 +284,7 @@ class CacheDecorator:
 
         if is_async_func:
             # 异步函数的处理逻辑
-            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 # 构建缓存键
                 cache_key = self.key_builder(func.__name__, **kwargs)
 
@@ -301,10 +301,10 @@ class CacheDecorator:
 
                 return result
 
-            return async_wrapper
+            return cast(Callable[P, Any], async_wrapper)
         else:
             # 同步函数的处理逻辑
-            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 # 构建缓存键
                 self.key_builder(func.__name__, **kwargs)
 
@@ -316,7 +316,7 @@ class CacheDecorator:
                 # 直接执行函数
                 return func(*args, **kwargs)
 
-            return sync_wrapper
+            return cast(Callable[P, Any], sync_wrapper)
 
 
 # 常用缓存装饰器

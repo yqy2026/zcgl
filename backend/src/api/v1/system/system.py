@@ -8,8 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from ...core.response_handler import success_response
-from ...database import get_database_status
+from ....core.response_handler import success_response
+from ....database import get_database_status
 
 router = APIRouter(tags=["系统管理"])
 

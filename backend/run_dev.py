@@ -45,6 +45,26 @@ if __name__ == "__main__":
         print("  SECRET_KEY=<生成的密钥>")
         sys.exit(1)
 
+    # 检查 DATA_ENCRYPTION_KEY（用于PII数据加密）
+    data_encryption_key = os.getenv("DATA_ENCRYPTION_KEY", "")
+    if not data_encryption_key:
+        print("⚠️  警告: DATA_ENCRYPTION_KEY 环境变量未设置")
+        print("注意: 如果不设置此密钥，敏感数据（如个人信息）将不会被加密存储！")
+        print("建议在 .env 文件中设置此密钥以保护敏感数据")
+        print()
+        print("生成方法:")
+        print('  python -c "import secrets; print(secrets.token_urlsafe(32))"')
+        print()
+        print("然后将生成的密钥添加到 .env 文件:")
+        print("  DATA_ENCRYPTION_KEY=<生成的密钥>")
+        print()
+        print("按 Enter 继续启动服务，或按 Ctrl+C 退出并配置密钥...")
+        try:
+            input()  # 等待用户确认
+        except KeyboardInterrupt:
+            print("\n取消启动")
+            sys.exit(1)
+
     print("启动开发服务器 (DEV_MODE=true)")
     uvicorn.run(
         "src.main:app", host="0.0.0.0", port=8002, reload=True, log_level="info"
