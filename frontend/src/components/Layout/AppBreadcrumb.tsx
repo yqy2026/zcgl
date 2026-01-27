@@ -26,7 +26,8 @@ const AppBreadcrumb: React.FC = () => {
   const breadcrumbNameMap: Record<string, { name: string; icon?: React.ReactNode }> = {
     '/': { name: '首页', icon: <HomeOutlined /> },
     '/dashboard': { name: '数据看板', icon: <DashboardOutlined /> },
-    '/assets': { name: '资产列表', icon: <UnorderedListOutlined /> },
+    '/assets': { name: '资产管理', icon: <UnorderedListOutlined /> },
+    '/assets/list': { name: '资产列表', icon: <UnorderedListOutlined /> },
     '/assets/new': { name: '新增资产', icon: <PlusOutlined /> },
     '/assets/search': { name: '高级搜索', icon: <SearchOutlined /> },
     '/data/import': { name: '数据导入', icon: <UploadOutlined /> },
@@ -75,12 +76,11 @@ const AppBreadcrumb: React.FC = () => {
     // 处理资产详情页面
     const assetDetailMatch = pathname.match(/^\/assets\/(\d+)$/);
     if (assetDetailMatch !== undefined && assetDetailMatch !== null) {
-      const _assetId = assetDetailMatch[1];
       return [
         ...breadcrumbItems,
         {
           title: (
-            <Link to="/assets">
+            <Link to="/assets/list">
               <UnorderedListOutlined style={{ marginRight: 4 }} />
               资产管理
             </Link>
@@ -88,7 +88,7 @@ const AppBreadcrumb: React.FC = () => {
         },
         {
           title: (
-            <Link to="/assets">
+            <Link to="/assets/list">
               <UnorderedListOutlined style={{ marginRight: 4 }} />
               资产列表
             </Link>
@@ -113,7 +113,7 @@ const AppBreadcrumb: React.FC = () => {
         ...breadcrumbItems,
         {
           title: (
-            <Link to="/assets">
+            <Link to="/assets/list">
               <UnorderedListOutlined style={{ marginRight: 4 }} />
               资产管理
             </Link>
@@ -121,7 +121,7 @@ const AppBreadcrumb: React.FC = () => {
         },
         {
           title: (
-            <Link to="/assets">
+            <Link to="/assets/list">
               <UnorderedListOutlined style={{ marginRight: 4 }} />
               资产列表
             </Link>

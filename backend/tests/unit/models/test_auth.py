@@ -25,6 +25,7 @@ class TestUserRoleEnum:
     def test_user_role_is_enum(self):
         """Test UserRole is an Enum"""
         from enum import Enum
+
         assert isinstance(UserRole.USER, Enum)
 
 

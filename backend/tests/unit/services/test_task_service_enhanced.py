@@ -13,6 +13,7 @@ from datetime import datetime, UTC
 def task_service(db: Session):
     """任务服务实例"""
     from src.services.task.service import TaskService
+
     return TaskService(db)
 
 
@@ -31,8 +32,8 @@ def sample_task(db: Session, admin_user):
             priority="normal",
             status="pending",
             assigned_to=admin_user.id,
-            due_date=datetime.now(UTC)
-        )
+            due_date=datetime.now(UTC),
+        ),
     )
     yield task
     try:
@@ -47,9 +48,7 @@ class TestTaskServiceBusinessLogic:
     def test_task_status_transition(self, task_service, sample_task, db: Session):
         """测试任务状态转换"""
         # pending → in_progress
-        updated = task_service.update_task_status(
-            db, sample_task.id, "in_progress"
-        )
+        updated = task_service.update_task_status(db, sample_task.id, "in_progress")
         assert updated.status == "in_progress"
 
     def test_task_priority_sorting(self, task_service, db: Session):
@@ -60,9 +59,7 @@ class TestTaskServiceBusinessLogic:
     def test_task_assignment(self, task_service, db: Session, admin_user):
         """测试任务分配"""
         result = task_service.assign_task(
-            db,
-            task_id="test-task-id",
-            user_id=admin_user.id
+            db, task_id="test-task-id", user_id=admin_user.id
         )
         # 可能返回成功或失败
         assert result is not None

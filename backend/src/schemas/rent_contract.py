@@ -144,7 +144,9 @@ class RentContractBase(BaseModel):
     payment_cycle: PaymentCycle | None = Field(
         PaymentCycle.MONTHLY, description="付款周期"
     )
-    contract_status: ContractStatus = Field(ContractStatus.ACTIVE, description="合同状态")
+    contract_status: ContractStatus = Field(
+        ContractStatus.ACTIVE, description="合同状态"
+    )
     payment_terms: str | None = Field(None, description="支付条款")
     contract_notes: str | None = Field(None, description="合同备注")
 

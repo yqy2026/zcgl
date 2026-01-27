@@ -17,7 +17,7 @@ def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"}
+        data={"username": admin_user.username, "password": "admin123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -31,49 +31,40 @@ class TestRolesCRUD:
         role_data = {
             "name": "test_role",
             "description": "Test role description",
-            "permissions": ["asset.read", "asset.write"]
+            "permissions": ["asset.read", "asset.write"],
         }
         response = client.post(
-            "/api/v1/roles/",
-            json=role_data,
-            headers=admin_user_headers
+            "/api/v1/roles/", json=role_data, headers=admin_user_headers
         )
         # 端点可能不存在或返回不同状态
-        assert response.status_code in [status.HTTP_200_OK, status.HTTP_201_CREATED, status.HTTP_404_NOT_FOUND]
+        assert response.status_code in [
+            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
+            status.HTTP_404_NOT_FOUND,
+        ]
 
     def test_get_roles_list(self, client, admin_user_headers):
         """测试获取角色列表"""
-        response = client.get(
-            "/api/v1/roles/",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/roles/", headers=admin_user_headers)
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_get_role_by_id(self, client, admin_user_headers):
         """测试获取单个角色"""
-        response = client.get(
-            "/api/v1/roles/test-role-id",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/roles/test-role-id", headers=admin_user_headers)
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_update_role(self, client, admin_user_headers):
         """测试更新角色"""
-        update_data = {
-            "description": "Updated description"
-        }
+        update_data = {"description": "Updated description"}
         response = client.put(
-            "/api/v1/roles/test-role-id",
-            json=update_data,
-            headers=admin_user_headers
+            "/api/v1/roles/test-role-id", json=update_data, headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_delete_role(self, client, admin_user_headers):
         """测试删除角色"""
         response = client.delete(
-            "/api/v1/roles/test-role-id",
-            headers=admin_user_headers
+            "/api/v1/roles/test-role-id", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -89,15 +80,14 @@ class TestRolePermissions:
         response = client.post(
             "/api/v1/roles/test-role-id/permissions",
             json=permissions_data,
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_get_role_permissions(self, client, admin_user_headers):
         """测试获取角色权限"""
         response = client.get(
-            "/api/v1/roles/test-role-id/permissions",
-            headers=admin_user_headers
+            "/api/v1/roles/test-role-id/permissions", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -105,7 +95,7 @@ class TestRolePermissions:
         """测试撤销角色权限"""
         response = client.delete(
             "/api/v1/roles/test-role-id/permissions/asset.write",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -115,22 +105,16 @@ class TestUserRoleAssignments:
 
     def test_assign_role_to_user(self, client, admin_user_headers):
         """测试为用户分配角色"""
-        assignment_data = {
-            "user_id": "test-user-id",
-            "role_id": "test-role-id"
-        }
+        assignment_data = {"user_id": "test-user-id", "role_id": "test-role-id"}
         response = client.post(
-            "/api/v1/roles/assign",
-            json=assignment_data,
-            headers=admin_user_headers
+            "/api/v1/roles/assign", json=assignment_data, headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_get_user_roles(self, client, admin_user_headers):
         """测试获取用户角色"""
         response = client.get(
-            "/api/v1/roles/user/test-user-id",
-            headers=admin_user_headers
+            "/api/v1/roles/user/test-user-id", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -138,7 +122,7 @@ class TestUserRoleAssignments:
         """测试撤销用户角色"""
         response = client.delete(
             "/api/v1/roles/user/test-user-id/role/test-role-id",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -155,12 +139,14 @@ class TestRolesAuthentication:
         """测试普通用户无法创建角色"""
         role_data = {"name": "unauthorized_role"}
         response = client.post(
-            "/api/v1/roles/",
-            json=role_data,
-            headers=normal_user_headers
+            "/api/v1/roles/", json=role_data, headers=normal_user_headers
         )
         # 普通用户应该被拒绝
-        assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_401_UNAUTHORIZED, status.HTTP_404_NOT_FOUND]
+        assert response.status_code in [
+            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_404_NOT_FOUND,
+        ]
 
 
 @pytest.fixture
@@ -168,7 +154,7 @@ def normal_user_headers(client, normal_user):
     """普通用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": normal_user.username, "password": "user123"}
+        data={"username": normal_user.username, "password": "user123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

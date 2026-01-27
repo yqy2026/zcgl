@@ -12,6 +12,7 @@ Security Design:
 """
 
 import logging
+from importlib import import_module
 from typing import ClassVar
 
 from ..constants.business_constants import DateTimeFields
@@ -296,6 +297,20 @@ def register_whitelist(model_class: type, whitelist: ModelFieldWhitelist) -> Non
     logger.info(f"Registered whitelist for model: {model_class.__name__}")
 
 
+def _ensure_whitelists_registered() -> None:
+    if WHITELIST_REGISTRY:
+        return
+    try:
+        from ..models.asset import Asset, Ownership
+        from ..models.rent_contract import RentContract
+
+        register_whitelist(Asset, AssetWhitelist())
+        register_whitelist(Ownership, OwnershipWhitelist())
+        register_whitelist(RentContract, RentContractWhitelist())
+    except Exception as exc:
+        logger.warning(f"Failed to initialize whitelist registry: {exc}")
+
+
 def get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
     """
     Get whitelist configuration for a model.
@@ -309,6 +324,7 @@ def get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
     Returns:
         ModelFieldWhitelist instance for the model
     """
+    _ensure_whitelists_registered()
     if model_class in WHITELIST_REGISTRY:
         return WHITELIST_REGISTRY[model_class]
 

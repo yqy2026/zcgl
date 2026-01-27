@@ -48,7 +48,9 @@ class TestJWTSecurityConfig:
         for key in default_keys:
             result = jwt_security.validate_secret_key(key)
             assert result["is_valid"] is False
-            assert any("默认" in issue or "不安全" in issue for issue in result["issues"])
+            assert any(
+                "默认" in issue or "不安全" in issue for issue in result["issues"]
+            )
 
     def test_validate_secret_key_weak_patterns(self):
         """Test that weak key patterns are detected"""
@@ -129,7 +131,7 @@ class TestTokenCreation:
         decoded = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[getattr(settings, "ALGORITHM", "HS256")]
+            algorithms=[getattr(settings, "ALGORITHM", "HS256")],
         )
 
         # Check standard claims
@@ -154,7 +156,7 @@ class TestTokenCreation:
         decoded = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[getattr(settings, "ALGORITHM", "HS256")]
+            algorithms=[getattr(settings, "ALGORITHM", "HS256")],
         )
 
         exp_datetime = datetime.fromtimestamp(decoded["exp"], UTC)
@@ -175,7 +177,7 @@ class TestTokenCreation:
         decoded = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[getattr(settings, "ALGORITHM", "HS256")]
+            algorithms=[getattr(settings, "ALGORITHM", "HS256")],
         )
 
         exp_datetime = datetime.fromtimestamp(decoded["exp"], UTC)
@@ -213,7 +215,7 @@ class TestTokenVerification:
         token = jwt.encode(
             payload,
             settings.SECRET_KEY,
-            algorithm=getattr(settings, "ALGORITHM", "HS256")
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         with pytest.raises(JWTError, match="Token missing expiration time"):
@@ -227,12 +229,12 @@ class TestTokenVerification:
         # Create token with exp but no iat
         payload = {
             "user_id": 123,
-            "exp": (datetime.now(UTC) + timedelta(minutes=30)).timestamp()
+            "exp": (datetime.now(UTC) + timedelta(minutes=30)).timestamp(),
         }
         token = jwt.encode(
             payload,
             settings.SECRET_KEY,
-            algorithm=getattr(settings, "ALGORITHM", "HS256")
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         with pytest.raises(JWTError, match="Token missing issued at time"):
@@ -249,12 +251,12 @@ class TestTokenVerification:
             "iat": (datetime.now(UTC) - timedelta(hours=2)).timestamp(),
             "exp": (datetime.now(UTC) - timedelta(hours=1)).timestamp(),
             "jti": "test-jti",
-            "type": "access"
+            "type": "access",
         }
         token = jwt.encode(
             payload,
             settings.SECRET_KEY,
-            algorithm=getattr(settings, "ALGORITHM", "HS256")
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         with pytest.raises(JWTError, match="expired"):
@@ -267,6 +269,7 @@ class TestTokenVerification:
 
         # Try to verify with different key
         from src.core.config import settings
+
         original_key = settings.SECRET_KEY
         settings.SECRET_KEY = "different-secret-key-for-testing"
 
@@ -308,12 +311,12 @@ class TestTokenSecurityInfo:
             "iat": (datetime.now(UTC) - timedelta(hours=2)).timestamp(),
             "exp": (datetime.now(UTC) - timedelta(hours=1)).timestamp(),
             "jti": "test-jti",
-            "type": "access"
+            "type": "access",
         }
         token = jwt.encode(
             payload,
             settings.SECRET_KEY,
-            algorithm=getattr(settings, "ALGORITHM", "HS256")
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         info = jwt_security.get_token_security_info(token)

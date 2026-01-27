@@ -1,5 +1,5 @@
 {
-  "id": "4646e6cb-1f79-4b46-a651-696ad5cc5ba6",
+  "id": "chrome-devtools_setup",
   "name": "Chrome DevTools",
   "slug": "chrome-devtools",
   "enabled": true,
@@ -17,9 +17,9 @@
     "authType": "none"
   },
   "icon": "🌐",
-  "createdAt": 1769317200000,
-  "updatedAt": 1769317483171,
-  "lastTestedAt": 1769317483171,
+  "tagline": "Control a Chrome browser instance for automation, scraping, and debugging",
+  "lastTestedAt": 1769485096336,
   "connectionStatus": "failed",
-  "connectionError": "Process error: npm notice Access token expired or revoked. Please try logging in again."
+  "connectionError": "Process error: npm notice Access token expired or revoked. Please try logging in again.",
+  "updatedAt": 1769485096336
 }

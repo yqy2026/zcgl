@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from jose import jwt
 from sqlalchemy.orm import Session
@@ -78,7 +78,7 @@ class SessionService:
         user_session.platform = platform
         user_session.ip_address = ip_address
         user_session.user_agent = user_agent
-        user_session.expires_at = datetime.now() + timedelta(
+        user_session.expires_at = datetime.now(UTC) + timedelta(
             days=settings.SESSION_EXPIRE_DAYS
         )
 

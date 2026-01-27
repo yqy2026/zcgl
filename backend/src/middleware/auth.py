@@ -14,12 +14,12 @@ from sqlalchemy.orm import Session
 
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
-from ..security.cookie_manager import cookie_manager
 from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..database import get_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
+from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
 
 logger = logging.getLogger(__name__)
@@ -62,43 +62,20 @@ SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 
-def safe_role_compare(role_value: Any, target_role: Any) -> bool:
-    """安全地比较角色值，支持字符串和枚举类型"""
-    if isinstance(role_value, str):
-        return bool(role_value == target_role.value)
-    return bool(role_value == target_role)
-
-
-def get_current_user(
-    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    authorization: str | None = Header(None),
-    db: Session = Depends(get_db),
-) -> User:
+def _validate_jwt_token(token: str) -> TokenData:
     """
-    Get current authenticated user from JWT token.
+    共享的JWT验证逻辑
 
-    Authentication priority:
-    1. httpOnly cookie (primary method for XSS protection)
-    2. Authorization header (fallback for backward compatibility)
+    Args:
+        token: JWT token string
 
-    This unified approach ensures ALL protected endpoints automatically
-    support both cookie and Bearer token authentication.
+    Returns:
+        TokenData: 解析并验证后的token数据
+
+    Raises:
+        HTTPException: 如果token无效或验证失败
     """
-
     credentials_exception = unauthorized("无效的认证凭据")
-
-    # Try cookie first (primary method for XSS protection)
-    token = None
-    if auth_token:
-        token = auth_token
-        logger.debug("Authenticating using httpOnly cookie")
-    elif authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        logger.debug("Authenticating using Authorization header (fallback)")
-
-    # No token found in either cookie or header
-    if not token:
-        raise credentials_exception
 
     try:
         payload = jwt.decode(
@@ -108,6 +85,7 @@ def get_current_user(
             audience="land-property-system",
             issuer="land-property-auth",
         )
+
         user_id: str | None = payload.get("sub")
         username: str | None = payload.get("username")
         role: str | None = payload.get("role")
@@ -167,9 +145,55 @@ def get_current_user(
             # 如果TokenData验证失败，记录错误并抛出认证异常
             logger.error(f"TokenData validation failed: {e}")
             raise credentials_exception
-    except JWTError:
+
+    except JWTError as e:
+        logger.warning(f"JWT decode error: {e}")
         raise credentials_exception
 
+    return token_data
+
+
+def safe_role_compare(role_value: Any, target_role: Any) -> bool:
+    """安全地比较角色值，支持字符串和枚举类型"""
+    if isinstance(role_value, str):
+        return bool(role_value == target_role.value)
+    return bool(role_value == target_role)
+
+
+def get_current_user(
+    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Get current authenticated user from JWT token.
+
+    Authentication priority:
+    1. httpOnly cookie (primary method for XSS protection)
+    2. Authorization header (fallback for backward compatibility)
+
+    This unified approach ensures ALL protected endpoints automatically
+    support both cookie and Bearer token authentication.
+    """
+    credentials_exception = unauthorized("无效的认证凭据")
+
+    # Try cookie first (primary method for XSS protection)
+    token = None
+    if auth_token:
+        token = auth_token
+        logger.debug("Authenticating using httpOnly cookie")
+    elif authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        logger.debug("Authenticating using Authorization header (fallback)")
+
+    # No token found in either cookie or header
+    if not token:
+        raise credentials_exception
+
+    # 使用共享的JWT验证逻辑
+    token_data = _validate_jwt_token(token)
+
+    # Get user from database
     user = db.query(User).filter(User.id == token_data.sub).first()
     if user is None:
         raise credentials_exception
@@ -209,7 +233,6 @@ def get_current_user_from_cookie(
     Raises:
         unauthorized: If no valid token found or user is inactive/locked
     """
-
     # Try cookie first (primary method for XSS protection)
     token = None
     if auth_token:
@@ -223,83 +246,13 @@ def get_current_user_from_cookie(
     if not token:
         raise unauthorized("Not authenticated")
 
-    # Validate token using the same logic as get_current_user()
-    credentials_exception = unauthorized("Invalid authentication credentials")
-
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
-            audience="land-property-system",
-            issuer="land-property-auth",
-        )
-        user_id: str | None = payload.get("sub")
-        username: str | None = payload.get("username")
-        role: str | None = payload.get("role")
-        exp: int | None = payload.get("exp")
-        iat: int | None = payload.get("iat")
-        jti: str | None = payload.get("jti")  # JWT ID for token tracking
-
-        # Validate required fields
-        if user_id is None or username is None or role is None:
-            logger.warning(
-                f"JWT token missing required fields: sub={user_id}, username={username}, role={role}"
-            )
-            raise credentials_exception
-
-        # Validate expiration
-        if exp is None:
-            logger.warning("JWT token missing expiration time")
-            raise credentials_exception
-
-        # Validate issued at time
-        if iat is None:
-            logger.warning("JWT token missing issued at time")
-            raise credentials_exception
-
-        # Check if token is blacklisted
-        if jti and _is_token_blacklisted(jti):
-            logger.warning(f"JWT token {jti} is blacklisted")
-            raise unauthorized("Token has been revoked")
-
-        # Handle role conversion (string to enum)
-        role_enum = role
-        if isinstance(role, str):
-            try:
-                role_enum = UserRole(role)
-            except ValueError:
-                logger.warning(f"Invalid role value '{role}', defaulting to USER")
-                role_enum = UserRole.USER
-        elif isinstance(role, UserRole):
-            # Already an enum, use as-is
-            pass
-        else:
-            # Unknown type, default to USER
-            logger.warning(
-                f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER"
-            )
-            role_enum = UserRole.USER
-
-        # Create TokenData for validation
-        try:
-            token_data = TokenData(
-                sub=user_id,
-                username=username,
-                role=role_enum,
-                exp=payload.get("exp") if payload else None,
-            )
-        except Exception as e:
-            logger.error(f"TokenData validation failed: {e}")
-            raise credentials_exception
-    except JWTError as e:
-        logger.warning(f"JWT decode error: {e}")
-        raise credentials_exception
+    # 使用共享的JWT验证逻辑
+    token_data = _validate_jwt_token(token)
 
     # Get user from database
     user = db.query(User).filter(User.id == token_data.sub).first()
     if user is None:
-        raise credentials_exception
+        raise unauthorized("Invalid authentication credentials")
 
     # Check if user is active
     if not user.is_active:
@@ -451,9 +404,7 @@ class AuditLogger:
 
             ip_address = get_client_ip(request)
             user_agent = request.headers.get("user-agent", "")
-            request_params = (
-                str(request.query_params) if request.query_params else None
-            )
+            request_params = str(request.query_params) if request.query_params else None
 
             self.log_action(
                 db=db,

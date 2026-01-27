@@ -30,7 +30,10 @@ class TestFileValidationConfig:
         config = FileValidationConfig()
 
         assert "application/pdf" in config.ALLOWED_MIME_TYPES
-        assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in config.ALLOWED_MIME_TYPES
+        assert (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            in config.ALLOWED_MIME_TYPES
+        )
         assert "image/jpeg" in config.ALLOWED_MIME_TYPES
 
     def test_max_file_sizes(self):
@@ -273,7 +276,9 @@ class TestFileTypeValidation:
             # File says .pdf but MIME type is different
             mock_magic.from_buffer.return_value = "application/vnd.ms-excel"
 
-            with pytest.raises(BusinessValidationError, match="文件扩展名与MIME类型不匹配"):
+            with pytest.raises(
+                BusinessValidationError, match="文件扩展名与MIME类型不匹配"
+            ):
                 validator.validate_file_type(mock_file)
 
     def test_suspicious_mime_type(self, validator, mock_file):

@@ -41,7 +41,7 @@ import { COLORS } from '@/styles/colorMap';
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
-import { type OperationLog, type LogStatistics } from '../../services/systemService';
+import { logService, type OperationLog, type LogStatistics } from '../../services/systemService';
 
 const OperationLogPage: React.FC = () => {
   const [logs, setLogs] = useState<OperationLog[]>([]);
@@ -54,6 +54,11 @@ const OperationLogPage: React.FC = () => {
   const [_actionFilter, _setActionFilter] = useState<string>('');
   const [_statusFilter, _setStatusFilter] = useState<string>('');
   const [_dateRange, _setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
 
   // 操作类型选项
   const actionOptions = [
@@ -86,84 +91,139 @@ const OperationLogPage: React.FC = () => {
     { value: 'warning', label: '警告', color: 'orange' },
   ];
 
+  type LogJsonValue = string | Record<string, unknown> | unknown[] | null | undefined;
+
+  const parseJsonValue = (value: LogJsonValue): LogJsonValue => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return value;
+    }
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed == null) {
+        return value;
+      }
+      if (Array.isArray(parsed) || typeof parsed === 'object') {
+        return parsed as Record<string, unknown> | unknown[];
+      }
+      return value;
+    } catch {
+      return value;
+    }
+  };
+
+  const formatJson = (value: unknown) => {
+    if (value == null) {
+      return '-';
+    }
+    if (typeof value === 'string') {
+      const parsed = parseJsonValue(value);
+      if (parsed !== value) {
+        return JSON.stringify(parsed, null, 2);
+      }
+      return value;
+    }
+    return JSON.stringify(value, null, 2);
+  };
+
+  const renderJsonBlock = (value: unknown) => {
+    const formatted = formatJson(value);
+    if (formatted === '-') {
+      return '-';
+    }
+    return (
+      <pre
+        style={{
+          background: COLORS.bgTertiary,
+          padding: '8px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          margin: 0,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}
+      >
+        {formatted}
+      </pre>
+    );
+  };
+
   useEffect(() => {
     loadLogs();
-    loadStatistics();
   }, []);
 
-  const loadLogs = async () => {
+  const loadLogs = async (options?: {
+    page?: number;
+    pageSize?: number;
+    searchText?: string;
+    module?: string;
+    action?: string;
+    status?: string;
+    dateRange?: [dayjs.Dayjs, dayjs.Dayjs] | null;
+  }) => {
     setLoading(true);
     try {
-      // 模拟API调用
-      const mockLogs: OperationLog[] = [
-        {
-          id: '1',
-          user_id: '1',
-          username: 'admin',
-          user_name: '系统管理员',
-          action: 'login',
-          action_name: '用户登录',
-          module: 'auth',
-          module_name: '认证授权',
-          resource_type: 'user',
-          resource_id: '1',
-          resource_name: '系统管理员',
-          ip_address: '192.168.1.100',
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          request_method: 'POST',
-          request_url: '/api/auth/login',
-          response_status: 200,
-          response_time: 120,
-          error_message: null,
-          details: { login_type: 'password', device: 'web' },
-          created_at: dayjs().subtract(1, 'hour').toISOString(),
-        },
-        {
-          id: '2',
-          user_id: '2',
-          username: 'manager001',
-          user_name: '张经理',
-          action: 'create',
-          action_name: '创建资产',
-          module: 'assets',
-          module_name: '资产管理',
-          resource_type: 'asset',
-          resource_id: 'asset123',
-          resource_name: '测试资产',
-          ip_address: '192.168.1.101',
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          request_method: 'POST',
-          request_url: '/api/assets',
-          response_status: 201,
-          response_time: 250,
-          error_message: null,
-          details: { asset_name: '测试资产', asset_type: 'commercial' },
-          created_at: dayjs().subtract(2, 'hours').toISOString(),
-        },
-        {
-          id: '3',
-          user_id: '3',
-          username: 'user001',
-          user_name: '普通用户',
-          action: 'view',
-          action_name: '查看资产',
-          module: 'assets',
-          module_name: '资产管理',
-          resource_type: 'asset',
-          resource_id: 'asset456',
-          resource_name: '示例资产',
-          ip_address: '192.168.1.102',
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          request_method: 'GET',
-          request_url: '/api/assets/asset456',
-          response_status: 200,
-          response_time: 80,
-          error_message: null,
-          details: { view_type: 'detail' },
-          created_at: dayjs().subtract(3, 'hours').toISOString(),
-        },
-      ];
-      setLogs(mockLogs);
+      const page = options?.page ?? pagination.current;
+      const pageSize = options?.pageSize ?? pagination.pageSize;
+      const searchText = options?.searchText ?? _searchText;
+      const moduleFilter = options?.module ?? _moduleFilter;
+      const actionFilter = options?.action ?? _actionFilter;
+      const statusFilter = options?.status ?? _statusFilter;
+      const dateRange = options?.dateRange ?? _dateRange;
+
+      const params = {
+        page,
+        page_size: pageSize,
+        module: moduleFilter || undefined,
+        action: actionFilter || undefined,
+        start_date: dateRange?.[0].format('YYYY-MM-DD'),
+        end_date: dateRange?.[1].format('YYYY-MM-DD'),
+        search: searchText || undefined,
+        response_status: statusFilter || undefined,
+      };
+
+      const result = await logService.getLogs(params);
+      const items = Array.isArray(result?.items) ? result.items : [];
+      const normalizedItems = items.map(item => ({
+        ...item,
+        request_params: parseJsonValue(item.request_params),
+        request_body: parseJsonValue(item.request_body),
+        details: parseJsonValue(item.details),
+        user_name: item.user_name ?? item.username ?? '-',
+        module_name: item.module_name ?? item.module,
+        action_name: item.action_name ?? item.action,
+      }));
+
+      setLogs(normalizedItems);
+      setPagination({
+        current: result?.page ?? page,
+        pageSize: result?.page_size ?? pageSize,
+        total: result?.total ?? normalizedItems.length,
+      });
+
+      const responseTimes = normalizedItems
+        .map(log => log.response_time)
+        .filter((time): time is number => typeof time === 'number');
+      const avgResponseTime =
+        responseTimes.length > 0
+          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+          : 0;
+
+      setStatistics({
+        total: result?.total ?? normalizedItems.length,
+        today: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'day')).length,
+        this_week: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'week'))
+          .length,
+        this_month: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'month'))
+          .length,
+        by_action: {},
+        by_module: {},
+        error_count: normalizedItems.filter(log => (log.response_status ?? 0) >= 400).length,
+        avg_response_time: avgResponseTime,
+      });
     } catch {
       MessageManager.error('加载操作日志失败');
     } finally {
@@ -171,29 +231,9 @@ const OperationLogPage: React.FC = () => {
     }
   };
 
-  const loadStatistics = async () => {
-    try {
-      // 模拟统计数据
-      const mockStats: LogStatistics = {
-        total: logs.length,
-        today: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'day')).length,
-        this_week: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'week')).length,
-        this_month: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'month')).length,
-        by_action: {},
-        by_module: {},
-        error_count: logs.filter(log => log.response_status >= 400).length,
-        avg_response_time:
-          Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0,
-      };
-      setStatistics(mockStats);
-    } catch {
-      MessageManager.error('加载统计信息失败');
-    }
-  };
-
   const handleSearch = (value: string) => {
     _setSearchText(value);
-    // 这里可以添加搜索逻辑
+    loadLogs({ page: 1, searchText: value });
   };
 
   const handleViewDetail = (log: OperationLog) => {
@@ -210,7 +250,10 @@ const OperationLogPage: React.FC = () => {
     );
   };
 
-  const getStatusTag = (status: number) => {
+  const getStatusTag = (status?: number | null) => {
+    if (status == null) {
+      return <Tag>未知</Tag>;
+    }
     if (status >= 200 && status < 300) {
       return <Tag color="green">成功</Tag>;
     } else if (status >= 400 && status < 500) {
@@ -235,8 +278,10 @@ const OperationLogPage: React.FC = () => {
       width: 150,
       render: (_, record) => (
         <Space direction="vertical" size="small">
-          <div style={{ fontWeight: 500 }}>{record.user_name}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>@{record.username}</div>
+          <div style={{ fontWeight: 500 }}>{record.user_name ?? record.username ?? '-'}</div>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
+            @{record.username ?? '-'}
+          </div>
         </Space>
       ),
     },
@@ -252,7 +297,7 @@ const OperationLogPage: React.FC = () => {
       dataIndex: 'module_name',
       key: 'module',
       width: 120,
-      render: module => <Tag color="blue">{module}</Tag>,
+      render: module => <Tag color="blue">{module ?? '-'}</Tag>,
     },
     {
       title: '资源',
@@ -290,15 +335,18 @@ const OperationLogPage: React.FC = () => {
       dataIndex: 'response_time',
       key: 'response_time',
       width: 100,
-      render: time => (
-        <span
-          style={{
-            color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success,
-          }}
-        >
-          {time}ms
-        </span>
-      ),
+      render: time =>
+        typeof time === 'number' ? (
+          <span
+            style={{
+              color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success,
+            }}
+          >
+            {time}ms
+          </span>
+        ) : (
+          '-'
+        ),
     },
     {
       title: '操作',
@@ -390,7 +438,10 @@ const OperationLogPage: React.FC = () => {
                 placeholder="模块筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={_setModuleFilter}
+                onChange={value => {
+                  _setModuleFilter(value ?? '');
+                  loadLogs({ page: 1, module: value ?? '' });
+                }}
               >
                 {moduleOptions.map(module => (
                   <Option key={module.value} value={module.value}>
@@ -404,7 +455,10 @@ const OperationLogPage: React.FC = () => {
                 placeholder="操作筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={_setActionFilter}
+                onChange={value => {
+                  _setActionFilter(value ?? '');
+                  loadLogs({ page: 1, action: value ?? '' });
+                }}
               >
                 {actionOptions.map(action => (
                   <Option key={action.value} value={action.value}>
@@ -418,7 +472,10 @@ const OperationLogPage: React.FC = () => {
                 placeholder="状态筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={_setStatusFilter}
+                onChange={value => {
+                  _setStatusFilter(value ?? '');
+                  loadLogs({ page: 1, status: value ?? '' });
+                }}
               >
                 {statusOptions.map(status => (
                   <Option key={status.value} value={status.value}>
@@ -433,15 +490,17 @@ const OperationLogPage: React.FC = () => {
                 onChange={dates => {
                   if (dates && dates[0] && dates[1]) {
                     _setDateRange([dates[0], dates[1]]);
+                    loadLogs({ page: 1, dateRange: [dates[0], dates[1]] });
                   } else {
                     _setDateRange(null);
+                    loadLogs({ page: 1, dateRange: null });
                   }
                 }}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>
             <Col xs={24} sm={12} md={4}>
-              <Button icon={<ReloadOutlined />} onClick={loadLogs} loading={loading}>
+              <Button icon={<ReloadOutlined />} onClick={() => loadLogs()} loading={loading}>
                 刷新
               </Button>
             </Col>
@@ -453,9 +512,20 @@ const OperationLogPage: React.FC = () => {
           dataSource={logs}
           rowKey="id"
           loading={loading}
+          onChange={paginationState => {
+            const current = paginationState.current ?? 1;
+            const pageSize = paginationState.pageSize ?? 20;
+            setPagination(prev => ({
+              ...prev,
+              current,
+              pageSize,
+            }));
+            loadLogs({ page: current, pageSize });
+          }}
           pagination={{
-            total: logs.length,
-            pageSize: 20,
+            current: pagination.current,
+            total: pagination.total,
+            pageSize: pagination.pageSize,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
@@ -482,7 +552,8 @@ const OperationLogPage: React.FC = () => {
                 <Space>
                   <UserOutlined />
                   <span>
-                    {selectedLog.user_name} (@{selectedLog.username})
+                    {selectedLog.user_name ?? selectedLog.username ?? '-'} (@
+                    {selectedLog.username ?? '-'})
                   </span>
                 </Space>
               </Descriptions.Item>
@@ -490,7 +561,7 @@ const OperationLogPage: React.FC = () => {
                 {getActionTag(selectedLog.action)}
               </Descriptions.Item>
               <Descriptions.Item label="所属模块">
-                <Tag color="blue">{selectedLog.module_name}</Tag>
+                <Tag color="blue">{selectedLog.module_name ?? selectedLog.module ?? '-'}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="资源信息">
                 {selectedLog.resource_name != null ? (
@@ -507,33 +578,51 @@ const OperationLogPage: React.FC = () => {
               <Descriptions.Item label="请求信息">
                 <div>
                   <div>
-                    <Tag color="purple">{selectedLog.request_method}</Tag>
-                    <code style={{ background: COLORS.bgTertiary, padding: '2px 4px' }}>
-                      {selectedLog.request_url}
-                    </code>
+                    {selectedLog.request_method != null ? (
+                      <Tag color="purple">{selectedLog.request_method}</Tag>
+                    ) : (
+                      '-'
+                    )}
+                    {selectedLog.request_url != null ? (
+                      <code style={{ background: COLORS.bgTertiary, padding: '2px 4px' }}>
+                        {selectedLog.request_url}
+                      </code>
+                    ) : (
+                      '-'
+                    )}
                   </div>
                   <div style={{ marginTop: 8, fontSize: '12px', color: COLORS.textSecondary }}>
-                    IP: {selectedLog.ip_address}
+                    IP: {selectedLog.ip_address ?? '-'}
                   </div>
                 </div>
+              </Descriptions.Item>
+              <Descriptions.Item label="请求参数">
+                {renderJsonBlock(selectedLog.request_params)}
+              </Descriptions.Item>
+              <Descriptions.Item label="请求体">
+                {renderJsonBlock(selectedLog.request_body)}
               </Descriptions.Item>
               <Descriptions.Item label="响应信息">
                 <div>
                   <div>状态: {getStatusTag(selectedLog.response_status)}</div>
                   <div>
                     耗时:{' '}
-                    <span
-                      style={{
-                        color:
-                          selectedLog.response_time > 1000
-                            ? COLORS.error
-                            : selectedLog.response_time > 500
-                              ? COLORS.warning
-                              : COLORS.success,
-                      }}
-                    >
-                      {selectedLog.response_time}ms
-                    </span>
+                    {typeof selectedLog.response_time === 'number' ? (
+                      <span
+                        style={{
+                          color:
+                            selectedLog.response_time > 1000
+                              ? COLORS.error
+                              : selectedLog.response_time > 500
+                                ? COLORS.warning
+                                : COLORS.success,
+                        }}
+                      >
+                        {selectedLog.response_time}ms
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </div>
                 </div>
               </Descriptions.Item>
@@ -555,31 +644,39 @@ const OperationLogPage: React.FC = () => {
                 <div
                   style={{ fontSize: '12px', color: COLORS.textSecondary, wordBreak: 'break-all' }}
                 >
-                  {selectedLog.user_agent}
+                  {selectedLog.user_agent ?? '-'}
                 </div>
               </Descriptions.Item>
               <Descriptions.Item label="详细信息">
-                <div
-                  style={{
-                    background: COLORS.bgTertiary,
-                    padding: '12px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    overflow: 'auto',
-                    maxHeight: '300px',
-                  }}
-                >
-                  {Object.entries(selectedLog.details || {}).map(([key, value]) => (
-                    <div key={key} style={{ marginBottom: 4 }}>
-                      <Text strong style={{ marginRight: 8 }}>
-                        {key}:
-                      </Text>
-                      <Text type="secondary">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
+                {selectedLog.details == null ? (
+                  '-'
+                ) : typeof selectedLog.details === 'string' ? (
+                  <Text type="secondary">{selectedLog.details}</Text>
+                ) : Array.isArray(selectedLog.details) ? (
+                  renderJsonBlock(selectedLog.details)
+                ) : (
+                  <div
+                    style={{
+                      background: COLORS.bgTertiary,
+                      padding: '12px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      overflow: 'auto',
+                      maxHeight: '300px',
+                    }}
+                  >
+                    {Object.entries(selectedLog.details).map(([key, value]) => (
+                      <div key={key} style={{ marginBottom: 4 }}>
+                        <Text strong style={{ marginRight: 8 }}>
+                          {key}:
+                        </Text>
+                        <Text type="secondary">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Descriptions.Item>
             </Descriptions>
           </div>

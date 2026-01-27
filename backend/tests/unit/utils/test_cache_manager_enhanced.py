@@ -122,11 +122,7 @@ class TestCacheManagerAdvanced:
 
     def test_set_many(self, cache_manager):
         """测试批量设置"""
-        data = {
-            "key1": "value1",
-            "key2": "value2",
-            "key3": "value3"
-        }
+        data = {"key1": "value1", "key2": "value2", "key3": "value3"}
         cache_manager.set_many(data)
         assert cache_manager.get("key1") == "value1"
         assert cache_manager.get("key2") == "value2"
@@ -258,7 +254,7 @@ class TestCacheManagerEdgeCases:
             "key/with/slashes",
             "key-with-dashes",
             "key_with_underscores",
-            "key.with.dots"
+            "key.with.dots",
         ]
 
         for key in special_keys:

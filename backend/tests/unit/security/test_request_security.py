@@ -60,7 +60,7 @@ class TestInputSanitization:
 
     def test_sanitize_malicious_input(self, sanitizer):
         """Test sanitization of potentially malicious input"""
-        malicious = "Normal\x00Text\x1B[31mRed"
+        malicious = "Normal\x00Text\x1b[31mRed"
         result = sanitizer.sanitize_input(malicious)
 
         assert "\x00" not in result
@@ -133,11 +133,11 @@ class TestPhoneValidation:
         """Test that invalid phone numbers fail"""
         invalid_phones = [
             "12345678901",  # Starts with 1, but second digit is 2
-            "1312345678",   # Too short
+            "1312345678",  # Too short
             "131234567890",  # Too long
             "23123456789",  # Wrong first digit
             "abcdefghijk",  # Not numeric
-            "131-2345-6789", # Contains dashes
+            "131-2345-6789",  # Contains dashes
         ]
 
         for phone in invalid_phones:
@@ -205,7 +205,10 @@ class TestURLSafety:
 
     def test_data_protocol(self, validator):
         """Test that data: URLs are rejected"""
-        assert validator.is_safe_url("data:text/html,<script>alert('XSS')</script>") is False
+        assert (
+            validator.is_safe_url("data:text/html,<script>alert('XSS')</script>")
+            is False
+        )
 
 
 class TestFieldValidator:
@@ -267,20 +270,23 @@ class TestFieldValidator:
         mock_whitelist.can_filter.return_value = False
         mock_get_whitelist.return_value = mock_whitelist
 
-        result = validator.validate_field("Asset", "blocked_field", raise_on_invalid=False)
+        result = validator.validate_field(
+            "Asset", "blocked_field", raise_on_invalid=False
+        )
         assert result is False
 
     @patch("src.security.security.get_whitelist_for_model")
     def test_validate_filter_fields_mixed(self, mock_get_whitelist, validator):
         """Test validating multiple filter fields"""
         mock_whitelist = Mock()
-        mock_whitelist.can_filter.side_effect = lambda field: field in ["name", "status"]
+        mock_whitelist.can_filter.side_effect = lambda field: field in [
+            "name",
+            "status",
+        ]
         mock_get_whitelist.return_value = mock_whitelist
 
         valid, invalid = validator.validate_filter_fields(
-            "Asset",
-            ["name", "status", "blocked_field"],
-            raise_on_invalid=False
+            "Asset", ["name", "status", "blocked_field"], raise_on_invalid=False
         )
 
         assert valid == ["name", "status"]
@@ -293,7 +299,9 @@ class TestFieldValidator:
         mock_whitelist.can_sort.return_value = True
         mock_get_whitelist.return_value = mock_whitelist
 
-        result = validator.validate_sort_field("Asset", "created_at", raise_on_invalid=False)
+        result = validator.validate_sort_field(
+            "Asset", "created_at", raise_on_invalid=False
+        )
         assert result is True
 
     @patch("src.security.security.get_whitelist_for_model")
@@ -303,7 +311,9 @@ class TestFieldValidator:
         mock_whitelist.can_search.return_value = True
         mock_get_whitelist.return_value = mock_whitelist
 
-        result = validator.validate_search_field("Asset", "name", raise_on_invalid=False)
+        result = validator.validate_search_field(
+            "Asset", "name", raise_on_invalid=False
+        )
         assert result is True
 
     @patch("src.security.security.get_whitelist_for_model")
@@ -313,14 +323,19 @@ class TestFieldValidator:
         mock_whitelist.can_filter.return_value = True
         mock_get_whitelist.return_value = mock_whitelist
 
-        result = validator.validate_group_by_field("Asset", "status", raise_on_invalid=False)
+        result = validator.validate_group_by_field(
+            "Asset", "status", raise_on_invalid=False
+        )
         assert result is True
 
     @patch("src.security.security.get_whitelist_for_model")
     def test_sanitize_filters(self, mock_get_whitelist, validator):
         """Test filter sanitization"""
         mock_whitelist = Mock()
-        mock_whitelist.can_filter.side_effect = lambda field: field in ["name", "status"]
+        mock_whitelist.can_filter.side_effect = lambda field: field in [
+            "name",
+            "status",
+        ]
         mock_get_whitelist.return_value = mock_whitelist
 
         filters = {
@@ -388,7 +403,9 @@ class TestFieldValidator:
 
     def test_get_allowed_fields_invalid_type(self, validator):
         """Test that invalid field type raises error"""
-        with patch("src.security.security.get_whitelist_for_model") as mock_get_whitelist:
+        with patch(
+            "src.security.security.get_whitelist_for_model"
+        ) as mock_get_whitelist:
             mock_whitelist = Mock()
             mock_get_whitelist.return_value = mock_whitelist
 
@@ -443,8 +460,12 @@ class TestSecurityEdgeCases:
     def test_unicode_security(self, validator):
         """Test handling of unicode characters"""
         # Should allow legitimate unicode
-        assert validator.validate_email("用户@example.com") is False  # No unicode in local part
-        assert validator.validate_email("user@例え.com") is True  # Unicode in domain is OK
+        assert (
+            validator.validate_email("用户@example.com") is False
+        )  # No unicode in local part
+        assert (
+            validator.validate_email("user@例え.com") is True
+        )  # Unicode in domain is OK
 
         # Should sanitize null bytes in unicode
         result = validator.sanitize_input("文本\x00更多文本")

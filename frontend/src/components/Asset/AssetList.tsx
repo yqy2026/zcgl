@@ -7,6 +7,30 @@ import type { Asset, AssetListResponse } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
 import type { PaginationConfig, FilterConfig, SorterConfig } from '@/types/common';
 import { getOccupancyRateColor } from '@/styles/colorMap';
+import { useSystemDictionary } from '@/hooks/useSystemDictionary';
+
+// Constants
+const UUID_LENGTH = 36;
+
+/**
+ * 格式化权属类别显示文本
+ * 从系统字典选项中查找对应的标签,如果找不到则返回原始值或默认值
+ *
+ * @param text - 权属类别值
+ * @param options - 系统字典选项列表
+ * @returns 格式化后的显示文本
+ */
+function formatOwnershipCategory(
+  text: string | undefined,
+  options: Array<{ label: string; value: string }>
+): string {
+  if (!text || options.length === 0) {
+    return text ?? '其他';
+  }
+
+  const matchedOption = options.find(opt => opt.value === String(text));
+  return matchedOption?.label ?? text;
+}
 
 interface AssetListProps {
   data?: AssetListResponse;
@@ -35,6 +59,9 @@ const AssetList: React.FC<AssetListProps> = ({
   selectedRowKeys = [],
   onSelectChange,
 }) => {
+  // 使用系统字典获取权属类别
+  const { options: ownershipCategoryOptions } = useSystemDictionary('ownership_category');
+
   // 表格列定义
   const columns: ColumnsType<Asset> = [
     {
@@ -50,7 +77,7 @@ const AssetList: React.FC<AssetListProps> = ({
       render: (text: string | undefined, record: Asset) => {
         // 如果是项目ID格式，尝试显示关联的项目名称
         const projectName = record.project_name ?? text;
-        const isId = typeof projectName === 'string' && projectName.length === 36; // UUID格式
+        const isId = typeof projectName === 'string' && projectName.length === UUID_LENGTH;
 
         let displayText: string = projectName ?? '未配置项目';
         if (isId) {
@@ -98,27 +125,12 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      filters: [
-        { text: '国资管理集团合并口径', value: '1' },
-        { text: '民政托管企业', value: '2' },
-        { text: '其他', value: '3' },
-      ],
+      filters: ownershipCategoryOptions.map(opt => ({
+        text: opt.label,
+        value: opt.value,
+      })),
       render: (text: string | undefined, _record: Asset) => {
-        // 权属类别映射
-        let displayText: string = text ?? '其他';
-        if (typeof text === 'string') {
-          // 权属类别字典映射
-          const categoryMap: Record<string, string> = {
-            '1': '国资管理集团合并口径',
-            '2': '民政托管企业',
-            '3': '其他',
-          };
-          // 如果是数字ID，转换为对应文字
-          if (/^\d+$/.test(text) && categoryMap[text]) {
-            displayText = categoryMap[text];
-          }
-        }
-
+        const displayText = formatOwnershipCategory(text, ownershipCategoryOptions);
         return <Tooltip title={displayText ?? '未设置'}>{displayText ?? '-'}</Tooltip>;
       },
     },
@@ -364,26 +376,36 @@ const AssetList: React.FC<AssetListProps> = ({
   const renderSummary = (_pageData: readonly Asset[]) => {
     if (!summary) return null;
 
+    const selectionOffset = onSelectChange ? 1 : 0;
+    const leadingSpan = 5 + selectionOffset;
+    const landIndex = leadingSpan;
+    const actualIndex = landIndex + 1;
+    const rentableIndex = actualIndex + 1;
+    const rentedIndex = rentableIndex + 1;
+    const statusSpan = 3;
+    const occupancyIndex = rentedIndex + 1 + statusSpan;
+    const trailingSpan = 4;
+
     return (
       <Table.Summary fixed>
         <Table.Summary.Row>
-          <Table.Summary.Cell index={0} colSpan={6} align="right">
+          <Table.Summary.Cell index={0} colSpan={leadingSpan} align="right">
             <strong>当前页合计：</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={6} align="right">
+          <Table.Summary.Cell index={landIndex} align="right">
             <strong>{formatArea(summary.landArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={7} align="right">
+          <Table.Summary.Cell index={actualIndex} align="right">
             <strong>{formatArea(summary.actualArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={8} align="right">
+          <Table.Summary.Cell index={rentableIndex} align="right">
             <strong>{formatArea(summary.rentableArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={9} align="right">
+          <Table.Summary.Cell index={rentedIndex} align="right">
             <strong>{formatArea(summary.rentedArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={10} colSpan={5} />
-          <Table.Summary.Cell index={15} align="right">
+          <Table.Summary.Cell index={rentedIndex + 1} colSpan={statusSpan} />
+          <Table.Summary.Cell index={occupancyIndex} align="right">
             <strong
               style={{
                 color: getOccupancyRateColor(summary.occupancyRate),
@@ -392,7 +414,7 @@ const AssetList: React.FC<AssetListProps> = ({
               {formatPercentage(summary.occupancyRate)}
             </strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={16} colSpan={3} />
+          <Table.Summary.Cell index={occupancyIndex + 1} colSpan={trailingSpan} />
         </Table.Summary.Row>
       </Table.Summary>
     );
@@ -403,6 +425,7 @@ const AssetList: React.FC<AssetListProps> = ({
     ? {
         selectedRowKeys,
         onChange: onSelectChange,
+        hideSelectAll: true,
         getCheckboxProps: (record: Asset) => ({
           name: record.property_name,
         }),
@@ -428,7 +451,7 @@ const AssetList: React.FC<AssetListProps> = ({
         pageSizeOptions: ['10', '20', '50', '100'],
         size: 'middle',
       }}
-      onChange={onTableChange as (pagination: unknown, filters: unknown, sorter: unknown) => void}
+      onChange={onTableChange}
       size="middle"
       bordered
       sticky={{ offsetHeader: 64 }}

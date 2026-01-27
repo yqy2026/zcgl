@@ -17,6 +17,7 @@ from fastapi import status
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def admin_user_headers():
     """管理员用户认证头"""
@@ -28,14 +29,14 @@ def admin_user_headers():
 # Comprehensive Analytics Tests
 # ============================================================================
 
+
 class TestComprehensiveAnalytics:
     """测试综合分析API"""
 
     def test_get_comprehensive_analytics_success(self, client, admin_user_headers):
         """测试成功获取综合分析数据"""
         response = client.get(
-            "/api/v1/analytics/comprehensive",
-            headers=admin_user_headers
+            "/api/v1/analytics/comprehensive", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -44,31 +45,37 @@ class TestComprehensiveAnalytics:
         assert data["success"] is True
         assert "data" in data
 
-    def test_get_comprehensive_analytics_with_date_filters(self, client, admin_user_headers):
+    def test_get_comprehensive_analytics_with_date_filters(
+        self, client, admin_user_headers
+    ):
         """测试带日期筛选的综合分析"""
         response = client.get(
             "/api/v1/analytics/comprehensive?date_from=2024-01-01&date_to=2024-12-31",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
 
-    def test_get_comprehensive_analytics_without_cache(self, client, admin_user_headers):
+    def test_get_comprehensive_analytics_without_cache(
+        self, client, admin_user_headers
+    ):
         """测试不使用缓存获取分析数据"""
         response = client.get(
             "/api/v1/analytics/comprehensive?should_use_cache=false",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_get_comprehensive_analytics_include_deleted(self, client, admin_user_headers):
+    def test_get_comprehensive_analytics_include_deleted(
+        self, client, admin_user_headers
+    ):
         """测试包含已删除数据的分析"""
         response = client.get(
             "/api/v1/analytics/comprehensive?should_include_deleted=true",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -84,14 +91,14 @@ class TestComprehensiveAnalytics:
 # Cache Statistics Tests
 # ============================================================================
 
+
 class TestCacheStatistics:
     """测试缓存统计API"""
 
     def test_get_cache_stats_success(self, client, admin_user_headers):
         """测试成功获取缓存统计"""
         response = client.get(
-            "/api/v1/analytics/cache/stats",
-            headers=admin_user_headers
+            "/api/v1/analytics/cache/stats", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -111,14 +118,14 @@ class TestCacheStatistics:
 # Cache Management Tests
 # ============================================================================
 
+
 class TestCacheManagement:
     """测试缓存管理API"""
 
     def test_clear_cache_success(self, client, admin_user_headers):
         """测试成功清除缓存"""
         response = client.post(
-            "/api/v1/analytics/cache/clear",
-            headers=admin_user_headers
+            "/api/v1/analytics/cache/clear", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -137,21 +144,18 @@ class TestCacheManagement:
 # Debug Endpoints Tests
 # ============================================================================
 
+
 class TestDebugEndpoints:
     """测试调试端点"""
 
     def test_debug_cache_status(self, client, admin_user_headers):
         """测试调试缓存状态"""
         response = client.get(
-            "/api/v1/analytics/debug/cache",
-            headers=admin_user_headers
+            "/api/v1/analytics/debug/cache", headers=admin_user_headers
         )
 
         # 调试端点可能存在或不存在
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND
-        ]
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_debug_cache_status_unauthorized(self, unauthenticated_client):
         """测试未授权访问调试端点"""
@@ -161,13 +165,14 @@ class TestDebugEndpoints:
         assert response.status_code in [
             status.HTTP_200_OK,
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_404_NOT_FOUND
+            status.HTTP_404_NOT_FOUND,
         ]
 
 
 # ============================================================================
 # Data Validation Tests
 # ============================================================================
+
 
 class TestAnalyticsDataValidation:
     """测试分析数据验证"""
@@ -176,33 +181,31 @@ class TestAnalyticsDataValidation:
         """测试无效的日期格式"""
         response = client.get(
             "/api/v1/analytics/comprehensive?date_from=invalid-date",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 可能返回400错误或200成功（取决于验证逻辑）
         assert response.status_code in [
             status.HTTP_200_OK,
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
         ]
 
     def test_date_from_after_date_to(self, client, admin_user_headers):
         """测试日期范围无效（起始日期晚于结束日期）"""
         response = client.get(
             "/api/v1/analytics/comprehensive?date_from=2024-12-31&date_to=2024-01-01",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 可能返回错误或返回空结果
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_400_BAD_REQUEST
-        ]
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST]
 
 
 # ============================================================================
 # Performance Tests
 # ============================================================================
+
 
 class TestAnalyticsPerformance:
     """测试分析API性能"""
@@ -215,8 +218,7 @@ class TestAnalyticsPerformance:
 
         def make_request():
             response = client.get(
-                "/api/v1/analytics/cache/stats",
-                headers=admin_user_headers
+                "/api/v1/analytics/cache/stats", headers=admin_user_headers
             )
             results.append(response.status_code)
 
@@ -232,12 +234,10 @@ class TestAnalyticsPerformance:
     def test_cache_clear_idempotent(self, client, admin_user_headers):
         """测试缓存清除幂等性"""
         response1 = client.post(
-            "/api/v1/analytics/cache/clear",
-            headers=admin_user_headers
+            "/api/v1/analytics/cache/clear", headers=admin_user_headers
         )
         response2 = client.post(
-            "/api/v1/analytics/cache/clear",
-            headers=admin_user_headers
+            "/api/v1/analytics/cache/clear", headers=admin_user_headers
         )
 
         # 两次调用都应该成功
@@ -249,24 +249,26 @@ class TestAnalyticsPerformance:
 # Response Structure Tests
 # ============================================================================
 
+
 class TestAnalyticsResponseStructure:
     """测试响应结构"""
 
-    def test_comprehensive_analytics_response_structure(self, client, admin_user_headers):
+    def test_comprehensive_analytics_response_structure(
+        self, client, admin_user_headers
+    ):
         """测试综合分析响应结构"""
         response = client.get(
-            "/api/v1/analytics/comprehensive",
-            headers=admin_user_headers
+            "/api/v1/analytics/comprehensive", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        
+
         # 验证响应结构
         assert "success" in data
         assert "data" in data
         assert "message" in data
-        
+
         # 验证成功响应
         assert data["success"] is True
         assert isinstance(data["data"], dict)
@@ -274,13 +276,12 @@ class TestAnalyticsResponseStructure:
     def test_cache_stats_response_structure(self, client, admin_user_headers):
         """测试缓存统计响应结构"""
         response = client.get(
-            "/api/v1/analytics/cache/stats",
-            headers=admin_user_headers
+            "/api/v1/analytics/cache/stats", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        
+
         assert "success" in data
         assert "data" in data
         assert data["success"] is True

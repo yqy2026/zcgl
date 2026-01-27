@@ -12,5 +12,6 @@ def __getattr__(name):
     """延迟导入以避免循环依赖"""
     if name == "api_router":
         from .v1 import api_router
+
         return api_router
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

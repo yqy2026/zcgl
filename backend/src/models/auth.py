@@ -251,6 +251,10 @@ class UserSession(Base):
             expires_at_value = cast("datetime", self.expires_at)  # pragma: no cover
             if expires_at_value is None:  # pragma: no cover
                 return True  # pragma: no cover
+            if expires_at_value.tzinfo is None:  # pragma: no cover
+                expires_at_value = expires_at_value.replace(tzinfo=UTC)  # pragma: no cover
+            else:  # pragma: no cover
+                expires_at_value = expires_at_value.astimezone(UTC)  # pragma: no cover
             return datetime.now(UTC) > expires_at_value  # pragma: no cover
 
 

@@ -71,13 +71,20 @@ export const userService = {
     role?: string;
     organization_id?: string;
   }): Promise<UserListResponse> {
-    const response = await api.get<any>(SYSTEM_API.USERS, { params });
+    const response = await api.get<unknown>(SYSTEM_API.USERS, { params });
 
     // 智能提取可能返回 items 或 UserListResponse
     const data = response.data;
 
     // 如果直接是 UserListResponse 格式（包含 items、total 等）
-    if (data != null && typeof data === 'object' && 'items' in data && 'total' in data) {
+    if (
+      data != null &&
+      typeof data === 'object' &&
+      'items' in data &&
+      'total' in data &&
+      'page' in data &&
+      'page_size' in data
+    ) {
       return data as UserListResponse;
     }
 
@@ -237,24 +244,34 @@ export const roleService = {
 export interface OperationLog {
   id: string;
   user_id: string;
-  username: string;
-  user_name: string;
+  username?: string | null;
+  user_name?: string | null;
   action: string;
-  action_name: string;
+  action_name?: string | null;
   module: string;
-  module_name: string;
-  resource_type: string;
-  resource_id: string | null;
-  resource_name: string | null;
-  ip_address: string;
-  user_agent: string;
-  request_method: string;
-  request_url: string;
-  response_status: number;
-  response_time: number;
-  error_message: string | null;
-  details: Record<string, unknown> | null;
+  module_name?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  resource_name?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  request_method?: string | null;
+  request_url?: string | null;
+  request_params?: string | Record<string, unknown> | unknown[] | null;
+  request_body?: string | Record<string, unknown> | unknown[] | null;
+  response_status?: number | null;
+  response_time?: number | null;
+  error_message?: string | null;
+  details?: string | Record<string, unknown> | unknown[] | null;
   created_at: string;
+}
+
+export interface OperationLogListResult {
+  items: OperationLog[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
 }
 
 export interface LogStatistics {
@@ -280,9 +297,9 @@ export const logService = {
     start_date?: string;
     end_date?: string;
     response_status?: string;
-  }) {
-    const response = await api.get(SYSTEM_API.AUDIT_LOGS, { params });
-    return response.data;
+  }): Promise<OperationLogListResult> {
+    const response = await api.get<OperationLogListResult>(SYSTEM_API.AUDIT_LOGS, { params });
+    return response.data as OperationLogListResult;
   },
 
   // 获取操作日志详情

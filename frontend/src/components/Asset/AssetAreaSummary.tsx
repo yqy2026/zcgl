@@ -36,7 +36,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="土地面积"
               value={summary.totalLandArea}
               formatter={value => formatArea(value)}
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
@@ -44,7 +44,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="实际物业面积"
               value={summary.totalActualArea}
               formatter={value => formatArea(value)}
-              valueStyle={{ color: COLORS.primary }}
+              styles={{ content: { color: COLORS.primary } }}
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
@@ -52,7 +52,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="可出租面积"
               value={summary.totalRentableArea}
               formatter={value => formatArea(value)}
-              valueStyle={{ color: COLORS.primary }}
+              styles={{ content: { color: COLORS.primary } }}
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
@@ -60,7 +60,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="已出租面积"
               value={summary.totalRentedArea}
               formatter={value => formatArea(value)}
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
@@ -68,7 +68,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="未出租面积"
               value={summary.totalUnrentedArea}
               formatter={value => formatArea(value)}
-              valueStyle={{ color: COLORS.error }}
+              styles={{ content: { color: COLORS.error } }}
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
@@ -76,8 +76,8 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
               title="平均出租率"
               value={summary.averageOccupancyRate}
               formatter={value => formatPercentage(value)}
-              valueStyle={{
-                color: getOccupancyRateColor(summary.averageOccupancyRate ?? 0),
+              styles={{
+                content: { color: getOccupancyRateColor(summary.averageOccupancyRate ?? 0) },
               }}
               precision={2}
             />

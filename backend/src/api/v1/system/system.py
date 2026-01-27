@@ -21,7 +21,6 @@ async def health_check():
     迁移自 main.py 的健康检查功能
     """
     try:
-        # 获取数据库状态
         db_status = get_database_status()
 
         health_check = db_status.get("health_check", {})
@@ -67,16 +66,15 @@ async def health_check():
 
     except Exception as e:
         import logging
+        from ....core.exception_handler import service_unavailable
+        from sqlalchemy.exc import OperationalError
 
         logger = logging.getLogger(__name__)
         logger.error(f"健康检查失败: {e}")
-        return {
-            "success": False,
-            "status": "unhealthy",
-            "timestamp": datetime.now(UTC).isoformat(),
-            "error": str(e),
-            "database": {"status": "unknown"},
-        }
+
+        if isinstance(e, OperationalError):
+            raise service_unavailable("数据库不可用，请稍后重试")
+        raise service_unavailable("系统健康检查失败")
 
 
 @router.get("/system/info")

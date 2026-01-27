@@ -100,8 +100,9 @@ async def get_system_dictionary(
     status_code=201,
 )
 async def create_system_dictionary(
-    dictionary_in: SystemDictionaryCreate, db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    dictionary_in: SystemDictionaryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
     """
     创建新的系统字典项
@@ -155,7 +156,7 @@ async def update_system_dictionary(
 
 @router.delete("/{dictionary_id}", summary="删除系统字典")
 async def delete_system_dictionary(
-    dictionary_id: str = Path(..., description="字典ID"), 
+    dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ) -> dict[str, str]:
@@ -184,7 +185,7 @@ async def delete_system_dictionary(
     summary="批量更新系统字典",
 )
 async def batch_update_system_dictionaries(
-    updates: list[dict[str, Any]], 
+    updates: list[dict[str, Any]],
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ) -> list[SystemDictionaryResponse]:

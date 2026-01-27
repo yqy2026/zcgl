@@ -249,6 +249,27 @@ class CommonDictionaryService:
 
         return {"message": f"字典类型 {dict_type} 删除成功"}
 
+    def get_all_dictionary_types(self, db: Session) -> list[str]:
+        """
+        获取所有字典类型列表
+
+        Args:
+            db: 数据库会话
+
+        Returns:
+            字典类型代码列表
+        """
+        from ..models.enum_field import EnumFieldType
+
+        # 从枚举字段表获取所有未删除的类型
+        enum_types = (
+            db.query(EnumFieldType.code)
+            .filter(EnumFieldType.is_deleted.is_(False))
+            .all()
+        )
+
+        return sorted([t.code for t in enum_types if t.code])
+
 
 # 单例服务实例
 common_dictionary_service = CommonDictionaryService()

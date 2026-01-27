@@ -477,6 +477,7 @@ def get_database_url() -> str:
                 "生产环境必须设置DATABASE_URL环境变量！\n"
                 "请在.env文件中配置:\n"
                 "DATABASE_URL=postgresql://user:password@host:port/database\n"
+                "或: DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
                 "帮助文档: docs/POSTGRESQL_MIGRATION.md"
             )
         elif environment in ["development", "testing"]:
@@ -508,6 +509,7 @@ def get_database_url() -> str:
                     "开发环境必须设置DATABASE_URL环境变量！\n"
                     "如需使用SQLite后备，请设置 ALLOW_SQLITE_FALLBACK=true\n"
                     "推荐: DATABASE_URL=postgresql://user:pass@localhost:5432/zcgl_db\n"
+                    "或: DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl_db\n"
                     "帮助文档: docs/POSTGRESQL_MIGRATION.md"
                 )
         else:
@@ -519,7 +521,7 @@ def get_database_url() -> str:
             raise ValueError(f"环境 '{environment}' 必须设置DATABASE_URL环境变量！")
 
     # 验证PostgreSQL URL格式
-    if database_url.startswith("postgresql://"):
+    if database_url.startswith(("postgresql://", "postgresql+psycopg://")):
         try:
             from urllib.parse import urlparse
 
@@ -538,7 +540,7 @@ def get_database_url() -> str:
                 raise ValueError(f"无效端口号: {parsed.port}")
 
             # 记录安全信息（不含密码）
-            safe_url = f"postgresql://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            safe_url = f"{parsed.scheme}://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
             logger.info(f"PostgreSQL URL验证通过: {safe_url}")
 
         except ValueError as e:
@@ -548,6 +550,7 @@ def get_database_url() -> str:
             raise ValueError(
                 f"DATABASE_URL格式错误: {e}\n"
                 f"正确格式: postgresql://user:password@host:port/database\n"
+                f"或: postgresql+psycopg://user:password@host:port/database\n"
                 f"示例: postgresql://postgres:password@localhost:5432/zcgl_db"
             ) from e
 
@@ -588,7 +591,7 @@ def get_database_url() -> str:
             extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
         )
         raise ValueError(
-            f"不支持的数据库类型。支持: postgresql://, sqlite://\n"
+            f"不支持的数据库类型。支持: postgresql://, postgresql+psycopg://, sqlite://\n"
             f"当前URL: {database_url[:50]}"
         )
 

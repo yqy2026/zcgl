@@ -10,7 +10,7 @@ from typing import Any
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 from ..constants.validation_constants import FieldLengthLimits
 from .ownership import OwnershipResponse
@@ -64,17 +64,9 @@ class AssetBase(BaseModel):
         None, ge=0, description="可出租面积（平方米）"
     )
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
-    unrented_area: Decimal | None = Field(
-        None, ge=0, description="未出租面积（平方米）"
-    )
-    occupancy_rate: Decimal | None = Field(
-        None, ge=0, le=100, description="出租率（%）"
-    )
-    # unrented_area 已移除，改为计算字段
     non_commercial_area: Decimal | None = Field(
         None, ge=0, description="非经营物业面积（平方米）"
     )
-    # occupancy_rate 已移除，改为计算字段
     include_in_occupancy_rate: bool = Field(
         True,
         description="是否计入出租率统计",
@@ -168,7 +160,7 @@ class AssetBase(BaseModel):
 
     @field_validator("contract_end_date")
     @classmethod
-    def validate_contract_dates(cls, v: date | None, info: Any) -> date | None:
+    def validate_contract_dates(cls, v: date | None, info: ValidationInfo) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("contract_start_date")  # pragma: no cover
@@ -179,7 +171,7 @@ class AssetBase(BaseModel):
 
     @field_validator("operation_agreement_end_date")
     @classmethod
-    def validate_agreement_dates(cls, v: date | None, info: Any) -> date | None:
+    def validate_agreement_dates(cls, v: date | None, info: ValidationInfo) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("operation_agreement_start_date")  # pragma: no cover
@@ -549,10 +541,17 @@ class AssetCustomFieldUpdate(BaseModel):
     description: str | None = Field(None, description="描述")
 
 
+class CustomFieldValueItem(BaseModel):
+    """自定义字段值项"""
+
+    field_name: str = Field(..., description="字段名称")
+    value: str | int | float | bool | None = Field(None, description="字段值")
+
+
 class CustomFieldValueUpdate(BaseModel):
     """自定义字段值更新模型"""
 
-    values: list[dict[str, Any]] = Field(..., description="字段值列表")
+    values: list[CustomFieldValueItem] = Field(..., description="字段值列表")
 
 
 class AssetCustomFieldResponse(BaseModel):
@@ -579,11 +578,28 @@ class AssetCustomFieldResponse(BaseModel):
 # ===== 批量操作相关模型 =====
 
 
+
+class BatchProcessingError(BaseModel):
+    """批量处理错误详情"""
+    id: str | None = Field(None, description="对象ID")
+    row_index: int | None = Field(None, description="行号")
+    field: str | None = Field(None, description="字段名")
+    message: str = Field(..., description="错误信息")
+    code: str | None = Field(None, description="错误代码")
+
+
+class ValidationWarning(BaseModel):
+    """验证警告详情"""
+    field: str | None = Field(None, description="字段名")
+    message: str = Field(..., description="警告信息")
+    code: str | None = Field(None, description="警告代码")
+
+
 class AssetBatchUpdateRequest(BaseModel):
     """资产批量更新请求模型"""
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
-    updates: dict[str, Any] = Field(..., description="更新数据")
+    updates: AssetUpdate = Field(..., description="更新数据")
     should_update_all: bool = Field(False, description="是否更新所有资产")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -595,7 +611,7 @@ class AssetBatchUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict[str, Any]] = Field(
+    errors: list[BatchProcessingError] = Field(
         default_factory=list, description="错误信息列表"
     )
     updated_assets: list[str] = Field(
@@ -618,10 +634,10 @@ class AssetValidationResponse(BaseModel):
     """资产数据验证响应模型"""
 
     is_valid: bool = Field(..., description="是否通过验证")
-    errors: list[dict[str, Any]] = Field(
+    errors: list[BatchProcessingError] = Field(
         default_factory=list, description="错误信息列表"
     )
-    warnings: list[dict[str, Any]] = Field(
+    warnings: list[ValidationWarning] = Field(
         default_factory=list, description="警告信息列表"
     )
     validated_fields: list[str] = Field(default_factory=list, description="已验证字段")
@@ -646,7 +662,7 @@ class AssetImportResponse(BaseModel):
     success_count: int = Field(..., description="成功导入数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict[str, Any]] = Field(
+    errors: list[BatchProcessingError] = Field(
         default_factory=list, description="错误信息列表"
     )
     imported_assets: list[str] = Field(
@@ -661,7 +677,7 @@ class BatchCustomFieldUpdateRequest(BaseModel):
     """批量自定义字段更新请求模型"""
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
-    field_values: dict[str, Any] = Field(..., description="自定义字段值")
+    field_values: dict[str, str | int | float | bool | None] = Field(..., description="自定义字段值")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -672,7 +688,7 @@ class BatchCustomFieldUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict[str, Any]] = Field(
+    errors: list[BatchProcessingError] = Field(
         default_factory=list, description="错误信息列表"
     )
 

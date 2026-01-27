@@ -63,7 +63,7 @@ class TestPermissionDeniedLogging:
     def test_should_alert_when_threshold_exceeded(self, test_db: Session):
         """Test that should_alert returns True when threshold is exceeded"""
         from datetime import datetime, timedelta
-        
+
         from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
 
@@ -94,7 +94,7 @@ class TestPermissionDeniedLogging:
     def test_should_not_alert_when_threshold_not_exceeded(self, test_db: Session):
         """Test that should_alert returns False when threshold is not exceeded"""
         from datetime import datetime, timedelta
-        
+
         from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
 
@@ -125,7 +125,7 @@ class TestPermissionDeniedLogging:
     def test_should_alert_with_custom_threshold(self, test_db: Session):
         """Test that should_alert respects custom threshold"""
         from datetime import datetime, timedelta
-        
+
         from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
 

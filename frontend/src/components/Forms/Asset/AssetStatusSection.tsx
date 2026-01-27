@@ -1,7 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '../../Dictionary';
-import { useDictionary } from '../../../hooks/useDictionary';
 
 const { Option } = Select;
 

@@ -56,6 +56,7 @@ export interface Asset {
   // 项目相关字段
   project_id?: string;
   ownership_id?: string;
+  wuyang_project_name?: string;
 
   // 项目相关字段已移至基本信息部分
 

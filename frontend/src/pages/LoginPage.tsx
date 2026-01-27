@@ -24,13 +24,6 @@ const LoginPage: React.FC = () => {
     remember: false,
   });
 
-  const _handleFormChange = (
-    changedFields: { [key: string]: unknown },
-    allFields: LoginFormData
-  ) => {
-    setFormData(allFields);
-  };
-
   const handleSubmit = async (values: LoginFormData) => {
     try {
       await login({ username: values.username, password: values.password });
@@ -62,7 +55,7 @@ const LoginPage: React.FC = () => {
         <Card className={styles['login-card']} variant="borderless">
           {/* 登录头部 */}
           <div className={styles['login-header']}>
-            <Space direction="vertical" size="middle" align="center">
+            <Space orientation="vertical" size="middle" align="center">
               <div className={styles['login-logo']}>
                 <SafetyCertificateOutlined className={styles['login-icon']} />
               </div>
@@ -160,7 +153,7 @@ const LoginPage: React.FC = () => {
 
           {/* 登录底部 */}
           <div className={styles['login-footer']}>
-            <Space direction="vertical" size="small" align="center">
+            <Space orientation="vertical" size="small" align="center">
               <Text type="secondary" className={styles['login-help']}>
                 <SafetyCertificateOutlined /> 如遇登录问题，请联系系统管理员
               </Text>

@@ -25,9 +25,15 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"  # 测试数据库
 
 # 设置测试环境必需的环境变量
 if "SECRET_KEY" not in os.environ or os.environ["SECRET_KEY"].startswith("<generate"):
-    os.environ["SECRET_KEY"] = "E0ocpsl2ek0uCNqh65GUSKwMUy9m20BAMXiTGXvkxm4"  # 强密钥用于测试
-if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ["DATA_ENCRYPTION_KEY"].startswith("<generate"):
-    os.environ["DATA_ENCRYPTION_KEY"] = "test-encryption-key-for-testing-only-min-32-chars-long"
+    os.environ["SECRET_KEY"] = (
+        "E0ocpsl2ek0uCNqh65GUSKwMUy9m20BAMXiTGXvkxm4"  # 强密钥用于测试
+    )
+if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ[
+    "DATA_ENCRYPTION_KEY"
+].startswith("<generate"):
+    os.environ["DATA_ENCRYPTION_KEY"] = (
+        "test-encryption-key-for-testing-only-min-32-chars-long"
+    )
 
 # =============================================================================
 # 数据库Fixtures

@@ -102,7 +102,7 @@ class UserResponse(UserBase):
 
     @field_validator("role", mode="before")
     @classmethod
-    def parse_role(cls, v: Any) -> Any:
+    def parse_role(cls, v: str | UserRole) -> str | UserRole:
         """Parse role from string or enum"""
         if isinstance(v, str):
             return v
@@ -110,7 +110,7 @@ class UserResponse(UserBase):
 
     @field_validator("is_active", "is_locked", mode="before")
     @classmethod
-    def parse_boolean(cls, v: Any) -> Any:
+    def parse_boolean(cls, v: bool | int) -> bool | int:
         """Parse boolean from int or bool"""
         if isinstance(v, int):
             return bool(v)
@@ -118,7 +118,7 @@ class UserResponse(UserBase):
 
     @field_validator("last_login_at", "created_at", "updated_at", mode="before")
     @classmethod
-    def parse_datetime(cls, v: Any) -> Any:
+    def parse_datetime(cls, v: str | datetime | None) -> str | datetime | None:
         """Parse datetime from string or datetime object"""
         if v is None:
             return v
@@ -199,7 +199,7 @@ class LoginResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """刷新令牌请求模型"""
 
-    refresh_token: str = Field(..., description="刷新令牌")
+    refresh_token: str | None = Field(default=None, description="刷新令牌")
 
 
 class PasswordChangeRequest(BaseModel):

@@ -47,11 +47,32 @@ export interface UsageStatusDistribution {
   percentage: number;
 }
 
+export interface OwnershipStatusAreaDistribution extends OwnershipStatusDistribution {
+  total_area: number;
+  area_percentage?: number;
+  average_area: number;
+}
+
+export interface UsageStatusAreaDistribution extends UsageStatusDistribution {
+  total_area: number;
+  area_percentage?: number;
+  average_area: number;
+}
+
 export interface BusinessCategoryDistribution {
   category: string;
   count: number;
   occupancy_rate: number;
   avg_annual_income: number;
+}
+
+export interface BusinessCategoryAreaDistribution {
+  category: string;
+  count: number;
+  occupancy_rate?: number;
+  total_area?: number;
+  area_percentage?: number;
+  avg_annual_income?: number;
 }
 
 export interface OccupancyTrend {

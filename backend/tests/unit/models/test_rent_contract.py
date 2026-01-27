@@ -311,11 +311,13 @@ class TestRentContractStatus:
         """Test default contract status"""
         # Import ContractStatus enum
         from src.core.enums import ContractStatus
+
         assert contract.status == ContractStatus.ACTIVE
 
     def test_status_can_be_changed(self, contract):
         """Test status can be updated"""
         from src.core.enums import ContractStatus
+
         contract.status = ContractStatus.TERMINATED
         assert contract.status == ContractStatus.TERMINATED
 
@@ -332,7 +334,9 @@ class TestRentContractValidation:
             tenant_name="Validation Tenant",
             sign_date=date(2024, 1, 1),
             start_date=date(2024, 12, 31),
-            end_date=date(2024, 1, 1),  # End before start - should validate at app level
+            end_date=date(
+                2024, 1, 1
+            ),  # End before start - should validate at app level
         )
         assert contract.end_date < contract.start_date
 

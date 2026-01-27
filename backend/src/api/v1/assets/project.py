@@ -102,7 +102,7 @@ async def get_project_options(
     is_active: bool | None = Query(True, description="是否仅返回启用项目"),
 ) -> list[dict[str, Any]]:
     """获取项目下拉列表选项（标准端点）"""
-    
+
     return project_service.get_project_dropdown_options(db, is_active=is_active)
 
 

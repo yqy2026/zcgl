@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post(
-    "/{contract_id}/attachments", response_model=dict[str, AnyType], summary="上传合同附件"
+    "/{contract_id}/attachments",
+    response_model=dict[str, AnyType],
+    summary="上传合同附件",
 )
 async def upload_contract_attachment(
     contract_id: str,
@@ -50,7 +52,7 @@ async def upload_contract_attachment(
             file_type=file_type,
             description=description,
             uploader_id=current_user.id,
-            uploader_name=current_user.full_name or current_user.username
+            uploader_name=current_user.full_name or current_user.username,
         )
         return result
     except ValueError as e:

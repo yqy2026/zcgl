@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
 
 
-
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])
 async def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
@@ -74,7 +73,7 @@ async def quick_create_dictionary(
     """
     try:
         result = common_dictionary_service.quick_create_enum_dictionary(
-            db, dict_type, dictionary_data, operator=current_user.name or "系统"
+            db, dict_type, dictionary_data, operator=current_user.full_name or "系统"
         )
         return JSONResponse(status_code=200, content=result)
     except Exception as e:
@@ -90,13 +89,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
 
     注意：已废弃旧的system_dictionaries表，统一使用enum_field表
     """
-    # 从枚举字段表获取
-    enum_types = (
-        db.query(EnumFieldType.code).filter(EnumFieldType.is_deleted.is_(False)).all()
-    )
-
-    # 直接返回枚举类型代码列表
-    return sorted([t.code for t in enum_types if t.code])
+    return common_dictionary_service.get_all_dictionary_types(db)
 
 
 @router.get("/validation/stats", summary="获取枚举验证统计信息")
@@ -166,7 +159,7 @@ async def add_dictionary_value(
     """
     try:
         result = common_dictionary_service.add_dictionary_value(
-            db, dict_type, value_data, operator=current_user.name or "系统"
+            db, dict_type, value_data, operator=current_user.full_name or "系统"
         )
         return JSONResponse(status_code=200, content=result)
     except Exception as e:
@@ -188,7 +181,7 @@ async def delete_dictionary_type(
     """
     try:
         result = common_dictionary_service.delete_dictionary_type(
-            db, dict_type, operator=current_user.name or "系统"
+            db, dict_type, operator=current_user.full_name or "系统"
         )
         return JSONResponse(status_code=200, content=result)
     except Exception as e:  # pragma: no cover

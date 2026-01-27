@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_notification(db: Session, admin_user):
     """创建测试通知"""
@@ -33,7 +34,7 @@ def sample_notification(db: Session, admin_user):
         title="测试通知",
         content="这是一条测试通知内容",
         is_read=False,
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
     )
     db.add(notification)
     db.commit()
@@ -64,7 +65,7 @@ def multiple_notifications(db: Session, admin_user):
             title=f"测试通知 {i}",
             content=f"通知内容 {i}",
             is_read=(i >= 3),  # 前3条未读，后2条已读
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
         db.add(notification)
         db.commit()
@@ -87,7 +88,7 @@ def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"}
+        data={"username": admin_user.username, "password": "admin123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -97,15 +98,15 @@ def admin_user_headers(client, admin_user):
 # Get Notifications List Tests
 # ============================================================================
 
+
 class TestGetNotifications:
     """测试获取通知列表API"""
 
-    def test_get_notifications_default(self, client, admin_user_headers, multiple_notifications):
+    def test_get_notifications_default(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试获取通知列表（默认参数）"""
-        response = client.get(
-            "/api/v1/notifications/",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -114,22 +115,24 @@ class TestGetNotifications:
         assert "unread_count" in data
         assert "count" in data
 
-    def test_get_notifications_with_pagination(self, client, admin_user_headers, multiple_notifications):
+    def test_get_notifications_with_pagination(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试分页功能"""
         response = client.get(
-            "/api/v1/notifications/?page=1&page_size=2",
-            headers=admin_user_headers
+            "/api/v1/notifications/?page=1&page_size=2", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["items"]) <= 2
 
-    def test_get_notifications_filter_by_unread(self, client, admin_user_headers, multiple_notifications):
+    def test_get_notifications_filter_by_unread(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试筛选未读通知"""
         response = client.get(
-            "/api/v1/notifications/?is_read=false",
-            headers=admin_user_headers
+            "/api/v1/notifications/?is_read=false", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -138,11 +141,12 @@ class TestGetNotifications:
         for item in data["items"]:
             assert item["is_read"] is False
 
-    def test_get_notifications_filter_by_read(self, client, admin_user_headers, multiple_notifications):
+    def test_get_notifications_filter_by_read(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试筛选已读通知"""
         response = client.get(
-            "/api/v1/notifications/?is_read=true",
-            headers=admin_user_headers
+            "/api/v1/notifications/?is_read=true", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -151,11 +155,12 @@ class TestGetNotifications:
         for item in data["items"]:
             assert item["is_read"] is True
 
-    def test_get_notifications_filter_by_type(self, client, admin_user_headers, multiple_notifications):
+    def test_get_notifications_filter_by_type(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试按类型筛选"""
         response = client.get(
-            "/api/v1/notifications/?type=alert",
-            headers=admin_user_headers
+            "/api/v1/notifications/?type=alert", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -175,14 +180,16 @@ class TestGetNotifications:
 # Get Unread Count Tests
 # ============================================================================
 
+
 class TestGetUnreadCount:
     """测试获取未读数量API"""
 
-    def test_get_unread_count_success(self, client, admin_user_headers, multiple_notifications):
+    def test_get_unread_count_success(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试成功获取未读数量"""
         response = client.get(
-            "/api/v1/notifications/unread-count",
-            headers=admin_user_headers
+            "/api/v1/notifications/unread-count", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -192,7 +199,9 @@ class TestGetUnreadCount:
         assert data["unread_count"] >= 0
         assert data["count"] == data["unread_count"]
 
-    def test_get_unread_count_zero(self, client, admin_user_headers, db: Session, admin_user):
+    def test_get_unread_count_zero(
+        self, client, admin_user_headers, db: Session, admin_user
+    ):
         """测试没有未读通知时返回0"""
         # 清除所有通知
         db.query(Notification).filter(
@@ -201,8 +210,7 @@ class TestGetUnreadCount:
         db.commit()
 
         response = client.get(
-            "/api/v1/notifications/unread-count",
-            headers=admin_user_headers
+            "/api/v1/notifications/unread-count", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -220,14 +228,17 @@ class TestGetUnreadCount:
 # Mark as Read Tests
 # ============================================================================
 
+
 class TestMarkAsRead:
     """测试标记已读API"""
 
-    def test_mark_notification_as_read_success(self, client, admin_user_headers, sample_notification):
+    def test_mark_notification_as_read_success(
+        self, client, admin_user_headers, sample_notification
+    ):
         """测试成功标记通知为已读"""
         response = client.post(
             f"/api/v1/notifications/{sample_notification.id}/read",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -239,8 +250,7 @@ class TestMarkAsRead:
     def test_mark_notification_as_read_not_found(self, client, admin_user_headers):
         """测试标记不存在的通知"""
         response = client.post(
-            "/api/v1/notifications/non-existent-id/read",
-            headers=admin_user_headers
+            "/api/v1/notifications/non-existent-id/read", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -256,14 +266,21 @@ class TestMarkAsRead:
 # Mark All as Read Tests
 # ============================================================================
 
+
 class TestMarkAllAsRead:
     """测试全部标记已读API"""
 
-    def test_mark_all_as_read_success(self, client, admin_user_headers, multiple_notifications, db: Session, admin_user):
+    def test_mark_all_as_read_success(
+        self,
+        client,
+        admin_user_headers,
+        multiple_notifications,
+        db: Session,
+        admin_user,
+    ):
         """测试成功标记所有通知为已读"""
         response = client.post(
-            "/api/v1/notifications/read-all",
-            headers=admin_user_headers
+            "/api/v1/notifications/read-all", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -271,10 +288,14 @@ class TestMarkAllAsRead:
         assert "message" in data
 
         # 验证所有通知都已读
-        unread_count = db.query(Notification).filter(
-            Notification.recipient_id == admin_user.id,
-            Notification.is_read.is_(False)
-        ).count()
+        unread_count = (
+            db.query(Notification)
+            .filter(
+                Notification.recipient_id == admin_user.id,
+                Notification.is_read.is_(False),
+            )
+            .count()
+        )
         assert unread_count == 0
 
     def test_mark_all_as_read_unauthorized(self, client):
@@ -288,16 +309,18 @@ class TestMarkAllAsRead:
 # Delete Notification Tests
 # ============================================================================
 
+
 class TestDeleteNotification:
     """测试删除通知API"""
 
-    def test_delete_notification_success(self, client, admin_user_headers, sample_notification, db: Session):
+    def test_delete_notification_success(
+        self, client, admin_user_headers, sample_notification, db: Session
+    ):
         """测试成功删除通知"""
         notification_id = sample_notification.id
 
         response = client.delete(
-            f"/api/v1/notifications/{notification_id}",
-            headers=admin_user_headers
+            f"/api/v1/notifications/{notification_id}", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -305,16 +328,15 @@ class TestDeleteNotification:
         assert "message" in data
 
         # 验证通知已删除
-        notification = db.query(Notification).filter(
-            Notification.id == notification_id
-        ).first()
+        notification = (
+            db.query(Notification).filter(Notification.id == notification_id).first()
+        )
         assert notification is None
 
     def test_delete_notification_not_found(self, client, admin_user_headers):
         """测试删除不存在的通知"""
         response = client.delete(
-            "/api/v1/notifications/non-existent-id",
-            headers=admin_user_headers
+            "/api/v1/notifications/non-existent-id", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -330,10 +352,13 @@ class TestDeleteNotification:
 # Edge Cases and Error Handling
 # ============================================================================
 
+
 class TestNotificationsEdgeCases:
     """测试边界情况"""
 
-    def test_empty_notifications_list(self, client, admin_user_headers, db: Session, admin_user):
+    def test_empty_notifications_list(
+        self, client, admin_user_headers, db: Session, admin_user
+    ):
         """测试空通知列表"""
         # 清除所有通知
         db.query(Notification).filter(
@@ -341,10 +366,7 @@ class TestNotificationsEdgeCases:
         ).delete()
         db.commit()
 
-        response = client.get(
-            "/api/v1/notifications/",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -355,8 +377,7 @@ class TestNotificationsEdgeCases:
     def test_large_page_size(self, client, admin_user_headers):
         """测试大分页大小"""
         response = client.get(
-            "/api/v1/notifications/?page_size=100",
-            headers=admin_user_headers
+            "/api/v1/notifications/?page_size=100", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -365,34 +386,35 @@ class TestNotificationsEdgeCases:
         """测试无效的分页大小（超过最大值）"""
         response = client.get(
             "/api/v1/notifications/?page_size=200",  # 超过最大值100
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 应该返回验证错误
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_mark_already_read_notification(self, client, admin_user_headers, sample_notification):
+    def test_mark_already_read_notification(
+        self, client, admin_user_headers, sample_notification
+    ):
         """测试标记已读通知（幂等性）"""
         # 先标记为已读
         client.post(
             f"/api/v1/notifications/{sample_notification.id}/read",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 再次标记应该成功（幂等）
         response = client.post(
             f"/api/v1/notifications/{sample_notification.id}/read",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_notifications_ordering(self, client, admin_user_headers, multiple_notifications):
+    def test_notifications_ordering(
+        self, client, admin_user_headers, multiple_notifications
+    ):
         """测试通知排序（按创建时间倒序）"""
-        response = client.get(
-            "/api/v1/notifications/",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -400,4 +422,6 @@ class TestNotificationsEdgeCases:
         # 验证排序（最新在前）
         if len(data["items"]) > 1:
             for i in range(len(data["items"]) - 1):
-                assert data["items"][i]["created_at"] >= data["items"][i + 1]["created_at"]
+                assert (
+                    data["items"][i]["created_at"] >= data["items"][i + 1]["created_at"]
+                )

@@ -303,43 +303,43 @@ class RentContractService:
         return contract
 
     def upload_contract_attachment(
-        self, 
-        db: Session, 
-        *, 
-        contract_id: str, 
+        self,
+        db: Session,
+        *,
+        contract_id: str,
         file: UploadFile,
         file_type: str = "other",
         description: str | None = None,
         uploader_id: str,
-        uploader_name: str
+        uploader_name: str,
     ) -> dict[str, Any]:
         """上传合同附件"""
         from ...models.rent_contract import RentContractAttachment
         from ...crud.rent_contract import rent_contract
         import uuid
         from pathlib import Path
-        
+
         # 验证合同是否存在
         contract = rent_contract.get(db, id=contract_id)
         if not contract:
             raise ValueError("合同不存在")
-        
+
         # 验证文件类型
         allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
         file_ext = Path(file.filename).suffix.lower() if file.filename else ""
-        
+
         if file_ext not in allowed_extensions:
             raise ValueError(
                 f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}"
             )
-        
+
         # 创建上传目录
         upload_dir = Path("uploads/contracts")
         upload_dir.mkdir(parents=True, exist_ok=True)
-        
+
         unique_filename = f"{uuid.uuid4()}{file_ext}"
         file_path = upload_dir / unique_filename
-        
+
         # 保存文件
         try:
             contents = file.file.read()
@@ -350,7 +350,7 @@ class RentContractService:
             file.file.seek(0)
         except Exception as e:
             raise ValueError(f"文件保存失败: {str(e)}")
-        
+
         # 创建附件记录
         attachment = RentContractAttachment()
         attachment.contract_id = contract_id
@@ -362,12 +362,12 @@ class RentContractService:
         attachment.description = description
         attachment.uploader = uploader_name
         attachment.uploader_id = uploader_id
-        
+
         # 在一个事务中添加附件并提交
         db.add(attachment)
         db.commit()
         db.refresh(attachment)
-        
+
         return {
             "id": attachment.id,
             "file_name": attachment.file_name,

@@ -1,10 +1,9 @@
-
 import sys
 import os
 from fastapi import FastAPI
 
 # Add project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from src.main import app
 from src.core.router_registry import route_registry

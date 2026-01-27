@@ -2,8 +2,13 @@ import pytest
 from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
 from src.services.common_dictionary_service import common_dictionary_service
-from src.schemas.dictionary import SimpleDictionaryCreate, DictionaryOptionCreate, DictionaryValueCreate
+from src.schemas.dictionary import (
+    SimpleDictionaryCreate,
+    DictionaryOptionCreate,
+    DictionaryValueCreate,
+)
 from src.core.exception_handler import BaseBusinessError
+
 
 class TestCommonDictionaryService:
     @pytest.fixture
@@ -12,15 +17,21 @@ class TestCommonDictionaryService:
 
     @pytest.fixture
     def mock_enum_type_crud(self):
-        with patch("src.services.common_dictionary_service.get_enum_field_type_crud") as mock:
+        with patch(
+            "src.services.common_dictionary_service.get_enum_field_type_crud"
+        ) as mock:
             yield mock.return_value
 
     @pytest.fixture
     def mock_enum_value_crud(self):
-        with patch("src.services.common_dictionary_service.get_enum_field_value_crud") as mock:
+        with patch(
+            "src.services.common_dictionary_service.get_enum_field_value_crud"
+        ) as mock:
             yield mock.return_value
 
-    def test_get_combined_options_from_enum(self, mock_db, mock_enum_type_crud, mock_enum_value_crud):
+    def test_get_combined_options_from_enum(
+        self, mock_db, mock_enum_type_crud, mock_enum_value_crud
+    ):
         """Test getting options from enum field"""
         # Setup mock return values
         mock_type = MagicMock()
@@ -47,7 +58,9 @@ class TestCommonDictionaryService:
         mock_enum_type_crud.get_by_code.assert_called_with("test_type")
         mock_enum_value_crud.get_by_type.assert_called()
 
-    def test_quick_create_enum_dictionary_success(self, mock_db, mock_enum_type_crud, mock_enum_value_crud):
+    def test_quick_create_enum_dictionary_success(
+        self, mock_db, mock_enum_type_crud, mock_enum_value_crud
+    ):
         """Test successful dictionary creation"""
         # Setup mocks
         mock_enum_type_crud.get_by_code.return_value = None  # Not existing
@@ -61,10 +74,8 @@ class TestCommonDictionaryService:
 
         # Input data
         data = SimpleDictionaryCreate(
-            options=[
-                DictionaryOptionCreate(label="Option 1", value="opt1")
-            ],
-            description="Test Dictionary"
+            options=[DictionaryOptionCreate(label="Option 1", value="opt1")],
+            description="Test Dictionary",
         )
 
         # Call service
@@ -80,7 +91,7 @@ class TestCommonDictionaryService:
 
     def test_quick_create_conflict(self, mock_db, mock_enum_type_crud):
         """Test creation when dictionary already exists"""
-        mock_enum_type_crud.get_by_code.return_value = MagicMock() # Existing
+        mock_enum_type_crud.get_by_code.return_value = MagicMock()  # Existing
 
         data = SimpleDictionaryCreate(options=[])
 
@@ -91,13 +102,17 @@ class TestCommonDictionaryService:
 
         assert exc.value.status_code == 409
 
-    def test_add_dictionary_value_success(self, mock_db, mock_enum_type_crud, mock_enum_value_crud):
+    def test_add_dictionary_value_success(
+        self, mock_db, mock_enum_type_crud, mock_enum_value_crud
+    ):
         """Test adding a value to existing dictionary"""
         mock_type = MagicMock()
         mock_type.id = 1
         mock_enum_type_crud.get_by_code.return_value = mock_type
 
-        mock_enum_value_crud.get_by_type_and_value.return_value = None # Not existing value
+        mock_enum_value_crud.get_by_type_and_value.return_value = (
+            None  # Not existing value
+        )
 
         mock_created = MagicMock()
         mock_created.id = 100
@@ -118,7 +133,9 @@ class TestCommonDictionaryService:
         mock_type.id = 1
         mock_enum_type_crud.get_by_code.return_value = mock_type
 
-        result = common_dictionary_service.delete_dictionary_type(mock_db, "test_dict", "admin")
+        result = common_dictionary_service.delete_dictionary_type(
+            mock_db, "test_dict", "admin"
+        )
 
         assert "成功" in result["message"]
         mock_enum_type_crud.delete.assert_called_with("1", deleted_by="admin")

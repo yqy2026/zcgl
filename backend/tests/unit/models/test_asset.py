@@ -326,7 +326,9 @@ class TestAssetValidation:
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
-            land_area=Decimal("-100.00"),  # Negative - should be validated at application level
+            land_area=Decimal(
+                "-100.00"
+            ),  # Negative - should be validated at application level
         )
         assert asset.land_area == Decimal("-100.00")
 

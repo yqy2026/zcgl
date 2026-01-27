@@ -418,17 +418,23 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                 <Form.Item label="面积范围">
                   <Space.Compact>
                     <InputNumber
+                      id="asset-area-min"
+                      name="asset-area-min"
                       style={{ width: '45%' }}
                       placeholder="最小面积"
                       value={areaRange[0]}
                       onChange={value => setAreaRange([value ?? 0, areaRange[1]])}
                     />
                     <Input
+                      id="asset-area-range-separator"
+                      name="asset-area-range-separator"
                       style={{ width: '10%', borderLeft: 0, borderRight: 0, pointerEvents: 'none' }}
                       placeholder="~"
                       disabled
                     />
                     <InputNumber
+                      id="asset-area-max"
+                      name="asset-area-max"
                       style={{ width: '45%' }}
                       placeholder="最大面积"
                       value={areaRange[1]}
@@ -552,7 +558,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                   )
                 }
                 description={
-                  <Space direction="vertical" size="small">
+                  <Space orientation="vertical" size="small">
                     <Text type="secondary">
                       保存时间: {dayjs(item.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                     </Text>

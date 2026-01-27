@@ -5,8 +5,7 @@ import { protectedRoutes } from './routes/AppRoutes';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary';
-import { AuthService } from './services/authService';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
 import { MessageManager } from './utils/messageManager';
 // App.css removed - classes were unused default React template styles
@@ -28,7 +27,7 @@ import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/Layout/PageTransition';
 
 const ProtectedRoutes: React.FC = () => {
-  const isAuthenticated = AuthService.isAuthenticated();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   // 未认证用户重定向到登录页面
@@ -73,7 +72,7 @@ const ProtectedRoutes: React.FC = () => {
  * 应用路由配置 - 根据认证状态分发路由
  */
 const AppContent: React.FC = () => {
-  const isAuthenticated = AuthService.isAuthenticated();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   return (

@@ -53,6 +53,21 @@ class Settings(BaseSettings):
     DATABASE_ECHO: bool = Field(
         default=False, json_schema_extra={"env": "DATABASE_ECHO"}
     )
+    DATABASE_POOL_SIZE: int = Field(
+        default=20, json_schema_extra={"env": "DATABASE_POOL_SIZE"}
+    )
+    DATABASE_MAX_OVERFLOW: int = Field(
+        default=30, json_schema_extra={"env": "DATABASE_MAX_OVERFLOW"}
+    )
+    DATABASE_POOL_TIMEOUT: int = Field(
+        default=30, json_schema_extra={"env": "DATABASE_POOL_TIMEOUT"}
+    )
+    DATABASE_POOL_RECYCLE: int = Field(
+        default=3600, json_schema_extra={"env": "DATABASE_POOL_RECYCLE"}
+    )
+    DATABASE_POOL_PRE_PING: bool = Field(
+        default=True, json_schema_extra={"env": "DATABASE_POOL_PRE_PING"}
+    )
 
     # Redis缓存配置
     REDIS_HOST: str | None = Field(
@@ -136,7 +151,6 @@ class Settings(BaseSettings):
     # 日志配置
     LOG_LEVEL: str = Field(default="INFO", json_schema_extra={"env": "LOG_LEVEL"})
     LOG_FILE: str | None = Field(default=None, json_schema_extra={"env": "LOG_FILE"})
-
 
     # 性能监控
     ENABLE_METRICS: bool = Field(
@@ -695,10 +709,11 @@ def get_config(key: str, default: Any = None) -> Any:
         "cors_origins": settings.CORS_ORIGINS,
         "database.url": settings.DATABASE_URL,
         "database.echo": settings.DATABASE_ECHO,
-        "database.pool_size": 20,
-        "database.max_overflow": 30,
-        "database.pool_timeout": 30,
-        "database.pool_recycle": 3600,
+        "database.pool_size": settings.DATABASE_POOL_SIZE,
+        "database.max_overflow": settings.DATABASE_MAX_OVERFLOW,
+        "database.pool_timeout": settings.DATABASE_POOL_TIMEOUT,
+        "database.pool_recycle": settings.DATABASE_POOL_RECYCLE,
+        "database.pool_pre_ping": settings.DATABASE_POOL_PRE_PING,
         "database.enable_query_logging": False,
         "rate_limit": {},
         "security": {},
@@ -739,7 +754,6 @@ def initialize_config() -> None:
     except ValueError as e:
         logger.error(f"Configuration validation failed: {e}")
         raise
-
 
     logger.info("Configuration initialized successfully")
 

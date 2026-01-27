@@ -16,7 +16,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { addDays, differenceInDays, parseISO, formatISO } from 'date-fns';
+import dayjs from 'dayjs';
 import { RentContractForm } from '../../components/Forms';
 import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
@@ -31,30 +31,30 @@ const { Title, Text } = Typography;
 /**
  * 调整租金条款日期到新合同期间
  */
-function adjustRentTermsDate(originalTerms: any[], newStartDate: Date): any[] {
+function adjustRentTermsDate(originalTerms: any[], newStartDate: dayjs.Dayjs): any[] {
   if (originalTerms == null || originalTerms.length === 0) return [];
 
-  const originalStart = parseISO(originalTerms[0].start_date);
-  const originalEnd = parseISO(originalTerms[originalTerms.length - 1].end_date);
+  const originalStart = dayjs(originalTerms[0].start_date);
+  const originalEnd = dayjs(originalTerms[originalTerms.length - 1].end_date);
 
   // 计算原合同总天数
-  const totalDays = differenceInDays(originalEnd, originalStart);
+  const totalDays = originalEnd.diff(originalStart, 'day');
 
   // 计算新合同结束日期
-  const newEndDate = addDays(newStartDate, totalDays);
+  const newEndDate = newStartDate.add(totalDays, 'day');
 
   // 调整每个条款的日期
   return originalTerms.map((term, index) => {
-    const termStartOffset = differenceInDays(parseISO(term.start_date), originalStart);
-    const termEndOffset = differenceInDays(parseISO(term.end_date), originalStart);
+    const termStartOffset = dayjs(term.start_date).diff(originalStart, 'day');
+    const termEndOffset = dayjs(term.end_date).diff(originalStart, 'day');
 
     return {
       ...term,
-      start_date: formatISO(addDays(newStartDate, termStartOffset), { representation: 'date' }),
+      start_date: newStartDate.add(termStartOffset, 'day').format('YYYY-MM-DD'),
       end_date:
         index === originalTerms.length - 1
-          ? formatISO(newEndDate, { representation: 'date' })
-          : formatISO(addDays(newStartDate, termEndOffset), { representation: 'date' }),
+          ? newEndDate.format('YYYY-MM-DD')
+          : newStartDate.add(termEndOffset, 'day').format('YYYY-MM-DD'),
     };
   });
 }
@@ -79,7 +79,7 @@ const ContractRenewPage: React.FC = () => {
     if (!originalContract) return undefined;
 
     // 计算新合同开始日期（原合同结束+1天）
-    const newStartDate = addDays(parseISO(originalContract.end_date), 1);
+    const newStartDate = dayjs(originalContract.end_date).add(1, 'day');
 
     // 调整租金条款日期
     const adjustedRentTerms = adjustRentTermsDate(originalContract.rent_terms ?? [], newStartDate);
@@ -95,7 +95,7 @@ const ContractRenewPage: React.FC = () => {
       tenant_usage: originalContract.tenant_usage,
 
       // 新合同开始日期 = 原合同结束+1天
-      start_date: formatISO(newStartDate, { representation: 'date' }),
+      start_date: newStartDate.format('YYYY-MM-DD'),
       // 结束日期需用户手动设置
       end_date: '',
 

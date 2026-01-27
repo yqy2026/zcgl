@@ -77,13 +77,15 @@ setup_security_middleware = safe_import_from(
 )
 
 # ===== 重要功能（推荐存在，允许降级）=====
-ErrorRecoveryMiddleware = safe_import(
-    "src.middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
+ErrorRecoveryMiddleware = safe_import_from(
+    "src.middleware.error_recovery_middleware",
+    "ErrorRecoveryMiddleware",
     fallback=None,
 )
 
-RequestLoggingMiddleware = safe_import(
-    "src.middleware.request_logging:RequestLoggingMiddleware",
+RequestLoggingMiddleware = safe_import_from(
+    "src.middleware.request_logging",
+    "RequestLoggingMiddleware",
     fallback=None,
 )
 

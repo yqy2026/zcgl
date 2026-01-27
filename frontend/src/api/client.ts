@@ -14,6 +14,7 @@ import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
 import { createLogger } from '../utils/logger';
 import { API_BASE_URL } from './config';
+import { AuthStorage } from '../utils/AuthStorage';
 
 const apiLogger = createLogger('API');
 
@@ -32,9 +33,10 @@ const validateApiPath = (url: string): void => {
       ? normalizedBaseUrl.slice(0, -1)
       : normalizedBaseUrl;
     if (!url.startsWith(basePath) && !url.startsWith('/auth')) {
-      console.warn(
-        `[API Client] URL does not use ${basePath} prefix: ${url}\n` +
-        `All API calls should use the centralized API client with correct prefix.`
+      apiLogger.warn(
+        `URL does not use ${basePath} prefix: ${url}`,
+        { url, basePath },
+        'All API calls should use the centralized API client with correct prefix.'
       );
     }
   }
@@ -239,9 +241,33 @@ export class ApiClient {
     // 请求拦截器
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        // 验证API路径前缀
+        // 规范化API路径前缀，确保走版本化路径
         if (config.url != null) {
-          validateApiPath(config.url);
+          const normalizedBaseUrl = API_BASE_URL.startsWith('http')
+            ? new URL(API_BASE_URL).pathname
+            : API_BASE_URL;
+          const basePath = normalizedBaseUrl.endsWith('/')
+            ? normalizedBaseUrl.slice(0, -1)
+            : normalizedBaseUrl;
+
+          if (!config.url.startsWith('http://') && !config.url.startsWith('https://')) {
+            let normalizedUrl = config.url;
+            if (basePath !== '' && normalizedUrl.startsWith(basePath)) {
+              normalizedUrl = normalizedUrl.slice(basePath.length);
+            }
+            if (normalizedUrl.startsWith('/')) {
+              normalizedUrl = normalizedUrl.slice(1);
+            }
+            config.url = normalizedUrl;
+
+            const validationUrl =
+              basePath !== ''
+                ? `${basePath}/${normalizedUrl}`.replace(/\/+/g, '/')
+                : `/${normalizedUrl}`;
+            validateApiPath(validationUrl);
+          } else {
+            validateApiPath(config.url);
+          }
         }
 
         // Authorization header removed - backend reads auth from httpOnly cookie
@@ -308,13 +334,19 @@ export class ApiClient {
           originalRequest != null &&
           originalRequest._retry !== true
         ) {
-          apiLogger.warn('🔑 Token过期，尝试刷新...');
+          apiLogger.warn('Token expired, attempting refresh', {
+            url: originalRequest.url,
+            method: originalRequest.method,
+          });
 
           try {
             // Try to refresh using cookie-based auth
             await this.instance.post('/auth/refresh');
 
-            apiLogger.info('✅ Token刷新成功，重试原始请求');
+            apiLogger.info('Token refresh successful, retrying original request', {
+              url: originalRequest.url,
+              method: originalRequest.method,
+            });
 
             // 标记请求已重试过，避免无限循环
             originalRequest._retry = true;
@@ -322,12 +354,19 @@ export class ApiClient {
             // 重试原始请求 (cookie automatically included)
             return await this.instance(originalRequest);
           } catch (refreshError) {
-            apiLogger.error('❌ Token刷新失败，执行登出', { refreshError });
+            apiLogger.error('Token refresh failed, logging out', {
+              refreshError,
+              url: originalRequest.url,
+              method: originalRequest.method,
+            });
 
             // 刷新失败，跳转到登录页
             // Cookie will be cleared by backend logout endpoint
             if (typeof window !== 'undefined') {
-              window.location.href = '/login';
+              AuthStorage.clearAuthData();
+              const currentPath =
+                window.location.pathname + window.location.search + window.location.hash;
+              window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
             }
 
             return Promise.reject(refreshError);
@@ -338,7 +377,7 @@ export class ApiClient {
 
         if (this.config.enableLogging === true) {
           apiLogger.error(
-            `❌ API Error: ${enhancedError.type} - ${enhancedError.message}`,
+            `API Error: ${enhancedError.type} - ${enhancedError.message}`,
             undefined,
             {
               config: axiosError.config,
@@ -655,7 +694,7 @@ export class ApiClient {
       if (value instanceof Date) {
         return value.toISOString();
       }
-      
+
       // 检查是否为普通对象
       if (Object.prototype.toString.call(value) === '[object Object]') {
         const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
@@ -666,7 +705,7 @@ export class ApiClient {
           return acc;
         }, {});
       }
-      
+
       // 如果是其他类型的对象（如Map, Set等），转换为字符串
       return value.toString();
     }

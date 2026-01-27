@@ -235,8 +235,8 @@ class Asset(Base):
     def clear_cached_properties(self):
         """清除缓存的计算属性"""
         # 对于cached_property，需要手动处理缓存清除
-        self.__dict__.pop('unrented_area', None)
-        self.__dict__.pop('occupancy_rate', None)
+        self.__dict__.pop("unrented_area", None)
+        self.__dict__.pop("occupancy_rate", None)
 
 
 class AssetHistory(Base):
@@ -407,7 +407,11 @@ class ProjectOwnershipRelation(Base):
         String, ForeignKey("projects.id"), index=True, nullable=False, comment="项目ID"
     )
     ownership_id: Mapped[str] = mapped_column(
-        String, ForeignKey("ownerships.id"), index=True, nullable=False, comment="权属方ID"
+        String,
+        ForeignKey("ownerships.id"),
+        index=True,
+        nullable=False,
+        comment="权属方ID",
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否有效"

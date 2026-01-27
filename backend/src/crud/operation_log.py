@@ -25,6 +25,8 @@ class OperationLogCRUD:
         resource_name: str | None = None,
         request_method: str | None = None,
         request_url: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
         response_status: int | None = None,
         response_time: int | None = None,
         ip_address: str | None = None,
@@ -48,6 +50,8 @@ class OperationLogCRUD:
             resource_name=resource_name,
             request_method=request_method,
             request_url=request_url,
+            request_params=request_params,
+            request_body=request_body,
             response_status=response_status,
             response_time=response_time,
             ip_address=ip_address,
@@ -76,6 +80,7 @@ class OperationLogCRUD:
         action: str | None = None,
         module: str | None = None,
         resource_type: str | None = None,
+        response_status: str | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         search: str | None = None,
@@ -98,6 +103,24 @@ class OperationLogCRUD:
         # 资源类型筛选
         if resource_type:
             query = query.filter(OperationLog.resource_type == resource_type)
+
+        if response_status:
+            if response_status == "success":
+                query = query.filter(
+                    OperationLog.response_status >= 200,
+                    OperationLog.response_status < 300,
+                )
+            elif response_status == "warning":
+                query = query.filter(
+                    OperationLog.response_status >= 400,
+                    OperationLog.response_status < 500,
+                )
+            elif response_status == "error":
+                query = query.filter(OperationLog.response_status >= 500)
+            elif response_status.isdigit():
+                query = query.filter(
+                    OperationLog.response_status == int(response_status)
+                )
 
         # 日期范围筛选
         if start_date:

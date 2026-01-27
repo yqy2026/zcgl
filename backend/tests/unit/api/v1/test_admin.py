@@ -16,12 +16,13 @@ from fastapi import status
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"}
+        data={"username": admin_user.username, "password": "admin123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -32,7 +33,7 @@ def normal_user_headers(client, normal_user):
     """普通用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": normal_user.username, "password": "user123"}
+        data={"username": normal_user.username, "password": "user123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -41,6 +42,7 @@ def normal_user_headers(client, normal_user):
 # ============================================================================
 # Health Check Tests
 # ============================================================================
+
 
 class TestHealthCheck:
     """测试健康检查API"""
@@ -65,6 +67,7 @@ class TestHealthCheck:
 # Database Reset Tests
 # ============================================================================
 
+
 class TestDatabaseReset:
     """测试数据库重置API"""
 
@@ -74,8 +77,7 @@ class TestDatabaseReset:
         # 在实际测试环境中，你可能需要mock这个操作或使用测试数据库
 
         response = client.post(
-            "/api/v1/admin/database/reset",
-            headers=admin_user_headers
+            "/api/v1/admin/database/reset", headers=admin_user_headers
         )
 
         # 由于测试环境限制，可能返回403或其他错误
@@ -83,14 +85,13 @@ class TestDatabaseReset:
         assert response.status_code in [
             status.HTTP_200_OK,
             status.HTTP_403_FORBIDDEN,
-            status.HTTP_401_UNAUTHORIZED
+            status.HTTP_401_UNAUTHORIZED,
         ]
 
     def test_database_reset_as_normal_user_forbidden(self, client, normal_user_headers):
         """测试普通用户重置数据库被禁止"""
         response = client.post(
-            "/api/v1/admin/database/reset",
-            headers=normal_user_headers
+            "/api/v1/admin/database/reset", headers=normal_user_headers
         )
 
         # 普通用户应该被拒绝
@@ -108,6 +109,7 @@ class TestDatabaseReset:
 # Admin Access Control Tests
 # ============================================================================
 
+
 class TestAdminAccessControl:
     """测试管理员访问控制"""
 
@@ -118,11 +120,12 @@ class TestAdminAccessControl:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_normal_user_cannot_access_admin_functions(self, client, normal_user_headers):
+    def test_normal_user_cannot_access_admin_functions(
+        self, client, normal_user_headers
+    ):
         """测试普通用户无法访问管理员功能"""
         response = client.post(
-            "/api/v1/admin/database/reset",
-            headers=normal_user_headers
+            "/api/v1/admin/database/reset", headers=normal_user_headers
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -131,6 +134,7 @@ class TestAdminAccessControl:
 # ============================================================================
 # Edge Cases and Error Handling
 # ============================================================================
+
 
 class TestAdminAPIEdgeCases:
     """测试API边界情况"""
@@ -148,12 +152,10 @@ class TestAdminAPIEdgeCases:
         """测试数据库重置幂等性"""
         # 多次调用应该都能成功（虽然实际不应该在测试中执行）
         response1 = client.post(
-            "/api/v1/admin/database/reset",
-            headers=admin_user_headers
+            "/api/v1/admin/database/reset", headers=admin_user_headers
         )
         response2 = client.post(
-            "/api/v1/admin/database/reset",
-            headers=admin_user_headers
+            "/api/v1/admin/database/reset", headers=admin_user_headers
         )
 
         # 验证两次调用返回相同的状态

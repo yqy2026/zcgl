@@ -4,7 +4,7 @@ import os
 # Setup path to import src
 # script is in backend/scripts/
 script_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(script_dir) # backend/
+backend_dir = os.path.dirname(script_dir)  # backend/
 sys.path.append(backend_dir)
 
 # Locate database
@@ -35,22 +35,23 @@ try:
         try:
             SessionLocal = get_session_factory()
             db = SessionLocal()
-            
+
             print("Querying distinct contract_status...")
             stmt = select(RentContract.contract_status).distinct()
             results = db.execute(stmt).scalars().all()
-            
+
             print("\nDistinct Contract Statuses:")
             if not results:
                 print("(No statuses found)")
             for status in results:
                 print(f"- '{status}'")
-            
+
             db.close()
-            
+
         except Exception as e:
             print(f"Error: {e}")
             import traceback
+
             traceback.print_exc()
 
     if __name__ == "__main__":
@@ -59,4 +60,5 @@ try:
 except Exception as e:
     print(f"Import/Setup Error: {e}")
     import traceback
+
     traceback.print_exc()

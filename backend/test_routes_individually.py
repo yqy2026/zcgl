@@ -1,4 +1,5 @@
 """逐个测试路由导入以定位问题"""
+
 import sys
 import os
 
@@ -29,14 +30,14 @@ for module_path, router_name in route_modules:
     try:
         full_path = f"src.api.v1.{module_path}"
         print(f"测试: {full_path}...", end=" ")
-        
+
         # 动态导入
         parts = full_path.split(".")
         module = __import__(full_path, fromlist=[router_name])
         router = getattr(module, "router")
-        
+
         print(f"✓ 成功 (路由数: {len(router.routes)})")
-        
+
     except Exception as e:
         print(f"✗ 失败")
         print(f"  错误: {str(e)[:200]}")

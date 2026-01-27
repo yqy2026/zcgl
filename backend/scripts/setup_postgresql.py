@@ -3,6 +3,7 @@ PostgreSQL数据库设置脚本
 创建zcgl_db和zcgl_test数据库
 """
 
+import os
 import sys
 
 import psycopg
@@ -10,11 +11,11 @@ from psycopg import sql
 
 # PostgreSQL连接配置
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "user": "postgres",
-    "password": "asdf",
-    "dbname": "postgres",  # 连接到默认数据库
+    "host": os.getenv("PGHOST", "localhost"),
+    "port": int(os.getenv("PGPORT", "5432")),
+    "user": os.getenv("PGUSER", "postgres"),
+    "password": os.getenv("PGPASSWORD"),
+    "dbname": os.getenv("PGDATABASE", "postgres"),
 }
 
 

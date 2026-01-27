@@ -5,6 +5,7 @@
 """
 
 import logging
+import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -21,8 +22,6 @@ from .....core.exception_handler import (
 
 logger = logging.getLogger(__name__)
 
-from .....security.cookie_manager import cookie_manager
-from .....security.route_guards import debug_only
 from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_db
 from .....exceptions import BusinessLogicError
@@ -40,6 +39,8 @@ from .....schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from .....security.cookie_manager import cookie_manager
+from .....security.route_guards import debug_only
 from .....services import AuthService
 from .....services.permission.rbac_service import RBACService
 
@@ -97,6 +98,7 @@ async def login(
 
         # Set httpOnly cookie for XSS protection
         cookie_manager.set_auth_cookie(response, tokens.access_token)
+        cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
 
         # 创建会话
         auth_service.create_user_session(
@@ -208,6 +210,7 @@ async def logout(
 
     # Clear httpOnly cookie
     cookie_manager.clear_auth_cookie(response)
+    cookie_manager.clear_refresh_cookie(response)
 
     # 提取并黑名单当前JWT令牌
     auth_header = request.headers.get("Authorization")
@@ -256,7 +259,10 @@ async def logout(
 
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
 async def refresh_token(
-    request: Request, refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)
+    request: Request,
+    response: Response,
+    refresh_data: RefreshTokenRequest | None = None,
+    db: Session = Depends(get_db),
 ) -> TokenResponse:
     """
     刷新访问令牌接口
@@ -278,8 +284,17 @@ async def refresh_token(
 
     # 验证刷新令牌（增强安全性）
     # Note: Returns User object (not UserSession), extracted from the session
+    cookie_header = request.headers.get("cookie", "")
+    refresh_token = cookie_manager.get_token_from_cookie(
+        cookie_header, cookie_name=cookie_manager.refresh_cookie_name
+    )
+    if not refresh_token and refresh_data:
+        refresh_token = refresh_data.refresh_token
+    if not refresh_token:
+        raise bad_request("刷新令牌缺失")
+
     user: User | None = auth_service.validate_refresh_token(
-        refresh_data.refresh_token, client_ip=client_ip, user_agent=user_agent
+        refresh_token, client_ip=client_ip, user_agent=user_agent
     )
     if not user:
         # 记录失败的刷新尝试
@@ -305,7 +320,7 @@ async def refresh_token(
     user_active = getattr(user, "is_active", False) if user else False
     if not user or not user_active:
         # 撤销无效会话
-        auth_service.revoke_session(refresh_data.refresh_token)
+        auth_service.revoke_session(refresh_token)
         raise unauthorized("用户不存在或已被禁用")
 
     # 记录刷新操作（可选：检查IP变化等安全检查）
@@ -320,6 +335,8 @@ async def refresh_token(
         "platform": None,  # User 对象不包含 platform 信息
     }
     tokens = auth_service.create_tokens(user, device_info)
+    cookie_manager.set_auth_cookie(response, tokens.access_token)
+    cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
 
     # 更新会话
     # Note: UserSession 需要单独查询和更新，这里暂时跳过
@@ -389,22 +406,34 @@ async def test_features() -> dict[str, Any]:
 async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
     """调试认证流程，测试各个步骤"""
     try:
+        # 从环境变量获取测试凭据
+        test_username = os.getenv("DEBUG_AUTH_USERNAME", "admin")
+        test_password = os.getenv("DEBUG_AUTH_PASSWORD")
+
+        if not test_password:
+            return {
+                "error": "Test credentials not configured",
+                "hint": "Set DEBUG_AUTH_PASSWORD environment variable for debug endpoint",
+            }
+
         auth_service = AuthService(db)
 
         # 1. 测试用户查询
-        admin_user = auth_service.get_user_by_username("admin")
+        admin_user = auth_service.get_user_by_username(test_username)
         if not admin_user:
-            return {"error": "Admin user not found"}
+            return {"error": f"Test user '{test_username}' not found"}
 
         # 2. 测试密码验证
         password_valid = auth_service.verify_password(
-            "Admin123!@#", admin_user.password_hash
+            test_password, admin_user.password_hash
         )
 
         # 3. 测试用户认证
         auth_error_debug: str | None = None
         try:
-            authenticated_user = auth_service.authenticate_user("admin", "Admin123!@#")
+            authenticated_user = auth_service.authenticate_user(
+                test_username, test_password
+            )
             auth_success = authenticated_user is not None
         except Exception as auth_exc:
             auth_success = False

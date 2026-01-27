@@ -136,7 +136,7 @@ class TestPropertyCertificateValidator:
             "area": 100.0,
             "issue_date": datetime(2020, 1, 1),
             "expiry_date": datetime(2030, 1, 1),
-            "address": "北京市朝阳区测试地址"
+            "address": "北京市朝阳区测试地址",
         }
 
         result = validator.validate_certificate_data(certificate_data)
@@ -147,7 +147,7 @@ class TestPropertyCertificateValidator:
         incomplete_data = {
             "certificate_number": "202012345678901234",
             # 缺少property_name
-            "area": 100.0
+            "area": 100.0,
         }
 
         with pytest.raises(ValueError):

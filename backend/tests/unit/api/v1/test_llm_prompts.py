@@ -17,7 +17,7 @@ def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"}
+        data={"username": admin_user.username, "password": "admin123"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -33,57 +33,43 @@ class TestLLMPromptsCRUD:
             "doc_type": "CONTRACT",
             "provider": "qwen",
             "system_prompt": "You are a helpful assistant",
-            "user_prompt_template": "Extract information from: {content}"
+            "user_prompt_template": "Extract information from: {content}",
         }
         response = client.post(
-            "/api/v1/llm-prompts/",
-            json=prompt_data,
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/", json=prompt_data, headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_201_CREATED]
 
     def test_get_prompts_list(self, client, admin_user_headers):
         """测试获取Prompt列表"""
-        response = client.get(
-            "/api/v1/llm-prompts/",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/llm-prompts/", headers=admin_user_headers)
         assert response.status_code == status.HTTP_200_OK
 
     def test_get_prompts_with_pagination(self, client, admin_user_headers):
         """测试分页功能"""
         response = client.get(
-            "/api/v1/llm-prompts/?page=1&page_size=10",
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/?page=1&page_size=10", headers=admin_user_headers
         )
         assert response.status_code == status.HTTP_200_OK
 
     def test_get_prompt_by_id(self, client, admin_user_headers):
         """测试获取单个Prompt"""
-        response = client.get(
-            "/api/v1/llm-prompts/test-id",
-            headers=admin_user_headers
-        )
+        response = client.get("/api/v1/llm-prompts/test-id", headers=admin_user_headers)
         # 可能返回200或404
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_update_prompt(self, client, admin_user_headers):
         """测试更新Prompt"""
-        update_data = {
-            "system_prompt": "Updated system prompt"
-        }
+        update_data = {"system_prompt": "Updated system prompt"}
         response = client.put(
-            "/api/v1/llm-prompts/test-id",
-            json=update_data,
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/test-id", json=update_data, headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_delete_prompt(self, client, admin_user_headers):
         """测试删除Prompt"""
         response = client.delete(
-            "/api/v1/llm-prompts/test-id",
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/test-id", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -94,20 +80,17 @@ class TestLLMPromptsVersionManagement:
     def test_get_prompt_versions(self, client, admin_user_headers):
         """测试获取Prompt版本列表"""
         response = client.get(
-            "/api/v1/llm-prompts/test-id/versions",
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/test-id/versions", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_rollback_prompt_version(self, client, admin_user_headers):
         """测试回滚到指定版本"""
-        rollback_data = {
-            "version_id": "version-123"
-        }
+        rollback_data = {"version_id": "version-123"}
         response = client.post(
             "/api/v1/llm-prompts/test-id/rollback",
             json=rollback_data,
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -118,8 +101,7 @@ class TestLLMPromptsActivation:
     def test_activate_prompt(self, client, admin_user_headers):
         """测试激活Prompt"""
         response = client.post(
-            "/api/v1/llm-prompts/test-id/activate",
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/test-id/activate", headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
@@ -133,18 +115,14 @@ class TestLLMPromptsValidation:
             "name": "duplicate_test",
             "doc_type": "CONTRACT",
             "provider": "qwen",
-            "system_prompt": "Test"
+            "system_prompt": "Test",
         }
         # 创建两次，第二次应该失败
         client.post(
-            "/api/v1/llm-prompts/",
-            json=prompt_data,
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/", json=prompt_data, headers=admin_user_headers
         )
         response = client.post(
-            "/api/v1/llm-prompts/",
-            json=prompt_data,
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/", json=prompt_data, headers=admin_user_headers
         )
         assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_200_OK]
 
@@ -154,14 +132,16 @@ class TestLLMPromptsValidation:
             "name": "invalid_provider_test",
             "doc_type": "CONTRACT",
             "provider": "invalid_provider",
-            "system_prompt": "Test"
+            "system_prompt": "Test",
         }
         response = client.post(
-            "/api/v1/llm-prompts/",
-            json=prompt_data,
-            headers=admin_user_headers
+            "/api/v1/llm-prompts/", json=prompt_data, headers=admin_user_headers
         )
-        assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_200_OK]
+        assert response.status_code in [
+            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_200_OK,
+        ]
 
 
 class TestLLMPromptsAuthentication:

@@ -271,7 +271,9 @@ class CacheDecorator:
         self.key_builder = key_builder or cache_key_builder
 
     @overload
-    def __call__(self, func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
+    def __call__(
+        self, func: Callable[P, Awaitable[R]]
+    ) -> Callable[P, Awaitable[R]]: ...
 
     @overload
     def __call__(self, func: Callable[P, R]) -> Callable[P, R]: ...

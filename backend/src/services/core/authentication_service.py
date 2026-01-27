@@ -223,7 +223,7 @@ class AuthenticationService:
             return None
 
         # 更新最后访问时间等
-        session.last_accessed_at = datetime.now()
+        session.last_accessed_at = datetime.now(UTC)
         if client_ip:
             setattr(session, "ip_address", client_ip)
         if user_agent:

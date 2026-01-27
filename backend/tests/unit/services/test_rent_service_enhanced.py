@@ -13,6 +13,7 @@ from datetime import datetime, UTC
 def rent_service(db: Session):
     """租赁合同服务实例"""
     from src.services.rent_contract.service import RentContractService
+
     return RentContractService(db)
 
 
@@ -33,8 +34,8 @@ def sample_contract(db: Session, admin_user):
             end_date=datetime.now(UTC),
             monthly_rent=10000.0,
             area=100.0,
-            status="active"
-        )
+            status="active",
+        ),
     )
     yield contract
     try:
@@ -49,26 +50,23 @@ class TestRentContractServiceBusinessLogic:
     def test_calculate_rent_in_arrears(self, rent_service, sample_contract):
         """测试计算欠租"""
         arrears = rent_service.calculate_rent_in_arrears(
-            sample_contract.id,
-            as_of_date=datetime.now(UTC)
+            sample_contract.id, as_of_date=datetime.now(UTC)
         )
         assert arrears is not None
 
-    def test_contract_termination_calculations(self, rent_service, sample_contract, db: Session):
+    def test_contract_termination_calculations(
+        self, rent_service, sample_contract, db: Session
+    ):
         """测试合同终止计算"""
         result = rent_service.calculate_termination_settlement(
-            db,
-            contract_id=sample_contract.id,
-            termination_date=datetime.now(UTC)
+            db, contract_id=sample_contract.id, termination_date=datetime.now(UTC)
         )
         assert result is not None
 
     def test_contract_renewal_validation(self, rent_service, sample_contract):
         """测试合同续期验证"""
         # 测试续期条件验证
-        result = rent_service.validate_renewal(
-            sample_contract.id
-        )
+        result = rent_service.validate_renewal(sample_contract.id)
         assert result is not None
 
     def test_get_contract_history(self, rent_service, sample_contract):
@@ -81,25 +79,19 @@ class TestRentContractServiceBusinessLogic:
         contract_ids = ["contract1", "contract2"]
         new_status = "expired"
         result = rent_service.batch_update_status(
-            db,
-            contract_ids=contract_ids,
-            new_status=new_status
+            db, contract_ids=contract_ids, new_status=new_status
         )
         assert result is not None
 
     def test_contract_reminder_check(self, rent_service):
         """测试合同到期提醒"""
-        result = rent_service.check_expiring_contracts(
-            days_before=30
-        )
+        result = rent_service.check_expiring_contracts(days_before=30)
         assert result is not None
 
     def test_generate_contract_statistics(self, rent_service, db: Session):
         """测试生成合同统计"""
         stats = rent_service.generate_statistics(
-            db,
-            date_from=datetime.now(UTC),
-            date_to=datetime.now(UTC)
+            db, date_from=datetime.now(UTC), date_to=datetime.now(UTC)
         )
         assert stats is not None
         assert "active_contracts" in stats

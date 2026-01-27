@@ -23,6 +23,7 @@ class TestDictionariesAPI:
     def test_debug_routes(self, client):
         """Debug: Print all registered routes"""
         from src.main import app
+
         print("\n=== Registered Routes ===")
         for route in app.routes:
             if hasattr(route, "path"):
@@ -32,8 +33,7 @@ class TestDictionariesAPI:
     def test_get_dictionary_types_success(self, client, admin_user_headers):
         """测试获取所有字典类型"""
         response = client.get(
-            "/api/v1/system/dictionaries/types",
-            headers=admin_user_headers
+            "/api/v1/system/dictionaries/types", headers=admin_user_headers
         )
         assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), list)
@@ -41,8 +41,7 @@ class TestDictionariesAPI:
     def test_get_dictionary_options_success(self, client, admin_user_headers):
         """测试获取字典选项"""
         response = client.get(
-            "/api/v1/system/dictionaries/asset_type/options",
-            headers=admin_user_headers
+            "/api/v1/system/dictionaries/asset_type/options", headers=admin_user_headers
         )
         # 可能是空列表（如果未初始化）或列表
         assert response.status_code == status.HTTP_200_OK
@@ -52,15 +51,14 @@ class TestDictionariesAPI:
         """测试带过滤条件的获取"""
         response = client.get(
             "/api/v1/system/dictionaries/asset_type/options?is_active=true",
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
         assert response.status_code == status.HTTP_200_OK
 
     def test_get_validation_stats(self, client, admin_user_headers):
         """测试获取验证统计"""
         response = client.get(
-            "/api/v1/system/dictionaries/validation/stats",
-            headers=admin_user_headers
+            "/api/v1/system/dictionaries/validation/stats", headers=admin_user_headers
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -70,21 +68,22 @@ class TestDictionariesAPI:
         """测试快速创建字典"""
         # 使用随机后缀避免冲突
         import random
+
         suffix = random.randint(1000, 9999)
         dict_type = f"test_dict_{suffix}"
 
         payload = {
             "options": [
                 {"label": "Option 1", "value": "opt1"},
-                {"label": "Option 2", "value": "opt2"}
+                {"label": "Option 2", "value": "opt2"},
             ],
-            "description": "Test Dictionary"
+            "description": "Test Dictionary",
         }
 
         response = client.post(
             f"/api/v1/system/dictionaries/{dict_type}/quick-create",
             json=payload,
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         if response.status_code == status.HTTP_200_OK:
@@ -100,6 +99,7 @@ class TestDictionariesAPI:
         """测试添加字典值"""
         # 先确保有一个字典存在
         import random
+
         suffix = random.randint(1000, 9999)
         dict_type = f"test_dict_val_{suffix}"
 
@@ -107,7 +107,7 @@ class TestDictionariesAPI:
         client.post(
             f"/api/v1/system/dictionaries/{dict_type}/quick-create",
             json={"options": [{"label": "Base", "value": "base"}]},
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 添加值
@@ -115,13 +115,13 @@ class TestDictionariesAPI:
             "label": "New Value",
             "value": "new_val",
             "code": "NEW_VAL",
-            "sort_order": 10
+            "sort_order": 10,
         }
 
         response = client.post(
             f"/api/v1/system/dictionaries/{dict_type}/values",
             json=payload,
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -129,6 +129,7 @@ class TestDictionariesAPI:
     def test_delete_dictionary(self, client, admin_user_headers):
         """测试删除字典"""
         import random
+
         suffix = random.randint(1000, 9999)
         dict_type = f"test_dict_del_{suffix}"
 
@@ -136,13 +137,12 @@ class TestDictionariesAPI:
         client.post(
             f"/api/v1/system/dictionaries/{dict_type}/quick-create",
             json={"options": [{"label": "Base", "value": "base"}]},
-            headers=admin_user_headers
+            headers=admin_user_headers,
         )
 
         # 删除
         response = client.delete(
-            f"/api/v1/system/dictionaries/{dict_type}",
-            headers=admin_user_headers
+            f"/api/v1/system/dictionaries/{dict_type}", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK

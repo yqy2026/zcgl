@@ -1,207 +1,44 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, Row, Col, Spin, Alert, Empty, Typography, Space, Button, Radio } from 'antd';
 import styles from './AssetAnalyticsPage.module.css';
-import { useQuery } from '@tanstack/react-query';
 import {
   ReloadOutlined,
   DownloadOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from '@ant-design/icons';
-import { analyticsService } from '@/services/analyticsService';
-import { exportAnalyticsData } from '@/services/analyticsExportService';
 import { AnalyticsStatsGrid, FinancialStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
-import {
-  AnalyticsPieChart,
-  AnalyticsBarChart,
-  AnalyticsLineChart,
-  chartDataUtils,
-} from '@/components/Analytics/AnalyticsChart';
+import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/AnalyticsChart';
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
-import type { AssetSearchParams } from '@/types/asset';
-import type {
-  AnalyticsData,
-  OwnershipStatusDistribution,
-  UsageStatusDistribution,
-} from '@/types/analytics';
 import { createLogger } from '@/utils/logger';
-import { MessageManager } from '@/utils/messageManager';
 import { COLORS } from '@/styles/colorMap';
+import { useAssetAnalytics, AnalysisDimension } from '@/hooks/useAssetAnalytics';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import AssetDistributionGrid from '@/components/Analytics/AssetDistributionGrid';
+import AssetDistributionDetails from '@/components/Analytics/AssetDistributionDetails';
 
 const pageLogger = createLogger('AssetAnalytics');
 
 const { Text } = Typography;
 
-// 分析维度类型
-type AnalysisDimension = 'count' | 'area';
-
-// Area distribution data types (extend base types with area-specific fields)
-interface OwnershipStatusAreaDistribution extends OwnershipStatusDistribution {
-  total_area: number;
-  area_percentage?: number;
-  average_area: number;
-}
-
-interface UsageStatusAreaDistribution extends UsageStatusDistribution {
-  total_area: number;
-  area_percentage?: number;
-  average_area: number;
-}
-
-interface BusinessCategoryAreaDistribution {
-  category: string;
-  count: number;
-  occupancy_rate?: number;
-  total_area?: number;
-  area_percentage?: number;
-  avg_annual_income?: number;
-}
-
-const isAnalyticsResponse = (
-  value: unknown
-): value is { success: boolean; data: AnalyticsData } => {
-  return value != null && typeof value === 'object' && 'success' in value && 'data' in value;
-};
-
-const isAnalyticsData = (value: unknown): value is AnalyticsData => {
-  return value != null && typeof value === 'object' && 'area_summary' in value;
-};
-
 const AssetAnalyticsPage: React.FC = () => {
-  const [filters, setFilters] = useState<AssetSearchParams>({});
-  const [dimension, setDimension] = useState<AnalysisDimension>('area');
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // 获取分析数据
   const {
-    data: analyticsResponse,
-    isLoading,
+    analyticsData,
+    loading,
     error,
     refetch,
-  } = useQuery({
-    queryKey: ['asset-analytics', filters],
-    queryFn: async () => {
-      const result = await analyticsService.getComprehensiveAnalytics(filters);
-      pageLogger.debug('Analytics API Result:', { result });
-      return result;
-    },
-    staleTime: 5 * 60 * 1000, // 5分钟缓存
-    refetchOnWindowFocus: false,
-  });
+    filters,
+    dimension,
+    hasData,
+    handleFilterChange,
+    handleFilterReset,
+    handleDimensionChange,
+    handleExport,
+  } = useAssetAnalytics();
 
-  // React Query 返回 AnalyticsResponse，从中提取 AnalyticsData
-  // analyticsService 已经处理了数据适配，这里直接使用
-  let analyticsData: AnalyticsData | null = null;
-  if (analyticsResponse) {
-    if (isAnalyticsResponse(analyticsResponse)) {
-      analyticsData = analyticsResponse.data;
-    } else if (isAnalyticsData(analyticsResponse)) {
-      // 兼容直接返回 AnalyticsData 的情况
-      analyticsData = analyticsResponse;
-    } else {
-      pageLogger.warn('Unexpected analytics response format:', analyticsResponse);
-    }
-  }
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
-  // 处理筛选条件变化
-  const handleFilterChange = (newFilters: AssetSearchParams) => {
-    setFilters(newFilters);
-  };
-
-  // 处理筛选条件重置
-  const handleFilterReset = () => {
-    setFilters({});
-  };
-
-  // 处理维度切换
-  const handleDimensionChange = (newDimension: AnalysisDimension) => {
-    setDimension(newDimension);
-  };
-
-  // 处理导出数据
-  const handleExport = async () => {
-    if (!analyticsData) return;
-
-    try {
-      MessageManager.loading('正在导出数据...', 0);
-
-      const exportData = {
-        summary: {
-          total_assets: analyticsData.area_summary.total_assets,
-          total_area: analyticsData.area_summary.total_area,
-          total_rentable_area: analyticsData.area_summary.total_rentable_area,
-          occupancy_rate: analyticsData.area_summary.occupancy_rate,
-          total_annual_income: analyticsData.financial_summary.total_annual_income,
-          total_annual_expense: analyticsData.financial_summary.total_annual_expense,
-          total_net_income: analyticsData.financial_summary.total_net_income,
-          total_monthly_rent: analyticsData.financial_summary.total_monthly_rent,
-        },
-        property_nature_distribution: analyticsData.property_nature_distribution ?? [],
-        ownership_status_distribution: analyticsData.ownership_status_distribution ?? [],
-        usage_status_distribution: analyticsData.usage_status_distribution ?? [],
-        business_category_distribution: (analyticsData.business_category_distribution ?? []).map(
-          item => ({
-            category: item.category,
-            count: item.count,
-            occupancy_rate: item.occupancy_rate ?? 0,
-          })
-        ),
-        occupancy_trend: (analyticsData.occupancy_trend ?? []).map(item => ({
-          date: item.date,
-          occupancy_rate: item.occupancy_rate,
-          total_rented_area: 0,
-          total_rentable_area: 0,
-        })),
-        // 面积维度数据
-        property_nature_area_distribution: analyticsData.property_nature_area_distribution,
-        ownership_status_area_distribution: analyticsData.ownership_status_area_distribution,
-        usage_status_area_distribution: analyticsData.usage_status_area_distribution,
-        business_category_area_distribution: analyticsData.business_category_area_distribution,
-      };
-
-      await exportAnalyticsData(exportData, 'excel');
-      MessageManager.success('数据导出成功！');
-    } catch (error) {
-      pageLogger.error('导出失败:', error as Error);
-      MessageManager.error('导出失败，请重试');
-    } finally {
-      MessageManager.destroy();
-    }
-  };
-
-  // 处理全屏切换
-  const handleToggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        // 进入全屏
-        await document.documentElement.requestFullscreen();
-        setIsFullscreen(true);
-        MessageManager.success('已进入全屏模式');
-      } else {
-        // 退出全屏
-        await document.exitFullscreen();
-        setIsFullscreen(false);
-        MessageManager.success('已退出全屏模式');
-      }
-    } catch (error) {
-      pageLogger.error('全屏切换失败:', error as Error);
-      MessageManager.error('全屏切换失败，请检查浏览器权限设置');
-    }
-  };
-
-  // 监听全屏状态变化
-  React.useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
         <Spin size="large" />
@@ -211,7 +48,6 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   if (error) {
-    // 调试 - 显示错误详情
     pageLogger.error('Analytics Error:', error as Error);
     return (
       <div style={{ padding: '24px' }}>
@@ -224,11 +60,6 @@ const AssetAnalyticsPage: React.FC = () => {
       </div>
     );
   }
-
-  const hasData =
-    analyticsData != null &&
-    analyticsData.area_summary != null &&
-    Number(analyticsData.area_summary.total_assets) > 0;
 
   return (
     <div className={styles.analyticsContainer}>
@@ -245,7 +76,7 @@ const AssetAnalyticsPage: React.FC = () => {
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => refetch()}
-                loading={isLoading}
+                loading={loading}
                 size="small"
                 className="no-print"
               >
@@ -262,7 +93,7 @@ const AssetAnalyticsPage: React.FC = () => {
               </Button>
               <Button
                 icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-                onClick={handleToggleFullscreen}
+                onClick={toggleFullscreen}
                 size="small"
                 className="no-print"
               >
@@ -278,7 +109,7 @@ const AssetAnalyticsPage: React.FC = () => {
         filters={filters}
         onFiltersChange={handleFilterChange}
         onResetFilters={handleFilterReset}
-        loading={isLoading}
+        loading={loading}
       />
 
       {/* 维度切换 */}
@@ -319,113 +150,20 @@ const AssetAnalyticsPage: React.FC = () => {
                 total_net_income: analyticsData.financial_summary.total_net_income,
                 total_monthly_rent: analyticsData.financial_summary.total_monthly_rent,
               }}
-              loading={isLoading}
+              loading={loading}
             />
           </Card>
 
-          {/* 分布图表 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-            {/* 物业性质分布饼图 */}
-            <Col xs={24} sm={12} xl={6}>
-              <AnalyticsPieChart
-                title={`物业性质分布 (${dimension === 'count' ? '数量' : '面积'})`}
-                data={
-                  dimension === 'count'
-                    ? chartDataUtils.toPieData(analyticsData.property_nature_distribution ?? [])
-                    : chartDataUtils.toAreaData(
-                        analyticsData.property_nature_area_distribution ?? []
-                      )
-                }
-                loading={isLoading}
-                height={280}
-              />
-            </Col>
-
-            {/* 确权状态分布饼图 */}
-            <Col xs={24} sm={12} xl={6}>
-              <AnalyticsPieChart
-                title={`确权状态分布 (${dimension === 'count' ? '数量' : '面积'})`}
-                data={
-                  dimension === 'count'
-                    ? chartDataUtils.toPieData(
-                        (analyticsData.ownership_status_distribution ?? []).map(item => ({
-                          name: item.status,
-                          count: item.count,
-                          percentage: item.percentage,
-                        }))
-                      )
-                    : chartDataUtils.toAreaData(
-                        (
-                          analyticsData.ownership_status_area_distribution as
-                            | OwnershipStatusAreaDistribution[]
-                            | undefined
-                        )?.map(item => ({
-                          name: item.status,
-                          total_area: item.total_area,
-                          area_percentage: item.area_percentage ?? item.percentage ?? 0,
-                          average_area: item.average_area,
-                        })) ?? []
-                      )
-                }
-                loading={isLoading}
-                height={280}
-              />
-            </Col>
-
-            {/* 使用状态分布柱状图 */}
-            <Col xs={24} sm={12} xl={6}>
-              <AnalyticsBarChart
-                title={`使用状态分布 (${dimension === 'count' ? '数量' : '面积'})`}
-                data={
-                  dimension === 'count'
-                    ? (analyticsData.usage_status_distribution ?? []).map(item => ({
-                        name: item.status,
-                        value: item.count,
-                      }))
-                    : chartDataUtils.toAreaBarData(
-                        (
-                          analyticsData.usage_status_area_distribution as
-                            | UsageStatusAreaDistribution[]
-                            | undefined
-                        )?.map(item => ({
-                          name: item.status,
-                          total_area: item.total_area,
-                          count: item.count,
-                          average_area: item.average_area,
-                        })) ?? []
-                      )
-                }
-                xAxisKey="name"
-                barKey="value"
-                loading={isLoading}
-                height={280}
-              />
-            </Col>
-
-            {/* 业态类别分布柱状图 */}
-            <Col xs={24} sm={12} xl={6}>
-              <AnalyticsBarChart
-                title={`业态类别分布 (${dimension === 'count' ? '数量' : '面积'})`}
-                data={
-                  dimension === 'count'
-                    ? chartDataUtils.toBusinessCategoryData(
-                        analyticsData.business_category_distribution ?? []
-                      )
-                    : chartDataUtils.toBusinessCategoryAreaData(
-                        analyticsData.business_category_area_distribution ?? []
-                      )
-                }
-                xAxisKey="name"
-                barKey="value"
-                loading={isLoading}
-                height={280}
-              />
-            </Col>
-          </Row>
+          {/* 分布图表网格 */}
+          <AssetDistributionGrid
+            analyticsData={analyticsData}
+            dimension={dimension}
+            loading={loading}
+          />
 
           {/* 财务指标 */}
           <Card title="财务指标" style={{ marginBottom: '24px' }}>
-            <FinancialStatsGrid data={analyticsData.financial_summary} loading={isLoading} />
+            <FinancialStatsGrid data={analyticsData.financial_summary} loading={loading} />
           </Card>
 
           {/* 出租率趋势 */}
@@ -442,7 +180,7 @@ const AssetAnalyticsPage: React.FC = () => {
                   },
                 ]}
                 xAxisKey="date"
-                loading={isLoading}
+                loading={loading}
                 height={400}
               />
             </Card>
@@ -451,133 +189,7 @@ const AssetAnalyticsPage: React.FC = () => {
           {/* 详细数据表格 */}
           <Row gutter={[16, 16]}>
             <Col xs={24}>
-              <Card title="分布详情">
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Typography.Title level={5}>
-                      物业性质分布 ({dimension === 'count' ? '数量' : '面积'})
-                    </Typography.Title>
-                    <div className={styles.distributionList}>
-                      {(dimension === 'count'
-                        ? (analyticsData.property_nature_distribution ?? [])
-                        : (analyticsData.property_nature_area_distribution ?? [])
-                      ).map((item, index) => (
-                        <div key={index} className={styles.distributionItem}>
-                          <span className={styles.itemName}>
-                            {dimension === 'count' ? item.name : item.name}
-                          </span>
-                          <span className={styles.itemStats}>
-                            {dimension === 'count'
-                              ? `${(item as { count: number; percentage: number }).count} (${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number }).area_percentage ?? 0}%)`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </Col>
-
-                  <Col xs={24} sm={12} lg={6}>
-                    <Typography.Title level={5}>
-                      确权状态分布 ({dimension === 'count' ? '数量' : '面积'})
-                    </Typography.Title>
-                    <div className={styles.distributionList}>
-                      {(dimension === 'count'
-                        ? (analyticsData.ownership_status_distribution ?? [])
-                        : (analyticsData.ownership_status_area_distribution ?? [])
-                      ).map((item, index) => (
-                        <div key={index} className={styles.distributionItem}>
-                          <span className={styles.itemName}>
-                            {dimension === 'count'
-                              ? (item as { status: string }).status
-                              : (item as { status: string }).status}
-                          </span>
-                          <span className={styles.itemStats}>
-                            {dimension === 'count'
-                              ? `${(item as { count: number }).count} (${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number; percentage?: number }).area_percentage ?? (item as { area_percentage?: number; percentage?: number }).percentage}%)`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </Col>
-
-                  <Col xs={24} sm={12} lg={6}>
-                    <Typography.Title level={5}>
-                      使用状态分布 ({dimension === 'count' ? '数量' : '面积'})
-                    </Typography.Title>
-                    <div className={styles.distributionList}>
-                      {(dimension === 'count'
-                        ? (analyticsData.usage_status_distribution ?? [])
-                        : (analyticsData.usage_status_area_distribution ?? [])
-                      ).map((item, index) => (
-                        <div key={index} className={styles.distributionItem}>
-                          <span className={styles.itemName}>
-                            {dimension === 'count'
-                              ? (item as { status: string }).status
-                              : (item as { status: string }).status}
-                          </span>
-                          <span className={styles.itemStats}>
-                            {dimension === 'count'
-                              ? `${(item as { count: number }).count} (${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number }).area_percentage}%)`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </Col>
-
-                  <Col xs={24} sm={12} lg={6}>
-                    <Typography.Title level={5}>
-                      业态类别分布 ({dimension === 'count' ? '数量' : '面积'})
-                    </Typography.Title>
-                    <div className={styles.distributionList}>
-                      {(dimension === 'count'
-                        ? (analyticsData.business_category_distribution ?? [])
-                        : (analyticsData.business_category_area_distribution ?? [])
-                      ).map((item, index) => {
-                        const isCount = dimension === 'count';
-                        const countItem = isCount ? item : null;
-                        const areaItem = isCount
-                          ? null
-                          : (item as BusinessCategoryAreaDistribution);
-
-                        return (
-                          <div key={index} className={styles.distributionItem}>
-                            <span className={styles.itemName}>
-                              {isCount && countItem
-                                ? countItem.category
-                                : (areaItem?.category ?? '')}
-                            </span>
-                            <span className={styles.itemStats}>
-                              {isCount && countItem
-                                ? `${countItem.count}个 (占比${((countItem.count / (analyticsData.business_category_distribution?.reduce((sum, i) => sum + i.count, 0) ?? 1)) * 100).toFixed(1)}%)`
-                                : areaItem
-                                  ? `${areaItem.total_area?.toFixed(0) ?? 0}㎡ (占比${areaItem.area_percentage ?? 0}%)`
-                                  : ''}
-                              {isCount &&
-                                countItem &&
-                                countItem.occupancy_rate != null &&
-                                countItem.occupancy_rate > 0 && (
-                                  <span className={styles.occupancyRate}>
-                                    ，出租率{countItem.occupancy_rate.toFixed(2)}%
-                                  </span>
-                                )}
-                              {!isCount &&
-                                areaItem &&
-                                areaItem.occupancy_rate != null &&
-                                areaItem.occupancy_rate > 0 && (
-                                  <span className={styles.occupancyRate}>
-                                    ，出租率{areaItem.occupancy_rate.toFixed(2)}%
-                                  </span>
-                                )}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Col>
-                </Row>
-              </Card>
+              <AssetDistributionDetails analyticsData={analyticsData} dimension={dimension} />
             </Col>
           </Row>
         </>

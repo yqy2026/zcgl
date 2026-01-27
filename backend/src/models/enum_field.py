@@ -30,28 +30,42 @@ class EnumFieldType(Base):
     )
 
     # 基本信息
-    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="枚举类型名称")
-    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, comment="枚举类型编码")
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, comment="枚举类型名称"
+    )
+    code: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, comment="枚举类型编码"
+    )
     category: Mapped[str | None] = mapped_column(String(50), comment="枚举类别")
     description: Mapped[str | None] = mapped_column(Text, comment="枚举类型描述")
 
     # 配置信息
-    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否系统内置")
-    is_multiple: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否支持多选")
+    is_system: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否系统内置"
+    )
+    is_multiple: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否支持多选"
+    )
     is_hierarchical: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否层级结构"
     )
     default_value: Mapped[str | None] = mapped_column(String(100), comment="默认值")
 
     # 验证规则
-    validation_rules: Mapped[dict | None] = mapped_column(JSON, comment="验证规则(JSON格式)")
-    display_config: Mapped[dict | None] = mapped_column(JSON, comment="显示配置(JSON格式)")
+    validation_rules: Mapped[dict | None] = mapped_column(
+        JSON, comment="验证规则(JSON格式)"
+    )
+    display_config: Mapped[dict | None] = mapped_column(
+        JSON, comment="显示配置(JSON格式)"
+    )
 
     # 状态信息
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active", comment="状态(active/inactive)"
     )
-    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否删除")
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否删除"
+    )
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
@@ -109,12 +123,20 @@ class EnumFieldValue(Base):
     icon: Mapped[str | None] = mapped_column(String(50), comment="图标")
 
     # 扩展属性
-    extra_properties: Mapped[dict | None] = mapped_column(JSON, comment="扩展属性(JSON格式)")
+    extra_properties: Mapped[dict | None] = mapped_column(
+        JSON, comment="扩展属性(JSON格式)"
+    )
 
     # 状态信息
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否启用")
-    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否默认值")
-    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否删除")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, comment="是否启用"
+    )
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否默认值"
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否删除"
+    )
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
@@ -160,18 +182,26 @@ class EnumFieldUsage(Base):
     )
 
     # 使用信息
-    table_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="使用表名")
-    field_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="使用字段名")
+    table_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, comment="使用表名"
+    )
+    field_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, comment="使用字段名"
+    )
     field_label: Mapped[str | None] = mapped_column(String(100), comment="字段显示名称")
     module_name: Mapped[str | None] = mapped_column(String(100), comment="所属模块")
 
     # 配置信息
-    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, comment="是否必填")
+    is_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="是否必填"
+    )
     default_value: Mapped[str | None] = mapped_column(String(100), comment="默认值")
     validation_config: Mapped[dict | None] = mapped_column(JSON, comment="验证配置")
 
     # 状态信息
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否启用")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, comment="是否启用"
+    )
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
@@ -215,7 +245,9 @@ class EnumFieldHistory(Base):
     action: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="操作类型(create/update/delete)"
     )
-    target_type: Mapped[str] = mapped_column(String(20), nullable=False, comment="目标类型(type/value)")
+    target_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment="目标类型(type/value)"
+    )
     field_name: Mapped[str | None] = mapped_column(String(100), comment="变更字段")
     old_value: Mapped[str | None] = mapped_column(Text, comment="原值")
     new_value: Mapped[str | None] = mapped_column(Text, comment="新值")

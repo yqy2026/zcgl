@@ -235,16 +235,18 @@ class OwnershipService:
             asset_count = self.get_asset_count(db, item.id)
             # 获取关联项目数量
             project_count = self.get_project_count(db, item.id)
-            responses.append({
-                "id": item.id,
-                "name": item.name,
-                "code": item.code,
-                "short_name": item.short_name,
-                "is_active": item.is_active,
-                "data_status": item.data_status,
-                "asset_count": asset_count,
-                "project_count": project_count,
-            })
+            responses.append(
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "code": item.code,
+                    "short_name": item.short_name,
+                    "is_active": item.is_active,
+                    "data_status": item.data_status,
+                    "asset_count": asset_count,
+                    "project_count": project_count,
+                }
+            )
         return responses
 
 

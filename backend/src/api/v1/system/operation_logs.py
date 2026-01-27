@@ -41,11 +41,14 @@ class OperationLogResponse(BaseModel):
     resource_name: str | None = None
     request_method: str | None = None
     request_url: str | None = None
+    request_params: str | None = None
+    request_body: str | None = None
     response_status: int | None = None
     response_time: int | None = None
     error_message: str | None = None
     ip_address: str | None = None
     user_agent: str | None = None
+    details: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -80,6 +83,7 @@ async def get_operation_logs(
     action: str | None = Query(None, description="操作类型"),
     module: str | None = Query(None, description="操作模块"),
     resource_type: str | None = Query(None, description="资源类型"),
+    response_status: str | None = Query(None, description="响应状态筛选"),
     search: str | None = Query(None, description="搜索关键词"),
     start_date: str | None = Query(None, description="开始日期(YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="结束日期(YYYY-MM-DD)"),
@@ -126,6 +130,7 @@ async def get_operation_logs(
             action=action,
             module=module,
             resource_type=resource_type,
+            response_status=response_status,
             start_date=start_dt,
             end_date=end_dt,
             search=search,

@@ -17,20 +17,22 @@ import type {
 // ==================== Zod Schemas ====================
 
 // 基础响应 Schema
-export const StandardResponseSchema = z.object({
+const StandardResponseBaseSchema = z.object({
   success: z.boolean(),
   data: z.unknown().optional(),
   message: z.string().optional(),
   code: z.string().optional(),
   timestamp: z.string().optional(),
-}).refine((data) => {
-  // 成功响应必须包含 data 字段
-  if (data.success && data.data === undefined) return false;
-  return true;
-}, {
-  message: "Successful response must contain data field",
-  path: ["data"]
 });
+
+// 确保 data 在 success=true 时存在
+export const StandardResponseSchema = StandardResponseBaseSchema.refine(
+  (data) => !data.success || data.data !== undefined,
+  {
+    message: "Successful response must contain data field",
+    path: ["data"],
+  }
+);
 
 // 分页信息 Schema
 export const PaginationSchema = z.object({
@@ -49,9 +51,15 @@ export const PaginatedDataSchema = z.object({
 });
 
 // 分页响应 Schema
-export const PaginatedResponseSchema = StandardResponseSchema.extend({
+export const PaginatedResponseSchema = StandardResponseBaseSchema.extend({
   data: PaginatedDataSchema,
-});
+}).refine(
+  (data) => !data.success || data.data !== undefined,
+  {
+    message: "Successful response must contain data field",
+    path: ["data"],
+  }
+);
 
 // 错误详情 Schema
 export const ErrorDetailSchema = z.object({
@@ -70,60 +78,11 @@ export const ErrorResponseSchema = z.object({
 
 // ==================== Validation Results ====================
 
-export interface ValidationResult<T = unknown> {
+export interface DetailedValidationResult<T = unknown> {
   valid: boolean;
   data?: T;
   error?: string;
-  path?: string;
-}
-
-export interface DetailedValidationResult<T = unknown> extends ValidationResult<T> {
-  warnings: string[];
-  missingFields: string[];
-  extraFields: string[];
-  typeErrors: Array<{ field: string; expected: string; actual: string }>;
   zodError?: z.ZodError;
-}
-
-/**
- * 将 Zod 错误转换为详细验证结果
- */
-function mapZodErrorToDetailedResult<T>(zodError: z.ZodError, data: unknown): DetailedValidationResult<T> {
-  const result: DetailedValidationResult<T> = {
-    valid: false,
-    warnings: [],
-    missingFields: [],
-    extraFields: [],
-    typeErrors: [],
-    zodError,
-  };
-
-  zodError.issues.forEach((issue) => {
-    const path = issue.path.join('.');
-
-    if (issue.code === 'invalid_type') {
-      if (issue.received === 'undefined') {
-        result.missingFields.push(path);
-      } else {
-        result.typeErrors.push({
-          field: path,
-          expected: issue.expected,
-          actual: issue.received,
-        });
-      }
-    } else if (issue.code === 'unrecognized_keys') {
-      result.extraFields.push(...issue.keys.map(k => path ? `${path}.${k}` : k));
-      result.warnings.push(`Found extra fields: ${issue.keys.join(', ')}`);
-    } else {
-      result.typeErrors.push({
-        field: path,
-        expected: 'valid',
-        actual: issue.message,
-      });
-    }
-  });
-
-  return result;
 }
 
 // ==================== Validation Functions ====================
@@ -139,23 +98,21 @@ export function isStandardApiResponse<T = unknown>(data: unknown): data is Stand
  * 详细验证标准 API 响应
  */
 export function validateStandardResponse<T = unknown>(
-  data: unknown,
-  strict: boolean = false
+  data: unknown
 ): DetailedValidationResult<StandardApiResponse<T>> {
-  const schema = strict ? StandardResponseSchema.strict() : StandardResponseSchema;
-  const result = schema.safeParse(data);
+  const result = StandardResponseSchema.safeParse(data);
 
   if (result.success) {
     return {
       valid: true,
       data: result.data as StandardApiResponse<T>,
-      warnings: [],
-      missingFields: [],
-      extraFields: [],
-      typeErrors: []
     };
   }
-  return mapZodErrorToDetailedResult(result.error, data);
+  return {
+    valid: false,
+    zodError: result.error,
+    error: result.error.message
+  };
 }
 
 /**
@@ -169,23 +126,21 @@ export function isPaginatedApiResponse<T = unknown>(data: unknown): data is Pagi
  * 详细验证分页 API 响应
  */
 export function validatePaginatedResponse<T = unknown>(
-  data: unknown,
-  strict: boolean = false
+  data: unknown
 ): DetailedValidationResult<PaginatedApiResponse<T>> {
-  const schema = strict ? PaginatedResponseSchema.strict() : PaginatedResponseSchema;
-  const result = schema.safeParse(data);
+  const result = PaginatedResponseSchema.safeParse(data);
 
   if (result.success) {
     return {
       valid: true,
       data: result.data as PaginatedApiResponse<T>,
-      warnings: [],
-      missingFields: [],
-      extraFields: [],
-      typeErrors: []
     };
   }
-  return mapZodErrorToDetailedResult(result.error, data);
+  return {
+    valid: false,
+    zodError: result.error,
+    error: result.error.message
+  };
 }
 
 /**
@@ -199,23 +154,21 @@ export function isErrorResponse(data: unknown): data is ErrorResponse {
  * 详细验证错误响应
  */
 export function validateErrorResponse(
-  data: unknown,
-  strict: boolean = false
+  data: unknown
 ): DetailedValidationResult<ErrorResponse> {
-  const schema = strict ? ErrorResponseSchema.strict() : ErrorResponseSchema;
-  const result = schema.safeParse(data);
+  const result = ErrorResponseSchema.safeParse(data);
 
   if (result.success) {
     return {
       valid: true,
       data: result.data as ErrorResponse,
-      warnings: [],
-      missingFields: [],
-      extraFields: [],
-      typeErrors: []
     };
   }
-  return mapZodErrorToDetailedResult(result.error, data);
+  return {
+    valid: false,
+    zodError: result.error,
+    error: result.error.message
+  };
 }
 
 /**
@@ -240,14 +193,14 @@ export function assertApiResponse<T = unknown>(
   data: unknown,
   expectedType: 'standard' | 'paginated' | 'error'
 ): asserts data is T {
-  let isValid = false;
+  let result;
+  if (expectedType === 'standard') result = StandardResponseSchema.safeParse(data);
+  else if (expectedType === 'paginated') result = PaginatedResponseSchema.safeParse(data);
+  else if (expectedType === 'error') result = ErrorResponseSchema.safeParse(data);
+  else throw new Error(`Unknown expected type: ${expectedType}`);
 
-  if (expectedType === 'standard') isValid = isStandardApiResponse(data);
-  else if (expectedType === 'paginated') isValid = isPaginatedApiResponse(data);
-  else if (expectedType === 'error') isValid = isErrorResponse(data);
-
-  if (!isValid) {
-    throw new Error(`无效的 API 响应格式或类型不匹配。期望 '${expectedType}'。`);
+  if (!result.success) {
+    throw new Error(`Invalid API response format for '${expectedType}': ${result.error.message}`);
   }
 }
 

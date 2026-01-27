@@ -25,6 +25,7 @@ from ...services.llm_prompt.prompt_manager import PromptManager
 
 router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
 
+
 @router.post("/", response_model=PromptTemplateResponse)
 def create_prompt(
     *,

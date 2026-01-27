@@ -37,7 +37,11 @@ from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....crud.history import history_crud
 from ....database import get_db
-from ....middleware.auth import audit_action, get_current_active_user, require_permission
+from ....middleware.auth import (
+    audit_action,
+    get_current_active_user,
+    require_permission,
+)
 from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
 from ....schemas.asset import (

@@ -35,17 +35,25 @@ async def get_ownership_dropdown_options(
     """获取权属方选项列表（用于下拉选择等）- V2修复is_active过滤"""
     try:
         # 调用服务层获取下拉选项
-        dropdown_data = ownership_service.get_ownership_dropdown_options(db, is_active=is_active)
-        
+        dropdown_data = ownership_service.get_ownership_dropdown_options(
+            db, is_active=is_active
+        )
+
         # 转换为响应格式
         responses = []
         for item_data in dropdown_data:
             # 创建临时Ownership对象以便model_validate使用
-            temp_ownership = Ownership(**{k: v for k, v in item_data.items() if k not in ['asset_count', 'project_count']})
+            temp_ownership = Ownership(
+                **{
+                    k: v
+                    for k, v in item_data.items()
+                    if k not in ["asset_count", "project_count"]
+                }
+            )
             response = OwnershipResponse.model_validate(temp_ownership)
             # 设置额外的计数字段
-            response.asset_count = item_data['asset_count']
-            response.project_count = item_data['project_count']
+            response.asset_count = item_data["asset_count"]
+            response.project_count = item_data["project_count"]
             responses.append(response)
         return responses
     except Exception as e:

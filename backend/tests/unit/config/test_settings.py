@@ -89,7 +89,9 @@ class TestSettingsEnvironmentVariables:
 
     def test_database_url_from_env(self):
         """Test DATABASE_URL from environment variable"""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://user:pass@localhost/db"}):
+        with patch.dict(
+            os.environ, {"DATABASE_URL": "postgresql://user:pass@localhost/db"}
+        ):
             # Re-import to get new settings
             from importlib import reload
             import src.config as config_module
@@ -162,7 +164,9 @@ class TestCORSConfiguration:
 
     def test_cors_origins_parsing(self):
         """Test CORS_ORIGINS comma-separated parsing"""
-        origins = "http://localhost:3000,http://localhost:5173,https://example.com".split(",")
+        origins = (
+            "http://localhost:3000,http://localhost:5173,https://example.com".split(",")
+        )
         assert len(origins) == 3
         assert "http://localhost:3000" in origins
 

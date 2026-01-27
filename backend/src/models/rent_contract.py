@@ -165,7 +165,9 @@ class RentContract(Base):
 
     # 合同状态
     contract_status = Column(
-        String(20), default=ContractStatus.ACTIVE.value, comment="合同状态：有效/到期/终止"
+        String(20),
+        default=ContractStatus.ACTIVE.value,
+        comment="合同状态：有效/到期/终止",
     )
 
     # 其他信息

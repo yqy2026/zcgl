@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import {
   ASSET_ROUTES,
   RENTAL_ROUTES,
@@ -19,6 +20,10 @@ export const protectedRoutes = [
   {
     path: BASE_PATHS.DASHBOARD,
     element: React.lazy(() => import('../pages/Dashboard/DashboardPage')),
+  },
+  {
+    path: BASE_PATHS.ASSETS,
+    element: () => <Navigate to={ASSET_ROUTES.LIST} replace />,
   },
 
   // 资产管理模块 - 注意路由顺序，更具体的路径要在前面

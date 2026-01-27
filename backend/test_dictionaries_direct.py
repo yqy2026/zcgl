@@ -1,4 +1,5 @@
 """直接测试 dictionaries 路由"""
+
 import sys
 import os
 
@@ -28,7 +29,7 @@ print("测试 dictionaries 路由...")
 print(f"注册的路由数: {len(app.routes)}")
 
 for route in app.routes:
-    if hasattr(route, 'path'):
+    if hasattr(route, "path"):
         print(f"  {route.methods} {route.path}")
 
 # 测试一个端点

@@ -84,7 +84,9 @@ class TestGetBasicStatistics:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test basic statistics without filters"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_basic_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_basic_statistics,
+        )
 
         # Mock empty results
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -110,7 +112,9 @@ class TestGetBasicStatistics:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test basic statistics with ownership_status filter"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_basic_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_basic_statistics,
+        )
 
         # Mock filtered results
         # The function calls get_multi_with_search ONCE.
@@ -130,7 +134,7 @@ class TestGetBasicStatistics:
             a.property_nature = "非经营性"
             a.usage_status = "自用"
             mock_assets.append(a)
-        
+
         # Total 10 assets
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 10)
 
@@ -154,7 +158,9 @@ class TestGetBasicStatistics:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test basic statistics with all filters applied"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_basic_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_basic_statistics,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
@@ -189,7 +195,9 @@ class TestGetStatisticsSummary:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test summary with empty database"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_statistics_summary
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_statistics_summary,
+        )
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -208,7 +216,9 @@ class TestGetStatisticsSummary:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test summary with actual data"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_statistics_summary
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_statistics_summary,
+        )
 
         # Mock various queries
         # The function calls get_basic_statistics which calls get_multi_with_search ONCE
@@ -234,7 +244,7 @@ class TestGetStatisticsSummary:
             a.property_nature = "非经营性"
             a.usage_status = "自用"
             mock_assets.append(a)
-            
+
         mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 20)
 
         result = await get_statistics_summary(
@@ -261,7 +271,9 @@ class TestGetOverallOccupancyRate:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test overall occupancy rate with default parameters"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_overall_occupancy_rate
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_overall_occupancy_rate,
+        )
 
         # Mock service instance and its method
         mock_service = MagicMock()
@@ -289,7 +301,9 @@ class TestGetOverallOccupancyRate:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test overall occupancy rate including deleted assets"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_overall_occupancy_rate
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_overall_occupancy_rate,
+        )
 
         mock_service = MagicMock()
         mock_service.calculate_with_aggregation.return_value = {
@@ -315,7 +329,9 @@ class TestGetOverallOccupancyRate:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test overall occupancy rate with zero area"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_overall_occupancy_rate
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_overall_occupancy_rate,
+        )
 
         mock_service = MagicMock()
         mock_service.calculate_with_aggregation.return_value = {
@@ -349,7 +365,9 @@ class TestGetOccupancyRateByCategory:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test occupancy by category with default field"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_occupancy_rate_by_category
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_occupancy_rate_by_category,
+        )
 
         mock_service = MagicMock()
         mock_service.calculate_category_with_aggregation.return_value = {
@@ -384,7 +402,9 @@ class TestGetOccupancyRateByCategory:
 
     def test_get_occupancy_by_category_invalid_field(self, mock_db, mock_current_user):
         """Test occupancy by category with invalid field"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_occupancy_rate_by_category
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_occupancy_rate_by_category,
+        )
 
         with pytest.raises(InvalidRequestError) as exc_info:
             get_occupancy_rate_by_category(
@@ -403,7 +423,9 @@ class TestGetOccupancyRateByCategory:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test occupancy by category with all valid fields"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_occupancy_rate_by_category
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_occupancy_rate_by_category,
+        )
 
         valid_fields = [
             "business_category",
@@ -518,7 +540,9 @@ class TestGetFinancialSummary:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test financial summary with no assets"""
-        from src.api.v1.analytics.statistics_modules.financial_stats import get_financial_summary
+        from src.api.v1.analytics.statistics_modules.financial_stats import (
+            get_financial_summary,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
         mock_to_float.return_value = 0.0
@@ -538,7 +562,9 @@ class TestGetFinancialSummary:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test financial summary with assets"""
-        from src.api.v1.analytics.statistics_modules.financial_stats import get_financial_summary
+        from src.api.v1.analytics.statistics_modules.financial_stats import (
+            get_financial_summary,
+        )
 
         # Create mock assets
         mock_assets = []
@@ -572,7 +598,9 @@ class TestGetFinancialSummary:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test per-square-meter calculations"""
-        from src.api.v1.analytics.statistics_modules.financial_stats import get_financial_summary
+        from src.api.v1.analytics.statistics_modules.financial_stats import (
+            get_financial_summary,
+        )
 
         # Create assets with specific values
         mock_assets = []
@@ -614,7 +642,9 @@ class TestClearStatisticsCache:
     @pytest.mark.asyncio
     async def test_clear_cache_success(self, mock_get_cache_manager):
         """Test successful cache clearing"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import clear_statistics_cache
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            clear_statistics_cache,
+        )
 
         mock_cache_mgr = AsyncMock()
         mock_cache_mgr.clear_pattern.return_value = 10
@@ -630,7 +660,9 @@ class TestClearStatisticsCache:
     @pytest.mark.asyncio
     async def test_clear_cache_empty(self, mock_get_cache_manager):
         """Test cache clearing when no cached items"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import clear_statistics_cache
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            clear_statistics_cache,
+        )
 
         mock_cache_mgr = AsyncMock()
         mock_cache_mgr.clear_pattern.return_value = 0
@@ -699,7 +731,9 @@ class TestGetDashboardData:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test dashboard data with no assets"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_dashboard_data
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_dashboard_data,
+        )
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -719,7 +753,9 @@ class TestGetDashboardData:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test dashboard data with assets"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_dashboard_data
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_dashboard_data,
+        )
 
         # Create mock assets
         mock_assets = []
@@ -759,7 +795,9 @@ class TestGetOwnershipDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test ownership distribution with no assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_ownership_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_ownership_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -777,7 +815,9 @@ class TestGetOwnershipDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test ownership distribution with assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_ownership_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_ownership_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = [MagicMock() for _ in range(10)]
         mock_asset_crud.get_multi_with_search.side_effect = [
@@ -811,7 +851,9 @@ class TestGetPropertyNatureDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test property nature distribution with no assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_property_nature_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_property_nature_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -829,7 +871,9 @@ class TestGetPropertyNatureDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test property nature distribution with assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_property_nature_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_property_nature_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = [MagicMock() for _ in range(10)]
         mock_asset_crud.get_multi_with_search.side_effect = [
@@ -861,7 +905,9 @@ class TestGetUsageStatusDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test usage status distribution with no assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_usage_status_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_usage_status_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = []
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
@@ -879,7 +925,9 @@ class TestGetUsageStatusDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test usage status distribution with assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_usage_status_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_usage_status_distribution,
+        )
 
         mock_asset_crud.get_multi.return_value = [MagicMock() for _ in range(10)]
         mock_asset_crud.get_multi_with_search.side_effect = [
@@ -990,7 +1038,9 @@ class TestGetOccupancyRateStatistics:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test occupancy rate statistics without filters"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_occupancy_rate_statistics
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_occupancy_rate_statistics,
+        )
 
         mock_service = MagicMock()
         mock_service.calculate_with_aggregation.return_value = {
@@ -1022,7 +1072,9 @@ class TestGetOccupancyRateStatistics:
         self, mock_occupancy_service_class, mock_db, mock_current_user
     ):
         """Test occupancy rate statistics with filters"""
-        from src.api.v1.analytics.statistics_modules.occupancy_stats import get_occupancy_rate_statistics
+        from src.api.v1.analytics.statistics_modules.occupancy_stats import (
+            get_occupancy_rate_statistics,
+        )
 
         mock_service = MagicMock()
         mock_service.calculate_with_aggregation.return_value = {
@@ -1063,7 +1115,9 @@ class TestGetAssetDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test asset distribution with default grouping"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_asset_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_asset_distribution,
+        )
 
         # Create mock assets with different ownership_status
         mock_assets = []
@@ -1092,7 +1146,9 @@ class TestGetAssetDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test asset distribution with invalid group_by field"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_asset_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_asset_distribution,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
@@ -1113,7 +1169,9 @@ class TestGetAssetDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test asset distribution with all valid group_by fields"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_asset_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_asset_distribution,
+        )
 
         valid_fields = [
             "ownership_status",
@@ -1139,7 +1197,9 @@ class TestGetAssetDistribution:
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test asset distribution including deleted assets"""
-        from src.api.v1.analytics.statistics_modules.distribution import get_asset_distribution
+        from src.api.v1.analytics.statistics_modules.distribution import (
+            get_asset_distribution,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
 
@@ -1170,7 +1230,9 @@ class TestGetAreaStatistics:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test area statistics with default parameters"""
-        from src.api.v1.analytics.statistics_modules.area_stats import get_area_statistics
+        from src.api.v1.analytics.statistics_modules.area_stats import (
+            get_area_statistics,
+        )
 
         # Mock assets
         mock_assets = []
@@ -1213,7 +1275,9 @@ class TestGetAreaStatistics:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test area statistics with filters"""
-        from src.api.v1.analytics.statistics_modules.area_stats import get_area_statistics
+        from src.api.v1.analytics.statistics_modules.area_stats import (
+            get_area_statistics,
+        )
 
         # Mock filtered assets
         mock_assets = []
@@ -1262,7 +1326,9 @@ class TestGetComprehensiveStatistics:
         mock_current_user,
     ):
         """Test comprehensive statistics with no matching assets"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_comprehensive_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_comprehensive_statistics,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
         mock_to_float.return_value = 0.0
@@ -1289,7 +1355,9 @@ class TestGetComprehensiveStatistics:
         mock_current_user,
     ):
         """Test comprehensive statistics with assets"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_comprehensive_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_comprehensive_statistics,
+        )
 
         # Create mock assets
         mock_assets = []
@@ -1327,7 +1395,9 @@ class TestGetComprehensiveStatistics:
         mock_current_user,
     ):
         """Test comprehensive statistics with filters"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_comprehensive_statistics
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_comprehensive_statistics,
+        )
 
         mock_asset_crud.get_multi_with_search.return_value = ([], 0)
         mock_to_float.return_value = 0.0
@@ -1376,7 +1446,9 @@ class TestStatisticsEdgeCases:
         self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test division by zero protection in calculations"""
-        from src.api.v1.analytics.statistics_modules.basic_stats import get_dashboard_data
+        from src.api.v1.analytics.statistics_modules.basic_stats import (
+            get_dashboard_data,
+        )
 
         # Create asset with zero area
         mock_asset = MagicMock()

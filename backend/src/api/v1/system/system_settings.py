@@ -295,13 +295,19 @@ def create_audit_log_with_fallback(
             request_body=json.dumps(kwargs),
         )
 
-    except Exception as audit_error:
-        # ✅ 修复: 捕获所有异常，确保任何审计日志失败都被处理
-        # 这包括: AttributeError, ImportError, RuntimeError 等所有可能的错误
+    except (
+        SQLAlchemyError,
+        ValueError,
+        RuntimeError,
+        AttributeError,
+        ImportError,
+        TypeError,
+    ) as audit_error:
         handle_audit_log_failure(db, current_user, action, audit_error)
-        # ✅ 安全修复: 审计日志失败时抛出异常，阻止操作继续
+        environment = os.getenv("ENVIRONMENT", "development")
+        status_code = 503 if environment == "production" else 500
         raise HTTPException(
-            status_code=500,
+            status_code=status_code,
             detail="审计日志记录失败，操作已中止。请联系管理员检查审计系统状态。",
             headers={
                 "X-Audit-Log-Error": "true",

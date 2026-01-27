@@ -181,7 +181,6 @@ export class ResponseExtractor {
       // 获取响应数据
       const responseData = response.data as ApiResponseData;
 
-
       // 开发模式下启用响应格式验证
       if (process.env.NODE_ENV === 'development' && finalOptions.detection?.strict !== false) {
         const validation = validateApiResponse(responseData);
@@ -189,7 +188,7 @@ export class ResponseExtractor {
         if (!validation.valid) {
           // 未知格式，记录警告但继续尝试提取
           // eslint-disable-next-line no-console
-          console.warn('⚠️ API 响应格式不符合标准:', {
+          console.warn('API response format does not match standard:', {
             url: response.config.url,
             method: response.config.method?.toUpperCase(),
             data: responseData,
@@ -197,7 +196,7 @@ export class ResponseExtractor {
         } else if (validation.result && !validation.result.valid) {
           // 格式可识别但验证失败
           // eslint-disable-next-line no-console
-          console.warn('⚠️ API 响应验证失败:', {
+          console.warn('API response validation failed:', {
             url: response.config.url,
             method: response.config.method?.toUpperCase(),
             type: validation.type,

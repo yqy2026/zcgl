@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, LoginCredentials } from '../types/auth';
 import { AuthService } from '../services/authService';
+import { AuthStorage } from '../utils/AuthStorage';
 import { createLogger } from '../utils/logger';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -37,26 +38,44 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 检查本地存储的认证状态
   useEffect(() => {
-    // Check for stored user metadata (tokens are in httpOnly cookies)
-    const storedUser = localStorage.getItem('user') ?? localStorage.getItem('user_info') ?? '';
+    let isMounted = true;
+    const restoreAuth = async () => {
+      // 从 AuthStorage 获取用户数据（统一的存储方式）
+      const authData = AuthStorage.getAuthData();
+      const storedUser = authData?.user;
 
-    if (storedUser !== '') {
-      try {
-        const parsedUser = JSON.parse(storedUser) as User;
-        setUser(parsedUser);
+      if (storedUser != null) {
+        if (isMounted) {
+          setUser(storedUser);
+        }
+        logger.debug('认证状态已从本地存储恢复', { userId: storedUser.id });
 
-        logger.debug('认证状态已从本地存储恢复');
-      } catch (error) {
-        logger.error(
-          '解析存储的用户信息失败',
-          error instanceof Error ? error : new Error(String(error))
-        );
-
-        // 清除所有可能的认证相关存储
+        // 清理旧的 localStorage 键
         localStorage.removeItem('user');
         localStorage.removeItem('user_info');
       }
-    }
+
+      // 验证登录会话
+      if (storedUser != null) {
+        logger.debug('开始校验登录会话');
+        const verified = await AuthService.verifyAuth();
+        if (!verified) {
+          logger.warn('登录会话校验失败，清理本地认证信息');
+          AuthStorage.clearAuthData();
+          if (isMounted) {
+            setUser(null);
+          }
+        } else {
+          logger.debug('登录会话校验通过');
+        }
+      }
+    };
+
+    restoreAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -101,19 +120,15 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Call backend logout to clear httpOnly cookies
       await AuthService.logout();
 
-      // Clear local user metadata (tokens are in cookies, cleared by backend)
-      localStorage.removeItem('user');
-      localStorage.removeItem('user_info');
-      localStorage.removeItem('permissions');
+      // Clear local authentication data using AuthStorage
+      AuthStorage.clearAuthData();
 
       setUser(null);
       MessageManager.success('已退出登录');
     } catch (error) {
       logger.error('登出错误', error instanceof Error ? error : new Error(String(error)));
       // 即使出错也要确保清除状态
-      localStorage.removeItem('user');
-      localStorage.removeItem('user_info');
-      localStorage.removeItem('permissions');
+      AuthStorage.clearAuthData();
       setUser(null);
     } finally {
       setLoading(false);
