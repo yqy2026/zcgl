@@ -4,7 +4,7 @@ import { createLogger } from '@/utils/logger';
 
 const searchLogger = createLogger('SearchHistory');
 
-interface SearchHistoryItem {
+export interface SearchHistoryItem {
   id: string;
   name: string;
   conditions: AssetSearchParams;

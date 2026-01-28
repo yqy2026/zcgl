@@ -12,9 +12,9 @@
 - 常见问题排除
 
 ## ✅ Status
-**当前状态**: Active (2025-12-23 创建)
-**适用版本**: v1.0.0
-**支持数据库**: SQLite (开发), PostgreSQL (生产), MySQL (可选)
+**当前状态**: Active (2026-01-27 更新)
+**适用版本**: v2.0.0
+**支持数据库**: PostgreSQL (开发/测试/生产), SQLite (开发后备), MySQL (可选)
 
 ---
 
@@ -24,8 +24,8 @@
 
 | 数据库 | 开发环境 | 测试环境 | 生产环境 | 说明 |
 |--------|----------|----------|----------|------|
-| **SQLite** | ✅ 推荐 | ❌ 不推荐 | ❌ 不推荐 | 轻量级，无需额外服务，适合本地开发 |
-| **PostgreSQL** | ✅ 可选 | ✅ 推荐 | ✅ 强烈推荐 | 功能强大，支持高并发，数据一致性好 |
+| **PostgreSQL** | ✅ 推荐 | ✅ 推荐 | ✅ 强烈推荐 | 功能强大，支持高并发，数据一致性好 |
+| **SQLite** | ✅ 后备 | ❌ 不推荐 | ❌ 不推荐 | 轻量级，允许开发后备使用 |
 | **MySQL** | ✅ 可选 | ✅ 可选 | ✅ 可选 | 广泛使用，社区支持好 |
 
 ### 核心数据模型
@@ -49,21 +49,22 @@
 
 ## 🚀 快速开始
 
-### 开发环境 (SQLite)
+### 开发环境 (PostgreSQL)
 
 ```bash
 # 1. 确保环境变量配置正确
 cd backend
-export DATABASE_URL="sqlite:///./database/data/zcgl.db"
+export DATABASE_URL="postgresql://postgres:your_password@localhost:5432/zcgl_db"
+export TEST_DATABASE_URL="postgresql://postgres:your_password@localhost:5432/zcgl_test"
 
-# 2. 创建数据库目录
-mkdir -p database/data
+# 2. 创建数据库（如未创建）
+python scripts/setup_postgresql.py
 
-# 3. 初始化数据库（自动创建表）
-python -c "from src.database import init_db; init_db()"
+# 3. 运行迁移
+alembic upgrade head
 
-# 4. 验证数据库
-ls -la database/data/zcgl.db
+# 4. 验证当前版本
+alembic current
 ```
 
 ### 生产环境 (PostgreSQL)
@@ -103,8 +104,11 @@ python -c "from src.database import get_database_status; print(get_database_stat
 
 ```bash
 # backend/.env
-DATABASE_URL=sqlite:///./database/data/zcgl.db
+DATABASE_URL=sqlite:///./data/land_property.db
 DATABASE_ECHO=false
+
+# 开发后备开关（仅用于 development/testing）
+ALLOW_SQLITE_FALLBACK=true
 ```
 
 **SQLite 连接优化** (自动应用):
@@ -121,6 +125,7 @@ PRAGMA temp_store=MEMORY        # 临时存储在内存
 ```bash
 # backend/.env
 DATABASE_URL=postgresql://zcgl_user:password@localhost:5432/zcgl_db
+TEST_DATABASE_URL=postgresql://zcgl_user:password@localhost:5432/zcgl_test
 
 # 连接池配置
 DATABASE_POOL_SIZE=20
@@ -156,7 +161,12 @@ backend/
 │   ├── env.py                  # 迁移环境配置
 │   ├── script.py.mako          # 迁移脚本模板
 │   └── versions/               # 版本迁移文件
-│       └── rent_contract_001.py
+│       ├── e4c9e4968dd7_initial_schema_creation.py
+│       ├── 20250118_add_user_id_to_extraction_feedback.py
+│       ├── 20250118_add_property_cert_tables.py
+│       ├── 20250120_add_security_events_table.py
+│       ├── ca5d6adb0012_add_management_entity_to_asset.py
+│       └── 8f37856a3aae_standardize_contract_status_to_enum.py
 └── migrations/                 # 额外迁移工具
     └── migration/
 ```
@@ -234,10 +244,11 @@ alembic upgrade head
 python scripts/verify_migration.py
 ```
 
-### 已有迁移文件
+### 当前迁移版本
 ```bash
-backend/alembic/versions/
-└── rent_contract_001.py    # 租赁合同表迁移
+# 查看当前版本与头版本
+alembic current
+alembic heads
 ```
 
 ---
@@ -251,10 +262,9 @@ backend/alembic/versions/
 cd backend
 python run_dev.py
 
-# 应用启动时会执行:
-# - 创建数据库表
-# - 运行迁移
-# - 初始化基础数据
+# 应用启动前建议执行:
+# - alembic upgrade head
+# - 初始化基础数据脚本（如有）
 ```
 
 **证据来源**: `backend/src/main.py:309-312`

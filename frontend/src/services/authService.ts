@@ -105,14 +105,7 @@ export class AuthService {
         const authData = {
           token: accessToken, // Kept for compatibility, but actual auth uses cookie
           refreshToken: refreshToken, // Kept for compatibility
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            full_name: user.full_name,
-            role: user.role,
-            organization_id: user.organization_id,
-          },
+          user,
           permissions,
         };
 

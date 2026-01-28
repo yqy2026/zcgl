@@ -8,6 +8,7 @@ import {
   PROFILE_ROUTES,
   SYSTEM_ROUTES,
   BASE_PATHS,
+  PROPERTY_CERTIFICATE_ROUTES,
 } from '../constants/routes';
 
 /**
@@ -88,6 +89,19 @@ export const protectedRoutes = [
   {
     path: RENTAL_ROUTES.STATISTICS,
     element: React.lazy(() => import('../pages/Rental/RentStatisticsPage')),
+  },
+
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.LIST,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateList')),
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateImport')),
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')),
   },
 
   // 权属方管理 - 注意路由顺序，详情页必须在列表页之前

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, Button, Space, message } from 'antd';
+import { Modal, Form, Input } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 
 interface SaveSearchModalProps {
@@ -22,7 +22,7 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
       const values = await form.validateFields();
       onSave(values.name);
       form.resetFields();
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

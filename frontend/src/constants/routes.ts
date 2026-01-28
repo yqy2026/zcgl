@@ -83,6 +83,13 @@ export const PROFILE_ROUTES = {
   PROFILE: '/profile',
 } as const;
 
+export const PROPERTY_CERTIFICATE_ROUTES = {
+  LIST: '/property-certificates',
+  IMPORT: '/property-certificates/import',
+  DETAIL_PATH: '/property-certificates/:id',
+  DETAIL: (id: string) => `/property-certificates/${id}`,
+} as const;
+
 // 页面重定向配置
 export const REDIRECTS = {
   ROOT: '/dashboard',
@@ -299,6 +306,7 @@ export const ROUTES = {
   OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
+  PROPERTY_CERTIFICATE_ROUTES,
   REDIRECTS,
   NOT_FOUND_REDIRECT,
 } as const;

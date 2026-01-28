@@ -25,32 +25,20 @@ const DashboardPage: React.FC = () => {
   // 从综合分析数据中提取面积汇总信息
   const areaSummary = analyticsData?.data?.area_summary;
 
-  // 计算模拟趋势数据（实际项目中应该从API获取历史数据）
-  const mockTrends = React.useMemo(() => {
-    if (areaSummary == null) return null;
-
-    const occupancyRate = areaSummary.occupancy_rate ?? 0;
-    const previousRate = Math.max(85, occupancyRate - (Math.random() * 10 - 5));
-    const trendValue = ((occupancyRate - previousRate) / previousRate) * 100;
-
+  const occupancyTrend = React.useMemo(() => {
+    const trendData = analyticsData?.data?.occupancy_trend;
+    if (!trendData || trendData.length < 2) return undefined;
+    const current = trendData[trendData.length - 1];
+    const previous = trendData[trendData.length - 2];
+    const previousRate = previous.occupancy_rate ?? 0;
+    if (previousRate === 0) return undefined;
+    const trendValue = ((current.occupancy_rate - previousRate) / previousRate) * 100;
     return {
-      assets: {
-        value: trendValue,
-        period: '较上月',
-        isPositive: trendValue >= 0,
-      },
-      area: {
-        value: -2.1,
-        period: '较上月',
-        isPositive: false,
-      },
-      occupancy: {
-        value: 3.2,
-        period: '较上月',
-        isPositive: true,
-      },
+      value: trendValue,
+      period: '较上期',
+      isPositive: trendValue >= 0,
     };
-  }, [areaSummary]);
+  }, [analyticsData]);
 
   const handleRefresh = () => {
     refetch();
@@ -157,7 +145,7 @@ const DashboardPage: React.FC = () => {
               value={areaSummary?.total_assets ?? 0}
               suffix="个"
               precision={0}
-              trend={mockTrends?.assets}
+              trend={undefined}
               icon={<HomeOutlined />}
               color="primary"
               loading={isLoading}
@@ -169,7 +157,7 @@ const DashboardPage: React.FC = () => {
               value={areaSummary?.total_area ?? 0}
               suffix="㎡"
               precision={2}
-              trend={mockTrends?.area}
+              trend={undefined}
               icon={<AreaChartOutlined />}
               color="success"
               loading={isLoading}
@@ -181,7 +169,7 @@ const DashboardPage: React.FC = () => {
               value={areaSummary?.total_rentable_area ?? 0}
               suffix="㎡"
               precision={2}
-              trend={mockTrends?.area}
+              trend={undefined}
               icon={<BarChartOutlined />}
               color="warning"
               loading={isLoading}
@@ -193,7 +181,7 @@ const DashboardPage: React.FC = () => {
               value={areaSummary?.occupancy_rate ?? 0}
               suffix="%"
               precision={1}
-              trend={mockTrends?.occupancy}
+              trend={occupancyTrend}
               icon={<PieChartOutlined />}
               color={
                 (areaSummary?.occupancy_rate ?? 0) >= 95

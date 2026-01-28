@@ -4,15 +4,19 @@ import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import { MessageManager } from '@/utils/messageManager';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { FilterConfig, SorterConfig } from '@/types/common';
-import type { TablePaginationConfig } from 'antd/es/table/interface';
+import type {
+  FilterValue,
+  SorterResult,
+  TableCurrentDataSource,
+  TablePaginationConfig,
+} from 'antd/es/table/interface';
 import { assetService } from '../../services/assetService';
 import { analyticsService } from '../../services/analyticsService';
 import { useAssets } from '../../hooks/useAssets';
 import AssetList from '../../components/Asset/AssetList';
 import AssetSearch from '../../components/Asset/AssetSearch';
 import AssetAreaSummary from '../../components/Asset/AssetAreaSummary';
-import type { AssetSearchParams } from '../../types/asset';
+import type { Asset, AssetSearchParams } from '../../types/asset';
 import { createLogger } from '../../utils/logger';
 import { PageContainer, ContentSection, LoadingContainer } from '../../components/Common/StateContainer';
 
@@ -56,15 +60,25 @@ const AssetListPage: React.FC = () => {
   // 处理表格变化
   const handleTableChange = (
     pagination: TablePaginationConfig,
-    _filters: FilterConfig,
-    sorter: SorterConfig
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<Asset> | SorterResult<Asset>[],
+    _extra: TableCurrentDataSource<Asset>
   ) => {
+    const normalizedSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    const sortField =
+      typeof normalizedSorter?.field === 'string' ? normalizedSorter.field : undefined;
+    const sortOrder =
+      normalizedSorter?.order === 'ascend'
+        ? 'asc'
+        : normalizedSorter?.order === 'descend'
+          ? 'desc'
+          : undefined;
     setSearchParams(prev => ({
       ...prev,
       page: pagination.current ?? 1,
       page_size: pagination.pageSize ?? 20,
-      sort_by: sorter.field,
-      sort_order: sorter.order === 'ascend' ? 'asc' : 'desc',
+      sort_by: sortField,
+      sort_order: sortOrder,
     }));
   };
 

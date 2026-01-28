@@ -8,7 +8,13 @@ import {
   StopOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
+import type {
+  FilterValue,
+  SorterResult,
+  TableCurrentDataSource,
+  TablePaginationConfig,
+} from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { useFormat } from '@/utils/format';
 import {
@@ -26,7 +32,12 @@ interface ContractTableProps {
     pageSize: number;
     total: number;
   };
-  onTableChange: (pagination: TablePaginationConfig) => void;
+  onTableChange: (
+    pagination: TablePaginationConfig,
+    filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<RentContract> | SorterResult<RentContract>[],
+    extra: TableCurrentDataSource<RentContract>
+  ) => void;
   onView: (contract: RentContract) => void;
   onEdit: (contract: RentContract) => void;
   onGenerateLedger: (id: string) => void;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Space, Button, Tag } from 'antd';
+import { Space, Button } from 'antd';
 import {
   SearchOutlined,
   ReloadOutlined,

@@ -131,3 +131,5 @@ export const PropertyCertificateList: React.FC = () => {
     </div>
   );
 };
+
+export default PropertyCertificateList;

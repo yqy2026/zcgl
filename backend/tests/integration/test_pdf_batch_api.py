@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.api.v1 import pdf_batch_routes
+from src.api.v1.documents import pdf_batch_routes
 from src.database import get_db
 from src.main import app
 from src.models.pdf_import_session import SessionStatus

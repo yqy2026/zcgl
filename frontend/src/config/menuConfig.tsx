@@ -68,6 +68,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         icon: <BarChartOutlined />,
         label: '数据分析',
       },
+      {
+        key: '/property-certificates',
+        icon: <FileTextOutlined />,
+        label: '产权证管理',
+      },
     ],
   },
   {
@@ -172,6 +177,9 @@ export function getSelectedKeys(pathname: string): string[] {
   if (pathname === '/ownership') {
     return ['/ownership'];
   }
+  if (pathname.startsWith('/property-certificates')) {
+    return ['/property-certificates'];
+  }
 
   return [pathname];
 }
@@ -181,6 +189,9 @@ export function getSelectedKeys(pathname: string): string[] {
  */
 export function getOpenKeys(pathname: string): string[] {
   if (pathname.startsWith('/assets')) {
+    return ['assets'];
+  }
+  if (pathname.startsWith('/property-certificates')) {
     return ['assets'];
   }
   if (pathname.startsWith('/rental')) {

@@ -16,10 +16,7 @@ import {
   ApiClientError,
   ApiErrorType,
 } from '../types/apiResponse';
-import {
-  validateApiResponse,
-  type ValidationResult as _ValidationResult,
-} from './responseValidator';
+import { validateApiResponse } from './responseValidator';
 
 // ==================== 类型定义 ====================
 
@@ -200,8 +197,8 @@ export class ResponseExtractor {
             url: response.config.url,
             method: response.config.method?.toUpperCase(),
             type: validation.type,
-            missingFields: validation.result.missingFields,
-            typeErrors: validation.result.typeErrors,
+            error: validation.result.error,
+            issues: validation.result.zodError?.issues,
           });
         }
       }

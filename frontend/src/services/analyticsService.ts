@@ -78,36 +78,35 @@ export class AnalyticsService {
         params: filters,
       });
 
-      // ApiClient returns ExtractResult<AnalyticsResponse>
-      if (response.success && response.data) {
-        const apiData = response.data as AnalyticsResponse | RawApiData;
-
-        // 检查是否已经是 AnalyticsResponse 格式
-        if ('success' in apiData && 'data' in apiData) {
-          return apiData as AnalyticsResponse;
-        }
-
-        // 适配后端API返回的数据到前端期望的格式
-        const adaptedData = this.adaptApiDataToAnalyticsData(apiData);
-        return {
-          success: true,
-          message: '数据获取成功',
-          data: adaptedData,
-          cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
-          performance_info: {
-            calculation_time: 0,
-            asset_count: adaptedData.area_summary?.total_assets ?? 0,
-            cache_enabled: true,
-          },
-        };
+      if (!response.success) {
+        throw new Error(response.error ?? '获取综合分析数据失败');
       }
 
-      // 如果response.data为空，返回模拟数据
-      return this.getMockAnalyticsData();
+      if (!response.data) {
+        throw new Error('综合分析接口返回为空');
+      }
+
+      const apiData = response.data as AnalyticsResponse | RawApiData;
+
+      if ('success' in apiData && 'data' in apiData) {
+        return apiData as AnalyticsResponse;
+      }
+
+      const adaptedData = this.adaptApiDataToAnalyticsData(apiData);
+      return {
+        success: true,
+        message: '数据获取成功',
+        data: adaptedData,
+        cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
+        performance_info: {
+          calculation_time: 0,
+          asset_count: adaptedData.area_summary?.total_assets ?? 0,
+          cache_enabled: true,
+        },
+      };
     } catch (error) {
       serviceLogger.error('Analytics API Error:', error as Error);
-      // 返回模拟数据而不是抛出错误
-      return this.getMockAnalyticsData();
+      throw error;
     }
   }
 
@@ -251,50 +250,11 @@ export class AnalyticsService {
       if (response.success && response.data) {
         return response.data;
       }
-      return this.getMockAnalyticsData();
+      throw new Error(response.error ?? 'Failed to fetch financial summary');
     } catch (error) {
       serviceLogger.error('Financial summary API Error:', error as Error);
-      return this.getMockAnalyticsData();
+      throw error;
     }
-  }
-
-  // 模拟数据方法
-  private getMockAnalyticsData(): AnalyticsResponse {
-    return {
-      success: true,
-      message: '使用模拟数据',
-      data: {
-        area_summary: {
-          total_assets: 696,
-          total_area: 90466.8,
-          total_rentable_area: 122246.02,
-          total_rented_area: 119170.36,
-          total_unrented_area: 3075.66,
-          assets_with_area_data: 669,
-          occupancy_rate: 97.48,
-          total_non_commercial_area: 0,
-        },
-        financial_summary: {
-          estimated_annual_income: 0.0,
-          total_annual_income: 0.0,
-          total_annual_expense: 0.0,
-          total_net_income: 0.0,
-          total_monthly_rent: 0.0,
-          total_deposit: 0.0,
-          assets_with_income_data: 0,
-          assets_with_rent_data: 0,
-          profit_margin: 0.0,
-        },
-        business_category_distribution: [],
-        property_nature_distribution: [],
-        ownership_status_distribution: [],
-        usage_status_distribution: [],
-        occupancy_distribution: [],
-        occupancy_trend: [],
-      },
-      cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
-      performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-    };
   }
 }
 

@@ -16,7 +16,7 @@
 ## ✅ Status
 **当前状态**: Active (2026-01-08 更新)
 **适用版本**: v2.0.0
-**技术栈**: FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2
+**技术栈**: FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + PostgreSQL
 
 ---
 
@@ -117,7 +117,8 @@ pip install -e .
 # 5. 安装开发依赖
 pip install -e ".[dev]"
 
-# 6. 启动开发服务器
+# 6. 配置数据库并启动开发服务器
+alembic upgrade head
 python run_dev.py
 ```
 

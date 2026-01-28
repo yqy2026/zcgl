@@ -47,10 +47,11 @@ graph TB
     end
 
     subgraph "数据库层 Database Layer"
-        D --> H[(SQLite Database)]
+        D --> H[(PostgreSQL Database)]
         E --> H
         F --> H
         G --> H
+        D --> I[(SQLite Fallback)]
     end
 
     subgraph "监控和日志 Monitoring & Logging"
@@ -159,7 +160,7 @@ class ConnectionPoolConfig:
   "data": {
     "enhanced_active": true,
     "enhanced_available": true,
-    "engine_type": "SQLite",
+    "engine_type": "PostgreSQL",
     "connection_pool": {
       "pool_size": 20,
       "checked_in": 15,

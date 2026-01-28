@@ -136,6 +136,22 @@ async def get_operation_logs(
             search=search,
         )
 
+        missing_user_ids = {
+            log.user_id for log in logs if log.user_id and not log.username
+        }
+        if missing_user_ids:
+            users = (
+                db.query(User.id, User.username)
+                .filter(User.id.in_(missing_user_ids))
+                .all()
+            )
+            username_map = {str(user_id): username for user_id, username in users}
+            for log in logs:
+                if log.user_id and not log.username:
+                    resolved_username = username_map.get(str(log.user_id))
+                    if resolved_username:
+                        log.username = resolved_username
+
         pages = (total + page_size - 1) // page_size
 
         return OperationLogListResponse(
@@ -166,6 +182,11 @@ async def get_operation_log(
             raise not_found(
                 "日志不存在", resource_type="operation_log", resource_id=log_id
             )
+
+        if log.user_id and not log.username:
+            user = db.query(User).filter(User.id == log.user_id).first()
+            if user:
+                log.username = user.username
 
         return OperationLogResponse.model_validate(log)
     except Exception as e:

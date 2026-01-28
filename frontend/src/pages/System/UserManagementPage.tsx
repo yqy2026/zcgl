@@ -22,13 +22,14 @@ import {
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb';
 import {
   userService,
+  roleService,
   type User,
   type CreateUserData,
   type UpdateUserData,
   type OrganizationOption,
   type RoleOption,
 } from '../../services/systemService';
-import { useMessage } from '../../hooks/useMessage';
+import { organizationService } from '../../services/organizationService';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '../../utils/logger';
 
@@ -65,7 +66,6 @@ interface UserStatistics {
 }
 
 const UserManagementPage: React.FC = () => {
-  const message = useMessage();
   const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
@@ -97,64 +97,62 @@ const UserManagementPage: React.FC = () => {
     } catch (error) {
       pageLogger.error('加载用户列表失败:', error as Error);
       MessageManager.error('加载用户列表失败');
-      // 如果API失败，使用模拟数据作为后备
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          full_name: '系统管理员',
-          phone: '13800138000',
-          status: 'active',
-          role: 'admin',
-          role_name: '系统管理员',
-          organization_id: '1',
-          organization_name: '总公司',
-          last_login: dayjs().subtract(1, 'hour').toISOString(),
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-10-15T00:00:00Z',
-          is_locked: false,
-          login_attempts: 0,
-        },
-      ];
-      setUsers(mockUsers);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, []);
 
   const loadOrganizations = useCallback(async () => {
     try {
-      // 模拟组织数据
-      const mockOrgs: OrganizationOption[] = [
-        { id: '1', name: '总公司' },
-        { id: '2', name: '项目部' },
-        { id: '3', name: '财务部' },
-      ];
-      setOrganizations(mockOrgs);
+      const data = await organizationService.getOrganizations({ page_size: 1000 });
+      const options = data.map(org => ({ id: org.id, name: org.name }));
+      setOrganizations(options);
     } catch {
       MessageManager.error('加载组织列表失败');
     }
-  }, [message]);
+  }, []);
 
   const loadRoles = useCallback(async () => {
     try {
-      // 模拟角色数据
-      const mockRoles: RoleOption[] = [
-        { id: 'admin', name: '系统管理员' },
-        { id: 'manager', name: '项目经理' },
-        { id: 'user', name: '普通用户' },
-      ];
-      setRoles(mockRoles);
+      const data = await roleService.getRoles({ page_size: 200 });
+      const roleItems = Array.isArray(data)
+        ? data
+        : Array.isArray((data as { items?: unknown[] }).items)
+          ? (data as { items: unknown[] }).items
+          : Array.isArray((data as { data?: unknown[] }).data)
+            ? (data as { data: unknown[] }).data
+            : [];
+      const options: RoleOption[] = roleItems
+        .map(role => {
+          const roleRecord = role as { id?: string; code?: string; name?: string };
+          return {
+            id: roleRecord.id ?? roleRecord.code ?? '',
+            name: roleRecord.name ?? roleRecord.code ?? '',
+          };
+        })
+        .filter(role => role.id.length > 0);
+      setRoles(options);
     } catch {
       MessageManager.error('加载角色列表失败');
     }
-  }, [message]);
+  }, []);
 
   const loadStatistics = useCallback(async () => {
     try {
-      // 模拟统计数据
-      const mockStats: UserStatistics = {
+      const data = await userService.getUserStatistics();
+      if (
+        data != null &&
+        typeof data === 'object' &&
+        'total' in data &&
+        'active' in data &&
+        'inactive' in data &&
+        'locked' in data
+      ) {
+        setStatistics(data as UserStatistics);
+        return;
+      }
+      const computedStats: UserStatistics = {
         total: users.length,
         active: users.filter(u => u.status === 'active').length,
         inactive: users.filter(u => u.status === 'inactive').length,
@@ -162,11 +160,13 @@ const UserManagementPage: React.FC = () => {
         by_role: {},
         by_organization: {},
       };
-      setStatistics(mockStats);
-    } catch {
+      setStatistics(computedStats);
+    } catch (error) {
+      pageLogger.error('加载统计信息失败:', error as Error);
       MessageManager.error('加载统计信息失败');
+      setStatistics(null);
     }
-  }, [message, users]);
+  }, [users]);
 
   useEffect(() => {
     loadUsers();
@@ -202,33 +202,40 @@ const UserManagementPage: React.FC = () => {
 
   const handleDelete = async (_id: string) => {
     try {
-      // 模拟删除API调用
+      await userService.deleteUser(_id);
       MessageManager.success('删除成功');
       loadUsers();
       loadStatistics();
-    } catch {
+    } catch (error) {
+      pageLogger.error('删除用户失败:', error as Error);
       MessageManager.error('删除失败');
     }
   };
 
   const handleToggleStatus = async (_user: User, _newStatus: string) => {
     try {
-      // 模拟状态切换API调用
+      await userService.updateUser(_user.id, { status: _newStatus as 'active' | 'inactive' });
       MessageManager.success('状态已更新');
       loadUsers();
       loadStatistics();
-    } catch {
+    } catch (error) {
+      pageLogger.error('更新用户状态失败:', error as Error);
       MessageManager.error('状态更新失败');
     }
   };
 
   const handleToggleLock = async (user: User) => {
     try {
-      // 模拟锁定/解锁API调用
+      if (user.is_locked) {
+        await userService.unlockUser(user.id);
+      } else {
+        await userService.lockUser(user.id);
+      }
       MessageManager.success(user.is_locked ? '用户已解锁' : '用户已锁定');
       loadUsers();
       loadStatistics();
-    } catch {
+    } catch (error) {
+      pageLogger.error('更新用户锁定状态失败:', error as Error);
       MessageManager.error('操作失败');
     }
   };
@@ -241,16 +248,17 @@ const UserManagementPage: React.FC = () => {
   const handleSubmit = async (_values: CreateUserData | UpdateUserData) => {
     try {
       if (editingUser) {
-        // 模拟更新API调用
+        await userService.updateUser(editingUser.id, _values as UpdateUserData);
         MessageManager.success('更新成功');
       } else {
-        // 模拟创建API调用
+        await userService.createUser(_values as CreateUserData);
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
       loadUsers();
       loadStatistics();
-    } catch {
+    } catch (error) {
+      pageLogger.error('保存用户失败:', error as Error);
       MessageManager.error(editingUser ? '更新失败' : '创建失败');
     }
   };

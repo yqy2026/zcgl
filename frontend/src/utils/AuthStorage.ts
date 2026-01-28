@@ -1,14 +1,9 @@
+import type { User } from '@/types/auth';
+
 export interface AuthData {
   token: string;
   refreshToken: string;
-  user: {
-    id: string;
-    username: string;
-    email?: string;
-    full_name?: string;
-    role?: string;
-    organization_id?: string;
-  };
+  user: User;
   permissions: Array<{
     resource: string;
     action: string;

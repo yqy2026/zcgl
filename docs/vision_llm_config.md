@@ -31,7 +31,7 @@ ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 ZHIPU_VISION_MODEL=glm-4.6v-flash
 ```
 
-### 方案3：腾讯混元
+### 方案3：腾讯混元(推荐)
 
 ```bash
 LLM_PROVIDER=hunyuan

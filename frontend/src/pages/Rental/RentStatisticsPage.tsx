@@ -116,87 +116,11 @@ const RentStatisticsPage: React.FC = () => {
       setMonthlyStats(monthlyData);
     } catch (error) {
       pageLogger.error('Statistics fetch error:', error as Error);
-      MessageManager.error('获取统计数据失败，显示模拟数据');
-
-      // 使用模拟数据作为降级方案
-      const mockOverview: RentStatisticsOverview = {
-        total_due: 1500000,
-        total_paid: 1200000,
-        total_overdue: 300000,
-        total_records: 120,
-        payment_rate: 80,
-        status_breakdown: [
-          { status: 'active', count: 98, due_amount: 1300000, paid_amount: 1100000 },
-          { status: 'pending', count: 22, due_amount: 200000, paid_amount: 100000 },
-        ],
-        monthly_breakdown: [
-          { year_month: '2024-12', due_amount: 500000, paid_amount: 450000, overdue_amount: 50000 },
-          {
-            year_month: '2024-11',
-            due_amount: 500000,
-            paid_amount: 400000,
-            overdue_amount: 100000,
-          },
-          {
-            year_month: '2024-10',
-            due_amount: 500000,
-            paid_amount: 350000,
-            overdue_amount: 150000,
-          },
-        ],
-        average_unit_price: 30,
-        renewal_rate: 85,
-      };
-
-      const mockOwnershipStats: OwnershipRentStatistics[] = [
-        {
-          ownership_id: '1',
-          ownership_name: '权属方A',
-          ownership_short_name: '权属A',
-          contract_count: 30,
-          total_due_amount: 500000,
-          total_paid_amount: 450000,
-          total_overdue_amount: 50000,
-          payment_rate: 90,
-        },
-        {
-          ownership_id: '2',
-          ownership_name: '权属方B',
-          ownership_short_name: '权属B',
-          contract_count: 25,
-          total_due_amount: 400000,
-          total_paid_amount: 350000,
-          total_overdue_amount: 50000,
-          payment_rate: 87.5,
-        },
-      ];
-
-      const mockAssetStats: AssetRentStatistics[] = [
-        {
-          asset_id: '1',
-          asset_name: '资产A',
-          asset_address: '地址A',
-          contract_count: 15,
-          total_due_amount: 300000,
-          total_paid_amount: 280000,
-          total_overdue_amount: 20000,
-          payment_rate: 93.3,
-        },
-      ];
-
-      const mockMonthlyStats: MonthlyRentStatistics[] = Array.from({ length: 12 }, (_, i) => ({
-        year_month: `2024-${String(i + 1).padStart(2, '0')}`,
-        total_contracts: 10 + i,
-        total_due_amount: 100000 + i * 10000,
-        total_paid_amount: 80000 + i * 8000,
-        total_overdue_amount: 20000 + i * 2000,
-        payment_rate: 80 + i,
-      }));
-
-      setOverviewData(mockOverview);
-      setOwnershipStats(mockOwnershipStats);
-      setAssetStats(mockAssetStats);
-      setMonthlyStats(mockMonthlyStats);
+      MessageManager.error('获取统计数据失败');
+      setOverviewData(null);
+      setOwnershipStats([]);
+      setAssetStats([]);
+      setMonthlyStats([]);
     } finally {
       setLoading(false);
     }

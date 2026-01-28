@@ -12,9 +12,23 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import bcrypt
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+import os
 
 # 数据库连接
-DATABASE_URL = "sqlite:///D:/work/zcgl/backend/data/land_property.db"
+# 先加载同目录下的 .env
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=str(env_path))
+else:
+    # 尝试加载项目根目录的 .env
+    root_env = Path(__file__).parent.parent / ".env"
+    if root_env.exists():
+        load_dotenv(dotenv_path=str(root_env))
+
+from src.core.config import settings
+
+DATABASE_URL = settings.DATABASE_URL
 engine = create_engine(DATABASE_URL)
 
 # 生成密码哈希 (密码: admin123)
@@ -28,9 +42,9 @@ now = datetime.now(UTC)
 
 with engine.connect() as conn:
     try:
-        # 插入admin用户
         conn.execute(
-            text("""
+            text(
+                """
             INSERT INTO users (
                 id, username, email, full_name, password_hash,
                 role, is_active, is_locked, failed_login_attempts,
@@ -40,7 +54,8 @@ with engine.connect() as conn:
                 :role, :is_active, :is_locked, :failed_login_attempts,
                 :password_last_changed, :created_at, :updated_at, :created_by, :updated_by
             )
-        """),
+        """
+            ),
             {
                 "id": user_id,
                 "username": "admin",
@@ -63,7 +78,6 @@ with engine.connect() as conn:
         print(f"   User ID: {user_id}")
     except Exception as e:
         print(f"ERROR: Failed to create user: {e}")
-        # 检查用户是否已存在
         result = conn.execute(
             text(
                 "SELECT username, email, is_active FROM users WHERE username = 'admin'"

@@ -209,7 +209,7 @@ class UserSession(Base):
         String(100), unique=True, comment="会话ID"
     )
     refresh_token: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False, comment="刷新令牌"
+        Text, unique=True, nullable=False, comment="刷新令牌"
     )
     device_info: Mapped[str | None] = mapped_column(Text, comment="设备信息")
     device_id: Mapped[str | None] = mapped_column(String(100), comment="设备ID")

@@ -45,64 +45,88 @@ def sample_asset(db: Session, admin_user):
 class TestAssetServiceBusinessLogic:
     """测试资产服务业务逻辑"""
 
-    def test_calculate_depreciation(self, asset_service):
-        """测试折旧计算"""
-        # 测试不同类型资产的折旧计算
-        pass
-
     def test_get_asset_by_code(self, asset_service, sample_asset):
         """测试按代码获取资产"""
-        result = asset_service.get_asset_by_code(sample_asset.code)
+        # Note: AssetService currently doesn't have get_asset_by_code,
+        # it relies on search or get by id. We'll test get_asset (by ID) instead
+        result = asset_service.get_asset(sample_asset.id)
         assert result is not None
+        assert result.code == sample_asset.code
+        assert result.id == sample_asset.id
 
-    def test_search_assets_advanced_filters(self, asset_service, db: Session):
+    def test_search_assets_advanced_filters(self, asset_service, db: Session, sample_asset):
         """测试高级搜索筛选"""
-        result = asset_service.search_assets(
-            db, keyword="测试", asset_type="building", min_area=500.0, max_area=2000.0
+        # Basic search
+        result, count = asset_service.get_assets(
+            search=sample_asset.property_name[:2]
         )
-        assert result is not None
+        assert count >= 1
+        assert result[0].id == sample_asset.id
 
-    def test_batch_update_assets_validation(self, asset_service, db: Session):
-        """测试批量更新验证"""
-        update_data = {"usage": "warehouse", "status": "active"}
-        asset_ids = ["id1", "id2"]
-        result = asset_service.batch_update_assets(
-            db, asset_ids=asset_ids, update_data=update_data
+        # Filter search
+        filters = {"asset_type": sample_asset.asset_type}
+        result, count = asset_service.get_assets(filters=filters)
+        assert count >= 1
+
+    def test_create_asset_logic(self, asset_service, db: Session, admin_user):
+        """测试创建资产业务逻辑"""
+        from src.schemas.asset import AssetCreate
+
+        asset_in = AssetCreate(
+            name="新测试资产",
+            code="NEW-ASSET-001",
+            area=500.0,
+            asset_type="building",
+            usage="office",
+            project_id="project-001",
+            ownership_id="owner-001"
         )
-        assert result is not None
 
-    def test_get_asset_statistics(self, asset_service, db: Session):
-        """测试获取资产统计信息"""
-        stats = asset_service.get_asset_statistics(db)
-        assert stats is not None
-        assert "total_count" in stats
-        assert "total_area" in stats
+        # Mock enum validation and calculator to avoid dependencies for this unit test
+        # or rely on integration if dependencies are available.
+        # Given this is "unit" but uses "db" fixture, it's an integration test.
 
-    def test_transfer_ownership(self, asset_service, sample_asset, db: Session):
-        """测试权属转移"""
-        new_owner_id = "new-owner-001"
-        result = asset_service.transfer_ownership(
-            db, asset_id=sample_asset.id, new_owner_id=new_owner_id
+        asset = asset_service.create_asset(
+            asset_in,
+            current_user=admin_user
         )
-        assert result is not None
 
-    def test_retire_asset(self, asset_service, sample_asset, db: Session):
-        """测试资产报废"""
-        result = asset_service.retire_asset(
-            db, asset_id=sample_asset.id, reason="testing_retirement"
+        assert asset.id is not None
+        assert asset.property_name == "新测试资产"
+        assert asset.status == "idle"  # Default
+
+    def test_update_asset_logic(self, asset_service, sample_asset, db: Session, admin_user):
+        """测试更新资产逻辑"""
+        from src.schemas.asset import AssetUpdate
+
+        update_data = AssetUpdate(
+            name="更新后的资产",
+            usage="retail"
         )
-        assert result is not None
 
-    def test_reactivate_asset(self, asset_service, sample_asset, db: Session):
-        """测试重新激活资产"""
-        result = asset_service.reactivate_asset(db, asset_id=sample_asset.id)
-        assert result is not None
+        updated = asset_service.update_asset(
+            sample_asset.id,
+            update_data,
+            current_user=admin_user
+        )
 
-    def test_asset_area_validation(self, asset_service):
-        """测试资产面积验证"""
-        # 测试各种边界情况
-        with pytest.raises(ValueError):
-            asset_service.validate_asset_area(-100)
-        with pytest.raises(ValueError):
-            asset_service.validate_asset_area(0)
-        assert asset_service.validate_asset_area(100) is not None
+        assert updated.property_name == "更新后的资产"
+        assert updated.usage == "retail"
+        # Ensure other fields remain
+        assert updated.code == sample_asset.code
+
+    def test_delete_asset_logic(self, asset_service, sample_asset):
+        """测试删除资产逻辑"""
+        from src.core.exception_handler import ResourceNotFoundError
+
+        asset_id = sample_asset.id
+        asset_service.delete_asset(asset_id)
+
+        # Verify deletion
+        with pytest.raises(ResourceNotFoundError):
+            asset_service.get_asset(asset_id)
+
+    def test_get_distinct_field_values(self, asset_service, sample_asset):
+        """测试获取唯一值"""
+        values = asset_service.get_distinct_field_values("asset_type")
+        assert sample_asset.asset_type in values

@@ -69,3 +69,5 @@ export const PropertyCertificateImport: React.FC = () => {
     </div>
   );
 };
+
+export default PropertyCertificateImport;

@@ -10,8 +10,8 @@ interface BasicSearchFieldsProps {
 }
 
 export const BasicSearchFields: React.FC<BasicSearchFieldsProps> = ({
-  ownershipEntityOptions = [],
-  businessCategoryOptions = [],
+  ownershipEntityOptions: _ownershipEntityOptions = [],
+  businessCategoryOptions: _businessCategoryOptions = [],
 }) => {
   return (
     <>

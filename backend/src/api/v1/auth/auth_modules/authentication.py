@@ -173,6 +173,8 @@ async def login(
             "message": "登录成功",
         }
 
+    except BusinessLogicError as e:
+        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -181,9 +183,6 @@ async def login(
 
         # Return generic error message to client
         raise internal_error("登录服务暂时不可用，请稍后重试")
-
-    except BusinessLogicError as e:
-        raise bad_request(str(e))
 
 
 @router.post("/logout", summary="用户登出")

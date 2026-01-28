@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, List, Tag, Space, Button, Typography, Popconfirm, Input, message } from 'antd';
+import { Modal, List, Tag, Space, Button, Typography, Popconfirm } from 'antd';
 import { DeleteOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { SearchHistoryItem } from '@/hooks/useSearchHistory';
 
@@ -22,31 +22,32 @@ export const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
   onDelete,
   onClear,
   onCancel,
-  loading = false,
 }) => {
   const formatSearchParams = (item: SearchHistoryItem): string => {
     const params: string[] = [];
 
-    if (item.params.search) {
-      params.push(`关键词: ${item.params.search}`);
+    if (item.conditions.search) {
+      params.push(`关键词: ${item.conditions.search}`);
     }
-    if (item.params.ownership_status) {
-      params.push(`确权状态: ${item.params.ownership_status}`);
+    if (item.conditions.ownership_status) {
+      params.push(`确权状态: ${item.conditions.ownership_status}`);
     }
-    if (item.params.property_nature) {
-      params.push(`物业性质: ${item.params.property_nature}`);
+    if (item.conditions.property_nature) {
+      params.push(`物业性质: ${item.conditions.property_nature}`);
     }
-    if (item.params.usage_status) {
-      params.push(`使用状态: ${item.params.usage_status}`);
+    if (item.conditions.usage_status) {
+      params.push(`使用状态: ${item.conditions.usage_status}`);
     }
-    if (item.params.area_min || item.params.area_max) {
+    if (item.conditions.area_min || item.conditions.area_max) {
       params.push(
-        `面积: ${item.params.area_min || 0}-${item.params.area_max || '∞'}㎡`
+        `面积: ${item.conditions.area_min || 0}-${item.conditions.area_max || '∞'}㎡`
       );
     }
-    if (item.params.created_start || item.params.created_end) {
+    if (item.conditions.created_start || item.conditions.created_end) {
       params.push(
-        `时间: ${item.params.created_start || '开始'} - ${item.params.created_end || '结束'}`
+        `时间: ${item.conditions.created_start || '开始'} - ${
+          item.conditions.created_end || '结束'
+        }`
       );
     }
 
@@ -136,7 +137,7 @@ export const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
                 title={
                   <Space>
                     <Text strong>{item.name}</Text>
-                    <Tag color="blue">{formatTime(item.timestamp)}</Tag>
+                    <Tag color="blue">{formatTime(item.createdAt)}</Tag>
                   </Space>
                 }
                 description={

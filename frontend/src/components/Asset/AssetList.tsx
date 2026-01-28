@@ -2,10 +2,15 @@ import React from 'react';
 import { Table, Tag, Button, Space, Popconfirm, Tooltip } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type {
+  TablePaginationConfig,
+  SorterResult,
+  TableCurrentDataSource,
+  FilterValue,
+} from 'antd/es/table/interface';
 
 import type { Asset, AssetListResponse } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
-import type { PaginationConfig, FilterConfig, SorterConfig } from '@/types/common';
 import { getOccupancyRateColor } from '@/styles/colorMap';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
 
@@ -40,9 +45,10 @@ interface AssetListProps {
   onView: (asset: Asset) => void;
   onViewHistory: (asset: Asset) => void;
   onTableChange: (
-    pagination: PaginationConfig,
-    filters: FilterConfig,
-    sorter: SorterConfig
+    pagination: TablePaginationConfig,
+    filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<Asset> | SorterResult<Asset>[],
+    extra: TableCurrentDataSource<Asset>
   ) => void;
   selectedRowKeys?: React.Key[];
   onSelectChange?: (selectedRowKeys: React.Key[]) => void;

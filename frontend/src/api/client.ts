@@ -34,9 +34,8 @@ const validateApiPath = (url: string): void => {
       : normalizedBaseUrl;
     if (!url.startsWith(basePath) && !url.startsWith('/auth')) {
       apiLogger.warn(
-        `URL does not use ${basePath} prefix: ${url}`,
-        { url, basePath },
-        'All API calls should use the centralized API client with correct prefix.'
+        `URL does not use ${basePath} prefix: ${url}. All API calls should use the centralized API client with correct prefix.`,
+        { url, basePath }
       );
     }
   }

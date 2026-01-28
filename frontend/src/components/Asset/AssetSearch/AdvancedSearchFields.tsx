@@ -1,5 +1,5 @@
 import React from 'react';
-import { Col, Form, InputNumber, DatePicker, Row, Select } from 'antd';
+import { Col, Form, InputNumber, DatePicker, Row, Select, Space } from 'antd';
 import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
@@ -59,7 +59,7 @@ export const AdvancedSearchFields: React.FC<AdvancedSearchFieldsProps> = ({
 
         <Col xs={24} sm={12} md={8} lg={6}>
           <Form.Item label="建筑面积范围(㎡)">
-            <InputNumber.Group compact>
+            <Space.Compact style={{ width: '100%' }}>
               <Form.Item name="area_min" noStyle>
                 <InputNumber
                   placeholder="最小"
@@ -76,7 +76,7 @@ export const AdvancedSearchFields: React.FC<AdvancedSearchFieldsProps> = ({
                   style={{ width: '50%' }}
                 />
               </Form.Item>
-            </InputNumber.Group>
+            </Space.Compact>
           </Form.Item>
         </Col>
 

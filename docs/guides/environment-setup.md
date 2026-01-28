@@ -96,12 +96,13 @@ TOKEN_BLACKLIST_ENABLED=true
 
 #### 3. 数据库配置
 ```bash
-# SQLite (开发环境默认)
-DATABASE_URL=sqlite:///./database/data/zcgl.db
-DATABASE_ECHO=false
+# PostgreSQL (开发/测试/生产推荐)
+DATABASE_URL=postgresql://username:password@host:5432/database_name
+TEST_DATABASE_URL=postgresql://username:password@host:5432/test_database_name
 
-# PostgreSQL (生产环境推荐)
-# DATABASE_URL=postgresql://username:password@host:5432/database_name
+# SQLite (仅开发后备)
+# DATABASE_URL=sqlite:///./data/land_property.db
+# ALLOW_SQLITE_FALLBACK=true
 
 # 连接池配置 (PostgreSQL)
 # DATABASE_POOL_SIZE=20
@@ -111,7 +112,7 @@ DATABASE_ECHO=false
 **数据库选择建议**:
 | 环境 | 数据库 | 说明 |
 |------|--------|------|
-| 开发 | SQLite | 轻量级，无需额外服务 |
+| 开发 | PostgreSQL | 与生产环境一致 |
 | 测试 | PostgreSQL | 与生产环境一致 |
 | 生产 | PostgreSQL | 高可用，支持并发 |
 
