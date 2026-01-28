@@ -767,8 +767,9 @@ from src.database import get_db
 from src.models.base import Base
 
 # 测试数据库
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+SQLALCHEMY_TEST_DATABASE_URL = "postgresql://user:password@localhost:5432/zcgl_test"
+# SQLite 已移除，测试环境请使用 PostgreSQL
+engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @pytest.fixture
@@ -914,17 +915,17 @@ async def get_debug_config():
 ## 🚨 常见问题
 
 ### Q1: 数据库连接失败
-**问题**: `sqlalchemy.exc.OperationalError: unable to open database file`
+**问题**: `sqlalchemy.exc.OperationalError: could not connect to server`
 **解决**:
 ```bash
-# 确保数据库目录存在
-mkdir -p database/data
-
 # 检查 DATABASE_URL 配置
 echo $DATABASE_URL
 
-# SQLite 检查权限
-chmod 644 database/data/zcgl.db
+# 确认 PostgreSQL 服务运行
+pg_isready -h localhost -p 5432
+
+# 检查账号和密码
+psql "$DATABASE_URL" -c "SELECT 1;"
 ```
 
 ### Q2: 导入错误

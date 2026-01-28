@@ -3,7 +3,7 @@ RentContractService 集成测试
 覆盖合同创建、更新、续签、终止、台账生成、统计等功能
 
 测试策略：
-- 使用SQLite内存数据库
+- 使用 PostgreSQL 测试数据库
 - 测试真实service依赖
 - 覆盖所有主要业务路径
 - 包含边界条件和异常处理

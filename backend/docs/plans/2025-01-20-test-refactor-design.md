@@ -68,7 +68,7 @@
    - 示例：`utils/format_date.py`
 
 2. **Service层改为集成测试**（真实数据库）
-   - 使用真实SQLite内存数据库
+   - 使用真实 PostgreSQL 测试数据库
    - 测试完整业务逻辑路径
    - 验证数据库状态和业务规则
 
@@ -112,7 +112,7 @@
    ```python
    @pytest.fixture(scope="function")
    def db_session():
-       engine = create_engine("sqlite:///:memory:")
+       engine = create_engine("postgresql://user:password@localhost:5432/zcgl_test")
        Base.metadata.create_all(engine)
        ...
    ```

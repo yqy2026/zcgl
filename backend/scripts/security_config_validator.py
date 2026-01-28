@@ -49,11 +49,8 @@ def check_database_security(database_url: str) -> tuple[bool, str]:
     if "localhost" in database_url and os.getenv("ENVIRONMENT") == "production":
         return False, "生产环境不应使用localhost数据库"
 
-    if (
-        database_url.startswith("sqlite:///./")
-        and os.getenv("ENVIRONMENT") == "production"
-    ):
-        return False, "生产环境不建议使用SQLite文件数据库"
+    if database_url.startswith("sqlite"):
+        return False, "SQLite 已移除，请使用 PostgreSQL"
 
     return True, "数据库配置合格"
 

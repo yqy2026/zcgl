@@ -236,6 +236,7 @@ app.add_middleware(
         "Content-Type",
         "Authorization",
         "X-Requested-With",
+        "X-Request-ID",
         "Accept",
         "Origin",
         "Access-Control-Request-Method",

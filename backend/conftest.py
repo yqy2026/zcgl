@@ -5,7 +5,6 @@ pytest全局配置文件
 
 import os
 import sys
-import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -21,7 +20,15 @@ sys.path.insert(0, str(backend_root))
 
 # 设置测试模式环境变量（在导入app之前）
 os.environ["TESTING_MODE"] = "true"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"  # 测试数据库
+os.environ["ENVIRONMENT"] = "testing"
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+if TEST_DATABASE_URL:
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+elif not os.getenv("DATABASE_URL"):
+    # Fallback placeholder to satisfy settings import in non-DB tests
+    os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost:5432/zcgl_test"
+    TEST_DATABASE_URL = None
 
 # 设置测试环境必需的环境变量
 if "SECRET_KEY" not in os.environ or os.environ["SECRET_KEY"].startswith("<generate"):
@@ -42,35 +49,22 @@ if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ[
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """创建测试数据库引擎（共享文件SQLite，确保所有连接访问同一数据库）"""
-    # 使用临时文件数据库，而不是:memory:，这样可以跨多个连接共享
-    import tempfile
+    """创建测试数据库引擎（PostgreSQL）"""
+    if not TEST_DATABASE_URL:
+        pytest.skip("TEST_DATABASE_URL is required for database tests")
 
-    # 导入所有模型以确保它们被注册到Base.metadata
-    # This imports all model classes which register themselves with Base.metadata
+    if TEST_DATABASE_URL.lower().startswith("sqlite"):
+        raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+
     import src.models  # noqa: F401 - Trigger model registration
     from src.database import Base
 
-    db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    db_path = db_file.name
-    db_file.close()
-
-    # 更新环境变量，确保database.py使用相同的数据库
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
-    engine = create_engine(
-        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}, echo=False
-    )
-    # 创建所有表
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
-
-    # 清理临时文件
-    try:
-        os.unlink(db_path)
-    except Exception:
-        pass
+    engine.dispose()
 
 
 @pytest.fixture(scope="function")

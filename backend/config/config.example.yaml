@@ -2,7 +2,7 @@
 # 复制此文件为 config.yaml 并根据需要修改配置
 
 # 数据库配置
-database_url: "sqlite:///./data/land_property.db"
+database_url: "postgresql://USERNAME:PASSWORD@localhost:5432/zcgl"
 database_echo: false
 
 # API配置
@@ -11,7 +11,7 @@ api_port: 8002
 api_title: "Land Property Asset Management API"
 
 # 安全配置
-secret_key: "your-secret-key-change-in-production"  # 生产环境必须修改
+secret_key: "REPLACE-WITH-SECURE-SECRET-KEY"  # 生产环境必须修改
 access_token_expire_minutes: 30
 
 # 文件上传配置

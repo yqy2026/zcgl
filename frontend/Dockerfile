@@ -4,6 +4,8 @@ FROM node:18-alpine AS builder
 # 设置环境变量
 ENV NODE_ENV=production
 ENV GENERATE_SOURCEMAP=false
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # 安装构建依赖
 RUN apk add --no-cache \
@@ -12,23 +14,23 @@ RUN apk add --no-cache \
     g++ \
     && rm -rf /var/cache/apk/*
 
+# 启用 pnpm
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+
 # 设置工作目录
 WORKDIR /app
 
 # 复制package文件
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # 安装依赖（包括devDependencies用于构建）
-RUN npm ci --include=dev --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN npm run build
-
-# 清理node_modules，只保留生产依赖
-RUN npm ci --only=production --frozen-lockfile && npm cache clean --force
+RUN pnpm build
 
 # 生产阶段
 FROM nginx:alpine AS production
@@ -76,11 +78,11 @@ RUN echo '<!DOCTYPE html><html><head><title>Health Check</title></head><body><h1
 USER appuser
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 80
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health.html || exit 1
+  CMD curl -f http://localhost:80/health.html || exit 1
 
 # 启动nginx
 CMD ["nginx", "-g", "daemon off;"]

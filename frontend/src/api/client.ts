@@ -269,8 +269,12 @@ export class ApiClient {
           }
         }
 
-        // Authorization header removed - backend reads auth from httpOnly cookie
-        // Cookies are automatically sent by browser with withCredentials: true
+        const accessToken = AuthStorage.getToken();
+        if (accessToken != null && accessToken.trim() !== '') {
+          if (config.headers != null && !config.headers.has('Authorization')) {
+            config.headers.set('Authorization', `Bearer ${accessToken}`);
+          }
+        }
 
         // 添加请求ID
         if (config.headers != null) {
@@ -340,7 +344,12 @@ export class ApiClient {
 
           try {
             // Try to refresh using cookie-based auth
-            await this.instance.post('/auth/refresh');
+            const storedRefreshToken = AuthStorage.getRefreshToken();
+            const refreshPayload =
+              storedRefreshToken != null && storedRefreshToken.trim() !== ''
+                ? { refresh_token: storedRefreshToken }
+                : {};
+            await this.instance.post('/auth/refresh', refreshPayload);
 
             apiLogger.info('Token refresh successful, retrying original request', {
               url: originalRequest.url,

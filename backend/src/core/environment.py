@@ -32,6 +32,13 @@ def get_environment() -> Environment:
     """
     # 检查是否明确指定了环境
     env_str = os.getenv("ENVIRONMENT", "").lower()
+    if not env_str:
+        try:
+            from .config import settings
+
+            env_str = str(getattr(settings, "ENVIRONMENT", "")).lower()
+        except Exception:
+            env_str = ""
     if env_str:
         try:
             return Environment(env_str)

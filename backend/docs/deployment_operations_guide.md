@@ -27,7 +27,7 @@ graph TB
     end
 
     subgraph "数据层 Data Layer"
-        DB[(SQLite/MySQL/PostgreSQL)]
+        DB[(PostgreSQL)]
         CACHE[(Redis Cache)]
         FILES[文件存储]
     end
@@ -85,7 +85,7 @@ graph TB
 | **Web服务器** | Nginx | 1.18+ | 负载均衡、静态文件、反向代理 |
 | **应用框架** | FastAPI | 0.104+ | API服务框架 |
 | **Python运行时** | Python | 3.9+ | 应用程序运行环境 |
-| **数据库** | SQLite/MySQL/PostgreSQL | 3.x/8.0+/13+ | 数据持久化 |
+| **数据库** | PostgreSQL | 13+ | 数据持久化 |
 | **缓存** | Redis | 6.0+ | 缓存和会话存储 |
 | **进程管理** | Gunicorn | 20.1+ | WSGI服务器 |
 | **包管理** | UV | 0.1+ | Python包管理 |
@@ -190,10 +190,8 @@ APP_ENV=production
 DEBUG=false
 SECRET_KEY=your-super-secret-key-change-this-in-production
 
-# 数据库配置
-DATABASE_URL=sqlite:///./data/asset_management.db
-# DATABASE_URL=mysql://user:password@localhost/asset_management
-# DATABASE_URL=postgresql://user:password@localhost/asset_management
+# 数据库配置（SQLite 已移除）
+DATABASE_URL=postgresql://user:password@localhost:5432/asset_management
 
 # Redis配置
 REDIS_URL=redis://localhost:6379/0
@@ -700,41 +698,37 @@ fi
 ```python
 # scripts/backup_database.py
 import os
-import shutil
 from datetime import datetime
-from sqlalchemy import create_engine
 from src.core.config import settings
 
 def backup_database():
-    """备份数据库"""
+    """备份数据库 (PostgreSQL)"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_dir = f"backups/{timestamp}"
 
     os.makedirs(backup_dir, exist_ok=True)
 
-    if "sqlite" in settings.DATABASE_URL:
-        # SQLite备份
-        db_path = settings.DATABASE_URL.replace("sqlite:///", "")
-        backup_path = os.path.join(backup_dir, "asset_management.db")
-        shutil.copy2(db_path, backup_path)
+    if not settings.DATABASE_URL.startswith("postgresql"):
+        raise ValueError("仅支持 PostgreSQL 备份")
 
-    elif "mysql" in settings.DATABASE_URL:
-        # MySQL备份
-        import subprocess
-        backup_file = os.path.join(backup_dir, "asset_management.sql")
-        cmd = f"mysqldump {settings.DATABASE_URL} > {backup_file}"
-        subprocess.run(cmd, shell=True, check=True)
+    import subprocess
 
-    elif "postgresql" in settings.DATABASE_URL:
-        # PostgreSQL备份
-        import subprocess
-        backup_file = os.path.join(backup_dir, "asset_management.sql")
-        cmd = f"pg_dump {settings.DATABASE_URL} > {backup_file}"
-        subprocess.run(cmd, shell=True, check=True)
+    backup_file = os.path.join(backup_dir, "asset_management.dump")
+    cmd = [
+        "pg_dump",
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+        "-f",
+        backup_file,
+        settings.DATABASE_URL,
+    ]
+    subprocess.run(cmd, check=True)
 
     # 备份文件
     files_backup = os.path.join(backup_dir, "uploads")
     if os.path.exists("uploads"):
+        import shutil
         shutil.copytree("uploads", files_backup)
 
     print(f"Backup completed: {backup_dir}")
@@ -860,7 +854,7 @@ uv run python -c "import fastapi, sqlalchemy, redis; print('Dependencies OK')"
 #### 数据库连接问题
 ```bash
 # 检查数据库服务状态
-sudo systemctl status mysql  # 或 postgresql
+sudo systemctl status postgresql
 
 # 测试数据库连接
 uv run python -c "
@@ -873,7 +867,7 @@ except Exception as e:
 "
 
 # 检查数据库权限
-mysql -u root -p -e "SHOW GRANTS FOR 'asset_user'@'localhost';"
+psql -d zcgl_db -c "SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE grantee='asset_user';"
 ```
 
 #### Redis连接问题

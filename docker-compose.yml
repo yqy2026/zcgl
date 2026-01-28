@@ -5,12 +5,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        VITE_API_BASE_URL: /api/v1
     container_name: zcgl-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
-    environment:
-      - VITE_API_BASE_URL=http://backend:8002/api/v1
     depends_on:
       - backend
     networks:
@@ -26,8 +26,14 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql://zcgl_user:zcgl_password@postgres:5432/zcgl
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_ENABLED=true
+      - SECRET_KEY=${SECRET_KEY}
+      - DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY}
       - CORS_ORIGINS=http://localhost:3000,http://frontend:80
       - API_PORT=8002
     depends_on:
@@ -73,13 +79,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=zcgl
-      - POSTGRES_USER=zcgl_user
-      - POSTGRES_PASSWORD=zcgl_password
+      - POSTGRES_DB=${POSTGRES_DB:-zcgl}
+      - POSTGRES_USER=${POSTGRES_USER:-zcgl_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zcgl_user -d zcgl"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # 应用基本信息
     APP_NAME: str = "土地物业资产管理系统"
     APP_VERSION: str = "1.0.0"
+    ENVIRONMENT: str = Field(
+        default="development", json_schema_extra={"env": "ENVIRONMENT"}
+    )
     DEBUG: bool = Field(default=False, json_schema_extra={"env": "DEBUG"})
     API_V1_STR: str = "/api/v1"
     ALLOW_MOCK_REGISTRY: bool = Field(
@@ -47,7 +50,7 @@ class Settings(BaseSettings):
 
     # 数据库配置
     DATABASE_URL: str = Field(
-        default="sqlite:///./land_property.db",
+        default="",
         json_schema_extra={"env": "DATABASE_URL"},
     )
     DATABASE_ECHO: bool = Field(
@@ -87,6 +90,8 @@ class Settings(BaseSettings):
         default=[
             "http://localhost:5173",
             "http://localhost:5174",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
             "http://localhost:5175",
         ],
         json_schema_extra={"env": "CORS_ORIGINS"},
@@ -354,8 +359,13 @@ class Settings(BaseSettings):
         is_too_short = len(v) < 32
 
         # 生产环境强制检查
-        # 直接从环境变量读取，因为 ENVIRONMENT 不是 Settings 的字段
-        environment = os.getenv("ENVIRONMENT", "production")
+        # 优先使用Settings中的ENVIRONMENT，其次回退到环境变量
+        environment = (
+            (info.data or {}).get("ENVIRONMENT")
+            or os.getenv("ENVIRONMENT")
+            or "production"
+        )
+        environment = environment.lower()
 
         if environment == "production":
             if is_weak_pattern:
@@ -537,8 +547,12 @@ class Settings(BaseSettings):
         处理所有安全检查并根据环境记录警告或抛出错误
         """
         warnings = []
-        is_testing = os.getenv("TESTING_MODE", "false").lower() == "true"
-        is_production = os.getenv("ENVIRONMENT", "production") == "production"
+        environment = (self.ENVIRONMENT or "production").lower()
+        is_testing = (
+            environment == "testing"
+            or os.getenv("TESTING_MODE", "false").lower() == "true"
+        )
+        is_production = environment == "production"
 
         # 1. JWT 密钥安全性检查
         insecure_keys = [
@@ -574,10 +588,11 @@ class Settings(BaseSettings):
             msg = "警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。"
             warnings.append(msg)
 
-        # 4. 数据库配置检查
-        if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            if is_production:
-                warnings.append("提醒: 生产环境建议使用 PostgreSQL 而非默认 SQLite。")
+        # 4. 数据库配置检查（SQLite 已移除）
+        if self.DATABASE_URL.startswith("sqlite://"):
+            allow_sqlite_for_tests = os.getenv("ALLOW_SQLITE_FOR_TESTS", "false").lower()
+            if not (is_testing and allow_sqlite_for_tests == "true"):
+                raise ValueError("SQLite 已移除，请配置 PostgreSQL 数据库")
 
         # 5. 记录警告
         if warnings and not is_testing:
@@ -597,7 +612,7 @@ class Settings(BaseSettings):
 settings = Settings()  # type: ignore[call-arg]
 
 # 根据环境变量覆盖配置
-if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover
+if settings.ENVIRONMENT == "production":  # pragma: no cover
     settings.DEBUG = False  # pragma: no cover
     settings.DATABASE_ECHO = False  # pragma: no cover
     # 从环境变量读取生产域名，如未设置则使用默认值并记录警告
@@ -612,7 +627,7 @@ if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover
         logging.getLogger(__name__).warning(  # pragma: no cover
             "CORS_ORIGINS not set for production. Set CORS_ORIGINS env var."
         )  # pragma: no cover
-elif os.getenv("ENVIRONMENT") == "development":  # pragma: no cover
+elif settings.ENVIRONMENT == "development":  # pragma: no cover
     settings.DEBUG = True  # pragma: no cover
     settings.RELOAD = True  # pragma: no cover
 
@@ -623,7 +638,9 @@ def validate_config() -> None:
     import os
 
     # 检查是否为测试模式
-    is_testing = os.getenv("TESTING_MODE", "false").lower() == "true"
+    is_testing = settings.ENVIRONMENT == "testing" or (
+        os.getenv("TESTING_MODE", "false").lower() == "true"
+    )
 
     required_fields = [
         "DATABASE_URL",

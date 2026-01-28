@@ -15,6 +15,7 @@ import {
   SettingOutlined,
   EditOutlined,
   EyeOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -41,6 +42,8 @@ const AppBreadcrumb: React.FC = () => {
     '/system/logs': { name: '操作日志', icon: <SettingOutlined /> },
     '/system/dictionaries': { name: '枚举值字段', icon: <SettingOutlined /> },
     '/ownership': { name: '权属方管理', icon: <SettingOutlined /> },
+    '/property-certificates': { name: '产权证管理', icon: <FileTextOutlined /> },
+    '/property-certificates/import': { name: '导入产权证', icon: <UploadOutlined /> },
   };
 
   // 生成面包屑项
@@ -146,6 +149,37 @@ const AppBreadcrumb: React.FC = () => {
       ];
     }
 
+    const certificateDetailMatch = pathname.match(/^\/property-certificates\/([^/]+)$/);
+    if (certificateDetailMatch !== undefined && certificateDetailMatch !== null) {
+      return [
+        ...breadcrumbItems,
+        {
+          title: (
+            <Link to="/assets/list">
+              <UnorderedListOutlined style={{ marginRight: 4 }} />
+              资产管理
+            </Link>
+          ),
+        },
+        {
+          title: (
+            <Link to="/property-certificates">
+              <FileTextOutlined style={{ marginRight: 4 }} />
+              产权证管理
+            </Link>
+          ),
+        },
+        {
+          title: (
+            <span>
+              <EyeOutlined style={{ marginRight: 4 }} />
+              产权证详情
+            </span>
+          ),
+        },
+      ];
+    }
+
     // 构建普通路径的面包屑
     let currentPath = '';
 
@@ -186,6 +220,27 @@ const AppBreadcrumb: React.FC = () => {
     // 添加分类面包屑
     if (
       pathname.startsWith('/assets') &&
+      !breadcrumbItems.some(
+        item =>
+          typeof item.title === 'object' &&
+          React.isValidElement(item.title) &&
+          (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.(
+            '资产管理'
+          ) === true
+      )
+    ) {
+      breadcrumbItems.splice(1, 0, {
+        title: (
+          <span>
+            <UnorderedListOutlined style={{ marginRight: 4 }} />
+            资产管理
+          </span>
+        ),
+      });
+    }
+
+    if (
+      pathname.startsWith('/property-certificates') &&
       !breadcrumbItems.some(
         item =>
           typeof item.title === 'object' &&

@@ -151,6 +151,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
 
         try:
+            if request.method == HTTPMethods.OPTIONS:
+                return await call_next(request)
+
             # 检查IP是否被封禁
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")

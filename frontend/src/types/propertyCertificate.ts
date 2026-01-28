@@ -122,4 +122,5 @@ export interface PropertyCertificateUpdate {
   restrictions?: string | null;
   remarks?: string | null;
   verified?: boolean;
+  asset_ids?: string[];
 }

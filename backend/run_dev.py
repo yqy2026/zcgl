@@ -45,6 +45,19 @@ if __name__ == "__main__":
         print("  SECRET_KEY=<生成的密钥>")
         sys.exit(1)
 
+    # 检查 DATABASE_URL（SQLite 已移除）
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        print("🚨 错误: DATABASE_URL 未设置")
+        print("本项目已移除 SQLite，本地开发必须使用 PostgreSQL")
+        print("请在 backend/.env 中设置，例如:")
+        print("  DATABASE_URL=postgresql://user:password@localhost:5432/zcgl")
+        sys.exit(1)
+
+    if database_url.startswith("sqlite://"):
+        print("🚨 错误: SQLite 已移除，本项目仅支持 PostgreSQL。")
+        sys.exit(1)
+
     # 检查 DATA_ENCRYPTION_KEY（用于PII数据加密）
     data_encryption_key = os.getenv("DATA_ENCRYPTION_KEY", "")
     if not data_encryption_key:
@@ -66,6 +79,8 @@ if __name__ == "__main__":
             sys.exit(1)
 
     print("启动开发服务器 (DEV_MODE=true)")
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT") or os.getenv("PORT", "8002"))
     uvicorn.run(
-        "src.main:app", host="0.0.0.0", port=8002, reload=True, log_level="info"
+        "src.main:app", host=host, port=port, reload=True, log_level="info"
     )

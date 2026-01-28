@@ -2,7 +2,7 @@
 
 > **版本**: v2.0
 > **更新日期**: 2026-01-23
-> **数据库**: SQLite (开发) / PostgreSQL (生产)
+> **数据库**: PostgreSQL
 > **ORM**: SQLAlchemy 2.0
 
 ---

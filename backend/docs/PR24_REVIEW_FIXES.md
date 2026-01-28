@@ -179,11 +179,11 @@ except Exception as audit_error:
 **文件**: `tests/integration/test_postgresql_migration.py:777-834`
 
 **测试用例**:
-1. `test_production_environment_rejects_sqlite` - 验证生产环境拒绝SQLite
+1. `test_production_environment_rejects_non_postgres` - 验证生产环境拒绝非 PostgreSQL 数据库
 2. `test_production_environment_requires_database_url` - 验证生产环境需要DATABASE_URL
 
 **覆盖的行为**:
-- ✅ 生产环境使用SQLite时抛出 `ValueError`
+- ✅ 生产环境使用非 PostgreSQL 数据库时抛出 `ValueError`
 - ✅ 生产环境缺少 `DATABASE_URL` 时抛出 `ValueError`
 - ✅ 错误消息清晰说明问题
 

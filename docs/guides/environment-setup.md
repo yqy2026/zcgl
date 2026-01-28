@@ -96,13 +96,9 @@ TOKEN_BLACKLIST_ENABLED=true
 
 #### 3. 数据库配置
 ```bash
-# PostgreSQL (开发/测试/生产推荐)
+# PostgreSQL (开发/测试/生产必需)
 DATABASE_URL=postgresql://username:password@host:5432/database_name
 TEST_DATABASE_URL=postgresql://username:password@host:5432/test_database_name
-
-# SQLite (仅开发后备)
-# DATABASE_URL=sqlite:///./data/land_property.db
-# ALLOW_SQLITE_FALLBACK=true
 
 # 连接池配置 (PostgreSQL)
 # DATABASE_POOL_SIZE=20
@@ -278,7 +274,7 @@ Vite 按以下优先级加载环境变量:
 ```bash
 # backend/.env
 DEBUG=true
-DATABASE_URL=sqlite:///./database/data/zcgl.db
+DATABASE_URL=postgresql://user:password@localhost:5432/zcgl
 REDIS_ENABLED=false
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 LOG_LEVEL=DEBUG
@@ -293,7 +289,7 @@ VITE_SOURCEMAP=true
 
 **特点**:
 - ✅ 详细的调试日志
-- ✅ SQLite 轻量数据库
+- ✅ PostgreSQL 数据库（与生产一致）
 - ✅ 热重载
 - ✅ Source Map 支持
 
@@ -448,11 +444,13 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 **解决**:
 ```bash
 # 检查 DATABASE_URL 格式
-# SQLite: sqlite:///./database/data/zcgl.db
 # PostgreSQL: postgresql://user:pass@host:port/db
 
-# 检查数据库文件权限
-ls -la database/data/
+# 确认 PostgreSQL 服务运行
+pg_isready -h host -p port
+
+# 用 psql 验证连接
+psql "$DATABASE_URL" -c "SELECT 1;"
 ```
 
 ### Q4: Redis 连接失败

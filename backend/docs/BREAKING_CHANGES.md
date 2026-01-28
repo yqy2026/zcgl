@@ -79,24 +79,21 @@ else:
 
 ---
 
-### 2. 生产环境DATABASE_URL验证
+### 2. DATABASE_URL 验证（SQLite 已移除）
 
-**影响范围**: 生产环境部署配置
+**影响范围**: 所有环境部署配置
 
 **变更内容**:
-- 生产环境 (`ENVIRONMENT=production`) 必须使用 PostgreSQL
-- SQLite URL 在生产环境将被拒绝，应用将启动失败
+- 所有环境必须使用 PostgreSQL
+- SQLite URL 已被移除，所有环境将被拒绝，应用将启动失败
 - 强制验证 `DATABASE_URL` 格式和有效性
 
 **错误消息示例**:
 ```
-ValueError: 生产环境必须使用PostgreSQL数据库！
-当前配置: SQLite
-请配置DATABASE_URL为PostgreSQL连接字符串
-帮助文档: docs/POSTGRESQL_MIGRATION.md
+ValueError: SQLite 已移除，请配置 PostgreSQL 数据库
 ```
 
-**正确配置 (生产环境)**:
+**正确配置 (任意环境)**:
 ```bash
 # .env
 ENVIRONMENT=production
@@ -118,15 +115,15 @@ PGDATABASE=zcgl_prod
 ```bash
 # .env (development)
 ENVIRONMENT=development
-# 可选: 不设置 DATABASE_URL 将使用默认 SQLite
-DATABASE_URL=sqlite:///./data/land_property.db
+# SQLite 已移除，开发环境也必须使用 PostgreSQL
+DATABASE_URL=postgresql://user:password@localhost:5432/zcgl_dev
 ```
 
 **升级检查清单**:
-- [ ] 检查所有生产环境配置文件
-- [ ] 确认生产环境设置 `DATABASE_URL` 为 PostgreSQL
-- [ ] 移除生产环境中的 SQLite 配置
-- [ ] 测试生产环境启动流程
+- [ ] 检查所有环境配置文件
+- [ ] 确认所有环境设置 `DATABASE_URL` 为 PostgreSQL
+- [ ] 移除所有环境中的 SQLite 配置
+- [ ] 测试各环境启动流程
 - [ ] 更新部署文档和CI/CD配置
 
 ---
@@ -152,8 +149,7 @@ grep -r "try:.*run_health_check" --include="*.py" src/ tests/
 # 运行相关测试
 pytest tests/integration/test_postgresql_migration.py::TestPostgreSQLHealthCheck -v
 
-# 验证生产环境配置拒绝SQLite
-ENVIRONMENT=production DATABASE_URL=sqlite:///test.db python -c "from src.database import get_database_url"
+# 确认 DATABASE_URL 使用 PostgreSQL 且配置完整
 ```
 
 ---

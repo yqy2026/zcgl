@@ -14,9 +14,11 @@
 ## ✅ Status
 **当前状态**: Active (2026-01-27 更新)
 **适用版本**: v2.0.0
-**支持数据库**: PostgreSQL (开发/测试/生产), SQLite (开发后备), MySQL (可选)
+**支持数据库**: PostgreSQL (开发/测试/生产)。SQLite 已移除。
 
 ---
+
+> ⚠️ SQLite 已移除。本文档以 PostgreSQL 为准。
 
 ## 🗄️ 数据库架构概述
 
@@ -25,8 +27,6 @@
 | 数据库 | 开发环境 | 测试环境 | 生产环境 | 说明 |
 |--------|----------|----------|----------|------|
 | **PostgreSQL** | ✅ 推荐 | ✅ 推荐 | ✅ 强烈推荐 | 功能强大，支持高并发，数据一致性好 |
-| **SQLite** | ✅ 后备 | ❌ 不推荐 | ❌ 不推荐 | 轻量级，允许开发后备使用 |
-| **MySQL** | ✅ 可选 | ✅ 可选 | ✅ 可选 | 广泛使用，社区支持好 |
 
 ### 核心数据模型
 
@@ -100,26 +100,6 @@ python -c "from src.database import get_database_status; print(get_database_stat
 - **数据库模块**: `backend/src/database.py`
 - **模型定义**: `backend/src/models/`
 
-### SQLite 配置
-
-```bash
-# backend/.env
-DATABASE_URL=sqlite:///./data/land_property.db
-DATABASE_ECHO=false
-
-# 开发后备开关（仅用于 development/testing）
-ALLOW_SQLITE_FALLBACK=true
-```
-
-**SQLite 连接优化** (自动应用):
-```python
-PRAGMA foreign_keys=ON          # 外键约束
-PRAGMA journal_mode=WAL         # 写前日志模式
-PRAGMA synchronous=NORMAL       # 同步模式
-PRAGMA cache_size=10000         # 缓存大小
-PRAGMA temp_store=MEMORY        # 临时存储在内存
-```
-
 ### PostgreSQL 配置
 
 ```bash
@@ -141,15 +121,6 @@ DATABASE_POOL_PRE_PING=true
 - `pool_timeout`: 获取连接超时时间（秒）
 - `pool_recycle`: 连接回收时间（秒），防止连接过期
 - `pool_pre_ping`: 连接前测试可用性
-
-### MySQL 配置
-
-```bash
-# backend/.env
-DATABASE_URL=mysql+pymysql://zcgl_user:password@localhost:3306/zcgl_db?charset=utf8mb4
-```
-
----
 
 ## 🔄 Alembic 数据库迁移
 
@@ -300,11 +271,8 @@ python -c "from src.database import get_database_status; print(get_database_stat
 ### 方式三：使用 SQL 初始化脚本
 
 ```bash
-# 对于 SQLite，可以使用现有的 SQL 脚本
+# 使用 PostgreSQL 初始化脚本
 cd database
-sqlite3 assets.db < init.sql
-
-# 对于 PostgreSQL
 psql -U zcgl_user -d zcgl_db -f init.sql
 ```
 
@@ -313,19 +281,6 @@ psql -U zcgl_user -d zcgl_db -f init.sql
 ---
 
 ## 💾 数据库备份与恢复
-
-### SQLite 备份与恢复
-
-```bash
-# 备份
-cp database/data/zcgl.db database/data/zcgl_backup_$(date +%Y%m%d_%H%M%S).db
-
-# 或使用 SQLite 命令
-sqlite3 database/data/zcgl.db ".backup database/data/zcgl_backup.db"
-
-# 恢复
-cp database/data/zcgl_backup.db database/data/zcgl.db
-```
 
 ### PostgreSQL 备份与恢复
 
@@ -376,19 +331,6 @@ echo "备份完成: backup_${TIMESTAMP}.sql.gz"
 ---
 
 ## 📊 数据库性能优化
-
-### SQLite 优化配置
-
-**已自动应用的优化** (`backend/src/database.py:208-223`):
-```python
-PRAGMA foreign_keys=ON          # 启用外键约束
-PRAGMA journal_mode=WAL         # 写前日志，提高并发性能
-PRAGMA synchronous=NORMAL       # 平衡性能和安全
-PRAGMA cache_size=10000         # 增加缓存
-PRAGMA temp_store=MEMORY        # 临时表使用内存
-PRAGMA optimize                 # 优化数据库
-PRAGMA wal_autocheckpoint=1000  # WAL 自动检查点
-```
 
 ### PostgreSQL 优化建议
 
@@ -455,21 +397,18 @@ LIMIT 10;
 ## 🚨 常见问题排除
 
 ### Q1: 数据库连接失败
-**问题**: `OperationalError: unable to open database file`
+**问题**: `OperationalError: could not connect to server`
 
 **解决方案**:
 ```bash
-# 1. 检查数据库目录权限
-ls -la database/data/
-
-# 2. 确保目录存在
-mkdir -p database/data
-
-# 3. 检查数据库文件路径
+# 1. 检查 DATABASE_URL 配置
 echo $DATABASE_URL
 
-# 4. SQLite: 检查文件权限
-chmod 644 database/data/zcgl.db
+# 2. 确认 PostgreSQL 服务运行
+pg_isready -h host -p port
+
+# 3. 验证连接和权限
+psql "$DATABASE_URL" -c "SELECT 1;"
 ```
 
 ### Q2: PostgreSQL 连接被拒绝
@@ -514,7 +453,7 @@ alembic upgrade head
 ```
 
 ### Q4: 表已存在错误
-**问题**: `sqlalchemy.exc.ProgrammingError: (sqlite3.OperationalError) table assets already exists`
+**问题**: `sqlalchemy.exc.ProgrammingError: (psycopg2.errors.DuplicateTable) relation "assets" already exists`
 
 **解决方案**:
 ```bash
@@ -533,8 +472,8 @@ alembic stamp head
 
 **解决方案**:
 ```bash
-# 1. 确认外键已启用（SQLite）
-sqlite3 database/data/zcgl.db "PRAGMA foreign_keys=ON;"
+# 1. 检查外键定义
+psql -d zcgl_db -c "\d+ ownerships"
 
 # 2. 检查数据完整性
 python -c "
@@ -550,22 +489,18 @@ print(f'Found {len(orphans)} orphaned ownerships')
 ```
 
 ### Q6: 数据库锁定
-**问题**: `sqlite3.OperationalError: database is locked`
+**问题**: `psycopg2.errors.LockNotAvailable` 或 `deadlock detected`
 
 **解决方案**:
 ```bash
-# 1. 检查是否有其他进程占用
-lsof database/data/zcgl.db
+# 1. 查看阻塞会话
+psql -d zcgl_db -c "SELECT pid, state, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state <> 'idle';"
 
-# 2. 关闭其他连接
+# 2. 终止阻塞会话（谨慎使用）
+psql -d zcgl_db -c "SELECT pg_terminate_backend(<pid>);"
 
-# 3. 删除锁文件（谨慎使用）
-rm -f database/data/zcgl.db-wal database/data/zcgl.db-shm
-
-# 4. 或使用连接池
-# 在 .env 中配置连接池参数
-DATABASE_POOL_SIZE=5
-DATABASE_MAX_OVERFLOW=10
+# 3. 为应用设置锁超时（可选）
+psql -d zcgl_db -c "ALTER DATABASE zcgl_db SET lock_timeout = '5s';"
 ```
 
 ---
@@ -574,8 +509,8 @@ DATABASE_MAX_OVERFLOW=10
 
 ### 开发环境初始化
 - [ ] 环境变量 `DATABASE_URL` 已配置
-- [ ] 数据库目录已创建 (`database/data/`)
-- [ ] 数据库文件已初始化
+- [ ] PostgreSQL 数据库已创建
+- [ ] 数据库 schema 已初始化
 - [ ] Alembic 迁移已应用
 - [ ] 基础数据已导入（如有）
 - [ ] 应用能正常连接数据库
@@ -613,7 +548,7 @@ DATABASE_MAX_OVERFLOW=10
 
 ### 2025-12-23 v1.0.0 - 初始版本
 - ✨ 新增：数据库配置和初始化完整指南
-- 🗄️ 新增：SQLite、PostgreSQL、MySQL 配置说明
+- 🗄️ 新增：PostgreSQL 配置说明
 - 🔄 新增：Alembic 迁移工作流程
 - 💾 新增：备份和恢复操作指南
 - 📊 新增：性能优化建议

@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # E2E tests use file database (not memory)
-TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL", "sqlite:///./test_e2e.db")
+TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
 
 
 def create_test_user(
@@ -57,29 +57,23 @@ def create_test_user(
 @pytest.fixture(scope="session")
 def test_database_url():
     """Provide the test database URL."""
+    if TEST_DATABASE_URL:
+        os.environ["DATABASE_URL"] = TEST_DATABASE_URL
     return TEST_DATABASE_URL
 
 
 @pytest.fixture(scope="session")
 def engine(test_database_url):
     """Create database engine for tests."""
-    engine = create_engine(
-        test_database_url,
-        connect_args={"check_same_thread": False}
-        if "sqlite" in test_database_url
-        else {},
-        pool_pre_ping=True,
-    )
-    yield engine
+    if not test_database_url:
+        pytest.skip("E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required", allow_module_level=True)
 
-    # Clean up SQLite database file
-    if "sqlite" in test_database_url and "test_e2e.db" in test_database_url:
-        db_path = test_database_url.replace("sqlite:///", "")
-        if os.path.exists(db_path):
-            try:
-                os.remove(db_path)
-            except PermissionError:
-                pass
+    if test_database_url.startswith("sqlite"):
+        raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+
+    engine = create_engine(test_database_url, pool_pre_ping=True)
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture(scope="session")

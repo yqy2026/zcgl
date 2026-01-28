@@ -5,6 +5,7 @@ Asset Model Tests
 Tests for the Asset model - core business entity for property/asset management.
 """
 
+import os
 import pytest
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -20,8 +21,15 @@ class TestAssetModelCreation:
 
     @pytest.fixture
     def engine(self):
-        """Create in-memory database for testing"""
-        engine = create_engine("sqlite:///:memory:")
+        """Create database engine for testing"""
+        database_url = (
+            os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+        )
+        if not database_url:
+            pytest.skip("TEST_DATABASE_URL or DATABASE_URL is required", allow_module_level=True)
+        if database_url.startswith("sqlite"):
+            raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+        engine = create_engine(database_url, pool_pre_ping=True)
         Base.metadata.create_all(engine)
         return engine
 

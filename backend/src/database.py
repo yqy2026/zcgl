@@ -20,7 +20,7 @@ from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
-from sqlalchemy.pool import QueuePool, StaticPool
+from sqlalchemy.pool import QueuePool
 
 from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
@@ -131,30 +131,21 @@ class DatabaseManager:
             "future": True,
         }
 
-        # 根据数据库类型配置连接池
+        # 根据数据库类型配置连接池（SQLite 已移除）
         if "sqlite" in database_url.lower():
-            engine_kwargs.update(
-                {
-                    "poolclass": StaticPool,
-                    "connect_args": {
-                        "check_same_thread": False,
-                        "timeout": DatabasePoolConfig.SQLITE_TIMEOUT_SECONDS,
-                        "isolation_level": None,
-                    },
-                }
-            )
-        else:  # pragma: no cover
-            engine_kwargs.update(  # pragma: no cover
-                {
-                    "poolclass": QueuePool,  # pragma: no cover
-                    "pool_size": self.config.pool_size,  # pragma: no cover
-                    "max_overflow": self.config.max_overflow,  # pragma: no cover
-                    "pool_timeout": self.config.pool_timeout,  # pragma: no cover
-                    "pool_recycle": self.config.pool_recycle,  # pragma: no cover
-                    "pool_pre_ping": self.config.pool_pre_ping,  # pragma: no cover
-                    "connect_args": self.config.connect_args,  # pragma: no cover
-                }  # pragma: no cover
-            )
+            raise ValueError("SQLite 已移除，请使用 PostgreSQL 连接字符串")
+
+        engine_kwargs.update(
+            {
+                "poolclass": QueuePool,
+                "pool_size": self.config.pool_size,
+                "max_overflow": self.config.max_overflow,
+                "pool_timeout": self.config.pool_timeout,
+                "pool_recycle": self.config.pool_recycle,
+                "pool_pre_ping": self.config.pool_pre_ping,
+                "connect_args": self.config.connect_args,
+            }
+        )
 
         try:
             self.engine = create_engine(database_url, **engine_kwargs)
@@ -268,8 +259,6 @@ class DatabaseManager:
             with self._metrics_lock:
                 self.metrics.active_connections += 1
                 self.metrics.last_activity = datetime.now()
-                if self.engine and "sqlite" in str(self.engine.url).lower():
-                    self._optimize_sqlite_connection(dbapi_connection)
 
         @event.listens_for(self.engine, "checkout")
         def on_checkout(
@@ -344,26 +333,6 @@ class DatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
-    def _optimize_sqlite_connection(self, dbapi_connection: DBAPIConnection) -> None:
-        """优化SQLite连接"""
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute(f"PRAGMA cache_size={DatabasePoolConfig.SQLITE_CACHE_SIZE}")
-            cursor.execute("PRAGMA temp_store=MEMORY")
-            cursor.execute("PRAGMA optimize")
-            cursor.execute(
-                f"PRAGMA wal_autocheckpoint={DatabasePoolConfig.SQLITE_WAL_AUTOCHECKPOINT}"
-            )
-            logger.debug("SQLite连接优化完成")
-        except Exception as e:  # pragma: no cover
-            logger.error(f"优化SQLite连接时出错: {e}")  # pragma: no cover
-        finally:
-            cursor.close()
-
-    @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
         """获取数据库会话"""
         if not self.session_factory:
@@ -466,59 +435,18 @@ def get_database_url() -> str:
     database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
-        environment = os.getenv("ENVIRONMENT", "production")
-
-        if environment == "production":
-            logger.critical(
-                "生产环境必须设置DATABASE_URL环境变量",
-                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
-            )
-            raise ValueError(
-                "生产环境必须设置DATABASE_URL环境变量！\n"
-                "请在.env文件中配置:\n"
-                "DATABASE_URL=postgresql://user:password@host:port/database\n"
-                "或: DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
-                "帮助文档: docs/POSTGRESQL_MIGRATION.md"
-            )
-        elif environment in ["development", "testing"]:
-            # ✅ 修复: 开发环境需要显式启用SQLite回退
-            # 避免意外的配置错误被静默掩盖
-            use_sqlite_fallback = (
-                os.getenv("ALLOW_SQLITE_FALLBACK", "false").lower() == "true"
-            )
-
-            if use_sqlite_fallback:
-                logger.warning(
-                    "未设置DATABASE_URL，使用SQLite后备数据库（已通过ALLOW_SQLITE_FALLBACK显式启用）",
-                    extra={
-                        "error_id": ErrorIDs.Database.SQLITE_FALLBACK_EXPLICIT,
-                        "fallback_enabled": "true",
-                    },
-                )
-                return "sqlite:///./data/land_property.db"
-            else:
-                # ✅ 快速失败: 不允许静默使用错误的数据库
-                logger.critical(
-                    "开发环境未设置DATABASE_URL",
-                    extra={
-                        "error_id": ErrorIDs.Database.MISSING_DATABASE_URL_DEV,
-                        "hint": "请设置DATABASE_URL或设置ALLOW_SQLITE_FALLBACK=true",
-                    },
-                )
-                raise ValueError(
-                    "开发环境必须设置DATABASE_URL环境变量！\n"
-                    "如需使用SQLite后备，请设置 ALLOW_SQLITE_FALLBACK=true\n"
-                    "推荐: DATABASE_URL=postgresql://user:pass@localhost:5432/zcgl_db\n"
-                    "或: DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl_db\n"
-                    "帮助文档: docs/POSTGRESQL_MIGRATION.md"
-                )
-        else:
-            # staging等其他环境
-            logger.critical(
-                f"环境 '{environment}' 必须设置DATABASE_URL",
-                extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL_STAGING},
-            )
-            raise ValueError(f"环境 '{environment}' 必须设置DATABASE_URL环境变量！")
+        environment = os.getenv("ENVIRONMENT", "development")
+        logger.critical(
+            f"环境 '{environment}' 未设置DATABASE_URL",
+            extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
+        )
+        raise ValueError(
+            "必须设置DATABASE_URL环境变量（SQLite已移除）。\n"
+            "请在.env文件中配置:\n"
+            "DATABASE_URL=postgresql://user:password@host:port/database\n"
+            "或: DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
+            "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+        )
 
     # 验证PostgreSQL URL格式
     if database_url.startswith(("postgresql://", "postgresql+psycopg://")):
@@ -554,36 +482,15 @@ def get_database_url() -> str:
                 f"示例: postgresql://postgres:password@localhost:5432/zcgl_db"
             ) from e
 
-    # 验证SQLite URL
+    # SQLite 已移除
     elif database_url.startswith("sqlite://"):
-        environment = os.getenv("ENVIRONMENT", "production")
-        if environment == "production":
-            logger.critical(
-                "生产环境禁止使用SQLite数据库",
-                extra={"error_id": ErrorIDs.Database.SQLITE_IN_PRODUCTION},
-            )
+        environment = os.getenv("ENVIRONMENT", "development").lower()
+        allow_sqlite_for_tests = os.getenv("ALLOW_SQLITE_FOR_TESTS", "false").lower()
+        if not (environment == "testing" and allow_sqlite_for_tests == "true"):
             raise ValueError(
-                "生产环境必须使用PostgreSQL数据库！\n"
-                "当前配置: SQLite\n"
-                "请配置DATABASE_URL为PostgreSQL连接字符串\n"
-                "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+                "SQLite 已移除，必须使用 PostgreSQL 连接字符串。\n"
+                "请配置 DATABASE_URL=postgresql://user:password@host:port/database"
             )
-
-        # 验证SQLite路径
-        try:
-            from urllib.parse import urlparse
-
-            parsed = urlparse(database_url)
-            db_path = parsed.path
-
-            if not db_path or db_path == "/":
-                raise ValueError("SQLite数据库路径为空")
-
-        except Exception as e:
-            logger.error(
-                f"SQLite URL验证失败: {e}", extra={"error_id": "SQLITE_URL_INVALID"}
-            )
-            raise ValueError(f"SQLite数据库URL格式错误: {e}") from e
 
     else:
         logger.error(
@@ -591,7 +498,7 @@ def get_database_url() -> str:
             extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
         )
         raise ValueError(
-            f"不支持的数据库类型。支持: postgresql://, postgresql+psycopg://, sqlite://\n"
+            "不支持的数据库类型。支持: postgresql://, postgresql+psycopg://\n"
             f"当前URL: {database_url[:50]}"
         )
 
@@ -600,14 +507,6 @@ def get_database_url() -> str:
 
 # 向后兼容的模块级变量（现在通过函数获取）
 DATABASE_URL = get_database_url()
-
-# 确保SQLite数据目录存在
-if "sqlite" in DATABASE_URL.lower():
-    db_path = DATABASE_URL.replace("sqlite:///", "")
-    db_dir = os.path.dirname(db_path)
-    if db_dir and not os.path.exists(db_dir):  # pragma: no cover
-        os.makedirs(db_dir, exist_ok=True)  # pragma: no cover
-        logger.info(f"Created database directory: {db_dir}")  # pragma: no cover
 
 # 全局数据库管理器实例（延迟初始化）
 _database_manager: DatabaseManager | None = None
@@ -707,6 +606,7 @@ def create_tables() -> None:
     """创建所有数据库表"""
     _init_globals()
     if engine:
+        import src.models
         Base.metadata.create_all(bind=engine)
         logger.info("数据库表创建完成")
 

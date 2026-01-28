@@ -159,10 +159,14 @@ export class AuthService {
   // 刷新令牌
   static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
     try {
-      // Refresh token is now in httpOnly cookie, sent automatically
+      const storedRefreshToken = AuthStorage.getRefreshToken();
+      const refreshPayload =
+        storedRefreshToken != null && storedRefreshToken.trim() !== ''
+          ? { refresh_token: storedRefreshToken }
+          : {};
       const result = await apiClient.post(
         AUTH_API.REFRESH,
-        {}, // Empty body - refresh token is in cookie
+        refreshPayload,
         {
           retry: {
             maxAttempts: 2,

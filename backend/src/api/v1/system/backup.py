@@ -17,6 +17,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
+from ....core.config import settings
 from ....database import get_db
 from ....services.backup import BackupService
 
@@ -51,14 +52,14 @@ async def create_backup(
         # 使用BackupService创建备份
         service = BackupService(backup_dir=BACKUP_DIR)
 
-        # 从数据库连接获取数据库文件路径（SQLite）
-        db_path: str | None = None
+        # 从数据库连接获取数据库URL
+        db_url: str | None = None
         if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
-            if db_url.startswith("sqlite:///"):
-                db_path = db_url.replace("sqlite:///", "")
+        if not db_url:
+            db_url = settings.DATABASE_URL or None
 
-        result = service.create_backup(backup_name=backup_name, db_path=db_path)
+        result = service.create_backup(backup_name=backup_name, database_url=db_url)
 
         logger.info(f"数据备份创建成功: {result['backup_path']}")
 
@@ -166,16 +167,16 @@ async def restore_backup(
         # 使用BackupService恢复备份
         service = BackupService(backup_dir=BACKUP_DIR)
 
-        # 从数据库连接获取数据库文件路径（SQLite）
-        db_path: str | None = None
+        # 从数据库连接获取数据库URL
+        db_url: str | None = None
         if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
-            if db_url.startswith("sqlite:///"):
-                db_path = db_url.replace("sqlite:///", "")
+        if not db_url:
+            db_url = settings.DATABASE_URL or None
 
         result = service.restore_backup(
             backup_name=backup_name,
-            db_path=db_path,
+            database_url=db_url,
             create_current_backup=True,
         )
 

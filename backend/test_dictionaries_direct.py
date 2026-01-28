@@ -6,7 +6,7 @@ import os
 # 设置环境变量
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["TESTING_MODE"] = "true"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://user:pass@localhost:5432/zcgl_test")
 os.environ["SECRET_KEY"] = "E0ocpsl2ek0uCNqh65GUSKwMUy9m20BAMXiTGXvkxm4"
 
 sys.path.insert(0, ".")

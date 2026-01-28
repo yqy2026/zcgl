@@ -51,18 +51,18 @@ graph TB
         E --> H
         F --> H
         G --> H
-        D --> I[(SQLite Fallback)]
+        
     end
 
     subgraph "监控和日志 Monitoring & Logging"
-        E --> I[Metrics Collection]
+        E --> M[Metrics Collection]
         F --> J[Health Reports]
         G --> K[Optimization Logs]
     end
 
     style C fill:#e1f5fe
     style H fill:#f3e5f5
-    style I fill:#e8f5e8
+    style M fill:#e8f5e8
     style J fill:#fff3e0
     style K fill:#fce4ec
 ```
@@ -254,7 +254,7 @@ class ConnectionPoolConfig:
     "timestamp": "2025-11-03T13:20:00Z",
     "actions_taken": [
       "分析了 10 个慢查询",
-      "更新了SQLite统计信息",
+      "更新了数据库统计信息",
       "重建了索引"
     ],
     "recommendations": [
@@ -378,7 +378,7 @@ for recommendation in optimization_result["recommendations"]:
 
 ```bash
 # 数据库配置
-DATABASE_URL=sqlite:///./data/asset_management.db
+DATABASE_URL=postgresql://user:password@localhost:5432/asset_management
 
 # 连接池配置
 DB_POOL_SIZE=20
@@ -396,7 +396,7 @@ DB_ENABLE_QUERY_LOGGING=true
 ```python
 # config/database.py
 DATABASE_CONFIG = {
-    "url": "sqlite:///./data/asset_management.db",
+    "url": "postgresql://user:password@localhost:5432/asset_management",
     "pool_config": {
         "pool_size": 20,
         "max_overflow": 30,
@@ -539,7 +539,7 @@ db_manager.reset_connection_pool()
 - **当前版本**: v1.0.0
 - **最后更新**: 2025-11-03
 - **兼容性**: Python 3.8+
-- **数据库支持**: SQLite, MySQL, PostgreSQL
+- **数据库支持**: PostgreSQL
 
 ## 相关文档
 

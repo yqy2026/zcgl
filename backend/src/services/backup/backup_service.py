@@ -6,7 +6,6 @@
 
 import logging
 import os
-import shutil
 from datetime import datetime
 from typing import Any
 
@@ -37,14 +36,16 @@ class BackupService:
             logger.info(f"创建备份目录: {self.backup_dir}")
 
     def create_backup(
-        self, backup_name: str | None = None, db_path: str | None = None
+        self,
+        backup_name: str | None = None,
+        database_url: str | None = None,
     ) -> dict[str, Any]:
         """
         创建数据库备份
 
         Args:
             backup_name: 备份名称，默认使用时间戳
-            db_path: 数据库文件路径
+            database_url: PostgreSQL 数据库连接URL
 
         Returns:
             备份结果信息
@@ -54,24 +55,29 @@ class BackupService:
             if not backup_name:
                 backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            backup_filename = f"{backup_name}.db"
+            if not database_url:
+                raise ValueError("数据库备份需要提供 PostgreSQL database_url")
+            if not database_url.startswith("postgresql"):
+                raise ValueError("仅支持 PostgreSQL 备份")
+            backup_filename = f"{backup_name}.dump"
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
             logger.info(f"开始创建数据备份: {backup_path}")
 
-            # 如果提供了数据库路径，进行真正的备份
-            if db_path and os.path.exists(db_path):
-                shutil.copy2(db_path, backup_path)
-                logger.info(f"已复制数据库文件: {db_path} -> {backup_path}")
-            else:
-                # 模拟创建备份文件（保持向后兼容）
-                with open(backup_path, "w") as f:
-                    f.write("# 数据库备份文件\n")
-                    f.write(f"# 创建时间: {datetime.now().isoformat()}\n")
-                    f.write(f"# 备份名称: {backup_name}\n")
-                    f.write(
-                        "# 注意: 这是模拟备份文件，请配置 db_path 参数进行真实备份\n"
-                    )
+            import subprocess
+
+            database_url = self._normalize_postgres_url(database_url)
+            cmd = [
+                "pg_dump",
+                "--format=custom",
+                "--no-owner",
+                "--no-privileges",
+                "-f",
+                backup_path,
+                database_url,
+            ]
+            logger.info("执行 PostgreSQL 备份命令: pg_dump (custom format)")
+            subprocess.run(cmd, check=True)
 
             # 获取备份文件信息
             backup_size = os.path.getsize(backup_path)
@@ -106,14 +112,14 @@ class BackupService:
 
             backups: list[dict[str, Any]] = []
             for filename in os.listdir(self.backup_dir):
-                if filename.endswith(".db"):
+                if filename.endswith(".dump"):
                     file_path = os.path.join(self.backup_dir, filename)
                     file_stat = os.stat(file_path)
 
                     backups.append(
                         {
                             "filename": filename,
-                            "backup_name": filename.replace(".db", ""),
+                            "backup_name": os.path.splitext(filename)[0],
                             "file_path": file_path,
                             "file_size": file_stat.st_size,
                             "created_at": datetime.fromtimestamp(
@@ -147,16 +153,17 @@ class BackupService:
             备份信息，如果不存在则返回 None
         """
         try:
-            backup_filename = f"{backup_name}.db"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
+            backup_path = self._find_backup_path(
+                backup_name, allowed_extensions=(".dump",)
+            )
 
-            if not os.path.exists(backup_path):
+            if not backup_path or not os.path.exists(backup_path):
                 return None
 
             file_stat = os.stat(backup_path)
 
             return {
-                "filename": backup_filename,
+                "filename": os.path.basename(backup_path),
                 "backup_name": backup_name,
                 "file_path": backup_path,
                 "file_size": file_stat.st_size,
@@ -179,10 +186,9 @@ class BackupService:
             删除结果信息
         """
         try:
-            backup_filename = f"{backup_name}.db"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
+            backup_path = self._find_backup_path(backup_name)
 
-            if not os.path.exists(backup_path):
+            if not backup_path or not os.path.exists(backup_path):
                 raise FileNotFoundError(f"备份文件不存在: {backup_name}")
 
             logger.info(f"删除备份文件: {backup_path}")
@@ -203,7 +209,7 @@ class BackupService:
     def restore_backup(
         self,
         backup_name: str,
-        db_path: str | None = None,
+        database_url: str | None = None,
         create_current_backup: bool | None = None,
         should_create_current_backup: bool = True,
     ) -> dict[str, Any]:
@@ -212,7 +218,6 @@ class BackupService:
 
         Args:
             backup_name: 备份名称
-            db_path: 数据库文件路径
             create_current_backup: 是否在恢复前创建当前状态的备份
             should_create_current_backup: 是否在恢复前创建当前状态的备份（兼容参数）
 
@@ -220,10 +225,9 @@ class BackupService:
             恢复结果信息
         """
         try:
-            backup_filename = f"{backup_name}.db"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
+            backup_path = self._find_backup_path(backup_name)
 
-            if not os.path.exists(backup_path):
+            if not backup_path or not os.path.exists(backup_path):
                 raise FileNotFoundError(f"备份文件不存在: {backup_name}")
 
             logger.info(f"开始恢复数据备份: {backup_path}")
@@ -233,24 +237,41 @@ class BackupService:
                 "restored_at": datetime.now().isoformat(),
             }
 
-            # 如果提供了数据库路径，进行真正的恢复
-            if db_path:
-                if create_current_backup is None:
-                    create_current_backup = should_create_current_backup
-                if create_current_backup:
-                    # 创建当前状态的备份
-                    current_backup = (
-                        f"current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-                    )
-                    current_backup_path = os.path.join(self.backup_dir, current_backup)
+            if not database_url:
+                raise ValueError("数据库恢复需要提供 PostgreSQL database_url")
+            if not database_url.startswith("postgresql"):
+                raise ValueError("仅支持 PostgreSQL 恢复")
 
-                    shutil.copy2(db_path, current_backup_path)
-                    result["current_backup"] = current_backup.replace(".db", "")
-                    logger.info(f"已创建当前状态备份: {current_backup_path}")
+            if create_current_backup is None:
+                create_current_backup = should_create_current_backup
+            if create_current_backup:
+                current_backup = (
+                    f"current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
+                current_backup_result = self.create_backup(
+                    backup_name=current_backup, database_url=database_url
+                )
+                result["current_backup"] = current_backup_result["backup_name"]
+                logger.info(
+                    "已创建当前状态备份: %s",
+                    current_backup_result["backup_path"],
+                )
 
-                # 恢复数据库
-                shutil.copy2(backup_path, db_path)
-                logger.info(f"已恢复数据库文件: {backup_path} -> {db_path}")
+            import subprocess
+
+            database_url = self._normalize_postgres_url(database_url)
+            cmd = [
+                "pg_restore",
+                "--clean",
+                "--if-exists",
+                "--no-owner",
+                "--no-privileges",
+                "-d",
+                database_url,
+                backup_path,
+            ]
+            logger.info("执行 PostgreSQL 恢复命令: pg_restore")
+            subprocess.run(cmd, check=True)
 
             return result
 
@@ -271,10 +292,9 @@ class BackupService:
             验证结果
         """
         try:
-            backup_filename = f"{backup_name}.db"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
+            backup_path = self._find_backup_path(backup_name)
 
-            if not os.path.exists(backup_path):
+            if not backup_path or not os.path.exists(backup_path):
                 return {
                     "valid": False,
                     "error": f"备份文件不存在: {backup_name}",
@@ -376,3 +396,22 @@ class BackupService:
         except Exception as e:
             logger.error(f"获取备份统计异常: {str(e)}")
             raise
+
+    @staticmethod
+    def _normalize_postgres_url(database_url: str) -> str:
+        """Convert SQLAlchemy PostgreSQL URLs to libpq-compatible URLs."""
+        if database_url.startswith("postgresql+"):
+            scheme_index = database_url.find("://")
+            if scheme_index != -1:
+                return "postgresql" + database_url[scheme_index:]
+        return database_url
+
+    def _find_backup_path(
+        self, backup_name: str, allowed_extensions: tuple[str, ...] = (".dump",)
+    ) -> str | None:
+        """根据备份名查找实际备份文件路径"""
+        for ext in allowed_extensions:
+            candidate = os.path.join(self.backup_dir, f"{backup_name}{ext}")
+            if os.path.exists(candidate):
+                return candidate
+        return None

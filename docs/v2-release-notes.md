@@ -190,7 +190,7 @@ alembic upgrade head
 
 验证表创建：
 ```bash
-sqlite3 land_property.db "SELECT name FROM sqlite_master WHERE type='table' AND name='notifications';"
+psql "$DATABASE_URL" -c "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='notifications';"
 # 输出: notifications
 ```
 

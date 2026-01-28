@@ -7,18 +7,14 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.dirname(script_dir)  # backend/
 sys.path.append(backend_dir)
 
-# Locate database
-db_path = os.path.join(backend_dir, "data", "land_property.db")
-if not os.path.exists(db_path):
-    print(f"DB not found at {db_path}, checking root...")
-    db_path = os.path.join(backend_dir, "land_property.db")
+db_url = os.getenv("DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
+if not db_url:
+    print("DATABASE_URL is required for this script")
+    sys.exit(1)
 
-print(f"Target DB Path: {db_path}")
-
-# Construct SQLAlchemy URL for SQLite
-# On Windows, abspath starts with drive letter (e.g., D:\...)
-# SQLite URL for absolute path on Windows: sqlite:///D:\path\to\file
-db_url = f"sqlite:///{db_path}"
+if db_url.startswith("sqlite"):
+    print("SQLite 已移除，请使用 PostgreSQL 数据库")
+    sys.exit(1)
 
 # Set Env Vars BEFORE importing src.database
 os.environ["SECRET_KEY"] = "temporary_secret_key_for_script_execution_12345"
@@ -40,7 +36,8 @@ try:
             stmt = select(RentContract.contract_status).distinct()
             results = db.execute(stmt).scalars().all()
 
-            print("\nDistinct Contract Statuses:")
+            print("
+Distinct Contract Statuses:")
             if not results:
                 print("(No statuses found)")
             for status in results:

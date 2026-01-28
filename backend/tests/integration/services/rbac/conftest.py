@@ -9,8 +9,13 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# 设置测试数据库URL为内存数据库
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+# 设置测试数据库URL为 PostgreSQL
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+if not TEST_DATABASE_URL:
+    pytest.skip("TEST_DATABASE_URL is required for integration tests", allow_module_level=True)
+if TEST_DATABASE_URL.startswith("sqlite"):
+    raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 from src.database import Base
 
@@ -18,13 +23,13 @@ from src.database import Base
 @pytest.fixture(scope="session")
 def test_database_url():
     """覆盖root conftest的数据库URL"""
-    return "sqlite:///:memory:"
+    return TEST_DATABASE_URL
 
 
 @pytest.fixture(scope="session")
 def engine(test_database_url):
     """创建内存数据库引擎，不使用alembic迁移"""
-    engine = create_engine(test_database_url, connect_args={"check_same_thread": False})
+    engine = create_engine(test_database_url, pool_pre_ping=True)
     # 直接创建所有表，跳过alembic迁移
     Base.metadata.create_all(bind=engine)
     yield engine
