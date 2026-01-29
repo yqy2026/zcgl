@@ -2,32 +2,32 @@
 
 from fastapi import APIRouter
 
-# 导入各个模块的路由
-from .auth.admin import router as admin_router
 from .analytics.analytics import router as analytics_router
 from .assets.assets import router as assets_router
+from .assets.custom_fields import router as custom_fields_router
+from .assets.occupancy import router as occupancy_router
+from .assets.ownership import router as ownership_router
+from .assets.property_certificate import router as property_certificate_router
+
+# 导入各个模块的路由
+from .auth.admin import router as admin_router
 from .auth.auth import router as auth_router
+from .auth.organization import router as organization_router
+
+# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
+# from .system.error_recovery import router as error_recovery_router
+# 修复Excel模块导入 - 使用正确的router名称
+from .documents.excel import router as excel_router
+from .llm_prompts import router as llm_prompts_router
 from .system.backup import router as backup_router
 from .system.collection import router as collection_router
 from .system.contact import router as contact_router
-from .assets.custom_fields import router as custom_fields_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
-# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
-# from .system.error_recovery import router as error_recovery_router
-
-# 修复Excel模块导入 - 使用正确的router名称
-from .documents.excel import router as excel_router
 from .system.history import router as history_router
-from .llm_prompts import router as llm_prompts_router
-
 from .system.monitoring import router as monitoring_router
 from .system.notifications import router as notifications_router
-from .assets.occupancy import router as occupancy_router
 from .system.operation_logs import router as operation_logs_router
-from .auth.organization import router as organization_router
-from .assets.ownership import router as ownership_router
-from .assets.property_certificate import router as property_certificate_router
 
 # 尝试导入 PDF 批量路由，如果失败则跳过
 pdf_batch_router: APIRouter | None = None
@@ -38,13 +38,12 @@ except ImportError as e:
 
     logging.warning(f"PDF batch routes not available: {e}")
 
-from .documents.pdf_import import router as pdf_import_router
-from .assets.project import router as project_router
-from .rent_contract import router as rent_contract_router
-from .auth.roles import router as roles_router
-
 # 修复statistics模块导入 - 使用正确的router名称
 from .analytics.statistics import router as statistics_router
+from .assets.project import router as project_router
+from .auth.roles import router as roles_router
+from .documents.pdf_import import router as pdf_import_router
+from .rent_contract import router as rent_contract_router
 
 # 导入新创建的统一路由模块
 from .system.system import router as system_router

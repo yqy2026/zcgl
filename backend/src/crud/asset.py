@@ -8,7 +8,7 @@ from typing import Any
 """
 
 from sqlalchemy import Select, select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, joinedload
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor

@@ -13,13 +13,12 @@ Test Coverage:
 - Edge cases
 """
 
-from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.organization import Organization, OrganizationHistory
+from src.models.organization import Organization
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService
 
@@ -116,7 +115,7 @@ class TestCreateOrganization:
         # Mock the created object
         with pytest.raises(Exception):
             # Service will try to access attributes
-            result = organization_service.create_organization(
+            organization_service.create_organization(
                 db=mock_db, obj_in=org_data
             )
 
@@ -136,7 +135,7 @@ class TestCreateOrganization:
         mock_db.scalar.return_value = sample_parent_org
 
         with pytest.raises(Exception):
-            result = organization_service.create_organization(
+            organization_service.create_organization(
                 db=mock_db, obj_in=org_data
             )
 
@@ -166,7 +165,7 @@ class TestCreateOrganization:
         )
 
         with pytest.raises(Exception):
-            result = organization_service.create_organization(
+            organization_service.create_organization(
                 db=mock_db, obj_in=org_data
             )
             # Verify history was created
@@ -193,7 +192,7 @@ class TestUpdateOrganization:
         mock_db.scalar.return_value = sample_organization
 
         with pytest.raises(Exception):
-            result = organization_service.update_organization(
+            organization_service.update_organization(
                 db=mock_db, org_id="org-123", obj_in=update_data
             )
 
@@ -209,7 +208,7 @@ class TestUpdateOrganization:
         mock_db.scalar.return_value = sample_organization
 
         with pytest.raises(Exception):
-            result = organization_service.update_organization(
+            organization_service.update_organization(
                 db=mock_db, org_id="org-123", obj_in=update_data
             )
 
@@ -301,7 +300,7 @@ class TestOrganizationHierarchy:
             rec_stack.remove(node)
             return False
 
-        assert has_cycle("A") == True
+        assert has_cycle("A")
 
 
 # ============================================================================
@@ -353,7 +352,7 @@ class TestOrganizationValidation:
     def test_organization_code_required(self):
         """Test that organization code is required"""
         with pytest.raises(Exception):
-            org = OrganizationCreate(
+            OrganizationCreate(
                 name="Test Organization",
                 # code missing
                 type="企业",
@@ -437,7 +436,7 @@ class TestOrganizationEdgeCases:
         mock_db.scalar.return_value = sample_organization
 
         with pytest.raises(Exception):
-            result = organization_service.update_organization(
+            organization_service.update_organization(
                 db=mock_db, org_id="org-123", obj_in=update_data
             )
 
@@ -446,6 +445,7 @@ class TestOrganizationEdgeCases:
         # Moving org from Branch A to Branch B
         old_path = "/branch-a/org-123"
         new_parent_path = "/branch-b"
+        assert old_path != new_parent_path
 
         with pytest.raises(Exception):
             # Should recalculate all descendant paths
@@ -512,7 +512,6 @@ class TestOrganizationIntegration:
 
     def test_organization_with_assets(self):
         """Test organization relationship with assets"""
-        org_id = "org-123"
         asset_count = 50
 
         # Should handle assets when organization changes
@@ -520,7 +519,6 @@ class TestOrganizationIntegration:
 
     def test_organization_with_users(self):
         """Test organization relationship with users"""
-        org_id = "org-123"
         user_count = 20
 
         # Should update users when organization changes
@@ -528,7 +526,6 @@ class TestOrganizationIntegration:
 
     def test_organization_with_projects(self):
         """Test organization relationship with projects"""
-        org_id = "org-123"
         project_count = 10
 
         # Should handle projects when organization changes

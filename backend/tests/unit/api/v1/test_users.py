@@ -296,6 +296,7 @@ class TestCreateUser:
     ):
         """Test creating user successfully"""
         from src.api.v1.auth_modules.users import create_user
+
         from src.schemas.auth import UserCreate
 
         user_data = UserCreate(
@@ -339,6 +340,7 @@ class TestCreateUser:
     ):
         """Test creating user with duplicate username"""
         from src.api.v1.auth_modules.users import create_user
+
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import UserCreate
 
@@ -489,6 +491,7 @@ class TestUpdateUser:
     ):
         """Test admin updating user successfully"""
         from src.api.v1.auth_modules.users import update_user
+
         from src.schemas.auth import UserUpdate
 
         user_data = UserUpdate(full_name="Updated Name", role="admin")
@@ -533,6 +536,7 @@ class TestUpdateUser:
     ):
         """Test user updating their own information"""
         from src.api.v1.auth_modules.users import update_user
+
         from src.schemas.auth import UserUpdate
 
         user_data = UserUpdate(full_name="My Updated Name")
@@ -572,6 +576,7 @@ class TestUpdateUser:
     ):
         """Test user trying to update another user"""
         from src.api.v1.auth_modules.users import update_user
+
         from src.schemas.auth import UserUpdate
 
         user_data = UserUpdate(full_name="Hacked Name")
@@ -594,6 +599,7 @@ class TestUpdateUser:
     ):
         """Test updating non-existent user"""
         from src.api.v1.auth_modules.users import update_user
+
         from src.schemas.auth import UserUpdate
 
         user_data = UserUpdate(full_name="Updated Name")
@@ -629,6 +635,7 @@ class TestChangePassword:
     ):
         """Test changing password successfully"""
         from src.api.v1.auth_modules.users import change_password
+
         from src.schemas.auth import PasswordChangeRequest
 
         password_data = PasswordChangeRequest(
@@ -664,6 +671,7 @@ class TestChangePassword:
     ):
         """Test admin changing password for another user"""
         from src.api.v1.auth_modules.users import change_password
+
         from src.schemas.auth import PasswordChangeRequest
 
         password_data = PasswordChangeRequest(
@@ -698,6 +706,7 @@ class TestChangePassword:
     ):
         """Test user trying to change another user's password"""
         from src.api.v1.auth_modules.users import change_password
+
         from src.schemas.auth import PasswordChangeRequest
 
         password_data = PasswordChangeRequest(
@@ -723,6 +732,7 @@ class TestChangePassword:
     ):
         """Test changing password for non-existent user"""
         from src.api.v1.auth_modules.users import change_password
+
         from src.schemas.auth import PasswordChangeRequest
 
         password_data = PasswordChangeRequest(
@@ -1132,6 +1142,7 @@ class TestUsersEdgeCases:
     ):
         """Test updating user with business logic error from CRUD layer"""
         from src.api.v1.auth_modules.users import update_user
+
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import UserUpdate
 

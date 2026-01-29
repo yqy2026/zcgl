@@ -14,8 +14,8 @@ Task: Integrate Security Event Logging into Permission Middleware (Issue #5)
 
 from sqlalchemy.orm import Session
 
-from src.security.audit_logger import SecurityEventLogger, SecurityEventType
 from src.models.security_event import SecurityEvent
+from src.security.audit_logger import SecurityEventLogger, SecurityEventType
 
 
 class TestPermissionDeniedLogging:
@@ -64,8 +64,8 @@ class TestPermissionDeniedLogging:
         """Test that should_alert returns True when threshold is exceeded"""
         from datetime import datetime, timedelta
 
-        from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
+        from src.security.audit_logger import SecurityEventType
 
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 
@@ -95,8 +95,8 @@ class TestPermissionDeniedLogging:
         """Test that should_alert returns False when threshold is not exceeded"""
         from datetime import datetime, timedelta
 
-        from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
+        from src.security.audit_logger import SecurityEventType
 
         logger = SecurityEventLogger(test_db, alert_threshold=10)
 
@@ -126,8 +126,8 @@ class TestPermissionDeniedLogging:
         """Test that should_alert respects custom threshold"""
         from datetime import datetime, timedelta
 
-        from src.security.audit_logger import SecurityEventType
         from src.models.security_event import SecurityEvent
+        from src.security.audit_logger import SecurityEventType
 
         logger = SecurityEventLogger(test_db, alert_threshold=5)
 

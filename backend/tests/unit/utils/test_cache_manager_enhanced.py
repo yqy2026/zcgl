@@ -4,9 +4,10 @@
 Enhanced tests for cache manager to improve coverage
 """
 
-import pytest
 import time
-from unittest.mock import Mock, patch
+
+import pytest
+
 from src.utils.cache_manager import CacheManager
 
 
@@ -232,7 +233,7 @@ class TestCacheManagerEdgeCases:
         cache_manager.set("key1", "value1", ttl=0)
         # 可能立即过期或保存
         result = cache_manager.get("key1")
-        # 结果取决于实现
+        assert result is None or result == "value1"
 
     def test_negative_ttl(self, cache_manager):
         """测试负TTL"""

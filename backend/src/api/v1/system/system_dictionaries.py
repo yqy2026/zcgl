@@ -15,7 +15,7 @@ from ....core.exception_handler import (
 )
 from ....crud.system_dictionary import system_dictionary_crud
 from ....database import get_db
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import require_admin
 from ....models.auth import User
 from ....schemas.asset import (
     SystemDictionaryCreate,

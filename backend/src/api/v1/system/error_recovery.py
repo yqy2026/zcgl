@@ -5,7 +5,7 @@
 """
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Query
 from fastapi.responses import JSONResponse

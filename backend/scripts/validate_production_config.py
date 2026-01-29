@@ -20,9 +20,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.jwt_security import jwt_security, validate_current_jwt_config
+
 from src.core.config import settings
 from src.core.encryption import EncryptionKeyManager
-from src.core.jwt_security import jwt_security, validate_current_jwt_config
 
 
 class ProductionConfigValidator:

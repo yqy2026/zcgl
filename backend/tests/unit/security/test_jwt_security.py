@@ -5,12 +5,12 @@ Tests for JWT token generation, validation, and security configuration.
 Critical for authentication security.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timedelta, UTC
-from jose.exceptions import ExpiredSignatureError, JWTError
+from jose.exceptions import JWTError
 
 from src.security.jwt_security import (
-    JWTSecurityConfig,
     jwt_security,
     validate_current_jwt_config,
 )
@@ -121,8 +121,9 @@ class TestTokenCreation:
 
     def test_token_claims_structure(self):
         """Test that token includes required claims"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         payload = {"user_id": 123, "role": "admin"}
         token = jwt_security.create_token_with_claims(payload, token_type="access")
@@ -147,8 +148,9 @@ class TestTokenCreation:
 
     def test_access_token_expiry(self):
         """Test access token expiration time"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         payload = {"user_id": 123}
         token = jwt_security.create_token_with_claims(payload, token_type="access")
@@ -168,8 +170,9 @@ class TestTokenCreation:
 
     def test_refresh_token_expiry(self):
         """Test refresh token expiration time"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         payload = {"user_id": 123}
         token = jwt_security.create_token_with_claims(payload, token_type="refresh")
@@ -207,8 +210,9 @@ class TestTokenVerification:
 
     def test_verify_token_missing_expiration(self):
         """Test that token without expiration fails"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         # Create token without exp claim
         payload = {"user_id": 123}
@@ -223,8 +227,9 @@ class TestTokenVerification:
 
     def test_verify_token_missing_iat(self):
         """Test that token without issued-at time fails"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         # Create token with exp but no iat
         payload = {
@@ -242,8 +247,9 @@ class TestTokenVerification:
 
     def test_verify_expired_token(self):
         """Test that expired token is rejected"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         # Create expired token
         payload = {
@@ -302,8 +308,9 @@ class TestTokenSecurityInfo:
 
     def test_get_security_info_expiry_status(self):
         """Test token expiry detection"""
-        from src.core.config import settings
         import jwt
+
+        from src.core.config import settings
 
         # Create expired token
         payload = {

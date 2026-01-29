@@ -1,25 +1,23 @@
-import pytest
-from unittest.mock import MagicMock, patch, ANY
 from datetime import date, datetime
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlalchemy.orm import Session
-from src.services.rent_contract.service import RentContractService
+
+from src.core.enums import ContractStatus
+from src.models.asset import Asset
+from src.models.rent_contract import ContractType, RentContract, RentLedger, RentTerm
 from src.schemas.rent_contract import (
+    GenerateLedgerRequest,
     RentContractCreate,
     RentContractUpdate,
-    RentTermCreate,
-    GenerateLedgerRequest,
     RentLedgerBatchUpdate,
-    RentStatisticsQuery
+    RentStatisticsQuery,
+    RentTermCreate,
 )
-from src.core.enums import ContractStatus, ContractType
-from src.models.rent_contract import (
-    RentContract,
-    RentTerm,
-    RentLedger
-)
-from src.models.asset import Asset
+from src.services.rent_contract.service import RentContractService
+
 
 class TestRentContractServiceCoverage:
     @pytest.fixture

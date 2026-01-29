@@ -23,8 +23,8 @@ from fastapi import APIRouter, Depends
 
 from ....core.exception_handler import internal_error
 from ....core.performance import PerformanceMonitor
-from ....security.route_guards import debug_only
 from ....schemas.pdf_import import SystemCapabilities, SystemInfoResponse
+from ....security.route_guards import debug_only
 from ..dependencies import get_performance_monitor
 
 logger = logging.getLogger(__name__)

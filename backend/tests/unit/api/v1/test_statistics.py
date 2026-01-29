@@ -34,7 +34,6 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
 from src.core.exception_handler import InvalidRequestError, ServiceUnavailableError
 

@@ -243,6 +243,7 @@ class TestUploadAssetAttachments:
     ):
         """Test uploading attachment to non-existent asset"""
         from src.api.v1.asset_attachments import upload_asset_attachments
+
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
@@ -551,6 +552,7 @@ class TestGetAssetAttachments:
     ):
         """Test getting attachments for non-existent asset"""
         from src.api.v1.asset_attachments import get_asset_attachments
+
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
@@ -734,6 +736,7 @@ class TestDownloadAssetAttachment:
     ):
         """Test downloading attachment for non-existent asset"""
         from src.api.v1.asset_attachments import download_asset_attachment
+
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
@@ -889,6 +892,7 @@ class TestDeleteAssetAttachment:
     ):
         """Test deleting attachment for non-existent asset"""
         from src.api.v1.asset_attachments import delete_asset_attachment
+
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None

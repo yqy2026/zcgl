@@ -961,6 +961,7 @@ class TestErrorRecoveryTest:
     ):
         """Test error recovery when recovery fails"""
         from src.api.v1.error_recovery import test_error_recovery
+
         from src.services.error_recovery_service import RecoveryResult
 
         # Mock failed recovery
@@ -1143,7 +1144,6 @@ class TestGetErrorRecoveryHealth:
     async def test_health_healthy(self, mock_engine):
         """Test health endpoint when system is healthy (90%+ success rate)"""
         from fastapi.responses import JSONResponse
-
         from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
@@ -1173,7 +1173,6 @@ class TestGetErrorRecoveryHealth:
     async def test_health_degraded(self, mock_engine):
         """Test health endpoint when system is degraded (70-90% success rate)"""
         from fastapi.responses import JSONResponse
-
         from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
@@ -1203,7 +1202,6 @@ class TestGetErrorRecoveryHealth:
     async def test_health_unhealthy(self, mock_engine):
         """Test health endpoint when system is unhealthy (<70% success rate)"""
         from fastapi.responses import JSONResponse
-
         from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
@@ -1233,7 +1231,6 @@ class TestGetErrorRecoveryHealth:
     async def test_health_error(self, mock_engine):
         """Test health endpoint when engine raises exception"""
         from fastapi.responses import JSONResponse
-
         from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.side_effect = Exception(
@@ -1254,7 +1251,6 @@ class TestGetErrorRecoveryHealth:
     async def test_health_active_circuit_breakers(self, mock_engine):
         """Test health endpoint counts active circuit breakers"""
         from fastapi.responses import JSONResponse
-
         from src.api.v1.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
@@ -1296,6 +1292,7 @@ class TestErrorRecoveryEdgeCases:
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
+
         from src.services.error_recovery_service import ErrorCategory
 
         mock_engine = MagicMock()

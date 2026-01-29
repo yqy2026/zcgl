@@ -1,20 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 RentContract Model Tests
 
 Tests for the RentContract model - core contract management entity.
 """
 
-import pytest
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
+import pytest
+
 from src.models.rent_contract import (
-    RentContract,
     ContractType,
-    PaymentCycle,
     DepositTransactionType,
+    PaymentCycle,
+    RentContract,
 )
 
 
@@ -101,7 +101,7 @@ class TestRentContractBasicFields:
     def test_ownership_id_required(self):
         """Test ownership_id is required"""
         with pytest.raises(Exception):
-            contract = RentContract(
+            RentContract(
                 tenant_name="Tenant",
                 sign_date=date(2024, 1, 1),
                 start_date=date(2024, 1, 1),

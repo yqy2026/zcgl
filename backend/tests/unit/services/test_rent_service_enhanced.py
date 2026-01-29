@@ -4,9 +4,10 @@
 Enhanced tests for Rent Contract Service to improve coverage
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +21,8 @@ def rent_service(db: Session):
 @pytest.fixture
 def sample_contract(db: Session, admin_user):
     """示例合同数据"""
-    from src.schemas.rent_contract import RentContractCreate
     from src.crud.rent_contract import rent_contract_crud
+    from src.schemas.rent_contract import RentContractCreate
 
     contract = rent_contract_crud.create(
         db,
@@ -40,7 +41,7 @@ def sample_contract(db: Session, admin_user):
     yield contract
     try:
         rent_contract_crud.remove(db, id=contract.id)
-    except:
+    except Exception:
         pass
 
 

@@ -4,9 +4,9 @@
 Comprehensive tests for Asset Service to maximize coverage
 """
 
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +20,8 @@ def asset_service(db: Session):
 @pytest.fixture
 def sample_asset(db: Session, admin_user):
     """示例资产数据"""
-    from src.schemas.asset import AssetCreate
     from src.crud.asset import asset_crud
+    from src.schemas.asset import AssetCreate
 
     asset = asset_crud.create(
         db,
@@ -38,7 +38,7 @@ def sample_asset(db: Session, admin_user):
     yield asset
     try:
         asset_crud.remove(db, id=asset.id)
-    except:
+    except Exception:
         pass
 
 

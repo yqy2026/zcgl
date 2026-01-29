@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from ....constants.message_constants import EMPTY_STRING
 from ....core.exception_handler import bad_request, conflict, not_found
-from ....security.route_guards import debug_only
 from ....crud.enum_field import (
     get_enum_field_type_crud,
     get_enum_field_usage_crud,
@@ -32,6 +31,7 @@ from ....schemas.enum_field import (
     EnumFieldValueResponse,
     EnumFieldValueUpdate,
 )
+from ....security.route_guards import debug_only
 
 router = APIRouter(prefix="/enum-fields", tags=["枚举字段管理"])
 

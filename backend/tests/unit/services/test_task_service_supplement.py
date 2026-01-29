@@ -4,9 +4,10 @@
 Supplemental tests for Task Service to increase coverage
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +21,8 @@ def task_service(db: Session):
 @pytest.fixture
 def sample_task(db: Session, admin_user):
     """示例任务数据"""
-    from src.schemas.task import TaskCreate
     from src.crud.task import task_crud
+    from src.schemas.task import TaskCreate
 
     task = task_crud.create(
         db,
@@ -38,7 +39,7 @@ def sample_task(db: Session, admin_user):
     yield task
     try:
         task_crud.remove(db, id=task.id)
-    except:
+    except Exception:
         pass
 
 
@@ -47,7 +48,6 @@ class TestTaskServiceSupplement:
 
     def test_get_overdue_tasks(self, task_service, db: Session):
         """测试获取过期任务"""
-        from datetime import timedelta
 
         overdue_tasks = task_service.get_overdue_tasks(db, as_of_date=datetime.now(UTC))
         assert overdue_tasks is not None
@@ -60,7 +60,6 @@ class TestTaskServiceSupplement:
 
     def test_get_upcoming_tasks(self, task_service, db: Session):
         """测试获取即将到期的任务"""
-        from datetime import timedelta
 
         upcoming_tasks = task_service.get_upcoming_tasks(db, days_within=7)
         assert upcoming_tasks is not None
@@ -68,8 +67,8 @@ class TestTaskServiceSupplement:
     def test_task_dependency_validation(self, task_service, sample_task, db: Session):
         """测试任务依赖验证"""
         # 创建前置任务
-        from src.schemas.task import TaskCreate
         from src.crud.task import task_crud
+        from src.schemas.task import TaskCreate
 
         prerequisite_task = task_crud.create(
             db,
@@ -93,8 +92,8 @@ class TestTaskServiceSupplement:
     def test_validate_circular_dependency(self, task_service, sample_task, db: Session):
         """测试验证循环依赖"""
         # 任务A依赖任务B，任务B依赖任务A - 应该被拒绝
-        from src.schemas.task import TaskCreate
         from src.crud.task import task_crud
+        from src.schemas.task import TaskCreate
 
         task_b = task_crud.create(
             db,

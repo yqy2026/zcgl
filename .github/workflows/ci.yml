@@ -96,7 +96,22 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
-      ALLOW_SQLITE_FOR_TESTS: "true"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zcgl_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zcgl_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - name: Checkout code
@@ -120,7 +135,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libmagic1
+        sudo apt-get install -y libmagic1 postgresql-client
 
     - name: Install Python dependencies
       run: |
@@ -149,8 +164,7 @@ jobs:
     - name: Initialize test database
       run: |
         cd backend
-        export DATABASE_URL="sqlite:///./test_database.db"
-        uv run alembic upgrade head || true
+        uv run alembic upgrade head
         echo "Database initialized with migrations"
 
     - name: Run unit tests

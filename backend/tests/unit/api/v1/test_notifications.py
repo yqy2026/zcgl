@@ -15,6 +15,7 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
+from src.models.notification import Notification
 
 # ============================================================================
 # Fixtures
@@ -24,8 +25,9 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def sample_notification(db: Session, admin_user):
     """创建测试通知"""
+    from datetime import UTC, datetime
+
     from src.models.notification import Notification
-    from datetime import datetime, UTC
 
     notification = Notification(
         recipient_id=admin_user.id,
@@ -46,15 +48,16 @@ def sample_notification(db: Session, admin_user):
     try:
         db.delete(notification)
         db.commit()
-    except:
+    except Exception:
         pass
 
 
 @pytest.fixture
 def multiple_notifications(db: Session, admin_user):
     """创建多条测试通知"""
+    from datetime import UTC, datetime
+
     from src.models.notification import Notification
-    from datetime import datetime, UTC
 
     notifications = []
     for i in range(5):
@@ -79,7 +82,7 @@ def multiple_notifications(db: Session, admin_user):
         try:
             db.delete(notification)
             db.commit()
-        except:
+        except Exception:
             pass
 
 

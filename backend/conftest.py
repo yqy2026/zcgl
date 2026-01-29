@@ -5,6 +5,7 @@ pytest全局配置文件
 
 import os
 import sys
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock

@@ -4,8 +4,10 @@
 Tests for Property Certificate Validator
 """
 
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, UTC
+
 from src.services.property_certificate.validator import PropertyCertificateValidator
 
 

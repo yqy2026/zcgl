@@ -408,6 +408,7 @@ class TestGetBatchStatus:
     async def test_get_batch_status_success(self, mock_get_tracker, mock_db):
         """Test successful batch status retrieval"""
         from src.api.v1.pdf_batch_routes import get_batch_status
+
         from src.models.pdf_import_session import SessionStatus
 
         batch_id = "test-batch-123"
@@ -473,6 +474,7 @@ class TestGetBatchStatus:
     ):
         """Test batch status with completed sessions"""
         from src.api.v1.pdf_batch_routes import get_batch_status
+
         from src.models.pdf_import_session import SessionStatus
 
         batch_id = "batch-completed"

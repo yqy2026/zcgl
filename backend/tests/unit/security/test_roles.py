@@ -5,8 +5,8 @@ Tests case-insensitive role comparison and normalization
 
 import pytest
 
-from src.security.roles import Role, RoleNormalizer
 from src.models.auth import UserRole
+from src.security.roles import Role, RoleNormalizer
 
 
 def test_role_enum_matches_user_role():

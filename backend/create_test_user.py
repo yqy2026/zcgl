@@ -10,10 +10,10 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent))
 
+
 import bcrypt
-from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
-import os
+from sqlalchemy import create_engine, text
 
 # 数据库连接
 # 先加载同目录下的 .env

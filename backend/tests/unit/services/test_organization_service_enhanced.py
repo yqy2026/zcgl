@@ -19,8 +19,8 @@ def org_service(db: Session):
 @pytest.fixture
 def sample_organization(db: Session):
     """示例组织数据"""
-    from src.schemas.organization import OrganizationCreate
     from src.crud.organization import organization_crud
+    from src.schemas.organization import OrganizationCreate
 
     org = organization_crud.create(
         db,
@@ -34,7 +34,7 @@ def sample_organization(db: Session):
     yield org
     try:
         organization_crud.remove(db, id=org.id)
-    except:
+    except Exception:
         pass
 
 
@@ -44,10 +44,10 @@ class TestOrganizationServiceBusinessLogic:
     def test_organization_code_validation(self, org_service, db: Session):
         """测试组织代码验证"""
         # 测试重复代码
-        from src.schemas.organization import OrganizationCreate
         from src.crud.organization import organization_crud
+        from src.schemas.organization import OrganizationCreate
 
-        org1 = organization_crud.create(
+        organization_crud.create(
             db,
             obj_in=OrganizationCreate(
                 name="组织1", code="DUPLICATE", organization_type="enterprise"
@@ -68,7 +68,9 @@ class TestOrganizationServiceBusinessLogic:
         # 测试父子组织关系
         pass
 
-    def test_organization_statistics(self, org_service, sample_organization):
+    def test_organization_statistics(
+        self, org_service, sample_organization, db: Session
+    ):
         """测试组织统计信息"""
         stats = org_service.get_organization_statistics(db, sample_organization.id)
         assert stats is not None

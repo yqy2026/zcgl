@@ -1,15 +1,17 @@
-import pytest
 from datetime import datetime
+
+import pytest
+
 from src.services.error_recovery_service import (
     ErrorCategory,
-    ErrorSeverity,
     ErrorContext,
-    RecoveryStrategy,
-    RecoveryResult,
     ErrorRecoveryEngine,
+    ErrorSeverity,
+    RecoveryResult,
+    RecoveryStrategy,
     with_error_recovery,
-    error_recovery_engine
 )
+
 
 class TestErrorRecoveryService:
     def test_error_context_initialization(self):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Asset Model Tests
 
@@ -6,14 +5,15 @@ Tests for the Asset model - core business entity for property/asset management.
 """
 
 import os
-import pytest
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.models.asset import Asset
 from src.database import Base
+from src.models.asset import Asset
 
 
 class TestAssetModelCreation:

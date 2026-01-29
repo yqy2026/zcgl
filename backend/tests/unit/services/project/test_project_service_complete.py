@@ -13,7 +13,7 @@ Test Coverage:
 - Error handling and edge cases
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -94,7 +94,7 @@ class TestCreateProject:
         )
 
         with pytest.raises(Exception):
-            result = project_service.create(db=mock_db, obj_in=project_data)
+            project_service.create(db=mock_db, obj_in=project_data)
 
     def test_create_project_validates_dates(self, project_service, mock_db):
         """Test that project dates are validated"""
@@ -142,7 +142,7 @@ class TestCreateProject:
         )
 
         with pytest.raises(Exception):
-            result = project_service.create(db=mock_db, obj_in=project_data)
+            project_service.create(db=mock_db, obj_in=project_data)
             # Default status should be PLANNING
 
     def test_create_project_duplicate_code(self, project_service, mock_db):
@@ -183,7 +183,7 @@ class TestUpdateProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.update(
+            project_service.update(
                 db=mock_db, project_id="project-123", obj_in=update_data
             )
 
@@ -200,7 +200,7 @@ class TestUpdateProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.update(
+            project_service.update(
                 db=mock_db, project_id="project-123", obj_in=update_data
             )
 
@@ -233,7 +233,7 @@ class TestUpdateProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.update(
+            project_service.update(
                 db=mock_db, project_id="project-123", obj_in=update_data
             )
 
@@ -247,7 +247,7 @@ class TestUpdateProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.update(
+            project_service.update(
                 db=mock_db, project_id="project-123", obj_in=update_data
             )
 
@@ -279,7 +279,7 @@ class TestDeleteProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.delete(db=mock_db, project_id="project-123")
+            project_service.delete(db=mock_db, project_id="project-123")
 
     def test_delete_nonexistent_project(self, project_service, mock_db):
         """Test deleting non-existent project"""
@@ -294,7 +294,7 @@ class TestDeleteProject:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.delete(db=mock_db, project_id="project-123")
+            project_service.delete(db=mock_db, project_id="project-123")
 
 
 # ============================================================================
@@ -339,7 +339,6 @@ class TestProjectStatus:
     def test_project_auto_status_completion(self):
         """Test automatic status change when progress reaches 100%"""
         progress = 100.0
-        expected_status = "已完成"
 
         # When progress is 100%, status should be 已完成
         assert progress >= 100.0
@@ -385,7 +384,7 @@ class TestProjectBudget:
 
         should_alert = actual_cost >= (budget * alert_threshold)
 
-        assert should_alert == True
+        assert should_alert
 
 
 # ============================================================================
@@ -418,7 +417,7 @@ class TestProjectSchedule:
         current_date = datetime(2024, 7, 1)
         is_overdue = current_date > end_date
 
-        assert is_overdue == True
+        assert is_overdue
 
     def test_project_on_schedule_detection(self):
         """Test detection if project is on schedule"""
@@ -428,7 +427,7 @@ class TestProjectSchedule:
 
         is_on_schedule = abs(actual_progress - planned_progress) <= tolerance
 
-        assert is_on_schedule == True
+        assert is_on_schedule
 
 
 # ============================================================================
@@ -490,7 +489,7 @@ class TestProjectEdgeCases:
         mock_db.scalar.return_value = sample_project
 
         with pytest.raises(Exception):
-            result = project_service.update(
+            project_service.update(
                 db=mock_db, project_id="project-123", obj_in=update_data
             )
 
@@ -528,7 +527,6 @@ class TestProjectIntegration:
 
     def test_project_with_organization(self):
         """Test project relationship with organization"""
-        org_id = "org-123"
         project_count = 15
 
         # Should handle organization changes
@@ -536,7 +534,6 @@ class TestProjectIntegration:
 
     def test_project_with_manager(self):
         """Test project relationship with manager"""
-        manager_id = "user-123"
         project_count = 8
 
         # Should handle manager reassignment
@@ -544,7 +541,6 @@ class TestProjectIntegration:
 
     def test_project_with_assets(self):
         """Test project relationship with assets"""
-        project_id = "project-123"
         asset_count = 25
 
         # Should handle asset associations

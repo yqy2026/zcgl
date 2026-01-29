@@ -11,7 +11,6 @@ Test coverage for Property Certificate API endpoints:
 import pytest
 from fastapi import status
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

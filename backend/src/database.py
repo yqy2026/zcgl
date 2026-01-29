@@ -23,9 +23,10 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
 
-from .core.config import get_config
 from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
+
+from .core.config import get_config
 
 logger = logging.getLogger(__name__)
 

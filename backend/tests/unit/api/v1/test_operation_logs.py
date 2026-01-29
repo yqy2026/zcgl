@@ -44,7 +44,7 @@ class TestOperationLogsAPI:
             "/api/v1/operation-logs/?date_from=2024-01-01&date_to=2024-12-31",
             headers=admin_user_headers,
         )
-        assert response.status_code in [status_HTTP_200_OK, status.HTTP_404_NOT_FOUND]
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_get_logs_with_pagination(self, client, admin_user_headers):
         """测试分页查询日志"""

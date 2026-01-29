@@ -4,9 +4,10 @@
 Enhanced tests for Task Service to improve coverage
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +21,8 @@ def task_service(db: Session):
 @pytest.fixture
 def sample_task(db: Session, admin_user):
     """示例任务数据"""
-    from src.schemas.task import TaskCreate
     from src.crud.task import task_crud
+    from src.schemas.task import TaskCreate
 
     task = task_crud.create(
         db,
@@ -38,7 +39,7 @@ def sample_task(db: Session, admin_user):
     yield task
     try:
         task_crud.remove(db, id=task.id)
-    except:
+    except Exception:
         pass
 
 

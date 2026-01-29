@@ -229,6 +229,7 @@ class TestCreateOwnership:
     ):
         """Test creating ownership successfully"""
         from src.api.v1.ownership import create_ownership
+
         from src.schemas.ownership import OwnershipCreate
 
         ownership_data = OwnershipCreate(
@@ -254,6 +255,7 @@ class TestCreateOwnership:
     ):
         """Test creating ownership with duplicate name"""
         from src.api.v1.ownership import create_ownership
+
         from src.schemas.ownership import OwnershipCreate
 
         ownership_data = OwnershipCreate(
@@ -277,6 +279,7 @@ class TestCreateOwnership:
     ):
         """Test creating ownership with unexpected exception"""
         from src.api.v1.ownership import create_ownership
+
         from src.schemas.ownership import OwnershipCreate
 
         ownership_data = OwnershipCreate(name="New Company", short_name="New")
@@ -310,6 +313,7 @@ class TestUpdateOwnership:
     ):
         """Test updating ownership successfully"""
         from src.api.v1.ownership import update_ownership
+
         from src.schemas.ownership import OwnershipUpdate
 
         update_data = OwnershipUpdate(name="Updated Ownership Name")
@@ -335,6 +339,7 @@ class TestUpdateOwnership:
     ):
         """Test updating non-existent ownership"""
         from src.api.v1.ownership import update_ownership
+
         from src.schemas.ownership import OwnershipUpdate
 
         update_data = OwnershipUpdate(name="Updated Name")
@@ -360,6 +365,7 @@ class TestUpdateOwnership:
     ):
         """Test updating ownership with duplicate name"""
         from src.api.v1.ownership import update_ownership
+
         from src.schemas.ownership import OwnershipUpdate
 
         update_data = OwnershipUpdate(name="Existing Ownership Name")
@@ -386,6 +392,7 @@ class TestUpdateOwnership:
     ):
         """Test updating ownership with unexpected exception"""
         from src.api.v1.ownership import update_ownership
+
         from src.schemas.ownership import OwnershipUpdate
 
         update_data = OwnershipUpdate(name="Updated Name")
@@ -754,6 +761,7 @@ class TestSearchOwnerships:
     ):
         """Test searching ownerships successfully"""
         from src.api.v1.ownership import search_ownerships
+
         from src.schemas.ownership import OwnershipSearchRequest
 
         search_params = OwnershipSearchRequest(keyword="Test", page=1, size=10)
@@ -786,6 +794,7 @@ class TestSearchOwnerships:
     ):
         """Test searching ownerships with no results"""
         from src.api.v1.ownership import search_ownerships
+
         from src.schemas.ownership import OwnershipSearchRequest
 
         search_params = OwnershipSearchRequest(keyword="Nonexistent", page=1, size=10)
@@ -948,6 +957,7 @@ class TestGetOwnershipFinancialSummary:
     ):
         """Test getting financial summary successfully"""
         from src.api.v1.ownership import get_ownership_financial_summary
+
         from src.crud.ownership import ownership as real_ownership
 
         # Add arrears_amount attribute to the mock RentLedger model
@@ -1008,6 +1018,7 @@ class TestGetOwnershipFinancialSummary:
     async def test_get_financial_summary_not_found(self, mock_db, mock_current_user):
         """Test getting financial summary for non-existent ownership"""
         from src.api.v1.ownership import get_ownership_financial_summary
+
         from src.crud.ownership import ownership as real_ownership
 
         # Patch the get method to return None
@@ -1030,6 +1041,7 @@ class TestGetOwnershipFinancialSummary:
     ):
         """Test getting financial summary when ownership has no contracts"""
         from src.api.v1.ownership import get_ownership_financial_summary
+
         from src.crud.ownership import ownership as real_ownership
 
         # Add arrears_amount attribute to the mock RentLedger model
@@ -1119,6 +1131,7 @@ class TestOwnershipEdgeCases:
     ):
         """Test updating ownership with no changes"""
         from src.api.v1.ownership import update_ownership
+
         from src.schemas.ownership import OwnershipUpdate
 
         with patch("src.api.v1.ownership.ownership") as mock_crud:
@@ -1197,6 +1210,7 @@ class TestOwnershipEdgeCases:
     ):
         """Test searching with special characters in keyword"""
         from src.api.v1.ownership import search_ownerships
+
         from src.schemas.ownership import OwnershipSearchRequest
 
         with patch("src.api.v1.ownership.ownership") as mock_crud:
@@ -1226,6 +1240,7 @@ class TestOwnershipEdgeCases:
     ):
         """Test payment rate calculation in financial summary"""
         from src.api.v1.ownership import get_ownership_financial_summary
+
         from src.crud.ownership import ownership as real_ownership
 
         # Add arrears_amount attribute to the mock RentLedger model
@@ -1274,6 +1289,7 @@ class TestOwnershipEdgeCases:
     ):
         """Test payment rate when due amount is zero"""
         from src.api.v1.ownership import get_ownership_financial_summary
+
         from src.crud.ownership import ownership as real_ownership
 
         # Add arrears_amount attribute to the mock RentLedger model

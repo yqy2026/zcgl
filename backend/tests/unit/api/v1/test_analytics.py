@@ -12,7 +12,6 @@ Test coverage for Analytics API endpoints:
 import pytest
 from fastapi import status
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

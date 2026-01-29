@@ -14,7 +14,6 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -23,8 +22,8 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def project_data(db: Session):
     """创建测试项目数据"""
-    from src.schemas.project import ProjectCreate
     from src.crud.project import project_crud
+    from src.schemas.project import ProjectCreate
 
     project = project_crud.create(
         db,
@@ -45,7 +44,7 @@ def project_data(db: Session):
     # Cleanup
     try:
         project_crud.remove(db, id=project.id)
-    except:
+    except Exception:
         pass
 
 
@@ -418,8 +417,8 @@ class TestSearchProjects:
 
     def test_delete_project_success(self, client, admin_user_headers, db: Session):
         """测试成功删除项目"""
-        from src.schemas.project import ProjectCreate
         from src.crud.project import project_crud
+        from src.schemas.project import ProjectCreate
 
         # 创建一个待删除的项目
         project = project_crud.create(

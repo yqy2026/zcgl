@@ -8,7 +8,7 @@ import asyncio
 import logging
 import os
 import uuid
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse

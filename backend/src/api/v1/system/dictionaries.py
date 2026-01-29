@@ -18,9 +18,8 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_db
-from ....models.enum_field import EnumFieldType
-from ....models.auth import User
 from ....middleware.auth import get_current_active_user
+from ....models.auth import User
 from ....schemas.dictionary import (
     DictionaryOptionResponse,
     DictionaryValueCreate,

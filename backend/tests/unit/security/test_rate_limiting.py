@@ -9,17 +9,16 @@ Tests for rate limiting mechanisms to prevent DDoS and brute force attacks:
 """
 
 from time import sleep, time
-from unittest.mock import Mock, patch
 
 import pytest
 
 from src.security.security import (
+    AdaptiveRateLimiter,
+    IPBlacklistManager,
     RateLimitConfig,
     RateLimiter,
-    TokenBucketRateLimiter,
-    AdaptiveRateLimiter,
     RequestLimiter,
-    IPBlacklistManager,
+    TokenBucketRateLimiter,
 )
 
 

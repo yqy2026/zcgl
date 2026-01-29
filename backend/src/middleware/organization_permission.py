@@ -10,8 +10,8 @@ from typing import Any
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
-from ..database import get_db
 from ..core.exception_handler import bad_request, forbidden
+from ..database import get_db
 from ..models.auth import User
 from ..security.audit_logger import SecurityEventLogger
 from ..security.roles import RoleNormalizer

@@ -8,15 +8,16 @@ Tests for request security utilities including:
 - Field validation against whitelist
 """
 
-import pytest
 from unittest.mock import Mock, patch
 
-from src.security.security import (
-    RequestSecurity,
-    FieldValidator,
-    MODEL_REGISTRY,
-)
+import pytest
+
 from src.core.exception_handler import InvalidRequestError
+from src.security.security import (
+    MODEL_REGISTRY,
+    FieldValidator,
+    RequestSecurity,
+)
 
 
 class TestInputSanitization:
@@ -240,7 +241,6 @@ class TestFieldValidator:
     @patch("src.security.security.get_whitelist_for_model")
     def test_validate_field_allowed(self, mock_get_whitelist, validator):
         """Test validating allowed field"""
-        from src.models.asset import Asset
 
         # Mock whitelist to allow field
         mock_whitelist = Mock()
@@ -253,7 +253,6 @@ class TestFieldValidator:
     @patch("src.security.security.get_whitelist_for_model")
     def test_validate_field_blocked(self, mock_get_whitelist, validator):
         """Test that blocked field raises error"""
-        from src.models.asset import Asset
 
         # Mock whitelist to deny field
         mock_whitelist = Mock()

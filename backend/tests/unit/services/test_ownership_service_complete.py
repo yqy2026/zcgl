@@ -4,9 +4,9 @@
 Complete tests for Ownership Service to maximize coverage
 """
 
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +20,8 @@ def ownership_service(db: Session):
 @pytest.fixture
 def sample_ownership(db: Session, admin_user):
     """示例权属数据"""
-    from src.schemas.ownership import OwnershipCreate
     from src.crud.ownership import ownership_crud
+    from src.schemas.ownership import OwnershipCreate
 
     ownership = ownership_crud.create(
         db,
@@ -38,15 +38,15 @@ def sample_ownership(db: Session, admin_user):
     yield ownership
     try:
         ownership_crud.remove(db, id=ownership.id)
-    except:
+    except Exception:
         pass
 
 
 @pytest.fixture
 def sample_ownership_with_org(db: Session, admin_user):
     """组织权属数据"""
-    from src.schemas.ownership import OwnershipCreate
     from src.crud.ownership import ownership_crud
+    from src.schemas.ownership import OwnershipCreate
 
     ownership = ownership_crud.create(
         db,
@@ -63,7 +63,7 @@ def sample_ownership_with_org(db: Session, admin_user):
     yield ownership
     try:
         ownership_crud.remove(db, id=ownership.id)
-    except:
+    except Exception:
         pass
 
 

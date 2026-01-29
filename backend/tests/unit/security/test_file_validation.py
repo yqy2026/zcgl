@@ -10,7 +10,7 @@ Tests for file upload security validation including:
 
 import hashlib
 import io
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import UploadFile
@@ -413,7 +413,7 @@ class TestFileHashCalculation:
         file.file = Mock()
 
         # Mock file.read to raise an exception
-        file.file.read.side_effect = IOError("Read error")
+        file.file.read.side_effect = OSError("Read error")
 
         result = validator.calculate_file_hash(file)
         assert result == ""  # Should return empty string on error

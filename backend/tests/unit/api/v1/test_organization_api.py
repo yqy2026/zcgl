@@ -714,6 +714,7 @@ class TestCreateOrganization:
     ):
         """Test creating organization successfully"""
         from src.api.v1.organization import create_organization
+
         from src.schemas.organization import OrganizationCreate
 
         org_data = OrganizationCreate(
@@ -746,6 +747,7 @@ class TestCreateOrganization:
     ):
         """Test creating organization with validation error"""
         from src.api.v1.organization import create_organization
+
         from src.schemas.organization import OrganizationCreate
 
         org_data = OrganizationCreate(
@@ -785,6 +787,7 @@ class TestUpdateOrganization:
     ):
         """Test updating organization successfully"""
         from src.api.v1.organization import update_organization
+
         from src.schemas.organization import OrganizationUpdate
 
         org_data = OrganizationUpdate(name="Updated Name", updated_by="admin")
@@ -810,6 +813,7 @@ class TestUpdateOrganization:
     ):
         """Test updating non-existent organization"""
         from src.api.v1.organization import update_organization
+
         from src.schemas.organization import OrganizationUpdate
 
         org_data = OrganizationUpdate(name="Updated Name")
@@ -836,6 +840,7 @@ class TestUpdateOrganization:
     ):
         """Test updating organization with validation error"""
         from src.api.v1.organization import update_organization
+
         from src.schemas.organization import OrganizationUpdate
 
         org_data = OrganizationUpdate(name="Updated Name")
@@ -944,6 +949,7 @@ class TestMoveOrganization:
     ):
         """Test moving organization successfully"""
         from src.api.v1.organization import move_organization
+
         from src.schemas.organization import OrganizationMoveRequest
 
         move_request = OrganizationMoveRequest(
@@ -970,6 +976,7 @@ class TestMoveOrganization:
     ):
         """Test moving non-existent organization"""
         from src.api.v1.organization import move_organization
+
         from src.schemas.organization import OrganizationMoveRequest
 
         move_request = OrganizationMoveRequest(
@@ -998,6 +1005,7 @@ class TestMoveOrganization:
     ):
         """Test moving organization with validation error"""
         from src.api.v1.organization import move_organization
+
         from src.schemas.organization import OrganizationMoveRequest
 
         move_request = OrganizationMoveRequest(
@@ -1035,6 +1043,7 @@ class TestBatchOrganizationOperation:
     ):
         """Test batch deleting organizations successfully"""
         from src.api.v1.organization import batch_organization_operation
+
         from src.schemas.organization import OrganizationBatchRequest
 
         batch_request = OrganizationBatchRequest(
@@ -1061,6 +1070,7 @@ class TestBatchOrganizationOperation:
     ):
         """Test batch deleting organizations with some failures"""
         from src.api.v1.organization import batch_organization_operation
+
         from src.schemas.organization import OrganizationBatchRequest
 
         batch_request = OrganizationBatchRequest(
@@ -1091,6 +1101,7 @@ class TestBatchOrganizationOperation:
     ):
         """Test batch deleting organizations with all failures"""
         from src.api.v1.organization import batch_organization_operation
+
         from src.schemas.organization import OrganizationBatchRequest
 
         batch_request = OrganizationBatchRequest(
@@ -1123,6 +1134,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search with keyword"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(keyword="test", skip=0, limit=100)
@@ -1152,6 +1164,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search with level filter"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(level=2, skip=0, limit=100)
@@ -1192,6 +1205,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search with parent_id filter"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(
@@ -1234,6 +1248,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search with multiple filters"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(
@@ -1264,6 +1279,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search without any filters"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(skip=0, limit=100)
@@ -1286,6 +1302,7 @@ class TestAdvancedSearchOrganizations:
     ):
         """Test advanced search with pagination"""
         from src.api.v1.organization import advanced_search_organizations
+
         from src.schemas.organization import OrganizationSearchRequest
 
         search_request = OrganizationSearchRequest(skip=10, limit=50)
@@ -1387,6 +1404,7 @@ class TestOrganizationEdgeCases:
     ):
         """Test creating organization with parent"""
         from src.api.v1.organization import create_organization
+
         from src.schemas.organization import OrganizationCreate
 
         org_data = OrganizationCreate(
@@ -1416,6 +1434,7 @@ class TestOrganizationEdgeCases:
     ):
         """Test updating organization with partial data"""
         from src.api.v1.organization import update_organization
+
         from src.schemas.organization import OrganizationUpdate
 
         # Only update name

@@ -27,12 +27,12 @@ from sqlalchemy.orm import Session
 
 from src.constants.message_constants import ErrorIDs
 
-from ....security.roles import RoleNormalizer
 from ....crud.auth import AuditLogCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
+from ....security.roles import RoleNormalizer
 
 # 创建系统设置路由器
 router = APIRouter()

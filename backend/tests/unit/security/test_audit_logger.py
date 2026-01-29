@@ -7,12 +7,12 @@ threshold checking, Redis integration, and database storage.
 
 from unittest.mock import Mock, patch
 
+from src.models.security_event import SecurityEvent
 from src.security.audit_logger import (
     SecurityEventLogger,
     SecurityEventType,
     SecuritySeverity,
 )
-from src.models.security_event import SecurityEvent
 
 
 def setup_mock_db_counts(mock_sessionlocal, counts):

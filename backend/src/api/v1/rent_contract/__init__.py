@@ -6,8 +6,8 @@
 
 from fastapi import APIRouter
 
-from . import attachments, contracts, excel_ops, ledger, lifecycle, terms
 from ..analytics import statistics
+from . import attachments, contracts, excel_ops, ledger, lifecycle, terms
 
 # 创建主路由器
 router = APIRouter()

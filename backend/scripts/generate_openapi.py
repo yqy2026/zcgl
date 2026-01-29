@@ -1,6 +1,6 @@
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root to python path
@@ -13,8 +13,9 @@ os.environ["SECRET_KEY"] = "mock-secret-key-for-openapi-generation-only-do-not-u
 os.environ["DATA_ENCRYPTION_KEY"] = "mock-data-encryption-key-for-openapi-generation-only"
 
 try:
-    from src.main import app
     from fastapi.openapi.utils import get_openapi
+
+    from src.main import app
 except ImportError as e:
     print(f"Error importing app: {e}")
     sys.exit(1)

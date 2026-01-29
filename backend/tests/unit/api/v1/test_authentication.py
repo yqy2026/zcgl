@@ -163,6 +163,7 @@ class TestLogin:
     ):
         """Test successful user login"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="testuser", password="password123")
@@ -219,6 +220,7 @@ class TestLogin:
     ):
         """Test login with invalid credentials"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
@@ -263,6 +265,7 @@ class TestLogin:
     ):
         """Test login with invalid credentials when user doesn't exist"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
@@ -303,6 +306,7 @@ class TestLogin:
     ):
         """Test login with server error"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.core.exception_handler import InternalServerError
         from src.schemas.auth import LoginRequest
 
@@ -337,6 +341,7 @@ class TestLogin:
     ):
         """Test login with business logic error - note: caught as general exception"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import LoginRequest
 
@@ -373,6 +378,7 @@ class TestLogin:
     ):
         """Test login when is_active is a boolean"""
         from src.api.v1.auth_modules.authentication import login
+
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="testuser", password="password123")
@@ -501,6 +507,7 @@ class TestLogout:
     ):
         """Test logout successfully blacklists token"""
         from src.api.v1.auth_modules.authentication import logout
+
         from src.core.config import settings
 
         mock_request.headers = {
@@ -630,6 +637,7 @@ class TestRefreshToken:
     ):
         """Test successful token refresh"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
@@ -659,6 +667,7 @@ class TestRefreshToken:
     ):
         """Test refresh with invalid token"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -694,6 +703,7 @@ class TestRefreshToken:
     ):
         """Test refresh when user not found"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -727,6 +737,7 @@ class TestRefreshToken:
     ):
         """Test refresh when user is inactive"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -762,6 +773,7 @@ class TestRefreshToken:
     ):
         """Test refresh with IP change (should succeed with warning)"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
@@ -798,6 +810,7 @@ class TestRefreshToken:
     ):
         """Test refresh when request.client is None"""
         from src.api.v1.auth_modules.authentication import refresh_token
+
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")

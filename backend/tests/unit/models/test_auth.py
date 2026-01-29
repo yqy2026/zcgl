@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Auth Model Tests
 
 Tests for User model - authentication and authorization core.
 """
 
-import pytest
 from datetime import UTC, datetime
+
+import pytest
 
 from src.models.auth import User, UserRole
 

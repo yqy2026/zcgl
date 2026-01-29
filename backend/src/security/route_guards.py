@@ -6,19 +6,16 @@
 import functools
 import os
 from collections.abc import Awaitable, Callable
-from typing import ParamSpec, TypeVar
 
 from ..core.exception_handler import not_found
 
-P = ParamSpec("P")
-R = TypeVar("R")
 
 def is_debug_mode() -> bool:
     """检查是否为调试模式"""
     return os.getenv("DEBUG", "false").lower() == "true"
 
 
-def debug_only(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+def debug_only[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """
     装饰器：仅在调试模式下允许访问端点
 
@@ -41,7 +38,7 @@ def debug_only(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     return wrapper
 
 
-def require_debug_mode(func: Callable[P, R]) -> Callable[P, R]:
+def require_debug_mode[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     同步版本的调试模式装饰器
     用于非async函数

@@ -114,7 +114,6 @@ class TestCreateDefect:
     async def test_create_defect_database_error(self, mock_get_conn):
         """Test defect creation with database error"""
         from sqlalchemy.exc import IntegrityError
-
         from src.api.v1.defect_tracking import DefectReport, create_defect
 
         sample_data = {
@@ -705,7 +704,6 @@ class TestCreatePreventionMeasure:
     async def test_create_prevention_database_error(self, mock_get_conn):
         """Test prevention creation with database error"""
         from sqlalchemy.exc import DatabaseError
-
         from src.api.v1.defect_tracking import (
             DefectPrevention,
             create_prevention_measure,

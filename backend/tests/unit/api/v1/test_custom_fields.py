@@ -283,6 +283,7 @@ class TestCreateCustomField:
     ):
         """Test creating custom field successfully"""
         from src.api.v1.custom_fields import create_custom_field
+
         from src.schemas.asset import AssetCustomFieldCreate
 
         field_data = AssetCustomFieldCreate(
@@ -311,6 +312,7 @@ class TestCreateCustomField:
     ):
         """Test creating custom field with duplicate name"""
         from src.api.v1.custom_fields import create_custom_field
+
         from src.schemas.asset import AssetCustomFieldCreate
 
         field_data = AssetCustomFieldCreate(
@@ -338,6 +340,7 @@ class TestCreateCustomField:
     ):
         """Test creating custom field with business exception from service"""
         from src.api.v1.custom_fields import create_custom_field
+
         from src.schemas.asset import AssetCustomFieldCreate
 
         field_data = AssetCustomFieldCreate(
@@ -365,6 +368,7 @@ class TestCreateCustomField:
     ):
         """Test creating custom field with unexpected exception"""
         from src.api.v1.custom_fields import create_custom_field
+
         from src.schemas.asset import AssetCustomFieldCreate
 
         field_data = AssetCustomFieldCreate(
@@ -397,6 +401,7 @@ class TestUpdateCustomField:
     ):
         """Test updating custom field successfully"""
         from src.api.v1.custom_fields import update_custom_field
+
         from src.schemas.asset import AssetCustomFieldUpdate
 
         update_data = AssetCustomFieldUpdate(display_name="Updated Display Name")
@@ -422,6 +427,7 @@ class TestUpdateCustomField:
     ):
         """Test updating non-existent custom field"""
         from src.api.v1.custom_fields import update_custom_field
+
         from src.schemas.asset import AssetCustomFieldUpdate
 
         update_data = AssetCustomFieldUpdate(display_name="Updated Name")
@@ -448,6 +454,7 @@ class TestUpdateCustomField:
     ):
         """Test updating custom field with duplicate name"""
         from src.api.v1.custom_fields import update_custom_field
+
         from src.schemas.asset import AssetCustomFieldUpdate
 
         update_data = AssetCustomFieldUpdate(field_name="existing_field")
@@ -474,6 +481,7 @@ class TestUpdateCustomField:
     ):
         """Test updating custom field with unexpected exception"""
         from src.api.v1.custom_fields import update_custom_field
+
         from src.schemas.asset import AssetCustomFieldUpdate
 
         update_data = AssetCustomFieldUpdate(display_name="Updated Name")
@@ -789,6 +797,7 @@ class TestUpdateAssetCustomFieldValues:
     ):
         """Test updating asset custom field values successfully"""
         from src.api.v1.custom_fields import update_asset_custom_field_values
+
         from src.schemas.asset import CustomFieldValueUpdate
 
         values_update = CustomFieldValueUpdate(
@@ -824,6 +833,7 @@ class TestUpdateAssetCustomFieldValues:
     ):
         """Test updating asset custom field values with validation error"""
         from src.api.v1.custom_fields import update_asset_custom_field_values
+
         from src.schemas.asset import CustomFieldValueUpdate
 
         values_update = CustomFieldValueUpdate(
@@ -852,6 +862,7 @@ class TestUpdateAssetCustomFieldValues:
     ):
         """Test updating asset custom field values with unexpected exception"""
         from src.api.v1.custom_fields import update_asset_custom_field_values
+
         from src.schemas.asset import CustomFieldValueUpdate
 
         values_update = CustomFieldValueUpdate(values=[])

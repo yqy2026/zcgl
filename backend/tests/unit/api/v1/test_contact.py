@@ -15,7 +15,6 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -24,8 +23,8 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def sample_ownership(db: Session):
     """创建测试权属单位"""
-    from src.schemas.ownership import OwnershipCreate
     from src.crud.ownership import ownership_crud
+    from src.schemas.ownership import OwnershipCreate
 
     ownership = ownership_crud.create(
         db,
@@ -39,15 +38,15 @@ def sample_ownership(db: Session):
     yield ownership
     try:
         ownership_crud.remove(db, id=ownership.id)
-    except:
+    except Exception:
         pass
 
 
 @pytest.fixture
 def contact_data(db: Session, sample_ownership):
     """创建测试联系人数据"""
-    from src.schemas.contact import ContactCreate
     from src.crud.contact import contact_crud
+    from src.schemas.contact import ContactCreate
 
     contact = contact_crud.create(
         db,
@@ -64,7 +63,7 @@ def contact_data(db: Session, sample_ownership):
     yield contact
     try:
         contact_crud.remove(db, id=contact.id)
-    except:
+    except Exception:
         pass
 
 
@@ -399,8 +398,8 @@ class TestDeleteContact:
         self, client, admin_user_headers, db: Session, sample_ownership
     ):
         """测试成功删除联系人（软删除）"""
-        from src.schemas.contact import ContactCreate
         from src.crud.contact import contact_crud
+        from src.schemas.contact import ContactCreate
 
         # 创建临时联系人用于删除
         temp_contact = contact_crud.create(

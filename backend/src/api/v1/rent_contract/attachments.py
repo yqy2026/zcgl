@@ -3,14 +3,13 @@
 """
 
 import logging
-import uuid
 from pathlib import Path
 from typing import Any
+from typing import Any as AnyType
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import Any as AnyType
 
 from ....core.exception_handler import bad_request, internal_error, not_found
 from ....crud.rent_contract import rent_contract

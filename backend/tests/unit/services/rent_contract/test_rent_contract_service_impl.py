@@ -9,10 +9,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
+from src.core.enums import ContractStatus
 from src.models.rent_contract import (
     ContractType as ContractTypeModel,
 )
-from src.core.enums import ContractStatus
 from src.models.rent_contract import (
     RentContract,
     RentLedger,

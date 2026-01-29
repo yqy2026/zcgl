@@ -3,8 +3,8 @@
 """
 
 import uuid
-from typing import Any
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,

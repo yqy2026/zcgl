@@ -12,8 +12,8 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....crud.ownership import ownership
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
-from ....models.auth import User
 from ....models.asset import Ownership
+from ....models.auth import User
 from ....schemas.ownership import (
     OwnershipCreate,
     OwnershipDeleteResponse,

@@ -4,9 +4,10 @@
 Deep tests for Organization Service to maximize coverage
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture
@@ -20,8 +21,8 @@ def org_service(db: Session):
 @pytest.fixture
 def sample_organization(db: Session, admin_user):
     """示例组织数据"""
-    from src.schemas.organization import OrganizationCreate
     from src.crud.organization import organization_crud
+    from src.schemas.organization import OrganizationCreate
 
     org = organization_crud.create(
         db,
@@ -37,7 +38,7 @@ def sample_organization(db: Session, admin_user):
     yield org
     try:
         organization_crud.remove(db, id=org.id)
-    except:
+    except Exception:
         pass
 
 
@@ -47,8 +48,8 @@ class TestOrganizationServiceDeep:
     def test_organization_hierarchy_validation(self, org_service, db: Session):
         """测试组织层级验证"""
         # 创建父组织
-        from src.schemas.organization import OrganizationCreate
         from src.crud.organization import organization_crud
+        from src.schemas.organization import OrganizationCreate
 
         parent_org = organization_crud.create(
             db,
@@ -79,11 +80,11 @@ class TestOrganizationServiceDeep:
 
     def test_organization_code_uniqueness(self, org_service, db: Session):
         """测试组织代码唯一性"""
-        from src.schemas.organization import OrganizationCreate
         from src.crud.organization import organization_crud
+        from src.schemas.organization import OrganizationCreate
 
         # 创建第一个组织
-        org1 = organization_crud.create(
+        organization_crud.create(
             db,
             obj_in=OrganizationCreate(
                 name="组织1", code="UNIQUE-001", organization_type="enterprise"
@@ -141,8 +142,8 @@ class TestOrganizationServiceDeep:
 
     def test_organization_merge(self, org_service, db: Session):
         """测试合并组织"""
-        from src.schemas.organization import OrganizationCreate
         from src.crud.organization import organization_crud
+        from src.schemas.organization import OrganizationCreate
 
         # 创建两个组织
         org1 = organization_crud.create(
@@ -317,11 +318,11 @@ class TestOrganizationServiceDeep:
 
     def test_organization_name_uniqueness_in_type(self, org_service, db: Session):
         """测试验证同类型组织名称唯一性"""
-        from src.schemas.organization import OrganizationCreate
         from src.crud.organization import organization_crud
+        from src.schemas.organization import OrganizationCreate
 
         # 创建第一个组织
-        org1 = organization_crud.create(
+        organization_crud.create(
             db,
             obj_in=OrganizationCreate(
                 name="同名组织", code="NAME-001", organization_type="enterprise"

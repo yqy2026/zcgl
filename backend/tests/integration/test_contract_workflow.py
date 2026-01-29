@@ -4,10 +4,10 @@
 Integration tests for complete contract workflow
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from fastapi import status
-from sqlalchemy.orm import Session
-from datetime import datetime, UTC
 
 
 @pytest.fixture

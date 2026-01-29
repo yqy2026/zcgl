@@ -39,7 +39,7 @@ class TestSystemAPI:
     def test_get_system_metrics(self, client, admin_user_headers):
         """测试获取系统指标"""
         response = client.get("/api/v1/system/metrics", headers=admin_user_headers)
-        assert response.status_code in [status_HTTP_200_OK, status.HTTP_404_NOT_FOUND]
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
     def test_get_database_status(self, client, admin_user_headers):
         """测试获取数据库状态"""

@@ -5,6 +5,7 @@ Integration tests for complete asset lifecycle
 """
 
 import pytest
+from fastapi import status
 from sqlalchemy.orm import Session
 
 
@@ -96,5 +97,5 @@ class TestAssetLifecycle:
         for asset_id in assets:
             try:
                 client.delete(f"/api/v1/assets/{asset_id}", headers=admin_user_headers)
-            except:
+            except Exception:
                 pass

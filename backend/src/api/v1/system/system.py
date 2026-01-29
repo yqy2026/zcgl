@@ -3,7 +3,6 @@
 包含健康检查、应用信息、API根路径等系统级端点
 """
 
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -66,8 +65,10 @@ async def health_check():
 
     except Exception as e:
         import logging
-        from ....core.exception_handler import service_unavailable
+
         from sqlalchemy.exc import OperationalError
+
+        from ....core.exception_handler import service_unavailable
 
         logger = logging.getLogger(__name__)
         logger.error(f"健康检查失败: {e}")

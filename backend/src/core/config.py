@@ -572,7 +572,7 @@ class Settings(BaseSettings):
         if len(self.SECRET_KEY) < 32:
             msg = f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，建议使用至少 32 字符的密钥。"
             if is_production and not is_testing:
-                raise ValueError(f"生产环境要求 SECRET_KEY 至少 32 字符")
+                raise ValueError("生产环境要求 SECRET_KEY 至少 32 字符")
             warnings.append(msg)
 
         # 2. DATA_ENCRYPTION_KEY 检查
