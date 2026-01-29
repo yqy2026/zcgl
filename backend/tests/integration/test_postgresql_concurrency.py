@@ -13,7 +13,7 @@ from sqlalchemy import text
 from src.database import get_database_manager
 
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DATABASE_URL", "").startswith("postgresql://"),
+    not os.getenv("DATABASE_URL", "").startswith("postgresql+psycopg://"),
     reason="PostgreSQL tests required",
 )
 

@@ -245,6 +245,7 @@ export interface AssetSearchParams {
   page_size?: number;
   search?: string;
   search_keyword?: string; // 添加搜索关键字字段
+  include_relations?: boolean; // 是否加载关联数据
   ownership_status?: OwnershipStatus;
   usage_status?: UsageStatus;
   property_nature?: PropertyNature;

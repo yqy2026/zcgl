@@ -277,9 +277,11 @@ export const SYSTEM_API = {
   // 角色管理
   ROLES: '/roles',
   ROLE_DETAIL: (id: string) => `/roles/${id}`,
+  ROLE_PERMISSIONS: (id: string) => `/roles/${id}/permissions`,
+  ROLE_STATISTICS: '/roles/statistics/summary',
 
   // 权限管理
-  PERMISSIONS: '/permissions',
+  PERMISSIONS: '/roles/permissions/list',
   PERMISSION_CHECK: '/permissions/check',
 
   // 审计日志

@@ -8,7 +8,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +199,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
     async def _extract_with_retry(
         self, image_paths: list[str], prompt: str, temperature: float = 0.1
-    ):
+    ) -> Any:
         """
         Extract from images with automatic retry on transient errors
 
@@ -260,11 +260,11 @@ class BaseVisionAdapter(ContractExtractorInterface):
     def _parse_json(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response (common logic)"""
         try:
-            return json.loads(content)
+            return cast(dict[str, Any], json.loads(content))
         except json.JSONDecodeError:
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if match:
-                return json.loads(match.group(0))
+                return cast(dict[str, Any], json.loads(match.group(0)))
             raise ValueError(f"Could not parse JSON from response: {content[:200]}")
 
     def _build_extraction_prompt(self, num_images: int) -> str:

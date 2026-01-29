@@ -12,7 +12,6 @@ Security Design:
 """
 
 import logging
-from importlib import import_module
 from typing import ClassVar
 
 from ..constants.business_constants import DateTimeFields
@@ -277,9 +276,42 @@ class OwnershipWhitelist(ModelFieldWhitelist):
     }
 
 
-# ============================================================================
-# Whitelist Registry
-# ============================================================================
+class RoleWhitelist(ModelFieldWhitelist):
+    filter_fields: ClassVar[set[str]] = {
+        "id",
+        "name",
+        "display_name",
+        "category",
+        "is_active",
+        "organization_id",
+        "is_system_role",
+        "scope",
+        "scope_id",
+        "level",
+        "created_at",
+        "updated_at",
+    }
+
+    search_fields: ClassVar[set[str]] = {
+        "name",
+        "display_name",
+        "description",
+    }
+
+    sort_fields: ClassVar[set[str]] = {
+        "id",
+        "name",
+        "display_name",
+        "level",
+        "created_at",
+        "updated_at",
+    }
+
+    blocked_fields: ClassVar[set[str]] = {
+        "created_by",
+        "updated_by",
+    }
+
 
 # Registry mapping model classes to their whitelist configurations
 WHITELIST_REGISTRY: dict[type, ModelFieldWhitelist] = {}
@@ -302,11 +334,13 @@ def _ensure_whitelists_registered() -> None:
         return
     try:
         from ..models.asset import Asset, Ownership
+        from ..models.rbac import Role
         from ..models.rent_contract import RentContract
 
         register_whitelist(Asset, AssetWhitelist())
         register_whitelist(Ownership, OwnershipWhitelist())
         register_whitelist(RentContract, RentContractWhitelist())
+        register_whitelist(Role, RoleWhitelist())
     except Exception as exc:
         logger.warning(f"Failed to initialize whitelist registry: {exc}")
 

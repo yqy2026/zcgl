@@ -33,7 +33,9 @@ export interface PaginatedApiResponse<T = unknown> {
       page: number;
       page_size: number;
       total: number;
-      totalPages: number;
+      total_pages: number;
+      has_next?: boolean;
+      has_prev?: boolean;
     };
   };
   message?: string;

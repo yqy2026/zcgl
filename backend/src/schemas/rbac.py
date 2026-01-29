@@ -60,7 +60,7 @@ class RoleBase(BaseModel):
 class RoleCreate(RoleBase):
     is_system_role: bool = Field(False, description="是否系统角色")
     organization_id: str | None = Field(None, description="所属组织ID")
-    permission_ids: list[str] | None = Field([], description="权限ID列表")
+    permission_ids: list[str] = Field(default_factory=list, description="权限ID列表")
 
 
 class RoleUpdate(BaseModel):
@@ -83,7 +83,7 @@ class RoleResponse(RoleBase):
     updated_at: datetime
     created_by: str | None
     updated_by: str | None
-    permissions: list[PermissionResponse] = []
+    permissions: list[PermissionResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -170,7 +170,9 @@ class PermissionCheckRequest(BaseModel):
 
 class PermissionCheckResponse(BaseModel):
     has_permission: bool = Field(..., description="是否有权限")
-    granted_by: list[str] = Field(default=[], description="授权来源(角色/权限)")
+    granted_by: list[str] = Field(
+        default_factory=list, description="授权来源(角色/权限)"
+    )
     conditions: dict[str, Any] | None = Field(None, description="权限条件")
     reason: str | None = Field(None, description="拒绝原因")
 

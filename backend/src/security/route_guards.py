@@ -6,18 +6,16 @@
 import functools
 import os
 from collections.abc import Awaitable, Callable
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from ..core.exception_handler import not_found
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
 def is_debug_mode() -> bool:
     """检查是否为调试模式"""
     return os.getenv("DEBUG", "false").lower() == "true"
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 
 def debug_only(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:

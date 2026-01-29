@@ -72,7 +72,7 @@ class TestSettingsEnvironmentVariables:
 
     def test_database_url_from_env(self):
         settings = build_settings(
-            {"DATABASE_URL": "postgresql://user:pass@localhost/db"}
+            {"DATABASE_URL": "postgresql+psycopg://user:pass@localhost/db"}
         )
         assert "postgresql" in settings.DATABASE_URL
 

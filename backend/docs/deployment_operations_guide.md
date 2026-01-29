@@ -191,10 +191,12 @@ DEBUG=false
 SECRET_KEY=your-super-secret-key-change-this-in-production
 
 # 数据库配置（SQLite 已移除）
-DATABASE_URL=postgresql://user:password@localhost:5432/asset_management
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/asset_management
 
 # Redis配置
-REDIS_URL=redis://localhost:6379/0
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
 REDIS_PASSWORD=your-redis-password
 
 # 文件存储配置
@@ -203,7 +205,8 @@ MAX_FILE_SIZE=50MB
 
 # PDF处理配置
 PDF_PROCESSING_TIMEOUT=300
-OCR_ENGINE=paddleocr
+# 使用 LLM Vision 提取（提供商配置在环境变量中）
+LLM_PROVIDER=qwen
 
 # 监控配置
 ENABLE_METRICS=true

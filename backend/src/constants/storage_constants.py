@@ -258,8 +258,7 @@ class DatabasePoolConfig:
     """
     Database connection pool settings.
 
-    These constants control the behavior of SQLAlchemy's connection pool
-    for both SQLite (development) and PostgreSQL (production).
+    These constants control the behavior of SQLAlchemy's connection pool.
     """
 
     SIZE_DEFAULT: Final[int] = 20
@@ -268,9 +267,6 @@ class DatabasePoolConfig:
     RECYCLE_SECONDS: Final[int] = 3600
     PRE_PING_ENABLED: Final[bool] = True
     ECHO_ENABLED: Final[bool] = False
-    SQLITE_TIMEOUT_SECONDS: Final[int] = 20
-    SQLITE_CACHE_SIZE: Final[int] = 10000
-    SQLITE_WAL_AUTOCHECKPOINT: Final[int] = 1000
     SLOW_QUERY_THRESHOLD_MS: Final[float] = 100.0
     ENABLE_QUERY_LOGGING: Final[bool] = False
     QUERY_HISTORY_QUEUE_SIZE: Final[int] = 1000

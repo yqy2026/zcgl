@@ -4,7 +4,7 @@ FROM python:3.12-slim-bookworm AS builder
 WORKDIR /app
 
 # Install system dependencies required for building Python packages
-# libpq-dev is needed for building psycopg2 (if using binary, mostly fine, but safe to have)
+# libpq-dev is needed for building psycopg (psycopg3)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \

@@ -232,7 +232,7 @@ class Asset(Base):
     def __repr__(self) -> str:
         return f"<Asset(id={self.id}, name={self.property_name})>"
 
-    def clear_cached_properties(self):
+    def clear_cached_properties(self) -> None:
         """清除缓存的计算属性"""
         # 对于cached_property，需要手动处理缓存清除
         self.__dict__.pop("unrented_area", None)

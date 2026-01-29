@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import Any, cast
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -33,11 +33,7 @@ class DuplicateAssetError(Exception):
 
 logger = logging.getLogger(__name__)
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
-
-def permission_required(
+def permission_required[**P, R](
     resource: str, action: str, resource_id_param: str | None = None
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
@@ -114,14 +110,14 @@ def permission_required(
     return decorator
 
 
-def admin_required(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+def admin_required[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """
     管理员权限装饰器
     """
     return permission_required("system", "admin")(func)
 
 
-def role_required(
+def role_required[**P, R](
     role_code: str,
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
@@ -162,7 +158,7 @@ def role_required(
     return decorator
 
 
-def organization_required(
+def organization_required[**P, R](
     organization_id_param: str = "organization_id",
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
@@ -188,7 +184,7 @@ def organization_required(
             # 获取目标组织ID
             target_org_id = kwargs.get(organization_id_param)
             if target_org_id is None:
-                target_org_id = current_user.organization_id
+                target_org_id = current_user.default_organization_id
             target_org_id_value = str(target_org_id)
 
             # 检查组织访问权限

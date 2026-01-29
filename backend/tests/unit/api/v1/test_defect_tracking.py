@@ -25,7 +25,7 @@ pytestmark = pytest.mark.api
 
 
 def create_mock_defect_row(defect_id="DEF-20260116-ABC12345"):
-    """Create a properly mocked defect row that behaves like sqlite3.Row"""
+    """Create a properly mocked defect row that behaves like a DB row"""
     row_data = {
         "defect_id": defect_id,
         "title": "Login button not responding",
@@ -113,7 +113,7 @@ class TestCreateDefect:
     @pytest.mark.asyncio
     async def test_create_defect_database_error(self, mock_get_conn):
         """Test defect creation with database error"""
-        from sqlite3 import IntegrityError
+        from sqlalchemy.exc import IntegrityError
 
         from src.api.v1.defect_tracking import DefectReport, create_defect
 
@@ -704,7 +704,7 @@ class TestCreatePreventionMeasure:
     @pytest.mark.asyncio
     async def test_create_prevention_database_error(self, mock_get_conn):
         """Test prevention creation with database error"""
-        from sqlite3 import DatabaseError
+        from sqlalchemy.exc import DatabaseError
 
         from src.api.v1.defect_tracking import (
             DefectPrevention,

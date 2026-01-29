@@ -3,6 +3,7 @@
 统一数据库服务，整合连接池、性能监控和健康检查功能
 """
 
+import importlib
 import logging
 import os
 import threading
@@ -22,41 +23,11 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
 
+from .core.config import get_config
 from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
 
 logger = logging.getLogger(__name__)
-
-try:
-    from .database_security import enhance_database_security
-except ImportError:  # pragma: no cover
-    # 回退数据库安全增强器（模块不可用时）
-    logger.warning(
-        "database_security模块不可用，使用不安全的后备实现",
-        extra={
-            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
-            "module": "database_security",
-        },
-    )
-    from sqlalchemy.engine import Engine
-
-    def enhance_database_security(engine: Engine) -> None:  # pragma: no cover
-        pass  # pragma: no cover
-
-
-try:
-    from .core.config import get_config
-except ImportError:  # pragma: no cover
-    logger.warning(
-        "config模块不可用，所有配置将使用默认值",
-        extra={
-            "error_id": ErrorIDs.System.RESOURCE_EXHAUSTED,
-            "module": "config",
-        },
-    )
-
-    def get_config(key: str, default: Any = None) -> Any:  # pragma: no cover
-        return default  # pragma: no cover
 
 
 @dataclass
@@ -131,10 +102,6 @@ class DatabaseManager:
             "future": True,
         }
 
-        # 根据数据库类型配置连接池（SQLite 已移除）
-        if "sqlite" in database_url.lower():
-            raise ValueError("SQLite 已移除，请使用 PostgreSQL 连接字符串")
-
         engine_kwargs.update(
             {
                 "poolclass": QueuePool,
@@ -153,9 +120,6 @@ class DatabaseManager:
             # Test connection immediately
             with self.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-
-            # 增强数据库安全
-            enhance_database_security(self.engine)
 
             # 设置事件监听器
             self._setup_event_listeners()
@@ -207,7 +171,7 @@ class DatabaseManager:
                 from urllib.parse import urlparse
 
                 parsed = urlparse(database_url)
-                safe_url = f"postgresql://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+                safe_url = f"{parsed.scheme}://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
             except Exception:
                 safe_url = (
                     database_url.split("@")[-1] if "@" in database_url else database_url
@@ -242,7 +206,7 @@ class DatabaseManager:
             )
             raise ValueError(
                 f"DATABASE_URL格式错误: {database_url}\n"
-                f"正确格式: postgresql://user:password@host:port/database\n"
+                f"正确格式: postgresql+psycopg://user:password@host:port/database\n"
                 f"错误详情: {e}"
             ) from e
 
@@ -333,6 +297,7 @@ class DatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
+    @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
         """获取数据库会话"""
         if not self.session_factory:
@@ -441,15 +406,14 @@ def get_database_url() -> str:
             extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
         )
         raise ValueError(
-            "必须设置DATABASE_URL环境变量（SQLite已移除）。\n"
+            "必须设置DATABASE_URL环境变量。\n"
             "请在.env文件中配置:\n"
-            "DATABASE_URL=postgresql://user:password@host:port/database\n"
-            "或: DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
+            "DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
             "帮助文档: docs/POSTGRESQL_MIGRATION.md"
         )
 
     # 验证PostgreSQL URL格式
-    if database_url.startswith(("postgresql://", "postgresql+psycopg://")):
+    if database_url.startswith("postgresql+psycopg://"):
         try:
             from urllib.parse import urlparse
 
@@ -477,20 +441,9 @@ def get_database_url() -> str:
             )
             raise ValueError(
                 f"DATABASE_URL格式错误: {e}\n"
-                f"正确格式: postgresql://user:password@host:port/database\n"
-                f"或: postgresql+psycopg://user:password@host:port/database\n"
-                f"示例: postgresql://postgres:password@localhost:5432/zcgl_db"
+                f"正确格式: postgresql+psycopg://user:password@host:port/database\n"
+                f"示例: postgresql+psycopg://postgres:password@localhost:5432/zcgl_db"
             ) from e
-
-    # SQLite 已移除
-    elif database_url.startswith("sqlite://"):
-        environment = os.getenv("ENVIRONMENT", "development").lower()
-        allow_sqlite_for_tests = os.getenv("ALLOW_SQLITE_FOR_TESTS", "false").lower()
-        if not (environment == "testing" and allow_sqlite_for_tests == "true"):
-            raise ValueError(
-                "SQLite 已移除，必须使用 PostgreSQL 连接字符串。\n"
-                "请配置 DATABASE_URL=postgresql://user:password@host:port/database"
-            )
 
     else:
         logger.error(
@@ -498,7 +451,7 @@ def get_database_url() -> str:
             extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
         )
         raise ValueError(
-            "不支持的数据库类型。支持: postgresql://, postgresql+psycopg://\n"
+            "不支持的数据库类型。支持: postgresql+psycopg://\n"
             f"当前URL: {database_url[:50]}"
         )
 
@@ -606,7 +559,7 @@ def create_tables() -> None:
     """创建所有数据库表"""
     _init_globals()
     if engine:
-        import src.models
+        _ = importlib.import_module("src.models")
         Base.metadata.create_all(bind=engine)
         logger.info("数据库表创建完成")
 

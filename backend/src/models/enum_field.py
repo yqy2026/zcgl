@@ -3,12 +3,12 @@
 """
 
 import uuid
+from typing import Any
 from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     DateTime,
     ForeignKey,
     Integer,
@@ -52,10 +52,10 @@ class EnumFieldType(Base):
     default_value: Mapped[str | None] = mapped_column(String(100), comment="默认值")
 
     # 验证规则
-    validation_rules: Mapped[dict | None] = mapped_column(
+    validation_rules: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, comment="验证规则(JSON格式)"
     )
-    display_config: Mapped[dict | None] = mapped_column(
+    display_config: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, comment="显示配置(JSON格式)"
     )
 
@@ -123,7 +123,7 @@ class EnumFieldValue(Base):
     icon: Mapped[str | None] = mapped_column(String(50), comment="图标")
 
     # 扩展属性
-    extra_properties: Mapped[dict | None] = mapped_column(
+    extra_properties: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, comment="扩展属性(JSON格式)"
     )
 
@@ -196,7 +196,9 @@ class EnumFieldUsage(Base):
         Boolean, nullable=False, default=False, comment="是否必填"
     )
     default_value: Mapped[str | None] = mapped_column(String(100), comment="默认值")
-    validation_config: Mapped[dict | None] = mapped_column(JSON, comment="验证配置")
+    validation_config: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="验证配置"
+    )
 
     # 状态信息
     is_active: Mapped[bool] = mapped_column(

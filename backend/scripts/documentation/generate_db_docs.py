@@ -133,7 +133,7 @@ class DatabaseDocumentationGenerator:
         table_names = inspector.get_table_names()
 
         overview = {
-            "database_type": "SQLite",
+            "database_type": "PostgreSQL",
             "total_tables": len(table_names),
             "tables": {},
             "statistics": {

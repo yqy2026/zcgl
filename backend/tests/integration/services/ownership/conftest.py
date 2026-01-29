@@ -13,8 +13,6 @@ from sqlalchemy.orm import sessionmaker
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 if not TEST_DATABASE_URL:
     pytest.skip("TEST_DATABASE_URL is required for integration tests", allow_module_level=True)
-if TEST_DATABASE_URL.startswith("sqlite"):
-    raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 from src.database import Base

@@ -22,10 +22,10 @@ class PromptTemplateBase(BaseModel):
     description: str | None = Field(None, max_length=500, description="Prompt描述")
     system_prompt: str = Field(..., min_length=1, description="系统提示词")
     user_prompt_template: str = Field(..., min_length=1, description="用户提示词模板")
-    few_shot_examples: dict[str, Any] | None = Field(
-        default={}, description="Few-shot示例"
+    few_shot_examples: dict[str, Any] = Field(
+        default_factory=dict[str, Any], description="Few-shot示例"
     )
-    tags: list[str] | None = Field(default=[], description="标签列表")
+    tags: list[str] = Field(default_factory=list, description="标签列表")
 
 
 class PromptTemplateCreate(PromptTemplateBase):

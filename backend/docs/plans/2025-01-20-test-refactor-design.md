@@ -112,7 +112,7 @@
    ```python
    @pytest.fixture(scope="function")
    def db_session():
-       engine = create_engine("postgresql://user:password@localhost:5432/zcgl_test")
+       engine = create_engine("postgresql+psycopg://user:password@localhost:5432/zcgl_test")
        Base.metadata.create_all(engine)
        ...
    ```

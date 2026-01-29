@@ -11,7 +11,7 @@ def pytest_configure(config):
     This hook runs before any test collection.
     Set environment variables BEFORE any imports from src.core.
     """
-    test_database_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL") or "postgresql://user:pass@localhost:5432/zcgl_test"
+    test_database_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL") or "postgresql+psycopg://user:pass@localhost:5432/zcgl_test"
     os.environ["DATABASE_URL"] = test_database_url
     # 使用强密钥，不包含任何弱模式（如 "test", "secret", "key" 等）
     os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6!@#"

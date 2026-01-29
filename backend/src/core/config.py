@@ -588,13 +588,7 @@ class Settings(BaseSettings):
             msg = "警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。"
             warnings.append(msg)
 
-        # 4. 数据库配置检查（SQLite 已移除）
-        if self.DATABASE_URL.startswith("sqlite://"):
-            allow_sqlite_for_tests = os.getenv("ALLOW_SQLITE_FOR_TESTS", "false").lower()
-            if not (is_testing and allow_sqlite_for_tests == "true"):
-                raise ValueError("SQLite 已移除，请配置 PostgreSQL 数据库")
-
-        # 5. 记录警告
+        # 4. 记录警告
         if warnings and not is_testing:
             logger.warning("=" * 60)
             logger.warning("安全配置检查发现以下问题:")

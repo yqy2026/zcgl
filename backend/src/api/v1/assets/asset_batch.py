@@ -13,17 +13,20 @@ from ....core.exception_handler import bad_request, internal_error
 from ....crud.asset import asset_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user, require_permission
-from ....models.asset import Asset
 from ....models.auth import User
 from ....schemas.asset import (
     AssetBatchUpdateRequest,
     AssetBatchUpdateResponse,
+    AssetListItemResponse,
     AssetResponse,
     AssetValidationRequest,
     AssetValidationResponse,
+    BatchProcessingError,
     BatchCustomFieldUpdateRequest,
     BatchCustomFieldUpdateResponse,
+    ValidationWarning,
 )
+from ....services.asset.asset_service import AssetService
 from ....services.asset.batch_service import AssetBatchService
 from ....services.enum_validation_service import get_enum_validation_service
 
@@ -51,12 +54,40 @@ async def batch_update_assets(
         service = AssetBatchService(db)
         result = service.batch_update(
             asset_ids=request.asset_ids,
-            updates=request.updates,
+            updates=request.updates.model_dump(exclude_unset=True),
             should_update_all=request.should_update_all,
             operator=str(current_user.username) if current_user else "system",
         )
 
-        return AssetBatchUpdateResponse(**result.to_dict())
+        result_dict = result.to_dict()
+        error_models = []
+        for error in result_dict.get("errors", []):
+            if not isinstance(error, dict):
+                continue
+            row_index_raw = error.get("row_index")
+            row_index: int | None
+            if isinstance(row_index_raw, int):
+                row_index = row_index_raw
+            elif isinstance(row_index_raw, str) and row_index_raw.isdigit():
+                row_index = int(row_index_raw)
+            else:
+                row_index = None
+            error_models.append(
+                BatchProcessingError(
+                    id=error.get("asset_id"),
+                    row_index=row_index,
+                    field=error.get("field_context") or error.get("field"),
+                    message=error.get("error") or error.get("message") or "批量更新失败",
+                    code=error.get("error_type") or error.get("code"),
+                )
+            )
+        return AssetBatchUpdateResponse(
+            success_count=result_dict.get("success_count", 0),
+            failed_count=result_dict.get("failed_count", 0),
+            total_count=result_dict.get("total_count", 0),
+            errors=error_models,
+            updated_assets=result_dict.get("updated_assets", []),
+        )
 
     except Exception as e:
         raise internal_error(f"批量更新失败: {str(e)}")
@@ -88,10 +119,38 @@ async def validate_asset_data(
             enum_validation_service=enum_service,
         )
 
+        error_models = []
+        for error in errors:
+            row_index_raw = error.get("row_index")
+            row_index: int | None
+            if isinstance(row_index_raw, int):
+                row_index = row_index_raw
+            elif isinstance(row_index_raw, str) and row_index_raw.isdigit():
+                row_index = int(row_index_raw)
+            else:
+                row_index = None
+            error_models.append(
+                BatchProcessingError(
+                    id=None,
+                    row_index=row_index,
+                    field=error.get("field"),
+                    message=error.get("error", "验证失败"),
+                    code=error.get("code"),
+                )
+            )
+        warning_models = [
+            ValidationWarning(
+                field=warning.get("field"),
+                message=warning.get("message", "校验警告"),
+                code=warning.get("code"),
+            )
+            for warning in warnings
+        ]
+
         return AssetValidationResponse(
             is_valid=is_valid,
-            errors=errors,
-            warnings=warnings,
+            errors=error_models,
+            warnings=warning_models,
             validated_fields=validated_fields,
         )
 
@@ -119,14 +178,22 @@ async def batch_update_custom_fields(
         total_count = len(request.asset_ids)
         success_count = 0
         failed_count = 0
-        errors = []
+        errors: list[BatchProcessingError] = []
 
         for asset_id in request.asset_ids:
             try:
                 # 检查资产是否存在
                 asset = asset_crud.get(db=db, id=asset_id)
                 if not asset:
-                    errors.append({"asset_id": asset_id, "error": "资产不存在"})
+                    errors.append(
+                        BatchProcessingError(
+                            id=asset_id,
+                            row_index=None,
+                            field=None,
+                            message="资产不存在",
+                            code="NOT_FOUND",
+                        )
+                    )
                     failed_count += 1
                     continue
 
@@ -135,7 +202,15 @@ async def batch_update_custom_fields(
                 success_count += 1
 
             except Exception as e:
-                errors.append({"asset_id": asset_id, "error": str(e)})
+                errors.append(
+                    BatchProcessingError(
+                        id=asset_id,
+                        row_index=None,
+                        field=None,
+                        message=str(e),
+                        code=type(e).__name__,
+                    )
+                )
                 failed_count += 1
 
         return BatchCustomFieldUpdateResponse(
@@ -161,6 +236,7 @@ async def get_all_assets(
     sort_by: str | None = Query("created_at", description="排序字段"),
     sort_order: str | None = Query("desc", description="排序顺序"),
     max_export: int = Query(10000, ge=1, le=50000, description="最大导出数量"),
+    include_relations: bool = Query(False, description="是否加载关联数据"),
 ) -> dict[str, Any]:
     """
     获取所有资产列表，不分页，用于导出等场景
@@ -174,12 +250,11 @@ async def get_all_assets(
     - **sort_by**: 排序字段
     - **sort_order**: 排序顺序（asc/desc）
     - **max_export**: 最大导出数量限制
+    - **include_relations**: 是否加载关联数据（默认不加载）
     """
     try:
         # 构建查询过滤器
         filters = {}
-        if search:
-            filters["search"] = search
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if usage_status:
@@ -197,20 +272,25 @@ async def get_all_assets(
                 pass
 
         # 获取所有资产（不分页）
-        assets: list[Asset] = asset_crud.get_with_filters(
-            db=db,
-            filters=filters if filters else None,
-            search=search,
-            order_by=sort_by,
-            order_desc=bool(sort_order and sort_order.lower() == "desc"),
+        asset_service = AssetService(db)
+        assets, _ = asset_service.get_assets(
+            skip=0,
             limit=max_export,
+            search=search,
+            filters=filters if filters else None,
+            sort_field=sort_by or "created_at",
+            sort_order=sort_order or "desc",
+            include_relations=include_relations,
         )
 
-        # 转换为响应格式 - 使用Pydantic的from_attributes模式
-        asset_responses = []
-        for asset in assets:
-            # 直接使用 model_validate 处理 ORM 对象
-            asset_responses.append(AssetResponse.model_validate(asset))
+        # 转换为响应格式
+        asset_responses: list[AssetResponse | AssetListItemResponse]
+        if include_relations:
+            asset_responses = [AssetResponse.model_validate(asset) for asset in assets]
+        else:
+            asset_responses = [
+                AssetListItemResponse.model_validate(asset) for asset in assets
+            ]
 
         # 返回统一格式，符合前端期望
         return {
@@ -228,11 +308,13 @@ async def get_assets_by_ids(
     request: dict[str, Any],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    include_relations: bool = Query(False, description="是否加载关联数据"),
 ) -> dict[str, Any]:
     """
     根据资产ID列表批量获取资产信息
 
     - **ids**: 资产ID列表
+    - **include_relations**: 是否加载关联数据（默认不加载）
     """
     try:
         asset_ids = request.get("ids", [])
@@ -240,13 +322,18 @@ async def get_assets_by_ids(
             return {"success": True, "data": [], "message": "未提供资产ID列表"}
 
         # 批量查询资产
-        assets = asset_crud.get_multi_by_ids(db=db, ids=asset_ids)
+        assets = asset_crud.get_multi_by_ids(
+            db=db, ids=asset_ids, include_relations=include_relations
+        )
 
-        # 转换为响应格式 - 使用Pydantic的from_attributes模式
-        asset_responses = []
-        for asset in assets:
-            # 直接使用 model_validate 处理 ORM 对象
-            asset_responses.append(AssetResponse.model_validate(asset))
+        # 转换为响应格式
+        asset_responses: list[AssetResponse | AssetListItemResponse]
+        if include_relations:
+            asset_responses = [AssetResponse.model_validate(asset) for asset in assets]
+        else:
+            asset_responses = [
+                AssetListItemResponse.model_validate(asset) for asset in assets
+            ]
 
         # 返回统一格式，符合前端期望
         return {

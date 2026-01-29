@@ -295,15 +295,14 @@ class EnumFieldTypeCRUD:
         created_by: str | None = None,
     ) -> None:
         """创建历史记录"""
-        history = EnumFieldHistory(
-            enum_type_id=enum_type_id,
-            action=action,
-            target_type=target_type,
-            field_name=field_name,
-            old_value=old_value,
-            new_value=new_value,
-            created_by=created_by,
-        )
+        history = EnumFieldHistory()
+        _set_attr(history, "enum_type_id", enum_type_id)
+        _set_attr(history, "action", action)
+        _set_attr(history, "target_type", target_type)
+        _set_attr(history, "field_name", field_name)
+        _set_attr(history, "old_value", old_value)
+        _set_attr(history, "new_value", new_value)
+        _set_attr(history, "created_by", created_by)
         self.db.add(history)
 
 
@@ -531,16 +530,15 @@ class EnumFieldValueCRUD:
         created_by: str | None = None,
     ) -> None:
         """创建历史记录"""
-        history = EnumFieldHistory(
-            enum_type_id=enum_type_id,
-            enum_value_id=enum_value_id,
-            action=action,
-            target_type=target_type,
-            field_name=field_name,
-            old_value=old_value,
-            new_value=new_value,
-            created_by=created_by,
-        )
+        history = EnumFieldHistory()
+        _set_attr(history, "enum_type_id", enum_type_id)
+        _set_attr(history, "enum_value_id", enum_value_id)
+        _set_attr(history, "action", action)
+        _set_attr(history, "target_type", target_type)
+        _set_attr(history, "field_name", field_name)
+        _set_attr(history, "old_value", old_value)
+        _set_attr(history, "new_value", new_value)
+        _set_attr(history, "created_by", created_by)
         self.db.add(history)
 
 

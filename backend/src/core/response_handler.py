@@ -9,6 +9,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -40,6 +41,13 @@ class PaginationInfo(BaseModel):
     total_pages: int
     has_next: bool
     has_prev: bool
+
+
+class PaginatedData[T](BaseModel):
+    """分页数据结构（items + pagination）"""
+
+    items: list[T]
+    pagination: PaginationInfo
 
 
 class ResponseHandler:
@@ -216,6 +224,7 @@ class ResponseHandler:
         total: int,
         message: str = "获取成功",
         request_id: str | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> JSONResponse:
         """分页响应"""
 
@@ -229,11 +238,28 @@ class ResponseHandler:
             has_prev=page > 1,
         )
 
+        payload_dict: dict[str, Any] = {
+            "items": data,
+            "pagination": pagination_info,
+        }
+
+        if extra:
+            for key, value in extra.items():
+                if key not in payload_dict:
+                    payload_dict[key] = value
+
+        payload = PaginatedData(items=payload_dict["items"], pagination=pagination_info)
+        if extra:
+            # Allow additional fields beyond the standard payload
+            payload_dict["pagination"] = pagination_info
+            encoded_payload = jsonable_encoder(payload_dict)
+        else:
+            encoded_payload = jsonable_encoder(payload)
+
         return ResponseHandler.success(
-            data=data,
+            data=encoded_payload,
             message=message,
             request_id=request_id,
-            pagination=pagination_info,
         )
 
 
@@ -280,9 +306,19 @@ def not_found_response(
 
 
 def paginated_response(
-    data: list[Any], page: int, page_size: int, total: int, **kwargs: Any
+    data: list[Any],
+    page: int,
+    page_size: int,
+    total: int,
+    extra: dict[str, Any] | None = None,
+    **kwargs: Any,
 ) -> JSONResponse:
     """分页响应便捷函数"""
     return ResponseHandler.paginated(
-        data=data, page=page, page_size=page_size, total=total, **kwargs
+        data=data,
+        page=page,
+        page_size=page_size,
+        total=total,
+        extra=extra,
+        **kwargs,
     )

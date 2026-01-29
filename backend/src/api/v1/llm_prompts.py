@@ -3,12 +3,15 @@ LLM Prompt管理API路由
 提供Prompt模板的CRUD操作和版本管理
 """
 
+from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ...core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
@@ -16,7 +19,6 @@ from ...models.llm_prompt import PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import (
     PromptRollbackRequest,
     PromptTemplateCreate,
-    PromptTemplateListResponse,
     PromptTemplateResponse,
     PromptTemplateUpdate,
     PromptVersionResponse,
@@ -32,7 +34,7 @@ def create_prompt(
     db: Session = Depends(get_db),
     prompt_in: PromptTemplateCreate,
     current_user: User = Depends(get_current_active_user),
-):
+) -> PromptTemplate:
     """
     创建新Prompt模板
 
@@ -51,7 +53,9 @@ def create_prompt(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=PromptTemplateListResponse)
+@router.get(
+    "/", response_model=APIResponse[PaginatedData[PromptTemplateResponse]]
+)
 def get_prompts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -60,7 +64,7 @@ def get_prompts(
     doc_type: str | None = Query(None, description="文档类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     provider: str | None = Query(None, description="提供商筛选"),
-):
+) -> JSONResponse:
     """
     获取Prompt模板列表
 
@@ -83,14 +87,12 @@ def get_prompts(
     skip = (page - 1) * page_size
     prompts = query.offset(skip).limit(page_size).all()
 
-    pages = (total + page_size - 1) // page_size
-
-    return PromptTemplateListResponse(
-        items=[PromptTemplateResponse.model_validate(p) for p in prompts],
-        total=total,
+    return ResponseHandler.paginated(
+        data=[PromptTemplateResponse.model_validate(p) for p in prompts],
         page=page,
         page_size=page_size,
-        pages=pages,
+        total=total,
+        message="获取Prompt模板列表成功",
     )
 
 
@@ -99,9 +101,9 @@ def get_prompt(
     prompt_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> PromptTemplate:
     """获取Prompt模板详情"""
-    prompt = db.query(PromptTemplate).get(prompt_id)
+    prompt = cast(PromptTemplate | None, db.query(PromptTemplate).get(prompt_id))
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt不存在")
     return prompt
@@ -114,7 +116,7 @@ def update_prompt(
     db: Session = Depends(get_db),
     prompt_in: PromptTemplateUpdate,
     current_user: User = Depends(get_current_active_user),
-):
+) -> PromptTemplate:
     """
     更新Prompt模板
 
@@ -141,7 +143,7 @@ def activate_prompt(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> PromptTemplate:
     """
     激活Prompt模板
 
@@ -163,7 +165,7 @@ def rollback_prompt(
     db: Session = Depends(get_db),
     request: PromptRollbackRequest,
     current_user: User = Depends(get_current_active_user),
-):
+) -> PromptTemplate:
     """
     回滚Prompt到指定版本
 
@@ -186,7 +188,7 @@ def get_prompt_versions(
     prompt_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[PromptVersionResponse]:
     """
     获取Prompt的所有历史版本
 
@@ -211,7 +213,7 @@ def get_prompt_versions(
 def get_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取Prompt统计概览
 
@@ -279,7 +281,7 @@ async def collect_feedback(
     session_id: str | None = None,
     user_action: str = "corrected",
     current_user: User = Depends(get_current_active_user),  # 🔒 安全修复: 添加身份验证
-):
+) -> dict[str, Any]:
     """
     收集用户反馈(修正数据)
 

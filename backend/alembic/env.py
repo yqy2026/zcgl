@@ -43,7 +43,7 @@ except ImportError as e:
     print("\n可能的解决方案:")
     print("1. 运行: uv pip install -e .")
     print("2. 检查src/models/目录是否存在所有模型文件")
-    print("3. 检查数据库依赖是否已安装 (psycopg2等)")
+    print("3. 检查数据库依赖是否已安装 (psycopg等)")
     print("4. 查看 docs/POSTGRESQL_MIGRATION.md 获取帮助")
     print(f"{'=' * 60}\n")
     sys.exit(1)

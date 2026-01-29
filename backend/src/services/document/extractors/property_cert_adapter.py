@@ -63,10 +63,10 @@ class PropertyCertAdapter(BaseVisionAdapter):
     def __init__(self, db: Session | None = None):
         super().__init__()
         self._vision_service = get_qwen_vision_service()
+        self.prompt_manager: PromptManager | None = None
         if db:
             self.prompt_manager = PromptManager()
         else:
-            self.prompt_manager = None
             logger.warning(
                 "PropertyCertAdapter initialized without PromptManager - will require explicit prompt"
             )
@@ -76,6 +76,10 @@ class PropertyCertAdapter(BaseVisionAdapter):
     async def extract(
         self,
         file_path: str,
+        max_pages: int = 10,
+        batch_size: int = 3,
+        dpi: int = 200,
+        *,
         prompt: PromptTemplate | None = None,
         certificate_type: str | None = None,
         **kwargs: Any,
@@ -143,7 +147,13 @@ class PropertyCertAdapter(BaseVisionAdapter):
 
         try:
             # Call parent's extract method
-            result = await super().extract(file_path, **kwargs)
+            result = await super().extract(
+                file_path,
+                max_pages=max_pages,
+                batch_size=batch_size,
+                dpi=dpi,
+                **kwargs,
+            )
             # Add prompt metadata to result
             if result.get("success"):
                 result["prompt_used"] = {

@@ -35,6 +35,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.history import history_crud
 from ....database import get_db
 from ....middleware.auth import (
@@ -46,7 +47,7 @@ from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
 from ....schemas.asset import (
     AssetCreate,
-    AssetListResponse,
+    AssetListItemResponse,
     AssetResponse,
     AssetUpdate,
 )
@@ -67,7 +68,13 @@ router.include_router(asset_import.router, tags=["资产导入"])
 router.include_router(asset_attachments.router, tags=["资产附件"])
 
 
-@router.get("", response_model=AssetListResponse, summary="获取资产列表")
+@router.get(
+    "",
+    response_model=APIResponse[
+        PaginatedData[AssetResponse | AssetListItemResponse]
+    ],
+    summary="获取资产列表",
+)
 async def get_assets(
     page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
     page_size: int = Query(
@@ -86,11 +93,12 @@ async def get_assets(
     min_area: float | None = Query(None, ge=0, description="最小面积筛选"),
     max_area: float | None = Query(None, ge=0, description="最大面积筛选"),
     is_litigated: str | None = Query(None, description="是否涉诉筛选"),
+    include_relations: bool = Query(False, description="是否加载关联数据"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     sort_field: str = Query(DateTimeFields.CREATED_AT, description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
-) -> AssetListResponse:
+) -> Response:
     """
     获取资产列表，支持分页、搜索和筛选
 
@@ -103,6 +111,7 @@ async def get_assets(
     - **ownership_entity**: 按权属方筛选
     - **sort_field**: 排序字段
     - **sort_order**: 排序方向（asc/desc）
+    - **include_relations**: 是否加载关联数据（默认不加载）
     """
     # 构建筛选条件
     filters = {}
@@ -133,19 +142,21 @@ async def get_assets(
         filters=filters,
         sort_field=sort_field,
         sort_order=sort_order,
+        include_relations=include_relations,
     )
 
-    # Convert Asset models to AssetResponse
-    from ....schemas.asset import AssetResponse
+    items: list[AssetResponse | AssetListItemResponse]
+    if include_relations:
+        items = [AssetResponse.model_validate(asset) for asset in assets]
+    else:
+        items = [AssetListItemResponse.model_validate(asset) for asset in assets]
 
-    items = [AssetResponse.model_validate(asset) for asset in assets]
-
-    return AssetListResponse(
-        items=items,
-        total=total,
+    return ResponseHandler.paginated(
+        data=items,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        total=total,
+        message="获取资产列表成功",
     )
 
 

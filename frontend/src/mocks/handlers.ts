@@ -62,15 +62,20 @@ export const getAssetsHandler = http.get(`${API_BASE_URL}/assets`, async ({ requ
 
   // 模拟搜索过滤
   if (params.search != null && params.search.length > 0) {
+    const filteredItems = assetListResponse.data.items.filter((asset: any) =>
+      Boolean(
+        asset.propertyName != null &&
+        asset.propertyName.length > 0 &&
+        asset.propertyName.includes(params.search)
+      )
+    );
+
     return HttpResponse.json({
       ...assetListResponse,
-      data: assetListResponse.data.filter((asset: any) =>
-        Boolean(
-          asset.propertyName != null &&
-          asset.propertyName.length > 0 &&
-          asset.propertyName.includes(params.search)
-        )
-      ),
+      data: {
+        ...assetListResponse.data,
+        items: filteredItems,
+      },
     });
   }
 

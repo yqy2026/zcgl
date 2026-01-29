@@ -141,7 +141,7 @@ class RentContractBase(BaseModel):
     total_deposit: Decimal = Field(Decimal("0"), ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
     # V2: 付款周期
-    payment_cycle: PaymentCycle | None = Field(
+    payment_cycle: PaymentCycle = Field(
         PaymentCycle.MONTHLY, description="付款周期"
     )
     contract_status: ContractStatus = Field(

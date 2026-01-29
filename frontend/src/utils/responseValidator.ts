@@ -39,9 +39,9 @@ export const PaginationSchema = z.object({
   page: z.number(),
   page_size: z.number(),
   total: z.number(),
-  totalPages: z.number(),
-  hasNext: z.boolean().optional(),
-  hasPrev: z.boolean().optional(),
+  total_pages: z.number(),
+  has_next: z.boolean().optional(),
+  has_prev: z.boolean().optional(),
 });
 
 // 分页数据 Schema

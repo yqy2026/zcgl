@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.operation_log import OperationLogCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user, require_admin
@@ -75,7 +77,11 @@ class OperationLogStatisticsResponse(BaseModel):
 # ==================== 日志查询端点 ====================
 
 
-@router.get("", response_model=OperationLogListResponse, summary="获取操作日志列表")
+@router.get(
+    "",
+    response_model=APIResponse[PaginatedData[OperationLogResponse]],
+    summary="获取操作日志列表",
+)
 async def get_operation_logs(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -89,7 +95,7 @@ async def get_operation_logs(
     end_date: str | None = Query(None, description="结束日期(YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> OperationLogListResponse:
+) -> JSONResponse:
     """
     获取操作日志列表，支持多条件筛选
 
@@ -152,14 +158,12 @@ async def get_operation_logs(
                     if resolved_username:
                         log.username = resolved_username
 
-        pages = (total + page_size - 1) // page_size
-
-        return OperationLogListResponse(
-            items=[OperationLogResponse.model_validate(log) for log in logs],
-            total=total,
+        return ResponseHandler.paginated(
+            data=[OperationLogResponse.model_validate(log) for log in logs],
             page=page,
             page_size=page_size,
-            pages=pages,
+            total=total,
+            message="获取操作日志列表成功",
         )
     except Exception as e:
         if isinstance(e, BaseBusinessError):

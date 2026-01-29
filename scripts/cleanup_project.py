@@ -45,7 +45,6 @@ FILE_PATTERNS = {
         r'test.*\.db$',
         r'.*\.db-(shm|wal|journal)$',
         r'defect_tracking\.db$',
-        r'database\.sqlite$',
     ],
 
     # 临时分析脚本（基于命名模式）

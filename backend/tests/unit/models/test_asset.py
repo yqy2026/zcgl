@@ -27,8 +27,8 @@ class TestAssetModelCreation:
         )
         if not database_url:
             pytest.skip("TEST_DATABASE_URL or DATABASE_URL is required", allow_module_level=True)
-        if database_url.startswith("sqlite"):
-            raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+        if not database_url.startswith("postgresql"):
+            raise RuntimeError("测试必须使用 PostgreSQL")
         engine = create_engine(database_url, pool_pre_ping=True)
         Base.metadata.create_all(engine)
         return engine

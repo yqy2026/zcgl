@@ -1,6 +1,3 @@
-from collections.abc import Callable
-from typing import Any
-
 """
 FastAPI安全中间件
 提供请求验证、文件上传安全和速率限制功能
@@ -10,10 +7,11 @@ import logging
 import time
 from collections import defaultdict
 from ipaddress import ip_address, ip_network
+from typing import Any
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
 from ..constants.api_constants import HTTPMethods
@@ -24,8 +22,8 @@ from ..core.exception_handler import (
     PermissionDeniedError,
     RateLimitError,
 )
-from ..security.ip_whitelist import ip_whitelist
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
+from ..security.ip_whitelist import ip_whitelist
 from ..security.logging_security import security_auditor
 from ..security.security import RateLimiter
 
@@ -92,7 +90,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """安全头部中间件"""
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """添加安全头部"""
         response: Response = await call_next(request)
@@ -144,7 +142,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         ]
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """执行请求验证"""
         start_time = time.time()
@@ -528,7 +526,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         self.max_file_size = max_file_size
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """处理文件上传安全检查"""
 
@@ -602,7 +600,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         ]
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """处理CORS和安全头部"""
 

@@ -38,7 +38,7 @@ nano backend/.env
 # 必须修改的配置项:
 # - SECRET_KEY (生产环境)
 # - DATABASE_URL
-# - REDIS_URL (如使用缓存)
+# - REDIS_HOST/REDIS_PORT/REDIS_DB (如使用缓存)
 ```
 
 ---
@@ -65,6 +65,7 @@ ENVIRONMENT=development  # development | staging | production
 # 服务器配置
 HOST=0.0.0.0
 PORT=8002
+API_PORT=8002  # run_dev.py / make dev-backend 优先读取
 RELOAD=true
 ```
 
@@ -97,8 +98,13 @@ TOKEN_BLACKLIST_ENABLED=true
 #### 3. 数据库配置
 ```bash
 # PostgreSQL (开发/测试/生产必需)
-DATABASE_URL=postgresql://username:password@host:5432/database_name
-TEST_DATABASE_URL=postgresql://username:password@host:5432/test_database_name
+DATABASE_URL=postgresql+psycopg://username:password@host:5432/database_name
+TEST_DATABASE_URL=postgresql+psycopg://username:password@host:5432/test_database_name
+
+# 可选：仅测试/CI 允许 SQLite（默认禁用）
+# ENVIRONMENT=testing
+# ALLOW_SQLITE_FOR_TESTS=true
+# DATABASE_URL=sqlite:///./test_database.db
 
 # 连接池配置 (PostgreSQL)
 # DATABASE_POOL_SIZE=20
@@ -120,7 +126,6 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
 REDIS_PASSWORD=
-REDIS_URL=redis://localhost:6379/0
 ```
 
 **Redis 使用场景**:
@@ -170,11 +175,13 @@ LOG_FILE=logs/app.log
 
 #### 9. LLM Vision 配置
 ```bash
-# LLM Vision 提供商选择
-EXTRACTION_LLM_PROVIDER=qwen  # qwen | deepseek | zhipu | auto
+# LLM Provider 选择（全局）
+LLM_PROVIDER=qwen  # qwen | deepseek | glm | hunyuan
+# 可选：仅 PDF 提取使用单独提供商
+# EXTRACTION_LLM_PROVIDER=qwen
 
 # API 密钥 (根据提供商选择)
-# QWEN_API_KEY=your_qwen_api_key
+# DASHSCOPE_API_KEY=your_qwen_api_key
 # DEEPSEEK_API_KEY=your_deepseek_api_key
 # ZHIPU_API_KEY=your_zhipu_api_key
 # HUNYUAN_API_KEY=your_hunyuan_api_key
@@ -274,7 +281,7 @@ Vite 按以下优先级加载环境变量:
 ```bash
 # backend/.env
 DEBUG=true
-DATABASE_URL=postgresql://user:password@localhost:5432/zcgl
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/zcgl
 REDIS_ENABLED=false
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 LOG_LEVEL=DEBUG
@@ -297,9 +304,12 @@ VITE_SOURCEMAP=true
 ```bash
 # backend/.env
 DEBUG=false
-DATABASE_URL=postgresql://user:pass@staging-db:5432/zcgl_staging
+DATABASE_URL=postgresql+psycopg://user:pass@staging-db:5432/zcgl_staging
 REDIS_ENABLED=true
-REDIS_URL=redis://staging-redis:6379/0
+REDIS_HOST=staging-redis
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_PASSWORD=<staging-redis-password>
 CORS_ORIGINS=https://staging.your-domain.com
 LOG_LEVEL=INFO
 SECRET_KEY=<staging-secret-key>
@@ -322,9 +332,12 @@ VITE_SOURCEMAP=false
 # backend/.env (通过环境变量或密钥管理服务)
 DEBUG=false
 ENVIRONMENT=production
-DATABASE_URL=postgresql://user:pass@prod-db:5432/zcgl_prod
+DATABASE_URL=postgresql+psycopg://user:pass@prod-db:5432/zcgl_prod
 REDIS_ENABLED=true
-REDIS_URL=redis://prod-redis:6379/0
+REDIS_HOST=prod-redis
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_PASSWORD=<prod-redis-password>
 CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com
 LOG_LEVEL=WARNING
 SECRET_KEY=<strong-random-key-from-vault>
@@ -375,12 +388,12 @@ export SECRET_KEY=$(openssl rand -base64 32)
 ### 3. 配置验证
 ```python
 # backend/src/core/config.py 提供配置验证
-settings = Settings()
-warnings = settings.validate_security_config()
+from src.core.config import validate_config
 
-if warnings:
-    for warning in warnings:
-        logger.warning(f"安全警告: {warning}")
+try:
+    validate_config()
+except ValueError as exc:
+    logger.error(f"配置验证失败: {exc}")
 ```
 
 启动时会自动检查:
@@ -444,7 +457,7 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 **解决**:
 ```bash
 # 检查 DATABASE_URL 格式
-# PostgreSQL: postgresql://user:pass@host:port/db
+# PostgreSQL: postgresql+psycopg://user:pass@host:port/db
 
 # 确认 PostgreSQL 服务运行
 pg_isready -h host -p port

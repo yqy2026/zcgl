@@ -167,11 +167,7 @@ class ProductionConfigValidator:
         """检查数据库配置"""
         db_url = settings.DATABASE_URL
 
-        if db_url.startswith("sqlite"):
-            self.warnings.append(
-                "使用 SQLite 数据库。生产环境强烈建议使用 PostgreSQL 或 MySQL。"
-            )
-        elif db_url.startswith("postgresql") or db_url.startswith("mysql"):
+        if db_url.startswith("postgresql") or db_url.startswith("mysql"):
             self.passed_checks.append(f"✓ 使用生产级数据库 ({db_url.split(':')[0]})")
         else:
             self.warnings.append(f"检测到非标准数据库配置: {db_url.split(':')[0]}")
@@ -180,7 +176,7 @@ class ProductionConfigValidator:
         if "@" in db_url and ":" in db_url.split("@")[0]:
             # 数据库 URL 包含认证信息，这是正常的
             self.passed_checks.append("✓ 数据库配置包含认证信息")
-        elif not db_url.startswith("sqlite"):
+        else:
             self.warnings.append("数据库配置可能缺少认证信息")
 
     def _check_encryption_config(self):

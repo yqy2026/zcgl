@@ -283,11 +283,73 @@ export class ResponseExtractor {
       };
     }
 
+    const normalized = this.normalizePaginatedData(dataContainer);
+
     return {
       success: true,
-      data: this.validateType<T>(dataContainer.items, options),
+      data: this.validateType<T>(normalized, options),
       rawResponse: response,
     };
+  }
+
+  /**
+   * 规范化分页数据，输出统一的列表结构
+   */
+  private static normalizePaginatedData(
+    dataContainer: PaginatedData
+  ): Record<string, unknown> {
+    const items = Array.isArray(dataContainer.items) ? dataContainer.items : [];
+    const pagination =
+      dataContainer.pagination && typeof dataContainer.pagination === 'object'
+        ? (dataContainer.pagination as Record<string, unknown>)
+        : {};
+
+    const page = this.toNumber(pagination.page, 1);
+    const pageSize = this.toNumber(
+      pagination.page_size ?? pagination.pageSize ?? pagination.size,
+      items.length
+    );
+    const total = this.toNumber(
+      pagination.total ?? pagination.total_count ?? pagination.totalCount,
+      items.length
+    );
+    const totalPages = this.toNumber(
+      pagination.total_pages ?? pagination.totalPages ?? pagination.pages,
+      undefined
+    );
+    const pages = totalPages ?? (pageSize > 0 ? Math.ceil(total / pageSize) : 0);
+
+    const normalized: Record<string, unknown> = {
+      items,
+      total,
+      page,
+      page_size: pageSize,
+      pages,
+    };
+
+    // Preserve extra fields (e.g. unread_count)
+    if (dataContainer && typeof dataContainer === 'object') {
+      for (const [key, value] of Object.entries(dataContainer as Record<string, unknown>)) {
+        if (key !== 'items' && key !== 'pagination') {
+          normalized[key] = value;
+        }
+      }
+    }
+
+    return normalized;
+  }
+
+  private static toNumber(value: unknown, fallback?: number): number {
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return fallback ?? 0;
   }
 
   /**

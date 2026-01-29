@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -15,6 +16,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.asset import asset_crud
 from ....crud.ownership import ownership
 from ....crud.rent_contract import rent_contract
@@ -23,7 +25,6 @@ from ....middleware.auth import can_edit_contract, get_current_active_user
 from ....models.auth import User, UserRole
 from ....schemas.rent_contract import (
     RentContractCreate,
-    RentContractListResponse,
     RentContractResponse,
     RentContractUpdate,
 )
@@ -92,7 +93,9 @@ def get_contract(
 
 
 @router.get(
-    "/contracts", response_model=RentContractListResponse, summary="获取租金合同列表"
+    "/contracts",
+    response_model=APIResponse[PaginatedData[RentContractResponse]],
+    summary="获取租金合同列表",
 )
 def get_contracts(
     db: Session = Depends(get_db),
@@ -106,7 +109,7 @@ def get_contracts(
     contract_status: str | None = Query(None, description="合同状态筛选"),
     start_date: date | None = Query(None, description="开始日期筛选"),
     end_date: date | None = Query(None, description="结束日期筛选"),
-) -> RentContractListResponse:
+) -> JSONResponse:
     """
     获取租金合同列表，支持分页和筛选
     """
@@ -124,15 +127,14 @@ def get_contracts(
         end_date=end_date,
     )
 
-    pages = (total + page_size - 1) // page_size
     contract_responses = [RentContractResponse.model_validate(c) for c in contracts]
 
-    return RentContractListResponse(
-        items=contract_responses,
-        total=total,
+    return ResponseHandler.paginated(
+        data=contract_responses,
         page=page,
         page_size=page_size,
-        pages=pages,
+        total=total,
+        message="获取租金合同列表成功",
     )
 
 

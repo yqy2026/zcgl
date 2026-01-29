@@ -310,7 +310,7 @@ class ExcelExportService:
 
         return [empty_row]
 
-    def _set_column_widths(self, worksheet) -> None:
+    def _set_column_widths(self, worksheet: Any) -> None:
         """
         设置Excel工作表列宽
 

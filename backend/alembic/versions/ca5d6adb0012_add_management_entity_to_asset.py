@@ -10,7 +10,6 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from sqlalchemy import inspect
-from sqlalchemy.dialects import sqlite
 
 from alembic import op
 
@@ -107,10 +106,10 @@ def downgrade() -> None:
         sa.Column("description", sa.VARCHAR(length=500), nullable=True),
         sa.Column("system_prompt", sa.TEXT(), nullable=False),
         sa.Column("user_prompt_template", sa.TEXT(), nullable=False),
-        sa.Column("few_shot_examples", sqlite.JSON(), nullable=True),
+        sa.Column("few_shot_examples", sa.JSON(), nullable=True),
         sa.Column("version", sa.VARCHAR(length=20), nullable=False),
         sa.Column("status", sa.VARCHAR(length=20), nullable=False),
-        sa.Column("tags", sqlite.JSON(), nullable=True),
+        sa.Column("tags", sa.JSON(), nullable=True),
         sa.Column("avg_accuracy", sa.FLOAT(), nullable=True),
         sa.Column("avg_confidence", sa.FLOAT(), nullable=True),
         sa.Column("total_usage", sa.INTEGER(), nullable=True),
@@ -154,7 +153,7 @@ def downgrade() -> None:
         sa.Column("version", sa.VARCHAR(length=20), nullable=False),
         sa.Column("system_prompt", sa.TEXT(), nullable=False),
         sa.Column("user_prompt_template", sa.TEXT(), nullable=False),
-        sa.Column("few_shot_examples", sqlite.JSON(), nullable=True),
+        sa.Column("few_shot_examples", sa.JSON(), nullable=True),
         sa.Column("change_description", sa.VARCHAR(length=500), nullable=True),
         sa.Column("change_type", sa.VARCHAR(length=50), nullable=True),
         sa.Column("auto_generated", sa.BOOLEAN(), nullable=True),

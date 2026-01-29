@@ -35,7 +35,7 @@
 | **认证** | Python-JOSE | 3.5+ | JWT 认证 |
 | **密码哈希** | Passlib | 1.7+ | 密码加密 |
 | **缓存** | Redis | 7.0+ | 缓存层 |
-| **PDF 处理** | PaddleOCR, PyMuPDF | 2.6+, 1.24+ | 文档处理 |
+| **PDF 处理** | LLM Vision API（Qwen/DeepSeek/GLM）, PyMuPDF（可选） | - , 1.24+ | 文档处理 |
 | **数据处理** | Pandas, Polars | 2.0+, 0.20+ | 数据分析 |
 
 **证据来源**: `backend/pyproject.toml`
@@ -116,6 +116,9 @@ pip install -e .
 
 # 5. 安装开发依赖
 pip install -e ".[dev]"
+
+# 可选：PDF 处理基础依赖（如需 PDF 解析/分析）
+pip install -e ".[pdf-basic]"
 
 # 6. 配置数据库并启动开发服务器
 alembic upgrade head
@@ -674,10 +677,13 @@ class CacheService:
     """Redis 缓存服务"""
 
     def __init__(self):
-        self.redis = redis.from_url(
-            settings.REDIS_URL,
+        self.redis = redis.Redis(
+            host=settings.REDIS_HOST or "localhost",
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            password=settings.REDIS_PASSWORD,
             encoding="utf-8",
-            decode_responses=True
+            decode_responses=True,
         )
 
     async def get(self, key: str) -> Optional[Any]:
@@ -767,7 +773,7 @@ from src.database import get_db
 from src.models.base import Base
 
 # 测试数据库
-SQLALCHEMY_TEST_DATABASE_URL = "postgresql://user:password@localhost:5432/zcgl_test"
+SQLALCHEMY_TEST_DATABASE_URL = "postgresql+psycopg://user:password@localhost:5432/zcgl_test"
 # SQLite 已移除，测试环境请使用 PostgreSQL
 engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -904,7 +910,12 @@ async def get_debug_config():
 
     return {
         "database_url": settings.DATABASE_URL,
-        "redis_url": settings.REDIS_URL,
+        "redis": {
+            "enabled": settings.REDIS_ENABLED,
+            "host": settings.REDIS_HOST,
+            "port": settings.REDIS_PORT,
+            "db": settings.REDIS_DB,
+        },
         "cors_origins": settings.CORS_ORIGINS,
         # ... 其他配置
     }

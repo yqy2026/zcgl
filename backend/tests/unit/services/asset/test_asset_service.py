@@ -114,6 +114,7 @@ class TestGetAssets:
                 filters=None,
                 sort_field="created_at",
                 sort_order="desc",
+                include_relations=False,
             )
 
     def test_get_assets_with_search(self, service, mock_db):
@@ -160,6 +161,20 @@ class TestGetAssets:
             call_kwargs = mock_get.call_args.kwargs
             assert call_kwargs["sort_field"] == "property_name"
             assert call_kwargs["sort_order"] == "asc"
+
+    def test_get_assets_with_include_relations(self, service, mock_db):
+        """测试显式加载关联数据"""
+        mock_assets = [MagicMock(spec=Asset)]
+
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search",
+            return_value=(mock_assets, 1),
+        ) as mock_get:
+            result = service.get_assets(include_relations=True)
+
+            assert result == (mock_assets, 1)
+            call_kwargs = mock_get.call_args.kwargs
+            assert call_kwargs["include_relations"] is True
 
     def test_get_assets_empty_result(self, service, mock_db):
         """测试空结果"""

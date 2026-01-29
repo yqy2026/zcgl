@@ -71,42 +71,27 @@ export const userService = {
     role?: string;
     organization_id?: string;
   }): Promise<UserListResponse> {
-    const response = await api.get<unknown>(SYSTEM_API.USERS, { params });
+    const response = await api.get<UserListResponse>(SYSTEM_API.USERS, { params });
 
-    // 智能提取可能返回 items 或 UserListResponse
-    const data = response.data;
-
-    // 如果直接是 UserListResponse 格式（包含 items、total 等）
-    if (
-      data != null &&
-      typeof data === 'object' &&
-      'items' in data &&
-      'total' in data &&
-      'page' in data &&
-      'page_size' in data
-    ) {
-      return data as UserListResponse;
-    }
-
-    // 如果只是 items 数组，包装成 UserListResponse
-    if (Array.isArray(data)) {
+    if (!response.success) {
       return {
-        items: data as User[],
-        total: data.length,
+        items: [],
+        total: 0,
         page: 1,
-        page_size: data.length,
-        pages: 1,
+        page_size: 20,
+        pages: 0,
       };
     }
 
-    // 其他情况，返回空结构
-    return {
-      items: [],
-      total: 0,
-      page: 1,
-      page_size: 20,
-      pages: 0,
-    };
+    return (
+      response.data ?? {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 20,
+        pages: 0,
+      }
+    );
   },
 
   // 获取用户详情
@@ -174,23 +159,27 @@ export interface Role {
 
 export interface CreateRoleData {
   name: string;
-  code: string;
+  display_name: string;
   description: string;
-  status: 'active' | 'inactive';
-  permissions?: string[];
+  is_active?: boolean;
+  permission_ids?: string[];
 }
 
 export interface UpdateRoleData {
-  name?: string;
-  code?: string;
+  display_name?: string;
   description?: string;
-  status?: 'active' | 'inactive';
-  permissions?: string[];
+  is_active?: boolean;
+  permission_ids?: string[];
 }
 
 export const roleService = {
   // 获取角色列表
-  async getRoles(params?: { page?: number; page_size?: number; search?: string; status?: string }) {
+  async getRoles(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    is_active?: boolean;
+  }) {
     const response = await api.get(SYSTEM_API.ROLES, { params });
     return response.data;
   },
@@ -227,16 +216,16 @@ export const roleService = {
 
   // 更新角色权限
   async updateRolePermissions(id: string, permissions: string[]) {
-    const response = await api.put(SYSTEM_API.ROLE_DETAIL(id), { permissions });
+    const response = await api.put(SYSTEM_API.ROLE_PERMISSIONS(id), {
+      permission_ids: permissions,
+    });
     return response.data;
   },
 
   // 获取角色统计
   async getRoleStatistics() {
-    // 暂时注释，后端可能没有这个端点
-    // const response = await api.get('/roles/statistics')
-    // return response.data
-    return { total: 0, active: 0, inactive: 0 };
+    const response = await api.get(SYSTEM_API.ROLE_STATISTICS);
+    return response.data;
   },
 };
 

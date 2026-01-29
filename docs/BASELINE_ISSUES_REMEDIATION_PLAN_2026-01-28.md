@@ -72,13 +72,41 @@
 - 文档不再引用已弃用组件
 - README 链接无断链
 
+## Phase 5 — 依赖策略与实现对齐（P2）
+**目的**: 明确依赖选型，消除重复与不确定性。
+
+**任务清单**
+1. 明确 PostgreSQL 驱动策略（`psycopg` 与 `psycopg2-binary` 二选一）
+2. 清理重复的 PDF 依赖（基础依赖与可选依赖保持一致边界）
+3. 更新依赖说明文档（如 `docs/guides/backend.md` 或 `README.md`）
+
+**验收标准**
+- `pyproject.toml` 中不再存在重复或冲突依赖
+- 文档描述与实际依赖一致
+
+## Phase 6 — 架构文档补齐（P2）
+**目的**: 恢复“单一可信来源”的架构文档入口。
+
+**任务清单**
+1. 创建 `docs/architecture/` 目录
+2. 补充 `docs/architecture/system-overview.md`（最小可用）
+3. 如暂不建立 ADR 列表，在 README 中移除/替换相关指引
+
+**验收标准**
+- README 指向的架构文档路径存在且可读
+- 新成员可按文档快速理解系统结构
+
 ## 依赖与决策点
-- 是否彻底移除 SQLite（或保留测试场景）
-- 是否保留 legacy `src/config`（若保留需明确用途与边界）
+- SQLite 仅测试/CI 场景允许（`ENVIRONMENT=testing` + `ALLOW_SQLITE_FOR_TESTS=true`）
+- legacy `src/config` 保留为兼容 shim（禁止新增依赖）
+- PostgreSQL 驱动统一为 `psycopg`（psycopg3）
+- PDF 处理依赖统一归入 `pdf-basic` 可选 extra
+- 已创建 ADR 目录（后续补齐条目）
 
 ## 推荐执行顺序
-P0 -> P0 -> P1 -> P1 -> P2
+P0 -> P0 -> P1 -> P1 -> P2 -> P2 -> P2
 
 ## 可执行下一步
 - 立即执行 Phase 0 + Phase 1（配置与密钥治理）
-- 完成后进入数据库策略与质量门槛整改
+- 完成后进入数据库策略、质量门槛与文档一致性整改
+- 依赖策略与架构文档可与 P2 阶段并行推进

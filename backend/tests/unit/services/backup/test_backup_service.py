@@ -24,7 +24,7 @@ def backup_service(temp_backup_dir: Path) -> BackupService:
 
 @pytest.fixture
 def postgres_url() -> str:
-    return "postgresql://user:pass@localhost/test_db"
+    return "postgresql+psycopg://user:pass@localhost/test_db"
 
 
 class TestBackupServiceInit:
@@ -51,7 +51,7 @@ class TestCreateBackup:
         with pytest.raises(ValueError):
             backup_service.create_backup()
         with pytest.raises(ValueError):
-            backup_service.create_backup(database_url="sqlite:///test.db")
+            backup_service.create_backup(database_url="mysql://user:pass@localhost/test")
 
     def test_create_backup_calls_pg_dump(self, backup_service, postgres_url, temp_backup_dir):
         def _write_dump(cmd, **_kwargs):
@@ -71,6 +71,7 @@ class TestCreateBackup:
 
         cmd = mock_run.call_args.args[0]
         assert cmd[0] == "pg_dump"
+        # URL should be normalized
         assert cmd[-1].startswith("postgresql://")
 
     def test_create_backup_with_custom_name(self, backup_service, postgres_url):
@@ -116,11 +117,17 @@ class TestDeleteBackup:
 
 
 class TestRestoreBackup:
-    def test_restore_backup_requires_database_url(self, backup_service):
+    def test_restore_backup_requires_database_url(self, backup_service, temp_backup_dir):
+        # Create a dummy backup file first so the file check passes
+        path = temp_backup_dir / "restore_test.dump"
+        path.write_bytes(b"data")
+
         with pytest.raises(ValueError):
-            backup_service.restore_backup("missing")
+            backup_service.restore_backup("restore_test")
         with pytest.raises(ValueError):
-            backup_service.restore_backup("missing", database_url="sqlite:///test.db")
+            backup_service.restore_backup(
+                "restore_test", database_url="mysql://user:pass@localhost/test"
+            )
 
     def test_restore_backup_calls_pg_restore(self, backup_service, postgres_url, temp_backup_dir):
         restore_path = temp_backup_dir / "restore_me.dump"

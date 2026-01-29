@@ -1,5 +1,3 @@
-from typing import Any
-
 """
 资产相关的Pydantic模型
 
@@ -9,8 +7,16 @@ from typing import Any
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+)
 
 from ..constants.validation_constants import FieldLengthLimits
 from .ownership import OwnershipResponse
@@ -218,12 +224,6 @@ class AssetUpdate(BaseModel):
         None, ge=0, description="可出租面积（平方米）"
     )
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
-    unrented_area: Decimal | None = Field(
-        None, ge=0, description="未出租面积（平方米）"
-    )
-    occupancy_rate: Decimal | None = Field(
-        None, ge=0, le=100, description="出租率（%）"
-    )
     # unrented_area 已移除，改为计算字段
     non_commercial_area: Decimal | None = Field(
         None, ge=0, description="非经营物业面积（平方米）"
@@ -417,6 +417,18 @@ class AssetResponse(AssetResponseBase):
     ownership_id: str | None = Field(None, description="权属ID")  # 对齐Model
     project: ProjectResponse | None = Field(None, description="关联项目")
     ownership: OwnershipResponse | None = Field(None, description="关联权属方")
+    created_at: datetime = Field(..., description="创建时间")
+    updated_at: datetime = Field(..., description="更新时间")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssetListItemResponse(AssetResponseBase):
+    """资产列表响应模型（轻量，无深层关联字段）"""
+
+    id: str = Field(..., description="资产ID")
+    project_id: str | None = Field(None, description="项目ID")
+    ownership_id: str | None = Field(None, description="权属ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 

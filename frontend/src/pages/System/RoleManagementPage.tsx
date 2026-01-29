@@ -22,11 +22,7 @@ import {
   Typography,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import {
-  systemService as _systemService,
-  roleService as _roleService,
-  type Role,
-} from '../../services/systemService';
+import { roleService, type Role } from '../../services/systemService';
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb';
 import {
   PlusOutlined,
@@ -84,6 +80,9 @@ const RoleManagementPage: React.FC = () => {
   const [_searchText, _setSearchText] = useState('');
   const [_statusFilter, _setStatusFilter] = useState<string>('');
   const [permissionTreeData, setPermissionTreeData] = useState<DataNode[]>([]);
+  const [rolePage, setRolePage] = useState(1);
+  const [rolePageSize, setRolePageSize] = useState(10);
+  const [roleTotal, setRoleTotal] = useState(0);
 
   const [form] = Form.useForm();
 
@@ -109,72 +108,36 @@ const RoleManagementPage: React.FC = () => {
   const loadRoles = React.useCallback(async () => {
     setLoading(true);
     try {
-      // 模拟API调用
-      const mockRoles: Role[] = [
-        {
-          id: 'admin',
-          name: '系统管理员',
-          code: 'admin',
-          description: '拥有系统所有权限的超级管理员',
-          status: 'active',
-          permissions: [
-            'dashboard.view',
-            'assets.*',
-            'rental.*',
-            'ownership.*',
-            'project.*',
-            'system.*',
-          ],
-          user_count: 1,
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-10-15T00:00:00Z',
-          is_system: true,
-        },
-        {
-          id: 'manager',
-          name: '项目经理',
-          code: 'project_manager',
-          description: '负责项目管理的高级用户',
-          status: 'active',
-          permissions: [
-            'dashboard.view',
-            'assets.view',
-            'assets.create',
-            'rental.view',
-            'ownership.view',
-            'project.*',
-          ],
-          user_count: 5,
-          created_at: '2024-01-02T00:00:00Z',
-          updated_at: '2024-10-14T00:00:00Z',
-          is_system: false,
-        },
-        {
-          id: 'user',
-          name: '普通用户',
-          code: 'normal_user',
-          description: '基础权限的普通用户',
-          status: 'active',
-          permissions: [
-            'dashboard.view',
-            'assets.view',
-            'rental.view',
-            'ownership.view',
-            'project.view',
-          ],
-          user_count: 20,
-          created_at: '2024-01-03T00:00:00Z',
-          updated_at: '2024-10-13T00:00:00Z',
-          is_system: false,
-        },
-      ];
-      setRoles(mockRoles);
+      const isActive =
+        _statusFilter === 'active' ? true : _statusFilter === 'inactive' ? false : undefined;
+      const data = (await roleService.getRoles({
+        page: rolePage,
+        page_size: rolePageSize,
+        search: _searchText || undefined,
+        is_active: isActive,
+      })) as { items?: any[]; total?: number } | any[];
+      const items = Array.isArray(data) ? data : (data.items ?? []);
+      const mapped: Role[] = items.map(r => ({
+        id: r.id,
+        name: r.display_name ?? r.name,
+        code: r.name,
+        description: r.description ?? '',
+        status: r.is_active ? 'active' : 'inactive',
+        permissions: Array.isArray(r.permissions) ? r.permissions.map((p: any) => p.id) : [],
+        user_count: r.user_count ?? 0,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        is_system: !!r.is_system_role,
+      }));
+      setRoles(mapped);
+      const total = Array.isArray(data) ? mapped.length : (data.total ?? mapped.length);
+      setRoleTotal(total);
     } catch {
       MessageManager.error('加载角色列表失败');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [_searchText, _statusFilter, rolePage, rolePageSize]);
 
   const buildPermissionTree = React.useCallback(
     (permissionList: Permission[]): DataNode[] => {
@@ -228,123 +191,22 @@ const RoleManagementPage: React.FC = () => {
 
   const loadPermissions = React.useCallback(async () => {
     try {
-      // 模拟权限数据
-      const mockPermissions: Permission[] = [
-        {
-          id: 'dashboard.view',
-          name: '查看看板',
-          code: 'dashboard.view',
-          module: 'dashboard',
-          description: '查看数据看板',
-          type: 'menu',
-        },
-        {
-          id: 'assets.view',
-          name: '查看资产',
-          code: 'assets.view',
-          module: 'assets',
-          description: '查看资产列表',
-          type: 'menu',
-        },
-        {
-          id: 'assets.create',
-          name: '创建资产',
-          code: 'assets.create',
-          module: 'assets',
-          description: '创建新资产',
-          type: 'action',
-        },
-        {
-          id: 'assets.edit',
-          name: '编辑资产',
-          code: 'assets.edit',
-          module: 'assets',
-          description: '编辑资产信息',
-          type: 'action',
-        },
-        {
-          id: 'assets.delete',
-          name: '删除资产',
-          code: 'assets.delete',
-          module: 'assets',
-          description: '删除资产',
-          type: 'action',
-        },
-        {
-          id: 'rental.view',
-          name: '查看租赁',
-          code: 'rental.view',
-          module: 'rental',
-          description: '查看租赁合同',
-          type: 'menu',
-        },
-        {
-          id: 'rental.create',
-          name: '创建合同',
-          code: 'rental.create',
-          module: 'rental',
-          description: '创建租赁合同',
-          type: 'action',
-        },
-        {
-          id: 'ownership.view',
-          name: '查看权属方',
-          code: 'ownership.view',
-          module: 'ownership',
-          description: '查看权属方信息',
-          type: 'menu',
-        },
-        {
-          id: 'project.view',
-          name: '查看项目',
-          code: 'project.view',
-          module: 'project',
-          description: '查看项目信息',
-          type: 'menu',
-        },
-        {
-          id: 'project.create',
-          name: '创建项目',
-          code: 'project.create',
-          module: 'project',
-          description: '创建新项目',
-          type: 'action',
-        },
-        {
-          id: 'system.user.view',
-          name: '查看用户',
-          code: 'system.user.view',
-          module: 'system',
-          description: '查看用户管理',
-          type: 'menu',
-        },
-        {
-          id: 'system.user.create',
-          name: '创建用户',
-          code: 'system.user.create',
-          module: 'system',
-          description: '创建新用户',
-          type: 'action',
-        },
-        {
-          id: 'system.role.view',
-          name: '查看角色',
-          code: 'system.role.view',
-          module: 'system',
-          description: '查看角色管理',
-          type: 'menu',
-        },
-        {
-          id: 'system.role.create',
-          name: '创建角色',
-          code: 'system.role.create',
-          module: 'system',
-          description: '创建新角色',
-          type: 'action',
-        },
-      ];
-      setPermissions(mockPermissions);
-      const treeData = buildPermissionTree(mockPermissions);
+      const resp = (await roleService.getPermissions()) as {
+        data?: Record<string, any[]>;
+      };
+      const grouped = resp.data ?? {};
+      const list: Permission[] = Object.keys(grouped).flatMap(resource =>
+        (grouped[resource] ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.display_name ?? p.name ?? `${p.resource}:${p.action}`,
+          code: `${p.resource}.${p.action}`,
+          module: p.resource,
+          description: p.description ?? '',
+          type: p.action === 'view' || p.action === 'read' ? 'menu' : 'action',
+        })),
+      );
+      setPermissions(list);
+      const treeData = buildPermissionTree(list);
       setPermissionTreeData(treeData);
     } catch {
       MessageManager.error('加载权限列表失败');
@@ -352,29 +214,56 @@ const RoleManagementPage: React.FC = () => {
   }, [buildPermissionTree]);
 
   const loadStatistics = React.useCallback(async () => {
+    const fallbackStats: RoleStatistics = {
+      total: roles.length,
+      active: roles.filter(r => r.status === 'active').length,
+      inactive: roles.filter(r => r.status === 'inactive').length,
+      system: roles.filter(r => r.is_system).length,
+      custom: roles.filter(r => !r.is_system).length,
+      avg_permissions:
+        roles.length > 0
+          ? Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length)
+          : 0,
+    };
     try {
-      // 模拟统计数据
-      const mockStats: RoleStatistics = {
-        total: roles.length,
-        active: roles.filter(r => r.status === 'active').length,
-        inactive: roles.filter(r => r.status === 'inactive').length,
-        system: roles.filter(r => r.is_system).length,
-        custom: roles.filter(r => !r.is_system).length,
-        avg_permissions:
-          roles.length > 0
-            ? Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length)
-            : 0,
+      const resp = (await roleService.getRoleStatistics()) as {
+        data?: {
+          total_roles?: number;
+          active_roles?: number;
+          system_roles?: number;
+          custom_roles?: number;
+        };
+        total_roles?: number;
+        active_roles?: number;
+        system_roles?: number;
+        custom_roles?: number;
       };
-      setStatistics(mockStats);
+      const stats = resp.data ?? resp;
+      if (stats && typeof stats.total_roles === 'number') {
+        const total = stats.total_roles;
+        const active = stats.active_roles ?? 0;
+        const system = stats.system_roles ?? 0;
+        const custom = stats.custom_roles ?? Math.max(total - system, 0);
+        setStatistics({
+          total,
+          active,
+          inactive: Math.max(total - active, 0),
+          system,
+          custom,
+          avg_permissions: fallbackStats.avg_permissions,
+        });
+        return;
+      }
     } catch {
       MessageManager.error('加载统计信息失败');
     }
+    setStatistics(fallbackStats);
   }, [roles]);
 
   useEffect(() => {
     void loadRoles();
     void loadPermissions();
-  }, []);
+  }, [loadRoles, loadPermissions]);
 
   useEffect(() => {
     void loadStatistics();
@@ -382,12 +271,18 @@ const RoleManagementPage: React.FC = () => {
 
   const handleSearch = (value: string) => {
     _setSearchText(value);
-    // 这里可以添加搜索逻辑
+    setRolePage(1);
+  };
+
+  const handleStatusFilterChange = (value?: string) => {
+    _setStatusFilter(value ?? '');
+    setRolePage(1);
   };
 
   const handleCreate = () => {
     setEditingRole(null);
     form.resetFields();
+    setTargetPermissions([]);
     setModalVisible(true);
   };
 
@@ -402,9 +297,9 @@ const RoleManagementPage: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = async (_id: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      // 模拟删除API调用
+      await roleService.deleteRole(id);
       MessageManager.success('删除成功');
       void loadRoles();
     } catch {
@@ -412,9 +307,11 @@ const RoleManagementPage: React.FC = () => {
     }
   };
 
-  const handleToggleStatus = async (_role: Role, _newStatus: string) => {
+  const handleToggleStatus = async (role: Role, newStatus: string) => {
     try {
-      // 模拟状态切换API调用
+      await roleService.updateRole(role.id, {
+        is_active: newStatus === 'active',
+      });
       MessageManager.success('状态已更新');
       void loadRoles();
     } catch {
@@ -428,18 +325,28 @@ const RoleManagementPage: React.FC = () => {
     setPermissionModalVisible(true);
   };
 
-  const handleSubmit = async (_values: {
+  const handleSubmit = async (values: {
     name: string;
-    description?: string;
-    permissions?: string[];
-    isActive?: boolean;
+    code: string;
+    description: string;
+    status: 'active' | 'inactive';
   }) => {
     try {
       if (editingRole) {
-        // 模拟更新API调用
+        await roleService.updateRole(editingRole.id, {
+          display_name: values.name,
+          description: values.description,
+          is_active: values.status === 'active',
+        });
         MessageManager.success('更新成功');
       } else {
-        // 模拟创建API调用
+        await roleService.createRole({
+          name: values.code,
+          display_name: values.name,
+          description: values.description,
+          is_active: values.status === 'active',
+          permission_ids: targetPermissions,
+        });
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
@@ -451,7 +358,9 @@ const RoleManagementPage: React.FC = () => {
 
   const handleSavePermissions = async () => {
     try {
-      // 模拟保存权限API调用
+      if (selectedRole) {
+        await roleService.updateRolePermissions(selectedRole.id, targetPermissions);
+      }
       MessageManager.success('权限配置已保存');
       setPermissionModalVisible(false);
       void loadRoles();
@@ -634,7 +543,7 @@ const RoleManagementPage: React.FC = () => {
                     placeholder="状态筛选"
                     allowClear
                     style={{ width: 120 }}
-                    onChange={_setStatusFilter}
+                    onChange={handleStatusFilterChange}
                   >
                     {statusOptions.map(status => (
                       <Option key={status.value} value={status.value}>
@@ -661,11 +570,17 @@ const RoleManagementPage: React.FC = () => {
             rowKey="id"
             loading={loading}
             pagination={{
-              total: roles.length,
-              pageSize: 10,
+              current: rolePage,
+              total: roleTotal,
+              pageSize: rolePageSize,
+              pageSizeOptions: ['10', '20', '50', '100'],
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: total => `共 ${total} 条记录`,
+              onChange: (page, pageSize) => {
+                setRolePage(page);
+                setRolePageSize(pageSize);
+              },
             }}
           />
         </Card>
@@ -701,7 +616,7 @@ const RoleManagementPage: React.FC = () => {
                     },
                   ]}
                 >
-                  <Input placeholder="请输入角色编码" />
+                  <Input placeholder="请输入角色编码" disabled={editingRole !== null} />
                 </Form.Item>
               </Col>
             </Row>

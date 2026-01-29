@@ -54,19 +54,6 @@ export interface ProjectListResponse {
   pages: number;
 }
 
-export interface NestedProjectListResponse {
-  data: {
-    items: ProjectResponse[];
-    total?: number;
-    total_count?: number;
-    page?: number;
-    page_size?: number;
-    size?: number;
-  };
-}
-
-export type ProjectListApiResponse = ProjectListResponse | NestedProjectListResponse;
-
 export interface ProjectDeleteResponse {
   message: string;
   deleted_id: string;

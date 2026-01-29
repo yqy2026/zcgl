@@ -46,7 +46,7 @@ def mock_db():
     db = MagicMock()
     # Mock database bind with URL
     db.bind = MagicMock()
-    db.bind.url = "postgresql://user:pass@localhost/test_database"
+    db.bind.url = "postgresql+psycopg://user:pass@localhost/test_database"
     return db
 
 
@@ -59,11 +59,11 @@ def mock_db_without_bind():
 
 
 @pytest.fixture
-def mock_db_with_non_sqlite():
-    """Create mock database session with non-SQLite URL"""
+def mock_db_with_non_postgres():
+    """Create mock database session with non-PostgreSQL URL"""
     db = MagicMock()
     db.bind = MagicMock()
-    db.bind.url = "postgresql://user:pass@localhost/db"
+    db.bind.url = "postgresql+psycopg://user:pass@localhost/db"
     return db
 
 
@@ -139,7 +139,7 @@ class TestCreateBackup:
         assert result["success"] is True
         mock_service.create_backup.assert_called_once_with(
             backup_name=None,
-            database_url="postgresql://user:pass@localhost/test_database",
+            database_url="postgresql+psycopg://user:pass@localhost/test_database",
         )
 
     @patch("src.api.v1.system.backup.BackupService")
@@ -162,7 +162,7 @@ class TestCreateBackup:
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="db_backup",
-            database_url="postgresql://user:pass@localhost/test_database",
+            database_url="postgresql+psycopg://user:pass@localhost/test_database",
         )
         assert result["success"] is True
 
@@ -184,7 +184,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        fallback_url = "postgresql://user:pass@localhost/fallback_db"
+        fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
         result = await backup_module.create_backup(
             backup_name="backup_no_bind", db=mock_db_without_bind
@@ -198,10 +198,10 @@ class TestCreateBackup:
 
     @patch("src.api.v1.system.backup.BackupService")
     @pytest.mark.asyncio
-    async def test_create_backup_non_sqlite_db(
-        self, mock_service_class, mock_db_with_non_sqlite
+    async def test_create_backup_non_postgres_db(
+        self, mock_service_class, mock_db_with_non_postgres
     ):
-        """Test backup creation with non-SQLite database"""
+        """Test backup creation with non-PostgreSQL database"""
         from src.api.v1.system.backup import create_backup
 
         mock_service = MagicMock()
@@ -215,12 +215,12 @@ class TestCreateBackup:
         mock_service_class.return_value = mock_service
 
         result = await create_backup(
-            backup_name="pg_backup", db=mock_db_with_non_sqlite
+            backup_name="pg_backup", db=mock_db_with_non_postgres
         )
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="pg_backup",
-            database_url="postgresql://user:pass@localhost/db",
+            database_url="postgresql+psycopg://user:pass@localhost/db",
         )
         assert result["success"] is True
 
@@ -418,7 +418,7 @@ class TestRestoreBackup:
         assert "data" in result
         mock_service.restore_backup.assert_called_once_with(
             backup_name="test_backup",
-            database_url="postgresql://user:pass@localhost/test_database",
+            database_url="postgresql+psycopg://user:pass@localhost/test_database",
             create_current_backup=True,
         )
 
@@ -486,7 +486,7 @@ class TestRestoreBackup:
         }
         mock_service_class.return_value = mock_service
 
-        fallback_url = "postgresql://user:pass@localhost/fallback_db"
+        fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
         result = await backup_module.restore_backup(
             backup_name="backup_no_bind", confirm=True, db=mock_db_without_bind

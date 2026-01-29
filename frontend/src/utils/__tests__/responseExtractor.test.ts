@@ -34,9 +34,9 @@ const paginatedResponse = createMockResponse({
     items: [{ id: 1 }, { id: 2 }, { id: 3 }],
     pagination: {
       page: 1,
-      pageSize: 20,
+      page_size: 20,
       total: 100,
-      totalPages: 5,
+      total_pages: 5,
     },
   },
 });
@@ -116,7 +116,13 @@ describe('ResponseExtractor - 核心功能', () => {
       const result = ResponseExtractor.smartExtract(paginatedResponse);
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+      expect(result.data).toEqual({
+        items: [{ id: 1 }, { id: 2 }, { id: 3 }],
+        total: 100,
+        page: 1,
+        page_size: 20,
+        pages: 5,
+      });
     });
 
     it('应该将缺少items字段的响应作为标准响应处理', () => {

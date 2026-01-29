@@ -5,13 +5,16 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import bad_request, not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.organization import organization as organization_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....models.organization import Organization, OrganizationHistory
 from ....schemas.organization import (
     OrganizationBatchRequest,
     OrganizationCreate,
@@ -28,21 +31,37 @@ from ....services.organization import organization_service
 router = APIRouter(tags=["组织架构管理"])
 
 
-@router.get("", response_model=list[OrganizationResponse])
-@router.get("/", response_model=list[OrganizationResponse])
+@router.get(
+    "",
+    response_model=APIResponse[PaginatedData[OrganizationResponse]],
+)
+@router.get(
+    "/",
+    response_model=APIResponse[PaginatedData[OrganizationResponse]],
+)
 async def get_organizations(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> list[OrganizationResponse]:
+) -> JSONResponse:
     """获取组织列表"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     skip = (page - 1) * page_size
     organizations = organization_crud.get_multi_with_filters(
         db, skip=skip, limit=page_size
     )
-    return [OrganizationResponse.model_validate(org) for org in organizations]
+    items = [OrganizationResponse.model_validate(org) for org in organizations]
+    total = (
+        db.query(Organization).filter(Organization.is_deleted.is_(False)).count()
+    )
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="获取组织列表成功",
+    )
 
 
 @router.get("/tree", response_model=list[OrganizationTree])
@@ -76,21 +95,46 @@ async def get_organization_tree(
     return build_tree(parent_id)
 
 
-@router.get("/search", response_model=list[OrganizationResponse])
+@router.get(
+    "/search",
+    response_model=APIResponse[PaginatedData[OrganizationResponse]],
+)
 async def search_organizations(
     keyword: str = Query(..., min_length=1, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> list[OrganizationResponse]:
+) -> JSONResponse:
     """搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     skip = (page - 1) * page_size
     organizations = organization_crud.search(
         db, keyword=keyword, skip=skip, limit=page_size
     )
-    return [OrganizationResponse.model_validate(org) for org in organizations]
+    items = [OrganizationResponse.model_validate(org) for org in organizations]
+
+    from sqlalchemy import or_
+
+    total = (
+        db.query(Organization)
+        .filter(Organization.is_deleted.is_(False))
+        .filter(
+            or_(
+                Organization.name.ilike(f"%{keyword}%"),
+                Organization.description.ilike(f"%{keyword}%"),
+            )
+        )
+        .count()
+    )
+
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="搜索组织成功",
+    )
 
 
 @router.get("/statistics", response_model=OrganizationStatistics)
@@ -153,14 +197,17 @@ async def get_organization_path(
     return [OrganizationResponse.model_validate(org) for org in path]
 
 
-@router.get("/{org_id}/history", response_model=list[OrganizationHistoryResponse])
+@router.get(
+    "/{org_id}/history",
+    response_model=APIResponse[PaginatedData[OrganizationHistoryResponse]],
+)
 async def get_organization_history(
     org_id: str,
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> list[OrganizationHistoryResponse]:
+) -> JSONResponse:
     """获取组织变更历史"""
     # 检查组织是否存在
     organization = organization_crud.get(db, id=org_id)
@@ -171,7 +218,20 @@ async def get_organization_history(
     history = organization_service.get_history(
         db, org_id=org_id, skip=skip, limit=page_size
     )
-    return [OrganizationHistoryResponse.model_validate(item) for item in history]
+    items = [OrganizationHistoryResponse.model_validate(item) for item in history]
+    total = (
+        db.query(OrganizationHistory)
+        .filter(OrganizationHistory.organization_id == org_id)
+        .count()
+    )
+
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="获取组织历史成功",
+    )
 
 
 @router.post("/", response_model=OrganizationResponse)
@@ -290,12 +350,15 @@ async def batch_organization_operation(
     }
 
 
-@router.post("/advanced-search", response_model=list[OrganizationResponse])
+@router.post(
+    "/advanced-search",
+    response_model=APIResponse[PaginatedData[OrganizationResponse]],
+)
 async def advanced_search_organizations(
     search_request: OrganizationSearchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> list[OrganizationResponse]:
+) -> JSONResponse:
     """高级搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     if search_request.keyword:
@@ -320,4 +383,18 @@ async def advanced_search_organizations(
             org for org in organizations if org.parent_id == search_request.parent_id
         ]
 
-    return [OrganizationResponse.model_validate(org) for org in organizations]
+    items = [OrganizationResponse.model_validate(org) for org in organizations]
+    page_size = search_request.page_size
+    page = (
+        (search_request.skip // page_size) + 1
+        if page_size > 0
+        else 1
+    )
+
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=len(items),
+        message="高级搜索组织成功",
+    )

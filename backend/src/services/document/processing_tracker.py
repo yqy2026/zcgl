@@ -13,6 +13,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
+redis: Any | None
 try:
     import redis
 
@@ -373,7 +374,7 @@ def track_processing_step(
     db: Session,
     session_id: str,
     step: ProcessingStep,
-):
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     处理步骤追踪装饰器
 
@@ -482,6 +483,7 @@ class BatchStatusTracker:
 
         # 尝试连接 Redis
         if REDIS_AVAILABLE and redis_host:
+            assert redis is not None
             try:
                 self._redis_client = redis.Redis(
                     host=redis_host,
@@ -516,7 +518,7 @@ class BatchStatusTracker:
         total: int,
         user_id: int | None = None,
         organization_id: int | None = None,
-        **metadata,
+        **metadata: Any,
     ) -> bool:
         """
         创建批处理记录

@@ -314,10 +314,11 @@ class RentContractService:
         uploader_name: str,
     ) -> dict[str, Any]:
         """上传合同附件"""
-        from ...models.rent_contract import RentContractAttachment
-        from ...crud.rent_contract import rent_contract
         import uuid
         from pathlib import Path
+
+        from ...crud.rent_contract import rent_contract
+        from ...models.rent_contract import RentContractAttachment
 
         # 验证合同是否存在
         contract = rent_contract.get(db, id=contract_id)

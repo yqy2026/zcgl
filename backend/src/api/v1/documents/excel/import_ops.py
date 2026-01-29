@@ -157,7 +157,7 @@ async def import_excel_async(
             "skip_errors": request.should_skip_errors,
             "batch_size": request.batch_size,
         },
-        config={"config_id": request.config_id} if request.config_id else None,
+        config={"config_id": request.config_id} if request.config_id else {},
     )
 
     task = task_crud.create(db=db, obj_in=task_in)

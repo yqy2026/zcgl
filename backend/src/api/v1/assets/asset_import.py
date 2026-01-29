@@ -23,6 +23,7 @@ from ....schemas.asset import (
     AssetImportResponse,
     AssetUpdate,
     AssetValidationRequest,
+    BatchProcessingError,
 )
 
 # 创建导入路由器
@@ -51,7 +52,7 @@ async def import_assets(
         success_count = 0
         failed_count = 0
         total_count = len(request.data)
-        errors: list[dict[str, Any]] = []
+        errors: list[BatchProcessingError] = []
         imported_assets: list[str] = []
 
         for index, asset_data in enumerate(request.data):
@@ -65,13 +66,16 @@ async def import_assets(
                 )
 
                 if not validation_result.is_valid and not request.should_skip_errors:
-                    errors.append(
-                        {
-                            "row": index + 1,
-                            "data": asset_data,
-                            "errors": validation_result.errors,
-                        }
-                    )
+                    for error in validation_result.errors:
+                        errors.append(
+                            BatchProcessingError(
+                                id=None,
+                                row_index=index + 1,
+                                field=error.field,
+                                message=error.message,
+                                code=error.code,
+                            )
+                        )
                     failed_count += 1
                     continue
 
@@ -150,7 +154,15 @@ async def import_assets(
                 )
 
             except Exception as e:
-                errors.append({"row": index + 1, "data": asset_data, "error": str(e)})
+                errors.append(
+                    BatchProcessingError(
+                        id=None,
+                        row_index=index + 1,
+                        field=None,
+                        message=str(e),
+                        code=type(e).__name__,
+                    )
+                )
                 failed_count += 1
 
         return AssetImportResponse(

@@ -17,10 +17,10 @@ class TaskCreate(BaseModel):
     task_type: TaskType = Field(..., description="任务类型")
     title: str = Field(..., min_length=1, max_length=200, description="任务标题")
     description: str | None = Field(None, description="任务描述")
-    parameters: dict[str, Any] | None = Field(
+    parameters: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="任务参数"
     )
-    config: dict[str, Any] | None = Field(
+    config: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="任务配置"
     )
 
@@ -126,13 +126,13 @@ class ExcelTaskConfigCreate(BaseModel):
     config_name: str = Field(..., min_length=1, max_length=200, description="配置名称")
     config_type: str = Field(..., description="配置类型")
     task_type: TaskType = Field(..., description="任务类型")
-    field_mapping: dict[str, Any] | None = Field(
+    field_mapping: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="字段映射配置"
     )
-    validation_rules: dict[str, Any] | None = Field(
+    validation_rules: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="验证规则配置"
     )
-    format_config: dict[str, Any] | None = Field(
+    format_config: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="格式配置"
     )
     is_default: bool = Field(False, description="是否默认配置")

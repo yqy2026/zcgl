@@ -68,8 +68,8 @@ def engine(test_database_url):
     if not test_database_url:
         pytest.skip("E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required", allow_module_level=True)
 
-    if test_database_url.startswith("sqlite"):
-        raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
+    if not test_database_url.startswith("postgresql"):
+        raise RuntimeError("测试必须使用 PostgreSQL")
 
     engine = create_engine(test_database_url, pool_pre_ping=True)
     yield engine

@@ -86,7 +86,6 @@ class TestAPIExceptionHandling:
             # 不应该包含数据库错误、SQL语句等
             error_str = str(data)
             assert "SQL" not in error_str
-            assert "sqlite" not in error_str.lower()
             assert "traceback" not in error_str.lower()
 
     def test_error_response_format(self, client):

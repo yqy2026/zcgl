@@ -2,6 +2,7 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal
+from collections.abc import Sequence
 from typing import Any, cast
 
 from sqlalchemy.orm import Session
@@ -9,7 +10,11 @@ from sqlalchemy.orm import Session
 from ...constants.message_constants import EMPTY_STRING
 from ...crud.custom_field import custom_field_crud
 from ...models.asset import AssetCustomField
-from ...schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
+from ...schemas.asset import (
+    AssetCustomFieldCreate,
+    AssetCustomFieldUpdate,
+    CustomFieldValueItem,
+)
 
 
 class CustomFieldService:
@@ -256,21 +261,37 @@ class CustomFieldService:
             return False, f"验证字段 {field.display_name} 时发生错误: {str(e)}"
 
     def update_asset_field_values(
-        self, db: Session, *, asset_id: str, values: list[dict[str, Any]]
+        self,
+        db: Session,
+        *,
+        asset_id: str,
+        values: Sequence[CustomFieldValueItem | dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """更新资产的自定义字段值 (Refactored from CRUD)"""
         updated_values: list[dict[str, Any]] = []
 
         for value_data in values:
-            field_id = value_data.get("field_id")
-            field_value = value_data.get("value")
+            field_id: str | None = None
+            field_name: str | None = None
+            field_value: Any = None
 
-            if not field_id:
-                continue
+            if isinstance(value_data, CustomFieldValueItem):
+                field_name = value_data.field_name
+                field_value = value_data.value
+            else:
+                field_id = value_data.get("field_id")
+                field_name = value_data.get("field_name")
+                field_value = value_data.get("value")
 
-            # 获取字段配置
-            field = custom_field_crud.get(db, field_id)
-            if not field:
+            field = None
+            if field_id:
+                field = custom_field_crud.get(db, field_id)
+            elif field_name:
+                field = custom_field_crud.get_by_field_name(db, field_name=field_name)
+                if field:
+                    field_id = field.id
+
+            if not field or not field_id:
                 continue
 
             # 验证字段值

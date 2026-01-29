@@ -7,9 +7,9 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from jose import JWTError, jwt

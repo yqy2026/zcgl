@@ -7,10 +7,12 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import forbidden, not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -66,8 +68,12 @@ class UnreadCountResponse(BaseModel):
 # ==================== API 端点 ====================
 
 
-@router.get("", response_model=NotificationListResponse)
-@router.get("/", response_model=NotificationListResponse)
+@router.get(
+    "", response_model=APIResponse[PaginatedData[NotificationResponse]]
+)
+@router.get(
+    "/", response_model=APIResponse[PaginatedData[NotificationResponse]]
+)
 async def get_notifications(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -75,7 +81,7 @@ async def get_notifications(
     type: str | None = Query(None, description="通知类型筛选"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-) -> NotificationListResponse:
+) -> JSONResponse:
     """
     获取当前用户的通知列表
 
@@ -113,11 +119,13 @@ async def get_notifications(
     offset = (page - 1) * page_size
     notifications = query.offset(offset).limit(page_size).all()
 
-    return NotificationListResponse(
-        items=[NotificationResponse.model_validate(n) for n in notifications],
+    return ResponseHandler.paginated(
+        data=[NotificationResponse.model_validate(n) for n in notifications],
+        page=page,
+        page_size=page_size,
         total=total,
-        unread_count=unread_count,
-        count=unread_count,  # count 字段值等于 unread_count
+        message="获取通知列表成功",
+        extra={"unread_count": unread_count, "count": unread_count},
     )
 
 

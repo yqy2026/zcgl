@@ -11,7 +11,6 @@ import type {
   ProjectUpdate,
   ProjectStatisticsResponse,
   ProjectDropdownOption,
-  ProjectListApiResponse,
   ProjectListResponse,
 } from '@/types/project';
 import { MessageManager } from '@/utils/messageManager';
@@ -132,29 +131,6 @@ interface UseProjectListResult {
   refresh: () => void;
 }
 
-const normalizeProjectListResponse = (
-  response: ProjectListApiResponse,
-  params: ProjectQueryParams
-): ProjectListResponse => {
-  if ('items' in response) {
-    return response;
-  }
-
-  const data = response.data;
-  const pageSize = data.page_size ?? data.size ?? params.page_size ?? 10;
-  const total = data.total ?? data.total_count ?? 0;
-  const page = data.page ?? params.page ?? 1;
-  const pages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
-
-  return {
-    items: data.items ?? [],
-    total,
-    page,
-    page_size: pageSize,
-    pages,
-  };
-};
-
 /**
  * 获取项目列表
  */
@@ -166,7 +142,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
     queryFn: async () => {
       try {
         const response = await projectService.getProjects(params);
-        return normalizeProjectListResponse(response, params);
+        return response;
       } catch (error) {
         projectLogger.error('Error searching projects:', error as Error);
         throw error;

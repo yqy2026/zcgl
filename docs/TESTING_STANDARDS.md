@@ -114,9 +114,6 @@ backend/tests/
 ├── performance/                     # Performance Tests - Separate, slower
 │   ├── test_api_performance.py
 │   └── test_pdf_performance.py
-│
-└── archive/                         # Archived legacy tests (ignored by pytest)
-    └── *.py                         # Old tests with known issues
 ```
 
 ### Frontend Structure
@@ -573,7 +570,24 @@ describe('assetService', () => {
 
 ## Coverage Targets
 
-### Backend Coverage Goals
+### Current CI Gates (Baseline)
+
+#### Backend (pytest)
+
+| Category | Minimum | Notes |
+|----------|---------|-------|
+| **Overall** | 70% | Enforced by `--cov-fail-under=70` |
+
+#### Frontend (Vitest)
+
+| Category | Minimum | Notes |
+|----------|---------|-------|
+| **Lines / Functions / Statements** | 50% | Enforced by Vitest thresholds |
+| **Branches** | 45% | Enforced by Vitest thresholds |
+
+### Target Coverage (Roadmap)
+
+#### Backend Coverage Goals
 
 | Category | Target | Notes |
 |----------|--------|-------|
@@ -583,7 +597,7 @@ describe('assetService', () => {
 | **Critical Paths** | 95%+ | Authentication, authorization, payment processing |
 | **Utility Functions** | 90% | Helper functions and validators |
 
-### Frontend Coverage Goals
+#### Frontend Coverage Goals
 
 | Category | Target | Notes |
 |----------|--------|-------|

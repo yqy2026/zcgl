@@ -59,7 +59,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         category: str | None = None,
         is_active: bool | None = None,
         organization_id: str | None = None,
-    ) -> list[Role]:
+    ) -> tuple[list[Role], int]:
         """获取角色列表"""
         filters: dict[str, Any] = {}
 
@@ -79,9 +79,15 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             skip=skip,
             limit=limit,
         )
+        count_stmt = self.query_builder.build_count_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
+        )
 
         result = db.execute(stmt)
-        return list(result.scalars().all())
+        total = int(db.execute(count_stmt).scalar() or 0)
+        return list(result.scalars().all()), total
 
     # Override count to use QueryBuilder implicitly or keep custom if complex logic needed
     # But for standard counts, CRUDBase.count works if filters aligned.

@@ -27,6 +27,7 @@ class AssetService:
         filters: dict[str, Any] | None = None,
         sort_field: str = "created_at",
         sort_order: str = "desc",
+        include_relations: bool = False,
     ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持分页、搜索和筛选
@@ -39,6 +40,7 @@ class AssetService:
             filters=filters,
             sort_field=sort_field,
             sort_order=sort_order,
+            include_relations=include_relations,
         )
         return result
 

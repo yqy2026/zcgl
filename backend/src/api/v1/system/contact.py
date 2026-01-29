@@ -5,16 +5,17 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import internal_error, not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.contact import contact_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.contact import (
     ContactCreate,
-    ContactListResponse,
     ContactResponse,
     ContactUpdate,
     PrimaryContactResponse,
@@ -63,7 +64,7 @@ def get_contact(
 
 @router.get(
     "/entity/{entity_type}/{entity_id}",
-    response_model=ContactListResponse,
+    response_model=APIResponse[PaginatedData[ContactResponse]],
     summary="获取实体的所有联系人",
 )
 def get_entity_contacts(
@@ -73,7 +74,7 @@ def get_entity_contacts(
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
-) -> Any:
+) -> JSONResponse:
     """
     获取指定实体的所有联系人
 
@@ -90,11 +91,13 @@ def get_entity_contacts(
         limit=page_size,
     )
 
-    pages = (total + page_size - 1) // page_size
-
     items = [ContactResponse.model_validate(contact) for contact in contacts]
-    return ContactListResponse(
-        items=items, total=total, page=page, page_size=page_size, pages=pages
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="获取联系人列表成功",
     )
 
 

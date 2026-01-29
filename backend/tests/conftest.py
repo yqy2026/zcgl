@@ -15,7 +15,7 @@ if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 elif "DATABASE_URL" not in os.environ:
     # Fallback placeholder to satisfy settings import in non-DB tests
-    os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost:5432/zcgl_test"
+    os.environ["DATABASE_URL"] = "postgresql+psycopg://user:pass@localhost:5432/zcgl_test"
     TEST_DATABASE_URL = None
 
 # 为测试环境设置强密钥（使用固定种子确保可复现性，或动态生成）
@@ -105,9 +105,6 @@ def setup_test_database():
     if not database_url:
         yield
         return
-
-    if database_url.startswith("sqlite"):
-        raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
 
     # Only run migrations for integration tests
     run_migrations = False

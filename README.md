@@ -48,8 +48,8 @@
 ### 🏗️ 技术架构
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [system-overview.md](docs/architecture/system-overview.md) | 系统架构和技术栈 | 📝 计划中 |
-| [ADR列表](docs/architecture/) | 架构决策记录 | 📝 计划中 |
+| [system-overview.md](docs/architecture/system-overview.md) | 系统架构和技术栈 | ✅ **已完成** |
+| [ADR列表](docs/architecture/) | 架构决策记录 | ✅ 已创建（待补充） |
 
 ### 🔌 接口集成
 | 文档 | 描述 | 状态 |
@@ -124,7 +124,7 @@
 |------|------|------|
 | **API版本** | ✅ `/api/v1/*` | 统一版本化架构 |
 | **核心功能** | ✅ 95%+ | 主要业务模块正常运行 |
-| **测试覆盖** | ✅ 90%+ | 前端95%+, 后端90%+ |
+| **测试覆盖** | ✅ CI门槛 | 后端≥70%，前端≥50%（目标85%/75%） |
 | **部署状态** | ✅ Ready | Docker Compose 就绪 |
 
 ---

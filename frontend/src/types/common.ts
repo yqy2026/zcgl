@@ -164,7 +164,7 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   page_size: number;
-  totalPages: number;
+  total_pages: number;
 }
 
 // 任务状态类型

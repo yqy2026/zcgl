@@ -6,9 +6,11 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....core.router_registry import route_registry
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -17,7 +19,6 @@ from ....models.collection import CollectionRecord, CollectionStatus
 from ....models.rent_contract import RentLedger
 from ....schemas.collection import (
     CollectionRecordCreate,
-    CollectionRecordListResponse,
     CollectionRecordResponse,
     CollectionRecordUpdate,
     CollectionTaskSummary,
@@ -113,7 +114,7 @@ async def get_collection_summary(
 
 @router.get(
     "/records",
-    response_model=CollectionRecordListResponse,
+    response_model=APIResponse[PaginatedData[CollectionRecordResponse]],
     summary="获取催缴记录列表",
 )
 async def list_collection_records(
@@ -124,7 +125,7 @@ async def list_collection_records(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-) -> CollectionRecordListResponse:
+) -> JSONResponse:
     """查询催缴记录列表，支持按台账、合同、状态筛选"""
 
     query = db.query(CollectionRecord)
@@ -149,17 +150,14 @@ async def list_collection_records(
         .all()
     )
 
-    # 计算总页数
-    pages = (total + page_size - 1) // page_size if total > 0 else 0
-
     items = [CollectionRecordResponse.model_validate(record) for record in records]
 
-    return CollectionRecordListResponse(
-        items=items,
-        total=total,
+    return ResponseHandler.paginated(
+        data=items,
         page=page,
         page_size=page_size,
-        pages=pages,
+        total=total,
+        message="获取催缴记录列表成功",
     )
 
 

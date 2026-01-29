@@ -12,7 +12,7 @@ import traceback
 import uuid
 from datetime import UTC, date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -470,9 +470,11 @@ class PDFImportService:
 
     def _get_extracted_fields(self, smart_result: dict[str, Any]) -> dict[str, Any]:
         """从智能提取结果中获取字段"""
-        return smart_result.get("raw_llm_json") or smart_result.get(
-            "extracted_fields", {}
-        )
+        raw_fields = smart_result.get("raw_llm_json")
+        if isinstance(raw_fields, dict):
+            return raw_fields
+        extracted_fields = smart_result.get("extracted_fields", {})
+        return cast(dict[str, Any], extracted_fields)
 
     def _fill_missing_fields_with_regex(
         self, extracted: dict[str, Any], regex_result: dict[str, Any] | None
@@ -506,11 +508,16 @@ class PDFImportService:
         self, smart_result: dict[str, Any], extraction_rate: float
     ) -> float:
         """计算综合置信度分数"""
-        base_confidence = (
-            smart_result.get("confidence", self.CONFIDENCE_BASE_THRESHOLD)
-            if smart_result.get("success")
-            else self.CONFIDENCE_MIN_BASE
-        )
+        if smart_result.get("success"):
+            confidence_value = smart_result.get(
+                "confidence", self.CONFIDENCE_BASE_THRESHOLD
+            )
+            try:
+                base_confidence = float(confidence_value)
+            except (TypeError, ValueError):
+                base_confidence = self.CONFIDENCE_BASE_THRESHOLD
+        else:
+            base_confidence = self.CONFIDENCE_MIN_BASE
         weighted_confidence = base_confidence * (
             0.7 + self.CONFIDENCE_WEIGHT_EXTRACTION * extraction_rate
         )
@@ -666,8 +673,12 @@ class PDFImportService:
             contract.sign_date = (
                 self._parse_date(contract_data.get("sign_date")) or date.today()
             )
-            contract.start_date = self._parse_date(contract_data["start_date"])
-            contract.end_date = self._parse_date(contract_data["end_date"])
+            start_date = self._parse_date(contract_data["start_date"])
+            end_date = self._parse_date(contract_data["end_date"])
+            if start_date is None or end_date is None:
+                raise ValueError("Invalid date format for start_date or end_date")
+            contract.start_date = start_date
+            contract.end_date = end_date
             contract.total_deposit = contract_data.get("total_deposit", 0)
             contract.monthly_rent_base = contract_data.get("monthly_rent", 0)
             contract.payment_cycle = payment_cycle

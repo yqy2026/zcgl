@@ -20,8 +20,8 @@ from src.database import (
 
 # Skip all tests in this module if not using PostgreSQL
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DATABASE_URL", "").startswith("postgresql://"),
-    reason="PostgreSQL tests require DATABASE_URL to be set to postgresql://",
+    not os.getenv("DATABASE_URL", "").startswith("postgresql+psycopg://"),
+    reason="PostgreSQL tests require DATABASE_URL to be set to postgresql+psycopg://",
 )
 
 
@@ -35,8 +35,9 @@ class TestPostgreSQLConnection:
         database_url = get_database_url()
 
         # 验证是PostgreSQL URL
-        assert database_url.startswith("postgresql://"), (
-            f"DATABASE_URL should start with postgresql://, got: {database_url[:20]}"
+        assert database_url.startswith("postgresql+psycopg://"), (
+            "DATABASE_URL should start with postgresql+psycopg://, "
+            f"got: {database_url[:30]}"
         )
 
         # 验证URL包含必需组件
@@ -61,7 +62,7 @@ class TestPostgreSQLConnection:
         engine = mgr.initialize_engine(database_url)
 
         assert engine is not None
-        assert engine.driver == "psycopg2"
+        assert engine.driver == "psycopg"
         assert str(engine.url).startswith("postgresql")
 
     def test_database_connection(self):
@@ -281,7 +282,7 @@ class TestPostgreSQLErrorHandling:
     def test_connection_error_handling(self):
         """测试连接错误的处理"""
         # 使用无效的数据库URL
-        invalid_url = "postgresql://invalid:invalid@localhost:9999/invalid_db"
+        invalid_url = "postgresql+psycopg://invalid:invalid@localhost:9999/invalid_db"
 
         mgr = DatabaseManager()
         with pytest.raises(RuntimeError) as exc_info:
@@ -301,7 +302,7 @@ class TestPostgreSQLErrorHandling:
         parsed = urlparse(database_url)
 
         # 验证必需组件
-        if database_url.startswith("postgresql://"):
+        if database_url.startswith("postgresql+psycopg://"):
             assert parsed.hostname is not None
             assert parsed.username is not None
             assert parsed.path and len(parsed.path) > 1

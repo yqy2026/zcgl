@@ -14,7 +14,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .config import get_config
 
@@ -117,7 +117,7 @@ class PDFCache:
             # 读取缓存，单独处理 JSON 解析错误
             try:
                 with open(cache_file, encoding="utf-8") as f:
-                    cached_data = json.load(f)
+                    cached_data = cast(dict[str, Any], json.load(f))
             except json.JSONDecodeError:
                 logger.error(
                     f"Cache file corrupted: {cache_file}",
@@ -452,7 +452,7 @@ class AsyncDocumentCache:
                     cache_file.read_text, encoding="utf-8"
                 )
 
-            cached_data = json.loads(content)
+            cached_data = cast(dict[str, Any], json.loads(content))
 
             # 更新访问时间
             await asyncio.to_thread(os.utime, cache_file, None)
@@ -704,7 +704,7 @@ class CachedExtractor:
             包装后的函数
         """
 
-        async def wrapper(file_path: str, *args, **kwargs):
+        async def wrapper(file_path: str, *args: Any, **kwargs: Any) -> Any:
             # 检查缓存
             cache_key = (
                 self.cache_key_func(file_path) if self.cache_key_func else file_path
@@ -934,5 +934,5 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 使用装饰器
     @cached_extraction(ttl_seconds=1800)
-    async def mock_extract(file_path: str):
+    async def mock_extract(file_path: str) -> dict[str, Any]:
         return {"success": True, "data": "test"}

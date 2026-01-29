@@ -10,7 +10,6 @@ dependencies = [
     "alembic>=1.17.0",
     "pydantic>=2.12.0",
     "pydantic-settings>=2.1.0",
-    "psycopg2-binary>=2.9.9",
     "psycopg>=3.2.0",
     "polars>=0.20.0",
     "openpyxl>=3.1.0",
@@ -28,10 +27,7 @@ dependencies = [
     "psutil>=7.1.3",
     "python-dotenv>=1.2.1",
     "pillow>=12.0.0",
-    # PDF基础处理
-    "pymupdf>=1.24.14",
-    "pdfplumber>=0.11.7",
-    "pdf2image>=1.17.0",
+    # PDF基础处理（移动到可选依赖）
 ]
 
 [project.optional-dependencies]
@@ -53,6 +49,7 @@ dev = [
 pdf-basic = [
     "pdfplumber>=0.11.0,<0.12.0",
     "pymupdf>=1.24.5,<1.25.0",
+    "pdf2image>=1.17.0,<2.0.0",
     "markitdown>=0.1.0",
     "python-magic>=0.4.27; sys_platform != 'linux'",
     "python-magic-bin>=0.4.14; sys_platform != 'linux'",
@@ -168,18 +165,6 @@ module = [
 # Removed: warn_redundant_casts (not allowed in per-module overrides)
 # Removed: warn_unused_ignores (not allowed in per-module overrides)
 
-# === Tier 3: 第三方集成 (PERMISSIVE) ===
-# OCR、PDF、文档处理服务
-[[tool.mypy.overrides]]
-module = [
-    "src.services.document.*",
-    "src.services.excel.*",
-]
-ignore_missing_imports = true
-# 允许策略化使用 # type: ignore
-warn_return_any = false
-disable_error_code = ["no-untyped-def", "no-any-return", "assignment", "override"]
-
 [[tool.mypy.overrides]]
 module = [
     "src.core.permissions",
@@ -204,22 +189,6 @@ module = [
 module = [
     "src.models.*",
 ]
-
-# === Tier 4: 新功能开发 (TEMPORARY IGNORE) ===
-# 临时忽略新功能的mypy错误，待后续PR修复
-[[tool.mypy.overrides]]
-module = [
-    "src.models.llm_prompt",
-    "src.schemas.llm_prompt",
-    "src.api.v1.llm_prompts",
-    "src.api.v1.property_certificate",
-    "src.services.llm_prompt.*",
-    "src.services.property_certificate.*",
-    "src.crud.property_certificate",
-]
-# TODO: 在后续PR中修复类型错误并移除此配置
-warn_return_any = false
-disable_error_code = ["no-untyped-def", "no-any-return"]
 
 # === 无类型第三方库的显式忽略 ===
 [[tool.mypy.overrides]]

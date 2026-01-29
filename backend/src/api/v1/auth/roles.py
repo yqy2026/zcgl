@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.rbac import permission_crud, role_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user, require_admin
@@ -81,7 +83,9 @@ class RoleUserListResponse(BaseModel):
 # ==================== 角色CRUD端点 ====================
 
 
-@router.get("", response_model=RoleListResponse, summary="获取角色列表")
+@router.get(
+    "", response_model=APIResponse[PaginatedData[RoleResponse]], summary="获取角色列表"
+)
 async def get_roles(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -91,7 +95,7 @@ async def get_roles(
     organization_id: str | None = Query(None, description="组织ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> RoleListResponse:
+) -> JSONResponse:
     """
     获取角色列表，支持分页和筛选
 
@@ -106,7 +110,7 @@ async def get_roles(
         skip = (page - 1) * page_size
 
         # Using CRUD for read operations
-        roles = role_crud.get_multi_with_filters(
+        roles, total = role_crud.get_multi_with_filters(
             db=db,
             skip=skip,
             limit=page_size,
@@ -116,28 +120,12 @@ async def get_roles(
             organization_id=organization_id,
         )
 
-        # Count is trickier with search/filters if we rely on QueryBuilder inside get_multi without returning tuple
-        # But we can assume total count is needed.
-        # Ideally get_multi could return tuple, or we do separate count.
-        # Let's use simple count for now or implement search count in CRUD.
-        # For full correctness with pagination, we should probably refactor CRUD to return (items, total) like before
-        # OR perform separate count query.
-        # Given previous pattern, let's keep it simple: total count of all roles or filtered?
-        # The previous code returned (roles, total).
-        # Let's count filtered logic.
-
-        # Re-using logic or just counting all for now to avoid complexity in this step?
-        # Correct way: role_crud.count(db, filters)
-        total = role_crud.count(db)  # This is total in DB, not filtered.
-
-        pages = (total + page_size - 1) // page_size
-
-        return RoleListResponse(
-            items=[RoleResponse.model_validate(role) for role in roles],
-            total=total,
+        return ResponseHandler.paginated(
+            data=[RoleResponse.model_validate(role) for role in roles],
             page=page,
             page_size=page_size,
-            pages=pages,
+            total=total,
+            message="获取角色列表成功",
         )
     except Exception as e:
         raise internal_error(str(e))
@@ -328,7 +316,7 @@ async def set_role_permissions(
 
 @router.get(
     "/{role_id}/users",
-    response_model=RoleUserListResponse,
+    response_model=APIResponse[PaginatedData[dict[str, Any]]],
     summary="获取角色的用户列表",
 )
 async def get_role_users(
@@ -337,7 +325,7 @@ async def get_role_users(
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> RoleUserListResponse:
+) -> JSONResponse:
     """获取拥有某个角色的所有用户"""
     try:
         role = role_crud.get(db, id=role_id)
@@ -362,11 +350,14 @@ async def get_role_users(
         skip = (page - 1) * page_size
         users, total = user_crud.get_users_by_role(db, role_id, skip, page_size)
 
-        return RoleUserListResponse(
-            users=[
+        return ResponseHandler.paginated(
+            data=[
                 {"id": u.id, "username": u.username, "email": u.email} for u in users
             ],
+            page=page,
+            page_size=page_size,
             total=total,
+            message="获取角色用户列表成功",
         )
     except Exception as e:
         if isinstance(e, BaseBusinessError):

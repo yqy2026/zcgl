@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ExcelExportRequest(BaseModel):
     """Excel导出请求模型"""
 
-    filters: dict[str, Any] | None = Field(
+    filters: dict[str, Any] = Field(
         default_factory=dict[str, Any], description="筛选条件"
     )
     fields: list[str] | None = Field(None, description="导出字段列表")

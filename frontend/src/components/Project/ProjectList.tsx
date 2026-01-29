@@ -36,8 +36,6 @@ import { ownershipService } from '@/services/ownershipService';
 import type {
   Project,
   ProjectStatisticsResponse,
-  ProjectListApiResponse,
-  NestedProjectListResponse,
 } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
@@ -52,24 +50,6 @@ interface ProjectQueryParams {
   is_active?: boolean;
   ownership_id?: string;
 }
-
-const isNestedProjectListResponse = (value: unknown): value is NestedProjectListResponse => {
-  if (value == null || typeof value !== 'object') {
-    return false;
-  }
-  const data = (value as { data?: unknown }).data;
-  if (data == null || typeof data !== 'object') {
-    return false;
-  }
-  return 'items' in data;
-};
-
-const extractProjectItems = (response: ProjectListApiResponse): Project[] => {
-  if ('items' in response) {
-    return response.items ?? [];
-  }
-  return response.data.items ?? [];
-};
 
 const { Search } = Input;
 const { Option } = Select;
@@ -123,39 +103,17 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       }
 
       const response = await projectService.getProjects(params);
-      // API response received
 
-      // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
-      if (response != null && 'items' in response) {
-        // 标准响应格式：{items: [...], total: number, page: number, size: number}
-        setProjects(response.items ?? []);
-        setPagination(prev => ({
-          ...prev,
-          total: response.total ?? 0,
-          current: response.page ?? prev.current,
-          pageSize: response.page_size ?? prev.pageSize,
-        }));
-      } else if (isNestedProjectListResponse(response)) {
-        // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects(response.data.items ?? []);
-        setPagination(prev => ({
-          ...prev,
-          total: response.data.total ?? response.data.total_count ?? 0,
-          current: response.data.page ?? prev.current,
-          pageSize: response.data.page_size ?? response.data.size ?? prev.pageSize,
-        }));
-      } else {
-        // eslint-disable-next-line no-console
-        console.error('Unexpected response format:', response ?? 'undefined response');
-        setProjects([]);
-        setPagination(prev => ({
-          ...prev,
-          total: 0,
-        }));
-      }
+      setProjects(response.items ?? []);
+      setPagination(prev => ({
+        ...prev,
+        total: response.total ?? 0,
+        current: response.page ?? prev.current,
+        pageSize: response.page_size ?? prev.pageSize,
+      }));
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = extractProjectItems(response);
+      const loadedProjects = response.items ?? [];
       const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 

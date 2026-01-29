@@ -38,7 +38,7 @@ class AutoOptimizer:
         self.accuracy_threshold = accuracy_threshold
         self.prompt_manager = PromptManager()
 
-    async def check_and_optimize_all(self, db: Session):
+    async def check_and_optimize_all(self, db: Session) -> list[dict[str, Any]]:
         """
         检查所有活跃的Prompt是否需要优化
 
@@ -54,7 +54,7 @@ class AutoOptimizer:
 
         logger.info(f"🔍 检查{len(active_prompts)}个活跃Prompt...")
 
-        optimization_results = []
+        optimization_results: list[dict[str, Any]] = []
 
         for prompt in active_prompts:
             try:

@@ -115,7 +115,7 @@ const UserManagementPage: React.FC = () => {
 
   const loadRoles = useCallback(async () => {
     try {
-      const data = await roleService.getRoles({ page_size: 200 });
+      const data = await roleService.getRoles({ page_size: 100 });
       const roleItems = Array.isArray(data)
         ? data
         : Array.isArray((data as { items?: unknown[] }).items)

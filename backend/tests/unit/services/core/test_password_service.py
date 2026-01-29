@@ -377,7 +377,7 @@ class TestIsPasswordExpired:
     def test_timezone_aware_datetime(self):
         """测试时区感知的 datetime"""
         service = PasswordService()
-        # 带 timezone 的 datetime（虽然 SQLite 通常存储 naive datetime）
+        # 带 timezone 的 datetime
 
         tz_aware_date = datetime.now(UTC).replace(tzinfo=None)
         user = MockUser(password_last_changed=tz_aware_date)

@@ -161,7 +161,7 @@ class ContractExtractorInterface(ABC):
     """
 
     @abstractmethod
-    async def extract(self, source: str, **kwargs) -> ExtractionResult:
+    async def extract(self, source: str, **kwargs: Any) -> ExtractionResult:
         """
         从源文本中提取合同信息
 
@@ -227,7 +227,7 @@ class BatchExtractorInterface(ContractExtractorInterface):
         self,
         sources: list[str],
         progress_callback: ProgressCallbackType | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[ExtractionResult]:
         """
         批量提取合同信息
@@ -290,7 +290,7 @@ class ExtractorFactory:
     根据配置创建合适的提取器实例
     """
 
-    _extractors: dict[str, type] = {}
+    _extractors: dict[str, type[ContractExtractorInterface]] = {}
 
     @classmethod
     def register(
@@ -306,7 +306,7 @@ class ExtractorFactory:
         cls._extractors[name] = extractor_class
 
     @classmethod
-    def create(cls, name: str, **kwargs) -> ContractExtractorInterface | None:
+    def create(cls, name: str, **kwargs: Any) -> ContractExtractorInterface | None:
         """
         创建提取器实例
 
@@ -369,7 +369,7 @@ def create_success_result(
     extracted_fields: dict[str, Any],
     method: ExtractionMethod,
     confidence: float = 0.8,
-    **kwargs,
+    **kwargs: Any,
 ) -> ExtractionResult:
     """
     创建成功结果

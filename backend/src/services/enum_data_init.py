@@ -166,15 +166,20 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
 
             if not enum_type:
                 # 创建新枚举类型
-                enum_type = EnumFieldType(
-                    code=enum_code,
-                    name=enum_config["name"],
-                    category=enum_config.get("category", "其他"),
-                    description=enum_config.get("description", ""),
-                    is_system=True,
-                    status="active",
-                    created_by=created_by,
+                enum_type = EnumFieldType()
+                _set_attr(enum_type, "code", enum_code)
+                _set_attr(enum_type, "name", enum_config["name"])
+                _set_attr(
+                    enum_type, "category", enum_config.get("category", "其他")
                 )
+                _set_attr(
+                    enum_type,
+                    "description",
+                    enum_config.get("description", ""),
+                )
+                _set_attr(enum_type, "is_system", True)
+                _set_attr(enum_type, "status", "active")
+                _set_attr(enum_type, "created_by", created_by)
                 db.add(enum_type)
                 db.flush()  # 获取ID
                 stats["types_created"] += 1
@@ -212,16 +217,16 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                 )
 
                 if not existing_value:
-                    # 创建新枚举值
-                    new_value = EnumFieldValue(
-                        enum_type_id=enum_type.id,
-                        value=value_dict["value"],
-                        label=value_dict["label"],
-                        sort_order=value_dict.get("sort_order", 0),
-                        is_active=True,
-                        is_deleted=False,
-                        created_by=created_by,
+                    new_value = EnumFieldValue()
+                    _set_attr(new_value, "enum_type_id", enum_type.id)
+                    _set_attr(new_value, "value", value_dict["value"])
+                    _set_attr(new_value, "label", value_dict["label"])
+                    _set_attr(
+                        new_value, "sort_order", value_dict.get("sort_order", 0)
                     )
+                    _set_attr(new_value, "is_active", True)
+                    _set_attr(new_value, "is_deleted", False)
+                    _set_attr(new_value, "created_by", created_by)
                     db.add(new_value)
                     stats["values_created"] += 1
                 else:
@@ -293,15 +298,16 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
                 )
 
                 if not existing:
-                    new_value = EnumFieldValue(
-                        enum_type_id=enum_type.id,
-                        value=value_dict["value"],
-                        label=value_dict["label"],
-                        sort_order=value_dict.get("sort_order", 99),
-                        is_active=True,
-                        is_deleted=False,
-                        created_by=created_by,
+                    new_value = EnumFieldValue()
+                    _set_attr(new_value, "enum_type_id", enum_type.id)
+                    _set_attr(new_value, "value", value_dict["value"])
+                    _set_attr(new_value, "label", value_dict["label"])
+                    _set_attr(
+                        new_value, "sort_order", value_dict.get("sort_order", 99)
                     )
+                    _set_attr(new_value, "is_active", True)
+                    _set_attr(new_value, "is_deleted", False)
+                    _set_attr(new_value, "created_by", created_by)
                     db.add(new_value)
                     stats["values_added"] += 1
                     logger.info(f"添加遗留枚举值: {enum_code}.{value_dict['value']}")

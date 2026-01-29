@@ -90,8 +90,8 @@ class UserResponse(UserBase):
 
     id: str
     role: UserRole | str
-    is_active: bool | int  # Handle SQLite boolean as int
-    is_locked: bool | int  # Handle SQLite boolean as int
+    is_active: bool
+    is_locked: bool
     last_login_at: datetime | str | None
     employee_id: str | None
     default_organization_id: str | None

@@ -27,7 +27,7 @@ if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 elif not os.getenv("DATABASE_URL"):
     # Fallback placeholder to satisfy settings import in non-DB tests
-    os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost:5432/zcgl_test"
+    os.environ["DATABASE_URL"] = "postgresql+psycopg://user:pass@localhost:5432/zcgl_test"
     TEST_DATABASE_URL = None
 
 # 设置测试环境必需的环境变量
@@ -52,9 +52,6 @@ def test_engine():
     """创建测试数据库引擎（PostgreSQL）"""
     if not TEST_DATABASE_URL:
         pytest.skip("TEST_DATABASE_URL is required for database tests")
-
-    if TEST_DATABASE_URL.lower().startswith("sqlite"):
-        raise RuntimeError("SQLite 已移除，测试必须使用 PostgreSQL")
 
     import src.models  # noqa: F401 - Trigger model registration
     from src.database import Base

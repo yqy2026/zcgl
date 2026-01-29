@@ -7,13 +7,13 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import Select, select
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
 from ..core.performance import cached, monitor_query
-from ..models.asset import Asset, AssetHistory
+from ..models.asset import Asset, AssetHistory, Project, ProjectOwnershipRelation
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
 
@@ -192,6 +192,19 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             },
         )
 
+    def _asset_base_query_with_relations(self) -> Select[Any]:
+        """
+        资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
+
+        注意：集合关系使用 selectinload，避免 joinedload 导致的行膨胀。
+        """
+        return select(Asset).options(
+            joinedload(Asset.project)
+            .selectinload(Project.ownership_relations)
+            .joinedload(ProjectOwnershipRelation.ownership),
+            joinedload(Asset.ownership),
+        )
+
     def create(
         self,
         db: Session,
@@ -319,6 +332,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         filters: dict[str, Any] | None = None,
         sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
+        include_relations: bool = False,
     ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持搜索、筛选和排序 - 优化版本
@@ -353,8 +367,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         # 使用 CRUDBase (QueryBuilder) 获取数据
         # 注意：QueryBuilder 默认处理 skip/limit
-        base_query = select(Asset).options(
-            joinedload(Asset.project), joinedload(Asset.ownership)
+        base_query = (
+            self._asset_base_query_with_relations()
+            if include_relations
+            else select(Asset)
         )
         assets: list[Asset] = self.get_with_filters(
             db,
@@ -491,10 +507,20 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         return self.update(db=db, db_obj=db_obj, obj_in=obj_in, commit=commit)
 
-    def get_multi_by_ids(self, db: Session, ids: list[str]) -> list[Asset]:
+    def get_multi_by_ids(
+        self, db: Session, ids: list[str], include_relations: bool = False
+    ) -> list[Asset]:
         """根据ID列表批量获取资产"""
+        base_query = (
+            self._asset_base_query_with_relations()
+            if include_relations
+            else select(Asset)
+        )
         return self.get_with_filters(
-            db, filters={"id__in": ids}, limit=len(ids) if ids else 100
+            db,
+            filters={"id__in": ids},
+            limit=len(ids) if ids else 100,
+            base_query=base_query,
         )
 
     # remove is inherited

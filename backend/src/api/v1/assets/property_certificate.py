@@ -260,7 +260,7 @@ def get_certificate(
                 detail="产权证不存在",
             )
         logger.debug(f"Retrieved certificate {certificate_id}")
-        return cert
+        return PropertyCertificateResponse.model_validate(cert)
     except HTTPException:
         raise
     except Exception as e:
@@ -318,7 +318,7 @@ def create_certificate(
             result.id,
             certificate.certificate_number,
         )
-        return result
+        return PropertyCertificateResponse.model_validate(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -363,7 +363,7 @@ def update_certificate(
 
         result = property_certificate_crud.update(db, db_obj=cert, obj_in=certificate)
         logger.info(f"Updated certificate {certificate_id}")
-        return result
+        return PropertyCertificateResponse.model_validate(result)
     except HTTPException:
         raise
     except Exception as e:

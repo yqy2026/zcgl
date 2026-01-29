@@ -2,19 +2,19 @@
 项目管理API路由
 """
 
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import bad_request, internal_error, not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.project import project_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.project import (
     ProjectCreate,
-    ProjectListResponse,
     ProjectResponse,
     ProjectSearchRequest,
     ProjectUpdate,
@@ -44,8 +44,12 @@ async def create_project(
         raise internal_error(f"创建项目失败: {str(e)}")
 
 
-@router.get("", response_model=ProjectListResponse, summary="获取项目列表")
-@router.get("/", response_model=ProjectListResponse, summary="获取项目列表")
+@router.get(
+    "", response_model=APIResponse[PaginatedData[ProjectResponse]], summary="获取项目列表"
+)
+@router.get(
+    "/", response_model=APIResponse[PaginatedData[ProjectResponse]], summary="获取项目列表"
+)
 async def list_projects(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -55,7 +59,7 @@ async def list_projects(
     is_active: bool | None = None,
     ownership_id: str | None = None,
     project_status: str | None = None,
-) -> ProjectListResponse:
+) -> Any:
     """
     获取项目列表，支持分页和筛选
 
@@ -74,23 +78,45 @@ async def list_projects(
             ownership_entity=None,
         )
         result = project_service.search_projects(db=db, search_params=search_params)
-        return ProjectListResponse(**result)
+        items = [
+            ProjectResponse.model_validate(item) for item in result.get("items", [])
+        ]
+        return ResponseHandler.paginated(
+            data=items,
+            page=result.get("page", page),
+            page_size=result.get("page_size", page_size),
+            total=result.get("total", 0),
+            message="获取项目列表成功",
+        )
     except Exception as e:
         raise internal_error(f"获取项目列表失败: {str(e)}")
 
 
-@router.post("/search", response_model=ProjectListResponse, summary="搜索项目")
+@router.post(
+    "/search",
+    response_model=APIResponse[PaginatedData[ProjectResponse]],
+    summary="搜索项目",
+)
 async def search_projects(
     search_params: ProjectSearchRequest,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-) -> ProjectListResponse:
+) -> Any:
     """
     搜索项目列表
     """
     try:
         result = project_service.search_projects(db=db, search_params=search_params)
-        return ProjectListResponse(**result)
+        items = [
+            ProjectResponse.model_validate(item) for item in result.get("items", [])
+        ]
+        return ResponseHandler.paginated(
+            data=items,
+            page=result.get("page", search_params.page),
+            page_size=result.get("page_size", search_params.page_size),
+            total=result.get("total", 0),
+            message="搜索项目成功",
+        )
     except Exception as e:
         raise internal_error(f"搜索项目失败: {str(e)}")
 
@@ -115,7 +141,7 @@ async def get_project_statistics(
     获取项目统计概览
     """
     stats = project_crud.get_statistics(db=db)
-    return cast(dict[str, Any], stats)
+    return stats
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")

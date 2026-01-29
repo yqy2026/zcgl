@@ -69,8 +69,8 @@ python -c "import psycopg; print(f'✓ psycopg {psycopg.__version__}')"
 cp backend/.env.example backend/.env
 
 # 编辑 backend/.env，添加：
-DATABASE_URL=postgresql://postgres:your_secure_password@localhost:5432/zcgl_db
-TEST_DATABASE_URL=postgresql://postgres:your_secure_password@localhost:5432/zcgl_test
+DATABASE_URL=postgresql+psycopg://postgres:your_secure_password@localhost:5432/zcgl_db
+TEST_DATABASE_URL=postgresql+psycopg://postgres:your_secure_password@localhost:5432/zcgl_test
 
 DATABASE_POOL_SIZE=20
 DATABASE_MAX_OVERFLOW=30

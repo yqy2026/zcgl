@@ -54,8 +54,8 @@
 ```bash
 # 1. 确保环境变量配置正确
 cd backend
-export DATABASE_URL="postgresql://postgres:your_password@localhost:5432/zcgl_db"
-export TEST_DATABASE_URL="postgresql://postgres:your_password@localhost:5432/zcgl_test"
+export DATABASE_URL="postgresql+psycopg://postgres:your_password@localhost:5432/zcgl_db"
+export TEST_DATABASE_URL="postgresql+psycopg://postgres:your_password@localhost:5432/zcgl_test"
 
 # 2. 创建数据库（如未创建）
 python scripts/setup_postgresql.py
@@ -81,7 +81,7 @@ GRANT ALL PRIVILEGES ON DATABASE zcgl_prod TO zcgl_user;
 \q
 
 # 3. 配置环境变量
-export DATABASE_URL="postgresql://zcgl_user:secure_password@localhost:5432/zcgl_prod"
+export DATABASE_URL="postgresql+psycopg://zcgl_user:secure_password@localhost:5432/zcgl_prod"
 
 # 4. 运行迁移
 alembic upgrade head
@@ -104,8 +104,8 @@ python -c "from src.database import get_database_status; print(get_database_stat
 
 ```bash
 # backend/.env
-DATABASE_URL=postgresql://zcgl_user:password@localhost:5432/zcgl_db
-TEST_DATABASE_URL=postgresql://zcgl_user:password@localhost:5432/zcgl_test
+DATABASE_URL=postgresql+psycopg://zcgl_user:password@localhost:5432/zcgl_db
+TEST_DATABASE_URL=postgresql+psycopg://zcgl_user:password@localhost:5432/zcgl_test
 
 # 连接池配置
 DATABASE_POOL_SIZE=20
@@ -453,7 +453,7 @@ alembic upgrade head
 ```
 
 ### Q4: 表已存在错误
-**问题**: `sqlalchemy.exc.ProgrammingError: (psycopg2.errors.DuplicateTable) relation "assets" already exists`
+**问题**: `sqlalchemy.exc.ProgrammingError: (psycopg.errors.DuplicateTable) relation "assets" already exists`
 
 **解决方案**:
 ```bash
@@ -489,7 +489,7 @@ print(f'Found {len(orphans)} orphaned ownerships')
 ```
 
 ### Q6: 数据库锁定
-**问题**: `psycopg2.errors.LockNotAvailable` 或 `deadlock detected`
+**问题**: `psycopg.errors.LockNotAvailable` 或 `deadlock detected`
 
 **解决方案**:
 ```bash

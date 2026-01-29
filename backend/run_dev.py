@@ -45,17 +45,12 @@ if __name__ == "__main__":
         print("  SECRET_KEY=<生成的密钥>")
         sys.exit(1)
 
-    # 检查 DATABASE_URL（SQLite 已移除）
+    # 检查 DATABASE_URL
     database_url = os.getenv("DATABASE_URL", "")
     if not database_url:
         print("🚨 错误: DATABASE_URL 未设置")
-        print("本项目已移除 SQLite，本地开发必须使用 PostgreSQL")
         print("请在 backend/.env 中设置，例如:")
-        print("  DATABASE_URL=postgresql://user:password@localhost:5432/zcgl")
-        sys.exit(1)
-
-    if database_url.startswith("sqlite://"):
-        print("🚨 错误: SQLite 已移除，本项目仅支持 PostgreSQL。")
+        print("  DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/zcgl")
         sys.exit(1)
 
     # 检查 DATA_ENCRYPTION_KEY（用于PII数据加密）

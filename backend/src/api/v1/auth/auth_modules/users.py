@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from .....core.exception_handler import (
@@ -18,6 +19,7 @@ from .....core.exception_handler import (
     internal_error,
     not_found,
 )
+from .....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,6 @@ from .....middleware.security_middleware import get_client_ip
 from .....schemas.auth import (
     PasswordChangeRequest,
     UserCreate,
-    UserListResponse,
     UserResponse,
     UserUpdate,
 )
@@ -44,13 +45,19 @@ router = APIRouter(prefix="/users", tags=["用户管理"])
 # ==================== User CRUD Endpoints ====================
 
 
-@router.get("", response_model=UserListResponse, summary="获取用户列表")
-@router.get("/search", response_model=UserListResponse, summary="搜索用户")
+@router.get(
+    "", response_model=APIResponse[PaginatedData[UserResponse]], summary="获取用户列表"
+)
+@router.get(
+    "/search",
+    response_model=APIResponse[PaginatedData[UserResponse]],
+    summary="搜索用户",
+)
 async def get_users(
     params: UserQueryParamsSchema = Depends(),
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-) -> UserListResponse:
+) -> JSONResponse:
     """
     获取用户列表（仅管理员）
 
@@ -71,14 +78,12 @@ async def get_users(
         organization_id=params.organization_id,
     )
 
-    total_pages = (total + params.page_size - 1) // params.page_size
-
-    return UserListResponse(
-        users=[UserResponse.model_validate(user) for user in users],
-        total=total,
+    return ResponseHandler.paginated(
+        data=[UserResponse.model_validate(user) for user in users],
         page=params.page,
         page_size=params.page_size,
-        total_pages=total_pages,
+        total=total,
+        message="获取用户列表成功",
     )
 
 

@@ -59,7 +59,6 @@ def run_migration():
 
         # 3. Ensure service_fee_rate is 0 for non-entrusted contracts
         logger.info("Normalizing service_fee_rate...")
-        # Note: SQLite might not support complex joins in UPDATE easily, but a simple update is fine.
 
         logger.info("Migration completed successfully.")
 

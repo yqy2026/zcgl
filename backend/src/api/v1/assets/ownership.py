@@ -8,14 +8,15 @@ from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import bad_request, internal_error, not_found
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.ownership import ownership
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....models.asset import Ownership
 from ....schemas.ownership import (
     OwnershipCreate,
     OwnershipDeleteResponse,
-    OwnershipListResponse,
     OwnershipResponse,
     OwnershipSearchRequest,
     OwnershipStatisticsResponse,
@@ -162,8 +163,16 @@ async def delete_ownership(
         raise internal_error(f"删除权属方失败: {str(e)}")
 
 
-@router.get("", response_model=OwnershipListResponse, summary="获取权属方列表")
-@router.get("/", response_model=OwnershipListResponse, summary="获取权属方列表")
+@router.get(
+    "",
+    response_model=APIResponse[PaginatedData[OwnershipResponse]],
+    summary="获取权属方列表",
+)
+@router.get(
+    "/",
+    response_model=APIResponse[PaginatedData[OwnershipResponse]],
+    summary="获取权属方列表",
+)
 async def get_ownerships(
     current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -171,7 +180,7 @@ async def get_ownerships(
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     keyword: str | None = Query(None, description="搜索关键词"),
     is_active: bool | None = Query(None, description="是否启用"),
-) -> OwnershipListResponse:
+) -> Any:
     """获取权属方列表"""
     search_params = OwnershipSearchRequest(
         page=page, page_size=page_size, keyword=keyword, is_active=is_active
@@ -189,22 +198,26 @@ async def get_ownerships(
         response.project_count = ownership_service.get_project_count(db, item.id)
         items.append(response)
 
-    return OwnershipListResponse(
-        items=items,
-        total=result["total"],
+    return ResponseHandler.paginated(
+        data=items,
         page=result["page"],
         page_size=result["page_size"],
-        pages=result["pages"],
+        total=result["total"],
+        message="获取权属方列表成功",
     )
 
 
-@router.post("/search", response_model=OwnershipListResponse, summary="搜索权属方")
+@router.post(
+    "/search",
+    response_model=APIResponse[PaginatedData[OwnershipResponse]],
+    summary="搜索权属方",
+)
 async def search_ownerships(
     *,
     db: Annotated[Session, Depends(get_db)],
     search_params: OwnershipSearchRequest,
     current_user: Annotated[User, Depends(get_current_active_user)],
-) -> OwnershipListResponse:
+) -> Any:
     """搜索权属方"""
     result = ownership.search(db, search_params)
 
@@ -218,12 +231,12 @@ async def search_ownerships(
         response.project_count = ownership_service.get_project_count(db, item.id)
         items.append(response)
 
-    return OwnershipListResponse(
-        items=items,
-        total=result["total"],
+    return ResponseHandler.paginated(
+        data=items,
         page=result["page"],
         page_size=result["page_size"],
-        pages=result["pages"],
+        total=result["total"],
+        message="搜索权属方成功",
     )
 
 

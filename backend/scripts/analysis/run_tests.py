@@ -5,7 +5,7 @@ import os
 import sys
 
 # Set environment variables before importing pytest
-os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://user:pass@localhost:5432/zcgl_test")
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql+psycopg://user:pass@localhost:5432/zcgl_test")
 os.environ["SECRET_KEY"] = (
     "test-secret-key-for-unit-testing-only-do-not-use-in-production"
 )

@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
-
 """
 错误恢复中间件
 在API层面集成错误恢复机制，提供透明的错误处理和恢复
@@ -11,8 +8,9 @@ import logging
 import time
 import traceback
 import uuid
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from typing import Any, overload
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -29,10 +27,6 @@ from ..services.error_recovery_service import (
 )
 
 logger = logging.getLogger(__name__)
-
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
     """错误恢复中间件"""
@@ -385,7 +379,21 @@ def create_error_recovery_middleware(
 
 
 # API路由错误恢复装饰器
-def api_error_recovery(
+@overload
+def api_error_recovery[**P, R](
+    error_category: ErrorCategory,
+    fallback_response: None = None,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]: ...
+
+
+@overload
+def api_error_recovery[**P, R](
+    error_category: ErrorCategory,
+    fallback_response: R,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]: ...
+
+
+def api_error_recovery[**P, R](
     error_category: ErrorCategory,
     fallback_response: R | None = None,
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:

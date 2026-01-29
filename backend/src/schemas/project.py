@@ -16,7 +16,7 @@ class ProjectBase(BaseModel):
     code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
     project_type: str | None = Field(None, title="项目类型", max_length=50)
     project_scale: str | None = Field(None, title="项目规模", max_length=50)
-    project_status: str | None = Field("规划中", title="项目状态", max_length=50)
+    project_status: str = Field("规划中", title="项目状态", max_length=50)
     start_date: str | None = Field(None, title="开始日期")
     end_date: str | None = Field(None, title="结束日期")
     expected_completion_date: str | None = Field(None, title="预计完成日期")
@@ -40,8 +40,8 @@ class ProjectBase(BaseModel):
     construction_company: str | None = Field(None, title="施工单位", max_length=200)
     design_company: str | None = Field(None, title="设计单位", max_length=200)
     supervision_company: str | None = Field(None, title="监理单位", max_length=200)
-    is_active: bool | None = Field(True, title="是否启用")
-    data_status: str | None = Field("正常", title="数据状态", max_length=20)
+    is_active: bool = Field(True, title="是否启用")
+    data_status: str = Field("正常", title="数据状态", max_length=20)
 
     @field_validator("code")
     @classmethod

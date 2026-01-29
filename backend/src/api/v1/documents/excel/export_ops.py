@@ -157,7 +157,7 @@ async def export_excel_async(
             "include_headers": request.should_include_headers,
             "date_format": request.date_format,
         },
-        config={"config_id": request.config_id} if request.config_id else None,
+        config={"config_id": request.config_id} if request.config_id else {},
     )
 
     task = task_crud.create(db=db, obj_in=task_in)

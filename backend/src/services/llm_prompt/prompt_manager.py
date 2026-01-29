@@ -4,6 +4,7 @@ Prompt管理服务
 """
 
 import logging
+from typing import cast
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -130,7 +131,9 @@ class PromptManager:
         Returns:
             PromptTemplate
         """
-        template = db.query(PromptTemplate).get(template_id)
+        template = cast(
+            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
+        )
         if not template:
             raise ValueError(f"Prompt不存在: {template_id}")
 
@@ -189,7 +192,9 @@ class PromptManager:
         Returns:
             PromptTemplate
         """
-        template = db.query(PromptTemplate).get(template_id)
+        template = cast(
+            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
+        )
         if not template:
             raise ValueError(f"Prompt不存在: {template_id}")
 
@@ -225,11 +230,15 @@ class PromptManager:
             PromptTemplate
         """
         # 1. 获取目标版本
-        target_version = db.query(PromptVersion).get(version_id)
+        target_version = cast(
+            PromptVersion | None, db.query(PromptVersion).get(version_id)
+        )
         if not target_version or target_version.template_id != template_id:
             raise ValueError(f"版本不存在或不匹配: {version_id}")
 
-        template = db.query(PromptTemplate).get(template_id)
+        template = cast(
+            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
+        )
         if not template:
             raise ValueError(f"Prompt不存在: {template_id}")
 

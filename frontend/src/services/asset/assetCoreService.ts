@@ -84,12 +84,17 @@ export class AssetCoreService {
   /**
    * 根据ID列表获取资产
    */
-  async getAssetsByIds(ids: string[]): Promise<Asset[]> {
+  async getAssetsByIds(
+    ids: string[],
+    options?: { includeRelations?: boolean }
+  ): Promise<Asset[]> {
     try {
+      const params = options?.includeRelations ? { include_relations: true } : undefined;
       const result = await apiClient.post<Asset[]>(
         `${ASSET_API.LIST}/by-ids`,
         { ids },
         {
+          params,
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
           smartExtract: true,
         }

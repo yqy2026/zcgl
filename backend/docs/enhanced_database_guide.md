@@ -378,7 +378,7 @@ for recommendation in optimization_result["recommendations"]:
 
 ```bash
 # 数据库配置
-DATABASE_URL=postgresql://user:password@localhost:5432/asset_management
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/asset_management
 
 # 连接池配置
 DB_POOL_SIZE=20
@@ -396,7 +396,7 @@ DB_ENABLE_QUERY_LOGGING=true
 ```python
 # config/database.py
 DATABASE_CONFIG = {
-    "url": "postgresql://user:password@localhost:5432/asset_management",
+    "url": "postgresql+psycopg://user:password@localhost:5432/asset_management",
     "pool_config": {
         "pool_size": 20,
         "max_overflow": 30,

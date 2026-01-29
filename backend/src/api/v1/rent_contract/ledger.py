@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -15,6 +16,7 @@ from ....core.exception_handler import (
     not_found,
     validation_error,
 )
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.rent_contract import rent_ledger
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -23,7 +25,6 @@ from ....schemas.rent_contract import (
     DepositLedgerResponse,
     GenerateLedgerRequest,
     RentLedgerBatchUpdate,
-    RentLedgerListResponse,
     RentLedgerResponse,
     RentLedgerUpdate,
     ServiceFeeLedgerResponse,
@@ -121,7 +122,9 @@ def generate_monthly_ledger(
 
 
 @router.get(
-    "/ledger", response_model=RentLedgerListResponse, summary="获取租金台账列表"
+    "/ledger",
+    response_model=APIResponse[PaginatedData[RentLedgerResponse]],
+    summary="获取租金台账列表",
 )
 def get_rent_ledger(
     db: Session = Depends(get_db),
@@ -135,7 +138,7 @@ def get_rent_ledger(
     payment_status: str | None = Query(None, description="支付状态筛选"),
     start_date: date | None = Query(None, description="开始日期筛选"),
     end_date: date | None = Query(None, description="结束日期筛选"),
-) -> RentLedgerListResponse:
+) -> JSONResponse:
     """
     获取租金台账列表，支持分页和筛选
     """
@@ -153,15 +156,14 @@ def get_rent_ledger(
         end_date=end_date,
     )
 
-    pages = (total + page_size - 1) // page_size
     ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
-    return RentLedgerListResponse(
-        items=ledger_responses,
-        total=total,
+    return ResponseHandler.paginated(
+        data=ledger_responses,
         page=page,
         page_size=page_size,
-        pages=pages,
+        total=total,
+        message="获取租金台账列表成功",
     )
 
 

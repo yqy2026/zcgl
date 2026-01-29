@@ -97,7 +97,7 @@ ValueError: SQLite 已移除，请配置 PostgreSQL 数据库
 ```bash
 # .env
 ENVIRONMENT=production
-DATABASE_URL=postgresql://user:password@host:5432/database
+DATABASE_URL=postgresql+psycopg://user:password@host:5432/database
 ```
 
 **替代配置 (使用单独环境变量)**:
@@ -116,7 +116,7 @@ PGDATABASE=zcgl_prod
 # .env (development)
 ENVIRONMENT=development
 # SQLite 已移除，开发环境也必须使用 PostgreSQL
-DATABASE_URL=postgresql://user:password@localhost:5432/zcgl_dev
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/zcgl_dev
 ```
 
 **升级检查清单**:

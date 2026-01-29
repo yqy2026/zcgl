@@ -7,6 +7,7 @@ from .asset import (  # noqa: F401
     AssetCreate,
     AssetDocumentResponse,
     AssetHistoryResponse,
+    AssetListItemResponse,
     AssetResponse,
     AssetUpdate,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "AssetCreate",
     "AssetUpdate",
     "AssetResponse",
+    "AssetListItemResponse",
     "AssetHistoryResponse",
     "AssetDocumentResponse",
     "ProjectBase",

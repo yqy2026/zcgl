@@ -85,12 +85,14 @@ export const paginatedResponse = <T>(
   total: number = items.length
 ) => ({
   success: true,
-  data: items,
-  pagination: {
-    page,
-    pageSize,
-    total,
-    totalPages: Math.ceil(total / pageSize),
+  data: {
+    items,
+    pagination: {
+      page,
+      page_size: pageSize,
+      total,
+      total_pages: Math.ceil(total / pageSize),
+    },
   },
 });
 

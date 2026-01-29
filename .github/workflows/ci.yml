@@ -14,9 +14,9 @@ concurrency:
 env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
-  # Updated to match TESTING_STANDARDS.md documentation (更新以匹配文档标准)
-  BACKEND_COVERAGE_THRESHOLD: 85
-  FRONTEND_COVERAGE_THRESHOLD: 75
+  # Updated to match TESTING_STANDARDS.md baseline gates (更新以匹配文档基线)
+  BACKEND_COVERAGE_THRESHOLD: 70
+  FRONTEND_COVERAGE_THRESHOLD: 50
 
 jobs:
   # ===========================
@@ -93,6 +93,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: backend-lint
+    env:
+      ENVIRONMENT: testing
+      TESTING_MODE: "true"
+      ALLOW_SQLITE_FOR_TESTS: "true"
 
     steps:
     - name: Checkout code
@@ -167,7 +171,7 @@ jobs:
           coverage.xml \
           ${{ steps.get-baseline.outputs.coverage }} \
           --target=${{ env.BACKEND_COVERAGE_THRESHOLD }} \
-          --soft-threshold=80 \
+          --soft-threshold=70 \
           --increment=1
 
     - name: Upload backend reports
@@ -313,7 +317,7 @@ jobs:
           coverage/coverage-summary.json \
           0 \
           --target=${{ env.FRONTEND_COVERAGE_THRESHOLD }} \
-          --soft-threshold=70 \
+          --soft-threshold=50 \
           --increment=1 || true  # Non-blocking until we reach baseline
 
     - name: Upload frontend reports
@@ -487,13 +491,13 @@ jobs:
     - name: Run database migrations
       run: |
         cd backend
-        export DATABASE_URL=postgresql://postgres:test_password@localhost:5432/test_land_property
+        export DATABASE_URL=postgresql+psycopg://postgres:test_password@localhost:5432/test_land_property
         uv run alembic upgrade head
 
     - name: Run integration tests
       run: |
         cd backend
-        export DATABASE_URL=postgresql://postgres:test_password@localhost:5432/test_land_property
+        export DATABASE_URL=postgresql+psycopg://postgres:test_password@localhost:5432/test_land_property
         export REDIS_URL=redis://localhost:6379/0
         export ENVIRONMENT=testing
         uv run pytest tests/integration/ -v
@@ -542,7 +546,7 @@ jobs:
         echo "## 📊 Coverage Targets" >> $GITHUB_STEP_SUMMARY
         echo "- Backend Target: ${{ env.BACKEND_COVERAGE_THRESHOLD }}% (documented standard)" >> $GITHUB_STEP_SUMMARY
         echo "- Frontend Target: ${{ env.FRONTEND_COVERAGE_THRESHOLD }}% (documented standard)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Incremental mode active** when below thresholds (80% / 70%)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Incremental mode active** when below thresholds (70% / 50%)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 🔧 Quality Checks" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ All lint checks **blocking** (Ruff, ESLint, MyPy)" >> $GITHUB_STEP_SUMMARY

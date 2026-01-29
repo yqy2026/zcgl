@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -10,6 +11,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
+from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.task import excel_task_config_crud, task_crud
 from ....database import get_db
 from ....enums.task import TaskStatus
@@ -21,7 +23,6 @@ from ....schemas.task import (
     TaskCancelRequest,
     TaskCreate,
     TaskHistoryResponse,
-    TaskListResponse,
     TaskResponse,
     TaskStatistics,
     TaskUpdate,
@@ -52,8 +53,16 @@ async def create_task(
         raise internal_error(f"创建任务失败: {str(e)}")
 
 
-@router.get("", response_model=TaskListResponse, summary="获取任务列表")
-@router.get("/", response_model=TaskListResponse, summary="获取任务列表")
+@router.get(
+    "",
+    response_model=APIResponse[PaginatedData[TaskResponse]],
+    summary="获取任务列表",
+)
+@router.get(
+    "/",
+    response_model=APIResponse[PaginatedData[TaskResponse]],
+    summary="获取任务列表",
+)
 async def get_tasks(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
@@ -66,7 +75,7 @@ async def get_tasks(
     order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> TaskListResponse:
+) -> JSONResponse:
     """
     获取任务列表，支持分页和筛选
     """
@@ -99,12 +108,12 @@ async def get_tasks(
         # Convert AsyncTask models to TaskResponse schemas
         task_responses = [TaskResponse.model_validate(task) for task in tasks]
 
-        return TaskListResponse(
-            items=task_responses,
-            total=total,
+        return ResponseHandler.paginated(
+            data=task_responses,
             page=page,
             page_size=page_size,
-            pages=(total + page_size - 1) // page_size,
+            total=total,
+            message="获取任务列表成功",
         )
     except Exception as e:
         raise internal_error(f"获取任务列表失败: {str(e)}")

@@ -86,21 +86,14 @@ export default defineConfig({
       // 包含文件（统计覆盖率）
       include: ['src/**/*.{ts,tsx}'],
 
-      // 覆盖率阈值（匹配TESTING_STANDARDS.md目标）
-      // Target: 75% (lines, functions, statements) / 70% (branches)
-      // Note: Thresholds disabled here - CI workflow uses incremental_coverage_check.py
-      // TODO: Re-enable thresholds once coverage improves
-      /*
+      // 覆盖率阈值（当前CI基线）
       thresholds: {
-        lines: 75,      // 从50%提升到75%
-        functions: 75,  // 从50%提升到75%
-        branches: 70,   // 从45%提升到70%
-        statements: 75, // 从50%提升到75%
-
-        perFile: false, // 不对单个文件强制要求
-        autoUpdate: true, // 自动更新配置
+        lines: 50,
+        functions: 50,
+        branches: 45,
+        statements: 50,
+        perFile: false,
       },
-      */
 
       // 收集选项
       ignoreEmptyLines: true,

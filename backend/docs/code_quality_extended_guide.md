@@ -493,7 +493,7 @@ class TestAssetAPI:
     def test_database(self):
         """测试数据库"""
         # 创建内存数据库
-        engine = create_engine("postgresql://user:password@localhost:5432/zcgl_test")
+        engine = create_engine("postgresql+psycopg://user:password@localhost:5432/zcgl_test")
         Base.metadata.create_all(engine)
 
         Session = sessionmaker(bind=engine)
@@ -553,7 +553,7 @@ class TestDatabaseOperations:
     @pytest.fixture
     def db_session(self):
         """数据库会话"""
-        engine = create_engine("postgresql://user:password@localhost:5432/zcgl_test")
+        engine = create_engine("postgresql+psycopg://user:password@localhost:5432/zcgl_test")
         Base.metadata.create_all(engine)
 
         Session = sessionmaker(bind=engine)

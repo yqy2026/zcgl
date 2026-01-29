@@ -229,15 +229,17 @@ class TestBatchCustomFieldUpdate:
 class TestGetAllAssets:
     """Tests for GET /all endpoint"""
 
-    @patch("src.api.v1.asset_batch.asset_crud")
-    def test_get_all_assets_success(self, mock_asset_crud, client):
+    @patch("src.api.v1.asset_batch.AssetService")
+    def test_get_all_assets_success(self, mock_asset_service, client):
         """Test successful retrieval of all assets"""
         # Mock assets
         mock_assets = [
             MagicMock(id="id1", property_name="Property 1"),
             MagicMock(id="id2", property_name="Property 2"),
         ]
-        mock_asset_crud.get_multi.return_value = (mock_assets, 2)
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets.return_value = (mock_assets, 2)
+        mock_asset_service.return_value = mock_service_instance
 
         response = client.get("/api/v1/assets/all")
 
@@ -245,10 +247,12 @@ class TestGetAllAssets:
         data = response.json()
         assert "items" in data or len(data) >= 0
 
-    @patch("src.api.v1.asset_batch.asset_crud")
-    def test_get_all_assets_empty(self, mock_asset_crud, client):
+    @patch("src.api.v1.asset_batch.AssetService")
+    def test_get_all_assets_empty(self, mock_asset_service, client):
         """Test getting all assets when none exist"""
-        mock_asset_crud.get_multi.return_value = ([], 0)
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets.return_value = ([], 0)
+        mock_asset_service.return_value = mock_service_instance
 
         response = client.get("/api/v1/assets/all")
 
@@ -270,14 +274,7 @@ class TestGetAssetsByIds:
             MagicMock(id="id3", property_name="Property 3"),
         ]
 
-        # Mock get_by_id for each asset
-        def mock_get_by_id(db, id):
-            for asset in mock_assets:
-                if asset.id == id:
-                    return asset
-            return None
-
-        mock_asset_crud.get_by_id.side_effect = mock_get_by_id
+        mock_asset_crud.get_multi_by_ids.return_value = mock_assets
 
         request_data = {"ids": ["id1", "id2", "id3"]}
 
@@ -295,13 +292,7 @@ class TestGetAssetsByIds:
             MagicMock(id="id1", property_name="Property 1"),
         ]
 
-        def mock_get_by_id(db, id):
-            for asset in mock_assets:
-                if asset.id == id:
-                    return asset
-            return None
-
-        mock_asset_crud.get_by_id.side_effect = mock_get_by_id
+        mock_asset_crud.get_multi_by_ids.return_value = mock_assets
 
         request_data = {
             "ids": ["id1", "id2", "id3"]  # id2 and id3 don't exist

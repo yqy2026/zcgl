@@ -22,7 +22,7 @@
 - `backend/src/core/config.py`: 强制要求 `SECRET_KEY`（无默认）
 - `backend/src/config/__init__.py`: 提供默认弱密钥与默认配置
 - `backend/run_dev.py`: 端口硬编码 `8002`，忽略 `API_PORT`
-- `start-dev.bat` / `start-dev.sh`: 设置 `API_PORT` 但不生效
+- 已移除 `start-dev.*`，统一使用 `make dev` / `make dev-backend` 作为启动入口
 
 ### 3) 数据库策略落地不一致 + SQLite 残留（中-高）
 **风险**: 文档与执行策略不一致导致环境漂移；残留数据库文件可能携带真实数据或引发误用。  
