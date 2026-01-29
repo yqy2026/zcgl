@@ -23,6 +23,14 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
+def _env_first(keys: list[str], default: str) -> str:
+    for key in keys:
+        value = os.getenv(key)
+        if value:
+            return value
+    return default
+
+
 class LLMResponse(BaseModel):
     """LLM 响应模型"""
 
@@ -236,7 +244,7 @@ class LLMServiceFactory:
         """
         # 从环境变量读取提供商
         if provider is None:
-            provider_str = os.getenv("LLM_PROVIDER", "glm")
+            provider_str = os.getenv("LLM_PROVIDER", "hunyuan")
             provider = LLMProvider.normalize(provider_str)
 
         # 根据提供商创建服务
@@ -246,6 +254,8 @@ class LLMServiceFactory:
             return cls._create_qwen_service()
         elif provider == LLMProvider.DEEPSEEK:
             return cls._create_deepseek_service()
+        elif provider == LLMProvider.HUNYUAN:
+            return cls._create_hunyuan_service()
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -254,8 +264,9 @@ class LLMServiceFactory:
         """创建智谱 GLM 服务"""
         return BaseOpenAILLM(
             api_key=os.getenv("ZHIPU_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=os.getenv(
-                "ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"
+            base_url=_env_first(
+                ["ZHIPU_BASE_URL", "ZHIPU_API_BASE"],
+                "https://open.bigmodel.cn/api/paas/v4",
             ),
             model=os.getenv("ZHIPU_MODEL", "glm-4v"),
             timeout=int(os.getenv("LLM_TIMEOUT", "30")),
@@ -267,8 +278,8 @@ class LLMServiceFactory:
         """创建通义千问服务"""
         return BaseOpenAILLM(
             api_key=os.getenv("DASHSCOPE_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=os.getenv(
-                "DASHSCOPE_API_BASE",
+            base_url=_env_first(
+                ["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"],
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",
             ),
             model=os.getenv("DASHSCOPE_MODEL", "qwen-vl-max"),
@@ -281,10 +292,30 @@ class LLMServiceFactory:
         """创建 DeepSeek 服务"""
         return BaseOpenAILLM(
             api_key=os.getenv("DEEPSEEK_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com"),
+            base_url=_env_first(
+                ["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"],
+                "https://api.deepseek.com",
+            ),
             model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
             timeout=int(os.getenv("LLM_TIMEOUT", "30")),
             provider=LLMProvider.DEEPSEEK,
+        )
+
+    @classmethod
+    def _create_hunyuan_service(cls) -> LLMServiceInterface:
+        """创建腾讯混元服务"""
+        return BaseOpenAILLM(
+            api_key=os.getenv("HUNYUAN_API_KEY", os.getenv("LLM_API_KEY", "")),
+            base_url=_env_first(
+                ["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"],
+                "https://api.hunyuan.cloud.tencent.com/v1",
+            ),
+            model=os.getenv(
+                "HUNYUAN_MODEL",
+                os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision"),
+            ),
+            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            provider=LLMProvider.HUNYUAN,
         )
 
 
@@ -301,7 +332,7 @@ class LLMService(BaseOpenAILLM):
     """
 
     def __init__(self) -> None:
-        provider_str = os.getenv("LLM_PROVIDER", "glm")
+        provider_str = os.getenv("LLM_PROVIDER", "hunyuan")
         provider = LLMProvider.normalize(provider_str)
 
         api_key = os.getenv("LLM_API_KEY", "dummy-key")
@@ -311,24 +342,39 @@ class LLMService(BaseOpenAILLM):
 
         # 根据提供商设置默认配置
         if provider == LLMProvider.GLM:
-            base_url = os.getenv(
-                "ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"
+            base_url = _env_first(
+                ["ZHIPU_BASE_URL", "ZHIPU_API_BASE"],
+                "https://open.bigmodel.cn/api/paas/v4",
             )
             model = os.getenv("ZHIPU_MODEL", "glm-4v")
             api_key = os.getenv("ZHIPU_API_KEY", api_key)
             timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         elif provider == LLMProvider.QWEN:
-            base_url = os.getenv(
-                "DASHSCOPE_API_BASE",
+            base_url = _env_first(
+                ["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"],
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",
             )
             model = os.getenv("DASHSCOPE_MODEL", "qwen-vl-max")
             api_key = os.getenv("DASHSCOPE_API_KEY", api_key)
             timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         elif provider == LLMProvider.DEEPSEEK:
-            base_url = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
+            base_url = _env_first(
+                ["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"],
+                "https://api.deepseek.com",
+            )
             model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
             api_key = os.getenv("DEEPSEEK_API_KEY", api_key)
+            timeout = int(os.getenv("LLM_TIMEOUT", "30"))
+        elif provider == LLMProvider.HUNYUAN:
+            base_url = _env_first(
+                ["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"],
+                "https://api.hunyuan.cloud.tencent.com/v1",
+            )
+            model = os.getenv(
+                "HUNYUAN_MODEL",
+                os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision"),
+            )
+            api_key = os.getenv("HUNYUAN_API_KEY", api_key)
             timeout = int(os.getenv("LLM_TIMEOUT", "30"))
 
         super().__init__(

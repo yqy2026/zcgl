@@ -223,9 +223,14 @@ class Settings(BaseSettings):
 
     # LLM Provider Configuration (2026.01 更新)
     LLM_PROVIDER: str = Field(
-        default="qwen",
-        description="LLM provider: qwen (推荐), deepseek, glm. 默认使用 qwen3-vl-flash ($0.05/M)",
+        default="hunyuan",
+        description="LLM provider: hunyuan (默认), qwen (推荐), glm, deepseek. 支持别名如 glm-4v, qwen-vl-max",
         json_schema_extra={"env": "LLM_PROVIDER"},
+    )
+    EXTRACTION_LLM_PROVIDER: str | None = Field(
+        default=None,
+        description="可选：仅文档提取使用的 LLM 提供商（覆盖 LLM_PROVIDER）",
+        json_schema_extra={"env": "EXTRACTION_LLM_PROVIDER"},
     )
 
     # Qwen/DashScope Configuration
@@ -390,17 +395,35 @@ class Settings(BaseSettings):
 
         return v
 
-    @field_validator("LLM_PROVIDER")
+    @field_validator("LLM_PROVIDER", "EXTRACTION_LLM_PROVIDER")
     @classmethod
-    def validate_llm_provider(cls, v: str) -> str:
+    def validate_llm_provider(cls, v: str | None) -> str | None:
         """验证 LLM 提供商"""
+        if v is None:
+            return v
         valid_providers = {
             "glm-4v",
+            "glm4v",
             "qwen-vl-max",
+            "qwen-vl-plus",
+            "qwen-vl",
             "deepseek-vl",
             "glm",
             "qwen",
             "deepseek",
+            "hunyuan",
+            "hunyuan-vision",
+            "zhipu",
+            "chatglm",
+            "dashscope",
+            "alibaba",
+            "智谱",
+            "通义",
+            "阿里",
+            "深度求索",
+            "腾讯",
+            "混元",
+            "tencent",
         }
         v_normalized = v.lower().strip()
         if v_normalized not in valid_providers:
@@ -503,7 +526,32 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_llm_configuration(self) -> "Settings":
         """验证 LLM 配置一致性"""
-        provider = self.LLM_PROVIDER.lower()
+        provider = (self.EXTRACTION_LLM_PROVIDER or self.LLM_PROVIDER).lower()
+        alias_map = {
+            # GLM aliases
+            "glm-4v": "glm",
+            "glm4v": "glm",
+            "zhipu": "glm",
+            "chatglm": "glm",
+            "智谱": "glm",
+            # Qwen aliases
+            "qwen-vl": "qwen",
+            "qwen-vl-max": "qwen",
+            "qwen-vl-plus": "qwen",
+            "dashscope": "qwen",
+            "通义": "qwen",
+            "阿里": "qwen",
+            "alibaba": "qwen",
+            # DeepSeek aliases
+            "deepseek-vl": "deepseek",
+            "深度求索": "deepseek",
+            # Hunyuan aliases
+            "hunyuan-vision": "hunyuan",
+            "tencent": "hunyuan",
+            "腾讯": "hunyuan",
+            "混元": "hunyuan",
+        }
+        provider = alias_map.get(provider, provider)
         has_api_key = False
 
         # 检查提供商是否有对应的 API Key
@@ -513,6 +561,8 @@ class Settings(BaseSettings):
             has_api_key = bool(self.DASHSCOPE_API_KEY)
         elif "deepseek" in provider:
             has_api_key = bool(self.DEEPSEEK_API_KEY)
+        elif "hunyuan" in provider or "tencent" in provider:
+            has_api_key = bool(self.HUNYUAN_API_KEY)
 
         if not has_api_key:
             logger.warning(

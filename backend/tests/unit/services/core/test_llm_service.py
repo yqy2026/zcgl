@@ -151,7 +151,12 @@ class TestBaseOpenAILLM:
 
     def test_provider_property(self):
         """Test provider property returns correct value."""
-        for provider in [LLMProvider.GLM, LLMProvider.QWEN, LLMProvider.DEEPSEEK]:
+        for provider in [
+            LLMProvider.GLM,
+            LLMProvider.QWEN,
+            LLMProvider.DEEPSEEK,
+            LLMProvider.HUNYUAN,
+        ]:
             service = BaseOpenAILLM(
                 api_key="test-key",
                 base_url="https://api.example.com",
@@ -495,8 +500,19 @@ class TestLLMServiceFactory:
         # base_url from default config should remain
         assert service._base_url == "https://api.example.com/v1"
 
-    def test_create_from_env_default_provider_glm(self, monkeypatch):
-        """Test create_from_env with default GLM provider."""
+    def test_create_from_env_default_provider_hunyuan(self, monkeypatch):
+        """Test create_from_env with default Hunyuan provider."""
+        monkeypatch.setenv("HUNYUAN_API_KEY", "test-hunyuan-key")
+        monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+        service = LLMServiceFactory.create_from_env()
+
+        assert isinstance(service, BaseOpenAILLM)
+        assert service._api_key == "test-hunyuan-key"
+        assert service.provider == LLMProvider.HUNYUAN
+
+    def test_create_from_env_glm_provider(self, monkeypatch):
+        """Test create_from_env with GLM provider."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-zhipu-key")
         monkeypatch.setenv("LLM_PROVIDER", "glm")
 
@@ -528,16 +544,25 @@ class TestLLMServiceFactory:
         assert service._api_key == "test-deepseek-key"
         assert service.provider == LLMProvider.DEEPSEEK
 
+    def test_create_from_env_hunyuan_provider(self, monkeypatch):
+        """Test create_from_env with Hunyuan provider."""
+        monkeypatch.setenv("HUNYUAN_API_KEY", "test-hunyuan-key")
+        monkeypatch.setenv("LLM_PROVIDER", "hunyuan")
+
+        service = LLMServiceFactory.create_from_env()
+
+        assert isinstance(service, BaseOpenAILLM)
+        assert service._api_key == "test-hunyuan-key"
+        assert service.provider == LLMProvider.HUNYUAN
+
     def test_create_from_env_unsupported_provider(self, monkeypatch):
         """Test create_from_env with unsupported provider."""
-        # This test would need mocking since HUNYUAN is in LLMProvider enum
-        # but not implemented in create_from_env
-        monkeypatch.setenv("LLM_PROVIDER", "hunyuan")
+        monkeypatch.setenv("LLM_PROVIDER", "invalid-provider")
 
         with pytest.raises(ValueError) as exc_info:
             LLMServiceFactory.create_from_env()
 
-        assert "Unsupported provider" in str(exc_info.value)
+        assert "Unsupported LLM provider" in str(exc_info.value)
 
     def test_create_from_env_explicit_provider(self, monkeypatch):
         """Test create_from_env with explicit provider parameter."""
@@ -578,6 +603,17 @@ class TestLLMServiceFactory:
         monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
         monkeypatch.setenv("LLM_API_KEY", "fallback-key")
         monkeypatch.setenv("LLM_PROVIDER", "deepseek")
+
+        service = LLMServiceFactory.create_from_env()
+
+        assert isinstance(service, BaseOpenAILLM)
+        assert service._api_key == "fallback-key"
+
+    def test_create_from_env_hunyuan_fallback_to_llm_api_key(self, monkeypatch):
+        """Test Hunyuan service falls back to LLM_API_KEY if HUNYUAN_API_KEY not set."""
+        monkeypatch.delenv("HUNYUAN_API_KEY", raising=False)
+        monkeypatch.setenv("LLM_API_KEY", "fallback-key")
+        monkeypatch.setenv("LLM_PROVIDER", "hunyuan")
 
         service = LLMServiceFactory.create_from_env()
 
@@ -659,20 +695,32 @@ class TestLLMService:
         assert service.provider == LLMProvider.DEEPSEEK
         assert service._api_key == "test-deepseek-key"
 
+    def test_initialization_hunyuan_provider(self, monkeypatch):
+        """Test initialization with Hunyuan provider."""
+        monkeypatch.setenv("LLM_PROVIDER", "hunyuan")
+        monkeypatch.setenv("HUNYUAN_API_KEY", "test-hunyuan-key")
+
+        service = LLMService()
+
+        assert isinstance(service, BaseOpenAILLM)
+        assert service.provider == LLMProvider.HUNYUAN
+        assert service._api_key == "test-hunyuan-key"
+
     def test_initialization_with_defaults(self, monkeypatch):
         """Test initialization with default values when env vars not set."""
         monkeypatch.delenv("ZHIPU_API_KEY", raising=False)
         monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
         monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
-        monkeypatch.setenv("LLM_PROVIDER", "glm")
+        monkeypatch.delenv("HUNYUAN_API_KEY", raising=False)
+        monkeypatch.delenv("LLM_PROVIDER", raising=False)
         monkeypatch.setenv("LLM_API_KEY", "default-key")
 
         service = LLMService()
 
         assert isinstance(service, BaseOpenAILLM)
         assert service._api_key == "default-key"
-        assert service._base_url == "https://open.bigmodel.cn/api/paas/v4"
-        assert service._model == "glm-4v"
+        assert service._base_url == "https://api.hunyuan.cloud.tencent.com/v1"
+        assert service._model == "hunyuan-vision"
         assert service._timeout == 30
 
     def test_initialization_uses_provider_specific_overrides(self, monkeypatch):
@@ -761,6 +809,16 @@ class TestConvenienceFunctions:
         assert isinstance(service, BaseOpenAILLM)
         assert service.provider == LLMProvider.DEEPSEEK
 
+    def test_create_llm_service_hunyuan(self, monkeypatch):
+        """Test create_llm_service with Hunyuan provider."""
+        monkeypatch.setenv("LLM_PROVIDER", "hunyuan")
+        monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
+
+        service = create_llm_service()
+
+        assert isinstance(service, BaseOpenAILLM)
+        assert service.provider == LLMProvider.HUNYUAN
+
     def test_create_llm_service_with_explicit_provider(self, monkeypatch):
         """Test create_llm_service with explicit provider parameter."""
         monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
@@ -772,14 +830,14 @@ class TestConvenienceFunctions:
         assert service.provider == LLMProvider.GLM
 
     def test_create_llm_service_default_provider(self, monkeypatch):
-        """Test create_llm_service defaults to GLM when no provider specified."""
+        """Test create_llm_service defaults to Hunyuan when no provider specified."""
         monkeypatch.delenv("LLM_PROVIDER", raising=False)
-        monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
+        monkeypatch.setenv("HUNYUAN_API_KEY", "test-key")
 
         service = create_llm_service()
 
         assert isinstance(service, BaseOpenAILLM)
-        assert service.provider == LLMProvider.GLM
+        assert service.provider == LLMProvider.HUNYUAN
 
 
 # ============================================================================

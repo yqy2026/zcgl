@@ -54,11 +54,14 @@ class LLMProvider(str, Enum):
             # Qwen 别名
             "qwen-vl": cls.QWEN,
             "qwen-vl-max": cls.QWEN,
+            "qwen-vl-plus": cls.QWEN,
             "dashscope": cls.QWEN,
             "通义": cls.QWEN,  # Chinese alias
             "阿里": cls.QWEN,  # Chinese alias
+            "alibaba": cls.QWEN,
             # DeepSeek 别名
             "deepseek-vl": cls.DEEPSEEK,
+            "深度求索": cls.DEEPSEEK,
             # Hunyuan 别名 (2026-01 新增)
             "hunyuan-vision": cls.HUNYUAN,
             "tencent": cls.HUNYUAN,

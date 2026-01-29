@@ -59,7 +59,7 @@ class ExtractorFactory:
         """
         # 解析提供商
         if provider is None:
-            provider_str = settings.LLM_PROVIDER
+            provider_str = settings.EXTRACTION_LLM_PROVIDER or settings.LLM_PROVIDER
             provider = LLMProvider.normalize(provider_str)
         elif isinstance(provider, str):
             provider = LLMProvider.normalize(provider)

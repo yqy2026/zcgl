@@ -176,8 +176,11 @@ LOG_FILE=logs/app.log
 #### 9. LLM Vision 配置
 ```bash
 # LLM Provider 选择（全局）
-LLM_PROVIDER=qwen  # qwen | deepseek | glm | hunyuan
-# 可选：仅 PDF 提取使用单独提供商
+# 默认: hunyuan（未设置 LLM_PROVIDER 时）
+# 建议使用提供商名: qwen | deepseek | glm | hunyuan
+# 兼容别名: glm-4v / qwen-vl-max / deepseek-vl 等（会自动归一化）
+LLM_PROVIDER=qwen
+# 可选：仅 PDF/文档提取使用单独提供商（覆盖 LLM_PROVIDER）
 # EXTRACTION_LLM_PROVIDER=qwen
 
 # API 密钥 (根据提供商选择)
@@ -186,6 +189,9 @@ LLM_PROVIDER=qwen  # qwen | deepseek | glm | hunyuan
 # ZHIPU_API_KEY=your_zhipu_api_key
 # HUNYUAN_API_KEY=your_hunyuan_api_key
 ```
+
+> 提示：如需使用文本 LLM（LLMService），请同时配置 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`  
+> 或对应的 `ZHIPU_MODEL` / `DASHSCOPE_MODEL` / `DEEPSEEK_MODEL` / `HUNYUAN_MODEL`（优先生效）。
 
 **LLM Vision 提供商**:
 | 提供商 | 说明 | 适用场景 |

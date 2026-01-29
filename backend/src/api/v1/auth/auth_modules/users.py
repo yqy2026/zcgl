@@ -381,7 +381,7 @@ async def reset_user_password(
         # 设置新密码
         setattr(
             user,
-            "hashed_password",
+            "password_hash",
             auth_service.get_password_hash(reset_request.new_password),
         )
         setattr(user, "updated_at", datetime.now(UTC))

@@ -13,6 +13,13 @@
 
 ## .env 配置示例
 
+> 建议在 `.env` 中使用提供商名：`qwen | glm | deepseek | hunyuan`。  
+> 旧写法如 `glm-4v` / `qwen-vl-max` 仍兼容，但不推荐（系统会自动归一化为提供商名）。
+
+> 如需“文档提取”使用不同提供商，可额外设置 `EXTRACTION_LLM_PROVIDER` 覆盖 `LLM_PROVIDER`。
+
+> 默认值（未设置 `LLM_PROVIDER`）为 `hunyuan`；若你希望使用 Qwen 的更强效果，请显式设置 `LLM_PROVIDER=qwen`。
+
 ### 方案1：阿里 Qwen (推荐)
 
 ```bash
@@ -31,7 +38,7 @@ ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 ZHIPU_VISION_MODEL=glm-4.6v-flash
 ```
 
-### 方案3：腾讯混元(推荐)
+### 方案3：腾讯混元（默认，可改）
 
 ```bash
 LLM_PROVIDER=hunyuan
