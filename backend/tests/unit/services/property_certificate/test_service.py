@@ -7,7 +7,6 @@ from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.property_certificate import PropertyCertificate
 from src.services.property_certificate.service import PropertyCertificateService
@@ -17,11 +16,6 @@ from src.services.property_certificate.service import PropertyCertificateService
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Mock数据库会话"""
-    db = MagicMock(spec=Session)
-    return db
 
 
 @pytest.fixture

@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
-    bad_request,
     forbidden,
     internal_error,
     not_found,
@@ -65,8 +64,6 @@ def create_contract(
     try:
         contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)
         return contract
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -169,8 +166,6 @@ def update_contract(
             db=db, db_obj=contract, obj_in=contract_in
         )
         return updated_contract
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise

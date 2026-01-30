@@ -7,7 +7,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import bad_request, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    internal_error,
+    not_found,
+)
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.project import project_crud
 from ....database import get_db
@@ -38,9 +42,9 @@ async def create_project(
             db=db, obj_in=project_in, created_by=current_user.id
         )
         return ProjectResponse.model_validate(project)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"创建项目失败: {str(e)}")
 
 
@@ -174,9 +178,9 @@ async def update_project(
             db=db, project_id=project_id, obj_in=project_in, updated_by=current_user.id
         )
         return ProjectResponse.model_validate(project)
-    except ValueError as e:
-        raise not_found(str(e), resource_type="project")
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"更新项目失败: {str(e)}")
 
 
@@ -192,11 +196,9 @@ async def delete_project(
     try:
         project_service.delete_project(db=db, project_id=project_id)
         return {"message": "项目删除成功"}
-    except ValueError as e:
-        if "资产" in str(e):
-            raise bad_request(str(e))
-        raise not_found(str(e), resource_type="project")
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"删除项目失败: {str(e)}")
 
 
@@ -214,7 +216,7 @@ async def toggle_project_status(
             db=db, project_id=project_id, updated_by=current_user.id
         )
         return ProjectResponse.model_validate(project)
-    except ValueError as e:
-        raise not_found(str(e), resource_type="project")
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"切换状态失败: {str(e)}")

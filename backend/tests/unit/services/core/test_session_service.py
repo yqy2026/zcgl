@@ -7,20 +7,14 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.core.config import settings
 from src.models.auth import UserSession
 from src.services.core.session_service import SessionService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

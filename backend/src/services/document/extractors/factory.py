@@ -8,6 +8,7 @@ Contract Extractor Factory
 import logging
 
 from src.core.config import settings
+from src.core.exception_handler import ConfigurationError
 
 from ..config import LLMProvider
 from .base import ContractExtractorInterface
@@ -68,9 +69,10 @@ class ExtractorFactory:
         extractor_class = EXTRACTOR_MAP.get(provider)
         if not extractor_class:
             supported = [p.value for p in EXTRACTOR_MAP.keys()]
-            raise ValueError(
+            raise ConfigurationError(
                 f"Unsupported LLM provider: {provider.value}. "
-                f"Supported providers: {supported}"
+                f"Supported providers: {supported}",
+                config_key="EXTRACTION_LLM_PROVIDER",
             )
 
         logger.info(f"Creating extractor for provider: {provider.value}")

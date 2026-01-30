@@ -273,6 +273,7 @@ export const SYSTEM_API = {
   // 组织管理
   ORGANIZATIONS: '/organizations',
   ORGANIZATION_DETAIL: (id: string) => `/organizations/${id}`,
+  ORGANIZATION_STATISTICS: '/organizations/statistics',
 
   // 角色管理
   ROLES: '/roles',
@@ -287,6 +288,7 @@ export const SYSTEM_API = {
   // 审计日志
   AUDIT_LOGS: '/logs',
   AUDIT_LOG_DETAIL: (id: string) => `/logs/${id}`,
+  AUDIT_LOG_STATISTICS: '/logs/statistics/summary',
 } as const;
 
 // 数据备份API

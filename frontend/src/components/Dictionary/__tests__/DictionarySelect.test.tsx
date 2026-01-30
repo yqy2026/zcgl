@@ -5,6 +5,23 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import type { DictionaryOption } from '../../services/dictionary';
+
+interface SelectMockProps {
+  children?: React.ReactNode;
+  loading?: boolean;
+  placeholder?: string;
+  notFoundContent?: React.ReactNode;
+  options?: DictionaryOption[];
+  filterOption?: (input: string, option?: DictionaryOption) => boolean;
+  virtual?: boolean;
+  listHeight?: number;
+  showSearch?: boolean;
+}
+
+interface SpinMockProps {
+  size?: 'small' | 'default' | 'large' | number;
+}
 
 // Mock hooks
 vi.mock('../../hooks/useDictionary', () => ({
@@ -37,7 +54,7 @@ vi.mock('antd', () => ({
     virtual,
     listHeight,
     showSearch,
-  }: any) => (
+  }: SelectMockProps) => (
     <div
       data-testid="select"
       data-loading={loading}
@@ -48,14 +65,14 @@ vi.mock('antd', () => ({
     >
       {notFoundContent}
       {options &&
-        options.map((opt: any) => (
+        options.map((opt) => (
           <div key={opt.value} data-value={opt.value}>
             {opt.label}
           </div>
         ))}
     </div>
   ),
-  Spin: ({ size }: any) => <div data-testid="spin" data-size={size} />,
+  Spin: ({ size }: SpinMockProps) => <div data-testid="spin" data-size={size} />,
 }));
 
 describe('DictionarySelect - 组件导入测试', () => {
@@ -138,7 +155,9 @@ describe('DictionarySelect - optionRender测试', () => {
 
   it('应该支持optionRender属性', async () => {
     const DictionarySelect = (await import('../DictionarySelect')).default;
-    const optionRender = vi.fn((option: any) => <div>自定义: {option.label}</div>);
+    const optionRender = vi.fn((option: DictionaryOption) => (
+      <div>自定义: {option.label}</div>
+    ));
     const element = React.createElement(DictionarySelect, {
       dictType: 'test_type',
       optionRender,
@@ -350,7 +369,7 @@ describe('DictionarySelect - SelectProps传递测试', () => {
     const DictionarySelect = (await import('../DictionarySelect')).default;
     const element = React.createElement(DictionarySelect, {
       dictType: 'test_type',
-      mode: 'multiple' as any,
+      mode: 'multiple',
     });
     expect(element).toBeTruthy();
   });

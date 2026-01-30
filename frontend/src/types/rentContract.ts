@@ -177,7 +177,7 @@ export interface ServiceFeeLedger {
 
 // 请求类型
 export interface RentContractCreate {
-  contract_number?: string;
+  contract_number: string;
   // V2: 多资产
   asset_ids?: string[];
   ownership_id: string;
@@ -394,7 +394,7 @@ export interface RentStatisticsOverview {
 // 表单数据类型
 export interface RentContractFormData {
   basicInfo: {
-    contract_number?: string;
+    contract_number: string;
     asset_ids?: string[]; // V2: 多资产
     ownership_id: string;
     contract_type?: ContractType;

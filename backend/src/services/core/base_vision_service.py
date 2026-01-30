@@ -12,6 +12,8 @@ from typing import Any
 
 import httpx
 
+from ...core.exception_handler import BusinessValidationError, ResourceNotFoundError
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,10 +124,13 @@ class BaseVisionService(ABC):
         """
         path = Path(image_path)
         if not path.exists():
-            raise FileNotFoundError(f"Image not found: {image_path}")
+            raise ResourceNotFoundError("文件", image_path)
 
         if not path.is_file():
-            raise ValueError(f"Path is not a file: {image_path}")
+            raise BusinessValidationError(
+                f"Path is not a file: {image_path}",
+                field_errors={"image_path": ["not_a_file"]},
+            )
 
         with open(path, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
@@ -281,10 +286,13 @@ def validate_image_path(image_path: str) -> Path:
     path = Path(image_path)
 
     if not path.exists():
-        raise FileNotFoundError(f"Image file not found: {image_path}")
+        raise ResourceNotFoundError("文件", image_path)
 
     if not path.is_file():
-        raise ValueError(f"Path is not a file: {image_path}")
+        raise BusinessValidationError(
+            f"Path is not a file: {image_path}",
+            field_errors={"image_path": ["not_a_file"]},
+        )
 
     # 检查扩展名
     ext = path.suffix.lower()
@@ -308,7 +316,10 @@ def validate_image_paths(image_paths: list[str]) -> list[Path]:
         ValueError: 任何路径无效
     """
     if not image_paths:
-        raise ValueError("image_paths cannot be empty")
+        raise BusinessValidationError(
+            "image_paths cannot be empty",
+            field_errors={"image_paths": ["empty"]},
+        )
 
     validated_paths = []
     for path_str in image_paths:

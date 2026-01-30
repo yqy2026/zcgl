@@ -10,12 +10,6 @@ from src.services.analytics.analytics_service import AnalyticsService
 
 
 @pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock()
-
-
-@pytest.fixture
 def analytics_service(mock_db):
     """创建 AnalyticsService 实例"""
     return AnalyticsService(mock_db)

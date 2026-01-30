@@ -16,7 +16,6 @@ Test Coverage:
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.organization import Organization
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
@@ -30,17 +29,6 @@ pytestmark = pytest.mark.unit
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Mock database session"""
-    db = MagicMock(spec=Session)
-    db.add = MagicMock()
-    db.flush = MagicMock()
-    db.commit = MagicMock()
-    db.refresh = MagicMock()
-    db.execute = MagicMock()
-    db.scalar = MagicMock()
-    return db
 
 
 @pytest.fixture

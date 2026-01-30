@@ -36,7 +36,7 @@
 | **密码哈希** | Passlib | 1.7+ | 密码加密 |
 | **缓存** | Redis | 7.0+ | 缓存层 |
 | **PDF 处理** | LLM Vision API（Qwen/DeepSeek/GLM）, PyMuPDF（可选） | - , 1.24+ | 文档处理 |
-| **数据处理** | Pandas, Polars | 2.0+, 0.20+ | 数据分析 |
+| **数据处理** | Pandas | 2.0+ | 数据分析 |
 
 **证据来源**: `backend/pyproject.toml`
 
@@ -263,6 +263,7 @@ class AssetUpdate(BaseModel):
     property_name: Optional[str] = Field(None, min_length=1, max_length=200)
     address: Optional[str] = None
     ownership_status: Optional[str] = None
+    version: Optional[int] = Field(None, description="版本号(乐观锁)")
     # ... 其他字段
 
 class AssetResponse(AssetBase):

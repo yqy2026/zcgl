@@ -7,19 +7,13 @@ Audit Service 单元测试
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.auth import AuditLog, User, UserRole
 from src.services.core.audit_service import AuditService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

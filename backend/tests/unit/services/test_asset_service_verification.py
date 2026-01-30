@@ -11,12 +11,6 @@ from src.services.asset.asset_service import AssetService
 
 
 @pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock()
-
-
-@pytest.fixture
 def asset_service(mock_db):
     """创建 AssetService 实例"""
     return AssetService(mock_db)

@@ -28,7 +28,6 @@ except ImportError:
 from fastapi import Depends, Request, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..core.config import get_config
 from ..core.exception_handler import (
     BusinessValidationError,
     InvalidRequestError,
@@ -522,7 +521,7 @@ class AdaptiveRateLimiter:
     """自适应速率限制器"""
 
     def __init__(self) -> None:
-        self.config = get_config("adaptive_rate_limit", {})
+        self.config: dict[str, Any] = {}  # TODO: 未来可添加自适应限流配置
         self.request_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"count": 0, "errors": 0, "last_reset": time()}
         )
@@ -565,7 +564,7 @@ class RequestLimiter:
     """请求限制器"""
 
     def __init__(self) -> None:
-        self.config = get_config("request_limit", {})
+        self.config: dict[str, Any] = {}  # TODO: 未来可添加请求限制配置
         self.request_counts: dict[str, dict[str, float]] = defaultdict(
             lambda: {"count": 0.0, "last_reset": time()}
         )
@@ -599,7 +598,7 @@ class IPBlacklistManager:
     """IP黑名单管理器"""
 
     def __init__(self) -> None:
-        self.config = get_config("ip_blacklist", {})
+        self.config: dict[str, Any] = {}  # TODO: 未来可添加IP黑名单配置
         self.blacklist: set[str] = set(self.config.get("blacklist", []))
         self.auto_block_enabled = self.config.get("auto_block_enabled", True)
         self.auto_block_threshold = self.config.get("auto_block_threshold", 10)
@@ -659,7 +658,7 @@ class SecurityAnalyzer:
     """安全分析器"""
 
     def __init__(self) -> None:
-        self.config = get_config("security_analysis", {})
+        self.config: dict[str, Any] = {}  # TODO: 未来可添加安全分析配置
         self.suspicious_patterns = [
             r"<script",
             r"javascript:",
@@ -749,7 +748,7 @@ class SecurityMiddleware:
     def __init__(self) -> None:
         self.rate_limiter = RateLimiter()
         self.file_validator = FileValidator()
-        self.config = get_config("security", {})
+        self.config: dict[str, Any] = {}  # TODO: 未来可添加安全中间件配置
         self.logger = logging.getLogger(__name__)
 
     async def validate_request(self, request: Request) -> bool:

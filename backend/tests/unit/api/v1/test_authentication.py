@@ -36,10 +36,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    return MagicMock()
 
 
 @pytest.fixture

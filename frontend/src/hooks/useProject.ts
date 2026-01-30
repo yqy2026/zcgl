@@ -309,7 +309,7 @@ export const useToggleProjectStatus = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('切换项目状态失败:', error as Error);
-      const err = error as any;
+      const err = error as ApiErrorResponse;
       MessageManager.error(err.response?.data?.detail ?? '切换项目状态失败');
     },
   });

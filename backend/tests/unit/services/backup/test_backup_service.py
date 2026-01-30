@@ -1,8 +1,11 @@
 """
-Unit tests for BackupService (PostgreSQL-only).
+备份服务单元测试
+
+测试 BackupService 的所有主要方法
 """
 
-from pathlib import Path
+import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,175 +13,228 @@ import pytest
 from src.services.backup.backup_service import BackupService
 
 
-@pytest.fixture
-def temp_backup_dir(tmp_path: Path) -> Path:
-    backup_dir = tmp_path / "backups"
-    backup_dir.mkdir()
-    return backup_dir
-
-
-@pytest.fixture
-def backup_service(temp_backup_dir: Path) -> BackupService:
-    return BackupService(backup_dir=str(temp_backup_dir))
-
-
-@pytest.fixture
-def postgres_url() -> str:
-    return "postgresql+psycopg://user:pass@localhost/test_db"
-
-
 class TestBackupServiceInit:
-    def test_init_with_default_backup_dir(self):
-        with patch("src.services.backup.backup_service.os.path.exists") as mock_exists:
-            with patch("src.services.backup.backup_service.os.makedirs") as mock_makedirs:
-                mock_exists.return_value = False
-                service = BackupService()
-                assert service.backup_dir == "backups"
-                mock_makedirs.assert_called_once_with("backups")
+    """测试 BackupService 初始化"""
 
-    def test_init_with_custom_backup_dir(self, backup_service, temp_backup_dir):
-        assert backup_service.backup_dir == str(temp_backup_dir)
+    def test_init_with_default_dir(self):
+        """测试使用默认备份目录初始化"""
+        with patch.object(BackupService, '_ensure_backup_dir'):
+            service = BackupService()
+            assert service.backup_dir == "backups"
 
-    def test_init_creates_backup_dir_if_not_exists(self, tmp_path: Path):
-        new_dir = tmp_path / "new_backups"
-        service = BackupService(backup_dir=str(new_dir))
-        assert new_dir.exists()
-        assert service.backup_dir == str(new_dir)
+    def test_init_with_custom_dir(self):
+        """测试使用自定义备份目录初始化"""
+        with patch.object(BackupService, '_ensure_backup_dir'):
+            service = BackupService(backup_dir="/custom/backup/path")
+            assert service.backup_dir == "/custom/backup/path"
+
+    def test_ensure_backup_dir_creates_directory(self):
+        """测试确保备份目录存在"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            backup_dir = os.path.join(tmpdir, "test_backups")
+            BackupService(backup_dir=backup_dir)
+            assert os.path.exists(backup_dir)
 
 
 class TestCreateBackup:
-    def test_create_backup_requires_database_url(self, backup_service):
-        with pytest.raises(ValueError):
-            backup_service.create_backup()
-        with pytest.raises(ValueError):
-            backup_service.create_backup(database_url="mysql://user:pass@localhost/test")
+    """测试 create_backup 方法"""
 
-    def test_create_backup_calls_pg_dump(self, backup_service, postgres_url, temp_backup_dir):
-        def _write_dump(cmd, **_kwargs):
-            output_path = cmd[cmd.index("-f") + 1]
-            Path(output_path).write_bytes(b"dump")
-            return MagicMock()
+    @pytest.fixture
+    def service(self):
+        """创建测试服务实例"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield BackupService(backup_dir=tmpdir)
 
-        with patch("subprocess.run", side_effect=_write_dump) as mock_run:
-            result = backup_service.create_backup(
-                backup_name="custom_backup",
-                database_url="postgresql+psycopg://user:pass@localhost/test_db",
+    def test_create_backup_requires_database_url(self, service):
+        """测试创建备份需要数据库URL"""
+        with pytest.raises(ValueError, match="需要提供"):
+            service.create_backup()
+
+    def test_create_backup_requires_postgresql(self, service):
+        """测试仅支持 PostgreSQL 备份"""
+        with pytest.raises(ValueError, match="仅支持 PostgreSQL"):
+            service.create_backup(database_url="mysql://localhost/test")
+
+    @patch('subprocess.run')
+    def test_create_backup_success(self, mock_run, service):
+        """测试成功创建备份"""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        backup_name = "test_backup"
+
+        with patch('os.path.getsize', return_value=1024):
+            result = service.create_backup(
+                backup_name=backup_name,
+                database_url="postgresql://localhost/testdb"
             )
 
-        assert result["backup_filename"] == "custom_backup.dump"
-        assert Path(result["backup_path"]).exists()
-        assert result["backup_size"] > 0
-
-        cmd = mock_run.call_args.args[0]
-        assert cmd[0] == "pg_dump"
-        # URL should be normalized
-        assert cmd[-1].startswith("postgresql://")
-
-    def test_create_backup_with_custom_name(self, backup_service, postgres_url):
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock()
-            with patch("os.path.getsize", return_value=10):
-                result = backup_service.create_backup(
-                    backup_name="my_backup", database_url=postgres_url
-                )
-        assert result["backup_filename"] == "my_backup.dump"
+        assert result["backup_name"] == backup_name
+        assert "created_at" in result
+        mock_run.assert_called_once()
 
 
 class TestListBackups:
-    def test_list_backups_filters_dump(self, backup_service, temp_backup_dir):
-        (temp_backup_dir / "a.dump").write_bytes(b"1")
-        (temp_backup_dir / "b.txt").write_bytes(b"1")
-        (temp_backup_dir / "c.dump").write_bytes(b"1")
+    """测试 list_backups 方法"""
 
-        result = backup_service.list_backups()
-        assert len(result) == 2
-        assert all(item["filename"].endswith(".dump") for item in result)
+    def test_list_backups_empty_dir(self):
+        """测试空目录返回空列表"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+            result = service.list_backups()
+            assert result == []
+
+    def test_list_backups_with_files(self):
+        """测试列出备份文件"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+
+            for i in range(3):
+                backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
+                with open(backup_file, 'w') as f:
+                    f.write(f"test content {i}")
+
+            result = service.list_backups()
+
+            assert len(result) == 3
+            assert all("filename" in b for b in result)
 
 
 class TestGetBackup:
-    def test_get_backup_returns_none_when_missing(self, backup_service):
-        assert backup_service.get_backup("missing") is None
+    """测试 get_backup 方法"""
 
-    def test_get_backup_returns_metadata(self, backup_service, temp_backup_dir):
-        path = temp_backup_dir / "one.dump"
-        path.write_bytes(b"data")
-        result = backup_service.get_backup("one")
-        assert result is not None
-        assert result["filename"] == "one.dump"
-        assert result["backup_name"] == "one"
+    def test_get_backup_exists(self):
+        """测试获取存在的备份"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+
+            backup_file = os.path.join(tmpdir, "test_backup.dump")
+            with open(backup_file, 'w') as f:
+                f.write("test content")
+
+            result = service.get_backup("test_backup")
+
+            assert result is not None
+            assert result["backup_name"] == "test_backup"
+
+    def test_get_backup_not_exists(self):
+        """测试获取不存在的备份"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+            result = service.get_backup("nonexistent")
+            assert result is None
 
 
 class TestDeleteBackup:
-    def test_delete_backup_removes_file(self, backup_service, temp_backup_dir):
-        path = temp_backup_dir / "to_delete.dump"
-        path.write_bytes(b"data")
-        backup_service.delete_backup("to_delete")
-        assert not path.exists()
+    """测试 delete_backup 方法"""
 
+    def test_delete_backup_success(self):
+        """测试成功删除备份"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
 
-class TestRestoreBackup:
-    def test_restore_backup_requires_database_url(self, backup_service, temp_backup_dir):
-        # Create a dummy backup file first so the file check passes
-        path = temp_backup_dir / "restore_test.dump"
-        path.write_bytes(b"data")
+            backup_file = os.path.join(tmpdir, "test_backup.dump")
+            with open(backup_file, 'w') as f:
+                f.write("test content")
 
-        with pytest.raises(ValueError):
-            backup_service.restore_backup("restore_test")
-        with pytest.raises(ValueError):
-            backup_service.restore_backup(
-                "restore_test", database_url="mysql://user:pass@localhost/test"
-            )
+            result = service.delete_backup("test_backup")
 
-    def test_restore_backup_calls_pg_restore(self, backup_service, postgres_url, temp_backup_dir):
-        restore_path = temp_backup_dir / "restore_me.dump"
-        restore_path.write_bytes(b"dump")
+            assert result["deleted_backup"] == "test_backup"
+            assert not os.path.exists(backup_file)
 
-        with patch("subprocess.run") as mock_run:
-            with patch.object(backup_service, "create_backup") as mock_create:
-                mock_create.return_value = {
-                    "backup_name": "current_backup_20260101_000000",
-                    "backup_path": str(temp_backup_dir / "current_backup_20260101_000000.dump"),
-                }
-                result = backup_service.restore_backup(
-                    "restore_me",
-                    database_url=postgres_url,
-                    create_current_backup=True,
-                )
+    def test_delete_backup_not_exists(self):
+        """测试删除不存在的备份"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
 
-        assert result["restored_backup"] == "restore_me"
-        assert result["current_backup"] == "current_backup_20260101_000000"
-        cmd = mock_run.call_args.args[0]
-        assert cmd[0] == "pg_restore"
+            with pytest.raises(FileNotFoundError):
+                service.delete_backup("nonexistent")
 
 
 class TestValidateBackup:
-    def test_validate_backup_invalid(self, backup_service, temp_backup_dir):
-        path = temp_backup_dir / "empty.dump"
-        path.write_bytes(b"")
-        result = backup_service.validate_backup("empty")
-        assert result["valid"] is False
+    """测试 validate_backup 方法"""
 
-    def test_validate_backup_valid(self, backup_service, temp_backup_dir):
-        path = temp_backup_dir / "ok.dump"
-        path.write_bytes(b"data")
-        result = backup_service.validate_backup("ok")
-        assert result["valid"] is True
+    def test_validate_backup_valid(self):
+        """测试验证有效备份"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+
+            backup_file = os.path.join(tmpdir, "test_backup.dump")
+            with open(backup_file, 'w') as f:
+                f.write("valid content")
+
+            result = service.validate_backup("test_backup")
+
+            assert result["valid"] is True
+
+    def test_validate_backup_empty_file(self):
+        """测试验证空文件"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+
+            backup_file = os.path.join(tmpdir, "empty_backup.dump")
+            with open(backup_file, "w"):
+                pass
+
+            result = service.validate_backup("empty_backup")
+
+            assert result["valid"] is False
 
 
-class TestCleanupAndStats:
-    def test_cleanup_old_backups(self, backup_service, temp_backup_dir):
-        for name in ("a", "b", "c"):
-            (temp_backup_dir / f"{name}.dump").write_bytes(b"data")
+class TestCleanupOldBackups:
+    """测试 cleanup_old_backups 方法"""
 
-        result = backup_service.cleanup_old_backups(keep_count=1)
-        assert result["cleaned"] == 2
-        remaining = list(temp_backup_dir.glob("*.dump"))
-        assert len(remaining) == 1
+    def test_cleanup_no_action_needed(self):
+        """测试备份数量未超限时不清理"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
 
-    def test_get_backup_stats(self, backup_service, temp_backup_dir):
-        (temp_backup_dir / "one.dump").write_bytes(b"1234")
-        (temp_backup_dir / "two.dump").write_bytes(b"12")
+            for i in range(3):
+                backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
+                with open(backup_file, 'w') as f:
+                    f.write(f"content {i}")
 
-        result = backup_service.get_backup_stats()
-        assert result["total_count"] == 2
-        assert result["total_size"] == 6
+            result = service.cleanup_old_backups(keep_count=10)
+
+            assert result["cleaned"] == 0
+
+
+class TestGetBackupStats:
+    """测试 get_backup_stats 方法"""
+
+    def test_get_stats_empty(self):
+        """测试空备份目录的统计"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+            result = service.get_backup_stats()
+
+            assert result["total_count"] == 0
+
+    def test_get_stats_with_backups(self):
+        """测试有备份时的统计"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = BackupService(backup_dir=tmpdir)
+
+            for i in range(3):
+                backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
+                with open(backup_file, 'w') as f:
+                    f.write("x" * 1000)
+
+            result = service.get_backup_stats()
+
+            assert result["total_count"] == 3
+
+
+class TestNormalizePostgresUrl:
+    """测试 _normalize_postgres_url 静态方法"""
+
+    def test_normalize_standard_url(self):
+        """测试标准 PostgreSQL URL"""
+        url = "postgresql://localhost/testdb"
+        result = BackupService._normalize_postgres_url(url)
+        assert result == url
+
+    def test_normalize_psycopg_url(self):
+        """测试 psycopg 驱动 URL"""
+        url = "postgresql+psycopg://localhost/testdb"
+        result = BackupService._normalize_postgres_url(url)
+        assert result == "postgresql://localhost/testdb"

@@ -6,32 +6,66 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface AlertMockProps {
+  message?: React.ReactNode;
+  description?: React.ReactNode;
+  type?: string;
+  showIcon?: boolean;
+}
+
+interface ResultMockProps {
+  icon?: React.ReactNode;
+  title?: React.ReactNode;
+  subTitle?: React.ReactNode;
+  extra?: React.ReactNode;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  onClick?: () => void;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+  direction?: string;
+  size?: number | string;
+  wrap?: boolean;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  strong?: boolean;
+  type?: string;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Alert: ({ message, description, type, showIcon }: any) => (
+  Alert: ({ message, description, type, showIcon }: AlertMockProps) => (
     <div data-testid="alert" data-message={message} data-type={type} data-show-icon={showIcon}>
       {description}
     </div>
   ),
-  Result: ({ icon, title, subTitle, extra }: any) => (
+  Result: ({ icon, title, subTitle, extra }: ResultMockProps) => (
     <div data-testid="result" data-title={title} data-subtitle={subTitle}>
       {icon}
       {extra}
     </div>
   ),
-  Button: ({ children, icon, type, onClick }: any) => (
+  Button: ({ children, icon, type, onClick }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} onClick={onClick}>
       {icon}
       {children}
     </button>
   ),
-  Space: ({ children, direction, size, wrap }: any) => (
+  Space: ({ children, direction, size, wrap }: SpaceMockProps) => (
     <div data-testid="space" data-direction={direction} data-size={size} data-wrap={wrap}>
       {children}
     </div>
   ),
   Typography: {
-    Text: ({ children, strong, type }: any) => (
+    Text: ({ children, strong, type }: TypographyTextMockProps) => (
       <div data-testid="text" data-strong={strong} data-type={type}>
         {children}
       </div>
@@ -365,7 +399,7 @@ describe('FriendlyErrorDisplay - 边界情况测试', () => {
     const error = { message: '测试' };
     const element = React.createElement(FriendlyErrorDisplay, {
       error,
-      type: 'invalid' as any,
+      type: 'invalid' as unknown as 'network' | 'server' | 'auth' | 'notFound' | 'unknown',
     });
     expect(element).toBeTruthy();
   });

@@ -13,6 +13,11 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
 from ..constants.performance_constants import CacheLimits, CacheTTL
+from ..core.exception_handler import (
+    BaseBusinessError,
+    InvalidRequestError,
+    ResourceNotFoundError,
+)
 from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
@@ -225,7 +230,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         try:
             obj = db.query(self.model).get(id)
             if obj is None:
-                raise ValueError(f"Record with id {id} not found")
+                raise ResourceNotFoundError(self.model.__name__, str(id))
 
             db.delete(obj)
             if commit:
@@ -243,7 +248,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"
             )
             return cast(ModelType, obj)
-        except ValueError:
+        except BaseBusinessError:
             raise
         except Exception as e:  # pragma: no cover
             if commit:
@@ -386,7 +391,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
         Raises:
             AttributeError: 如果字段名在模型上不存在
-            ValueError: 如果 sort_order 不是 'asc' 或 'desc'
+            InvalidRequestError: 如果 sort_order 不是 'asc' 或 'desc'
 
         Examples:
             >>> # 获取所有不重复的权属方
@@ -408,7 +413,10 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
         # 验证排序参数
         if sort_order not in ("asc", "desc"):
-            raise ValueError(f"sort_order must be 'asc' or 'desc', got '{sort_order}'")
+            raise InvalidRequestError(
+                f"sort_order must be 'asc' or 'desc', got '{sort_order}'",
+                field="sort_order",
+            )
 
         # 检查缓存
         cache_key = None

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/admin", tags=["系统管理"])
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """
     健康检查
     """

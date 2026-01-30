@@ -55,7 +55,7 @@ class TestSecretKeySecurity:
 
             for weak_key in weak_keys:
                 os.environ["SECRET_KEY"] = weak_key
-                with pytest.raises(ValueError) as exc_info:
+                with pytest.raises(ValidationError) as exc_info:
                     Settings()
                 assert "弱密钥" in str(exc_info.value) or "生产环境" in str(
                     exc_info.value

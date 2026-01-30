@@ -8,7 +8,7 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -19,6 +19,12 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -26,7 +32,8 @@ from sqlalchemy.pool import QueuePool
 from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
 
-from .core.config import get_config
+from .core.config import settings
+from .core.exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +84,12 @@ class DatabaseManager:
     def _load_config(self) -> ConnectionPoolConfig:
         """加载数据库配置"""
         return ConnectionPoolConfig(
-            pool_size=get_config("database.pool_size", DatabasePoolConfig.SIZE_DEFAULT),
-            max_overflow=get_config(
-                "database.max_overflow", DatabasePoolConfig.MAX_OVERFLOW
-            ),
-            pool_timeout=get_config(
-                "database.pool_timeout", DatabasePoolConfig.TIMEOUT_SECONDS
-            ),
-            pool_recycle=get_config(
-                "database.pool_recycle", DatabasePoolConfig.RECYCLE_SECONDS
-            ),
-            pool_pre_ping=get_config(
-                "database.pool_pre_ping", DatabasePoolConfig.PRE_PING_ENABLED
-            ),
-            echo=get_config("database.echo", DatabasePoolConfig.ECHO_ENABLED),
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+            pool_recycle=settings.DATABASE_POOL_RECYCLE,
+            pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
+            echo=settings.DATABASE_ECHO,
             connect_args={},
         )
 
@@ -205,10 +204,11 @@ class DatabaseManager:
                     "error_details": str(e),
                 },
             )
-            raise ValueError(
+            raise ConfigurationError(
                 f"DATABASE_URL格式错误: {database_url}\n"
                 f"正确格式: postgresql+psycopg://user:password@host:port/database\n"
-                f"错误详情: {e}"
+                f"错误详情: {e}",
+                config_key="DATABASE_URL",
             ) from e
 
     def _setup_event_listeners(self) -> None:
@@ -406,11 +406,12 @@ def get_database_url() -> str:
             f"环境 '{environment}' 未设置DATABASE_URL",
             extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
         )
-        raise ValueError(
+        raise ConfigurationError(
             "必须设置DATABASE_URL环境变量。\n"
             "请在.env文件中配置:\n"
             "DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
-            "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+            "帮助文档: docs/POSTGRESQL_MIGRATION.md",
+            config_key="DATABASE_URL",
         )
 
     # 验证PostgreSQL URL格式
@@ -422,28 +423,35 @@ def get_database_url() -> str:
 
             # 检查必需组件
             if not parsed.hostname:
-                raise ValueError("缺少主机名 (hostname)")
+                raise ConfigurationError("缺少主机名 (hostname)", config_key="DATABASE_URL")
             if not parsed.username:
-                raise ValueError("缺少用户名 (username)")
+                raise ConfigurationError("缺少用户名 (username)", config_key="DATABASE_URL")
             if not parsed.password:
                 logger.warning("DATABASE_URL缺少密码 (password)")
             if not parsed.path or len(parsed.path) <= 1:
-                raise ValueError("缺少数据库名称 (database name)")
+                raise ConfigurationError(
+                    "缺少数据库名称 (database name)",
+                    config_key="DATABASE_URL",
+                )
             if parsed.port and not (1 <= parsed.port <= 65535):
-                raise ValueError(f"无效端口号: {parsed.port}")
+                raise ConfigurationError(
+                    f"无效端口号: {parsed.port}",
+                    config_key="DATABASE_URL",
+                )
 
             # 记录安全信息（不含密码）
             safe_url = f"{parsed.scheme}://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
             logger.info(f"PostgreSQL URL验证通过: {safe_url}")
 
-        except ValueError as e:
+        except (ValueError, ConfigurationError) as e:
             logger.error(
                 f"DATABASE_URL验证失败: {e}", extra={"error_id": "DATABASE_URL_INVALID"}
             )
-            raise ValueError(
+            raise ConfigurationError(
                 f"DATABASE_URL格式错误: {e}\n"
                 f"正确格式: postgresql+psycopg://user:password@host:port/database\n"
-                f"示例: postgresql+psycopg://postgres:password@localhost:5432/zcgl_db"
+                f"示例: postgresql+psycopg://postgres:password@localhost:5432/zcgl_db",
+                config_key="DATABASE_URL",
             ) from e
 
     else:
@@ -451,12 +459,18 @@ def get_database_url() -> str:
             f"不支持的数据库类型: {database_url[:20]}...",
             extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
         )
-        raise ValueError(
+        raise ConfigurationError(
             "不支持的数据库类型。支持: postgresql+psycopg://\n"
-            f"当前URL: {database_url[:50]}"
+            f"当前URL: {database_url[:50]}",
+            config_key="DATABASE_URL",
         )
 
     return database_url
+
+
+def get_async_database_url() -> str:
+    database_url = get_database_url()
+    return database_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
 
 
 # 向后兼容的模块级变量（现在通过函数获取）
@@ -490,6 +504,8 @@ def _get_session_local() -> sessionmaker[Session] | None:
 # 为了向后兼容，提供全局变量（但实际使用时通过函数获取）
 engine: Engine | None = None  # 将在首次使用时初始化
 SessionLocal: sessionmaker[Session] | None = None  # 将在首次使用时初始化
+async_engine: AsyncEngine | None = None
+AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
 
 
 def _init_globals() -> None:
@@ -499,6 +515,28 @@ def _init_globals() -> None:
         manager = _get_database_manager()
         engine = manager.engine
         SessionLocal = manager.session_factory
+
+
+def _init_async_globals() -> None:
+    global async_engine, AsyncSessionLocal
+    if async_engine is None or AsyncSessionLocal is None:
+        async_url = get_async_database_url()
+        async_engine = create_async_engine(
+            async_url,
+            echo=settings.DATABASE_ECHO,
+            future=True,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+            pool_recycle=settings.DATABASE_POOL_RECYCLE,
+            pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
+        )
+        AsyncSessionLocal = async_sessionmaker(
+            bind=async_engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False,
+        )
 
 
 # 创建基础模型类
@@ -531,6 +569,28 @@ def get_db() -> Generator[Session, None, None]:
         raise  # pragma: no cover
     finally:
         session.close()
+
+
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    _init_async_globals()
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Async database session factory is not initialized")
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception as e:  # pragma: no cover
+            await session.rollback()  # pragma: no cover
+            logger.critical(
+                "数据库会话异常",
+                exc_info=True,
+                extra={
+                    "error_id": ErrorIDs.Database.SESSION_ERROR,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "session_id": id(session),
+                },
+            )
+            raise  # pragma: no cover
 
 
 def get_database_engine() -> Engine:

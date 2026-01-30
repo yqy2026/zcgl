@@ -25,7 +25,7 @@ router.include_router(status.router)
 # 测试端点
 @router.get("/test", summary="测试端点")
 @debug_only
-async def test_endpoint():
+async def test_endpoint() -> dict[str, str]:
     """测试端点"""
     return {"message": "Excel API 测试成功", "timestamp": "2025-08-27"}
 

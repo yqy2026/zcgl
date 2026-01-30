@@ -61,7 +61,7 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
 
     class _ErrorRecoveryEngine:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
     ErrorRecoveryEngine = _ErrorRecoveryEngine

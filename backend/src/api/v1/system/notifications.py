@@ -243,7 +243,7 @@ async def run_notification_tasks_endpoint(
         raise forbidden("只有管理员可以手动触发通知任务")
 
     # 在后台运行任务
-    def run_tasks():
+    def run_tasks() -> dict[str, str]:
         try:
             result = run_notification_tasks()
             return result

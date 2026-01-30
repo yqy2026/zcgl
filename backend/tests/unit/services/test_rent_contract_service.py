@@ -1,10 +1,11 @@
 from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
 
+from src.constants.rent_contract_constants import PaymentStatus
 from src.models.rent_contract import RentContract, RentLedger, RentTerm
 from src.schemas.rent_contract import (
     GenerateLedgerRequest,
@@ -22,9 +23,6 @@ TEST_ASSET_ID = "asset_123"
 TEST_OWNERSHIP_ID = "ownership_123"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture
@@ -33,7 +31,9 @@ def service():
 
 
 class TestRentContractService:
-    def test_create_contract(self, service, mock_db):
+    def test_create_contract(
+        self, service, test_db, sample_ownership, sample_asset_with_ownership
+    ):
         # Prepare input data
         term_data = RentTermCreate(
             start_date=date(2024, 1, 1),
@@ -41,48 +41,27 @@ class TestRentContractService:
             monthly_rent=Decimal("1000"),
             management_fee=Decimal("100"),
         )
+        contract_number = f"TEST{uuid4().hex[:8]}"
         contract_in = RentContractCreate(
-            contract_number="TEST2024001",
+            contract_number=contract_number,
             tenant_name="Test Tenant",
-            asset_ids=[TEST_ASSET_ID],  # V2: 多资产
-            ownership_id=TEST_OWNERSHIP_ID,
+            asset_ids=[sample_asset_with_ownership.id],  # V2: 多资产
+            ownership_id=sample_ownership.id,
             sign_date=date(2024, 1, 1),
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
             rent_terms=[term_data],
         )
 
-        # Mock internal methods
-        service._generate_contract_number = MagicMock(return_value="TEST2024001")
-        service._create_history = MagicMock()
-
         # Execute
-        result = service.create_contract(mock_db, obj_in=contract_in)
+        result = service.create_contract(test_db, obj_in=contract_in)
 
         # Verify
         assert isinstance(result, RentContract)
-        assert result.contract_number == "TEST2024001"
-        assert (
-            len(result.rent_terms) == 0
-        )  # In unit test with mocked add, relations might not link automatically unless logic does it
-        # However, our service creates RentTerm and adds it to DB.
-
-        # Check DB calls
-        # 1 add for contract, 1 add for term, 1 for history (inside _create_history)
-        # Actually _create_history also does add/commit.
-
-        # Verify contract creation
-        contract_add_call = mock_db.add.call_args_list[0]
-        assert isinstance(contract_add_call[0][0], RentContract)
-
-        # Verify term creation
-        term_add_call = mock_db.add.call_args_list[1]
-        assert isinstance(term_add_call[0][0], RentTerm)
-        assert term_add_call[0][0].monthly_rent == Decimal("1000")
-        assert term_add_call[0][0].total_monthly_amount == Decimal("1100")  # 1000 + 100
-
-        mock_db.commit.assert_called()
-        mock_db.flush.assert_called()
+        assert result.contract_number == contract_number
+        assert len(result.rent_terms) == 1
+        assert result.rent_terms[0].monthly_rent == Decimal("1000")
+        assert any(asset.id == sample_asset_with_ownership.id for asset in result.assets)
 
     def test_update_contract(self, service, mock_db):
         # Prepare
@@ -176,13 +155,13 @@ class TestRentContractService:
             id="1",
             due_amount=Decimal("1000"),
             paid_amount=Decimal("0"),
-            payment_status="未支付",
+            payment_status=PaymentStatus.UNPAID,
         )
         ledger2 = RentLedger(
             id="2",
             due_amount=Decimal("1000"),
             paid_amount=Decimal("500"),
-            payment_status="部分支付",
+            payment_status=PaymentStatus.PARTIAL,
         )
 
         mock_query = MagicMock()
@@ -191,14 +170,14 @@ class TestRentContractService:
         mock_query.all.return_value = [ledger1, ledger2]
 
         request = RentLedgerBatchUpdate(
-            ledger_ids=["1", "2"], payment_status="已支付", notes="Batch update"
+            ledger_ids=["1", "2"], payment_status=PaymentStatus.PAID, notes="Batch update"
         )
 
         # Execute
         service.batch_update_payment(mock_db, request=request)
 
         # Verify
-        assert ledger1.payment_status == "已支付"
+        assert ledger1.payment_status == PaymentStatus.PAID
         assert ledger1.notes == "Batch update"
         # Logic: if "已支付", overdue should be calc.
         # But paid_amount didn't change in update request?

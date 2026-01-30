@@ -18,6 +18,15 @@ depends_on = None
 
 
 def upgrade():
+    # Check if table already exists (created by initial migration)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
+
+    # Skip if table already exists (from initial migration)
+    if "security_events" in existing_tables:
+        return
+
     # Create security_events table
     op.create_table(
         "security_events",

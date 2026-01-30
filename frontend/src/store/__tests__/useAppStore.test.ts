@@ -3,9 +3,8 @@
  * 测试应用全局状态管理
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useAppStore } from '../useAppStore';
 
 // =============================================================================

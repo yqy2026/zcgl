@@ -7,7 +7,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.core.exception_handler import (
     BaseBusinessError,
@@ -23,10 +22,6 @@ TEST_ASSET_ID = "asset_123"
 TEST_USER_ID = "user_123"
 
 
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture
@@ -347,6 +342,29 @@ class TestUpdateAsset:
 
                     assert result == mock_asset
                     mock_update.assert_called_once()
+
+    def test_update_asset_version_conflict(self, service, mock_asset):
+        """测试版本冲突"""
+        mock_asset.version = 2
+        update_data = {"version": 1, "notes": "更新备注"}
+        asset_in = AssetUpdate(**update_data)
+
+        with patch(
+            "src.services.asset.asset_service.AssetService.get_asset",
+            return_value=mock_asset,
+        ):
+            with patch(
+                "src.services.asset.asset_service.get_enum_validation_service"
+            ) as mock_validation:
+                mock_validation_service = MagicMock()
+                mock_validation_service.validate_asset_data.return_value = (True, [])
+                mock_validation.return_value = mock_validation_service
+
+                with pytest.raises(BaseBusinessError) as excinfo:
+                    service.update_asset(TEST_ASSET_ID, asset_in)
+
+                assert excinfo.value.status_code == 409
+                assert "版本冲突" in str(excinfo.value.message)
 
     def test_update_asset_not_found(self, service):
         """测试更新不存在的资产"""

@@ -8,24 +8,70 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import {} from '@testing-library/react';
 
+interface SkeletonItemMockProps {
+  style?: React.CSSProperties;
+  active?: boolean;
+}
+
+interface SkeletonAvatarMockProps {
+  size?: number | string;
+  active?: boolean;
+}
+
+interface SkeletonNodeMockProps {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+  active?: boolean;
+}
+
+interface SkeletonDefaultMockProps {
+  avatar?: boolean;
+  paragraph?: boolean;
+  title?: boolean;
+  rows?: number;
+  active?: boolean;
+}
+
+interface CardMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  size?: string;
+  style?: React.CSSProperties;
+}
+
+interface RowMockProps {
+  children?: React.ReactNode;
+  gutter?: unknown;
+  style?: React.CSSProperties;
+}
+
+interface ColMockProps {
+  children?: React.ReactNode;
+  span?: number;
+  xs?: unknown;
+  sm?: unknown;
+  md?: unknown;
+  lg?: unknown;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Skeleton: {
-    Input: ({ style, active }: any) => (
+    Input: ({ style, active }: SkeletonItemMockProps) => (
       <div data-testid="skeleton-input" data-active={active} style={style} />
     ),
-    Button: ({ style, active }: any) => (
+    Button: ({ style, active }: SkeletonItemMockProps) => (
       <div data-testid="skeleton-button" data-active={active} style={style} />
     ),
-    Avatar: ({ size, active }: any) => (
+    Avatar: ({ size, active }: SkeletonAvatarMockProps) => (
       <div data-testid="skeleton-avatar" data-size={size} data-active={active} />
     ),
-    Node: ({ children, style, active }: any) => (
+    Node: ({ children, style, active }: SkeletonNodeMockProps) => (
       <div data-testid="skeleton-node" data-active={active} style={style}>
         {children}
       </div>
     ),
-    default: ({ avatar, paragraph, title, rows, active }: any) => (
+    default: ({ avatar, paragraph, title, rows, active }: SkeletonDefaultMockProps) => (
       <div
         data-testid="skeleton"
         data-avatar={avatar}
@@ -38,17 +84,17 @@ vi.mock('antd', () => ({
       </div>
     ),
   },
-  Card: ({ children, title, size, style }: any) => (
+  Card: ({ children, title, size, style }: CardMockProps) => (
     <div data-testid="card" data-size={size} data-has-title={!!title} style={style}>
       {children}
     </div>
   ),
-  Row: ({ children, gutter, style }: any) => (
+  Row: ({ children, gutter, style }: RowMockProps) => (
     <div data-testid="row" data-gutter={gutter} style={style}>
       {children}
     </div>
   ),
-  Col: ({ children, span, xs, sm, md, lg }: any) => (
+  Col: ({ children, span, xs, sm, md, lg }: ColMockProps) => (
     <div data-testid="col" data-span={span} data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
       {children}
     </div>
@@ -267,7 +313,7 @@ describe('SkeletonLoader - 边界情况测试', () => {
 
   it('应该处理未知type类型', async () => {
     const SkeletonLoader = (await import('../SkeletonLoader')).default;
-    const element = React.createElement(SkeletonLoader, { type: 'unknown' as any });
+    const element = React.createElement(SkeletonLoader, { type: 'unknown' as unknown as 'card' | 'list' | 'form' | 'table' });
     expect(element).toBeTruthy();
   });
 

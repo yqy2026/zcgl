@@ -333,15 +333,7 @@ def get_permission_cache_service() -> PermissionCacheService:
             logger.warning(f"Failed to get Redis client: {e}")  # pragma: no cover
 
         # 从配置获取TTL
-        ttl_seconds = 300  # 默认5分钟
-        try:
-            from ...core.config import get_config
-
-            ttl_seconds = get_config("permission_cache_ttl", 300)
-        except Exception as e:  # pragma: no cover
-            logger.warning(
-                f"Failed to get permission cache TTL from config: {e}"
-            )  # pragma: no cover
+        ttl_seconds = 300  # 默认5分钟，固定值
 
         _permission_cache_service = PermissionCacheService(
             redis_client=redis_client, ttl_seconds=ttl_seconds

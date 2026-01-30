@@ -7,16 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from sqlalchemy.orm import Session
 
 from src.core.exception_handler import BusinessValidationError
 from src.services.excel.excel_import_service import FIELD_MAPPING, ExcelImportService
-
-
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

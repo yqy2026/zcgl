@@ -13,6 +13,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import BusinessValidationError
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
@@ -109,7 +110,10 @@ class PropertyCertificateService:
             owners_data = data.get("owners", [])
 
             if not certificate_number:
-                raise ValueError("缺少证书编号")
+                raise BusinessValidationError(
+                    "缺少证书编号",
+                    field_errors={"certificate_number": ["缺少证书编号"]},
+                )
 
             logger.info(f"确认导入产权证: {certificate_number}")
 
@@ -182,7 +186,7 @@ class PropertyCertificateService:
             logger.info(f"产权证创建成功: {certificate.id} - {certificate_number}")
             return certificate
 
-        except ValueError as e:
+        except BusinessValidationError as e:
             logger.error(f"数据验证失败: {str(e)}")
             raise
         except Exception as e:

@@ -6,6 +6,7 @@
 
 import pytest
 
+from src.core.exception_handler import BusinessValidationError
 from src.utils.file_security import (
     generate_safe_filename,
     sanitize_file_content,
@@ -215,12 +216,12 @@ class TestGenerateSafeFilenameSecurity:
 
     def test_empty_filename_raises_error(self):
         """测试空文件名抛出异常"""
-        with pytest.raises(ValueError, match="文件名不能为空"):
+        with pytest.raises(BusinessValidationError, match="文件名不能为空"):
             generate_safe_filename("", allowed_extensions=["pdf"])
 
     def test_disallowed_extension_raises_error(self):
         """测试不允许的扩展名抛出异常"""
-        with pytest.raises(ValueError, match="不允许的文件扩展名"):
+        with pytest.raises(BusinessValidationError, match="不允许的文件扩展名"):
             generate_safe_filename("malicious.exe", allowed_extensions=["pdf"])
 
     def test_uuid_uniqueness(self):
@@ -235,7 +236,7 @@ class TestGenerateSafeFilenameSecurity:
         """测试最终安全验证"""
         # 即使经过所有处理，最终文件名仍会被验证
         # 这个测试确保安全验证逻辑正常工作
-        with pytest.raises(ValueError):
+        with pytest.raises(BusinessValidationError):
             # 模拟一个理论上可能绕过前面检查的情况
             # （实际上由于多重检查，这不应该发生）
             generate_safe_filename(
@@ -285,7 +286,7 @@ class TestFileContentSanitization:
         """测试文件大小限制"""
         large_content = b"x" * (101 * 1024 * 1024)  # 101MB
 
-        with pytest.raises(ValueError, match="文件大小超过限制"):
+        with pytest.raises(BusinessValidationError, match="文件大小超过限制"):
             sanitize_file_content("test.txt", large_content, max_size=100 * 1024 * 1024)
 
     def test_binary_files_unchanged(self):
@@ -451,13 +452,13 @@ class TestIntegrationScenarios:
                             or "\\" in safe_filename
                         ):
                             blocked = True
-                    except ValueError:
+                    except BusinessValidationError:
                         # generate_safe_filename 拒绝了文件（例如双重扩展名）
                         blocked = True
 
                 # 验证文件被阻止
                 assert blocked, f"恶意文件应该被拒绝: {filename}"
 
-            except (ValueError, AssertionError):
+            except (BusinessValidationError, AssertionError):
                 # 预期的行为 - 文件被拒绝
                 assert True

@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
@@ -11,9 +10,6 @@ TEST_PROJECT_ID = "proj_123"
 TEST_USER_ID = "user_123"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

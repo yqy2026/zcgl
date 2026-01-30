@@ -18,7 +18,6 @@ Coverage:
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.services.analytics.analytics_service import AnalyticsService
 from src.services.analytics.area_service import AreaCalculationError, AreaService
@@ -28,10 +27,6 @@ from src.services.analytics.area_service import AreaCalculationError, AreaServic
 # =============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

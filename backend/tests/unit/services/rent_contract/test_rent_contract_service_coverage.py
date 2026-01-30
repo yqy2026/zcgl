@@ -1,10 +1,11 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
 
+from src.constants.rent_contract_constants import PaymentStatus
 from src.core.enums import ContractStatus
 from src.models.asset import Asset
 from src.models.rent_contract import ContractType, RentContract, RentLedger, RentTerm
@@ -25,24 +26,18 @@ class TestRentContractServiceCoverage:
         return RentContractService()
 
     @pytest.fixture
-    def mock_db(self):
-        return MagicMock(spec=Session)
-
-    @pytest.fixture
     def mock_asset(self):
-        asset = MagicMock(spec=Asset)
-        asset.id = "asset_1"
-        asset.property_name = "Test Asset"
+        asset = Asset(
+            id="asset_1",
+            ownership_entity="Test Owner",
+            property_name="Test Asset",
+            address="Test Address",
+            ownership_status="已确权",
+            property_nature="商业",
+            usage_status="使用中",
+        )
         asset.rentable_area = Decimal("100.0")
         return asset
-
-    def test_generate_contract_number(self, service, mock_db):
-        """Test contract number generation logic"""
-        mock_db.query.return_value.filter.return_value.count.return_value = 5
-        contract_number = service._generate_contract_number(mock_db)
-        today_str = datetime.now().strftime("%Y%m%d")
-        expected_number = f"ZJ{today_str}006"
-        assert contract_number == expected_number
 
     def test_create_contract_basic(self, service, mock_db, mock_asset):
         """Test basic contract creation flow"""
@@ -85,6 +80,7 @@ class TestRentContractServiceCoverage:
         )
 
         contract_data = RentContractCreate(
+            contract_number="CONFLICT001",
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
             sign_date=date(2024, 1, 1),
@@ -143,6 +139,7 @@ class TestRentContractServiceCoverage:
         )
 
         new_contract_data = RentContractCreate(
+            contract_number="NEW001",
             start_date=date(2025, 1, 1),
             end_date=date(2025, 12, 31),
             sign_date=date(2025, 1, 1),
@@ -227,29 +224,40 @@ class TestRentContractServiceCoverage:
 
         request = RentLedgerBatchUpdate(
             ledger_ids=["l1"],
-            payment_status="已支付",
+            payment_status=PaymentStatus.PAID,
             payment_date=date(2024, 1, 5)
         )
 
         service.batch_update_payment(mock_db, request=request)
 
-        assert ledger.payment_status == "已支付"
+        assert ledger.payment_status == PaymentStatus.PAID
         assert ledger.payment_date == date(2024, 1, 5)
         mock_db.commit.assert_called()
 
-    def test_calculate_average_unit_price(self, service, mock_db):
+    def test_calculate_average_unit_price(
+        self, service, test_db, sample_ownership, sample_asset_with_ownership
+    ):
         """Test average unit price calculation"""
-        contract = MagicMock(spec=RentContract)
-        contract.contract_type = ContractType.LEASE_DOWNSTREAM
-        contract.monthly_rent_base = Decimal("5000.00")
-        asset = MagicMock(spec=Asset)
-        asset.rentable_area = Decimal("100.00")
-        contract.assets = [asset]
+        sample_asset_with_ownership.rentable_area = Decimal("100.00")
+        test_db.flush()
 
-        mock_db.query.return_value.options.return_value.filter.return_value.all.return_value = [contract]
+        contract = RentContract(
+            contract_number=f"CT{uuid4().hex[:8]}",
+            contract_type=ContractType.LEASE_DOWNSTREAM,
+            ownership_id=sample_ownership.id,
+            tenant_name="Test Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            monthly_rent_base=Decimal("5000.00"),
+            contract_status=ContractStatus.ACTIVE.value,
+        )
+        contract.assets.append(sample_asset_with_ownership)
+        test_db.add(contract)
+        test_db.flush()
 
         query = RentStatisticsQuery()
-        avg_price = service._calculate_average_unit_price(mock_db, query)
+        avg_price = service._calculate_average_unit_price(test_db, query)
         assert avg_price == Decimal("50.00")
 
     def test_calculate_renewal_rate(self, service, mock_db):

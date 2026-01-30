@@ -13,20 +13,14 @@ from sqlalchemy.orm import Session
 
 from src.services.excel.excel_template_service import ExcelTemplateService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return pytest.fixture(lambda: Mock(spec=Session))()
 
 
 @pytest.fixture
 def excel_service():
     """Excel模板服务实例"""
-    from unittest.mock import Mock
 
     return ExcelTemplateService(Mock(spec=Session))
 
@@ -429,7 +423,6 @@ class TestExcelTemplateServiceInitialization:
 
     def test_initialization_with_db(self):
         """测试使用db初始化"""
-        from unittest.mock import Mock
 
         mock_db = Mock(spec=Session)
         service = ExcelTemplateService(mock_db)

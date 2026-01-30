@@ -11,6 +11,13 @@ except ImportError:
         return None
 
 
+from ...core.exception_handler import (
+    BaseBusinessError,
+    DuplicateResourceError,
+    InternalServerError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from ...crud.project import project_crud
 from ...models import Project
 from ...schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
@@ -31,7 +38,7 @@ class ProjectService:
             # 2. 检查编码唯一性
             existing_project = project_crud.get_by_code(db, code=obj_in.code)
             if existing_project:
-                raise ValueError(f"项目编码 '{obj_in.code}' 已存在")
+                raise DuplicateResourceError("项目", "code", obj_in.code)
 
             # 3. 创建项目
             project: Project = project_crud.create(
@@ -40,7 +47,9 @@ class ProjectService:
             return project
 
         except Exception as e:
-            raise ValueError(f"创建项目失败: {str(e)}")
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise InternalServerError("创建项目失败", original_error=e) from e
 
     def update_project(
         self,
@@ -53,7 +62,7 @@ class ProjectService:
         """更新项目"""
         project: Project | None = project_crud.get(db, project_id)
         if not project:
-            raise ValueError(f"项目 {project_id} 不存在")
+            raise ResourceNotFoundError("项目", project_id)
 
         result: Project = project_crud.update(db, db_obj=project, obj_in=obj_in)
         return result
@@ -64,7 +73,7 @@ class ProjectService:
         """切换项目状态"""
         project: Project | None = project_crud.get(db, project_id)
         if not project:
-            raise ValueError(f"项目 {project_id} 不存在")
+            raise ResourceNotFoundError("项目", project_id)
 
         # Toggle logic: 规划中/进行中 <-> 暂停
         if project.project_status in ["规划中", "进行中"]:
@@ -86,7 +95,10 @@ class ProjectService:
         """删除项目"""
         count = project_crud.get_asset_count(db, project_id)
         if count > 0:
-            raise ValueError(f"项目包含 {count} 个资产，无法删除")
+            raise OperationNotAllowedError(
+                f"项目包含 {count} 个资产，无法删除",
+                reason="project_has_assets",
+            )
 
         # Use remove instead of delete
         project = project_crud.get(db, project_id)

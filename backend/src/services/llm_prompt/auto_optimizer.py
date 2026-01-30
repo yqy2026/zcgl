@@ -12,6 +12,7 @@ from uuid import uuid4
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import ResourceNotFoundError
 from ...models.llm_prompt import (
     ExtractionFeedback,
     PromptStatus,
@@ -154,7 +155,7 @@ class AutoOptimizer:
         # 4. 应用优化
         template = db.query(PromptTemplate).get(template_id)
         if not template:
-            raise ValueError(f"Prompt不存在: {template_id}")
+            raise ResourceNotFoundError("Prompt", template_id)
 
         # 在"重要"部分后追加新规则
         updated_system_prompt = template.system_prompt

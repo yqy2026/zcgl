@@ -6,11 +6,27 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 
+interface VirtuosoItem {
+  id: string;
+  name?: string;
+  data?: string;
+}
+
+interface VirtuosoComponents {
+  Footer?: React.ComponentType;
+}
+
+interface VirtuosoMockProps {
+  data?: VirtuosoItem[];
+  itemContent: (index: number, item: VirtuosoItem) => React.ReactNode;
+  components?: VirtuosoComponents;
+}
+
 // Mock the virtualization library
 vi.mock('react-virtuoso', () => ({
-  Virtuoso: ({ data, itemContent, components }: any) => (
+  Virtuoso: ({ data, itemContent, components }: VirtuosoMockProps) => (
     <div data-testid="virtuoso">
-      {data?.map((item: any, index: number) => (
+      {data?.map((item, index) => (
         <div key={index}>{itemContent(index, item)}</div>
       ))}
       {components?.Footer && <components.Footer />}
@@ -39,7 +55,7 @@ describe('VirtualTable Component', () => {
   });
 
   it('handles empty data', () => {
-    const mockData: any[] = [];
+    const mockData: VirtuosoItem[] = [];
 
     const TestComponent = () => (
       <div data-testid="empty-table">

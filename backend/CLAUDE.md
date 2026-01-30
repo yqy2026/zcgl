@@ -296,7 +296,7 @@ pytest --cov=src --cov-report=html  # 覆盖率
 | 问题 | 解决方案 |
 |------|---------|
 | Import 错误 | `pip install -e .` |
-| 数据库连接失败 | 确保 `database/data/` 存在 |
+| 数据库连接失败 | 检查 PostgreSQL 服务和连接配置 |
 | Alembic 失败 | `alembic stamp head && alembic upgrade head` |
 | 加密未生效 | 检查 `DATA_ENCRYPTION_KEY` 是否设置 |
 | 搜索加密字段失败 | 确保使用确定性加密（SEARCHABLE_FIELDS） |

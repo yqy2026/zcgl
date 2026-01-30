@@ -69,7 +69,7 @@ export interface RentTermFormData {
 
 // Form data interfaces for type-safe validateFields
 export interface RentContractFormValues {
-  contract_number?: string;
+  contract_number: string;
   asset_ids: string[];
   ownership_id: string;
   contract_type?: ContractType;

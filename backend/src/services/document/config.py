@@ -10,6 +10,9 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
+
+from ...core.exception_handler import ConfigurationError
 
 # ============================================================================
 # LLM 提供商枚举 - 统一命名
@@ -42,7 +45,7 @@ class LLMProvider(str, Enum):
             标准化的 LLMProvider 枚举值
 
         Raises:
-            ValueError: 如果无法识别的提供商名称
+            ConfigurationError: 如果无法识别的提供商名称
         """
         value_map = {
             # GLM 别名
@@ -76,11 +79,12 @@ class LLMProvider(str, Enum):
         # 尝试直接匹配
         try:
             return cls(value.lower())
-        except ValueError:
-            raise ValueError(
+        except ValueError as exc:
+            raise ConfigurationError(
                 f"Unsupported LLM provider: {value}. "
-                f"Supported providers: {[p.value for p in cls]}"
-            )
+                f"Supported providers: {[p.value for p in cls]}",
+                config_key="LLM_PROVIDER",
+            ) from exc
 
 
 class OCRConfig(BaseModel):
@@ -235,7 +239,11 @@ class ExtractionConfig(BaseModel):
         if v is not None:
             valid_methods = ["text", "vision", "smart", "ocr", "llm"]
             if v not in valid_methods:
-                raise ValueError(f"Invalid method. Must be one of: {valid_methods}")
+                raise PydanticCustomError(
+                    "invalid_method",
+                    "Invalid method. Must be one of: {valid_methods}",
+                    {"valid_methods": valid_methods},
+                )
         return v
 
     @classmethod
@@ -245,7 +253,7 @@ class ExtractionConfig(BaseModel):
         llm_provider_str = os.getenv("EXTRACTION_LLM_PROVIDER", "glm")
         try:
             llm_provider = LLMProvider.normalize(llm_provider_str)
-        except ValueError:
+        except ConfigurationError:
             llm_provider = LLMProvider.GLM  # 默认值
 
         return cls(

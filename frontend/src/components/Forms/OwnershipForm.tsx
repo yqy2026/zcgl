@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Space, Card, Row, Col, Divider, Switch, Select } from 'antd';
+import type { RuleObject } from 'antd/es/form';
 import { MessageManager } from '@/utils/messageManager';
 
 const { Option } = Select;
@@ -68,16 +69,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
     loadProjectOptions();
   }, [initialValues, form]);
 
-  // 表单验证规则接口
-  interface FormValidationRule {
-    field?: string;
-    fullField?: string;
-    type?: string;
-    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>;
-  }
-
   // 验证名称唯一性
-  const validateName = async (_: FormValidationRule, value: string) => {
+  const validateName = async (_: RuleObject, value: string) => {
     if (value == null) return Promise.resolve();
 
     const isUnique = await ownershipService.validateOwnershipName(value, initialValues?.id);
@@ -158,7 +151,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
               name="name"
               rules={[
                 { required: true, message: '请输入权属方全称' },
-                { validator: validateName as any },
+                { validator: validateName },
               ]}
             >
               <Input placeholder="请输入权属方全称" />

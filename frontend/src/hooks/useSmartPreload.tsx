@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import type { ComponentType } from 'react';
 import { useLocation } from 'react-router-dom';
 import { createLogger } from '@/utils/logger';
 
@@ -6,7 +7,7 @@ const preloadLogger = createLogger('SmartPreload');
 
 // 预加载模块类型定义
 interface PreloadModule {
-  default: React.ComponentType<any>;
+  default: ComponentType<Record<string, unknown>>;
 }
 
 // 预加载函数类型
@@ -14,7 +15,7 @@ type PreloadFunction = () => Promise<PreloadModule>;
 
 // 调试接口
 interface PreloadDebugInterface {
-  getStats: () => any;
+  getStats: () => PreloadCacheStats | null;
   clearCache: () => void;
   manager: SmartPreloadManager | null;
 }
@@ -47,6 +48,13 @@ interface UserBehavior {
   hoveredRoutes: Set<string>;
   visitedRoutes: Set<string>;
   currentRoute: string;
+  interactionCount: number;
+}
+
+interface PreloadCacheStats {
+  cachedRoutes: number;
+  activePreloads: number;
+  visitedRoutes: number;
   interactionCount: number;
 }
 
@@ -146,6 +154,10 @@ class SmartPreloadManager {
     setTimeout(() => {
       this.executePreload(route);
     }, delay);
+  }
+
+  public preloadRoute(route: string, trigger: 'hover' | 'click' | 'predictive' = 'predictive') {
+    this.schedulePreload(route, trigger);
   }
 
   private async executePreload(route: string) {
@@ -289,12 +301,12 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
   // 提供预加载函数
   const preloadRoute = useCallback((route: string) => {
     if (managerRef.current) {
-      (managerRef.current as any).schedulePreload(route, 'predictive');
+      managerRef.current.preloadRoute(route, 'predictive');
     }
   }, []);
 
   const getStats = useCallback(() => {
-    return managerRef.current?.getCacheStats() || null;
+    return managerRef.current?.getCacheStats() ?? null;
   }, []);
 
   const clearCache = useCallback(() => {

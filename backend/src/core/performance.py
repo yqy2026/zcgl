@@ -16,7 +16,7 @@ from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload
 
 from ..constants.performance_constants import PerformanceThresholds
-from .config import get_config
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class PerformanceMonitor:
     """性能监控器"""
 
     def __init__(self) -> None:
-        self.slow_query_threshold = get_config("slow_query_threshold_ms", 1000)
-        self.enabled = get_config("performance_monitoring_enabled", True)
+        self.slow_query_threshold = int(settings.SLOW_QUERY_THRESHOLD * 1000)
+        self.enabled = settings.ENABLE_METRICS
         self.query_stats: dict[str, dict[str, Any]] = {}
 
     def record_query(
@@ -174,8 +174,8 @@ class QueryOptimizer:
 
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.cache_enabled = get_config("cache_enabled", False)
-        self.cache_ttl = get_config("cache_ttl_seconds", 3600)
+        self.cache_enabled = settings.REDIS_ENABLED
+        self.cache_ttl = settings.CACHE_TTL
 
     @contextmanager
     def query_with_monitoring(self, query_name: str) -> Generator[None, None, None]:
@@ -290,9 +290,9 @@ class CacheManager:
 
     def __init__(self) -> None:
         self.cache: dict[str, dict[str, Any]] = {}
-        self.cache_enabled = get_config("cache_enabled", False)
-        self.default_ttl = get_config("cache_ttl_seconds", 3600)
-        self.max_size = get_config("cache_max_size", 1000)
+        self.cache_enabled = settings.REDIS_ENABLED
+        self.default_ttl = settings.CACHE_TTL
+        self.max_size = 1000  # 固定值，如需可配置可新增 CACHE_MAX_SIZE
 
     def _is_expired(self, cache_item: dict[str, Any] | None) -> bool:
         """检查缓存是否过期"""

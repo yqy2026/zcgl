@@ -2,6 +2,12 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import (
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from ...crud.rbac import (
     permission_crud,
     role_crud,
@@ -25,7 +31,7 @@ class RBACService:
         # 业务规则：名称唯一
         existing_role = role_crud.get_by_name(db, name=obj_in.name)
         if existing_role:
-            raise ValueError(f"角色名称 '{obj_in.name}' 已存在")
+            raise DuplicateResourceError("角色", "name", obj_in.name)
 
         # Create role
         role: Role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
@@ -47,7 +53,7 @@ class RBACService:
         """更新角色"""
         role = role_crud.get(db, id=role_id)
         if not role:
-            raise ValueError("角色不存在")
+            raise ResourceNotFoundError("角色", role_id)
 
         if role.is_system_role:
             # System roles typically have restrictions, but let's allow updating non-critical fields if needed.
@@ -80,12 +86,18 @@ class RBACService:
             return False
 
         if role.is_system_role:
-            raise ValueError("系统角色不能删除")
+            raise OperationNotAllowedError(
+                "系统角色不能删除",
+                reason="system_role",
+            )
 
         # Check usage
         user_count = user_role_assignment_crud.count_by_role(db, role_id=role_id)
         if user_count > 0:
-            raise ValueError(f"角色正在被 {user_count} 个用户使用，无法删除")
+            raise OperationNotAllowedError(
+                f"角色正在被 {user_count} 个用户使用，无法删除",
+                reason="role_in_use",
+            )
 
         # Use remove instead of delete (CRUDBase has remove, not delete)
         try:
@@ -100,11 +112,14 @@ class RBACService:
         """更新角色权限"""
         role = role_crud.get(db, id=role_id)
         if not role:
-            raise ValueError("角色不存在")
+            raise ResourceNotFoundError("角色", role_id)
 
         if role.is_system_role:
             # Depends on policy. Let's assume system roles' permissions are fixed in code/migration.
-            raise ValueError("系统角色权限无法修改")
+            raise OperationNotAllowedError(
+                "系统角色权限无法修改",
+                reason="system_role",
+            )
 
         # Clear existing
         role.permissions.clear()
@@ -140,7 +155,10 @@ class RBACService:
                 db.commit()
                 return existing
             else:
-                raise ValueError("用户已分配此角色")
+                raise ResourceConflictError(
+                    "用户已分配此角色",
+                    resource_type="user_role_assignment",
+                )
 
         return user_role_assignment_crud.create(
             db, obj_in=obj_in, assigned_by=assigned_by

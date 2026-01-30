@@ -11,6 +11,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ....core.exception_handler import (
+    BusinessValidationError,
+    ConfigurationError,
+    ResourceNotFoundError,
+)
 from ....models.llm_prompt import PromptTemplate
 from ....services.llm_prompt.prompt_manager import PromptManager
 from ...core.qwen_vision_service import get_qwen_vision_service
@@ -99,18 +104,21 @@ class PropertyCertAdapter(BaseVisionAdapter):
         # If explicit prompt provided, validate it
         if prompt:
             if not isinstance(prompt, PromptTemplate):
-                raise ValueError("prompt must be a PromptTemplate instance")
+                raise BusinessValidationError(
+                    "prompt must be a PromptTemplate instance",
+                    field_errors={"prompt": ["invalid_type"]},
+                )
             logger.info(f"Using provided prompt: {prompt.name} (v{prompt.version})")
         # Otherwise, get from database via PromptManager
         else:
             if not self.prompt_manager:
-                raise ValueError(
+                raise ConfigurationError(
                     "PromptManager not initialized - pass db to constructor or provide explicit prompt"
                 )
             # Need db session for PromptManager
             db = kwargs.get("db")
             if not db:
-                raise ValueError(
+                raise ConfigurationError(
                     "db session required for PromptManager - pass via kwargs or constructor"
                 )
 
@@ -121,9 +129,10 @@ class PropertyCertAdapter(BaseVisionAdapter):
             )
 
             if not prompt:
-                raise ValueError(
-                    f"No active prompt found for PROPERTY_CERT with provider qwen. "
-                    f"Please ensure prompts are initialized (certificate_type={certificate_type})"
+                raise ResourceNotFoundError(
+                    "Prompt",
+                    f"PROPERTY_CERT/{certificate_type or 'real_estate'}",
+                    details={"provider": "qwen", "doc_type": "PROPERTY_CERT"},
                 )
 
             logger.info(

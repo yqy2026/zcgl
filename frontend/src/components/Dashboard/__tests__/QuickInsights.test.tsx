@@ -6,9 +6,45 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface CardMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  loading?: boolean;
+  className?: string;
+  variant?: string;
+  size?: string;
+}
+
+interface RowMockProps {
+  children?: React.ReactNode;
+  gutter?: unknown;
+}
+
+interface ColMockProps {
+  children?: React.ReactNode;
+  xs?: unknown;
+  sm?: unknown;
+  lg?: unknown;
+}
+
+interface TitleMockProps {
+  children?: React.ReactNode;
+  level?: number;
+  className?: string;
+}
+
+interface TextMockProps {
+  children?: React.ReactNode;
+  type?: string;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, title, loading, className, variant, size }: any) => (
+  Card: ({ children, title, loading, className, variant, size }: CardMockProps) => (
     <div
       data-testid="card"
       data-title={title}
@@ -20,29 +56,29 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Row: ({ children, gutter }: any) => (
+  Row: ({ children, gutter }: RowMockProps) => (
     <div data-testid="row" data-gutter={JSON.stringify(gutter)}>
       {children}
     </div>
   ),
-  Col: ({ children, xs, sm, lg }: any) => (
+  Col: ({ children, xs, sm, lg }: ColMockProps) => (
     <div data-testid="col" data-xs={xs} data-sm={sm} data-lg={lg}>
       {children}
     </div>
   ),
   Typography: {
-    Title: ({ children, level, className }: any) => (
+    Title: ({ children, level, className }: TitleMockProps) => (
       <div data-testid="title" data-level={level} className={className}>
         {children}
       </div>
     ),
-    Text: ({ children, type }: any) => (
+    Text: ({ children, type }: TextMockProps) => (
       <div data-testid="text" data-type={type}>
         {children}
       </div>
     ),
   },
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
 }));
 
 // Mock icons

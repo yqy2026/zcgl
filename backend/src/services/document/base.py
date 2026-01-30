@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 
 class ExtractionMethod(str, Enum):
@@ -113,15 +114,21 @@ class ExtractionResult(BaseModel):
         """
         if self.success:
             if self.error is not None:
-                raise ValueError(
-                    f"success=True 时 error 必须为 None，当前值: '{self.error}'"
+                raise PydanticCustomError(
+                    "success_error_mismatch",
+                    "success=True 时 error 必须为 None，当前值: '{error}'",
+                    {"error": self.error},
                 )
             if not self.extracted_fields and self.status != ExtractionStatus.SKIPPED:
                 # 允许空字段在跳过状态下，但成功时应该有数据
-                pass  # 可以改为强制要求：raise ValueError("success=True 时 extracted_fields 不能为空")
+                pass  # 可以改为强制要求：raise PydanticCustomError("missing_extracted_fields", "success=True 时 extracted_fields 不能为空", {})
         else:
             if self.error is None:
-                raise ValueError("success=False 时必须提供 error 信息")
+                raise PydanticCustomError(
+                    "missing_error",
+                    "success=False 时必须提供 error 信息",
+                    {},
+                )
             # 根据错误自动设置状态
             if self.status == ExtractionStatus.SUCCESS:
                 self.status = ExtractionStatus.FAILED

@@ -7,6 +7,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface SiderMockProps {
+  children?: React.ReactNode;
+  collapsed?: boolean;
+  width?: number | string;
+  style?: React.CSSProperties;
+}
+
+interface MenuItemMock {
+  key: string;
+  label?: React.ReactNode;
+}
+
+interface MenuMockProps {
+  selectedKeys?: string[];
+  defaultOpenKeys?: string[];
+  items?: MenuItemMock[];
+  onClick?: () => void;
+  mode?: string;
+  theme?: string;
+  style?: React.CSSProperties;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  strong?: boolean;
+  style?: React.CSSProperties;
+}
+
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({
@@ -18,13 +46,21 @@ vi.mock('react-router-dom', () => ({
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Layout: {
-    Sider: ({ children, collapsed, width, style }: any) => (
+    Sider: ({ children, collapsed, width, style }: SiderMockProps) => (
       <div data-testid="sider" data-collapsed={collapsed} data-width={width} style={style}>
         {children}
       </div>
     ),
   },
-  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode, theme, style }: any) => (
+  Menu: ({
+    selectedKeys,
+    defaultOpenKeys,
+    items,
+    onClick,
+    mode,
+    theme,
+    style,
+  }: MenuMockProps) => (
     <div
       data-testid="menu"
       data-selected-keys={JSON.stringify(selectedKeys)}
@@ -36,7 +72,7 @@ vi.mock('antd', () => ({
       style={style}
     >
       {items &&
-        items.map((item: any, index: number) => (
+        items.map((item, index) => (
           <div key={index} data-menu-key={item.key}>
             {item.label}
           </div>
@@ -44,7 +80,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Typography: {
-    Text: ({ children, strong, style }: any) => (
+    Text: ({ children, strong, style }: TypographyTextMockProps) => (
       <span data-testid="text" data-strong={strong} style={style}>
         {children}
       </span>
@@ -302,13 +338,13 @@ describe('AppSidebar - 边界情况测试', () => {
 
   it('应该处理undefined collapsed', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: undefined as any });
+    const element = React.createElement(AppSidebar, { collapsed: undefined });
     expect(element).toBeTruthy();
   });
 
   it('应该处理null collapsed', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: null as any });
+    const element = React.createElement(AppSidebar, { collapsed: null });
     expect(element).toBeTruthy();
   });
 });

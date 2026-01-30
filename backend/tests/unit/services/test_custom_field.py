@@ -1,7 +1,6 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import AssetCustomField
 from src.schemas.asset import AssetCustomFieldCreate
@@ -10,9 +9,6 @@ from src.services.custom_field.service import CustomFieldService
 TEST_FIELD_ID = "field_123"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

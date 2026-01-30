@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from ..models.auth import UserRole
 
@@ -24,7 +25,11 @@ class UserBase(BaseModel):
     def validate_username(cls, v: str) -> str:
         """验证用户名格式"""
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError("用户名只能包含字母、数字、下划线和连字符")
+            raise PydanticCustomError(
+                "invalid_username",
+                "用户名只能包含字母、数字、下划线和连字符",
+                {},
+            )
         return v
 
     @field_validator("full_name")
@@ -32,7 +37,7 @@ class UserBase(BaseModel):
     def validate_full_name(cls, v: str) -> str:
         """验证姓名格式"""
         if not v.strip():
-            raise ValueError("姓名不能为空")
+            raise PydanticCustomError("empty_full_name", "姓名不能为空", {})
         return v.strip()
 
 
@@ -49,7 +54,7 @@ class UserCreate(UserBase):
     def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
-            raise ValueError("密码长度至少8位")
+            raise PydanticCustomError("password_too_short", "密码长度至少8位", {})
 
         has_upper = any(c.isupper() for c in v)
         has_lower = any(c.islower() for c in v)
@@ -57,10 +62,18 @@ class UserCreate(UserBase):
         has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
 
         if not (has_upper and has_lower and has_digit):
-            raise ValueError("密码必须包含大写字母、小写字母和数字")
+            raise PydanticCustomError(
+                "password_missing_complexity",
+                "密码必须包含大写字母、小写字母和数字",
+                {},
+            )
 
         if not has_special:
-            raise ValueError("密码必须包含至少一个特殊字符")
+            raise PydanticCustomError(
+                "password_missing_special",
+                "密码必须包含至少一个特殊字符",
+                {},
+            )
 
         return v
 
@@ -213,7 +226,7 @@ class PasswordChangeRequest(BaseModel):
     def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
-            raise ValueError("密码长度至少8位")
+            raise PydanticCustomError("password_too_short", "密码长度至少8位", {})
 
         has_upper = any(c.isupper() for c in v)
         has_lower = any(c.islower() for c in v)
@@ -221,10 +234,18 @@ class PasswordChangeRequest(BaseModel):
         has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
 
         if not (has_upper and has_lower and has_digit):
-            raise ValueError("密码必须包含大写字母、小写字母和数字")
+            raise PydanticCustomError(
+                "password_missing_complexity",
+                "密码必须包含大写字母、小写字母和数字",
+                {},
+            )
 
         if not has_special:
-            raise ValueError("密码必须包含至少一个特殊字符")
+            raise PydanticCustomError(
+                "password_missing_special",
+                "密码必须包含至少一个特殊字符",
+                {},
+            )
 
         return v
 
@@ -293,6 +314,41 @@ class PasswordResetRequest(BaseModel):
     email: EmailStr = Field(..., description="邮箱地址")
 
 
+class AdminPasswordResetRequest(BaseModel):
+    """管理员重置用户密码请求模型"""
+
+    new_password: str = Field(..., min_length=8, max_length=128, description="新密码")
+    reason: str | None = Field(None, description="重置原因")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """验证密码强度"""
+        if len(v) < 8:
+            raise PydanticCustomError("password_too_short", "密码长度至少8位", {})
+
+        has_upper = any(c.isupper() for c in v)
+        has_lower = any(c.islower() for c in v)
+        has_digit = any(c.isdigit() for c in v)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
+
+        if not (has_upper and has_lower and has_digit):
+            raise PydanticCustomError(
+                "password_missing_complexity",
+                "密码必须包含大写字母、小写字母和数字",
+                {},
+            )
+
+        if not has_special:
+            raise PydanticCustomError(
+                "password_missing_special",
+                "密码必须包含至少一个特殊字符",
+                {},
+            )
+
+        return v
+
+
 class PasswordResetConfirm(BaseModel):
     """密码重置确认模型"""
 
@@ -304,7 +360,7 @@ class PasswordResetConfirm(BaseModel):
     def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
-            raise ValueError("密码长度至少8位")
+            raise PydanticCustomError("password_too_short", "密码长度至少8位", {})
 
         has_upper = any(c.isupper() for c in v)
         has_lower = any(c.islower() for c in v)
@@ -312,9 +368,17 @@ class PasswordResetConfirm(BaseModel):
         has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
 
         if not (has_upper and has_lower and has_digit):
-            raise ValueError("密码必须包含大写字母、小写字母和数字")
+            raise PydanticCustomError(
+                "password_missing_complexity",
+                "密码必须包含大写字母、小写字母和数字",
+                {},
+            )
 
         if not has_special:
-            raise ValueError("密码必须包含至少一个特殊字符")
+            raise PydanticCustomError(
+                "password_missing_special",
+                "密码必须包含至少一个特殊字符",
+                {},
+            )
 
         return v

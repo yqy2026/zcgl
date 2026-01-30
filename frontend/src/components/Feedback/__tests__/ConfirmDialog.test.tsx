@@ -7,6 +7,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface ModalOkButtonPropsMock {
+  danger?: boolean;
+}
+
+interface ModalMockProps {
+  title?: React.ReactNode;
+  open?: boolean;
+  onOk?: () => void;
+  onCancel?: () => void;
+  okText?: React.ReactNode;
+  cancelText?: React.ReactNode;
+  children?: React.ReactNode;
+  okButtonProps?: ModalOkButtonPropsMock;
+  width?: number | string;
+  centered?: boolean;
+  maskClosable?: boolean;
+  confirmLoading?: boolean;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  type?: string;
+  strong?: boolean;
+}
+
+interface TypographyParagraphMockProps {
+  children?: React.ReactNode;
+  type?: string;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  onClick?: () => void;
+}
+
+interface IconMockProps {
+  style?: React.CSSProperties;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Modal: ({
@@ -22,7 +67,7 @@ vi.mock('antd', () => ({
     centered,
     maskClosable,
     confirmLoading,
-  }: any) => (
+  }: ModalMockProps) => (
     <div
       data-testid="modal"
       data-open={open}
@@ -42,19 +87,19 @@ vi.mock('antd', () => ({
     </div>
   ),
   Typography: {
-    Text: ({ children, type, strong }: any) => (
+    Text: ({ children, type, strong }: TypographyTextMockProps) => (
       <span data-testid="text" data-type={type} data-strong={strong}>
         {children}
       </span>
     ),
-    Paragraph: ({ children, type }: any) => (
+    Paragraph: ({ children, type }: TypographyParagraphMockProps) => (
       <p data-testid="paragraph" data-type={type}>
         {children}
       </p>
     ),
   },
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-  Button: ({ children, icon, type, onClick }: any) => (
+  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
+  Button: ({ children, icon, type, onClick }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} onClick={onClick}>
       {icon && <span data-testid="button-icon">{icon}</span>}
       {children}
@@ -63,16 +108,18 @@ vi.mock('antd', () => ({
 }));
 
 vi.mock('@ant-design/icons', () => ({
-  ExclamationCircleOutlined: ({ style }: any) => (
+  ExclamationCircleOutlined: ({ style }: IconMockProps) => (
     <div data-testid="icon-exclamation" style={style} />
   ),
-  DeleteOutlined: ({ style }: any) => <div data-testid="icon-delete" style={style} />,
-  EditOutlined: ({ style }: any) => <div data-testid="icon-edit" style={style} />,
-  SaveOutlined: ({ style }: any) => <div data-testid="icon-save" style={style} />,
-  LogoutOutlined: ({ style }: any) => <div data-testid="icon-logout" style={style} />,
-  StopOutlined: ({ style }: any) => <div data-testid="icon-stop" style={style} />,
-  QuestionCircleOutlined: ({ style }: any) => <div data-testid="icon-question" style={style} />,
-  InfoCircleOutlined: ({ style }: any) => <div data-testid="icon-info" style={style} />,
+  DeleteOutlined: ({ style }: IconMockProps) => <div data-testid="icon-delete" style={style} />,
+  EditOutlined: ({ style }: IconMockProps) => <div data-testid="icon-edit" style={style} />,
+  SaveOutlined: ({ style }: IconMockProps) => <div data-testid="icon-save" style={style} />,
+  LogoutOutlined: ({ style }: IconMockProps) => <div data-testid="icon-logout" style={style} />,
+  StopOutlined: ({ style }: IconMockProps) => <div data-testid="icon-stop" style={style} />,
+  QuestionCircleOutlined: ({ style }: IconMockProps) => (
+    <div data-testid="icon-question" style={style} />
+  ),
+  InfoCircleOutlined: ({ style }: IconMockProps) => <div data-testid="icon-info" style={style} />,
 }));
 
 describe('ConfirmDialog - 组件导入测试', () => {

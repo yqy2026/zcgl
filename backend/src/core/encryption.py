@@ -5,7 +5,7 @@
 - AES-256-CBC 确定性加密（可搜索字段）- 从密钥派生固定IV实现确定性
 - AES-256-GCM 标准加密（非搜索字段）
 - 密钥版本管理（支持未来密钥轮换）
-- 优雅降级（密钥缺失时禁用加密）
+- 环境感知降级（生产环境可强制要求密钥）
 
 安全设计：
 - 密钥通过环境变量 DATA_ENCRYPTION_KEY 提供
@@ -13,17 +13,20 @@
 - 密文格式:
   - 确定性: enc:v{version}:base64(ciphertext)
   - 标准: enc:v{version}:base64(nonce):base64(ciphertext)
+- 生产环境强制要求密钥（REQUIRE_ENCRYPTION=true 时）
 """
 
 import base64
 import logging
 import secrets
+from typing import Any
 
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from ..core.config import settings
+from ..core.environment import get_environment, is_production
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +50,14 @@ class EncryptionKeyManager:
     - 从环境变量加载 DATA_ENCRYPTION_KEY
     - 验证密钥长度（必须 >= 32 字节）
     - 提取密钥版本号
-    - 支持优雅降级（密钥缺失时不崩溃）
+    - 环境感知降级（生产环境可强制要求密钥）
     """
 
     def __init__(self) -> None:
         """初始化密钥管理器，从环境加载密钥"""
         self.key: bytes | None = None
         self.version: int = 1
+        self._environment: str = get_environment().value
         self._load_key_from_env()
 
     def _load_key_from_env(self) -> None:
@@ -62,13 +66,30 @@ class EncryptionKeyManager:
 
         密钥格式: {base64_key}:{version}
         示例: MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz:1
+
+        生产环境行为：
+        - 若 REQUIRE_ENCRYPTION=true（默认）且无密钥，抛出 RuntimeError
+        - 若 REQUIRE_ENCRYPTION=false，仅记录警告
         """
         env_key = settings.DATA_ENCRYPTION_KEY
+        require_encryption = getattr(settings, "REQUIRE_ENCRYPTION", None)
+
+        # 默认：生产环境强制要求，非生产环境不强制
+        if require_encryption is None:
+            require_encryption = is_production()
 
         if not env_key:
+            if require_encryption:
+                raise RuntimeError(
+                    "CRITICAL: DATA_ENCRYPTION_KEY is required but not set. "
+                    "PII data cannot be stored securely without encryption. "
+                    "Generate a key with: python -m backend.src.core.encryption "
+                    "Or set REQUIRE_ENCRYPTION=false to disable this check (NOT recommended for production)."
+                )
             logger.warning(
                 "DATA_ENCRYPTION_KEY not set - PII encryption disabled. "
-                "Data will be stored in plaintext."
+                "Data will be stored in plaintext. "
+                "This is acceptable for development but NOT for production."
             )
             return
 
@@ -194,7 +215,12 @@ class FieldEncryptor:
 
         key = self.key_manager.get_key()
         if key is None:
-            return None
+            # 开发环境：返回原值而非 None，防止数据丢失
+            logger.warning(
+                "DATA_ENCRYPTION_KEY not configured, storing plaintext. "
+                "This is acceptable for development only."
+            )
+            return plaintext
 
         try:
             # 使用 AES-256-CBC
@@ -309,7 +335,12 @@ class FieldEncryptor:
 
         key = self.key_manager.get_key()
         if key is None:
-            return None
+            # 开发环境：返回原值而非 None，防止数据丢失
+            logger.warning(
+                "DATA_ENCRYPTION_KEY not configured, storing plaintext. "
+                "This is acceptable for development only."
+            )
+            return plaintext
 
         try:
             # 使用 AES-256-GCM（带认证的加密）
@@ -408,6 +439,39 @@ class FieldEncryptor:
         if value is None:
             return False
         return value.startswith(FieldEncryptor.ENCRYPTION_PREFIX)
+
+
+# ============================================================================
+# 状态查询函数
+# ============================================================================
+def get_encryption_status() -> dict[str, Any]:
+    """
+    获取加密服务状态
+
+    Returns:
+        包含加密状态信息的字典：
+        - enabled: 加密是否可用
+        - key_version: 密钥版本号（无密钥时为 None）
+        - algorithms: 支持的加密算法列表
+        - environment: 当前运行环境
+        - warning: 警告信息（如有）
+    """
+    key_manager = EncryptionKeyManager()
+    status: dict[str, Any] = {
+        "enabled": key_manager.is_available(),
+        "key_version": key_manager.get_version() if key_manager.is_available() else None,
+        "algorithms": ["AES-256-GCM", "AES-256-CBC"],
+        "environment": key_manager._environment,
+        "warning": None,
+    }
+
+    if not key_manager.is_available():
+        status["warning"] = (
+            "Encryption is disabled. PII data will be stored in plaintext. "
+            "Set DATA_ENCRYPTION_KEY to enable encryption."
+        )
+
+    return status
 
 
 # ============================================================================

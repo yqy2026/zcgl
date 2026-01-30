@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -37,9 +38,14 @@ class BatchOperationResult(BaseModel):
     def validate_counts(self) -> "BatchOperationResult":
         """验证计数一致性：success + failed 不能超过 total"""
         if self.success_count + self.failed_count > self.total_count:
-            raise ValueError(
-                f"success_count({self.success_count}) + failed_count({self.failed_count}) "
-                f"cannot exceed total_count({self.total_count})"
+            raise PydanticCustomError(
+                "count_mismatch",
+                "success_count({success}) + failed_count({failed}) cannot exceed total_count({total})",
+                {
+                    "success": self.success_count,
+                    "failed": self.failed_count,
+                    "total": self.total_count,
+                },
             )
         return self
 

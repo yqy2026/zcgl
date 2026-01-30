@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Select, Button, Modal, Space, Tooltip } from 'antd';
+import type { SelectProps } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import { MessageManager } from '@/utils/messageManager';
 import { PlusOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useProjectOptions } from '@/hooks/useProject';
-import type { Project } from '@/types/project';
+import type { Project, ProjectDropdownOption } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
 
 interface ProjectSelectProps {
   value?: string;
-  onChange?: (value: string, project?: Project) => void;
+  onChange?: (value: string, project?: Project | ProjectDropdownOption) => void;
   placeholder?: string;
   disabled?: boolean;
   allowClear?: boolean;
@@ -16,6 +18,13 @@ interface ProjectSelectProps {
   size?: 'large' | 'middle' | 'small';
   showCreateButton?: boolean;
   onlyActive?: boolean;
+}
+
+interface ProjectOption extends Omit<DefaultOptionType, 'label' | 'title' | 'value'> {
+  label: React.ReactNode;
+  value: string;
+  realValue: string;
+  title?: string;
 }
 
 const ProjectSelect: React.FC<ProjectSelectProps> = ({
@@ -71,26 +80,32 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   }, [value, allProjects, displayValue]);
 
   // 处理选择
-  const handleChange = (
-    selectedValue: string,
-    option: {
-      value: string;
-      realValue?: string;
-      label?: React.ReactNode;
-      title?: React.ReactNode;
-    }
+  const handleChange: SelectProps<string, ProjectOption>['onChange'] = (
+    selectedValue,
+    option
   ) => {
-    // 从option中获取真实的项目ID
-    const realValue = option?.realValue ?? option?.value;
+    if (selectedValue == null) {
+      setDisplayValue('');
+      onChange?.('');
+      return;
+    }
+
+    const resolvedOption = Array.isArray(option) ? option[0] : option;
+    const realValue = resolvedOption?.realValue ?? resolvedOption?.value;
     const selected = filteredProjects.find(p => p.id === realValue);
 
     if (selected != null) {
       setDisplayValue(selectedValue);
-      onChange?.(selected.id, selected as any);
+      onChange?.(selected.id, selected);
     } else {
       setDisplayValue(selectedValue);
       onChange?.(selectedValue);
     }
+  };
+
+  const filterOption: SelectProps<string, ProjectOption>['filterOption'] = (input, option) => {
+    const labelText = option?.title ?? (typeof option?.label === 'string' ? option.label : '');
+    return labelText.toLowerCase().includes(input.toLowerCase());
   };
 
   // 处理清除
@@ -130,9 +145,9 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   return (
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
-        <Select
+        <Select<string, ProjectOption>
           value={displayValue || undefined}
-          onChange={handleChange as any}
+          onChange={handleChange}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -141,31 +156,17 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           style={{ flex: 1 }}
           loading={loading}
           showSearch
-          filterOption={(input, option) =>
-            String((option?.children as any) ?? '')
-              .toLowerCase()
-              .includes(input.toLowerCase()) ||
-            String((option?.label as any) ?? '')
-              .toLowerCase()
-              .includes(input.toLowerCase())
-          }
+          filterOption={filterOption}
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="label"
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
-          options={
-            filteredProjects.map(project => ({
-              label:
-                project.short_name != null
-                  ? `${project.name} (${project.short_name})`
-                  : project.name,
-              value:
-                project.short_name != null
-                  ? `${project.name} (${project.short_name})`
-                  : project.name,
-              // 存储真实的项目ID用于内部处理
-              realValue: project.id,
-              // 保留完整信息用于下拉显示
-              title: (
+          options={filteredProjects.map(project => {
+            const nameLabel =
+              project.short_name != null
+                ? `${project.name} (${project.short_name})`
+                : project.name;
+            return {
+              label: (
                 <Space>
                   <span>{project.name}</span>
                   {project.short_name != null && (
@@ -174,8 +175,11 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
                   <span style={{ color: '#666', fontSize: '12px' }}>[{project.code}]</span>
                 </Space>
               ),
-            })) as any
-          }
+              value: nameLabel,
+              realValue: project.id,
+              title: `${nameLabel} [${project.code}]`,
+            };
+          })}
         />
 
         <Tooltip title="从列表中选择">

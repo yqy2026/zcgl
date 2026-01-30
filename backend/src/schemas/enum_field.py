@@ -7,6 +7,7 @@ from typing import Any
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class EnumFieldTypeBase(BaseModel):
@@ -31,8 +32,10 @@ class EnumFieldTypeBase(BaseModel):
     def validate_status(cls, v: str) -> str:
         allowed_statuses = ["active", "inactive"]  # pragma: no cover
         if v not in allowed_statuses:  # pragma: no cover
-            raise ValueError(
-                f"status must be one of {allowed_statuses}"
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_status",
+                f"status must be one of {allowed_statuses}",
+                {},
             )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -43,8 +46,10 @@ class EnumFieldTypeBase(BaseModel):
         import re  # pragma: no cover
 
         if not re.match(r"^[a-zA-Z0-9_]+$", v):  # pragma: no cover
-            raise ValueError(
-                "code can only contain letters, numbers and underscores"
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_code",
+                "code can only contain letters, numbers and underscores",
+                {},
             )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -83,8 +88,10 @@ class EnumFieldTypeUpdate(BaseModel):
         if v is not None:  # pragma: no cover
             allowed_statuses = ["active", "inactive"]  # pragma: no cover
             if v not in allowed_statuses:  # pragma: no cover
-                raise ValueError(
-                    f"status must be one of {allowed_statuses}"
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_status",
+                    f"status must be one of {allowed_statuses}",
+                    {},
                 )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -95,8 +102,10 @@ class EnumFieldTypeUpdate(BaseModel):
             import re  # pragma: no cover
 
             if not re.match(r"^[a-zA-Z0-9_]+$", v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "code can only contain letters, numbers and underscores"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_code",
+                    "code can only contain letters, numbers and underscores",
+                    {},
                 )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -130,8 +139,10 @@ class EnumFieldValueBase(BaseModel):
             import re  # pragma: no cover
 
             if not re.match(r"^[a-zA-Z0-9_]+$", v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "code can only contain letters, numbers and underscores"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_code",
+                    "code can only contain letters, numbers and underscores",
+                    {},
                 )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -143,8 +154,10 @@ class EnumFieldValueBase(BaseModel):
             import re  # pragma: no cover
 
             if not re.match(r"^#[0-9A-Fa-f]{6}$", v):  # pragma: no cover
-                raise ValueError(
-                    "color must be in hex format (#RRGGBB)"
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_color",
+                    "color must be in hex format (#RRGGBB)",
+                    {},
                 )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -185,8 +198,10 @@ class EnumFieldValueUpdate(BaseModel):
             import re  # pragma: no cover
 
             if not re.match(r"^#[0-9A-Fa-f]{6}$", v):  # pragma: no cover
-                raise ValueError(
-                    "color must be in hex format (#RRGGBB)"
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_color",
+                    "color must be in hex format (#RRGGBB)",
+                    {},
                 )  # pragma: no cover
         return v  # pragma: no cover
 

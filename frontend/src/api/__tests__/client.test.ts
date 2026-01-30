@@ -3,6 +3,7 @@
  * 测试API客户端的核心功能（简化版本，不依赖MSW）
  */
 
+import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
@@ -97,7 +98,12 @@ describe('MemoryCache', () => {
         },
       });
 
-      const cache = cacheClient['cache'] as any;
+      // 访问私有属性用于测试缓存行为
+      const cache = cacheClient['cache'] as unknown as {
+        set: (key: string, data: unknown, ttl: number) => void;
+        get: (key: string) => unknown;
+        size: () => number;
+      };
 
       // 添加4个条目（超过最大容量3）
       cache.set('key1', { data: 'test1' }, 5000);
@@ -273,6 +279,11 @@ describe('URL Validation', () => {
   const basePath = normalizedBaseUrl.endsWith('/')
     ? normalizedBaseUrl.slice(0, -1)
     : normalizedBaseUrl;
+  const buildRequestConfig = (url: string): InternalAxiosRequestConfig => ({
+    url,
+    method: 'get',
+    headers: new AxiosHeaders(),
+  });
 
   beforeEach(() => {
     console.warn = vi.fn();
@@ -289,30 +300,33 @@ describe('URL Validation', () => {
 
   it('should not warn for URLs starting with base path', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: `${basePath}/auth/login` });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig(`${basePath}/auth/login`));
 
     expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('should not warn for URLs starting with /auth (legacy)', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: '/auth/login' });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig('/auth/login'));
 
     expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('should warn for URLs without base path prefix', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: '/users' });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig('/users'));
 
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining(`[API Client] URL does not use ${basePath} prefix: /users`)
@@ -321,10 +335,11 @@ describe('URL Validation', () => {
 
   it('should warn for URLs without base path prefix (with nested path)', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: '/assets/list' });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig('/assets/list'));
 
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -335,20 +350,22 @@ describe('URL Validation', () => {
 
   it('should not validate relative URLs (not starting with /)', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: 'relative-path' });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig('relative-path'));
 
     expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('should not validate URLs without / prefix (full URLs)', () => {
     const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0];
-
-    // @ts-expect-error - testing internal interceptor
-    requestInterceptor.fulfilled({ url: 'https://api.example.com/data' });
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+    requestInterceptor(buildRequestConfig('https://api.example.com/data'));
 
     expect(console.warn).not.toHaveBeenCalled();
   });

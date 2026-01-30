@@ -7,12 +7,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface LinkMockProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+  to: string;
+  children?: React.ReactNode;
+}
+
+interface BreadcrumbItem {
+  title?: React.ReactNode;
+}
+
+interface BreadcrumbMockProps {
+  items?: BreadcrumbItem[];
+  style?: React.CSSProperties;
+}
+
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({
     pathname: '/dashboard',
   }),
-  Link: ({ children, to, ...props }: any) => (
+  Link: ({ children, to, ...props }: LinkMockProps) => (
     <a href={to} data-link-to={to} {...props}>
       {children}
     </a>
@@ -21,10 +35,10 @@ vi.mock('react-router-dom', () => ({
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Breadcrumb: ({ items, style }: any) => (
+  Breadcrumb: ({ items, style }: BreadcrumbMockProps) => (
     <div data-testid="breadcrumb" data-items-count={items?.length ?? 0} style={style}>
       {items &&
-        items.map((item: any, index: number) => (
+        items.map((item, index) => (
           <div key={index} data-breadcrumb-item={index}>
             {item.title}
           </div>

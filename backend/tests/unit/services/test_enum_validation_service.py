@@ -6,7 +6,6 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.enum_field import EnumFieldType
 from src.services.enum_validation_service import (
@@ -17,14 +16,9 @@ from src.services.enum_validation_service import (
     validate_enum_value,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

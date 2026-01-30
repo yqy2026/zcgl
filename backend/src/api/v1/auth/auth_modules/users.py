@@ -26,9 +26,15 @@ logger = logging.getLogger(__name__)
 from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_db
 from .....exceptions import BusinessLogicError
-from .....middleware.auth import get_current_active_user, require_admin
+from .....middleware.auth import (
+    get_current_active_user,
+    require_admin,
+    safe_role_compare,
+)
 from .....middleware.security_middleware import get_client_ip
+from .....models.auth import UserRole
 from .....schemas.auth import (
+    AdminPasswordResetRequest,
     PasswordChangeRequest,
     UserCreate,
     UserResponse,
@@ -122,7 +128,9 @@ async def get_user(
     user_crud = UserCRUD()
 
     # 权限检查
-    if current_user.role != "admin" and current_user.id != user_id:
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
         raise forbidden("无权访问该用户信息")
 
     user = user_crud.get(db, user_id)
@@ -149,7 +157,9 @@ async def update_user(
     user_crud = UserCRUD()
 
     # 权限检查
-    if current_user.role != "admin" and current_user.id != user_id:
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
         raise forbidden("无权修改该用户信息")
 
     try:
@@ -180,7 +190,9 @@ async def change_password(
     user_crud = UserCRUD()
 
     # 权限检查
-    if current_user.role != "admin" and current_user.id != user_id:
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
         raise forbidden("无权修改该用户密码")
 
     user = user_crud.get(db, user_id)
@@ -201,19 +213,7 @@ async def change_password(
         raise bad_request(str(e))
 
 
-@router.post("/{user_id}/deactivate", summary="停用用户")
-@router.delete("/{user_id}", summary="删除用户")
-async def deactivate_user(
-    user_id: str,
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_admin),
-) -> dict[str, str]:
-    """
-    停用用户（仅管理员）
-
-    - 软删除用户
-    - 撤销所有会话
-    """
+def _deactivate_user(user_id: str, db: Session) -> dict[str, str]:
     user_crud = UserCRUD()
 
     user = user_crud.get(db, str(user_id))
@@ -225,6 +225,36 @@ async def deactivate_user(
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     return {"message": "用户已停用"}
+
+
+@router.post("/{user_id}/deactivate", summary="停用用户")
+async def deactivate_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+) -> dict[str, str]:
+    """
+    停用用户（仅管理员）
+
+    - 软删除用户
+    - 撤销所有会话
+    """
+    return _deactivate_user(user_id=user_id, db=db)
+
+
+@router.delete("/{user_id}", summary="删除用户")
+async def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+) -> dict[str, str]:
+    """
+    删除用户（仅管理员）
+
+    - 软删除用户
+    - 撤销所有会话
+    """
+    return _deactivate_user(user_id=user_id, db=db)
 
 
 @router.post("/{user_id}/activate", summary="激活用户")
@@ -345,7 +375,7 @@ async def unlock_user_account(
 @router.post("/{user_id}/reset-password", summary="重置用户密码")
 async def reset_user_password(
     user_id: str,
-    password_data: dict[str, Any],
+    password_data: AdminPasswordResetRequest,
     request: Request,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -356,20 +386,8 @@ async def reset_user_password(
     - 不需要验证当前密码
     - 适用于用户忘记密码等情况
     """
-    from pydantic import BaseModel
-
-    class PasswordResetRequest(BaseModel):
-        new_password: str
-        reason: str | None = None
-
     try:
-        # 解析请求体
-        import json
-
-        if isinstance(password_data, str):
-            password_data = json.loads(password_data)
-
-        reset_request = PasswordResetRequest(**password_data)
+        reset_request = password_data
 
         user_crud = UserCRUD()
         auth_service = AuthService(db)
@@ -423,26 +441,14 @@ async def get_user_statistics(
     获取用户相关统计数据（仅管理员）
     """
     try:
-        from sqlalchemy import func
+        from .....services.core.user_management_service import UserManagementService
 
-        from .....models.auth import User
-
-        total_users = db.query(func.count(User.id)).scalar()
-        active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()
-        locked_users = db.query(func.count(User.id)).filter(User.is_locked).scalar()
-        inactive_users = (
-            db.query(func.count(User.id)).filter(User.is_active.is_(False)).scalar()
-        )
+        user_service = UserManagementService(db)
+        stats = user_service.get_statistics()
 
         return {
             "success": True,
-            "data": {
-                "total_users": total_users,
-                "active_users": active_users,
-                "locked_users": locked_users,
-                "inactive_users": inactive_users,
-                "online_users": 0,  # 可根据会话表计算
-            },
+            "data": stats,
         }
     except Exception as e:
         raise internal_error(str(e))

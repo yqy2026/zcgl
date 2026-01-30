@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # 核心依赖 - 严格导入（开发/生产环境必须存在）
-from .core.config import get_config, initialize_config, settings
+from .core.config import settings, validate_config
 from .core.encoding_utils import safe_print, setup_utf8_encoding
 from .core.environment import (
     get_dependency_policy,
@@ -214,12 +214,10 @@ app = FastAPI(
 )
 
 # 初始化配置
-initialize_config()
+validate_config()
 
 # 设置CORS中间件
-cors_origins = get_config(
-    "cors_origins", ["http://localhost:5173", "http://localhost:5174"]
-)
+cors_origins = settings.CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -326,6 +324,20 @@ try:
     setup_logging_security()
 except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
+
+# ===== 调试路由（仅开发环境）=====
+from .security.route_guards import is_debug_mode
+
+if is_debug_mode():
+    try:
+        from .api.v1.debug import router as debug_router
+
+        app.include_router(debug_router, prefix="/api/v1")
+        logger.info("调试端点已加载 (DEBUG=true)")
+    except ImportError as e:
+        logger.warning(f"调试模块加载失败: {e}")
+else:
+    logger.info("调试端点未加载 (生产模式)")
 
 # 初始化数据库（跳过测试模式）
 if not is_testing():

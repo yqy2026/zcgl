@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
-from ..core.config import get_config
+from ..core.config import settings
 
 
 class SensitiveDataFilter(logging.Filter):
@@ -184,8 +184,8 @@ class SecurityAuditor:
     """安全审计器"""
 
     def __init__(self) -> None:
-        self.security_log_file = get_config("security_log_file", "logs/security.log")
-        self.enabled = get_config("security_logging_enabled", True)
+        self.security_log_file = "logs/security.log"
+        self.enabled = True
         self._setup_security_logger()
         self.sensitive_filter = SensitiveDataFilter()
 
@@ -231,8 +231,8 @@ class RequestLogger:
     """请求日志记录器"""
 
     def __init__(self) -> None:
-        self.log_file = get_config("request_log_file", "logs/request.log")
-        self.enabled = get_config("request_logging_enabled", True)
+        self.log_file = "logs/request.log"
+        self.enabled = True
         self._setup_logger()
         self.sensitive_filter = SensitiveDataFilter()
 
@@ -1314,9 +1314,7 @@ class StructuredSecurityLogger:
         self.logger.setLevel(logging.INFO)
 
         if not self.logger.handlers:
-            log_file = get_config(
-                "security_structured_log_file", "logs/security_structured.log"
-            )
+            log_file = "logs/security_structured.log"
             log_dir = Path(log_file).parent
             log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1347,7 +1345,7 @@ class AuditTrailLogger:
         self.logger.setLevel(logging.INFO)
 
         if not self.logger.handlers:
-            log_file = get_config("audit_log_file", "logs/audit.log")
+            log_file = "logs/audit.log"
             log_dir = Path(log_file).parent
             log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1424,8 +1422,8 @@ request_logger: RequestLogger = RequestLogger()
 
 def setup_logging_security() -> logging.Logger:
     """设置日志安全"""
-    log_level = get_config("log_level", "INFO")
-    log_file = get_config("log_file", "logs/app.log")
+    log_level = settings.LOG_LEVEL
+    log_file = settings.LOG_FILE or "logs/app.log"
 
     log_dir = Path(log_file).parent
     log_dir.mkdir(parents=True, exist_ok=True)

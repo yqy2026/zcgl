@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
 
 from src.models.asset import Asset
 from src.services.asset.batch_service import (
@@ -26,10 +25,6 @@ from src.services.asset.batch_service import (
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

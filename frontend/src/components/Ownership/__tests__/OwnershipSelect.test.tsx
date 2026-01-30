@@ -2,422 +2,511 @@
  * OwnershipSelect 组件测试
  *
  * 测试覆盖范围:
- * - 组件导入与导出
- * - 基本属性测试
- * - 下拉框渲染
- * - 数据加载
+ * - 组件基本渲染
+ * - 选择功能
  * - 搜索功能
  * - 多选模式
- * - 默认值设置
  * - 禁用状态
- * - 占位符显示
- * - 清除功能
- * - 空状态处理
- * - 加载状态
- * - 错误处理
- * - 选项显示
- * - 自定义选项渲染
- * - 分页加载
+ * - 按钮功能
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
-// Mock antd 组件
-vi.mock('antd', () => ({
-  Typography: ({ children }: any) => <span data-testid="typography">{children}</span>,
-  Text: ({ children }: any) => <span data-testid="text">{children}</span>,
-  Collapse: ({ children, accordion }: any) => (
-    <div data-testid="collapse" data-accordion={accordion}>
-      {children}
+// Mock useOwnership hook
+vi.mock('@/hooks/useOwnership', () => ({
+  useOwnershipOptions: vi.fn(() => ({
+    ownerships: [
+      {
+        id: '1',
+        name: '权属方1',
+        code: 'OWN-001',
+        short_name: '权属1',
+        is_active: true,
+      },
+      {
+        id: '2',
+        name: '权属方2',
+        code: 'OWN-002',
+        short_name: '权属2',
+        is_active: true,
+      },
+      {
+        id: '3',
+        name: '权属方3',
+        code: 'OWN-003',
+        short_name: null,
+        is_active: false,
+      },
+    ],
+    loading: false,
+    refresh: vi.fn(),
+  })),
+}));
+
+// Mock messageManager
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
+
+// Mock OwnershipList
+vi.mock('../OwnershipList', () => ({
+  default: ({
+    mode,
+    onSelectOwnership,
+  }: {
+    mode: string;
+    onSelectOwnership: (ownership: { id: string; name: string }) => void;
+  }) => (
+    <div data-testid="ownership-list" data-mode={mode}>
+      <button
+        data-testid="select-ownership-btn"
+        onClick={() => onSelectOwnership({ id: '1', name: '权属方1' })}
+      >
+        选择权属方1
+      </button>
     </div>
   ),
+}));
+
+// Mock Ant Design
+vi.mock('antd', () => ({
   Select: ({
     children,
     value,
     onChange,
     placeholder,
-    mode,
+    disabled,
     allowClear,
     loading,
-    disabled,
     showSearch,
     onSearch,
-    filterOption,
-    options,
-  }: any) => (
+    mode,
+    onClear,
+  }: {
+    children?: React.ReactNode;
+    value?: string | string[];
+    onChange?: (value: string | string[]) => void;
+    placeholder?: string;
+    disabled?: boolean;
+    allowClear?: boolean;
+    loading?: boolean;
+    showSearch?: boolean;
+    onSearch?: (value: string) => void;
+    mode?: string;
+    onClear?: () => void;
+  }) => (
     <div
       data-testid="select"
-      data-value={value}
+      data-value={Array.isArray(value) ? value.join(',') : value}
       data-placeholder={placeholder}
-      data-mode={mode}
+      data-disabled={disabled}
       data-allow-clear={allowClear}
       data-loading={loading}
-      data-disabled={disabled}
       data-show-search={showSearch}
-      data-has-options={!!options?.length}
-      onClick={() => {
-        if (onChange !== undefined && onChange !== null && mode === 'multiple') {
-          onChange(['test-id'], { key: 'test-id', label: '测试权属方' });
-        } else if (onChange !== undefined && onChange !== null) {
-          onChange('test-id', { key: 'test-id', label: '测试权属方' });
-        }
-      }}
+      data-mode={mode}
     >
-      {children}
-      {options?.map((opt: any, index: number) => (
-        <div key={index} data-option-value={opt.value}>
-          {opt.label}
-        </div>
-      ))}
-    </div>
-  ),
-  Input: {
-    Search: ({ children, value, onChange, placeholder, onSearch }: any) => (
-      <input
-        data-testid="input-search"
-        data-placeholder={placeholder}
-        value={value || ''}
-        onChange={e => onChange && onChange(e)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' && onSearch) {
-            onSearch(value);
+      <select
+        data-testid="select-input"
+        value={Array.isArray(value) ? value[0] : value || ''}
+        onChange={e => {
+          if (mode === 'multiple') {
+            onChange?.([e.target.value]);
+          } else {
+            onChange?.(e.target.value);
           }
         }}
-      />
-    ),
-  },
-  Modal: {
-    confirm: ({ onOk, onCancel }: any) => ({
-      then: (callback: any) => callback && callback({ result: 'ok' }),
-    }),
-  },
-  Option: ({ children, value }: any) => <option value={value}>{children}</option>,
-  Spin: ({ spinning, tip }: any) => (
-    <div data-testid="spin" data-spinning={spinning} data-tip={tip}>
-      {spinning ? <div>加载中...</div> : null}
+        disabled={disabled}
+      >
+        <option value="">{placeholder}</option>
+        {children}
+      </select>
+      {showSearch && (
+        <input
+          data-testid="search-input"
+          placeholder="搜索"
+          onChange={e => onSearch?.(e.target.value)}
+        />
+      )}
+      {allowClear && value && (
+        <button data-testid="clear-btn" onClick={onClear}>
+          清除
+        </button>
+      )}
     </div>
   ),
-  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
-  Tag: ({ children, closable, onClose }: any) => (
-    <span data-testid="tag" data-closable={closable} onClick={onClose}>
+  Button: ({
+    children,
+    onClick,
+    icon,
+    disabled,
+    loading,
+    size,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    disabled?: boolean;
+    loading?: boolean;
+    size?: string;
+  }) => (
+    <button
+      data-testid="button"
+      data-disabled={disabled}
+      data-loading={loading}
+      data-size={size}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {icon}
       {children}
-    </span>
+    </button>
   ),
-  Tooltip: ({ children, title }: any) => (
+  Modal: ({
+    children,
+    open,
+    title,
+    onCancel,
+  }: {
+    children?: React.ReactNode;
+    open?: boolean;
+    title?: string;
+    onCancel?: () => void;
+  }) => (
+    <div data-testid="modal" data-open={open} data-title={title}>
+      {open && (
+        <>
+          <div data-testid="modal-title">{title}</div>
+          <div data-testid="modal-content">{children}</div>
+          <button data-testid="modal-close" onClick={onCancel}>
+            关闭
+          </button>
+        </>
+      )}
+    </div>
+  ),
+  Space: {
+    Compact: ({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }) => (
+      <div data-testid="space-compact" style={style}>
+        {children}
+      </div>
+    ),
+  },
+  Tooltip: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
     <div data-testid="tooltip" data-title={title}>
       {children}
     </div>
+  ),
+  Tag: ({
+    children,
+    color,
+    closable,
+    onClose,
+  }: {
+    children?: React.ReactNode;
+    color?: string;
+    closable?: boolean;
+    onClose?: () => void;
+  }) => (
+    <span data-testid="tag" data-color={color} data-closable={closable} onClick={onClose}>
+      {children}
+    </span>
   ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  SearchOutlined: () => <span data-testid="icon-search" />,
-  LoadingOutlined: () => <span data-testid="icon-loading" />,
-  CloseOutlined: () => <span data-testid="icon-close" />,
+  PlusOutlined: () => <span data-testid="icon-plus">+</span>,
+  ReloadOutlined: () => <span data-testid="icon-reload">Reload</span>,
+  UnorderedListOutlined: () => <span data-testid="icon-list">List</span>,
+  SearchOutlined: () => <span data-testid="icon-search">Search</span>,
 }));
 
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: [],
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
-}));
-
-// Mock services
-vi.mock('@/services', () => ({
-  getOwnershipList: vi.fn(() => ({ items: [], total: 0 })),
-}));
+import OwnershipSelect from '../OwnershipSelect';
 
 describe('OwnershipSelect 组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockOptions = [
-    { id: '1', name: '权属方1', type: 'enterprise' },
-    { id: '2', name: '权属方2', type: 'individual' },
-    { id: '3', name: '权属方3', type: 'government' },
-  ];
+  describe('基本渲染', () => {
+    it('应该正确渲染组件', () => {
+      render(<OwnershipSelect />);
 
-  // Helper function to create component element
-  const createElement = async (props: any = {}) => {
-    const module = await import('../OwnershipSelect');
-    const Component = module.default;
-    return React.createElement(Component, {
-      ...props,
-    });
-  };
-
-  describe('组件导入与导出', () => {
-    it('应该成功导入默认导出', async () => {
-      const module = await import('../OwnershipSelect');
-      expect(module.default).toBeDefined();
+      expect(screen.getByTestId('select')).toBeInTheDocument();
     });
 
-    it('应该是React组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示默认占位符', () => {
+      render(<OwnershipSelect />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-placeholder', '请选择权属方');
+    });
+
+    it('应该支持自定义占位符', () => {
+      render(<OwnershipSelect placeholder="自定义占位符" />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-placeholder', '自定义占位符');
+    });
+
+    it('应该渲染 Space.Compact 容器', () => {
+      render(<OwnershipSelect />);
+
+      expect(screen.getByTestId('space-compact')).toBeInTheDocument();
     });
   });
 
-  describe('基本属性测试', () => {
-    it('应该接收 value 属性', async () => {
-      const element = await createElement({ value: '1' });
-      expect(element).toBeTruthy();
+  describe('value 属性', () => {
+    it('应该接受 value 属性', () => {
+      render(<OwnershipSelect value="1" />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-value', '1');
     });
 
-    it('应该接收 onChange 回调', async () => {
+    it('多选模式应该接受数组 value', () => {
+      render(<OwnershipSelect value={['1', '2']} mode="multiple" />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-value', '1,2');
+    });
+  });
+
+  describe('onChange 回调', () => {
+    it('选择权属方应该触发 onChange', () => {
       const handleChange = vi.fn();
-      const element = await createElement({ onChange: handleChange });
-      expect(element).toBeTruthy();
+      render(<OwnershipSelect onChange={handleChange} />);
+
+      const selectInput = screen.getByTestId('select-input');
+      fireEvent.change(selectInput, { target: { value: '1' } });
+
+      expect(handleChange).toHaveBeenCalled();
     });
 
-    it('应该接受 placeholder 属性', async () => {
-      const element = await createElement({ placeholder: '请选择权属方' });
-      expect(element).toBeTruthy();
-    });
+    it('多选模式 onChange 应该返回数组', () => {
+      const handleChange = vi.fn();
+      render(<OwnershipSelect onChange={handleChange} mode="multiple" />);
 
-    it('应该接受 disabled 属性', async () => {
-      const element = await createElement({ disabled: true });
-      expect(element).toBeTruthy();
-    });
+      const selectInput = screen.getByTestId('select-input');
+      fireEvent.change(selectInput, { target: { value: '1' } });
 
-    it('应该接受 allowClear 属性', async () => {
-      const element = await createElement({ allowClear: true });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('下拉框渲染', () => {
-    it('应该渲染 Select 组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有占位符', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示下拉选项', async () => {
-      const element = await createElement({ options: mockOptions });
-      expect(element).toBeTruthy();
+      expect(handleChange).toHaveBeenCalled();
     });
   });
 
-  describe('数据加载', () => {
-    it('应该加载权属方列表', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('disabled 状态', () => {
+    it('disabled 时应该不可交互', () => {
+      render(<OwnershipSelect disabled={true} />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-disabled', 'true');
     });
 
-    it('加载时应该显示 loading 状态', async () => {
-      const { useQuery } = await import('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      } as any);
+    it('disabled 时 select 应该被禁用', () => {
+      render(<OwnershipSelect disabled={true} />);
 
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const selectInput = screen.getByTestId('select-input');
+      expect(selectInput).toBeDisabled();
     });
 
-    it('加载失败应该显示错误', async () => {
-      const { useQuery } = await import('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-        error: new Error('加载失败'),
-        refetch: vi.fn(),
-      } as any);
+    it('disabled 时按钮应该被禁用', () => {
+      render(<OwnershipSelect disabled={true} />);
 
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const buttons = screen.getAllByTestId('button');
+      buttons.forEach(button => {
+        expect(button).toBeDisabled();
+      });
+    });
+  });
+
+  describe('allowClear 属性', () => {
+    it('allowClear 为 true 时应该显示清除功能', () => {
+      render(<OwnershipSelect allowClear={true} value="1" />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-allow-clear', 'true');
+    });
+
+    it('点击清除应该清空值', () => {
+      const handleChange = vi.fn();
+      render(<OwnershipSelect allowClear={true} value="1" onChange={handleChange} />);
+
+      const clearBtn = screen.getByTestId('clear-btn');
+      fireEvent.click(clearBtn);
+
+      expect(handleChange).toHaveBeenCalled();
     });
   });
 
   describe('搜索功能', () => {
-    it('应该支持搜索', async () => {
-      const element = await createElement({ showSearch: true });
-      expect(element).toBeTruthy();
+    it('showSearch 为 true 时应该支持搜索', () => {
+      render(<OwnershipSelect showSearch={true} />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-show-search', 'true');
     });
 
-    it('搜索时应该过滤选项', async () => {
-      const element = await createElement({ showSearch: true, filterOption: true });
-      expect(element).toBeTruthy();
-    });
+    it('应该能输入搜索文本', () => {
+      render(<OwnershipSelect showSearch={true} />);
 
-    it('搜索输入应该触发 onSearch', async () => {
-      const handleSearch = vi.fn();
-      const element = await createElement({ showSearch: true, onSearch: handleSearch });
-      expect(element).toBeTruthy();
-    });
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: '权属方1' } });
 
-    it('搜索框应该有 SearchOutlined 图标', async () => {
-      const element = await createElement({ showSearch: true });
-      expect(element).toBeTruthy();
+      expect(searchInput).toHaveValue('权属方1');
     });
   });
 
   describe('多选模式', () => {
-    it('应该支持多选', async () => {
-      const element = await createElement({ mode: 'multiple' });
-      expect(element).toBeTruthy();
-    });
+    it('mode 为 multiple 时应该支持多选', () => {
+      render(<OwnershipSelect mode="multiple" />);
 
-    it('多选时 value 应该是数组', async () => {
-      const element = await createElement({ mode: 'multiple', value: ['1', '2'] });
-      expect(element).toBeTruthy();
-    });
-
-    it('多选选中后应该显示标签', async () => {
-      const element = await createElement({ mode: 'multiple', value: ['1', '2'] });
-      expect(element).toBeTruthy();
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-mode', 'multiple');
     });
   });
 
-  describe('默认值设置', () => {
-    it('应该支持设置默认值', async () => {
-      const element = await createElement({ value: '1', defaultValue: '1' });
-      expect(element).toBeTruthy();
+  describe('按钮功能', () => {
+    it('应该显示搜索按钮', () => {
+      render(<OwnershipSelect />);
+
+      expect(screen.getByTestId('icon-search')).toBeInTheDocument();
     });
 
-    it('多选模式应该支持默认数组', async () => {
-      const element = await createElement({
-        mode: 'multiple',
-        value: ['1', '2'],
-        defaultValue: ['1', '2'],
+    it('showAdvancedSelect 为 true 时应该显示列表选择按钮', () => {
+      render(<OwnershipSelect showAdvancedSelect={true} />);
+
+      expect(screen.getByTestId('icon-list')).toBeInTheDocument();
+    });
+
+    it('showCreateButton 为 true 时应该显示创建按钮', () => {
+      render(<OwnershipSelect showCreateButton={true} />);
+
+      expect(screen.getByTestId('icon-plus')).toBeInTheDocument();
+    });
+
+    it('应该显示刷新按钮', () => {
+      render(<OwnershipSelect />);
+
+      expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
+    });
+
+    it('点击刷新按钮应该刷新数据', () => {
+      const { useOwnershipOptions } = require('@/hooks/useOwnership');
+      const mockRefresh = vi.fn();
+      vi.mocked(useOwnershipOptions).mockReturnValue({
+        ownerships: [],
+        loading: false,
+        refresh: mockRefresh,
       });
-      expect(element).toBeTruthy();
+
+      render(<OwnershipSelect />);
+
+      const buttons = screen.getAllByTestId('button');
+      const refreshButton = buttons.find(btn => btn.querySelector('[data-testid="icon-reload"]'));
+
+      if (refreshButton) {
+        fireEvent.click(refreshButton);
+      }
+
+      expect(mockRefresh).toHaveBeenCalled();
     });
   });
 
-  describe('禁用状态', () => {
-    it('禁用时应该不可交互', async () => {
-      const element = await createElement({ disabled: true });
-      expect(element).toBeTruthy();
+  describe('模态框交互', () => {
+    it('点击搜索按钮应该打开选择弹窗', () => {
+      render(<OwnershipSelect />);
+
+      const buttons = screen.getAllByTestId('button');
+      const searchButton = buttons.find(btn => btn.querySelector('[data-testid="icon-search"]'));
+
+      if (searchButton) {
+        fireEvent.click(searchButton);
+      }
+
+      const modal = screen.getByTestId('modal');
+      expect(modal).toHaveAttribute('data-open', 'true');
     });
 
-    it('禁用时应该显示禁用样式', async () => {
-      const element = await createElement({ disabled: true });
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该能关闭选择弹窗', () => {
+      render(<OwnershipSelect />);
 
-  describe('占位符显示', () => {
-    it('应该有默认占位符', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      // 打开弹窗
+      const buttons = screen.getAllByTestId('button');
+      const searchButton = buttons.find(btn => btn.querySelector('[data-testid="icon-search"]'));
+      if (searchButton) {
+        fireEvent.click(searchButton);
+      }
 
-    it('应该支持自定义占位符', async () => {
-      const element = await createElement({ placeholder: '请选择权属方名称' });
-      expect(element).toBeTruthy();
-    });
-  });
+      // 关闭弹窗
+      const closeButton = screen.getByTestId('modal-close');
+      fireEvent.click(closeButton);
 
-  describe('清除功能', () => {
-    it('allowClear 为 true 时应该显示清除按钮', async () => {
-      const element = await createElement({ allowClear: true, value: '1' });
-      expect(element).toBeTruthy();
+      const modal = screen.getByTestId('modal');
+      expect(modal).toHaveAttribute('data-open', 'false');
     });
 
-    it('点击清除应该触发 onChange', async () => {
+    it('从弹窗中选择权属方应该触发 onChange 并关闭弹窗', () => {
       const handleChange = vi.fn();
-      const element = await createElement({ allowClear: true, onChange: handleChange });
-      expect(element).toBeTruthy();
-    });
+      render(<OwnershipSelect onChange={handleChange} />);
 
-    it('清除按钮应该有 CloseOutlined 图标', async () => {
-      const element = await createElement({ allowClear: true, value: '1' });
-      expect(element).toBeTruthy();
-    });
-  });
+      // 打开弹窗
+      const buttons = screen.getAllByTestId('button');
+      const searchButton = buttons.find(btn => btn.querySelector('[data-testid="icon-search"]'));
+      if (searchButton) {
+        fireEvent.click(searchButton);
+      }
 
-  describe('空状态处理', () => {
-    it('没有选项时应该显示空状态', async () => {
-      const { useQuery } = await import('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValue({
-        data: [],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      } as any);
+      // 选择权属方
+      const selectBtn = screen.getByTestId('select-ownership-btn');
+      fireEvent.click(selectBtn);
 
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      expect(handleChange).toHaveBeenCalled();
 
-    it('空状态应该有提示信息', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const modal = screen.getByTestId('modal');
+      expect(modal).toHaveAttribute('data-open', 'false');
     });
   });
 
-  describe('选项显示', () => {
-    it('选项应该显示权属方名称', async () => {
-      const element = await createElement({ options: mockOptions });
-      expect(element).toBeTruthy();
-    });
-
-    it('选项应该显示权属方类型标签', async () => {
-      const element = await createElement({ options: mockOptions });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示选项数量', async () => {
-      const element = await createElement({ options: mockOptions });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('分页加载', () => {
-    it('应该支持分页加载', async () => {
-      const element = await createElement({ pagination: true });
-      expect(element).toBeTruthy();
-    });
-
-    it('滚动到底部应该加载更多', async () => {
-      const element = await createElement({ pagination: true, onScroll: vi.fn() });
-      expect(element).toBeTruthy();
-    });
-
-    it('加载更多时应该显示 loading', async () => {
-      const element = await createElement({ pagination: true, loading: true });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('其他功能', () => {
-    it('应该支持远程搜索', async () => {
-      const element = await createElement({
-        showSearch: true,
-        filterOption: false,
-        onSearch: vi.fn(),
+  describe('loading 状态', () => {
+    it('加载时应该显示 loading 状态', () => {
+      const { useOwnershipOptions } = require('@/hooks/useOwnership');
+      vi.mocked(useOwnershipOptions).mockReturnValue({
+        ownerships: [],
+        loading: true,
+        refresh: vi.fn(),
       });
-      expect(element).toBeTruthy();
+
+      render(<OwnershipSelect />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toHaveAttribute('data-loading', 'true');
+    });
+  });
+
+  describe('size 属性', () => {
+    it('应该支持 large 尺寸', () => {
+      render(<OwnershipSelect size="large" />);
+
+      const buttons = screen.getAllByTestId('button');
+      buttons.forEach(button => {
+        expect(button).toHaveAttribute('data-size', 'large');
+      });
     });
 
-    it('应该支持选项分组', async () => {
-      const element = await createElement({ options: mockOptions });
-      expect(element).toBeTruthy();
-    });
+    it('应该支持 small 尺寸', () => {
+      render(<OwnershipSelect size="small" />);
 
-    it('应该支持虚拟滚动', async () => {
-      const element = await createElement({ virtual: true });
-      expect(element).toBeTruthy();
+      const buttons = screen.getAllByTestId('button');
+      buttons.forEach(button => {
+        expect(button).toHaveAttribute('data-size', 'small');
+      });
     });
   });
 });

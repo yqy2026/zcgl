@@ -5,7 +5,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
@@ -15,14 +14,9 @@ from src.schemas.rbac import (
 )
 from src.services.rbac.service import RBACService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

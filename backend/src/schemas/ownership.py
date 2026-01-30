@@ -5,6 +5,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class OwnershipBase(BaseModel):
@@ -28,8 +29,10 @@ class OwnershipCreate(OwnershipBase):
 
             pattern = r"^[A-Z]{2}\d{7}$"  # pragma: no cover
             if not re.match(pattern, v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "权属方编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: OW2501001"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_ownership_code",
+                    "权属方编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: OW2501001",
+                    {},
                 )  # pragma: no cover
             return v.upper()  # pragma: no cover
         return v  # pragma: no cover
@@ -53,8 +56,10 @@ class OwnershipUpdate(BaseModel):
 
             pattern = r"^[A-Z]{2}\d{7}$"  # pragma: no cover
             if not re.match(pattern, v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "权属方编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: OW2501001"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_ownership_code",
+                    "权属方编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: OW2501001",
+                    {},
                 )  # pragma: no cover
             return v.upper()  # pragma: no cover
         return v  # pragma: no cover

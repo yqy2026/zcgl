@@ -63,7 +63,7 @@ describe('useAssetAnalytics', () => {
         financial_summary: {},
       },
     };
-    (analyticsService.getComprehensiveAnalytics as any).mockResolvedValue(mockData);
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue(mockData);
 
     const { result } = renderHook(() => useAssetAnalytics(), {
       wrapper: createWrapper(),

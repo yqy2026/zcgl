@@ -11,7 +11,6 @@ dependencies = [
     "pydantic>=2.12.0",
     "pydantic-settings>=2.1.0",
     "psycopg>=3.2.0",
-    "polars>=0.20.0",
     "openpyxl>=3.1.0",
     "python-multipart>=0.0.6",
     "email-validator>=2.0.0",
@@ -31,20 +30,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "httpx>=0.25.0",
-    "mypy>=1.7.0",
-    "ruff>=0.1.6",
-    "pytest-cov>=4.1.0",
-    "pre-commit>=4.3.0",
-    "bandit>=1.8.6",
-    "radon>=6.0.1",
-    "safety>=3.6.2",
-    "testcontainers>=4.0.0",
-]
-
 # PDF基础处理功能（轻量级）
 pdf-basic = [
     "pdfplumber>=0.11.0,<0.12.0",
@@ -81,7 +66,20 @@ llm-local = [
 
 # 完整功能（所有可选依赖）
 all = [
-    "land-property-management[dev,pdf-basic,nlp,docs,llm-local]",
+    "land-property-management[pdf-basic,nlp,docs,llm-local]",
+]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "mypy>=1.7.0",
+    "ruff>=0.1.6",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
+    "radon>=6.0.1",
+    "safety>=3.6.2",
+    "testcontainers>=4.0.0",
 ]
 
 [build-system]
@@ -147,8 +145,8 @@ module = [
     "src.services.*",
     "src.crud.*",
 ]
-# Phase 1: 逐步启用（当前允许未类型定义）
-disallow_untyped_defs = false  # Week 2-5: 逐步修复后启用
+# Phase 1 完成: 启用严格类型检查
+disallow_untyped_defs = true
 check_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
@@ -170,13 +168,11 @@ module = [
     "src.core.permissions",
 ]
 
-# === rent_contract.py 关系类型降级检查 ===
-# 此文件使用旧式 relationship() 语法，需要大规模重构才能支持 mypy 插件
-# 临时禁用 misc 错误代码，待后续重构为 Mapped[] 类型
+# === rent_contract.py 已重构为 Mapped[] 类型 ===
+# 2026-01: 完成重构，移除 misc 错误码豁免
 [[tool.mypy.overrides]]
 module = "src.models.rent_contract"
-disable_error_code = ["misc"]
-check_untyped_defs = false
+check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -290,11 +286,3 @@ exclude_dirs = [
 # -ll: Only report HIGH and MEDIUM severity issues
 # -iii: Skip some checks to reduce false positives
 assert_used = false  # Don't treat assert as security issue
-
-[dependency-groups]
-dev = [
-    "httpx>=0.28.1",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=7.0.0",
-]

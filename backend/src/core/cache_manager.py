@@ -5,6 +5,7 @@ from typing import Any
 提供标准化的缓存操作和策略
 """
 
+import fnmatch
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -120,7 +121,9 @@ class MemoryCache(CacheBackend):
     def clear(self, pattern: str | None = None) -> bool:
         """清空缓存"""
         if pattern:
-            keys_to_delete = [key for key in self._cache if pattern in key]
+            keys_to_delete = [
+                key for key in self._cache if fnmatch.fnmatch(key, pattern)
+            ]
             for key in keys_to_delete:
                 del self._cache[key]
         else:

@@ -8,6 +8,11 @@ from typing import Any, cast
 from sqlalchemy.orm import Session
 
 from ...constants.message_constants import EMPTY_STRING
+from ...core.exception_handler import (
+    BusinessValidationError,
+    DuplicateResourceError,
+    ResourceNotFoundError,
+)
 from ...crud.custom_field import custom_field_crud
 from ...models.asset import AssetCustomField
 from ...schemas.asset import (
@@ -26,7 +31,7 @@ class CustomFieldService:
         """创建自定义字段"""
         existing = custom_field_crud.get_by_field_name(db, field_name=obj_in.field_name)
         if existing:
-            raise ValueError(f"字段名 {obj_in.field_name} 已存在")
+            raise DuplicateResourceError("字段", "field_name", obj_in.field_name)
 
         result: AssetCustomField = custom_field_crud.create(db, obj_in=obj_in)
         return result
@@ -37,14 +42,14 @@ class CustomFieldService:
         """更新自定义字段"""
         field = custom_field_crud.get(db, id)
         if not field:
-            raise ValueError(f"字段 {id} 不存在")
+            raise ResourceNotFoundError("字段", id)
 
         if obj_in.field_name and obj_in.field_name != field.field_name:
             existing = custom_field_crud.get_by_field_name(
                 db, field_name=obj_in.field_name
             )
             if existing and existing.id != id:
-                raise ValueError(f"字段名 {obj_in.field_name} 已存在")
+                raise DuplicateResourceError("字段", "field_name", obj_in.field_name)
 
         result: AssetCustomField = custom_field_crud.update(
             db, db_obj=field, obj_in=obj_in
@@ -55,7 +60,7 @@ class CustomFieldService:
         """删除自定义字段"""
         field = custom_field_crud.get(db, id)
         if not field:
-            raise ValueError(f"字段 {id} 不存在")
+            raise ResourceNotFoundError("字段", id)
         result: AssetCustomField = custom_field_crud.remove(db, id=id)
         return result
 
@@ -297,7 +302,10 @@ class CustomFieldService:
             # 验证字段值
             is_valid, error_message = self.validate_field_value(field, field_value)
             if not is_valid:
-                raise ValueError(error_message)
+                raise BusinessValidationError(
+                    message=error_message or "字段值验证失败",
+                    field_errors={"custom_fields": [error_message or "字段值无效"]},
+                )
 
             # NOTE: logic to update database is currently a stub in original CRUD too.
             # Keeping the stub behavior.
@@ -325,7 +333,7 @@ class CustomFieldService:
         """切换启用状态"""
         field = custom_field_crud.get(db, id)
         if not field:
-            raise ValueError(f"字段 {id} 不存在")
+            raise ResourceNotFoundError("字段", id)
 
         field.is_active = not field.is_active
         db.add(field)

@@ -9,6 +9,8 @@ import os
 from datetime import datetime
 from typing import Any
 
+from ...core.exception_handler import ConfigurationError
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,9 +58,15 @@ class BackupService:
                 backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             if not database_url:
-                raise ValueError("数据库备份需要提供 PostgreSQL database_url")
+                raise ConfigurationError(
+                    "数据库备份需要提供 PostgreSQL database_url",
+                    config_key="DATABASE_URL",
+                )
             if not database_url.startswith("postgresql"):
-                raise ValueError("仅支持 PostgreSQL 备份")
+                raise ConfigurationError(
+                    "仅支持 PostgreSQL 备份",
+                    config_key="DATABASE_URL",
+                )
             backup_filename = f"{backup_name}.dump"
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
@@ -238,9 +246,15 @@ class BackupService:
             }
 
             if not database_url:
-                raise ValueError("数据库恢复需要提供 PostgreSQL database_url")
+                raise ConfigurationError(
+                    "数据库恢复需要提供 PostgreSQL database_url",
+                    config_key="DATABASE_URL",
+                )
             if not database_url.startswith("postgresql"):
-                raise ValueError("仅支持 PostgreSQL 恢复")
+                raise ConfigurationError(
+                    "仅支持 PostgreSQL 恢复",
+                    config_key="DATABASE_URL",
+                )
 
             if create_current_backup is None:
                 create_current_backup = should_create_current_backup

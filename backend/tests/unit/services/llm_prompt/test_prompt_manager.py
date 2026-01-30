@@ -7,7 +7,6 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from src.schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
@@ -24,11 +23,6 @@ def prompt_manager():
     return PromptManager()
 
 
-@pytest.fixture
-def mock_db():
-    """Mock数据库会话"""
-    db = MagicMock(spec=Session)
-    return db
 
 
 @pytest.fixture

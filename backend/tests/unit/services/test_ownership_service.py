@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
@@ -12,9 +11,6 @@ TEST_OWNERSHIP_ID = "ownership_123"
 TEST_OWNERSHIP_NAME = "Test Ownership"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

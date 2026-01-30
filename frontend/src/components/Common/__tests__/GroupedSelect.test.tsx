@@ -5,24 +5,25 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import type { EnumGroup, EnumOption } from '@/utils/enumHelpers';
 
 // Mock enumHelpers
 vi.mock('@/utils/enumHelpers', () => ({
   EnumGroup: [],
   EnumOption: {},
   EnumSearchHelper: {
-    searchInGroups: vi.fn((groups, keyword) => {
+    searchInGroups: vi.fn((groups: EnumGroup[], keyword: string) => {
       if (!keyword.trim()) return groups;
-      return groups.map((group: any) => ({
+      return groups.map((group: EnumGroup) => ({
         ...group,
-        options: group.options.filter((option: any) =>
+        options: group.options.filter((option: EnumOption) =>
           option.label.toLowerCase().includes(keyword.toLowerCase())
         ),
       }));
     }),
-    findByValue: vi.fn((groups, value) => {
+    findByValue: vi.fn((groups: EnumGroup[], value: string) => {
       for (const group of groups) {
-        const found = group.options.find((opt: any) => opt.value === value);
+        const found = group.options.find((opt: EnumOption) => opt.value === value);
         if (found) return found;
       }
       return undefined;
@@ -31,6 +32,47 @@ vi.mock('@/utils/enumHelpers', () => ({
 }));
 
 // Mock Ant Design components
+interface SelectMockProps {
+  children?: React.ReactNode;
+  value?: string | string[];
+  onChange?: (value: string | string[]) => void;
+  placeholder?: string;
+  allowClear?: boolean;
+  showSearch?: boolean;
+  onSearch?: (value: string) => void;
+  tagRender?: (props: {
+    label: React.ReactNode;
+    value: string;
+    closable: boolean;
+    onClose: () => void;
+  }) => React.ReactNode;
+}
+
+interface InputSearchMockProps {
+  value?: string;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  allowClear?: boolean;
+}
+
+interface TagMockProps {
+  children?: React.ReactNode;
+  color?: string;
+  closable?: boolean;
+  onClose?: () => void;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  type?: string;
+  strong?: boolean;
+  style?: React.CSSProperties;
+}
+
 vi.mock('antd', () => ({
   Select: ({
     children,
@@ -41,7 +83,7 @@ vi.mock('antd', () => ({
     showSearch,
     onSearch: _onSearch,
     tagRender: _tagRender,
-  }: any) => (
+  }: SelectMockProps) => (
     <div
       data-testid="select"
       data-value={value}
@@ -54,7 +96,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Input: {
-    Search: ({ value, onChange: _onChange, placeholder, allowClear }: any) => (
+    Search: ({ value, onChange: _onChange, placeholder, allowClear }: InputSearchMockProps) => (
       <div
         data-testid="search"
         data-value={value}
@@ -65,14 +107,14 @@ vi.mock('antd', () => ({
       </div>
     ),
   },
-  Tag: ({ children, color, closable, onClose: _onClose }: any) => (
+  Tag: ({ children, color, closable, onClose: _onClose }: TagMockProps) => (
     <div data-testid="tag" data-color={color} data-closable={closable}>
       {children}
     </div>
   ),
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
   Typography: {
-    Text: ({ children, type, strong, style }: any) => (
+    Text: ({ children, type, strong, style }: TypographyTextMockProps) => (
       <div data-testid="text" data-type={type} data-strong={strong} style={style}>
         {children}
       </div>
@@ -86,13 +128,23 @@ vi.mock('@ant-design/icons', () => ({
 }));
 
 // Mock Select.Option and Select.OptGroup
-const MockOption: any = ({ children, value }: any) => (
+interface OptionMockProps {
+  children?: React.ReactNode;
+  value?: string;
+}
+
+interface OptGroupMockProps {
+  label?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+const MockOption = ({ children, value }: OptionMockProps) => (
   <div data-testid="option" data-value={value}>
     {children}
   </div>
 );
 
-const MockOptGroup: any = ({ label, children }: any) => (
+const MockOptGroup = ({ label, children }: OptGroupMockProps) => (
   <div data-testid="optgroup" data-label={label}>
     {children}
   </div>
@@ -357,7 +409,7 @@ describe('GroupedSelect - 标签渲染测试', () => {
     ];
     const element = React.createElement(GroupedSelect, {
       groups,
-      mode: 'multiple' as any,
+      mode: 'multiple',
     });
     expect(element).toBeTruthy();
   });
@@ -372,7 +424,7 @@ describe('GroupedSelect - 标签渲染测试', () => {
     ];
     const element = React.createElement(GroupedSelect, {
       groups,
-      mode: 'multiple' as any,
+      mode: 'multiple',
     });
     expect(element).toBeTruthy();
   });
@@ -387,7 +439,7 @@ describe('GroupedSelect - 标签渲染测试', () => {
     ];
     const element = React.createElement(GroupedSelect, {
       groups,
-      mode: 'multiple' as any,
+      mode: 'multiple',
     });
     expect(element).toBeTruthy();
   });

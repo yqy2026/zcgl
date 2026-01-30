@@ -2,6 +2,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.system_dictionary import system_dictionary_crud
 from ...models.asset import SystemDictionary
 from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
@@ -19,8 +20,11 @@ class SystemDictionaryService:
             db, dict_type=obj_in.dict_type, dict_code=obj_in.dict_code
         )
         if existing:
-            raise ValueError(
-                f"字典代码 {obj_in.dict_code} 在类型 {obj_in.dict_type} 中已存在"
+            raise DuplicateResourceError(
+                "字典项",
+                "dict_code",
+                obj_in.dict_code,
+                details={"dict_type": obj_in.dict_type},
             )
 
         result: SystemDictionary = system_dictionary_crud.create(db, obj_in=obj_in)
@@ -32,7 +36,7 @@ class SystemDictionaryService:
         """更新字典项"""
         db_obj = system_dictionary_crud.get(db, id)
         if not db_obj:
-            raise ValueError("字典项不存在")
+            raise ResourceNotFoundError("字典项", id)
 
         result: SystemDictionary = system_dictionary_crud.update(
             db, db_obj=db_obj, obj_in=obj_in
@@ -43,7 +47,7 @@ class SystemDictionaryService:
         """删除字典项"""
         db_obj = system_dictionary_crud.get(db, id)
         if not db_obj:
-            raise ValueError("字典项不存在")
+            raise ResourceNotFoundError("字典项", id)
 
         # Soft delete logic if model supports it, otherwise hard delete
         # SystemDictionary usually hard delete or soft?
@@ -56,7 +60,7 @@ class SystemDictionaryService:
         """切换启用状态"""
         dictionary: SystemDictionary | None = system_dictionary_crud.get(db, id)
         if not dictionary:
-            raise ValueError("字典项不存在")
+            raise ResourceNotFoundError("字典项", id)
 
         dictionary.is_active = not dictionary.is_active
         db.add(dictionary)

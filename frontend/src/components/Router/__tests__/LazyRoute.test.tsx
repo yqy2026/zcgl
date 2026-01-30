@@ -4,12 +4,19 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { describe, it, expect } from 'vitest';
-import {} from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { MemoryRouter, Routes } from 'react-router-dom';
 import LazyRoute from '../LazyRoute';
+
+interface PermissionMock {
+  resource: string;
+  action: string;
+}
+
+interface PermissionGuardMockProps {
+  children: React.ReactNode;
+  permissions?: PermissionMock[];
+}
 
 // Mock dependencies
 vi.mock('@/components/Loading', () => ({
@@ -27,13 +34,7 @@ vi.mock('@/components/ErrorHandling', () => ({
 }));
 
 vi.mock('../System/PermissionGuard', () => ({
-  PermissionGuard: ({
-    children,
-    permissions,
-  }: {
-    children: React.ReactNode;
-    permissions?: any[];
-  }) => (
+  PermissionGuard: ({ children, permissions }: PermissionGuardMockProps) => (
     <div
       data-testid="permission-guard"
       data-permissions={permissions ? JSON.stringify(permissions) : 'none'}
@@ -44,12 +45,6 @@ vi.mock('../System/PermissionGuard', () => ({
 }));
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <MemoryRouter>
-    <Routes>{children}</Routes>
-  </MemoryRouter>
-);
-
 describe('LazyRoute - 组件导入测试', () => {
   it('应该能够导入组件', () => {
     expect(LazyRoute).toBeDefined();

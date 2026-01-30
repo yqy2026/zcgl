@@ -17,6 +17,7 @@ from pydantic import (
     ValidationInfo,
     field_validator,
 )
+from pydantic_core import PydanticCustomError
 
 from ..constants.validation_constants import FieldLengthLimits
 from .ownership import OwnershipResponse
@@ -152,7 +153,9 @@ class AssetBase(BaseModel):
     @classmethod
     def validate_area(cls, v: Decimal | None) -> Decimal | None:
         if v is not None and v < 0:  # pragma: no cover
-            raise ValueError("数值不能为负数")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "negative_value", "数值不能为负数", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
     # occupancy_rate 验证器已移除，因为现在是计算字段
@@ -161,7 +164,9 @@ class AssetBase(BaseModel):
     @classmethod
     def validate_is_litigated(cls, v: bool) -> bool:
         if v is not None and not isinstance(v, bool):  # pragma: no cover
-            raise ValueError("是否涉诉必须是布尔值")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_boolean", "是否涉诉必须是布尔值", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
     @field_validator("contract_end_date")
@@ -172,7 +177,9 @@ class AssetBase(BaseModel):
             and info.data.get("contract_start_date")  # pragma: no cover
             and v < info.data["contract_start_date"]  # pragma: no cover
         ):
-            raise ValueError("合同结束日期不能早于开始日期")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_date_range", "合同结束日期不能早于开始日期", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
     @field_validator("operation_agreement_end_date")
@@ -183,7 +190,9 @@ class AssetBase(BaseModel):
             and info.data.get("operation_agreement_start_date")  # pragma: no cover
             and v < info.data["operation_agreement_start_date"]  # pragma: no cover
         ):
-            raise ValueError("接收协议结束日期不能早于开始日期")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_date_range", "接收协议结束日期不能早于开始日期", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
 
@@ -285,6 +294,7 @@ class AssetUpdate(BaseModel):
     # 系统字段
     data_status: str | None = Field(None, description="数据状态")
     updated_by: str | None = Field(None, max_length=100, description="更新人")
+    version: int | None = Field(None, ge=1, description="版本号(乐观锁)")
     tags: str | None = Field(None, description="标签")
 
     # 审核相关字段已简化
@@ -303,7 +313,9 @@ class AssetUpdate(BaseModel):
     @classmethod
     def validate_area(cls, v: Decimal | None) -> Decimal | None:
         if v is not None and v < 0:  # pragma: no cover
-            raise ValueError("数值不能为负数")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "negative_value", "数值不能为负数", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
     # occupancy_rate 验证器已移除，因为现在是计算字段
@@ -312,7 +324,9 @@ class AssetUpdate(BaseModel):
     @classmethod
     def validate_is_litigated(cls, v: bool | None) -> bool | None:
         if v is not None and not isinstance(v, bool):  # pragma: no cover
-            raise ValueError("是否涉诉必须是布尔值")  # pragma: no cover
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_boolean", "是否涉诉必须是布尔值", {}
+            )  # pragma: no cover
         return v  # pragma: no cover
 
 
@@ -719,7 +733,9 @@ class AssetCustomFieldAssignment(BaseModel):
     @classmethod
     def validate_field_type(cls, v: str) -> str:
         if v not in ["text", "number", "date", "boolean"]:  # pragma: no cover
-            raise ValueError(
-                "字段类型必须是text、number、date或boolean之一"
+            raise PydanticCustomError(
+                "invalid_field_type",
+                "字段类型必须是text、number、date或boolean之一",
+                {},
             )  # pragma: no cover
         return v  # pragma: no cover

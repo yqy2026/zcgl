@@ -35,6 +35,12 @@ const DECIMAL_FIELDS = [
   'total_income',
 ] as const;
 
+type DecimalField = (typeof DECIMAL_FIELDS)[number];
+
+const isDecimalField = (key: string): key is DecimalField => {
+  return DECIMAL_FIELDS.includes(key as DecimalField);
+};
+
 /**
  * 类型守卫：检查是否为普通对象
  */
@@ -74,7 +80,7 @@ export const convertBackendToFrontend = <T = unknown>(data: unknown): T => {
 
         if (value === null || value === undefined) {
           result[key] = value;
-        } else if (DECIMAL_FIELDS.includes(key as any) && typeof value === 'string') {
+        } else if (isDecimalField(key) && typeof value === 'string') {
           // 处理Decimal字段
           result[key] = DecimalUtils.parseDecimal(value);
         } else if (isObject(value) || isArray(value)) {
@@ -117,7 +123,7 @@ export const convertFrontendToBackend = <T = unknown>(data: unknown): T => {
 
         if (value === null || value === undefined) {
           result[key] = value;
-        } else if (DECIMAL_FIELDS.includes(key as any) && typeof value === 'number') {
+        } else if (isDecimalField(key) && typeof value === 'number') {
           // 处理Decimal字段
           result[key] = DecimalUtils.formatDecimal(value);
         } else if (isObject(value) || isArray(value)) {

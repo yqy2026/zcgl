@@ -70,6 +70,8 @@ async def create_backup(
         }
 
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"创建数据备份异常: {str(e)}")
         raise internal_error(f"创建数据备份失败: {str(e)}")
 
@@ -96,6 +98,8 @@ async def list_backups() -> dict[str, Any]:
         }
 
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"获取备份列表异常: {str(e)}")
         raise internal_error(f"获取备份列表失败: {str(e)}")
 
@@ -224,6 +228,8 @@ async def delete_backup(backup_name: str) -> dict[str, Any]:
     except FileNotFoundError as e:
         raise not_found(str(e), resource_type="backup")
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"删除备份文件异常: {str(e)}")
         raise internal_error(f"删除备份文件失败: {str(e)}")
 
@@ -246,6 +252,8 @@ async def get_backup_stats() -> dict[str, Any]:
         }
 
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"获取备份统计异常: {str(e)}")
         raise internal_error(f"获取备份统计失败: {str(e)}")
 
@@ -271,6 +279,8 @@ async def validate_backup(backup_name: str) -> dict[str, Any]:
         }
 
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"验证备份文件异常: {str(e)}")
         raise internal_error(f"验证备份文件失败: {str(e)}")
 
@@ -299,5 +309,7 @@ async def cleanup_old_backups(
         }
 
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         logger.error(f"清理旧备份异常: {str(e)}")
         raise internal_error(f"清理旧备份失败: {str(e)}")

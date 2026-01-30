@@ -8,6 +8,7 @@ import pytest
 
 # Import crud module to trigger whitelist registration
 import src.crud  # noqa: F401
+from src.core.exception_handler import InvalidRequestError
 from src.crud.query_builder import QueryBuilder
 from src.models.asset import Asset
 
@@ -52,14 +53,14 @@ class TestQueryBuilderSecurityIntegration:
         assert isinstance(result, list)
 
     def test_blocked_filter_field_raises_error(self, db_session):
-        """Blocked filter fields should raise ValueError."""
+        """Blocked filter fields should raise InvalidRequestError."""
         qb = QueryBuilder(Asset)
 
         # Try to filter by PII field
         filters = {"manager_name": "Test Manager"}
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
+        # Should raise InvalidRequestError
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         # Error message should be clear
@@ -72,7 +73,7 @@ class TestQueryBuilderSecurityIntegration:
 
         filters = {"tenant_name": "Test Tenant"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "tenant_name" in str(exc_info.value)
@@ -88,7 +89,7 @@ class TestQueryBuilderSecurityIntegration:
             "max_monthly_rent": "5000",
         }
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "monthly_rent" in str(exc_info.value)
@@ -100,7 +101,7 @@ class TestQueryBuilderSecurityIntegration:
         # Try to filter by created_by (user discovery)
         filters = {"created_by": "admin"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "created_by" in str(exc_info.value)
@@ -171,11 +172,11 @@ class TestQueryBuilderSecurityIntegration:
         assert isinstance(result, list)
 
     def test_blocked_sort_field_raises_error(self, db_session):
-        """Blocked sort fields should raise ValueError."""
+        """Blocked sort fields should raise InvalidRequestError."""
         qb = QueryBuilder(Asset)
 
         # Try to sort by PII field
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(sort_by="manager_name")
 
         assert "not allowed" in str(exc_info.value).lower()
@@ -185,7 +186,7 @@ class TestQueryBuilderSecurityIntegration:
         """Sorting by audit fields should be blocked."""
         qb = QueryBuilder(Asset)
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(sort_by="created_by")
 
         assert "created_by" in str(exc_info.value)
@@ -218,7 +219,7 @@ class TestQueryBuilderSecurityIntegration:
         assert isinstance(result, list)
 
         # Now test with a truly blocked field (manager_name)
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(
                 filters={"ownership_status": "已确权"},
                 sort_by="manager_name",  # Blocked for sorting (PII field)
@@ -241,7 +242,7 @@ class TestQueryBuilderSecurityIntegration:
         qb = QueryBuilder(Asset)
 
         # Blocked filter
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_count_query(filters={"manager_name": "Test"})
 
         assert "manager_name" in str(exc_info.value)
@@ -283,7 +284,7 @@ class TestSecurityAttackScenarios:
         # Try to enumerate users
         filters = {"created_by": "admin"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "created_by" in str(exc_info.value)
@@ -295,7 +296,7 @@ class TestSecurityAttackScenarios:
         # Try to find high-rent properties
         filters = {"min_monthly_rent": "10000"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "monthly_rent" in str(exc_info.value)
@@ -309,7 +310,7 @@ class TestSecurityAttackScenarios:
 
         for field in pii_fields:
             filters = {field: "test"}
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(InvalidRequestError) as exc_info:
                 qb.build_query(filters=filters)
             assert field in str(exc_info.value)
 
@@ -325,7 +326,7 @@ class TestSecurityAttackScenarios:
         # Try to filter by a blocked field
         filters = {"manager_name": "test"}
 
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidRequestError):
             qb.build_query(filters=filters)
 
     def test_data_exfiltration_via_sort_blocked(self, db_session):
@@ -333,7 +334,7 @@ class TestSecurityAttackScenarios:
         qb = QueryBuilder(Asset)
 
         # Try to sort by audit trail
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(sort_by="created_by")
 
         assert "created_by" in str(exc_info.value)
@@ -347,7 +348,7 @@ class TestSecurityAttackScenarios:
         # Try to filter by tenant name
         filters = {"tenant_name": "test"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "tenant_name" in str(exc_info.value)
@@ -361,7 +362,7 @@ class TestSecurityAttackScenarios:
         # Try to filter by phone
         filters = {"owner_phone": "13800138000"}
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             qb.build_query(filters=filters)
 
         assert "owner_phone" in str(exc_info.value)

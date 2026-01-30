@@ -350,7 +350,7 @@ const PromptListPage: React.FC = () => {
       key: 'action',
       width: 200,
       fixed: 'right' as const,
-      render: (_: any, record: PromptTemplate) => (
+      render: (_: unknown, record: PromptTemplate) => (
         <Space size="small">
           {record.status !== PromptStatus.ACTIVE && (
             <Tooltip title="激活">

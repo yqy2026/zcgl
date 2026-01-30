@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
-    bad_request,
     internal_error,
     not_found,
 )
@@ -50,6 +49,8 @@ async def create_task(
         task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
         return TaskResponse.model_validate(task)
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"创建任务失败: {str(e)}")
 
 
@@ -148,9 +149,9 @@ async def update_task(
     try:
         updated_task = task_service.update_task(db=db, task_id=task_id, obj_in=task_in)
         return TaskResponse.model_validate(updated_task)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"更新任务失败: {str(e)}")
 
 
@@ -171,11 +172,9 @@ async def cancel_task(
             reason=cancel_request.reason if cancel_request else None,
         )
         return TaskResponse.model_validate(updated_task)
-    except ValueError as e:
-        if "任务不存在" in str(e):
-            raise not_found(str(e), resource_type="task")
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"取消任务失败: {str(e)}")
 
 
@@ -191,9 +190,9 @@ async def delete_task(
     try:
         task_service.delete_task(db=db, task_id=task_id)
         return {"message": "任务删除成功"}
-    except ValueError as e:
-        raise not_found(str(e), resource_type="task")
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"删除任务失败: {str(e)}")
 
 

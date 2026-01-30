@@ -6,8 +6,6 @@
  * 2. Token兼容性 (优先级、回退、空值处理)
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('Request工具 - 错误处理增强', () => {
@@ -117,7 +115,7 @@ describe('Request工具 - 错误处理增强', () => {
 
   describe('错误对象元数据', () => {
     it('应该正确添加errorId到错误对象', () => {
-      const error: any = new Error('Test error');
+      const error: Error & { errorId?: string } = new Error('Test error');
       error.errorId = `ERR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
       expect(error.errorId).toBeDefined();
@@ -125,7 +123,7 @@ describe('Request工具 - 错误处理增强', () => {
     });
 
     it('应该正确添加timestamp到错误对象', () => {
-      const error: any = new Error('Test error');
+      const error: Error & { timestamp?: string } = new Error('Test error');
       error.timestamp = new Date().toISOString();
 
       expect(error.timestamp).toBeDefined();
@@ -133,7 +131,7 @@ describe('Request工具 - 错误处理增强', () => {
     });
 
     it('错误对象应该包含完整的追踪信息', () => {
-      const error: any = new Error('Test error');
+      const error: Error & { errorId?: string; timestamp?: string } = new Error('Test error');
       error.errorId = `ERR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       error.timestamp = new Date().toISOString();
 

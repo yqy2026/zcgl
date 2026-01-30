@@ -19,13 +19,17 @@ import {
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { CertificateExtractionResult, AssetMatch } from '@/types/propertyCertificate';
+import type {
+  CertificateExtractionResult,
+  AssetMatch,
+  CertificateImportConfirm,
+} from '@/types/propertyCertificate';
 
 const { Text } = Typography;
 
 interface PropertyCertificateReviewProps {
   extractionResult: CertificateExtractionResult;
-  onConfirm: (data: any) => void;
+  onConfirm: (data: CertificateImportConfirm) => void;
   loading?: boolean;
 }
 

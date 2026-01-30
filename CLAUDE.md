@@ -14,7 +14,7 @@
 |---|-------|
 | **前端** | React 19 + TypeScript + Vite 6 + Ant Design 6 + pnpm |
 | **后端** | FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 |
-| **数据库** | SQLite (dev) / PostgreSQL (prod) |
+| **数据库** | PostgreSQL 16+（开发和生产环境统一） |
 | **缓存** | Redis |
 
 ---

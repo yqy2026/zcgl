@@ -1,725 +1,740 @@
 /**
  * AssetSearch 组件测试
- *
- * 测试覆盖范围:
- * - 组件导入与导出
- * - 基本属性测试
- * - 基本搜索字段
- * - 高级搜索字段 (可展开)
- * - 搜索按钮
- * - 重置按钮
- * - 保存搜索条件
- * - 搜索历史管理
- * - 面积范围滑块
- * - 日期范围选择器
- * - 下拉选择器数据加载
- * - 搜索条件初始化
- * - 搜索条件变化
- * - 防抖处理
- * - Collapse 组件
- * - Input 组件
- * - Select 组件
+ * 测试资产搜索表单的渲染和交互
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-// Mock antd 组件
-vi.mock('antd', () => ({
-  Card: ({ children, className }: any) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  Form: ({ children, onFinish, initialValues: _initialValues, layout, colon }: any) => (
-    <form
-      data-testid="form"
-      data-layout={layout}
-      data-colon={colon}
-      onSubmit={e => {
-        e.preventDefault();
-        onFinish?.({});
-      }}
-    >
-      {children}
-    </form>
-  ),
-  Input: ({ value, onChange, placeholder, allowClear, prefix }: any) => (
-    <input
-      data-testid="input"
-      data-placeholder={placeholder}
-      data-allow-clear={allowClear}
-      data-prefix={!!prefix}
-      value={value || ''}
-      onChange={e => onChange && onChange(e)}
-    />
-  ),
-  Select: ({ children, value, onChange, placeholder, mode, allowClear, loading }: any) => (
-    <div
-      data-testid="select"
-      data-value={value}
-      data-placeholder={placeholder}
-      data-mode={mode}
-      data-allow-clear={allowClear}
-      data-loading={loading}
-      onClick={() => onChange && onChange('test-value')}
-    >
-      {children}
-    </div>
-  ),
-  Option: ({ children, value }: any) => <option value={value}>{children}</option>,
-  Button: ({ children, onClick, icon, type, htmlType }: any) => (
-    <button data-testid="button" data-type={type} data-html-type={htmlType} onClick={onClick}>
-      {icon}
-      {children}
-    </button>
-  ),
-  Space: ({ children, size }: any) => (
-    <div data-testid="space" data-size={size}>
-      {children}
-    </div>
-  ),
-  Col: ({ children, span }: any) => (
-    <div data-testid="col" data-span={span}>
-      {children}
-    </div>
-  ),
-  Row: ({ children, gutter }: any) => (
-    <div data-testid="row" data-gutter={gutter}>
-      {children}
-    </div>
-  ),
-  Collapse: ({ children, activeKey, onChange }: any) => (
-    <div
-      data-testid="collapse"
-      data-active-key={activeKey}
-      onClick={() => onChange && onChange(!activeKey ? ['1'] : [])}
-    >
-      {children}
-    </div>
-  ),
-  Panel: ({ children, header, extra }: any) => (
-    <div data-testid="panel" data-header={header}>
-      <div className="panel-header">{header}</div>
-      {extra && <div className="panel-extra">{extra}</div>}
-      {children}
-    </div>
-  ),
-  Slider: ({ value, onChange, range, min, max, marks: _marks }: any) => (
-    <div data-testid="slider" data-range={range} data-min={min} data-max={max}>
-      <input
-        type="range"
-        value={value?.[0] ?? 0}
-        onChange={e => onChange && onChange([e.target.value, value?.[1]])}
-      />
-      <input
-        type="range"
-        value={value?.[1] || 100}
-        onChange={e => onChange && onChange([value?.[0], e.target.value])}
-      />
-    </div>
-  ),
-  RangePicker: ({ value, onChange, placeholder }: any) => (
-    <div data-testid="range-picker">
-      <input
-        data-value-start={value?.[0]}
-        data-placeholder={placeholder?.[0]}
-        onChange={e => onChange && onChange([e.target.value, value?.[1]])}
-      />
-      <input
-        data-value-end={value?.[1]}
-        data-placeholder={placeholder?.[1]}
-        onChange={e => onChange && onChange([value?.[0], e.target.value])}
-      />
-    </div>
-  ),
-  DatePicker: ({ value, onChange, placeholder }: any) => (
-    <input
-      data-testid="date-picker"
-      data-value={value}
-      data-placeholder={placeholder}
-      onChange={e => onChange && onChange(e.target.value)}
-    />
-  ),
-  Tag: ({ children, closable, onClose }: any) => (
-    <span data-testid="tag" data-closable={closable} onClick={onClose}>
-      {children}
-    </span>
-  ),
-  Tooltip: ({ children, title }: any) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
-  Modal: ({ children, open, onOk, onCancel, title }: any) => (
-    <div data-testid="modal" data-open={open} data-title={title}>
-      {open && (
-        <>
-          <div className="modal-title">{title}</div>
-          <div className="modal-content">{children}</div>
-          <button onClick={onOk}>确定</button>
-          <button onClick={onCancel}>取消</button>
-        </>
-      )}
-    </div>
-  ),
-  InputNumber: ({ value, onChange, min, max, placeholder }: any) => (
-    <input
-      data-testid="input-number"
-      type="number"
-      data-placeholder={placeholder}
-      data-min={min}
-      data-max={max}
-      value={value}
-      onChange={e => onChange && onChange(parseFloat(e.target.value))}
-    />
-  ),
-  Typography: ({ children }: any) => <span data-testid="typography">{children}</span>,
-  Text: ({ children }: any) => <span data-testid="text">{children}</span>,
+// Mock dependencies before imports
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  SearchOutlined: () => <span data-testid="icon-search" />,
-  ReloadOutlined: () => <span data-testid="icon-reload" />,
-  SaveOutlined: () => <span data-testid="icon-save" />,
-  HistoryOutlined: () => <span data-testid="icon-history" />,
-  DownOutlined: () => <span data-testid="icon-down" />,
-  UpOutlined: () => <span data-testid="icon-up" />,
-  EnvironmentOutlined: () => <span data-testid="icon-environment" />,
-  UserOutlined: () => <span data-testid="icon-user" />,
-  HomeOutlined: () => <span data-testid="icon-home" />,
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
 }));
 
-// Mock @tanstack/react-query
-const mockQueries = {
-  data: [{ id: '1', name: '选项1' }],
-  isLoading: false,
-  isError: false,
-  error: null,
-};
-vi.mock('@tanstack/react-query', () => ({
-  useQueries: vi.fn(() => [mockQueries, mockQueries]),
+vi.mock('@/services/assetService', () => ({
+  assetService: {
+    getOwnershipEntities: vi.fn(() => Promise.resolve(['政府', '企业', '事业单位'])),
+    getBusinessCategories: vi.fn(() => Promise.resolve(['办公', '商业', '工业'])),
+  },
 }));
 
-// Mock hooks
-vi.mock('@/hooks', () => ({
-  useDebounce: vi.fn(value => value),
-  useSearchHistory: vi.fn(() => ({
+vi.mock('@/hooks/useSearchHistory', () => ({
+  useSearchHistory: () => ({
     searchHistory: [
       {
         id: '1',
         name: '我的搜索',
-        conditions: { ownership_status: '自有' },
+        conditions: { ownership_status: '已确权' },
         createdAt: '2024-01-01T00:00:00.000Z',
       },
     ],
     addSearchHistory: vi.fn(),
     removeSearchHistory: vi.fn(),
-  })),
+    clearSearchHistory: vi.fn(),
+    updateSearchHistoryName: vi.fn(),
+  }),
 }));
 
-// Mock services
-vi.mock('@/services', () => ({
-  getOwnershipEntities: vi.fn(() => [{ id: '1', name: '权属单位1' }]),
-  getBusinessCategories: vi.fn(() => [{ id: '1', name: '商业类别1' }]),
-  saveSearchCondition: vi.fn(() => ({ id: '1', name: '保存成功' })),
-  getSearchHistory: vi.fn(() => []),
+vi.mock('@tanstack/react-query', () => ({
+  useQueries: () => [
+    { data: ['政府', '企业', '事业单位'], isLoading: false },
+    { data: ['办公', '商业', '工业'], isLoading: false },
+  ],
 }));
 
-// Mock format utilities
-vi.mock('@/utils/format', () => ({
-  getOwnershipStatusLabel: (status: string) => status,
-  getPropertyNatureLabel: (nature: string) => nature,
-  getUsageStatusLabel: (status: string) => status,
+// Mock Form.useForm
+const mockFormInstance = {
+  getFieldsValue: vi.fn(() => ({})),
+  setFieldsValue: vi.fn(),
+  resetFields: vi.fn(),
+  getFieldValue: vi.fn(),
+};
+
+// Mock Ant Design
+vi.mock('antd', () => {
+  const Card = ({
+    children,
+    title,
+    extra,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+    extra?: React.ReactNode;
+  }) => (
+    <div data-testid="search-card">
+      {title && <div data-testid="card-title">{title}</div>}
+      {extra && <div data-testid="card-extra">{extra}</div>}
+      {children}
+    </div>
+  );
+
+  const Form = ({
+    children,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    disabled?: boolean;
+  }) => (
+    <form data-testid="search-form" data-disabled={disabled}>
+      {children}
+    </form>
+  );
+  Form.Item = ({
+    children,
+    label,
+    name,
+  }: {
+    children: React.ReactNode;
+    label?: string;
+    name?: string;
+  }) => (
+    <div data-testid={`form-item-${name || label}`}>
+      {label && <label>{label}</label>}
+      {children}
+    </div>
+  );
+  Form.useForm = () => [mockFormInstance];
+
+  const Select = ({
+    children,
+    placeholder,
+    loading,
+    onChange,
+  }: {
+    children?: React.ReactNode;
+    placeholder?: string;
+    loading?: boolean;
+    onChange?: (value: string) => void;
+  }) => (
+    <select
+      data-testid="select"
+      data-placeholder={placeholder}
+      data-loading={loading}
+      onChange={e => onChange?.(e.target.value)}
+    >
+      <option value="">{placeholder}</option>
+      {children}
+    </select>
+  );
+
+  const Option = ({
+    children,
+    value,
+  }: {
+    children: React.ReactNode;
+    value: string;
+  }) => <option value={value}>{children}</option>;
+
+  Select.Option = Option;
+
+  const Input = ({
+    placeholder,
+    prefix,
+    allowClear,
+    value,
+    onChange,
+  }: {
+    placeholder?: string;
+    prefix?: React.ReactNode;
+    allowClear?: boolean;
+    value?: string;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  }) => (
+    <div data-testid="input-wrapper">
+      {prefix}
+      <input
+        data-testid="input"
+        placeholder={placeholder}
+        data-allow-clear={allowClear}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+  );
+
+  const DatePicker = {
+    RangePicker: ({ format }: { format?: string }) => (
+      <div data-testid="range-picker" data-format={format}>
+        <input data-testid="date-start" />
+        <input data-testid="date-end" />
+      </div>
+    ),
+  };
+
+  return {
+    Card,
+    Form,
+    Input,
+    Select,
+    DatePicker,
+    InputNumber: ({
+      placeholder,
+      value,
+      onChange,
+    }: {
+      placeholder?: string;
+      value?: number;
+      onChange?: (value: number | null) => void;
+    }) => (
+      <input
+        data-testid="input-number"
+        type="number"
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange?.(parseFloat(e.target.value) || null)}
+      />
+    ),
+    Button: ({
+      children,
+      onClick,
+      icon,
+      type,
+      loading,
+      disabled,
+    }: {
+      children?: React.ReactNode;
+      onClick?: () => void;
+      icon?: React.ReactNode;
+      type?: string;
+      loading?: boolean;
+      disabled?: boolean;
+    }) => (
+      <button
+        data-testid={`btn-${type || 'default'}`}
+        data-loading={loading}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {icon}
+        {children}
+      </button>
+    ),
+    Space: ({
+      children,
+    }: {
+      children: React.ReactNode;
+    }) => <div data-testid="space">{children}</div>,
+    Row: ({
+      children,
+      gutter,
+    }: {
+      children: React.ReactNode;
+      gutter?: number;
+    }) => (
+      <div data-testid="row" data-gutter={gutter}>
+        {children}
+      </div>
+    ),
+    Col: ({
+      children,
+      xs,
+      sm,
+      md,
+      lg,
+    }: {
+      children: React.ReactNode;
+      xs?: number;
+      sm?: number;
+      md?: number;
+      lg?: number;
+    }) => (
+      <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
+        {children}
+      </div>
+    ),
+    Modal: ({
+      children,
+      open,
+      title,
+      onOk,
+      onCancel,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      title?: string;
+      onOk?: () => void;
+      onCancel?: () => void;
+    }) =>
+      open ? (
+        <div data-testid="modal" data-title={title}>
+          <div data-testid="modal-title">{title}</div>
+          <div data-testid="modal-content">{children}</div>
+          <button data-testid="modal-ok" onClick={onOk}>
+            确定
+          </button>
+          <button data-testid="modal-cancel" onClick={onCancel}>
+            取消
+          </button>
+        </div>
+      ) : null,
+    List: ({
+      dataSource,
+      renderItem,
+      locale,
+    }: {
+      dataSource: Array<{ id: string; name: string }>;
+      renderItem: (item: { id: string; name: string }) => React.ReactNode;
+      locale?: { emptyText: string };
+    }) => (
+      <div data-testid="list">
+        {dataSource.length === 0 ? (
+          <div data-testid="list-empty">{locale?.emptyText}</div>
+        ) : (
+          dataSource.map(item => <div key={item.id}>{renderItem(item)}</div>)
+        )}
+      </div>
+    ),
+    Typography: {
+      Text: ({ children }: { children: React.ReactNode }) => (
+        <span data-testid="text">{children}</span>
+      ),
+    },
+    Popconfirm: ({
+      children,
+      title,
+      onConfirm,
+    }: {
+      children: React.ReactNode;
+      title: string;
+      onConfirm?: () => void;
+    }) => (
+      <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
+        {children}
+      </div>
+    ),
+    Tag: ({
+      children,
+      color,
+    }: {
+      children: React.ReactNode;
+      color?: string;
+    }) => (
+      <span data-testid="tag" data-color={color}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+// Mock icons
+vi.mock('@ant-design/icons', () => ({
+  SearchOutlined: () => <span data-testid="icon-search">SearchIcon</span>,
+  ReloadOutlined: () => <span data-testid="icon-reload">ReloadIcon</span>,
+  DownOutlined: () => <span data-testid="icon-down">DownIcon</span>,
+  UpOutlined: () => <span data-testid="icon-up">UpIcon</span>,
+  SaveOutlined: () => <span data-testid="icon-save">SaveIcon</span>,
+  HistoryOutlined: () => <span data-testid="icon-history">HistoryIcon</span>,
 }));
 
-describe('AssetSearch 组件测试', () => {
+import AssetSearch from '../AssetSearch';
+import { MessageManager } from '@/utils/messageManager';
+
+describe('AssetSearch', () => {
+  const defaultProps = {
+    onSearch: vi.fn(),
+    onReset: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFormInstance.getFieldsValue.mockReturnValue({});
   });
 
-  const defaultInitialValues = {
-    search: '',
-    ownership_status: undefined,
-    property_nature: undefined,
-    usage_status: undefined,
-    ownership_entity: undefined,
-    business_category: undefined,
-    address: undefined,
-    land_area_min: undefined,
-    land_area_max: undefined,
-    rentable_area_min: undefined,
-    rentable_area_max: undefined,
-    certificated_usage: undefined,
-    actual_usage: undefined,
-  };
+  describe('基本渲染', () => {
+    it('应该正确渲染搜索卡片', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-  const _initialValues = { ...defaultInitialValues };
-
-  // Helper function to create component element
-  const createElement = async (props: any = {}) => {
-    const module = await import('../AssetSearch');
-    const Component = module.default;
-    return React.createElement(Component, {
-      onSearch: vi.fn(),
-      onReset: vi.fn(),
-      ...props,
-    });
-  };
-
-  describe('组件导入与导出', () => {
-    it('应该成功导入默认导出', async () => {
-      const module = await import('../AssetSearch');
-      expect(module.default).toBeDefined();
+      expect(screen.getByTestId('search-card')).toBeInTheDocument();
     });
 
-    it('应该是React组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示资产搜索标题', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('资产搜索')).toBeInTheDocument();
+    });
+
+    it('应该显示搜索表单', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('search-form')).toBeInTheDocument();
+    });
+
+    it('应该显示搜索图标', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
     });
   });
 
-  describe('基本属性测试', () => {
-    it('应该接收 onSearch 回调', async () => {
+  describe('搜索字段', () => {
+    it('应该显示关键词搜索输入框', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('form-item-search')).toBeInTheDocument();
+    });
+
+    it('应该显示确权状态下拉框', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('form-item-ownership_status')).toBeInTheDocument();
+    });
+
+    it('应该显示物业性质下拉框', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('form-item-property_nature')).toBeInTheDocument();
+    });
+
+    it('应该显示使用状态下拉框', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('form-item-usage_status')).toBeInTheDocument();
+    });
+  });
+
+  describe('操作按钮', () => {
+    it('应该显示搜索按钮', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('搜索')).toBeInTheDocument();
+    });
+
+    it('应该显示重置按钮', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('重置')).toBeInTheDocument();
+    });
+
+    it('应该显示保存条件按钮', () => {
+      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+
+      expect(screen.getByText('保存条件')).toBeInTheDocument();
+    });
+
+    it('应该显示搜索历史按钮', () => {
+      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+
+      expect(screen.getByText('搜索历史')).toBeInTheDocument();
+    });
+
+    it('应该显示展开/收起按钮', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('展开')).toBeInTheDocument();
+    });
+
+    it('搜索按钮应该是primary类型', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('btn-primary')).toBeInTheDocument();
+    });
+  });
+
+  describe('点击事件', () => {
+    it('点击搜索按钮应该触发onSearch', () => {
       const handleSearch = vi.fn();
-      const element = await createElement({ onSearch: handleSearch });
-      expect(element).toBeTruthy();
+      render(<AssetSearch {...defaultProps} onSearch={handleSearch} />);
+
+      const searchButton = screen.getByText('搜索');
+      fireEvent.click(searchButton);
+
+      expect(handleSearch).toHaveBeenCalled();
     });
 
-    it('应该接收 onReset 回调', async () => {
+    it('点击重置按钮应该触发onReset', () => {
       const handleReset = vi.fn();
-      const element = await createElement({ onReset: handleReset });
-      expect(element).toBeTruthy();
+      render(<AssetSearch {...defaultProps} onReset={handleReset} />);
+
+      const resetButton = screen.getByText('重置');
+      fireEvent.click(resetButton);
+
+      expect(handleReset).toHaveBeenCalled();
     });
 
-    it('应该接受 initialValues 属性', async () => {
-      const element = await createElement({ initialValues: _initialValues, defaultInitialValues });
-      expect(element).toBeTruthy();
+    it('点击重置按钮应该重置表单', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      const resetButton = screen.getByText('重置');
+      fireEvent.click(resetButton);
+
+      expect(mockFormInstance.resetFields).toHaveBeenCalled();
     });
 
-    it('应该接受 className 属性', async () => {
-      const element = await createElement({ className: 'custom-class' });
-      expect(element).toBeTruthy();
-    });
+    it('点击展开按钮应该切换状态', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-    it('应该接受 style 属性', async () => {
-      const element = await createElement({ style: { marginBottom: 16 } });
-      expect(element).toBeTruthy();
-    });
-  });
+      // 初始状态显示"展开"
+      expect(screen.getByText('展开')).toBeInTheDocument();
 
-  describe('基本搜索字段', () => {
-    it('应该显示搜索输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      // 点击展开
+      const expandButton = screen.getByText('展开');
+      fireEvent.click(expandButton);
 
-    it('应该显示权属状态下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示物业性质下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示使用状态下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('搜索输入框应该有 SearchOutlined 前缀图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('搜索输入框应该支持清除', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      // 应该显示"收起"
+      expect(screen.getByText('收起')).toBeInTheDocument();
     });
   });
 
-  describe('高级搜索字段 (可展开)', () => {
-    it('应该使用 Collapse 组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('展开/收起高级搜索', () => {
+    it('默认不显示高级搜索字段', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      // 高级字段不应该显示
+      expect(screen.queryByTestId('form-item-ownership_entity')).not.toBeInTheDocument();
     });
 
-    it('应该显示权属单位下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('展开后应该显示高级搜索字段', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      // 点击展开
+      const expandButton = screen.getByText('展开');
+      fireEvent.click(expandButton);
+
+      // 高级字段应该显示
+      expect(screen.getByTestId('form-item-ownership_entity')).toBeInTheDocument();
+      expect(screen.getByTestId('form-item-business_category')).toBeInTheDocument();
+      expect(screen.getByTestId('form-item-is_litigated')).toBeInTheDocument();
     });
 
-    it('应该显示经营类别下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('展开后应该显示日期范围选择器', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('展开'));
+
+      expect(screen.getByTestId('range-picker')).toBeInTheDocument();
     });
 
-    it('应该显示地址输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('展开后应该显示面积范围输入', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('展开'));
+
+      expect(screen.getByText('面积范围')).toBeInTheDocument();
     });
 
-    it('应该显示土地面积范围滑块', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('展开后应该显示排序方式', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-    it('应该显示可出租面积范围滑块', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      fireEvent.click(screen.getByText('展开'));
 
-    it('应该显示证载用途输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示实际用途输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('展开时应该显示 DownOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('收起时应该显示 UpOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('搜索按钮', () => {
-    it('应该显示搜索按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('搜索按钮应该有 SearchOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('搜索按钮应该是 primary 类型', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('点击搜索按钮应该触发 onSearch', async () => {
-      const handleSearch = vi.fn();
-      const element = await createElement({ onSearch: handleSearch });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('重置按钮', () => {
-    it('应该显示重置按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('重置按钮应该有 ReloadOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('点击重置按钮应该触发 onReset', async () => {
-      const handleReset = vi.fn();
-      const element = await createElement({ onReset: handleReset });
-      expect(element).toBeTruthy();
-    });
-
-    it('重置后表单应该恢复初始值', async () => {
-      const element = await createElement({ initialValues: _initialValues, defaultInitialValues });
-      expect(element).toBeTruthy();
+      expect(screen.getByText('排序方式')).toBeInTheDocument();
     });
   });
 
   describe('保存搜索条件', () => {
-    it('应该显示保存按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('点击保存按钮应该打开保存弹窗', () => {
+      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+
+      fireEvent.click(screen.getByText('保存条件'));
+
+      expect(screen.getByTestId('modal')).toBeInTheDocument();
+      expect(screen.getByText('保存搜索条件')).toBeInTheDocument();
     });
 
-    it('保存按钮应该有 SaveOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('没有搜索条件时保存应该提示警告', () => {
+      mockFormInstance.getFieldsValue.mockReturnValue({});
+      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+
+      fireEvent.click(screen.getByText('保存条件'));
+      fireEvent.click(screen.getByTestId('modal-ok'));
+
+      expect(MessageManager.warning).toHaveBeenCalledWith('请先设置搜索条件');
     });
 
-    it('点击保存按钮应该打开保存弹窗', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('点击取消应该关闭保存弹窗', () => {
+      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
-    it('保存弹窗应该有名称输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      fireEvent.click(screen.getByText('保存条件'));
+      expect(screen.getByTestId('modal')).toBeInTheDocument();
 
-    it('保存弹窗应该有确定和取消按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('搜索历史管理', () => {
-    it('应该显示历史按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('历史按钮应该有 HistoryOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示历史记录列表', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持点击历史记录应用搜索条件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持删除历史记录', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      fireEvent.click(screen.getByTestId('modal-cancel'));
+      expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
     });
   });
 
-  describe('面积范围滑块', () => {
-    it('土地面积应该是双滑块范围选择', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('搜索历史', () => {
+    it('点击历史按钮应该打开历史弹窗', () => {
+      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+
+      fireEvent.click(screen.getByText('搜索历史'));
+
+      expect(screen.getByTestId('modal')).toBeInTheDocument();
+      expect(screen.getByText('搜索历史')).toBeInTheDocument();
     });
 
-    it('可出租面积应该是双滑块范围选择', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('历史弹窗应该显示历史列表', () => {
+      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
 
-    it('应该显示范围标记', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      fireEvent.click(screen.getByText('搜索历史'));
 
-    it('应该设置合理的最小值和最大值', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('list')).toBeInTheDocument();
     });
   });
 
-  describe('下拉选择器数据加载', () => {
-    it('应该加载权属单位数据', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-      // useQueries 在组件内部被调用来加载数据
+  describe('loading状态', () => {
+    it('loading时搜索按钮应该显示loading状态', () => {
+      render(<AssetSearch {...defaultProps} loading={true} />);
+
+      const searchButton = screen.getByTestId('btn-primary');
+      expect(searchButton).toHaveAttribute('data-loading', 'true');
     });
 
-    it('应该加载经营类别数据', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('loading时重置按钮应该禁用', () => {
+      render(<AssetSearch {...defaultProps} loading={true} />);
+
+      const resetButton = screen.getByText('重置').closest('button');
+      expect(resetButton).toBeDisabled();
     });
 
-    it('加载时应该显示 loading 状态', async () => {
-      const { useQueries } = await import('@tanstack/react-query');
-      vi.mocked(useQueries).mockReturnValue([
-        { ...mockQueries, isLoading: true },
-        mockQueries,
-      ] as any);
+    it('loading时保存按钮应该禁用', () => {
+      render(<AssetSearch {...defaultProps} loading={true} showSaveButton={true} />);
 
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('搜索条件初始化', () => {
-    it('应该使用 initialValues 初始化表单', async () => {
-      const element = await createElement({
-        initialValues: {
-          ...defaultInitialValues,
-          ownership_status: '自有',
-        },
-      });
-      expect(element).toBeTruthy();
+      const saveButton = screen.getByText('保存条件').closest('button');
+      expect(saveButton).toBeDisabled();
     });
 
-    it(' initialValues 为空时应该使用默认值', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('loading时应该显示加载中标签', () => {
+      render(<AssetSearch {...defaultProps} loading={true} />);
+
+      expect(screen.getByText('加载中...')).toBeInTheDocument();
     });
   });
 
-  describe('搜索条件变化', () => {
-    it('输入框变化应该更新表单值', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('初始值', () => {
+    it('应该接受initialValues属性', () => {
+      const initialValues = { search: '测试' };
+      render(<AssetSearch {...defaultProps} initialValues={initialValues} />);
+
+      expect(mockFormInstance.setFieldsValue).toHaveBeenCalled();
     });
 
-    it('下拉框变化应该更新表单值', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('空initialValues不应该调用setFieldsValue', () => {
+      render(<AssetSearch {...defaultProps} initialValues={{}} />);
 
-    it('滑块变化应该更新表单值', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(mockFormInstance.setFieldsValue).not.toHaveBeenCalled();
     });
   });
 
-  describe('防抖处理', () => {
-    it('搜索输入应该使用防抖', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-      // useDebounce hook 在组件内部被使用
+  describe('可选按钮显示', () => {
+    it('showSaveButton为false时不显示保存按钮', () => {
+      render(<AssetSearch {...defaultProps} showSaveButton={false} />);
+
+      expect(screen.queryByText('保存条件')).not.toBeInTheDocument();
+    });
+
+    it('showHistoryButton为false时不显示历史按钮', () => {
+      render(<AssetSearch {...defaultProps} showHistoryButton={false} />);
+
+      expect(screen.queryByText('搜索历史')).not.toBeInTheDocument();
+    });
+
+    it('默认显示保存和历史按钮', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('保存条件')).toBeInTheDocument();
+      expect(screen.getByText('搜索历史')).toBeInTheDocument();
     });
   });
 
-  describe('Form 布局', () => {
-    it('应该使用垂直布局', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('图标渲染', () => {
+    it('应该显示搜索图标', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
     });
 
-    it('应该隐藏冒号', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示重置图标', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
     });
 
-    it('应该使用 Row 和 Col 进行布局', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示保存图标', () => {
+      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+
+      expect(screen.getByTestId('icon-save')).toBeInTheDocument();
     });
 
-    it('基本字段应该占 6 列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示历史图标', () => {
+      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+
+      expect(screen.getByTestId('icon-history')).toBeInTheDocument();
     });
 
-    it('按钮组应该使用 Space 组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('初始应该显示展开图标', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-  describe('字段标签', () => {
-    it('搜索字段应该有正确标签', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('icon-down')).toBeInTheDocument();
     });
 
-    it('权属状态标签应该正确', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('展开后应该显示收起图标', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-    it('面积范围标签应该正确', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      fireEvent.click(screen.getByText('展开'));
+
+      expect(screen.getByTestId('icon-up')).toBeInTheDocument();
     });
   });
 
-  describe('占位符文本', () => {
-    it('搜索输入框应该有占位符', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('布局验证', () => {
+    it('应该使用Row和Col布局', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getAllByTestId('row').length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId('col').length).toBeGreaterThan(0);
     });
 
-    it('下拉框应该有请选择占位符', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该使用Space组件', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-    it('输入框应该有适当的占位符提示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getAllByTestId('space').length).toBeGreaterThan(0);
     });
   });
 
-  describe('按钮布局和样式', () => {
-    it('搜索、重置、保存、历史按钮应该在操作栏', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('下拉选项', () => {
+    it('确权状态应该有正确的选项', () => {
+      render(<AssetSearch {...defaultProps} />);
+
+      expect(screen.getByText('已确权')).toBeInTheDocument();
+      expect(screen.getByText('未确权')).toBeInTheDocument();
     });
 
-    it('操作栏应该使用 Space 组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('物业性质应该有正确的选项', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-  describe('可访问性', () => {
-    it('输入框应该有正确的 aria 属性', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByText('经营性')).toBeInTheDocument();
+      expect(screen.getByText('非经营性')).toBeInTheDocument();
     });
 
-    it('按钮应该有清晰的标签', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('使用状态应该有正确的选项', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-  describe('高级面板标题', () => {
-    it('高级面板标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('高级面板标题应该包含展开/收起图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByText('出租')).toBeInTheDocument();
+      expect(screen.getByText('空置')).toBeInTheDocument();
+      expect(screen.getByText('自用')).toBeInTheDocument();
     });
   });
 
-  describe('空值处理', () => {
-    it('空的 initialValues 应该正常工作', async () => {
-      const element = await createElement({ initialValues: {} });
-      expect(element).toBeTruthy();
-    });
+  describe('表单验证', () => {
+    it('表单应该使用垂直布局', () => {
+      render(<AssetSearch {...defaultProps} />);
 
-    it('undefined initialValues 应该使用默认值', async () => {
-      const element = await createElement({ initialValues: undefined });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('边缘情况', () => {
-    it('极大面积值应该正常处理', async () => {
-      const element = await createElement({
-        initialValues: {
-          ...defaultInitialValues,
-          land_area_max: 1000000,
-        },
-      });
-      expect(element).toBeTruthy();
-    });
-
-    it('零面积值应该正常处理', async () => {
-      const element = await createElement({
-        initialValues: {
-          ...defaultInitialValues,
-          land_area_min: 0,
-          land_area_max: 0,
-        },
-      });
-      expect(element).toBeTruthy();
-    });
-
-    it('特殊字符在搜索框中应该正常处理', async () => {
-      const element = await createElement({
-        initialValues: {
-          ...defaultInitialValues,
-          search: '测试@#$%',
-        },
-      });
-      expect(element).toBeTruthy();
+      const form = screen.getByTestId('search-form');
+      expect(form).toBeInTheDocument();
     });
   });
 });

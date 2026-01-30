@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.organization import Organization
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
@@ -11,9 +10,6 @@ TEST_ORG_ID = "org_123"
 TEST_PARENT_ID = "org_root"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

@@ -2,11 +2,92 @@
 Unit test configuration and fixtures
 """
 
+import os
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+if TEST_DATABASE_URL:
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+
+@pytest.fixture(scope="session")
+def test_database_url():
+    """Provide the test database URL for unit tests."""
+    if TEST_DATABASE_URL:
+        os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+    return TEST_DATABASE_URL
+
+
+@pytest.fixture(scope="session")
+def engine(test_database_url):
+    """Create database engine for unit tests."""
+    if not test_database_url:
+        pytest.skip("TEST_DATABASE_URL is required for db-backed unit tests", allow_module_level=True)
+
+    engine = create_engine(test_database_url, pool_pre_ping=True)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def db_tables(engine):
+    """Create database tables using Alembic migrations when available."""
+    from alembic.config import Config
+
+    from src.database import Base
+
+    versions_dir = Path("alembic/versions")
+    has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
+
+    if has_migrations:
+        from alembic import command
+
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
+        command.upgrade(alembic_cfg, "head")
+
+    Base.metadata.create_all(bind=engine)
+
+    yield
+
+    try:
+        Base.metadata.drop_all(bind=engine)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="function")
+def db_session(engine, db_tables):
+    """Create a new database session for each unit test."""
+    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    session = test_session_local()
+
+    connection = engine.connect()
+    transaction = connection.begin()
+    session.bind = connection
+
+    yield session
+
+    try:
+        session.close()
+        transaction.rollback()
+        connection.close()
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="function")
+def test_db(db_session):
+    """Alias fixture for tests still expecting test_db."""
+    return db_session
+
+
 
 
 @pytest.fixture(autouse=True)
@@ -62,7 +143,7 @@ def mock_enum_validation_service(request):
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, db_session):
     """Create a test client for unit tests with authentication bypassed"""
     from src.database import get_db
     from src.main import app
@@ -97,15 +178,14 @@ def client(monkeypatch):
     app.dependency_overrides[get_current_active_user] = mock_get_current_user
     app.dependency_overrides[require_permission] = mock_require_permission
 
-    # Mock database session
-    def mock_get_db():
-        db = MagicMock(spec=Session)
+    # Use real database session
+    def override_get_db():
         try:
-            yield db
+            yield db_session
         finally:
             pass
 
-    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client

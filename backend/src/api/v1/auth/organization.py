@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import bad_request, not_found
+from ....core.exception_handler import BaseBusinessError, bad_request, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.organization import organization as organization_crud
 from ....database import get_db
@@ -246,6 +246,8 @@ async def create_organization(
             db, obj_in=organization
         )
         return OrganizationResponse.model_validate(db_organization)
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise bad_request(str(e))
 
@@ -263,6 +265,8 @@ async def update_organization(
             db, org_id=org_id, obj_in=organization
         )
         return OrganizationResponse.model_validate(db_organization)
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         if str(e).startswith("组织ID"):
             raise not_found(str(e), resource_type="organization")
@@ -286,6 +290,8 @@ async def delete_organization(
                 "组织不存在", resource_type="organization", resource_id=org_id
             )
         return {"message": "组织删除成功"}
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise bad_request(str(e))
 
@@ -311,6 +317,8 @@ async def move_organization(
             db, org_id=org_id, obj_in=update_data
         )
         return {"message": "组织移动成功", "organization": db_organization}
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         if str(e).startswith("组织ID"):
             raise not_found(str(e), resource_type="organization")
@@ -340,6 +348,8 @@ async def batch_organization_operation(
                 else:
                     errors.append({"id": org_id, "error": "组织不存在"})
 
+        except BaseBusinessError as e:
+            errors.append({"id": org_id, "error": str(e)})
         except ValueError as e:
             errors.append({"id": org_id, "error": str(e)})
 

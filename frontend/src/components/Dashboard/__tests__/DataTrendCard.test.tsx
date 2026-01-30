@@ -6,9 +6,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface CardMockProps {
+  children?: React.ReactNode;
+  loading?: boolean;
+  className?: string;
+  variant?: string;
+}
+
+interface StatisticMockProps {
+  title?: React.ReactNode;
+  value?: number;
+  precision?: number;
+  suffix?: React.ReactNode;
+  valueStyle?: React.CSSProperties;
+}
+
+interface TooltipMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, loading, className, variant }: any) => (
+  Card: ({ children, loading, className, variant }: CardMockProps) => (
     <div
       data-testid="card"
       data-loading={loading}
@@ -18,7 +38,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Statistic: ({ title, value, precision, suffix, valueStyle }: any) => (
+  Statistic: ({ title, value, precision, suffix, valueStyle }: StatisticMockProps) => (
     <div
       data-testid="statistic"
       data-title={title}
@@ -30,7 +50,7 @@ vi.mock('antd', () => ({
       <span>{value}</span>
     </div>
   ),
-  Tooltip: ({ children, title }: any) => (
+  Tooltip: ({ children, title }: TooltipMockProps) => (
     <div data-testid="tooltip" data-title={title}>
       {children}
     </div>

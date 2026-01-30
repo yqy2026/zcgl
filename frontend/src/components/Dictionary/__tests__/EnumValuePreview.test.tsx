@@ -5,23 +5,41 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import type { EnumFieldValue } from '@/types/dictionary';
 
 // Mock types
 vi.mock('@/types/dictionary', () => ({}));
 
 // Mock Ant Design components
+interface TagMockProps {
+  children?: React.ReactNode;
+  color?: string;
+  style?: React.CSSProperties;
+}
+
+interface TooltipMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+  wrap?: boolean;
+  size?: 'small' | 'middle' | 'large' | number;
+}
+
 vi.mock('antd', () => ({
-  Tag: ({ children, color, style }: any) => (
+  Tag: ({ children, color, style }: TagMockProps) => (
     <div data-testid="tag" data-color={color} style={style}>
       {children}
     </div>
   ),
-  Tooltip: ({ children, title }: any) => (
+  Tooltip: ({ children, title }: TooltipMockProps) => (
     <div data-testid="tooltip" data-title={JSON.stringify(title)}>
       {children}
     </div>
   ),
-  Space: ({ children, wrap, size }: any) => (
+  Space: ({ children, wrap, size }: SpaceMockProps) => (
     <div data-testid="space" data-wrap={wrap} data-size={size}>
       {children}
     </div>
@@ -133,7 +151,7 @@ describe('EnumValuePreview - 空状态测试', () => {
   it('values为null应该显示暂无枚举值', async () => {
     const EnumValuePreview = (await import('../EnumValuePreview')).default;
     const element = React.createElement(EnumValuePreview, {
-      values: null as any,
+      values: null as unknown as EnumFieldValue[],
     });
     expect(element).toBeTruthy();
   });
@@ -149,7 +167,7 @@ describe('EnumValuePreview - 空状态测试', () => {
   it('values不是数组应该显示暂无枚举值', async () => {
     const EnumValuePreview = (await import('../EnumValuePreview')).default;
     const element = React.createElement(EnumValuePreview, {
-      values: 'invalid' as any,
+      values: 'invalid' as unknown as EnumFieldValue[],
     });
     expect(element).toBeTruthy();
   });

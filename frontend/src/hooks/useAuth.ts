@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthService } from '../services/authService';
 import type { User, LoginCredentials } from '../types/auth';
+import type { StandardApiResponse, AuthResponse as ApiAuthResponse } from '../types/apiResponse';
 import { createLogger } from '../utils/logger';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -44,7 +45,7 @@ export const useAuth = () => {
     setError(null);
 
     try {
-      const response = (await AuthService.login(credentials)) as any;
+      const response: StandardApiResponse<ApiAuthResponse> = await AuthService.login(credentials);
 
       if (response.success === true) {
         setUser(response.data.user);

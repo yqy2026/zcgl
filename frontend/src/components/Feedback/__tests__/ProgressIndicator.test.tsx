@@ -7,6 +7,68 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface ProgressMockProps {
+  percent?: number;
+  status?: string;
+  showInfo?: boolean;
+  strokeColor?: string;
+  type?: string;
+  width?: number;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  type?: string;
+  strong?: boolean;
+}
+
+interface TypographyTitleMockProps {
+  children?: React.ReactNode;
+  level?: number;
+  style?: React.CSSProperties;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface CardMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  extra?: React.ReactNode;
+  actions?: React.ReactNode;
+  size?: string;
+}
+
+interface StepsMockProps {
+  children?: React.ReactNode;
+  current?: number;
+  status?: string;
+  direction?: string;
+  size?: string;
+}
+
+interface StepMockProps {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  status?: string;
+  icon?: React.ReactNode;
+}
+
+interface TimelineMockProps {
+  children?: React.ReactNode;
+}
+
+interface TimelineItemMockProps {
+  children?: React.ReactNode;
+  color?: string;
+  dot?: React.ReactNode;
+}
+
+interface IconMockProps {
+  style?: React.CSSProperties;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Progress: ({
@@ -17,7 +79,7 @@ vi.mock('antd', () => ({
     strokeColor,
     type,
     width,
-  }: any) => (
+  }: ProgressMockProps) => (
     <div
       data-testid="progress"
       data-percent={percent}
@@ -29,19 +91,19 @@ vi.mock('antd', () => ({
     />
   ),
   Typography: {
-    Text: ({ children, type, strong }: any) => (
+    Text: ({ children, type, strong }: TypographyTextMockProps) => (
       <span data-testid="text" data-type={type} data-strong={strong}>
         {children}
       </span>
     ),
-    Title: ({ children, level, style }: any) => (
+    Title: ({ children, level, style }: TypographyTitleMockProps) => (
       <div data-testid="title" data-level={level} style={style}>
         {children}
       </div>
     ),
   },
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-  Card: ({ children, title, extra, actions, size }: any) => (
+  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
+  Card: ({ children, title, extra, actions, size }: CardMockProps) => (
     <div data-testid="card" data-size={size}>
       {title && <div data-testid="card-title">{title}</div>}
       {extra && <div data-testid="card-extra">{extra}</div>}
@@ -49,7 +111,7 @@ vi.mock('antd', () => ({
       {actions && <div data-testid="card-actions">{actions}</div>}
     </div>
   ),
-  Steps: ({ children, current, status, direction, size }: any) => (
+  Steps: ({ children, current, status, direction, size }: StepsMockProps) => (
     <div
       data-testid="steps"
       data-current={current}
@@ -60,15 +122,15 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  'Steps.Step': ({ title, description, status, icon }: any) => (
+  'Steps.Step': ({ title, description, status, icon }: StepMockProps) => (
     <div data-testid="step" data-status={status}>
       {title && <div data-testid="step-title">{title}</div>}
       {description && <div data-testid="step-description">{description}</div>}
       {icon && <div data-testid="step-icon">{icon}</div>}
     </div>
   ),
-  Timeline: ({ children }: any) => <div data-testid="timeline">{children}</div>,
-  'Timeline.Item': ({ children, color, dot }: any) => (
+  Timeline: ({ children }: TimelineMockProps) => <div data-testid="timeline">{children}</div>,
+  'Timeline.Item': ({ children, color, dot }: TimelineItemMockProps) => (
     <div data-testid="timeline-item" data-color={color}>
       {dot && <div data-testid="timeline-dot">{dot}</div>}
       {children}
@@ -77,10 +139,10 @@ vi.mock('antd', () => ({
 }));
 
 vi.mock('@ant-design/icons', () => ({
-  CheckCircleOutlined: ({ style }: any) => <div data-testid="icon-check" style={style} />,
-  LoadingOutlined: ({ style }: any) => <div data-testid="icon-loading" style={style} />,
-  ClockCircleOutlined: ({ style }: any) => <div data-testid="icon-clock" style={style} />,
-  ExclamationCircleOutlined: ({ style }: any) => (
+  CheckCircleOutlined: ({ style }: IconMockProps) => <div data-testid="icon-check" style={style} />,
+  LoadingOutlined: ({ style }: IconMockProps) => <div data-testid="icon-loading" style={style} />,
+  ClockCircleOutlined: ({ style }: IconMockProps) => <div data-testid="icon-clock" style={style} />,
+  ExclamationCircleOutlined: ({ style }: IconMockProps) => (
     <div data-testid="icon-exclamation" style={style} />
   ),
 }));

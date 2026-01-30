@@ -9,7 +9,7 @@ const routeLogger = createLogger('RouteCache');
 
 // 缓存接口定义
 export interface RouteCacheItem {
-  component: React.ComponentType<any>;
+  component: React.ComponentType<unknown>;
   loadTime: number;
   hitCount: number;
   lastAccess: number;
@@ -146,7 +146,7 @@ export const useRouteCacheState = () => {
     return cache.getMetrics();
   };
 
-  const preloadRoute = async (key: string, loader: () => Promise<React.ComponentType<any>>) => {
+  const preloadRoute = async (key: string, loader: () => Promise<React.ComponentType<unknown>>) => {
     const cached = cache.get(key);
     if (cached) {
       return cached.component;
@@ -213,7 +213,13 @@ export class RoutePerformanceMonitor {
   }
 
   getMetrics() {
-    const result: Record<string, any> = {};
+    const result: Record<string, {
+      averageLoadTime: number;
+      hitCount: number;
+      errorCount: number;
+      errorRate: number;
+      lastLoad: number;
+    }> = {};
 
     for (const [key, value] of this.metrics.entries()) {
       result[key] = {

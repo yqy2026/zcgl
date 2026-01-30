@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Select, Button, Modal, Space, Tooltip, Tag } from 'antd';
+import type { SelectProps } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
@@ -40,6 +42,12 @@ interface OwnershipSelectProps {
   showSearch?: boolean;
   /** 最大选择数量（多选模式） */
   maxCount?: number;
+}
+
+type OwnershipSelectValue = string | string[];
+interface OwnershipSelectOption extends DefaultOptionType {
+  value: string;
+  label: React.ReactNode;
 }
 
 const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
@@ -101,18 +109,22 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     setSearchText(text);
   }, []);
 
-  // 处理单选
-  const handleSingleChange = (
-    selectedValue: string | { value: string; label: React.ReactNode }
+  const handleChange: SelectProps<OwnershipSelectValue, OwnershipSelectOption>['onChange'] = (
+    selectedValue
   ) => {
-    // 处理labelInValue模式
-    let valueStr: string;
-    if (typeof selectedValue === 'object' && selectedValue !== null) {
-      valueStr = selectedValue.value;
-    } else {
-      valueStr = selectedValue;
+    if (selectedValue == null || selectedValue === '') {
+      onChange?.(mode === 'multiple' ? [] : '', mode === 'multiple' ? [] : undefined);
+      return;
     }
 
+    if (mode === 'multiple') {
+      const values = Array.isArray(selectedValue) ? selectedValue : [selectedValue];
+      const selectedOwners = allOwnerships.filter(o => values.includes(o.id));
+      onChange?.(values, selectedOwners);
+      return;
+    }
+
+    const valueStr = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
     const selected =
       filteredOwnerships.find(o => o.id === valueStr) ||
       filteredOwnerships.find(o => o.name === valueStr);
@@ -122,12 +134,6 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     } else {
       onChange?.(valueStr);
     }
-  };
-
-  // 处理多选
-  const handleMultipleChange = (selectedValues: string[]) => {
-    const selectedOwners = allOwnerships.filter(o => selectedValues.includes(o.id));
-    onChange?.(selectedValues, selectedOwners);
   };
 
   // 处理清除
@@ -207,9 +213,9 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   return (
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
-        <Select
-          value={value ?? ((mode === 'multiple' ? [] : undefined) as any)}
-          onChange={mode === 'multiple' ? handleMultipleChange : (handleSingleChange as any)}
+        <Select<OwnershipSelectValue, OwnershipSelectOption>
+          value={value ?? (mode === 'multiple' ? [] : undefined)}
+          onChange={handleChange}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}

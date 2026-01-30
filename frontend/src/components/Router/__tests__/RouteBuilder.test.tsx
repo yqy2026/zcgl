@@ -4,16 +4,19 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import {} from '@testing-library/react';
-import { MemoryRouter, Routes } from 'react-router-dom';
 import RouteBuilder, { AssetRoutes, SystemRoutes } from '../RouteBuilder';
+
+interface RouteMockProps {
+  path?: string;
+  element?: React.ReactNode;
+  children?: React.ReactNode;
+}
 
 // Mock all dependencies before importing
 vi.mock('../ProtectedRoute', () => ({
-  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ...props }) => {
+  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ..._props }) => {
     return React.createElement(
       'div',
       {
@@ -28,7 +31,7 @@ vi.mock('../ProtectedRoute', () => ({
 }));
 
 vi.mock('../LazyRoute', () => ({
-  default: vi.fn(({ path, component, preload, permissions, ...props }) => {
+  default: vi.fn(({ path, component, preload, permissions, ..._props }) => {
     return React.createElement(
       'div',
       {
@@ -52,7 +55,7 @@ vi.mock('react-router-dom', async () => {
         { 'data-testid': 'navigate', 'data-to': to, 'data-replace': replace },
         `Navigate to ${to}`
       ),
-    Route: ({ path, element, children }: any) =>
+    Route: ({ path, element, children }: RouteMockProps) =>
       React.createElement(
         'div',
         {
@@ -67,12 +70,6 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <MemoryRouter>
-    <Routes>{children}</Routes>
-  </MemoryRouter>
-);
-
 describe('RouteBuilder - 组件导入测试', () => {
   it('应该能够导入组件', () => {
     expect(RouteBuilder).toBeDefined();

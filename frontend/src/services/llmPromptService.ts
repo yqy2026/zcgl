@@ -16,6 +16,7 @@ import type {
   PromptStatistics,
   PromptQueryParams,
 } from '@/types/llmPrompt';
+import { DocType, PromptStatus, LLMProvider } from '@/types/llmPrompt';
 
 const logger = createLogger('LLMPromptService');
 
@@ -181,15 +182,18 @@ export class LLMPromptService {
   /**
    * 获取活跃的 Prompt (按文档类型和提供商)
    */
-  async getActivePrompt(docType: string, provider?: string): Promise<PromptTemplate | null> {
+  async getActivePrompt(
+    docType: DocType,
+    provider?: LLMProvider
+  ): Promise<PromptTemplate | null> {
     try {
       const params: PromptQueryParams = {
-        doc_type: docType as any,
-        status: 'ACTIVE' as any,
+        doc_type: docType,
+        status: PromptStatus.ACTIVE,
       };
 
       if (provider != null && provider.trim() !== '') {
-        params.provider = provider as any;
+        params.provider = provider;
       }
 
       const response = await this.getPrompts({
@@ -211,7 +215,7 @@ export class LLMPromptService {
   async testPrompt(
     id: string,
     testFile?: File
-  ): Promise<{ success: boolean; result?: any; error?: string }> {
+  ): Promise<{ success: boolean; result?: unknown; error?: string }> {
     try {
       if (testFile == null) {
         throw new Error('请提供测试文件');
@@ -220,7 +224,7 @@ export class LLMPromptService {
       const formData = new FormData();
       formData.append('file', testFile);
 
-      const response = await apiClient.post<{ success: boolean; result: any }>(
+      const response = await apiClient.post<{ success: boolean; result: unknown }>(
         `${API_BASE}/${id}/test`,
         formData,
         {
@@ -270,7 +274,7 @@ export const getStatistics = () => llmPromptService.getStatistics();
 export const submitFeedback = (data: ExtractionFeedbackCreate) =>
   llmPromptService.submitFeedback(data);
 
-export const getActivePrompt = (docType: string, provider?: string) =>
+export const getActivePrompt = (docType: DocType, provider?: LLMProvider) =>
   llmPromptService.getActivePrompt(docType, provider);
 
 export const testPrompt = (id: string, testFile?: File) =>

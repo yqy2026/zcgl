@@ -150,6 +150,37 @@ class UserManagementService:
         self.db.commit()
         return True
 
+    def get_statistics(self) -> dict[str, Any]:
+        """
+        获取用户统计数据
+
+        Returns:
+            包含总用户数、活跃用户数、锁定用户数、停用用户数
+        """
+        from sqlalchemy import func
+
+        total_users = self.db.query(func.count(User.id)).scalar() or 0
+        active_users = (
+            self.db.query(func.count(User.id)).filter(User.is_active).scalar() or 0
+        )
+        locked_users = (
+            self.db.query(func.count(User.id)).filter(User.is_locked).scalar() or 0
+        )
+        inactive_users = (
+            self.db.query(func.count(User.id))
+            .filter(User.is_active.is_(False))
+            .scalar()
+            or 0
+        )
+
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "locked_users": locked_users,
+            "inactive_users": inactive_users,
+            "online_users": 0,  # 可根据会话表计算
+        }
+
     def change_password(
         self, user: User, current_password: str, new_password: str
     ) -> bool:

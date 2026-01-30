@@ -7,18 +7,12 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from src.models.auth import AuditLog, User, UserRole, UserSession
 from src.schemas.auth import UserCreate, UserUpdate
 
-
 # ===================== Fixtures =====================
-@pytest.fixture
-def mock_db():
-    """Mock database session"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

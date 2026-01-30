@@ -8,13 +8,62 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AssetList from '../AssetList';
 
+interface AssetRow {
+  id?: string;
+  property_name?: string;
+  ownership_entity?: string;
+}
+
+interface TableMockProps {
+  dataSource?: AssetRow[];
+  columns?: unknown;
+  pagination?: unknown;
+  loading?: boolean;
+  rowSelection?: unknown;
+  summary?: React.ReactNode;
+}
+
+interface TagMockProps {
+  color?: string;
+  children?: React.ReactNode;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+  icon?: React.ReactNode;
+  type?: string;
+  danger?: boolean;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface TooltipMockProps {
+  title?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+interface PopconfirmMockProps {
+  children?: React.ReactNode;
+  onConfirm?: () => void;
+}
+
 // Mock Ant Design components before importing
 vi.mock('antd', async () => {
   const actual = await vi.importActual('antd');
   return {
     ...actual,
     Table: vi.fn(
-      ({ dataSource, columns: _columns, pagination, loading, rowSelection, summary }: any) => {
+      ({
+        dataSource,
+        columns: _columns,
+        pagination,
+        loading,
+        rowSelection,
+        summary,
+      }: TableMockProps) => {
         const data = dataSource ?? [];
         return React.createElement(
           'div',
@@ -26,7 +75,7 @@ vi.mock('antd', async () => {
             'data-has-selection': !!rowSelection,
             'data-has-summary': !!summary,
           },
-          data.map((item: any, idx: number) =>
+          data.map((item: AssetRow, idx: number) =>
             React.createElement(
               'div',
               {
@@ -41,10 +90,10 @@ vi.mock('antd', async () => {
         );
       }
     ),
-    Tag: vi.fn(({ color, children }: any) =>
+    Tag: vi.fn(({ color, children }: TagMockProps) =>
       React.createElement('span', { 'data-color': color }, children)
     ),
-    Button: vi.fn(({ children, onClick, icon, type, danger }: any) =>
+    Button: vi.fn(({ children, onClick, icon, type, danger }: ButtonMockProps) =>
       React.createElement(
         'button',
         {
@@ -55,11 +104,13 @@ vi.mock('antd', async () => {
         icon || children
       )
     ),
-    Space: vi.fn(({ children }: any) =>
+    Space: vi.fn(({ children }: SpaceMockProps) =>
       React.createElement('div', { 'data-testid': 'space' }, children)
     ),
-    Tooltip: vi.fn(({ title, children }: any) => React.createElement('div', { title }, children)),
-    Popconfirm: vi.fn(({ children, onConfirm }: any) =>
+    Tooltip: vi.fn(({ title, children }: TooltipMockProps) =>
+      React.createElement('div', { title }, children)
+    ),
+    Popconfirm: vi.fn(({ children, onConfirm }: PopconfirmMockProps) =>
       React.createElement('div', { 'data-testid': 'popconfirm', onClick: onConfirm }, children)
     ),
   };
@@ -538,17 +589,20 @@ describe('AssetList - 属性传递测试', () => {
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
+      onSelectChange: vi.fn(),
     };
 
-    // 验证组件可以接收所有属性而不报错
-    const element = React.createElement(AssetList, {
-      data: mockData,
-      loading: false,
-      selectedRowKeys: [],
-      onSelectChange: vi.fn(),
-      ...mockHandlers,
-    });
+    // 验证组件可以接收所有属性而正常渲染
+    render(
+      <AssetList
+        data={mockData}
+        loading={false}
+        selectedRowKeys={[]}
+        {...mockHandlers}
+      />
+    );
 
-    expect(element).toBeTruthy();
+    const table = screen.getByTestId('table');
+    expect(table).toBeInTheDocument();
   });
 });

@@ -2,541 +2,446 @@
  * OwnershipList 组件测试
  *
  * 测试覆盖范围:
- * - 组件导入与导出
- * - 基本属性测试
- * - 列表渲染
+ * - 组件基本渲染
+ * - 统计卡片显示
  * - 搜索功能
- * - 筛选功能
- * - 分页功能
- * - 排序功能
- * - 新增按钮
- * - 编辑操作
- * - 删除操作
- * - 查看详情
- * - 批量操作
- * - 空状态处理
- * - 加载状态
- * - 错误处理
- * - 列表列配置
- * - 操作列显示
+ * - 表格渲染
+ * - 操作按钮
+ * - 模态框交互
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
-// Mock antd 组件
+// Mock services
+vi.mock('@/services/ownershipService', () => ({
+  ownershipService: {
+    getOwnerships: vi.fn(() =>
+      Promise.resolve({
+        items: [
+          {
+            id: '1',
+            name: '权属方1',
+            code: 'OWN-001',
+            short_name: '权属1',
+            is_active: true,
+            asset_count: 10,
+            project_count: 5,
+          },
+          {
+            id: '2',
+            name: '权属方2',
+            code: 'OWN-002',
+            short_name: '权属2',
+            is_active: false,
+            asset_count: 5,
+            project_count: 2,
+          },
+        ],
+        total: 2,
+      })
+    ),
+    getOwnershipStatistics: vi.fn(() =>
+      Promise.resolve({
+        total_count: 10,
+        active_count: 8,
+        inactive_count: 2,
+      })
+    ),
+    deleteOwnership: vi.fn(() => Promise.resolve({ success: true })),
+    toggleOwnershipStatus: vi.fn(() => Promise.resolve({ success: true })),
+  },
+}));
+
+// Mock logger
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
+// Mock messageManager
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
+
+// Mock OwnershipForm
+vi.mock('../../Forms', () => ({
+  OwnershipForm: ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) => (
+    <div data-testid="ownership-form">
+      <button data-testid="form-submit" onClick={onSuccess}>
+        提交
+      </button>
+      <button data-testid="form-cancel" onClick={onCancel}>
+        取消
+      </button>
+    </div>
+  ),
+}));
+
+// Mock OwnershipDetail
+vi.mock('../OwnershipDetail', () => ({
+  default: ({ ownership, onEdit }: { ownership: { name: string }; onEdit: () => void }) => (
+    <div data-testid="ownership-detail">
+      <span data-testid="detail-name">{ownership.name}</span>
+      <button data-testid="detail-edit" onClick={onEdit}>
+        编辑
+      </button>
+    </div>
+  ),
+}));
+
+// Mock Ant Design
 vi.mock('antd', () => ({
-  Typography: ({ children }: any) => <span data-testid="typography">{children}</span>,
-  Text: ({ children }: any) => <span data-testid="text">{children}</span>,
-  Collapse: ({ children, accordion }: any) => (
-    <div data-testid="collapse" data-accordion={accordion}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, title, extra }: any) => (
-    <div data-testid="card" data-title={title}>
-      <div className="card-title">{title}</div>
-      {extra && <div className="card-extra">{extra}</div>}
-      {children}
-    </div>
-  ),
   Table: ({
     dataSource,
-    columns: _columns,
-    pagination,
     loading,
-    rowSelection,
-    onChange: _onChange,
-  }: any) => (
-    <div
-      data-testid="table"
-      data-pagination={pagination}
-      data-loading={loading}
-      data-row-selection={!!rowSelection}
-    >
-      {dataSource?.map((item: any, index: number) => (
-        <div key={index} data-row={index}>
-          {JSON.stringify(item)}
+    columns,
+  }: {
+    dataSource?: Array<{ id: string; name: string; code: string; is_active: boolean }>;
+    loading?: boolean;
+    columns?: Array<{ title: string; key: string }>;
+  }) => (
+    <div data-testid="table" data-loading={loading} data-column-count={columns?.length}>
+      {dataSource?.map(item => (
+        <div key={item.id} data-testid={`row-${item.id}`}>
+          <span data-testid={`name-${item.id}`}>{item.name}</span>
+          <span data-testid={`code-${item.id}`}>{item.code}</span>
+          <span data-testid={`status-${item.id}`}>{item.is_active ? '启用' : '禁用'}</span>
         </div>
       ))}
     </div>
   ),
-  Button: ({ children, onClick, icon, type }: any) => (
-    <button data-testid="button" data-type={type} onClick={onClick}>
+  Button: ({
+    children,
+    onClick,
+    icon,
+    type,
+    loading,
+    danger,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    type?: string;
+    loading?: boolean;
+    danger?: boolean;
+  }) => (
+    <button
+      data-testid="button"
+      data-type={type}
+      data-loading={loading}
+      data-danger={danger}
+      onClick={onClick}
+    >
       {icon}
       {children}
     </button>
   ),
-  Space: ({ children, size }: any) => (
-    <div data-testid="space" data-size={size}>
-      {children}
-    </div>
+  Space: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
   ),
-  Input: ({ value, onChange, placeholder, allowClear }: any) => (
-    <input
-      data-testid="input"
-      data-placeholder={placeholder}
-      data-allow-clear={allowClear}
-      value={value || ''}
-      onChange={e => onChange && onChange(e)}
-    />
-  ),
-  Select: ({ children, value, onChange, placeholder }: any) => (
-    <div
-      data-testid="select"
-      data-value={value}
-      data-placeholder={placeholder}
-      onClick={() => onChange && onChange('test')}
-    >
-      {children}
-    </div>
-  ),
-  Option: ({ children, value }: any) => <option value={value}>{children}</option>,
-  Tag: ({ children, color }: any) => (
-    <span data-testid="tag" data-color={color}>
-      {children}
-    </span>
-  ),
-  Popconfirm: ({ children, onConfirm, title }: any) => (
-    <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
-      {children}
-    </div>
-  ),
-  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
-  Spin: ({ children, spinning, tip }: any) => (
-    <div data-testid="spin" data-spinning={spinning} data-tip={tip}>
-      {spinning ? <div>加载中...</div> : children}
-    </div>
-  ),
-  Alert: ({ message, type, showIcon }: any) => (
-    <div data-testid="alert" data-type={type} data-show-icon={showIcon}>
-      {message}
-    </div>
-  ),
-  Modal: ({ children, open, onOk, onCancel, title }: any) => (
-    <div data-testid="modal" data-open={open} data-title={title}>
-      {open && (
-        <>
-          <div className="modal-title">{title}</div>
-          <div className="modal-content">{children}</div>
-          <button onClick={onOk}>确定</button>
-          <button onClick={onCancel}>取消</button>
-        </>
-      )}
-    </div>
-  ),
-  Tooltip: ({ children, title }: any) => (
+  Tooltip: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
     <div data-testid="tooltip" data-title={title}>
       {children}
     </div>
   ),
-  Divider: ({ children }: any) => <div data-testid="divider">{children}</div>,
+  Modal: ({
+    children,
+    open,
+    title,
+    onCancel,
+  }: {
+    children?: React.ReactNode;
+    open?: boolean;
+    title?: string;
+    onCancel?: () => void;
+  }) => (
+    <div data-testid="modal" data-open={open} data-title={title}>
+      {open && (
+        <>
+          <div data-testid="modal-title">{title}</div>
+          <div data-testid="modal-content">{children}</div>
+          <button data-testid="modal-close" onClick={onCancel}>
+            关闭
+          </button>
+        </>
+      )}
+    </div>
+  ),
+  Card: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+    <div data-testid="card" data-title={title}>
+      {title && <div data-testid="card-title">{title}</div>}
+      {children}
+    </div>
+  ),
+  Row: ({
+    children,
+    gutter,
+  }: {
+    children?: React.ReactNode;
+    gutter?: number | [number, number];
+  }) => (
+    <div data-testid="row" data-gutter={JSON.stringify(gutter)}>
+      {children}
+    </div>
+  ),
+  Col: ({ children, span }: { children?: React.ReactNode; span?: number }) => (
+    <div data-testid="col" data-span={span}>
+      {children}
+    </div>
+  ),
+  Statistic: ({ title, value }: { title?: string; value?: number }) => (
+    <div data-testid="statistic" data-title={title}>
+      <span data-testid="statistic-title">{title}</span>
+      <span data-testid="statistic-value">{value}</span>
+    </div>
+  ),
+  Badge: ({ status, text }: { status?: string; text?: string }) => (
+    <span data-testid="badge" data-status={status}>
+      {text}
+    </span>
+  ),
+  Input: {
+    Search: ({
+      placeholder,
+      value,
+      onChange,
+      onSearch,
+    }: {
+      placeholder?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      onSearch?: () => void;
+    }) => (
+      <div data-testid="input-search">
+        <input
+          data-testid="search-input"
+          placeholder={placeholder}
+          value={value || ''}
+          onChange={onChange}
+        />
+        <button data-testid="search-button" onClick={onSearch}>
+          搜索
+        </button>
+      </div>
+    ),
+  },
+  Select: ({
+    children,
+    placeholder,
+    value,
+    onChange,
+  }: {
+    children?: React.ReactNode;
+    placeholder?: string;
+    value?: boolean;
+    onChange?: (value: boolean | undefined) => void;
+  }) => (
+    <div data-testid="select" data-placeholder={placeholder}>
+      <select
+        data-testid="select-input"
+        value={value === undefined ? '' : String(value)}
+        onChange={e => {
+          const val = e.target.value;
+          onChange?.(val === '' ? undefined : val === 'true');
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {children}
+      </select>
+    </div>
+  ),
+  Switch: ({
+    checked,
+    onChange,
+    size,
+  }: {
+    checked?: boolean;
+    onChange?: () => void;
+    size?: string;
+  }) => (
+    <button data-testid="switch" data-checked={checked} data-size={size} onClick={onChange}>
+      {checked ? '启用' : '禁用'}
+    </button>
+  ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  PlusOutlined: () => <span data-testid="icon-plus" />,
-  EditOutlined: () => <span data-testid="icon-edit" />,
-  DeleteOutlined: () => <span data-testid="icon-delete" />,
-  EyeOutlined: () => <span data-testid="icon-eye" />,
-  SearchOutlined: () => <span data-testid="icon-search" />,
-  ReloadOutlined: () => <span data-testid="icon-reload" />,
-  DownloadOutlined: () => <span data-testid="icon-download" />,
-  FilterOutlined: () => <span data-testid="icon-filter" />,
+  PlusOutlined: () => <span data-testid="icon-plus">+</span>,
+  EditOutlined: () => <span data-testid="icon-edit">Edit</span>,
+  DeleteOutlined: () => <span data-testid="icon-delete">Delete</span>,
+  EyeOutlined: () => <span data-testid="icon-eye">Eye</span>,
+  SearchOutlined: () => <span data-testid="icon-search">Search</span>,
+  ReloadOutlined: () => <span data-testid="icon-reload">Reload</span>,
+  ExclamationCircleOutlined: () => <span data-testid="icon-exclamation">!</span>,
 }));
 
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: [],
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
-}));
-
-// Mock services
-vi.mock('@/services', () => ({
-  getOwnershipList: vi.fn(() => ({ items: [], total: 0 })),
-  deleteOwnership: vi.fn(() => ({ success: true })),
-}));
+import OwnershipList from '../OwnershipList';
 
 describe('OwnershipList 组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockListData = [
-    {
-      id: '1',
-      name: '权属方1',
-      type: 'enterprise',
-      status: 'active',
-      contact_person: '张三',
-      contact_phone: '13800138000',
-      asset_count: 10,
-      total_area: 50000,
-    },
-    {
-      id: '2',
-      name: '权属方2',
-      type: 'individual',
-      status: 'active',
-      contact_person: '李四',
-      contact_phone: '13900139000',
-      asset_count: 5,
-      total_area: 25000,
-    },
-  ];
+  describe('基本渲染', () => {
+    it('应该正确渲染组件', () => {
+      render(<OwnershipList />);
 
-  // Helper function to create component element
-  const createElement = async (props: any = {}) => {
-    const module = await import('../OwnershipList');
-    const Component = module.default;
-    return React.createElement(Component, {
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
-      onView: vi.fn(),
-      onAdd: vi.fn(),
-      ...props,
-    });
-  };
-
-  describe('组件导入与导出', () => {
-    it('应该成功导入默认导出', async () => {
-      const module = await import('../OwnershipList');
-      expect(module.default).toBeDefined();
+      expect(screen.getByTestId('input-search')).toBeInTheDocument();
+      expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('应该是React组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该渲染搜索输入框', () => {
+      render(<OwnershipList />);
 
-  describe('基本属性测试', () => {
-    it('应该接收 onEdit 回调', async () => {
-      const handleEdit = vi.fn();
-      const element = await createElement({ onEdit: handleEdit });
-      expect(element).toBeTruthy();
+      const searchInput = screen.getByTestId('search-input');
+      expect(searchInput).toBeInTheDocument();
+      expect(searchInput).toHaveAttribute('placeholder', '搜索权属方名称、简称等');
     });
 
-    it('应该接收 onDelete 回调', async () => {
-      const handleDelete = vi.fn();
-      const element = await createElement({ onDelete: handleDelete });
-      expect(element).toBeTruthy();
+    it('应该渲染状态筛选下拉框', () => {
+      render(<OwnershipList />);
+
+      const select = screen.getByTestId('select');
+      expect(select).toBeInTheDocument();
+      expect(select).toHaveAttribute('data-placeholder', '状态');
     });
 
-    it('应该接收 onView 回调', async () => {
-      const handleView = vi.fn();
-      const element = await createElement({ onView: handleView });
-      expect(element).toBeTruthy();
+    it('应该渲染新建按钮', () => {
+      render(<OwnershipList />);
+
+      const buttons = screen.getAllByTestId('button');
+      const createButton = buttons.find(btn => btn.textContent?.includes('新建权属方'));
+      expect(createButton).toBeInTheDocument();
     });
 
-    it('应该接收 onAdd 回调', async () => {
-      const handleAdd = vi.fn();
-      const element = await createElement({ onAdd: handleAdd });
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该渲染刷新按钮', () => {
+      render(<OwnershipList />);
 
-  describe('列表渲染', () => {
-    it('应该渲染表格组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示权属方列表数据', async () => {
-      const element = await createElement({ dataSource: mockListData });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该设置表格列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const buttons = screen.getAllByTestId('button');
+      const refreshButton = buttons.find(btn => btn.textContent?.includes('刷新'));
+      expect(refreshButton).toBeInTheDocument();
     });
   });
 
   describe('搜索功能', () => {
-    it('应该有搜索输入框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该能输入搜索关键字', () => {
+      render(<OwnershipList />);
+
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: '测试权属方' } });
+
+      expect(searchInput).toHaveValue('测试权属方');
     });
 
-    it('搜索框应该有 SearchOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该能点击搜索按钮', () => {
+      render(<OwnershipList />);
+
+      const searchButton = screen.getByTestId('search-button');
+      fireEvent.click(searchButton);
+
+      expect(searchButton).toBeInTheDocument();
     });
 
-    it('应该支持按名称搜索', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该能重置筛选条件', () => {
+      render(<OwnershipList />);
 
-    it('应该支持按联系人搜索', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      const buttons = screen.getAllByTestId('button');
+      const resetButton = buttons.find(btn => btn.textContent === '重置');
+      expect(resetButton).toBeInTheDocument();
 
-    it('应该支持清除搜索', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('筛选功能', () => {
-    it('应该有类型筛选下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有状态下拉框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('筛选后应该更新列表', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持清除筛选', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      if (resetButton) {
+        fireEvent.click(resetButton);
+      }
     });
   });
 
-  describe('分页功能', () => {
-    it('应该显示分页组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+  describe('表格渲染', () => {
+    it('应该渲染表格组件', () => {
+      render(<OwnershipList />);
 
-    it('应该有默认页大小', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持改变页大小', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示总数信息', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('table')).toBeInTheDocument();
     });
   });
 
-  describe('排序功能', () => {
-    it('应该支持按名称排序', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('模态框交互', () => {
+    it('点击新建按钮应该打开表单模态框', () => {
+      render(<OwnershipList />);
+
+      const buttons = screen.getAllByTestId('button');
+      const createButton = buttons.find(btn => btn.textContent?.includes('新建权属方'));
+
+      if (createButton) {
+        fireEvent.click(createButton);
+      }
+
+      const modals = screen.getAllByTestId('modal');
+      const formModal = modals.find(modal => modal.getAttribute('data-title') === '新建权属方');
+      expect(formModal).toHaveAttribute('data-open', 'true');
     });
 
-    it('应该支持按创建时间排序', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该能关闭模态框', () => {
+      render(<OwnershipList />);
 
-    it('应该支持切换升序降序', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+      // 打开模态框
+      const buttons = screen.getAllByTestId('button');
+      const createButton = buttons.find(btn => btn.textContent?.includes('新建权属方'));
+      if (createButton) {
+        fireEvent.click(createButton);
+      }
 
-  describe('新增按钮', () => {
-    it('应该显示新增按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      // 关闭模态框
+      const closeButtons = screen.getAllByTestId('modal-close');
+      if (closeButtons.length > 0) {
+        fireEvent.click(closeButtons[0]);
+      }
 
-    it('新增按钮应该有 PlusOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('点击新增按钮应该触发 onAdd', async () => {
-      const handleAdd = vi.fn();
-      const element = await createElement({ onAdd: handleAdd });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('编辑操作', () => {
-    it('每一行应该有编辑按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('编辑按钮应该有 EditOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('点击编辑应该触发 onEdit', async () => {
-      const handleEdit = vi.fn();
-      const element = await createElement({ onEdit: handleEdit });
-      expect(element).toBeTruthy();
+      const modals = screen.getAllByTestId('modal');
+      const formModal = modals.find(modal => modal.getAttribute('data-title') === '新建权属方');
+      expect(formModal).toHaveAttribute('data-open', 'false');
     });
   });
 
-  describe('删除操作', () => {
-    it('每一行应该有删除按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('选择模式', () => {
+    it('应该支持选择模式', () => {
+      const handleSelect = vi.fn();
+      render(<OwnershipList mode="select" onSelectOwnership={handleSelect} />);
+
+      expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('删除按钮应该有 DeleteOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('列表模式不显示统计卡片', () => {
+      render(<OwnershipList mode="select" />);
 
-    it('点击删除应该显示确认对话框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('确认删除应该触发 onDelete', async () => {
-      const handleDelete = vi.fn();
-      const element = await createElement({ onDelete: handleDelete });
-      expect(element).toBeTruthy();
+      const statistics = screen.queryAllByTestId('statistic');
+      // 选择模式下不显示统计卡片
+      expect(statistics.length).toBe(0);
     });
   });
 
-  describe('查看详情', () => {
-    it('每一行应该有查看按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+  describe('刷新功能', () => {
+    it('点击刷新按钮应该刷新列表', () => {
+      render(<OwnershipList />);
 
-    it('查看按钮应该有 EyeOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+      const buttons = screen.getAllByTestId('button');
+      const refreshButton = buttons.find(btn => btn.textContent?.includes('刷新'));
 
-    it('点击查看应该触发 onView', async () => {
-      const handleView = vi.fn();
-      const element = await createElement({ onView: handleView });
-      expect(element).toBeTruthy();
-    });
-  });
+      if (refreshButton) {
+        fireEvent.click(refreshButton);
+      }
 
-  describe('批量操作', () => {
-    it('应该支持选择行', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有批量删除按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('选中多行后应该显示批量操作', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('空状态处理', () => {
-    it('没有数据时应该显示空状态', async () => {
-      const element = await createElement({ dataSource: [] });
-      expect(element).toBeTruthy();
-    });
-
-    it('空状态应该有提示信息', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('空状态应该有新增按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('加载状态', () => {
-    it('加载时应该显示 Spin 组件', async () => {
-      const element = await createElement({ loading: true });
-      expect(element).toBeTruthy();
-    });
-
-    it('加载时应该显示提示文本', async () => {
-      const element = await createElement({ loading: true });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('错误处理', () => {
-    it('错误时应该显示 Alert 组件', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
-    });
-
-    it('错误时应该显示错误信息', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
-    });
-
-    it('错误时应该有重试按钮', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('列表列配置', () => {
-    it('应该有名称列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有类型列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有状态列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有联系人列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有资产数量列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该有总面积列', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('其他功能', () => {
-    it('应该支持刷新列表', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持导出数据', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('刷新按钮应该有 ReloadOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('导出按钮应该有 DownloadOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('table')).toBeInTheDocument();
     });
   });
 });

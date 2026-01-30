@@ -7,8 +7,8 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
+from src.core.exception_handler import OperationNotAllowedError
 from src.crud.enum_field import (
     EnumFieldTypeCRUD,
     EnumFieldUsageCRUD,
@@ -31,12 +31,7 @@ from src.schemas.enum_field import (
     EnumFieldValueUpdate,
 )
 
-
 # ===================== Fixtures =====================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture
@@ -498,7 +493,7 @@ class TestEnumFieldTypeCRUD:
 
         crud = EnumFieldTypeCRUD(mock_db)
 
-        with pytest.raises(ValueError, match="无法删除包含枚举值的枚举类型"):
+        with pytest.raises(OperationNotAllowedError, match="无法删除包含枚举值的枚举类型"):
             crud.delete("enum_type_123")
 
     def test_delete_enum_type_with_usage_raises_error(self, mock_db, sample_enum_type):
@@ -533,7 +528,7 @@ class TestEnumFieldTypeCRUD:
 
         crud = EnumFieldTypeCRUD(mock_db)
 
-        with pytest.raises(ValueError, match="无法删除|包含"):
+        with pytest.raises(OperationNotAllowedError, match="无法删除|包含"):
             crud.delete("enum_type_123")
 
     def test_get_categories(self, mock_db):
@@ -905,7 +900,7 @@ class TestEnumFieldValueCRUD:
 
         crud = EnumFieldValueCRUD(mock_db)
 
-        with pytest.raises(ValueError, match="无法删除包含子枚举值的枚举值"):
+        with pytest.raises(OperationNotAllowedError, match="无法删除包含子枚举值的枚举值"):
             crud.delete("enum_value_123")
 
     def test_batch_create_enum_values(self, mock_db, sample_enum_value_create):

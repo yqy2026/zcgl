@@ -7,6 +7,62 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface HeaderMockProps {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+  size?: number | string;
+}
+
+interface AvatarMockProps {
+  children?: React.ReactNode;
+  size?: number | string;
+  icon?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+interface DropdownMockProps {
+  children?: React.ReactNode;
+  menu?: unknown;
+  placement?: string;
+  trigger?: string[];
+}
+
+interface BadgeMockProps {
+  children?: React.ReactNode;
+  count?: number;
+  size?: string;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  strong?: boolean;
+  type?: string;
+  style?: React.CSSProperties;
+}
+
+interface TooltipMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+}
+
+interface ModalConfirmMockProps {
+  onOk?: () => void;
+  title?: React.ReactNode;
+  content?: React.ReactNode;
+}
+
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -28,53 +84,53 @@ vi.mock('../../services/authService', () => ({
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Layout: {
-    Header: ({ children, style }: any) => (
+    Header: ({ children, style }: HeaderMockProps) => (
       <div data-testid="header" style={style}>
         {children}
       </div>
     ),
   },
-  Button: ({ children, icon, type, onClick, style }: any) => (
+  Button: ({ children, icon, type, onClick, style }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} onClick={onClick} style={style}>
       {icon && <span data-testid="button-icon">{icon}</span>}
       {children}
     </button>
   ),
-  Space: ({ children, size }: any) => (
+  Space: ({ children, size }: SpaceMockProps) => (
     <div data-testid="space" data-size={size}>
       {children}
     </div>
   ),
-  Avatar: ({ children, size, icon, style }: any) => (
+  Avatar: ({ children, size, icon, style }: AvatarMockProps) => (
     <div data-testid="avatar" data-size={size} style={style}>
       {icon}
       {children}
     </div>
   ),
-  Dropdown: ({ children, menu: _menu, placement, trigger: _trigger }: any) => (
+  Dropdown: ({ children, menu: _menu, placement, trigger: _trigger }: DropdownMockProps) => (
     <div data-testid="dropdown" data-placement={placement}>
       {children}
     </div>
   ),
-  Badge: ({ children, count, size }: any) => (
+  Badge: ({ children, count, size }: BadgeMockProps) => (
     <div data-testid="badge" data-count={count} data-size={size}>
       {children}
     </div>
   ),
   Typography: {
-    Text: ({ children, strong, type, style }: any) => (
+    Text: ({ children, strong, type, style }: TypographyTextMockProps) => (
       <span data-testid="text" data-strong={strong} data-type={type} style={style}>
         {children}
       </span>
     ),
   },
-  Tooltip: ({ children, title }: any) => (
+  Tooltip: ({ children, title }: TooltipMockProps) => (
     <div data-testid="tooltip" data-title={title}>
       {children}
     </div>
   ),
   Modal: {
-    confirm: ({ onOk, title, content }: any) => {
+    confirm: ({ onOk, title, content }: ModalConfirmMockProps) => {
       return { onOk, title, content };
     },
   },

@@ -6,8 +6,8 @@ from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
+from src.constants.rent_contract_constants import PaymentStatus
 from src.models.auth import User
 from src.models.notification import Notification, NotificationPriority, NotificationType
 from src.models.rent_contract import RentContract, RentLedger
@@ -16,14 +16,9 @@ from src.services.notification.scheduler import (
     run_notification_tasks,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture
@@ -51,7 +46,7 @@ def mock_ledger():
     ledger.id = "ledger_123"
     ledger.year_month = "2024-01"
     ledger.due_amount = 10000.0
-    ledger.payment_status = "未支付"
+    ledger.payment_status = PaymentStatus.UNPAID
     ledger.due_date = date.today() - timedelta(days=5)
     ledger.data_status = "正常"
 
@@ -373,7 +368,7 @@ class TestCheckPaymentOverdue:
         ledger.due_amount = 10000.0
         ledger.due_date = date.today() - timedelta(days=30)
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
 
         ledger.contract = MagicMock()
         ledger.contract.contract_number = "HT001"
@@ -409,7 +404,7 @@ class TestCheckPaymentOverdue:
         ledger.id = "ledger_123"
         ledger.due_date = date.today() - timedelta(days=7)
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()
@@ -444,7 +439,7 @@ class TestCheckPaymentOverdue:
         ledger.id = "ledger_123"
         ledger.due_date = date.today() - timedelta(days=1)
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()
@@ -496,7 +491,7 @@ class TestCheckPaymentDueSoon:
         ledger.id = "ledger_123"
         ledger.due_date = date.today()
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()
@@ -531,7 +526,7 @@ class TestCheckPaymentDueSoon:
         ledger.id = "ledger_123"
         ledger.due_date = date.today() + timedelta(days=3)
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()
@@ -566,7 +561,7 @@ class TestCheckPaymentDueSoon:
         ledger.id = "ledger_123"
         ledger.due_date = date.today() + timedelta(days=7)
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()
@@ -720,7 +715,7 @@ class TestSchedulerEdgeCases:
         )
         ledger.due_date = due_datetime
         ledger.data_status = "正常"
-        ledger.payment_status = "未支付"
+        ledger.payment_status = PaymentStatus.UNPAID
         ledger.year_month = "2024-01"
         ledger.due_amount = 5000.0
         ledger.contract = MagicMock()

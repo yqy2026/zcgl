@@ -7,7 +7,6 @@ from datetime import date
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.pdf_import_session import (
     PDFImportSession,
@@ -17,14 +16,9 @@ from src.models.pdf_import_session import (
 from src.models.rent_contract import ContractType, PaymentCycle
 from src.services.document.pdf_import_service import PDFImportService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

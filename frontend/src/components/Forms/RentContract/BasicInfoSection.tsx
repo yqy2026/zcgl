@@ -27,8 +27,12 @@ const BasicInfoSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="合同编号" name="contract_number" tooltip="留空将自动生成">
-            <Input placeholder="留空将自动生成" />
+          <Form.Item
+            label="合同编号"
+            name="contract_number"
+            rules={[{ required: true, message: '请输入合同编号' }]}
+          >
+            <Input placeholder="请输入合同编号" />
           </Form.Item>
         </Col>
         <Col span={8}>

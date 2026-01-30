@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
 import type { AssetSearchParams, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
+import type { AssetSearchFilters } from '@/services/asset/types';
 
 /**
  * 资产列表查询 Hook
@@ -123,7 +124,7 @@ export const useAssetHistory = (assetId: string, page = 1, pageSize = 20, change
 /**
  * 资产统计 Hook
  */
-export const useAssetStats = (filters?: Record<string, any>) => {
+export const useAssetStats = (filters?: AssetSearchParams) => {
   return useQuery({
     queryKey: ['asset-stats', filters],
     queryFn: () => assetService.getAssetStats(filters),
@@ -171,7 +172,7 @@ export const useAssetSearch = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ query, filters }: { query: string; filters?: Record<string, any> }) =>
+    mutationFn: ({ query, filters }: { query: string; filters?: AssetSearchFilters }) =>
       assetService.searchAssets(query, filters),
     onSuccess: result => {
       // 可以选择性地更新缓存

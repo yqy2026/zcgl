@@ -49,7 +49,7 @@ class ZhipuVisionService(BaseVisionService):
 
     DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
 
-    def __init__(self):
+    def __init__(self) -> None:
         # 优先使用 centralized config，fallback 到环境变量
         try:
             from src.core.config import settings
@@ -243,6 +243,6 @@ def get_zhipu_vision_service() -> ZhipuVisionService:
     """Get or create singleton ZhipuVisionService instance"""
     global _vision_service
     if _vision_service is None:
-        _vision_service = ZhipuVisionService()  # type: ignore[no-untyped-call]
+        _vision_service = ZhipuVisionService()
     assert _vision_service is not None  # nosec B101  # Type narrowing for singleton pattern
     return _vision_service

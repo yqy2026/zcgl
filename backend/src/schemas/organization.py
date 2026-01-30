@@ -9,6 +9,7 @@ from typing import Any
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class OrganizationBase(BaseModel):
@@ -150,8 +151,10 @@ class OrganizationBatchRequest(BaseModel):
     def validate_action(cls, v: str) -> str:
         allowed_actions = ["delete", "move"]  # pragma: no cover
         if v not in allowed_actions:  # pragma: no cover
-            raise ValueError(
-                f"action must be one of {allowed_actions}"
+            raise PydanticCustomError(  # pragma: no cover
+                "invalid_action",
+                f"action must be one of {allowed_actions}",
+                {},
             )  # pragma: no cover
         return v  # pragma: no cover
 

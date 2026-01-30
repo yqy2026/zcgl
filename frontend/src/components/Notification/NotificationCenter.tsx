@@ -49,8 +49,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   const notifications = notificationsData?.items ?? [];
 
   // 标记已读
-  const handleMarkAsRead = async (notificationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleMarkAsRead = async (notificationId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     try {
       await notificationService.markAsRead(notificationId);
       // 刷新通知列表和未读数量
@@ -74,8 +74,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   };
 
   // 删除通知
-  const handleDelete = async (notificationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (notificationId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     try {
       await notificationService.deleteNotification(notificationId);
       // 刷新通知列表和未读数量
@@ -147,7 +147,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
               }}
               onClick={() => {
                 if (!notification.is_read) {
-                  handleMarkAsRead(notification.id, {} as any);
+                  handleMarkAsRead(notification.id);
                 }
               }}
             >

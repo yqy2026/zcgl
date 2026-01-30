@@ -55,10 +55,10 @@ def check_component_health() -> dict[str, dict[str, Any]]:
             }
         else:
             components["database"] = {
-                "status": "healthy",
-                "response_time_ms": 15,
+                "status": "unhealthy",
+                "response_time_ms": 0,
                 "last_check": datetime.now().isoformat(),
-                "details": "数据库连接正常（基本检查）",
+                "details": "数据库管理器初始化失败，无法建立连接",
             }
     except Exception as e:
         components["database"] = {
@@ -110,6 +110,26 @@ def check_component_health() -> dict[str, dict[str, Any]]:
     except Exception as e:
         components["memory"] = {
             "status": "unhealthy",
+            "error": str(e),
+            "last_check": datetime.now().isoformat(),
+        }
+
+    # 加密服务健康检查
+    try:
+        from ....core.encryption import get_encryption_status
+
+        enc_status = get_encryption_status()
+        components["encryption"] = {
+            "status": "healthy" if enc_status["enabled"] else "disabled",
+            "key_available": enc_status["enabled"],
+            "key_version": enc_status["key_version"],
+            "algorithms": enc_status["algorithms"],
+            "warning": enc_status["warning"],
+            "last_check": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        components["encryption"] = {
+            "status": "error",
             "error": str(e),
             "last_check": datetime.now().isoformat(),
         }

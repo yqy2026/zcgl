@@ -43,7 +43,7 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
     class SecurityService:  # type: ignore[no-redef]
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
     __all__.append("SecurityService")
@@ -65,7 +65,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         _ErrorRecoveryEngineStub = ErrorRecoveryEngine
 
         class ErrorRecoveryEngine:  # type: ignore[no-redef]
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: object, **kwargs: object) -> None:
                 pass
 
         __all__.append("ErrorRecoveryEngine")

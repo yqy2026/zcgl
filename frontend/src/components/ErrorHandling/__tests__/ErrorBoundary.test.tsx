@@ -31,7 +31,7 @@ const AsyncErrorComponent = () => {
 
 const ChunkLoadErrorComponent = () => {
   const error = new Error('Loading chunk 0 failed');
-  (error as any).name = 'ChunkLoadError';
+  (error as Error & { name: string }).name = 'ChunkLoadError';
   throw error;
 };
 

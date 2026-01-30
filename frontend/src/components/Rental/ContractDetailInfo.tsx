@@ -16,7 +16,7 @@ import {
   BankOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import type { RentContract, DepositLedger, ServiceFeeLedger } from '@/types/rentContract';
+import type { RentContract, RentTerm, DepositLedger, ServiceFeeLedger } from '@/types/rentContract';
 import { ContractStatus, ContractStatusColors, ContractStatusLabels } from '@/types/rentContract';
 import type { ColumnsType } from 'antd/es/table';
 import DepositLedgerHistory from './DepositLedgerHistory';
@@ -60,7 +60,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
   serviceFeeLoading,
 }) => {
   // 租金条款表格列定义
-  const rentTermColumns: ColumnsType<any> = [
+  const rentTermColumns: ColumnsType<RentTerm> = [
     {
       title: '序号',
       key: 'index',
@@ -171,7 +171,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             }
           >
             <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
-              {contract.contract_number || '自动生成'}
+              {contract.contract_number ?? '-'}
             </span>
           </Descriptions.Item>
 

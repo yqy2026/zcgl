@@ -5,17 +5,13 @@
 
 import React from 'react';
 import { Select, Spin } from 'antd';
+import type { SelectProps } from 'antd';
 import { useDictionary } from '../../hooks/useDictionary';
 import { dictionaryService } from '../../services/dictionary';
+import type { DictionaryOption } from '../../services/dictionary';
 
-interface DictionaryOption {
-  value: string;
-  label: string;
-  color?: string;
-  icon?: string;
-}
-
-interface DictionarySelectProps extends Omit<any, 'options'> {
+interface DictionarySelectProps
+  extends Omit<SelectProps<string, DictionaryOption>, 'options' | 'optionRender'> {
   /** 字典类型 */
   dictType: string;
   /** 是否只显示启用的选项 */

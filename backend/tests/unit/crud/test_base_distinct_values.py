@@ -3,15 +3,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
+from src.core.exception_handler import InvalidRequestError
 from src.crud.asset import asset_crud
-
-
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 class TestGetDistinctFieldValues:
@@ -24,7 +18,7 @@ class TestGetDistinctFieldValues:
 
     def test_invalid_sort_order(self, mock_db: MagicMock):
         """Test error handling for invalid sort order"""
-        with pytest.raises(ValueError, match="sort_order must be"):
+        with pytest.raises(InvalidRequestError, match="sort_order must be"):
             asset_crud.get_distinct_field_values(
                 mock_db, "ownership_entity", sort_order="invalid"
             )

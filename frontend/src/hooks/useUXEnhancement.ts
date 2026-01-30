@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { uxManager, recordAction, isLoading } from '@/utils/uxManager';
+import type { ErrorContext } from '@/utils/uxManager';
+
+const normalizeRecord = (data?: unknown): Record<string, unknown> | undefined => {
+  if (data != null && typeof data === 'object') {
+    return data as Record<string, unknown>;
+  }
+  return undefined;
+};
 
 // 错误处理Hook
 export const useErrorHandler = () => {
-  const handleError = useCallback((error: Error, context?: unknown) => {
-    uxManager.handleError(error, context as any);
+  const handleError = useCallback((error: Error, context?: ErrorContext) => {
+    uxManager.handleError(error, context);
   }, []);
 
   const handleAsyncError = useCallback(
-    async <T>(asyncFn: () => Promise<T>, context?: unknown) => {
+    async <T>(asyncFn: () => Promise<T>, context?: ErrorContext) => {
       try {
         return await asyncFn();
       } catch (error) {
@@ -54,26 +62,26 @@ export const useLoadingState = (key?: string) => {
 // 用户操作跟踪Hook
 export const useActionTracking = () => {
   const trackAction = useCallback((action: string, data?: unknown) => {
-    recordAction(action, data as any);
+    recordAction(action, normalizeRecord(data));
   }, []);
 
   const trackClick = useCallback(
     (elementName: string, data?: unknown) => {
-      trackAction('click', { element: elementName, ...(data as any) });
+      trackAction('click', { element: elementName, ...normalizeRecord(data) });
     },
     [trackAction]
   );
 
   const trackFormSubmit = useCallback(
     (formName: string, data?: unknown) => {
-      trackAction('formSubmit', { form: formName, ...(data as any) });
+      trackAction('formSubmit', { form: formName, ...normalizeRecord(data) });
     },
     [trackAction]
   );
 
   const trackPageView = useCallback(
     (pageName: string, data?: unknown) => {
-      trackAction('pageView', { page: pageName, ...(data as any) });
+      trackAction('pageView', { page: pageName, ...normalizeRecord(data) });
     },
     [trackAction]
   );

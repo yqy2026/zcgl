@@ -6,7 +6,11 @@ import enum
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .asset import Asset
+    from .ownership import Ownership
 
 from sqlalchemy import (
     DECIMAL,
@@ -23,6 +27,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..constants.rent_contract_constants import PaymentStatus
 from ..core.enums import ContractStatus
 from ..database import Base
 
@@ -164,23 +169,27 @@ class RentContract(Base):
     )
 
     # 合同状态
-    contract_status = Column(
+    contract_status: Mapped[str] = mapped_column(
         String(20),
         default=ContractStatus.ACTIVE.value,
         comment="合同状态：有效/到期/终止",
     )
 
     # 其他信息
-    payment_terms = Column(Text, comment="支付条款")
-    contract_notes = Column(Text, comment="合同备注")
+    payment_terms: Mapped[str | None] = mapped_column(Text, comment="支付条款")
+    contract_notes: Mapped[str | None] = mapped_column(Text, comment="合同备注")
 
     # 系统字段
-    data_status = Column(String(20), default="正常", comment="数据状态")
-    version = Column(Integer, default=1, comment="版本号")
+    data_status: Mapped[str] = mapped_column(
+        String(20), default="正常", comment="数据状态"
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1, comment="版本号")
 
     # 时间戳
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), comment="创建时间")
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
@@ -188,43 +197,61 @@ class RentContract(Base):
     )
 
     # 多租户支持
-    tenant_id = Column(String(50), nullable=True, comment="租户ID")
+    tenant_id: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, comment="租户ID"
+    )
 
     # PDF导入追踪
-    source_session_id = Column(String(100), nullable=True, comment="PDF导入会话ID")
+    source_session_id: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="PDF导入会话ID"
+    )
 
     # 关联关系 - V2: 改为多对多
-    assets = relationship(
+    assets: Mapped[list["Asset"]] = relationship(
         "Asset", secondary=rent_contract_assets, back_populates="rent_contracts"
     )
-    ownership = relationship("Ownership", back_populates="owned_rent_contracts")
-    rent_terms = relationship(
+    ownership: Mapped["Ownership"] = relationship(
+        "Ownership", back_populates="owned_rent_contracts"
+    )
+    rent_terms: Mapped[list["RentTerm"]] = relationship(
         "RentTerm", back_populates="contract", cascade="all, delete-orphan"
     )
-    rent_ledger = relationship(
+    rent_ledger: Mapped[list["RentLedger"]] = relationship(
         "RentLedger", back_populates="contract", cascade="all, delete-orphan"
     )
     # V2: 押金账本
-    deposit_ledger = relationship(
+    deposit_ledger: Mapped[list["RentDepositLedger"]] = relationship(
         "RentDepositLedger",
         back_populates="contract",
         cascade="all, delete-orphan",
         foreign_keys="[RentDepositLedger.contract_id]",
     )
     # V2: 上游合同关联（自关联）
-    upstream_contract = relationship(
+    upstream_contract: Mapped["RentContract | None"] = relationship(
         "RentContract", remote_side=[id], backref="downstream_contracts"
     )
     # V2: 合同附件
-    attachments = relationship(
+    attachments: Mapped[list["RentContractAttachment"]] = relationship(
         "RentContractAttachment",
         back_populates="contract",
         cascade="all, delete-orphan",
     )
     # V2: 服务费台账（委托运营）
-    service_fee_ledger = relationship(
+    service_fee_ledger: Mapped[list["ServiceFeeLedger"]] = relationship(
         "ServiceFeeLedger", back_populates="contract", cascade="all, delete-orphan"
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        assets = kwargs.get("assets")
+        if assets is not None:
+            sa_assets = [
+                asset for asset in assets if hasattr(asset, "_sa_instance_state")
+            ]
+            if sa_assets:
+                kwargs["assets"] = sa_assets
+            else:
+                kwargs.pop("assets", None)
+        super().__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<RentContract(contract_number={self.contract_number}, tenant_name={self.tenant_name})>"  # pragma: no cover
@@ -282,12 +309,14 @@ class RentDepositLedger(Base):
     )
 
     # 关联关系
-    contract = relationship(
+    contract: Mapped["RentContract"] = relationship(
         "RentContract",
         back_populates="deposit_ledger",
         foreign_keys=[contract_id],
     )
-    related_contract = relationship("RentContract", foreign_keys=[related_contract_id])
+    related_contract: Mapped["RentContract | None"] = relationship(
+        "RentContract", foreign_keys=[related_contract_id]
+    )
 
     def __repr__(self) -> str:
         return f"<RentDepositLedger(contract_id={self.contract_id}, type={self.transaction_type}, amount={self.amount})>"  # pragma: no cover
@@ -342,7 +371,9 @@ class RentTerm(Base):
     )
 
     # 关联关系
-    contract = relationship("RentContract", back_populates="rent_terms")
+    contract: Mapped["RentContract"] = relationship(
+        "RentContract", back_populates="rent_terms"
+    )
 
     def __repr__(self) -> str:
         return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"  # pragma: no cover
@@ -387,7 +418,7 @@ class RentLedger(Base):
 
     # 支付状态
     payment_status: Mapped[str] = mapped_column(
-        String(20), default="未支付", comment="支付状态：未支付/部分支付/已支付/逾期"
+        String(20), default=PaymentStatus.UNPAID, comment="支付状态：未支付/部分支付/已支付/逾期"
     )
     payment_date: Mapped[date | None] = mapped_column(Date, comment="支付日期")
     payment_method: Mapped[str | None] = mapped_column(String(50), comment="支付方式")
@@ -422,9 +453,11 @@ class RentLedger(Base):
     )
 
     # 关联关系
-    contract = relationship("RentContract", back_populates="rent_ledger")
-    asset = relationship("Asset")
-    ownership = relationship("Ownership")
+    contract: Mapped["RentContract"] = relationship(
+        "RentContract", back_populates="rent_ledger"
+    )
+    asset: Mapped["Asset | None"] = relationship("Asset")
+    ownership: Mapped["Ownership"] = relationship("Ownership")
 
     def __repr__(self) -> str:
         return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"  # pragma: no cover
@@ -492,8 +525,10 @@ class ServiceFeeLedger(Base):
     )
 
     # 关联关系
-    contract = relationship("RentContract", back_populates="service_fee_ledger")
-    source_ledger = relationship("RentLedger")
+    contract: Mapped["RentContract"] = relationship(
+        "RentContract", back_populates="service_fee_ledger"
+    )
+    source_ledger: Mapped["RentLedger | None"] = relationship("RentLedger")
 
     def __repr__(self) -> str:
         return f"<ServiceFeeLedger(contract_id={self.contract_id}, fee_amount={self.fee_amount})>"  # pragma: no cover
@@ -533,7 +568,7 @@ class RentContractHistory(Base):
     )
 
     # 关联关系
-    contract = relationship("RentContract")
+    contract: Mapped["RentContract"] = relationship("RentContract")
 
     def __repr__(self) -> str:
         return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"  # pragma: no cover
@@ -579,7 +614,9 @@ class RentContractAttachment(Base):
     )
 
     # 关联关系
-    contract = relationship("RentContract", back_populates="attachments")
+    contract: Mapped["RentContract"] = relationship(
+        "RentContract", back_populates="attachments"
+    )
 
     def __repr__(self) -> str:
         return f"<RentContractAttachment(contract_id={self.contract_id}, file_name={self.file_name})>"  # pragma: no cover

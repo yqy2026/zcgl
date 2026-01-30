@@ -348,9 +348,9 @@ export const useABTest = () => {
 // A/B测试包装器组件
 interface ABTestWrapperProps {
   testId: string;
-  fallback?: React.ComponentType<any>;
+  fallback?: React.ComponentType<Record<string, unknown>>;
   children: ReactNode;
-  loadingComponent?: React.ComponentType;
+  loadingComponent?: React.ComponentType<Record<string, unknown>>;
 }
 
 export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({

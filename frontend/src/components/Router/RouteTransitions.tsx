@@ -6,6 +6,7 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { TargetAndTransition } from 'framer-motion';
 import { ConfigProvider, theme } from 'antd';
 
 // 动画类型
@@ -37,9 +38,9 @@ interface RouteTransitionProps {
 }
 
 interface PageTransitionConfig {
-  enter: any;
-  exit: any;
-  initial: any;
+  enter: TargetAndTransition;
+  exit: TargetAndTransition;
+  initial: TargetAndTransition;
 }
 
 class RouteTransitionManager {

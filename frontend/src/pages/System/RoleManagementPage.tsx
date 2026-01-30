@@ -58,6 +58,51 @@ interface Permission {
   type: 'menu' | 'action' | 'data';
 }
 
+interface RoleApiPermission {
+  id: string;
+}
+
+interface RoleApiItem {
+  id: string;
+  name: string;
+  display_name?: string;
+  description?: string;
+  is_active?: boolean;
+  permissions?: RoleApiPermission[];
+  user_count?: number;
+  created_at: string;
+  updated_at: string;
+  is_system_role?: boolean;
+}
+
+type RoleListResponse = { items?: RoleApiItem[]; total?: number } | RoleApiItem[];
+
+interface PermissionApiItem {
+  id: string;
+  name?: string;
+  display_name?: string;
+  resource?: string;
+  action?: string;
+  description?: string;
+}
+
+interface PermissionListResponse {
+  data?: Record<string, PermissionApiItem[]>;
+}
+
+interface RoleStatisticsApiResponse {
+  data?: {
+    total_roles?: number;
+    active_roles?: number;
+    system_roles?: number;
+    custom_roles?: number;
+  };
+  total_roles?: number;
+  active_roles?: number;
+  system_roles?: number;
+  custom_roles?: number;
+}
+
 interface RoleStatistics {
   total: number;
   active: number;
@@ -115,7 +160,7 @@ const RoleManagementPage: React.FC = () => {
         page_size: rolePageSize,
         search: _searchText || undefined,
         is_active: isActive,
-      })) as { items?: any[]; total?: number } | any[];
+      })) as RoleListResponse;
       const items = Array.isArray(data) ? data : (data.items ?? []);
       const mapped: Role[] = items.map(r => ({
         id: r.id,
@@ -123,7 +168,7 @@ const RoleManagementPage: React.FC = () => {
         code: r.name,
         description: r.description ?? '',
         status: r.is_active ? 'active' : 'inactive',
-        permissions: Array.isArray(r.permissions) ? r.permissions.map((p: any) => p.id) : [],
+        permissions: Array.isArray(r.permissions) ? r.permissions.map(p => p.id) : [],
         user_count: r.user_count ?? 0,
         created_at: r.created_at,
         updated_at: r.updated_at,
@@ -191,19 +236,21 @@ const RoleManagementPage: React.FC = () => {
 
   const loadPermissions = React.useCallback(async () => {
     try {
-      const resp = (await roleService.getPermissions()) as {
-        data?: Record<string, any[]>;
-      };
+      const resp = (await roleService.getPermissions()) as PermissionListResponse;
       const grouped = resp.data ?? {};
       const list: Permission[] = Object.keys(grouped).flatMap(resource =>
-        (grouped[resource] ?? []).map((p: any) => ({
-          id: p.id,
-          name: p.display_name ?? p.name ?? `${p.resource}:${p.action}`,
-          code: `${p.resource}.${p.action}`,
-          module: p.resource,
-          description: p.description ?? '',
-          type: p.action === 'view' || p.action === 'read' ? 'menu' : 'action',
-        })),
+        (grouped[resource] ?? []).map(p => {
+          const action = p.action ?? 'action';
+          const resourceKey = p.resource ?? resource;
+          return {
+            id: p.id,
+            name: p.display_name ?? p.name ?? `${resourceKey}:${action}`,
+            code: `${resourceKey}.${action}`,
+            module: resourceKey,
+            description: p.description ?? '',
+            type: action === 'view' || action === 'read' ? 'menu' : 'action',
+          };
+        }),
       );
       setPermissions(list);
       const treeData = buildPermissionTree(list);
@@ -226,18 +273,7 @@ const RoleManagementPage: React.FC = () => {
           : 0,
     };
     try {
-      const resp = (await roleService.getRoleStatistics()) as {
-        data?: {
-          total_roles?: number;
-          active_roles?: number;
-          system_roles?: number;
-          custom_roles?: number;
-        };
-        total_roles?: number;
-        active_roles?: number;
-        system_roles?: number;
-        custom_roles?: number;
-      };
+      const resp = (await roleService.getRoleStatistics()) as RoleStatisticsApiResponse;
       const stats = resp.data ?? resp;
       if (stats && typeof stats.total_roles === 'number') {
         const total = stats.total_roles;

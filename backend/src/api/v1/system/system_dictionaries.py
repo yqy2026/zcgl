@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
-    bad_request,
     internal_error,
     not_found,
 )
@@ -114,9 +113,6 @@ async def create_system_dictionary(
             db=db, obj_in=dictionary_in
         )
         return SystemDictionaryResponse.model_validate(dictionary)
-
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -143,11 +139,6 @@ async def update_system_dictionary(
             db=db, id=dictionary_id, obj_in=dictionary_in
         )
         return SystemDictionaryResponse.model_validate(updated_dictionary)
-
-    except ValueError as e:
-        if "不存在" in str(e):
-            raise not_found(str(e), resource_type="system_dictionary")
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -168,11 +159,6 @@ async def delete_system_dictionary(
     try:
         system_dictionary_service.delete_dictionary(db=db, id=dictionary_id)
         return {"message": f"字典 {dictionary_id} 已成功删除"}
-
-    except ValueError as e:
-        raise not_found(
-            str(e), resource_type="system_dictionary", resource_id=dictionary_id
-        )
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -221,7 +207,7 @@ async def batch_update_system_dictionaries(
                 updated_dictionaries.append(
                     SystemDictionaryResponse.model_validate(updated)
                 )
-            except ValueError:
+            except BaseBusinessError:
                 continue
 
         return updated_dictionaries

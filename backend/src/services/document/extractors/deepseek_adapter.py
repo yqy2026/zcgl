@@ -4,6 +4,7 @@ DeepSeek-VL Contract Extractor Adapter
 """
 
 import logging
+from typing import Any
 
 from ...core.deepseek_vision_service import get_deepseek_vision_service
 from .base import BaseVisionAdapter
@@ -18,11 +19,11 @@ class DeepSeekAdapter(BaseVisionAdapter):
     Inherits common extraction logic from BaseVisionAdapter.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._vision_service = get_deepseek_vision_service()
 
     @property
-    def vision_service(self):
+    def vision_service(self) -> Any:
         return self._vision_service
 
     @property

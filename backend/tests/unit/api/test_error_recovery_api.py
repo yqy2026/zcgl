@@ -27,7 +27,7 @@ pytestmark = pytest.mark.skip(reason="Error recovery API endpoints not yet imple
 class TestErrorRecoveryStatistics:
     """Tests for GET /error-recovery/statistics endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_statistics_success(self, mock_engine, client, admin_user):
         """Test successful retrieval of error recovery statistics"""
         # Mock statistics data
@@ -51,7 +51,7 @@ class TestErrorRecoveryStatistics:
         assert data["successful_recoveries"] == 85
         assert data["success_rate"] == 85.0
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_statistics_with_category_filter(self, mock_engine, client, admin_user):
         """Test filtering statistics by error category"""
         mock_engine.get_recovery_statistics.return_value = {
@@ -75,7 +75,7 @@ class TestErrorRecoveryStatistics:
 class TestRecoveryStrategies:
     """Tests for GET /error-recovery/strategies endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_strategies_success(self, mock_engine, client, admin_user):
         """Test successful retrieval of recovery strategies"""
         # Mock strategy object
@@ -104,7 +104,7 @@ class TestRecoveryStrategies:
 class TestUpdateRecoveryStrategy:
     """Tests for PUT /error-recovery/strategies/{category} endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_update_strategy_success(self, mock_engine, client, admin_user):
         """Test successful update of recovery strategy"""
         # Mock existing strategy
@@ -148,7 +148,7 @@ class TestUpdateRecoveryStrategy:
 class TestCircuitBreakerStatus:
     """Tests for GET /error-recovery/circuit-breakers endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_circuit_breaker_status_success(self, mock_engine, client, admin_user):
         """Test successful retrieval of circuit breaker status"""
         # Mock circuit breaker data
@@ -180,7 +180,7 @@ class TestCircuitBreakerStatus:
 class TestResetCircuitBreaker:
     """Tests for POST /error-recovery/circuit-breakers/{category}/reset endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_reset_circuit_breaker_success(self, mock_engine, client, admin_user):
         """Test successful reset of circuit breaker"""
         mock_engine.circuit_breakers = {
@@ -207,7 +207,7 @@ class TestResetCircuitBreaker:
 class TestRecoveryHistory:
     """Tests for GET /error-recovery/history endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_history_success(self, mock_engine, client, admin_user):
         """Test successful retrieval of recovery history"""
         # Mock history data
@@ -234,7 +234,7 @@ class TestRecoveryHistory:
         assert "records" in data
         assert data["total"] == 2
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_get_history_with_filters(self, mock_engine, client, admin_user):
         """Test filtering recovery history"""
         mock_engine.recovery_history = [
@@ -264,7 +264,7 @@ class TestRecoveryHistory:
 class TestClearRecoveryHistory:
     """Tests for DELETE /error-recovery/history/clear endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     def test_clear_history_all(self, mock_engine, client, admin_user):
         """Test clearing all recovery history"""
         mock_engine.recovery_history = [

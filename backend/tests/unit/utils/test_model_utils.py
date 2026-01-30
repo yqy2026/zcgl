@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import BusinessValidationError
 from src.utils.model_utils import (
     batch_to_dict,
     calculate_percentage,
@@ -355,7 +356,7 @@ class TestGenerateMonthRange:
 
     def test_invalid_format(self):
         """测试无效格式"""
-        with pytest.raises(ValueError, match="无效的月份格式"):
+        with pytest.raises(BusinessValidationError, match="无效的月份格式"):
             generate_month_range("2024/01", "2024-03")
 
     def test_reversed_range(self):

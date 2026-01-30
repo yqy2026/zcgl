@@ -34,6 +34,7 @@ from ....models.pdf_import_session import (
     SessionStatus,
 )
 from ....schemas.pdf_import import ExtractionResponse, FileUploadResponse
+from ....security.file_validation import validate_upload_file
 from ....services.document.pdf_import_service import PDFImportService
 from ....utils.file_security import generate_safe_filename
 from ..dependencies import get_optional_services, get_pdf_import_service
@@ -55,7 +56,10 @@ async def upload_pdf_file(
 ) -> FileUploadResponse:
     """上传PDF文件并开始处理"""
 
-    # 验证文件类型
+    # 通过 Magic Number 校验文件真实类型（防止恶意文件伪装）
+    await validate_upload_file(file, "application/pdf")
+
+    # 验证文件类型（保留后缀名检查作为备用）
     if file.content_type != "application/pdf" and not (
         file.filename and file.filename.lower().endswith(".pdf")
     ):

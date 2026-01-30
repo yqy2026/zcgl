@@ -8,10 +8,12 @@ from typing import Any
 """
 
 from sqlalchemy import Select, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, joinedload
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
+from ..core.exception_handler import ResourceNotFoundError
 from ..core.performance import cached, monitor_query
 from ..models.asset import Asset, AssetHistory, Project, ProjectOwnershipRelation
 from ..schemas.asset import AssetCreate, AssetUpdate
@@ -230,6 +232,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         # unrented_area 和 occupancy_rate 是自动计算的，不应该从 API 输入
         obj_in_data.pop("unrented_area", None)
         obj_in_data.pop("occupancy_rate", None)
+        obj_in_data.pop("version", None)
 
         # 加密PII字段
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
@@ -251,6 +254,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             self._decrypt_asset_object(result)
 
         return result
+
+    async def get_async(
+        self, db: AsyncSession, id: Any, use_cache: bool = False
+    ) -> Asset | None:
+        result = await db.execute(
+            select(Asset).filter(getattr(self.model, "id") == id)
+        )
+        asset = result.scalars().first()
+        if asset is not None:
+            self._decrypt_asset_object(asset)
+        return asset
 
     def get_multi(
         self,
@@ -321,6 +335,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """根据物业名称获取资产（别名方法）"""
         return self.get_by_name(db, property_name)
 
+    async def get_by_name_async(
+        self, db: AsyncSession, property_name: str
+    ) -> Asset | None:
+        result = await db.execute(
+            select(Asset).filter(Asset.property_name == property_name)
+        )
+        asset = result.scalars().first()
+        if asset is not None:
+            self._decrypt_asset_object(asset)
+        return asset
+
     @monitor_query("asset_get_multi_with_search")
     @cached(ttl=600)
     def get_multi_with_search(
@@ -332,7 +357,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         filters: dict[str, Any] | None = None,
         sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
-        include_relations: bool = False,
+        include_relations: bool = True,  # 默认开启关联预加载，避免 N+1 查询
     ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持搜索、筛选和排序 - 优化版本
@@ -398,6 +423,68 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         return assets, total
 
+    async def get_multi_with_search_async(
+        self,
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        filters: dict[str, Any] | None = None,
+        sort_field: str = DateTimeFields.CREATED_AT,
+        sort_order: str = "desc",
+        include_relations: bool = True,
+    ) -> tuple[list[Asset], int]:
+        qb_filters = {}
+        if filters:
+            for key, value in filters.items():
+                if key == "min_area":
+                    qb_filters["min_actual_property_area"] = value
+                elif key == "max_area":
+                    qb_filters["max_actual_property_area"] = value
+                elif key == "ids":
+                    qb_filters["id__in"] = value
+                else:
+                    qb_filters[key] = value
+
+        non_pii_search_fields = ["property_name", "business_category"]
+        pii_search_fields = ["address", "ownership_entity"]
+        all_search_fields = non_pii_search_fields + pii_search_fields
+
+        search_query = search
+        if search and self.sensitive_data_handler.encryption_enabled:
+            pass
+
+        base_query = (
+            self._asset_base_query_with_relations()
+            if include_relations
+            else select(Asset)
+        )
+        query: Select[Any] = self.query_builder.build_query(
+            filters=qb_filters,
+            search_query=search_query,
+            search_fields=all_search_fields,
+            sort_by=sort_field,
+            sort_desc=(sort_order.lower() == "desc"),
+            skip=skip,
+            limit=limit,
+            base_query=base_query,
+        )
+        result = await db.execute(query)
+        assets = list(result.scalars().all())
+
+        cnt_query = self.query_builder.build_count_query(
+            filters=qb_filters,
+            search_query=search_query,
+            search_fields=all_search_fields,
+        )
+        total_result = await db.execute(cnt_query)
+        total = total_result.scalar() or 0
+
+        for asset in assets:
+            self._decrypt_asset_object(asset)
+
+        return assets, total
+
     def create_with_history(
         self,
         db: Session,
@@ -426,6 +513,42 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             db.flush()
         return db_obj
 
+    async def create_with_history_async(
+        self,
+        db: AsyncSession,
+        obj_in: AssetCreate,
+        commit: bool = True,
+        operator: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> Asset:
+        obj_in_data = obj_in.model_dump()
+        obj_in_data.pop("unrented_area", None)
+        obj_in_data.pop("occupancy_rate", None)
+        obj_in_data.pop("version", None)
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
+
+        db_obj = Asset(**encrypted_data)
+        db.add(db_obj)
+
+        history = AssetHistory()
+        history.asset_id = db_obj.id
+        history.operation_type = "CREATE"
+        history.description = f"创建资产: {db_obj.property_name}"
+        history.operator = operator
+        history.ip_address = ip_address
+        history.user_agent = user_agent
+        history.session_id = session_id
+        db.add(history)
+
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        await db.refresh(db_obj)
+        return db_obj
+
     def update(
         self,
         db: Session,
@@ -435,7 +558,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         commit: bool = True,
     ) -> Asset:
         """
-        更新资产，增加版本号并加密PII字段
+        更新资产并加密PII字段（版本号由ORM维护）
 
         Override CRUDBase.update() to encrypt PII fields.
 
@@ -450,14 +573,12 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         # 移除计算字段（这些字段在模型中是@property，不能设置）
         update_data.pop("unrented_area", None)
         update_data.pop("occupancy_rate", None)
+        update_data.pop("version", None)
 
         # 加密PII字段
         encrypted_data = self._encrypt_update_data(update_data)
 
-        # 版本号递增
-        if hasattr(db_obj, "version") and db_obj.version is not None:
-            current_version = int(db_obj.version)
-            db_obj.version = current_version + 1
+        # 版本号由 SQLAlchemy 的 version_id_col 自动维护
 
         # 调用父类方法更新记录
         result: Asset = super().update(
@@ -481,6 +602,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             update_data = obj_in.model_dump(exclude_unset=True)
         else:
             update_data = obj_in.dict(exclude_unset=True)
+
+        update_data.pop("version", None)
 
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
@@ -506,6 +629,67 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     db.add(history)
 
         return self.update(db=db, db_obj=db_obj, obj_in=obj_in, commit=commit)
+
+    async def update_with_history_async(
+        self,
+        db: AsyncSession,
+        db_obj: Asset,
+        obj_in: AssetUpdate,
+        commit: bool = True,
+        operator: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> Asset:
+        update_data = obj_in.model_dump(exclude_unset=True)
+        update_data.pop("version", None)
+
+        for field, new_value in update_data.items():
+            if hasattr(db_obj, field):
+                old_value = getattr(db_obj, field)
+                if old_value != new_value:
+                    history = AssetHistory()
+                    history.asset_id = db_obj.id
+                    history.operation_type = "UPDATE"
+                    history.field_name = field
+                    history.old_value = str(old_value) if old_value is not None else None
+                    history.new_value = str(new_value) if new_value is not None else None
+                    history.description = (
+                        f"更新字段 {field}: {old_value} -> {new_value}"
+                    )
+                    history.operator = operator
+                    history.ip_address = ip_address
+                    history.user_agent = user_agent
+                    history.session_id = session_id
+                    db.add(history)
+
+        update_data.pop("unrented_area", None)
+        update_data.pop("occupancy_rate", None)
+        encrypted_data = self._encrypt_update_data(update_data)
+
+        for field, value in encrypted_data.items():
+            setattr(db_obj, field, value)
+
+        db.add(db_obj)
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def remove_async(
+        self, db: AsyncSession, *, id: Any, commit: bool = True
+    ) -> Asset:
+        obj = await db.get(self.model, id)
+        if obj is None:
+            raise ResourceNotFoundError(self.model.__name__, str(id))
+        await db.delete(obj)
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        return obj
 
     def get_multi_by_ids(
         self, db: Session, ids: list[str], include_relations: bool = False

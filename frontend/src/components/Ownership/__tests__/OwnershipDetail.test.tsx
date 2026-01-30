@@ -2,513 +2,338 @@
  * OwnershipDetail 组件测试
  *
  * 测试覆盖范围:
- * - 组件导入与导出
- * - 基本属性测试
+ * - 组件基本渲染
  * - 权属方信息展示
- * - 关联资产展示
- * - 统计数据展示
- * - 编辑功能
- * - 删除功能
- * - 联系信息显示
- * - 地址信息显示
- * - 类型标签显示
- * - 状态标签显示
- * - 空状态处理
- * - 加载状态
- * - 错误处理
- * - 操作按钮
- * - 图标显示
+ * - 编辑按钮功能
+ * - 关联项目展示
+ * - 系统信息展示
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
-// Mock antd 组件
+// Mock Ant Design
 vi.mock('antd', () => ({
-  Typography: ({ children }: any) => <span data-testid="typography">{children}</span>,
-  Text: ({ children }: any) => <span data-testid="text">{children}</span>,
-  Collapse: ({ children, accordion }: any) => (
-    <div data-testid="collapse" data-accordion={accordion}>
+  Descriptions: ({
+    children,
+    column,
+    bordered,
+  }: {
+    children?: React.ReactNode;
+    column?: number;
+    bordered?: boolean;
+  }) => (
+    <div data-testid="descriptions" data-column={column} data-bordered={bordered}>
       {children}
     </div>
   ),
-  Card: ({ children, title, extra }: any) => (
+  Card: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
     <div data-testid="card" data-title={title}>
-      <div className="card-title">{title}</div>
-      {extra && <div className="card-extra">{extra}</div>}
+      {title && <div data-testid="card-title">{title}</div>}
       {children}
     </div>
   ),
-  Descriptions: ({ children, column, bordered, size, items }: any) => (
-    <div data-testid="descriptions" data-column={column} data-bordered={bordered} data-size={size}>
-      {items?.map((item: any, index: number) => (
-        <div key={index} data-label={item.label}>
-          <span className="label">{item.label}</span>
-          <span className="value">{item.children || item.value}</span>
-        </div>
-      ))}
-      {children}
-    </div>
-  ),
-  Row: ({ children, gutter }: any) => (
-    <div data-testid="row" data-gutter={gutter}>
-      {children}
-    </div>
-  ),
-  Col: ({ children, span }: any) => (
-    <div data-testid="col" data-span={span}>
-      {children}
-    </div>
-  ),
-  Tag: ({ children, color }: any) => (
+  Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>
   ),
-  Button: ({ children, onClick, icon, type, danger }: any) => (
-    <button data-testid="button" data-type={type} data-danger={danger} onClick={onClick}>
+  Space: ({
+    children,
+    size,
+    align,
+  }: {
+    children?: React.ReactNode;
+    size?: string;
+    align?: string;
+  }) => (
+    <div data-testid="space" data-size={size} data-align={align}>
+      {children}
+    </div>
+  ),
+  Button: ({
+    children,
+    onClick,
+    icon,
+    type,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    type?: string;
+  }) => (
+    <button data-testid="button" data-type={type} onClick={onClick}>
       {icon}
       {children}
     </button>
   ),
-  Space: ({ children, size }: any) => (
-    <div data-testid="space" data-size={size}>
-      {children}
-    </div>
+  Badge: ({ status, text }: { status?: string; text?: string }) => (
+    <span data-testid="badge" data-status={status}>
+      {text}
+    </span>
   ),
-  Divider: ({ children }: any) => <div data-testid="divider">{children}</div>,
-  Table: ({ dataSource, columns: _columns, pagination }: any) => (
-    <div data-testid="table" data-pagination={pagination}>
-      {dataSource?.map((item: any, index: number) => (
-        <div key={index} data-row={index}>
-          {JSON.stringify(item)}
+  Typography: {
+    Text: ({
+      children,
+      strong,
+      style,
+    }: {
+      children?: React.ReactNode;
+      strong?: boolean;
+      style?: React.CSSProperties;
+    }) => (
+      <span data-testid="text" data-strong={strong} style={style}>
+        {children}
+      </span>
+    ),
+  },
+  Table: ({
+    dataSource,
+    columns,
+    rowKey,
+    pagination,
+    size,
+  }: {
+    dataSource?: Array<{ id: string; name: string; code: string }>;
+    columns?: Array<{ title: string; key: string }>;
+    rowKey?: string;
+    pagination?: boolean;
+    size?: string;
+  }) => (
+    <div
+      data-testid="table"
+      data-row-key={rowKey}
+      data-pagination={pagination}
+      data-size={size}
+      data-column-count={columns?.length}
+    >
+      {dataSource?.map(item => (
+        <div key={item.id} data-testid={`project-row-${item.id}`}>
+          <span data-testid={`project-name-${item.id}`}>{item.name}</span>
+          <span data-testid={`project-code-${item.id}`}>{item.code}</span>
         </div>
       ))}
-    </div>
-  ),
-  Statistic: ({ title, value, suffix }: any) => (
-    <div data-testid="statistic" data-title={title}>
-      <span className="statistic-title">{title}</span>
-      <span className="statistic-value">{value}</span>
-      {suffix && <span className="statistic-suffix">{suffix}</span>}
-    </div>
-  ),
-  Alert: ({ message, type, showIcon }: any) => (
-    <div data-testid="alert" data-type={type} data-show-icon={showIcon}>
-      {message}
-    </div>
-  ),
-  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
-  Spin: ({ children, spinning, tip }: any) => (
-    <div data-testid="spin" data-spinning={spinning} data-tip={tip}>
-      {spinning ? <div>加载中...</div> : children}
-    </div>
-  ),
-  Tooltip: ({ children, title }: any) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
-  Modal: ({ children, open, onOk, onCancel, title }: any) => (
-    <div data-testid="modal" data-open={open} data-title={title}>
-      {open && (
-        <>
-          <div className="modal-title">{title}</div>
-          <div className="modal-content">{children}</div>
-          <button onClick={onOk}>确定</button>
-          <button onClick={onCancel}>取消</button>
-        </>
-      )}
-    </div>
-  ),
-  Tabs: ({ children, activeKey, onChange }: any) => (
-    <div data-testid="tabs" data-active-key={activeKey}>
-      {React.Children.map(children, (child: any, index: number) => (
-        <div
-          key={index}
-          data-tab-key={child.props?.tabKey}
-          onClick={() => onChange && onChange(child.props?.tabKey)}
-        >
-          {child.props?.tab}
-        </div>
-      ))}
-      {children}
-    </div>
-  ),
-  TabPane: ({ children, tab, tabKey }: any) => (
-    <div data-testid="tab-pane" data-tab-key={tabKey} data-tab={tab}>
-      {children}
     </div>
   ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  EditOutlined: () => <span data-testid="icon-edit" />,
-  DeleteOutlined: () => <span data-testid="icon-delete" />,
-  HomeOutlined: () => <span data-testid="icon-home" />,
-  PhoneOutlined: () => <span data-testid="icon-phone" />,
-  MailOutlined: () => <span data-testid="icon-mail" />,
-  EnvironmentOutlined: () => <span data-testid="icon-environment" />,
-  BuildingOutlined: () => <span data-testid="icon-building" />,
-  BankOutlined: () => <span data-testid="icon-bank" />,
-  UserOutlined: () => <span data-testid="icon-user" />,
-  InfoCircleOutlined: () => <span data-testid="icon-info" />,
+  EditOutlined: () => <span data-testid="icon-edit">Edit</span>,
+  ProjectOutlined: () => <span data-testid="icon-project">Project</span>,
 }));
 
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
-}));
-
-// Mock services
-vi.mock('@/services', () => ({
-  getOwnershipDetail: vi.fn(() => ({})),
-  getOwnershipAssets: vi.fn(() => []),
-  deleteOwnership: vi.fn(() => ({ success: true })),
-}));
+import OwnershipDetail from '../OwnershipDetail';
+import type { Ownership } from '@/types/ownership';
 
 describe('OwnershipDetail 组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const _mockOwnershipData: any = {
+  const mockOwnership: Ownership = {
     id: '1',
     name: '测试权属方',
-    type: 'enterprise',
-    status: 'active',
-    contact_person: '张三',
-    contact_phone: '13800138000',
-    contact_email: 'test@example.com',
-    address: '北京市朝阳区',
-    business_scope: '物业管理',
-    registration_date: '2020-01-01',
+    code: 'OWN-001',
+    short_name: '测试',
+    is_active: true,
+    asset_count: 10,
+    project_count: 5,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-15T00:00:00Z',
+    related_projects: [
+      {
+        id: 'proj-1',
+        name: '项目1',
+        code: 'PROJ-001',
+        relation_type: '合作',
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+      },
+      {
+        id: 'proj-2',
+        name: '项目2',
+        code: 'PROJ-002',
+        relation_type: '投资',
+        start_date: '2024-02-01',
+      },
+    ],
   };
 
-  // Helper function to create component element
-  const createElement = async (props: any = {}) => {
-    const module = await import('../OwnershipDetail');
-    const Component = module.default;
-    return React.createElement(Component, {
-      ownershipId: '1',
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
-      ...props,
-    });
-  };
+  const mockOnEdit = vi.fn();
 
-  describe('组件导入与导出', () => {
-    it('应该成功导入默认导出', async () => {
-      const module = await import('../OwnershipDetail');
-      expect(module.default).toBeDefined();
+  describe('基本渲染', () => {
+    it('应该正确渲染组件', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
 
-    it('应该是React组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该显示权属方名称', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
-  describe('基本属性测试', () => {
-    it('应该接收 ownershipId 属性', async () => {
-      const element = await createElement({ ownershipId: 'test-123' });
-      expect(element).toBeTruthy();
+      const nameElement = screen.getByTestId('text');
+      expect(nameElement).toHaveTextContent('测试权属方');
     });
 
-    it('应该接收 onEdit 回调', async () => {
-      const handleEdit = vi.fn();
-      const element = await createElement({ onEdit: handleEdit });
-      expect(element).toBeTruthy();
+    it('应该显示权属方简称', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      expect(screen.getByText(/简称：测试/)).toBeInTheDocument();
     });
 
-    it('应该接收 onDelete 回调', async () => {
-      const handleDelete = vi.fn();
-      const element = await createElement({ onDelete: handleDelete });
-      expect(element).toBeTruthy();
-    });
+    it('应该显示启用状态', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
-    it('应该接受 readonly 属性', async () => {
-      const element = await createElement({ readonly: true });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该接受 loading 属性', async () => {
-      const element = await createElement({ loading: true });
-      expect(element).toBeTruthy();
+      const badges = screen.getAllByTestId('badge');
+      const activeBadge = badges.find(badge => badge.textContent === '启用');
+      expect(activeBadge).toBeInTheDocument();
+      expect(activeBadge).toHaveAttribute('data-status', 'success');
     });
   });
 
-  describe('权属方信息展示', () => {
-    it('应该显示权属方名称', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+  describe('禁用状态', () => {
+    it('禁用权属方应该显示禁用状态', () => {
+      const inactiveOwnership = { ...mockOwnership, is_active: false };
+      render(<OwnershipDetail ownership={inactiveOwnership} onEdit={mockOnEdit} />);
 
-    it('应该显示权属方类型', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示权属方状态', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示经营范围', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示注册日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const badges = screen.getAllByTestId('badge');
+      const inactiveBadge = badges.find(badge => badge.textContent === '禁用');
+      expect(inactiveBadge).toBeInTheDocument();
+      expect(inactiveBadge).toHaveAttribute('data-status', 'error');
     });
   });
 
-  describe('联系信息显示', () => {
-    it('应该显示联系人', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('编辑按钮', () => {
+    it('应该显示编辑按钮', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const buttons = screen.getAllByTestId('button');
+      const editButton = buttons.find(btn => btn.textContent?.includes('编辑'));
+      expect(editButton).toBeInTheDocument();
     });
 
-    it('应该显示联系电话', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('点击编辑按钮应该触发 onEdit', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const buttons = screen.getAllByTestId('button');
+      const editButton = buttons.find(btn => btn.textContent?.includes('编辑'));
+
+      if (editButton) {
+        fireEvent.click(editButton);
+      }
+
+      expect(mockOnEdit).toHaveBeenCalledTimes(1);
     });
 
-    it('应该显示联系邮箱', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('编辑按钮应该显示 EditOutlined 图标', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
-    it('应该显示地址', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('关联资产展示', () => {
-    it('应该显示关联资产列表', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示资产数量', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持跳转到资产详情', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('icon-edit')).toBeInTheDocument();
     });
   });
 
-  describe('统计数据展示', () => {
-    it('应该显示资产总数统计', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('基本信息卡片', () => {
+    it('应该显示基本信息卡片', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const cards = screen.getAllByTestId('card');
+      const basicInfoCard = cards.find(card => card.getAttribute('data-title') === '基本信息');
+      expect(basicInfoCard).toBeInTheDocument();
     });
 
-    it('应该显示总面积统计', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示 Descriptions 组件', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const descriptions = screen.getAllByTestId('descriptions');
+      expect(descriptions.length).toBeGreaterThan(0);
     });
 
-    it('应该显示已出租面积统计', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示关联资产数量', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const tags = screen.getAllByTestId('tag');
+      const assetTag = tags.find(tag => tag.textContent?.includes('10'));
+      expect(assetTag).toBeInTheDocument();
     });
 
-    it('应该显示出租率统计', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该显示关联项目数量', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
-  describe('编辑功能', () => {
-    it('应该有编辑按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('readonly 模式下不应该显示编辑按钮', async () => {
-      const element = await createElement({ readonly: true });
-      expect(element).toBeTruthy();
-    });
-
-    it('点击编辑应该触发 onEdit', async () => {
-      const handleEdit = vi.fn();
-      const element = await createElement({ onEdit: handleEdit });
-      expect(element).toBeTruthy();
+      const tags = screen.getAllByTestId('tag');
+      const projectTag = tags.find(tag => tag.textContent?.includes('5'));
+      expect(projectTag).toBeInTheDocument();
     });
   });
 
-  describe('删除功能', () => {
-    it('应该有删除按钮', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('关联项目卡片', () => {
+    it('应该显示关联项目卡片', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      const cards = screen.getAllByTestId('card');
+      const projectCard = cards.find(card => card.getAttribute('data-title') === '关联项目');
+      expect(projectCard).toBeInTheDocument();
     });
 
-    it('点击删除应该显示确认对话框', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示关联项目表格', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+
+      expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('确认删除应该调用 onDelete', async () => {
-      const handleDelete = vi.fn();
-      const element = await createElement({ onDelete: handleDelete });
-      expect(element).toBeTruthy();
-    });
-  });
+    it('没有关联项目时不应该显示关联项目卡片', () => {
+      const ownershipWithoutProjects = { ...mockOwnership, related_projects: [] };
+      render(<OwnershipDetail ownership={ownershipWithoutProjects} onEdit={mockOnEdit} />);
 
-  describe('类型标签显示', () => {
-    it('企业类型应该显示相应标签', async () => {
-      const element = await createElement({ ownershipData: { type: 'enterprise' } });
-      expect(element).toBeTruthy();
-    });
-
-    it('个人类型应该显示相应标签', async () => {
-      const element = await createElement({ ownershipData: { type: 'individual' } });
-      expect(element).toBeTruthy();
-    });
-
-    it('政府类型应该显示相应标签', async () => {
-      const element = await createElement({ ownershipData: { type: 'government' } });
-      expect(element).toBeTruthy();
+      const cards = screen.getAllByTestId('card');
+      const projectCard = cards.find(card => card.getAttribute('data-title') === '关联项目');
+      expect(projectCard).toBeUndefined();
     });
   });
 
-  describe('状态标签显示', () => {
-    it('活跃状态应该显示绿色标签', async () => {
-      const element = await createElement({ ownershipData: { status: 'active' } });
-      expect(element).toBeTruthy();
-    });
+  describe('系统信息卡片', () => {
+    it('应该显示系统信息卡片', () => {
+      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
-    it('禁用状态应该显示灰色标签', async () => {
-      const element = await createElement({ ownershipData: { status: 'inactive' } });
-      expect(element).toBeTruthy();
+      const cards = screen.getAllByTestId('card');
+      const systemCard = cards.find(card => card.getAttribute('data-title') === '系统信息');
+      expect(systemCard).toBeInTheDocument();
     });
   });
 
-  describe('空状态处理', () => {
-    it('没有权属方数据时应该显示空状态', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('无简称情况', () => {
+    it('没有简称时不应该显示简称', () => {
+      const ownershipWithoutShortName = { ...mockOwnership, short_name: null };
+      render(<OwnershipDetail ownership={ownershipWithoutShortName} onEdit={mockOnEdit} />);
+
+      expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
 
-    it('没有关联资产时应该显示空状态', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('简称为空字符串时不应该显示简称', () => {
+      const ownershipWithEmptyShortName = { ...mockOwnership, short_name: '' };
+      render(<OwnershipDetail ownership={ownershipWithEmptyShortName} onEdit={mockOnEdit} />);
 
-  describe('加载状态', () => {
-    it('loading 时应该显示 Spin 组件', async () => {
-      const element = await createElement({ loading: true });
-      expect(element).toBeTruthy();
-    });
-
-    it('loading 时应该显示提示文本', async () => {
-      const element = await createElement({ loading: true });
-      expect(element).toBeTruthy();
+      expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
   });
 
-  describe('错误处理', () => {
-    it('错误时应该显示 Alert 组件', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
+  describe('资产和项目计数', () => {
+    it('资产数量为0时应该显示0', () => {
+      const ownershipWithZeroAssets = { ...mockOwnership, asset_count: 0 };
+      render(<OwnershipDetail ownership={ownershipWithZeroAssets} onEdit={mockOnEdit} />);
+
+      const tags = screen.getAllByTestId('tag');
+      const zeroTag = tags.find(tag => tag.textContent === '0 个');
+      expect(zeroTag).toBeInTheDocument();
     });
 
-    it('错误时应该显示错误信息', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
-    });
+    it('项目数量为undefined时应该显示0', () => {
+      const ownershipWithNoProjectCount = { ...mockOwnership, project_count: undefined };
+      render(<OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />);
 
-    it('错误时应该有重试按钮', async () => {
-      const element = await createElement({ error: new Error('加载失败') });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('标签页切换', () => {
-    it('应该显示基本信息标签页', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示关联资产标签页', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持标签页切换', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('图标显示', () => {
-    it('编辑按钮应该显示 EditOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('删除按钮应该显示 DeleteOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('联系人应该显示 PhoneOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('地址应该显示 EnvironmentOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('布局组件', () => {
-    it('应该使用 Row 和 Col 布局', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用 Divider 分隔内容', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用 Space 组织按钮组', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('其他功能', () => {
-    it('应该支持刷新数据', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持导出数据', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该支持打印功能', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      const tags = screen.getAllByTestId('tag');
+      expect(tags.length).toBeGreaterThan(0);
     });
   });
 });

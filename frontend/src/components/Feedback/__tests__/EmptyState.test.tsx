@@ -8,29 +8,59 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import {} from '@testing-library/react';
 
+interface EmptyMockProps {
+  image?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  onClick?: () => void;
+  danger?: boolean;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  type?: string;
+  strong?: boolean;
+  style?: React.CSSProperties;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+  wrap?: boolean;
+}
+
+interface IconMockProps {
+  style?: React.CSSProperties;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Empty: ({ image, description, children }: any) => (
+  Empty: ({ image, description, children }: EmptyMockProps) => (
     <div data-testid="empty" data-has-description={!!description}>
       {image && <div data-testid="empty-image">{image}</div>}
       {description && <div data-testid="empty-description">{description}</div>}
       {children && <div data-testid="empty-children">{children}</div>}
     </div>
   ),
-  Button: ({ children, icon, type, onClick, danger }: any) => (
+  Button: ({ children, icon, type, onClick, danger }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} data-danger={danger} onClick={onClick}>
       {icon && <span data-testid="button-icon">{icon}</span>}
       {children}
     </button>
   ),
   Typography: {
-    Text: ({ children, type, strong, style }: any) => (
+    Text: ({ children, type, strong, style }: TypographyTextMockProps) => (
       <span data-testid="text" data-type={type} data-strong={strong} style={style}>
         {children}
       </span>
     ),
   },
-  Space: ({ children, wrap }: any) => (
+  Space: ({ children, wrap }: SpaceMockProps) => (
     <div data-testid="space" data-wrap={wrap}>
       {children}
     </div>
@@ -38,13 +68,13 @@ vi.mock('antd', () => ({
 }));
 
 vi.mock('@ant-design/icons', () => ({
-  FileTextOutlined: ({ style }: any) => <div data-testid="icon-file-text" style={style} />,
-  SearchOutlined: ({ style }: any) => <div data-testid="icon-search" style={style} />,
+  FileTextOutlined: ({ style }: IconMockProps) => <div data-testid="icon-file-text" style={style} />,
+  SearchOutlined: ({ style }: IconMockProps) => <div data-testid="icon-search" style={style} />,
   PlusOutlined: () => <div data-testid="icon-plus" />,
   ReloadOutlined: () => <div data-testid="icon-reload" />,
-  InboxOutlined: ({ style }: any) => <div data-testid="icon-inbox" style={style} />,
-  DisconnectOutlined: ({ style }: any) => <div data-testid="icon-disconnect" style={style} />,
-  FilterOutlined: ({ style }: any) => <div data-testid="icon-filter" style={style} />,
+  InboxOutlined: ({ style }: IconMockProps) => <div data-testid="icon-inbox" style={style} />,
+  DisconnectOutlined: ({ style }: IconMockProps) => <div data-testid="icon-disconnect" style={style} />,
+  FilterOutlined: ({ style }: IconMockProps) => <div data-testid="icon-filter" style={style} />,
 }));
 
 describe('EmptyState - 组件导入测试', () => {

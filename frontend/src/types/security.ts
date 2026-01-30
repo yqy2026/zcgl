@@ -54,7 +54,7 @@ export interface SecurityEvent {
   severity: SecuritySeverity;
   user_id?: string | null;
   ip_address?: string | null;
-  event_metadata?: Record<string, any> | null;
+  event_metadata?: Record<string, unknown> | null;
   created_at: string;
 }
 

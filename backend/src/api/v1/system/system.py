@@ -6,6 +6,7 @@
 from typing import Any
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 from ....core.response_handler import success_response
 from ....database import get_database_status
@@ -14,7 +15,7 @@ router = APIRouter(tags=["系统管理"])
 
 
 @router.get("/monitoring/health")
-async def health_check():
+async def health_check() -> JSONResponse:
     """
     健康检查端点 - 包含数据库状态
     迁移自 main.py 的健康检查功能
@@ -79,7 +80,7 @@ async def health_check():
 
 
 @router.get("/system/info")
-async def app_info():
+async def app_info() -> JSONResponse:
     """
     应用信息端点
     迁移自 main.py 的应用信息功能
@@ -103,7 +104,7 @@ async def app_info():
 
 
 @router.get("/system/root")
-async def api_root():
+async def api_root() -> JSONResponse:
     """
     API根路径端点
     迁移自 main.py 的API根路径功能

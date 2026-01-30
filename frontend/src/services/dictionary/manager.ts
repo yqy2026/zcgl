@@ -275,31 +275,48 @@ class DictionaryManagerService {
       const dataArray = Array.isArray(data) ? data : [];
 
       // 映射数据到标准格式
-      const mappedData = dataArray.map((option: Record<string, any>, index: number) => ({
-        id: (option.id as string) || `dict-${typeId}-${index}`,
-        enum_type_id: typeId,
-        label:
-          (option.label as string) ||
-          (option.name as string) ||
-          (option.code as string) ||
-          (option.id as string) ||
-          index.toString(),
-        value:
-          (option.value as string) ||
-          (option.code as string) ||
-          (option.id as string) ||
-          index.toString(),
-        code: option.code as string,
-        description: option.description as string,
-        level: (option.level as number) || 1,
-        sort_order: (option.sort_order as number) || index + 1,
-        color: option.color as string,
-        icon: option.icon as string,
-        is_active: (option.is_active as boolean | undefined) !== false,
-        is_default: option.is_default ?? index === 0,
-        created_at: (option.created_at as string) || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }));
+      const mappedData = dataArray.map((rawOption: unknown, index: number) => {
+        const option = rawOption as Record<string, unknown>;
+        const id = typeof option.id === 'string' ? option.id : undefined;
+        const label =
+          (typeof option.label === 'string' && option.label !== '' ? option.label : undefined) ??
+          (typeof option.name === 'string' && option.name !== '' ? option.name : undefined) ??
+          (typeof option.code === 'string' && option.code !== '' ? option.code : undefined) ??
+          (typeof option.id === 'string' && option.id !== '' ? option.id : undefined) ??
+          index.toString();
+        const value =
+          (typeof option.value === 'string' && option.value !== '' ? option.value : undefined) ??
+          (typeof option.code === 'string' && option.code !== '' ? option.code : undefined) ??
+          (typeof option.id === 'string' && option.id !== '' ? option.id : undefined) ??
+          index.toString();
+        const code = typeof option.code === 'string' ? option.code : undefined;
+        const description = typeof option.description === 'string' ? option.description : undefined;
+        const level = typeof option.level === 'number' ? option.level : 1;
+        const sortOrder = typeof option.sort_order === 'number' ? option.sort_order : index + 1;
+        const color = typeof option.color === 'string' ? option.color : undefined;
+        const icon = typeof option.icon === 'string' ? option.icon : undefined;
+        const isActive = typeof option.is_active === 'boolean' ? option.is_active : true;
+        const isDefault = typeof option.is_default === 'boolean' ? option.is_default : index === 0;
+        const createdAt =
+          typeof option.created_at === 'string' ? option.created_at : new Date().toISOString();
+
+        return {
+          id: id ?? `dict-${typeId}-${index}`,
+          enum_type_id: typeId,
+          label,
+          value,
+          code,
+          description,
+          level,
+          sort_order: sortOrder,
+          color,
+          icon,
+          is_active: isActive,
+          is_default: isDefault,
+          created_at: createdAt,
+          updated_at: new Date().toISOString(),
+        };
+      });
 
       return mappedData;
     } catch (error) {

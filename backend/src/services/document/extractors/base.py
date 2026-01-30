@@ -10,6 +10,8 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
+from ....core.exception_handler import ExternalServiceError
+
 logger = logging.getLogger(__name__)
 
 
@@ -265,7 +267,12 @@ class BaseVisionAdapter(ContractExtractorInterface):
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if match:
                 return cast(dict[str, Any], json.loads(match.group(0)))
-            raise ValueError(f"Could not parse JSON from response: {content[:200]}")
+            raise ExternalServiceError(
+                message="模型响应无法解析为JSON",
+                service_name="LLM",
+                service_error="INVALID_JSON",
+                details={"content_preview": content[:200]},
+            )
 
     def _build_extraction_prompt(self, num_images: int) -> str:
         """Build extraction prompt (unified format)"""

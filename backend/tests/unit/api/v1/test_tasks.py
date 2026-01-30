@@ -97,10 +97,6 @@ def create_mock_excel_config(**kwargs):
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    return MagicMock()
 
 
 @pytest.fixture

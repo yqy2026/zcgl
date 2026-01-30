@@ -26,16 +26,6 @@ from src.services.permission.rbac_service import RBACService
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    db = Mock()
-    db.query = Mock()
-    db.add = Mock()
-    db.commit = Mock()
-    db.refresh = Mock()
-    db.execute = Mock()
-    return db
 
 
 @pytest.fixture

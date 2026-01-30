@@ -5,7 +5,7 @@ import { PermissionGuard } from '../System/PermissionGuard';
 import { RouteConfig } from '@/constants/routes';
 
 interface ProtectedRouteProps extends Omit<RouteConfig, 'children'> {
-  component: React.ComponentType<any>;
+  component: React.ComponentType<Record<string, unknown>>;
   errorBoundary?: boolean;
   fallback?: React.ReactNode;
   exact?: boolean;

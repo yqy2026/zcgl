@@ -16,6 +16,8 @@ from datetime import datetime
 from enum import Enum
 from queue import PriorityQueue
 
+from .exception_handler import ConfigurationError
+
 logger = logging.getLogger(__name__)
 
 
@@ -146,7 +148,10 @@ class TaskQueue:
 
             # 获取处理函数
             if task.func_name not in self.callbacks:
-                raise ValueError(f"未找到处理函数: {task.func_name}")
+                raise ConfigurationError(
+                    f"未找到处理函数: {task.func_name}",
+                    config_key="TASK_HANDLER",
+                )
 
             func = self.callbacks[task.func_name]
 

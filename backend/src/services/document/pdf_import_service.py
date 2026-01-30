@@ -16,6 +16,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import BaseBusinessError, BusinessValidationError
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
@@ -676,7 +677,13 @@ class PDFImportService:
             start_date = self._parse_date(contract_data["start_date"])
             end_date = self._parse_date(contract_data["end_date"])
             if start_date is None or end_date is None:
-                raise ValueError("Invalid date format for start_date or end_date")
+                raise BusinessValidationError(
+                    "Invalid date format for start_date or end_date",
+                    field_errors={
+                        "start_date": ["invalid_date_format"],
+                        "end_date": ["invalid_date_format"],
+                    },
+                )
             contract.start_date = start_date
             contract.end_date = end_date
             contract.total_deposit = contract_data.get("total_deposit", 0)
@@ -706,7 +713,7 @@ class PDFImportService:
                 "message": "Contract created successfully",
             }
 
-        except ValueError as e:
+        except BaseBusinessError as e:
             # 用户输入验证错误 - 用户可修复
             db.rollback()
             logger.info(
@@ -719,7 +726,7 @@ class PDFImportService:
             return {
                 "success": False,
                 "error": str(e),
-                "error_type": "VALIDATION_ERROR",
+                "error_type": e.code,
                 "error_category": "USER_ERROR",
             }
         except Exception as e:

@@ -4,95 +4,119 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Mock @tanstack/react-query
+const mockUseQuery = vi.fn();
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: undefined,
-    isLoading: false,
-    error: null,
-  })),
+  useQuery: (options: unknown) => mockUseQuery(options),
 }));
 
 // Mock @ant-design/plots
 vi.mock('@ant-design/plots', () => ({
-  Pie: ({ data, height }: any) => (
+  Pie: ({ height }: { height?: number }) => (
     <div data-testid="pie-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+      Pie Chart
     </div>
   ),
-  Column: ({ data, height }: any) => (
+  Column: ({ height }: { height?: number }) => (
     <div data-testid="column-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+      Column Chart
     </div>
   ),
 }));
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, title, style, size }: any) => (
-    <div data-testid="card" data-title={title} data-size={size} style={style}>
+  Card: ({
+    children,
+    title,
+  }: {
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="card">
+      {title && <div data-testid="card-title">{title}</div>}
       {children}
     </div>
   ),
-  Row: ({ children, gutter, style }: any) => (
-    <div data-testid="row" data-gutter={gutter} style={style}>
-      {children}
+  Row: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="row">{children}</div>
+  ),
+  Col: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="col">{children}</div>
+  ),
+  Statistic: ({
+    title,
+    value,
+    suffix,
+  }: {
+    title?: React.ReactNode;
+    value?: number;
+    suffix?: React.ReactNode;
+  }) => (
+    <div data-testid="statistic">
+      <span data-testid="statistic-title">{title}</span>
+      <span data-testid="statistic-value">{value}</span>
+      {suffix && <span data-testid="statistic-suffix">{suffix}</span>}
     </div>
   ),
-  Col: ({ children, xs, sm, md, lg }: any) => (
-    <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
-      {children}
-    </div>
-  ),
-  Statistic: ({ title, value, suffix, prefix, valueStyle, formatter }: any) => (
-    <div data-testid="statistic" data-title={title} data-value={value} style={valueStyle}>
-      {prefix && <span data-testid="statistic-prefix">{prefix}</span>}
-      <span>{formatter ? formatter(value) : value}</span>
-      {suffix && <span>{suffix}</span>}
-    </div>
-  ),
-  Spin: ({ children, spinning }: any) => (
+  Spin: ({
+    children,
+    spinning,
+  }: {
+    children?: React.ReactNode;
+    spinning?: boolean;
+  }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
-    <div data-testid="alert" data-type={type} data-message={message}>
-      {description}
+  Alert: ({
+    message,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
+    <div data-testid="alert" data-type={type}>
+      <span data-testid="alert-message">{message}</span>
+      <span data-testid="alert-description">{description}</span>
     </div>
   ),
   Typography: {
-    Title: ({ children, level }: any) => (
-      <div data-testid="title" data-level={level}>
-        {children}
-      </div>
+    Title: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="typography-title">{children}</div>
     ),
-    Text: ({ children, type, strong, style }: any) => (
-      <span data-testid="text" data-type={type} data-strong={strong} style={style}>
-        {children}
-      </span>
+    Text: ({ children }: { children?: React.ReactNode }) => (
+      <span data-testid="typography-text">{children}</span>
     ),
   },
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-  Tag: ({ children, color }: any) => (
-    <div data-testid="tag" data-color={color}>
+  Space: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  ),
+  Tag: ({
+    children,
+    color,
+  }: {
+    children?: React.ReactNode;
+    color?: string;
+  }) => (
+    <span data-testid="tag" data-color={color}>
       {children}
-    </div>
+    </span>
   ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  PieChartOutlined: () => <div data-testid="icon-pie-chart" />,
-  HomeOutlined: () => <div data-testid="icon-home" />,
-  EnvironmentOutlined: () => <div data-testid="icon-environment" />,
-  UserOutlined: () => <div data-testid="icon-user" />,
+  PieChartOutlined: () => <span data-testid="icon-pie-chart" />,
+  HomeOutlined: () => <span data-testid="icon-home" />,
+  EnvironmentOutlined: () => <span data-testid="icon-environment" />,
+  UserOutlined: () => <span data-testid="icon-user" />,
 }));
 
 // Mock asset service
@@ -102,264 +126,280 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-describe('AssetDistributionChart - 组件导入测试', () => {
-  it('应该能够导入AssetDistributionChart组件', async () => {
-    const module = await import('../AssetDistributionChart');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
-  });
-});
+// Sample mock data
+const mockDistributionData = {
+  total_assets: 150,
+  by_property_nature: [
+    { property_nature: '经营类', count: 80, percentage: 53.3, total_area: 50000 },
+    { property_nature: '非经营类', count: 70, percentage: 46.7, total_area: 30000 },
+  ],
+  by_ownership_status: [
+    { ownership_status: '已确权', count: 100, percentage: 66.7 },
+    { ownership_status: '未确权', count: 50, percentage: 33.3 },
+  ],
+  by_usage_status: [
+    { usage_status: '出租', count: 80, percentage: 53.3 },
+    { usage_status: '闲置', count: 30, percentage: 20.0 },
+    { usage_status: '自用', count: 40, percentage: 26.7 },
+  ],
+  by_ownership_entity: [
+    { ownership_entity: '权属方A', count: 50, percentage: 33.3, total_area: 25000 },
+    { ownership_entity: '权属方B', count: 40, percentage: 26.7, total_area: 20000 },
+    { ownership_entity: '权属方C', count: 30, percentage: 20.0, total_area: 15000 },
+  ],
+  by_region: [
+    { region: '区域A', count: 60, percentage: 40.0 },
+    { region: '区域B', count: 90, percentage: 60.0 },
+  ],
+  summary: {
+    total_area: 80000,
+    commercial_area: 50000,
+    non_commercial_area: 30000,
+    rented_area: 40000,
+    vacant_area: 10000,
+  },
+};
 
-describe('AssetDistributionChart - 基础属性测试', () => {
+describe('AssetDistributionChart', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('应该支持filters属性', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const filters = { ownership_status: '自有' };
-    const element = React.createElement(AssetDistributionChart, { filters });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, { height: 400 });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认height应该是300', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 图表类型测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含物业性质饼图', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含确权状态环形图', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含使用状态饼图', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含权属方柱状图', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 统计指标测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示资产总数统计', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示总面积统计', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示权属方数量统计', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示经营类面积统计', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 详细列表测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示物业性质详情列表', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示使用状态详情列表', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 数据查询测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该使用useQuery获取数据', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('查询键应该包含filters', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const filters = { ownership_status: '自有' };
-    const element = React.createElement(AssetDistributionChart, { filters });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 错误处理测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('错误状态应该显示Alert', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 加载状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('加载中应该显示Spin', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 样式属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('图表应该有可配置的height', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, { height: 400 });
-    expect(element).toBeTruthy();
-  });
-
-  it('卡片应该有合适的间距', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 响应式布局测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持xs屏幕尺寸', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持sm屏幕尺寸', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持md屏幕尺寸', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持lg屏幕尺寸', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AssetDistributionChart - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理undefined filters', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {
-      filters: undefined,
+    // Default mock: loading complete with data
+    mockUseQuery.mockReturnValue({
+      data: mockDistributionData,
+      isLoading: false,
+      error: null,
     });
-    expect(element).toBeTruthy();
   });
 
-  it('应该处理空filters', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {
-      filters: {},
+  describe('Component Import', () => {
+    it('should be able to import AssetDistributionChart component', async () => {
+      const module = await import('../AssetDistributionChart');
+      expect(module).toBeDefined();
+      expect(module.default).toBeDefined();
     });
-    expect(element).toBeTruthy();
   });
 
-  it('应该处理height为0', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {
-      height: 0,
+  describe('Basic Rendering', () => {
+    it('should render without crashing', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
-    expect(element).toBeTruthy();
-  });
-});
 
-describe('AssetDistributionChart - 图表配置测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    it('should render with filters prop', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      const filters = { ownership_status: '自有' };
+      render(<AssetDistributionChart filters={filters} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
 
-  it('物业性质图表图例应该在底部', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('确权状态图表图例应该在底部', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
+    it('should render with custom height prop', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart height={400} />);
+      const pieCharts = screen.getAllByTestId('pie-chart');
+      expect(pieCharts[0]).toHaveAttribute('data-height', '400');
+    });
   });
 
-  it('使用状态图表图例应该在底部', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
+  describe('Statistics Display', () => {
+    it('should display total assets statistic', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('资产总数');
+    });
+
+    it('should display total area statistic', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('总面积');
+    });
+
+    it('should display ownership entity count statistic', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('权属方数量');
+    });
+
+    it('should display commercial area statistic', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('经营类面积');
+    });
   });
 
-  it('权属方图表应该显示前10名', async () => {
-    const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
-    const element = React.createElement(AssetDistributionChart, {});
-    expect(element).toBeTruthy();
+  describe('Chart Components', () => {
+    it('should render property nature pie chart', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const pieCharts = screen.getAllByTestId('pie-chart');
+      expect(pieCharts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should render ownership status pie chart', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const pieCharts = screen.getAllByTestId('pie-chart');
+      expect(pieCharts.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should render usage status pie chart', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const pieCharts = screen.getAllByTestId('pie-chart');
+      expect(pieCharts.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should render ownership entity column chart', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(screen.getByTestId('column-chart')).toBeInTheDocument();
+    });
+  });
+
+  describe('Card Titles', () => {
+    it('should display property nature distribution card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('物业性质分布');
+    });
+
+    it('should display ownership status distribution card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('确权状态分布');
+    });
+
+    it('should display usage status distribution card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('使用状态分布');
+    });
+
+    it('should display ownership entity distribution card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles.some(t => t?.includes('权属方'))).toBe(true);
+    });
+
+    it('should display property nature details card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('物业性质详情');
+    });
+
+    it('should display usage status details card title', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('使用状态详情');
+    });
+  });
+
+  describe('Loading State', () => {
+    it('should show spin component when loading', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+      });
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      const spinElements = screen.getAllByTestId('spin');
+      expect(spinElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Error State', () => {
+    it('should display Alert when there is an error', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Failed to load'),
+      });
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(screen.getByTestId('alert')).toBeInTheDocument();
+      expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'error');
+    });
+
+    it('should display error message in Alert', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Failed to load'),
+      });
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(screen.getByTestId('alert-message')).toHaveTextContent('数据加载失败');
+    });
+  });
+
+  describe('Data Query', () => {
+    it('should call useQuery with correct query key', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(mockUseQuery).toHaveBeenCalled();
+      const callArgs = mockUseQuery.mock.calls[0][0];
+      expect(callArgs.queryKey).toContain('asset-distribution-stats');
+    });
+
+    it('should include filters in query key', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      const filters = { ownership_status: '自有' };
+      render(<AssetDistributionChart filters={filters} />);
+      const callArgs = mockUseQuery.mock.calls[0][0];
+      expect(callArgs.queryKey).toContain(filters);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle undefined filters', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart filters={undefined} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty filters', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart filters={{}} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty data', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+      });
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should handle height of 0', async () => {
+      const AssetDistributionChart = (await import('../AssetDistributionChart')).default;
+      render(<AssetDistributionChart height={0} />);
+      const pieCharts = screen.getAllByTestId('pie-chart');
+      expect(pieCharts[0]).toHaveAttribute('data-height', '0');
+    });
   });
 });

@@ -3,104 +3,54 @@
  * 测试图表组件重导出和错误边界集成
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
+
+// Mock color utilities
+vi.mock('@/styles/colorMap', () => ({
+  CHART_COLORS: ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1'],
+}));
 
 // Mock @ant-design/plots
 vi.mock('@ant-design/plots', () => ({
-  Pie: ({ data, height }: any) => (
-    <div data-testid="pie" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+  Pie: ({ height }: { height?: number }) => (
+    <div data-testid="pie-chart" data-height={height}>
+      Pie Chart
     </div>
   ),
-  Column: ({ data, height }: any) => (
-    <div data-testid="column" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+  Column: ({ height }: { height?: number }) => (
+    <div data-testid="column-chart" data-height={height}>
+      Column Chart
     </div>
   ),
-  Line: ({ data, height }: any) => (
-    <div data-testid="line" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+  Line: ({ height }: { height?: number }) => (
+    <div data-testid="line-chart" data-height={height}>
+      Line Chart
     </div>
   ),
-  Area: ({ data, height }: any) => (
-    <div data-testid="area" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+  Area: ({ height }: { height?: number }) => (
+    <div data-testid="area-chart" data-height={height}>
+      Area Chart
     </div>
   ),
 }));
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, title, extra, hoverable, bordered, size }: any) => (
-    <div
-      data-testid="card"
-      data-title={title}
-      data-hoverable={hoverable}
-      data-bordered={bordered}
-      data-size={size}
-    >
-      {extra}
-      {children}
-    </div>
+  Empty: ({ description }: { description?: React.ReactNode }) => (
+    <div data-testid="empty">{description}</div>
   ),
+  Spin: ({ size }: { size?: string }) => <div data-testid="spin" data-size={size} />,
 }));
 
 // Mock ChartErrorBoundary
 vi.mock('../ChartErrorBoundary', () => ({
-  ChartErrorBoundary: class MockChartErrorBoundary extends React.Component<any, any> {
-    static getDerivedStateFromError() {
-      return { hasError: true };
-    }
-    state = { hasError: false };
-    componentDidCatch = vi.fn();
-    render() {
-      if (this.state.hasError) {
-        return <div data-testid="error-fallback">图表加载失败</div>;
-      }
-      return <>{this.props.children}</>;
-    }
-  },
-}));
-
-// Mock chart components
-vi.mock('../AnalyticsChart', () => ({
-  AnalyticsPieChart: ({ data, title, height }: any) => (
-    <div data-testid="analytics-pie-chart" data-title={title} data-height={height}>
-      <div data-testid="pie-data">{JSON.stringify(data)}</div>
-    </div>
+  default: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="chart-error-boundary">{children}</div>
   ),
-  AnalyticsBarChart: ({ data, dataKeys, title, height }: any) => (
-    <div data-testid="analytics-bar-chart" data-title={title} data-height={height}>
-      <div data-testid="bar-keys">{JSON.stringify(dataKeys)}</div>
-      <div data-testid="bar-data">{JSON.stringify(data)}</div>
-    </div>
-  ),
-  AnalyticsLineChart: ({ data, dataKey, title, height }: any) => (
-    <div data-testid="analytics-line-chart" data-title={title} data-height={height}>
-      <div data-testid="line-data-key">{dataKey}</div>
-      <div data-testid="line-data">{JSON.stringify(data)}</div>
-    </div>
-  ),
-  AnalyticsMultiBarChart: ({ data, bars, title, height }: any) => (
-    <div data-testid="analytics-multi-bar-chart" data-title={title} data-height={height}>
-      <div data-testid="multi-bar-bars">{JSON.stringify(bars)}</div>
-      <div data-testid="multi-bar-data">{JSON.stringify(data)}</div>
-    </div>
-  ),
-  AnalyticsAreaChart: ({ data, areas, title, height }: any) => (
-    <div data-testid="analytics-area-chart" data-title={title} data-height={height}>
-      <div data-testid="area-areas">{JSON.stringify(areas)}</div>
-      <div data-testid="area-data">{JSON.stringify(data)}</div>
-    </div>
+  ChartErrorBoundary: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="chart-error-boundary">{children}</div>
   ),
 }));
 
@@ -131,373 +81,173 @@ describe('Charts - 组件导出测试', () => {
   });
 });
 
-describe('Charts - AnalyticsPieChart测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsPieChart - 渲染测试', () => {
+  it('有数据时应该渲染饼图', async () => {
+    const { AnalyticsPieChart } = await import('../Charts');
+    const data = [
+      { name: '选项1', value: 100 },
+      { name: '选项2', value: 200 },
+    ];
+    render(<AnalyticsPieChart data={data} dataKey="value" />);
+
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsPieChart } = await import('../Charts');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, { data });
-    expect(element).toBeTruthy();
+    render(<AnalyticsPieChart data={[]} dataKey="value" />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 
-  it('应该支持title属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsPieChart } = await import('../Charts');
     const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      title: '测试标题',
-    });
-    expect(element).toBeTruthy();
-  });
+    render(<AnalyticsPieChart data={data} dataKey="value" height={400} />);
 
-  it('应该支持height属性', async () => {
-    const { AnalyticsPieChart } = await import('../Charts');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      height: 400,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认height应该是300', async () => {
-    const { AnalyticsPieChart } = await import('../Charts');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, { data });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('Charts - AnalyticsBarChart测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsBarChart - 渲染测试', () => {
+  it('有数据时应该渲染柱状图', async () => {
+    const { AnalyticsBarChart } = await import('../Charts');
+    const data = [
+      { name: '项目1', value: 100 },
+      { name: '项目2', value: 200 },
+    ];
+    render(<AnalyticsBarChart data={data} xDataKey="name" yDataKey="value" />);
+
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
+    expect(screen.getByTestId('column-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100, value2: 200 }];
-    const element = React.createElement(AnalyticsBarChart, { data });
-    expect(element).toBeTruthy();
+    render(<AnalyticsBarChart data={[]} xDataKey="name" yDataKey="value" />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 
-  it('应该支持dataKeys属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100, value2: 200 }];
-    const dataKeys = ['value1', 'value2'];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      dataKeys,
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ name: '项目1', value: 100 }];
+    render(<AnalyticsBarChart data={data} xDataKey="name" yDataKey="value" height={400} />);
 
-  it('应该支持title属性', async () => {
-    const { AnalyticsBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      dataKeys: ['value1'],
-      title: '测试标题',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const { AnalyticsBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      dataKeys: ['value1'],
-      height: 400,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('column-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('Charts - AnalyticsLineChart测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsLineChart - 渲染测试', () => {
+  it('有数据时应该渲染折线图', async () => {
+    const { AnalyticsLineChart } = await import('../Charts');
+    const data = [
+      { date: '2024-01', value: 100 },
+      { date: '2024-02', value: 200 },
+    ];
+    render(<AnalyticsLineChart data={data} xDataKey="date" yDataKey="value" />);
+
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
+    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsLineChart } = await import('../Charts');
-    const data = [{ name: '1月', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, { data });
-    expect(element).toBeTruthy();
+    render(<AnalyticsLineChart data={[]} xDataKey="date" yDataKey="value" />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 
-  it('应该支持dataKey属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsLineChart } = await import('../Charts');
-    const data = [{ name: '1月', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ date: '2024-01', value: 100 }];
+    render(<AnalyticsLineChart data={data} xDataKey="date" yDataKey="value" height={400} />);
 
-  it('应该支持title属性', async () => {
-    const { AnalyticsLineChart } = await import('../Charts');
-    const data = [{ name: '1月', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      dataKey: 'value',
-      title: '测试标题',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const { AnalyticsLineChart } = await import('../Charts');
-    const data = [{ name: '1月', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      dataKey: 'value',
-      height: 400,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('line-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('Charts - AnalyticsMultiBarChart测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持data属性', async () => {
-    const { AnalyticsMultiBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100, value2: 200 }];
-    const element = React.createElement(AnalyticsMultiBarChart, { data });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持bars属性', async () => {
+describe('AnalyticsMultiBarChart - 渲染测试', () => {
+  it('有数据时应该渲染多系列柱状图', async () => {
     const { AnalyticsMultiBarChart } = await import('../Charts');
     const data = [{ name: '项目1', value1: 100, value2: 200 }];
     const bars = [
-      { dataKey: 'value1', fill: '#8884d8', name: '系列1' },
-      { dataKey: 'value2', fill: '#82ca9d', name: '系列2' },
+      { dataKey: 'value1', name: '系列1', fill: '#1890ff' },
+      { dataKey: 'value2', name: '系列2', fill: '#52c41a' },
     ];
-    const element = React.createElement(AnalyticsMultiBarChart, {
-      data,
-      bars,
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsMultiBarChart data={data} xDataKey="name" bars={bars} />);
+
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
+    expect(screen.getByTestId('column-chart')).toBeInTheDocument();
   });
 
-  it('应该支持title属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsMultiBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100 }];
-    const element = React.createElement(AnalyticsMultiBarChart, {
-      data,
-      bars: [{ dataKey: 'value1', fill: '#8884d8' }],
-      title: '测试标题',
-    });
-    expect(element).toBeTruthy();
-  });
+    render(<AnalyticsMultiBarChart data={[]} xDataKey="name" bars={[]} />);
 
-  it('应该支持height属性', async () => {
-    const { AnalyticsMultiBarChart } = await import('../Charts');
-    const data = [{ name: '项目1', value1: 100 }];
-    const element = React.createElement(AnalyticsMultiBarChart, {
-      data,
-      bars: [{ dataKey: 'value1', fill: '#8884d8' }],
-      height: 400,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 });
 
-describe('Charts - AnalyticsAreaChart测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持data属性', async () => {
+describe('AnalyticsAreaChart - 渲染测试', () => {
+  it('有数据时应该渲染面积图', async () => {
     const { AnalyticsAreaChart } = await import('../Charts');
-    const data = [{ name: '1月', value1: 100, value2: 200 }];
-    const element = React.createElement(AnalyticsAreaChart, { data });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持areas属性', async () => {
-    const { AnalyticsAreaChart } = await import('../Charts');
-    const data = [{ name: '1月', value1: 100, value2: 200 }];
-    const areas = [
-      { dataKey: 'value1', fill: '#8884d8', stroke: '#8884d8' },
-      { dataKey: 'value2', fill: '#82ca9d', stroke: '#82ca9d' },
+    const data = [
+      { date: '2024-01', value: 100 },
+      { date: '2024-02', value: 200 },
     ];
-    const element = React.createElement(AnalyticsAreaChart, {
-      data,
-      areas,
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsAreaChart data={data} xDataKey="date" yDataKey="value" />);
+
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
+    expect(screen.getByTestId('area-chart')).toBeInTheDocument();
   });
 
-  it('应该支持title属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsAreaChart } = await import('../Charts');
-    const data = [{ name: '1月', value1: 100 }];
-    const element = React.createElement(AnalyticsAreaChart, {
-      data,
-      areas: [{ dataKey: 'value1', fill: '#8884d8' }],
-      title: '测试标题',
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsAreaChart data={[]} xDataKey="date" yDataKey="value" />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 
-  it('应该支持height属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsAreaChart } = await import('../Charts');
-    const data = [{ name: '1月', value1: 100 }];
-    const element = React.createElement(AnalyticsAreaChart, {
-      data,
-      areas: [{ dataKey: 'value1', fill: '#8884d8' }],
-      height: 400,
-    });
-    expect(element).toBeTruthy();
+    const data = [{ date: '2024-01', value: 100 }];
+    render(<AnalyticsAreaChart data={data} xDataKey="date" yDataKey="value" height={400} />);
+
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('Charts - 错误边界测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
+describe('Charts - 错误边界集成测试', () => {
   it('所有图表组件都应该被ChartErrorBoundary包裹', async () => {
     const { AnalyticsPieChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: [{ name: '测试', value: 100 }],
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ name: '测试', value: 100 }];
+    render(<AnalyticsPieChart data={data} dataKey="value" />);
 
-  it('错误时应该显示错误信息', async () => {
-    const { ChartErrorBoundary } = await import('../ChartErrorBoundary');
-    const ThrowError = () => {
-      throw new Error('Test error');
-    };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('Charts - 空状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart应该处理空data', async () => {
-    const { AnalyticsPieChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: [],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart应该处理空data', async () => {
-    const { AnalyticsBarChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsBarChart, {
-      data: [],
-      dataKeys: [],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart应该处理空data', async () => {
-    const { AnalyticsLineChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsLineChart, {
-      data: [],
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsMultiBarChart应该处理空data', async () => {
-    const { AnalyticsMultiBarChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsMultiBarChart, {
-      data: [],
-      bars: [],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsAreaChart应该处理空data', async () => {
-    const { AnalyticsAreaChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsAreaChart, {
-      data: [],
-      areas: [],
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('chart-error-boundary')).toBeInTheDocument();
   });
 });
 
 describe('Charts - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart应该处理undefined data', async () => {
-    const { AnalyticsPieChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: undefined as any,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart应该处理undefined dataKeys', async () => {
-    const { AnalyticsBarChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsBarChart, {
-      data: [{ name: '测试', value: 100 }],
-      dataKeys: undefined as any,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart应该处理undefined dataKey', async () => {
-    const { AnalyticsLineChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsLineChart, {
-      data: [{ name: '测试', value: 100 }],
-      dataKey: undefined as any,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsMultiBarChart应该处理undefined bars', async () => {
-    const { AnalyticsMultiBarChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsMultiBarChart, {
-      data: [{ name: '测试', value: 100 }],
-      bars: undefined as any,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsAreaChart应该处理undefined areas', async () => {
-    const { AnalyticsAreaChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsAreaChart, {
-      data: [{ name: '测试', value: 100 }],
-      areas: undefined as any,
-    });
-    expect(element).toBeTruthy();
-  });
-
   it('应该处理height为0', async () => {
     const { AnalyticsPieChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: [{ name: '测试', value: 100 }],
-      height: 0,
-    });
-    expect(element).toBeTruthy();
+    const data = [{ name: '测试', value: 100 }];
+    render(<AnalyticsPieChart data={data} dataKey="value" height={0} />);
+
+    expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '0');
   });
 
-  it('应该处理负height', async () => {
-    const { AnalyticsBarChart } = await import('../Charts');
-    const element = React.createElement(AnalyticsBarChart, {
-      data: [{ name: '测试', value: 100 }],
-      dataKeys: ['value'],
-      height: -100,
-    });
-    expect(element).toBeTruthy();
+  it('应该过滤掉value为0的饼图数据', async () => {
+    const { AnalyticsPieChart } = await import('../Charts');
+    const data = [
+      { name: '有值', value: 100 },
+      { name: '无值', value: 0 },
+    ];
+    render(<AnalyticsPieChart data={data} dataKey="value" />);
+
+    // 组件应该正常渲染
+    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
   });
 });

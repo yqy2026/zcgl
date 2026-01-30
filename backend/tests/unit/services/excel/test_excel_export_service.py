@@ -15,14 +15,9 @@ from src.services.excel.excel_export_service import (
     ExcelExportService,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return Mock()
 
 
 @pytest.fixture

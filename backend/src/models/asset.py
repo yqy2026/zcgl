@@ -38,12 +38,12 @@ class Asset(Base):
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
     ownership_entity: Mapped[str] = mapped_column(
-        String(200), nullable=False, comment="权属方"
+        String(200), nullable=False, index=True, comment="权属方"
     )
     ownership_category: Mapped[str | None] = mapped_column(
         String(100), comment="权属类别"
     )
-    project_name: Mapped[str | None] = mapped_column(String(200), comment="项目名称")
+    project_name: Mapped[str | None] = mapped_column(String(200), index=True, comment="项目名称")
     property_name: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="物业名称"
     )
@@ -51,13 +51,13 @@ class Asset(Base):
         String(500), nullable=False, comment="物业地址"
     )
     ownership_status: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="确权状态"
+        String(50), nullable=False, index=True, comment="确权状态"
     )
     property_nature: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="物业性质"
+        String(50), nullable=False, index=True, comment="物业性质"
     )
     usage_status: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="使用状态"
+        String(50), nullable=False, index=True, comment="使用状态"
     )
     management_entity: Mapped[str | None] = mapped_column(
         String(200), comment="经营管理单位"
@@ -156,6 +156,7 @@ class Asset(Base):
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, comment="版本号"
     )
+    __mapper_args__ = {"version_id_col": version}
     tags: Mapped[str | None] = mapped_column(Text, comment="标签")
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
@@ -599,7 +600,9 @@ class Ownership(Base):
     owned_rent_contracts: Mapped[list["RentContract"]] = relationship(
         "RentContract", back_populates="ownership", cascade="all, delete-orphan"
     )
-    assets: Mapped[list["Asset"]] = relationship("Asset", back_populates="ownership")
+    assets: Mapped[list["Asset"]] = relationship(
+        "Asset", back_populates="ownership", passive_deletes=True
+    )  # 注意：不使用 cascade="all, delete-orphan"，因为资产不应随权属方删除而自动删除
     ownership_relations: Mapped[list["ProjectOwnershipRelation"]] = relationship(
         "ProjectOwnershipRelation",
         back_populates="ownership",

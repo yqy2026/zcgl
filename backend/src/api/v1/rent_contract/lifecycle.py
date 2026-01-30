@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
+from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -45,8 +45,6 @@ def renew_contract(
             operator_id=current_user.id if current_user else None,
         )
         return new_contract
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -83,8 +81,6 @@ def terminate_contract(
             operator_id=current_user.id if current_user else None,
         )
         return contract
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise

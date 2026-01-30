@@ -4,161 +4,156 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 // Mock hooks
 vi.mock('../../hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(() => ({
-    data: undefined,
+    data: {
+      data: {
+        area_summary: {
+          total_assets: 100,
+          total_area: 5000,
+          total_rentable_area: 4000,
+          occupancy_rate: 85,
+        },
+        financial_summary: {
+          estimated_annual_income: 100000,
+          total_monthly_rent: 10000,
+          total_deposit: 50000,
+        },
+        property_nature_distribution: [{ name: '商业', count: 50, percentage: 50 }],
+        ownership_status_distribution: [{ status: '已确权', count: 80, percentage: 80 }],
+        usage_status_distribution: [{ status: '出租', count: 70, percentage: 70 }],
+        occupancy_distribution: [{ range: '80-100%', count: 30, percentage: 30 }],
+        business_category_distribution: [{ category: '零售', occupancy_rate: 90, count: 20 }],
+        occupancy_trend: [{ date: '2024-01', occupancy_rate: 85, total_rented_area: 3400, total_rentable_area: 4000 }],
+      },
+    },
     isLoading: false,
     error: null,
     refetch: vi.fn(),
   })),
 }));
 
+// Mock utils
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    loading: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+  }),
+}));
+
+vi.mock('@/api/config', () => ({
+  createApiUrl: (path: string) => `/api${path}`,
+}));
+
+// Mock sub-components
+vi.mock('./AnalyticsFilters', () => ({
+  AnalyticsFilters: ({
+    onApplyFilters,
+    onResetFilters,
+    loading,
+  }: {
+    filters: Record<string, unknown>;
+    onFiltersChange: (f: Record<string, unknown>) => void;
+    onApplyFilters?: () => void;
+    onResetFilters?: () => void;
+    loading?: boolean;
+    showAdvanced?: boolean;
+    onToggleAdvanced?: () => void;
+  }) => (
+    <div data-testid="analytics-filters" data-loading={loading}>
+      <button data-testid="apply-filters" onClick={onApplyFilters}>Apply</button>
+      <button data-testid="reset-filters" onClick={onResetFilters}>Reset</button>
+    </div>
+  ),
+}));
+
+vi.mock('./StatisticCard', () => ({
+  StatisticCard: ({ title, value, suffix, loading }: { title: string; value: number; suffix?: string; loading?: boolean }) => (
+    <div data-testid="statistic-card" data-title={title} data-loading={loading}>
+      {value}{suffix}
+    </div>
+  ),
+  FinancialStatisticCard: ({ title, value, suffix, loading }: { title: string; value: number; suffix?: string; loading?: boolean; isPositive?: boolean }) => (
+    <div data-testid="financial-statistic-card" data-title={title} data-loading={loading}>
+      {value}{suffix}
+    </div>
+  ),
+}));
+
+vi.mock('./AnalyticsCard', () => ({
+  ChartCard: ({ title, children, loading }: { title: string; hasData?: boolean; loading?: boolean; children?: React.ReactNode }) => (
+    <div data-testid="chart-card" data-title={title} data-loading={loading}>
+      {children}
+    </div>
+  ),
+}));
+
+vi.mock('./Charts', () => ({
+  AnalyticsPieChart: ({ data }: { data: unknown[]; dataKey: string; labelKey: string }) => (
+    <div data-testid="pie-chart">{JSON.stringify(data)}</div>
+  ),
+  AnalyticsBarChart: ({ data }: { data: unknown[]; xDataKey: string; yDataKey: string; barName?: string; isPercentage?: boolean }) => (
+    <div data-testid="bar-chart">{JSON.stringify(data)}</div>
+  ),
+  AnalyticsLineChart: ({ data }: { data: unknown[]; xDataKey: string; yDataKey: string; lineName?: string; isPercentage?: boolean }) => (
+    <div data-testid="line-chart">{JSON.stringify(data)}</div>
+  ),
+}));
+
+vi.mock('../PerformanceMonitor', () => ({
+  default: () => <div data-testid="performance-monitor" />,
+}));
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Row: ({ children, gutter }: any) => (
-    <div data-testid="row" data-gutter={JSON.stringify(gutter)}>
-      {children}
-    </div>
-  ),
-  Col: ({ children, xs, md, lg, sm }: any) => (
-    <div data-testid="col" data-xs={xs} data-md={md} data-lg={lg} data-sm={sm}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, title, className }: any) => (
-    <div data-testid="card" data-title={title} className={className}>
-      {title}
-      {children}
-    </div>
+  Row: ({ children }: { children?: React.ReactNode }) => <div data-testid="row">{children}</div>,
+  Col: ({ children }: { children?: React.ReactNode }) => <div data-testid="col">{children}</div>,
+  Card: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+    <div data-testid="card" className={className}>{children}</div>
   ),
   Typography: {
-    Title: ({ children, level, type }: any) => (
-      <div data-testid="title" data-level={level} data-type={type}>
-        {children}
-      </div>
+    Title: ({ children, level, type }: { children?: React.ReactNode; level?: number; type?: string }) => (
+      <h1 data-testid="title" data-level={level} data-type={type}>{children}</h1>
     ),
   },
-  Button: ({ children, icon, onClick, loading, type }: any) => (
+  Button: ({ children, icon, onClick, loading, type }: { children?: React.ReactNode; icon?: React.ReactNode; onClick?: () => void; loading?: boolean; type?: string }) => (
     <button data-testid="button" data-type={type} data-loading={loading} onClick={onClick}>
-      {icon}
-      {children}
+      {icon}{children}
     </button>
   ),
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-  Dropdown: ({ children, overlay, placement }: any) => (
-    <div data-testid="dropdown" data-placement={placement}>
-      {overlay}
-      {children}
-    </div>
-  ),
-  Menu: ({ items }: any) => (
-    <div data-testid="menu">
-      {items?.map((item: any) => (
-        <div key={item.key} data-item-key={item.key}>
+  Space: ({ children }: { children?: React.ReactNode }) => <div data-testid="space">{children}</div>,
+  Dropdown: ({ children, menu }: { children?: React.ReactNode; menu?: { items?: Array<{ key: string; label: string; onClick?: () => void }> } }) => (
+    <div data-testid="dropdown">
+      {menu?.items?.map(item => (
+        <button key={item.key} data-testid={`dropdown-item-${item.key}`} onClick={item.onClick}>
           {item.label}
-        </div>
+        </button>
       ))}
+      {children}
     </div>
   ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  ReloadOutlined: () => <div data-testid="icon-reload" />,
-  DownloadOutlined: () => <div data-testid="icon-download" />,
-  SettingOutlined: () => <div data-testid="icon-setting" />,
-  FullscreenOutlined: () => <div data-testid="icon-fullscreen" />,
-  FullscreenExitOutlined: () => <div data-testid="icon-fullscreen-exit" />,
-}));
-
-// Mock sub-components
-vi.mock('../AnalyticsFilters', () => ({
-  AnalyticsFilters: ({
-    filters,
-    onFiltersChange,
-    onApplyFilters,
-    onResetFilters,
-    loading,
-    showAdvanced,
-    onToggleAdvanced,
-  }: any) => (
-    <div data-testid="analytics-filters" data-show-advanced={showAdvanced} data-loading={loading}>
-      <button onClick={() => onFiltersChange(filters)}>改变筛选</button>
-      <button onClick={onApplyFilters}>应用筛选</button>
-      <button onClick={onResetFilters}>重置筛选</button>
-      <button onClick={onToggleAdvanced}>切换高级筛选</button>
-    </div>
-  ),
-}));
-
-vi.mock('../StatisticCard', () => ({
-  StatisticCard: ({ title, value, precision, suffix, loading }: any) => (
-    <div data-testid="statistic-card" data-title={title} data-loading={loading}>
-      <div data-testid="value" data-precision={precision}>
-        {value}
-        {suffix}
-      </div>
-    </div>
-  ),
-  FinancialStatisticCard: ({ title, value, precision, suffix, isPositive, loading }: any) => (
-    <div
-      data-testid="financial-statistic-card"
-      data-title={title}
-      data-is-positive={isPositive}
-      data-loading={loading}
-    >
-      <div data-testid="value" data-precision={precision}>
-        {value}
-        {suffix}
-      </div>
-    </div>
-  ),
-}));
-
-vi.mock('../AnalyticsCard', () => ({
-  ChartCard: ({ title, hasData, loading, children }: any) => (
-    <div data-testid="chart-card" data-title={title} data-has-data={hasData} data-loading={loading}>
-      {title}
-      {children}
-    </div>
-  ),
-}));
-
-vi.mock('../Charts', () => ({
-  AnalyticsPieChart: ({ data, dataKey, labelKey }: any) => (
-    <div data-testid="analytics-pie-chart" data-data-key={dataKey} data-label-key={labelKey}>
-      {JSON.stringify(data)}
-    </div>
-  ),
-  AnalyticsBarChart: ({ data, xDataKey, yDataKey, barName }: any) => (
-    <div
-      data-testid="analytics-bar-chart"
-      data-x-data-key={xDataKey}
-      data-y-data-key={yDataKey}
-      data-bar-name={barName}
-    >
-      {JSON.stringify(data)}
-    </div>
-  ),
-  AnalyticsLineChart: ({ data, xDataKey, yDataKey, lineName }: any) => (
-    <div
-      data-testid="analytics-line-chart"
-      data-x-data-key={xDataKey}
-      data-y-data-key={yDataKey}
-      data-line-name={lineName}
-    >
-      {JSON.stringify(data)}
-    </div>
-  ),
-}));
-
-vi.mock('../PerformanceMonitor', () => ({
-  PerformanceMonitor: ({ enabled }: any) => (
-    <div data-testid="performance-monitor" data-enabled={enabled} />
-  ),
+  ReloadOutlined: () => <span data-testid="icon-reload" />,
+  DownloadOutlined: () => <span data-testid="icon-download" />,
+  SettingOutlined: () => <span data-testid="icon-setting" />,
+  FullscreenOutlined: () => <span data-testid="icon-fullscreen" />,
+  FullscreenExitOutlined: () => <span data-testid="icon-fullscreen-exit" />,
 }));
 
 describe('AnalyticsDashboard - 组件导入测试', () => {
@@ -174,139 +169,177 @@ describe('AnalyticsDashboard - 组件导入测试', () => {
   });
 });
 
-describe('AnalyticsDashboard - 基础属性测试', () => {
+describe('AnalyticsDashboard - 渲染测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该支持initialFilters属性', async () => {
+  it('应该渲染标题', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const initialFilters = { ownership_status: '自有' };
-    const element = React.createElement(AnalyticsDashboard, {
-      initialFilters,
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('资产分析')).toBeInTheDocument();
   });
 
-  it('默认initialFilters应该是空对象', async () => {
+  it('应该渲染AnalyticsFilters组件', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByTestId('analytics-filters')).toBeInTheDocument();
   });
 
-  it('应该支持className属性', async () => {
+  it('应该渲染刷新按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {
-      className: 'custom-class',
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('刷新')).toBeInTheDocument();
   });
 
-  it('默认className应该是空字符串', async () => {
+  it('应该渲染导出按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('导出')).toBeInTheDocument();
+  });
+
+  it('应该渲染全屏按钮', async () => {
+    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('全屏')).toBeInTheDocument();
+  });
+
+  it('应该渲染自动刷新按钮', async () => {
+    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('自动刷新')).toBeInTheDocument();
   });
 });
 
-describe('AnalyticsDashboard - 状态管理测试', () => {
+describe('AnalyticsDashboard - 统计卡片测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该有filters状态', async () => {
+  it('应该渲染关键指标卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {
-      initialFilters: { ownership_status: '自有' },
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    const statisticCards = screen.getAllByTestId('statistic-card');
+    expect(statisticCards.length).toBeGreaterThan(0);
   });
 
-  it('应该有showAdvanced状态', async () => {
+  it('应该渲染财务指标卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+    render(<AnalyticsDashboard />);
 
-  it('应该有fullscreen状态', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有autoRefresh状态', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    const financialCards = screen.getAllByTestId('financial-statistic-card');
+    expect(financialCards.length).toBeGreaterThan(0);
   });
 });
 
-describe('AnalyticsDashboard - useAnalytics hook测试', () => {
+describe('AnalyticsDashboard - 图表测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该调用useAnalytics hook', async () => {
+  it('应该渲染图表卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    const chartCards = screen.getAllByTestId('chart-card');
+    expect(chartCards.length).toBeGreaterThan(0);
   });
 
-  it('应该传递filters给useAnalytics', async () => {
+  it('应该渲染饼图', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const filters = { ownership_status: '自有' };
-    const element = React.createElement(AnalyticsDashboard, {
-      initialFilters: filters,
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    const pieCharts = screen.getAllByTestId('pie-chart');
+    expect(pieCharts.length).toBeGreaterThan(0);
+  });
+
+  it('应该渲染柱状图', async () => {
+    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
+    render(<AnalyticsDashboard />);
+
+    const barCharts = screen.getAllByTestId('bar-chart');
+    expect(barCharts.length).toBeGreaterThan(0);
+  });
+
+  it('应该渲染折线图', async () => {
+    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
+    render(<AnalyticsDashboard />);
+
+    const lineCharts = screen.getAllByTestId('line-chart');
+    expect(lineCharts.length).toBeGreaterThan(0);
   });
 });
 
-describe('AnalyticsDashboard - 顶部操作栏测试', () => {
+describe('AnalyticsDashboard - 交互测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该显示刷新按钮', async () => {
+  it('点击刷新按钮应该调用refetch', async () => {
+    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const mockRefetch = vi.fn();
+    vi.mocked(useAnalytics).mockReturnValue({
+      data: {
+        data: {
+          area_summary: { total_assets: 100, total_area: 5000, total_rentable_area: 4000, occupancy_rate: 85 },
+          financial_summary: { estimated_annual_income: 100000, total_monthly_rent: 10000, total_deposit: 50000 },
+          property_nature_distribution: [],
+          ownership_status_distribution: [],
+          usage_status_distribution: [],
+          occupancy_distribution: [],
+          business_category_distribution: [],
+          occupancy_trend: [],
+        },
+      },
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    } as ReturnType<typeof useAnalytics>);
+
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    const refreshButton = screen.getByText('刷新');
+    fireEvent.click(refreshButton);
+
+    expect(mockRefetch).toHaveBeenCalled();
   });
 
-  it('应该显示导出按钮', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+  it('点击应用筛选按钮应该调用refetch', async () => {
+    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const mockRefetch = vi.fn();
+    vi.mocked(useAnalytics).mockReturnValue({
+      data: {
+        data: {
+          area_summary: { total_assets: 100, total_area: 5000, total_rentable_area: 4000, occupancy_rate: 85 },
+          financial_summary: { estimated_annual_income: 100000, total_monthly_rent: 10000, total_deposit: 50000 },
+          property_nature_distribution: [],
+          ownership_status_distribution: [],
+          usage_status_distribution: [],
+          occupancy_distribution: [],
+          business_category_distribution: [],
+          occupancy_trend: [],
+        },
+      },
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    } as ReturnType<typeof useAnalytics>);
 
-  it('应该显示全屏按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+    render(<AnalyticsDashboard />);
 
-  it('应该显示自动刷新按钮', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+    const applyButton = screen.getByTestId('apply-filters');
+    fireEvent.click(applyButton);
 
-  it('刷新按钮应该有图标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('导出按钮应该有图标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('全屏按钮应该根据状态显示不同图标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    expect(mockRefetch).toHaveBeenCalled();
   });
 });
 
@@ -315,90 +348,25 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
     vi.clearAllMocks();
   });
 
-  it('导出菜单应该有Excel选项', async () => {
+  it('应该有Excel导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByTestId('dropdown-item-excel')).toBeInTheDocument();
   });
 
-  it('导出菜单应该有PDF选项', async () => {
+  it('应该有PDF导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByTestId('dropdown-item-pdf')).toBeInTheDocument();
   });
 
-  it('导出菜单应该有CSV选项', async () => {
+  it('应该有CSV导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
+    render(<AnalyticsDashboard />);
 
-describe('AnalyticsDashboard - AnalyticsFilters测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该渲染AnalyticsFilters组件', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递filters给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {
-      initialFilters: { ownership_status: '自有' },
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递onFiltersChange给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递onApplyFilters给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递onResetFilters给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递loading给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递showAdvanced给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递onToggleAdvanced给AnalyticsFilters', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - PerformanceMonitor测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该渲染PerformanceMonitor组件', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('dropdown-item-csv')).toBeInTheDocument();
   });
 });
 
@@ -408,15 +376,29 @@ describe('AnalyticsDashboard - 空状态测试', () => {
   });
 
   it('无数据时应该显示暂无数据', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    vi.mocked(useAnalytics).mockReturnValue({
+      data: {
+        data: {
+          area_summary: { total_assets: 0, total_area: 0, total_rentable_area: 0, occupancy_rate: 0 },
+          financial_summary: { estimated_annual_income: 0, total_monthly_rent: 0, total_deposit: 0 },
+          property_nature_distribution: [],
+          ownership_status_distribution: [],
+          usage_status_distribution: [],
+          occupancy_distribution: [],
+          business_category_distribution: [],
+          occupancy_trend: [],
+        },
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as ReturnType<typeof useAnalytics>);
 
-  it('暂无数据应该有提示信息', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
 
@@ -426,254 +408,53 @@ describe('AnalyticsDashboard - 错误状态测试', () => {
   });
 
   it('错误时应该显示错误信息', async () => {
-    vi.doMock('../../hooks/useAnalytics', () => ({
-      useAnalytics: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        error: { message: '网络错误' },
-        refetch: vi.fn(),
-      })),
-    }));
+    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    vi.mocked(useAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: { message: '网络错误' },
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useAnalytics>);
+
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('数据加载失败')).toBeInTheDocument();
   });
 
   it('错误时应该显示重试按钮', async () => {
-    vi.doMock('../../hooks/useAnalytics', () => ({
-      useAnalytics: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        error: { message: '网络错误' },
-        refetch: vi.fn(),
-      })),
-    }));
+    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    vi.mocked(useAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: { message: '网络错误' },
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useAnalytics>);
+
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    render(<AnalyticsDashboard />);
+
+    expect(screen.getByText('重试')).toBeInTheDocument();
   });
 });
 
-describe('AnalyticsDashboard - 关键指标测试', () => {
+describe('AnalyticsDashboard - 属性测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该显示资产总数指标', async () => {
+  it('应该支持initialFilters属性', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    const initialFilters = { ownership_status: '自有' };
+    render(<AnalyticsDashboard initialFilters={initialFilters} />);
+
+    expect(screen.getByTestId('analytics-filters')).toBeInTheDocument();
   });
 
-  it('应该显示总面积指标', async () => {
+  it('应该支持className属性', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
+    const { container } = render(<AnalyticsDashboard className="custom-class" />);
 
-  it('应该显示可租面积指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示整体出租率指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 财务指标测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示预估年收入指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示月租金指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示押金总额指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示资产收益率指标', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 图表测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示物业性质分布图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示确权状态分布图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示使用状态分布图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示出租率区间分布图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示业态类别出租率图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示出租率趋势图', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 全屏功能测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持全屏切换', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('全屏时应该改变样式', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('全屏时应该显示退出全屏按钮', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 自动刷新功能测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持自动刷新切换', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('自动刷新开启时按钮应该是primary类型', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理undefined analytics数据', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理空数组分布数据', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理loading状态', async () => {
-    vi.doMock('../../hooks/useAnalytics', () => ({
-      useAnalytics: vi.fn(() => ({
-        data: undefined,
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      })),
-    }));
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 布局测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该使用Row和Col布局', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('图表应该使用lg={12}布局', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('指标卡片应该使用sm={6}布局', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsDashboard - 响应式测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('Col应该支持xs响应式', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('Col应该支持md响应式', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('Col应该支持lg响应式', async () => {
-    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const element = React.createElement(AnalyticsDashboard, {});
-    expect(element).toBeTruthy();
+    expect(container.firstChild).toHaveClass('custom-class');
   });
 });

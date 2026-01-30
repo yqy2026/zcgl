@@ -1,12 +1,21 @@
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, cast
+from typing import Any
 
 from fastapi import UploadFile
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session, selectinload
 
+from ...constants.rent_contract_constants import PaymentStatus
+from ...core.config import settings
 from ...core.enums import ContractStatus
+from ...core.exception_handler import (
+    BusinessValidationError,
+    FileProcessingError,
+    OperationNotAllowedError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
 from ...models.asset import Asset, Ownership
 from ...models.rent_contract import (
@@ -37,9 +46,13 @@ class RentContractService:
         self, db: Session, *, obj_in: RentContractCreate
     ) -> RentContract:
         """创建合同（包含租金条款）- V2 支持多资产"""
-        # 生成合同编号
-        if not obj_in.contract_number:
-            obj_in.contract_number = self._generate_contract_number(db)
+        # 合同编号必须手工录入
+        if not obj_in.contract_number or not obj_in.contract_number.strip():
+            raise BusinessValidationError(
+                "合同编号不能为空，请手工录入",
+                field_errors={"contract_number": ["不能为空"]},
+            )
+        obj_in.contract_number = obj_in.contract_number.strip()
 
         # V2: 检查资产租金冲突
         if obj_in.asset_ids:
@@ -57,10 +70,14 @@ class RentContractService:
                     f"({c['contract_start_date']} 至 {c['contract_end_date']})"
                     for c in conflicts
                 ]
-                raise ValueError(
-                    "资产租金冲突检测:\n"
-                    + "\n".join(conflict_details)
-                    + "\n\n是否仍要创建? 如果确认创建,请联系管理员或使用强制覆盖功能。"
+                raise ResourceConflictError(
+                    message=(
+                        "资产租金冲突检测:\n"
+                        + "\n".join(conflict_details)
+                        + "\n\n是否仍要创建? 如果确认创建,请联系管理员或使用强制覆盖功能。"
+                    ),
+                    resource_type="asset",
+                    details={"conflicts": conflicts},
                 )
 
         # V2: 提取 asset_ids 单独处理
@@ -71,7 +88,9 @@ class RentContractService:
         # V2: 关联资产
         if asset_ids:
             assets = db.query(Asset).filter(Asset.id.in_(asset_ids)).all()
-            setattr(db_contract, "assets", assets)
+            sa_assets = [asset for asset in assets if hasattr(asset, "_sa_instance_state")]
+            if sa_assets:
+                setattr(db_contract, "assets", sa_assets)
 
         db.add(db_contract)
         db.flush()  # 获取ID
@@ -122,7 +141,9 @@ class RentContractService:
         # V2: 更新资产关联
         if obj_in.asset_ids is not None:
             assets = db.query(Asset).filter(Asset.id.in_(obj_in.asset_ids)).all()
-            setattr(db_obj, "assets", assets)
+            sa_assets = [asset for asset in assets if hasattr(asset, "_sa_instance_state")]
+            if sa_assets:
+                setattr(db_obj, "assets", sa_assets)
 
         # 更新租金条款
         if obj_in.rent_terms is not None:
@@ -175,9 +196,12 @@ class RentContractService:
             .first()
         )
         if not original:
-            raise ValueError(f"原合同不存在: {original_contract_id}")
+            raise ResourceNotFoundError("合同", original_contract_id)
         if original.contract_status != ContractStatus.ACTIVE:
-            raise ValueError(f"原合同状态不可续签: {original.contract_status}")
+            raise OperationNotAllowedError(
+                f"原合同状态不可续签: {original.contract_status}",
+                reason="contract_status_not_active",
+            )
 
         # 创建新合同
         new_contract = self.create_contract(db, obj_in=new_contract_data)
@@ -247,17 +271,23 @@ class RentContractService:
         """
         contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
         if not contract:
-            raise ValueError(f"合同不存在: {contract_id}")
+            raise ResourceNotFoundError("合同", contract_id)
         if contract.contract_status not in [ContractStatus.ACTIVE]:
-            raise ValueError(f"合同状态不可终止: {contract.contract_status}")
+            raise OperationNotAllowedError(
+                f"合同状态不可终止: {contract.contract_status}",
+                reason="contract_status_not_active",
+            )
 
         deposit_balance = contract.total_deposit
 
         # 处理抵扣
         if deduction_amount > 0:
             if deduction_amount > deposit_balance:
-                raise ValueError(
-                    f"抵扣金额 {deduction_amount} 超过押金余额 {deposit_balance}"
+                raise BusinessValidationError(
+                    f"抵扣金额 {deduction_amount} 超过押金余额 {deposit_balance}",
+                    field_errors={
+                        "deduction_amount": ["超过押金余额"],
+                    },
                 )
 
             deduction = RentDepositLedger()
@@ -323,19 +353,21 @@ class RentContractService:
         # 验证合同是否存在
         contract = rent_contract.get(db, id=contract_id)
         if not contract:
-            raise ValueError("合同不存在")
+            raise ResourceNotFoundError("合同", contract_id)
 
         # 验证文件类型
         allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
         file_ext = Path(file.filename).suffix.lower() if file.filename else ""
 
         if file_ext not in allowed_extensions:
-            raise ValueError(
+            raise BusinessValidationError(
                 f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}"
             )
 
         # 创建上传目录
-        upload_dir = Path("uploads/contracts")
+        upload_dir = (
+            Path(settings.UPLOAD_DIR) / settings.RENT_CONTRACT_ATTACHMENT_SUBDIR
+        )
         upload_dir.mkdir(parents=True, exist_ok=True)
 
         unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -350,7 +382,11 @@ class RentContractService:
             # 重置文件指针，以便其他地方可以再次读取
             file.file.seek(0)
         except Exception as e:
-            raise ValueError(f"文件保存失败: {str(e)}")
+            raise FileProcessingError(
+                message=f"文件保存失败: {str(e)}",
+                file_name=file.filename,
+                file_type=file.content_type,
+            ) from e
 
         # 创建附件记录
         attachment = RentContractAttachment()
@@ -385,12 +421,15 @@ class RentContractService:
         # 获取合同信息
         contract = rent_contract.get(db, id=request.contract_id)
         if not contract:
-            raise ValueError(f"合同不存在: {request.contract_id}")
+            raise ResourceNotFoundError("合同", request.contract_id)
 
         # 获取租金条款
         rent_terms = rent_term.get_by_contract(db, contract_id=request.contract_id)
         if not rent_terms:
-            raise ValueError(f"合同没有租金条款: {request.contract_id}")
+            raise BusinessValidationError(
+                f"合同没有租金条款: {request.contract_id}",
+                field_errors={"rent_terms": ["合同没有租金条款"]},
+            )
 
         # 确定生成月份范围
         if not request.start_year_month:
@@ -434,7 +473,7 @@ class RentContractService:
                 db_ledger.due_amount = due_amount
                 db_ledger.paid_amount = Decimal("0")
                 db_ledger.overdue_amount = Decimal("0")
-                db_ledger.payment_status = "未支付"
+                db_ledger.payment_status = PaymentStatus.UNPAID
                 db.add(db_ledger)
                 created_ledgers.append(db_ledger)
 
@@ -463,7 +502,7 @@ class RentContractService:
                 ledger.notes = request.notes
 
             # 计算逾期金额
-            if ledger.payment_status in ["已支付", "部分支付"]:
+            if ledger.payment_status in [PaymentStatus.PAID, PaymentStatus.PARTIAL]:
                 if ledger.paid_amount < ledger.due_amount:
                     ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
                 else:
@@ -776,17 +815,13 @@ class RentContractService:
             conditions.append(RentContract.id != exclude_contract_id)
 
         # 查询与指定资产相关的所有有效合同
-        existing_contracts = (
-            db.query(RentContract)
-            .options(selectinload(RentContract.assets))
-            .filter(and_(*conditions))
-            .all()
-        )
+        query = db.query(RentContract).options(selectinload(RentContract.assets))
+        existing_contracts = query.filter(and_(*conditions)).all()
 
         # 检查每个现有合同是否与新合同时间段重叠
         for contract in existing_contracts:
             # 获取该合同的资产
-            contract_assets = [a.id for a in cast(list[Asset], contract.assets)]
+            contract_assets = [a.id for a in contract.assets]
 
             # 检查是否有资产重叠
             overlapping_assets = set(asset_ids) & set(contract_assets)
@@ -797,8 +832,8 @@ class RentContractService:
                 if start_date <= contract.end_date and end_date >= contract.start_date:
                     # 获取重叠资产的名称
                     overlapping_asset_names = [
-                        a.property_name
-                        for a in cast(list[Asset], contract.assets)
+                        a.property_name if getattr(a, "property_name", None) else getattr(a, "name", None)
+                        for a in contract.assets
                         if a.id in overlapping_assets
                     ]
 
@@ -816,19 +851,6 @@ class RentContractService:
                     )
 
         return conflicts
-
-    def _generate_contract_number(self, db: Session) -> str:
-        """生成合同编号"""
-        today = datetime.now(UTC)
-        date_str = today.strftime("%Y%m%d")
-
-        today_count = (
-            db.query(RentContract)
-            .filter(RentContract.contract_number.like(f"ZJ{date_str}%"))
-            .count()
-        )
-
-        return f"ZJ{date_str}{today_count + 1:03d}"
 
     def _create_history(
         self,
@@ -953,15 +975,12 @@ class RentContractService:
         # we will aggregate total rent of downstream contracts and divide by total area of assets linked to them.
 
         # 1. Filter valid downstream contracts
-        query = (
-            db.query(RentContract)
-            .options(
-                selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
-            )
-            .filter(
-                RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
-                RentContract.contract_status == ContractStatus.ACTIVE,
-            )
+        query = db.query(RentContract).options(
+            selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
+        )
+        query = query.filter(
+            RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
+            RentContract.contract_status == ContractStatus.ACTIVE,
         )
 
         if query_params.start_date:
@@ -992,7 +1011,7 @@ class RentContractService:
 
             # Asset Area
             # Sum area of all associated assets
-            assets = cast(list[Asset], contract.assets)
+            assets = contract.assets
             area = sum((asset.rentable_area or Decimal("0")) for asset in assets)
 
             if area > 0:
@@ -1041,6 +1060,51 @@ class RentContractService:
 
         rate = (Decimal(str(renewed)) / Decimal(str(total_ended))) * 100
         return rate.quantize(Decimal("0.00"))
+
+
+    def get_contract_by_id(self, db: Session, *, contract_id: str) -> RentContract | None:
+        """获取合同详情"""
+        return db.query(RentContract).filter(RentContract.id == contract_id).first()
+
+    def get_deposit_ledger(
+        self, db: Session, *, contract_id: str
+    ) -> list[RentDepositLedger]:
+        """
+        获取合同押金变动记录
+
+        Args:
+            db: 数据库会话
+            contract_id: 合同ID
+
+        Returns:
+            押金变动记录列表（按创建时间倒序）
+        """
+        return (
+            db.query(RentDepositLedger)
+            .filter(RentDepositLedger.contract_id == contract_id)
+            .order_by(RentDepositLedger.created_at.desc())
+            .all()
+        )
+
+    def get_service_fee_ledger(
+        self, db: Session, *, contract_id: str
+    ) -> list[ServiceFeeLedger]:
+        """
+        获取合同服务费台账记录
+
+        Args:
+            db: 数据库会话
+            contract_id: 合同ID
+
+        Returns:
+            服务费台账记录列表（按年月倒序）
+        """
+        return (
+            db.query(ServiceFeeLedger)
+            .filter(ServiceFeeLedger.contract_id == contract_id)
+            .order_by(ServiceFeeLedger.year_month.desc())
+            .all()
+        )
 
 
 rent_contract_service = RentContractService()

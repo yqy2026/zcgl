@@ -1,7 +1,6 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.enums.task import TaskStatus, TaskType
 from src.models.task import AsyncTask
@@ -12,9 +11,6 @@ TEST_TASK_ID = "task_123"
 TEST_USER_ID = "user_123"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

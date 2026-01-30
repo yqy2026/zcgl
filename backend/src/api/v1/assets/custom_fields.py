@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
-    bad_request,
     internal_error,
     not_found,
 )
@@ -117,9 +116,6 @@ async def create_custom_field(
     try:
         field = custom_field_service.create_custom_field(db=db, obj_in=field_in)
         return AssetCustomFieldResponse.model_validate(field)
-
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -146,11 +142,6 @@ async def update_custom_field(
             db=db, id=field_id, obj_in=field_in
         )
         return AssetCustomFieldResponse.model_validate(updated_field)
-
-    except ValueError as e:
-        if "不存在" in str(e) and "已存在" not in str(e):
-            raise not_found(str(e), resource_type="custom_field")
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -171,9 +162,6 @@ async def delete_custom_field(
     try:
         custom_field_service.delete_custom_field(db=db, id=field_id)
         return {"message": f"字段 {field_id} 已成功删除"}
-
-    except ValueError as e:
-        raise not_found(str(e), resource_type="custom_field", resource_id=field_id)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -285,10 +273,9 @@ async def update_asset_custom_field_values(
             db=db, asset_id=asset_id, values=values_update.values
         )
         return {"asset_id": asset_id, "values": updated_values}
-
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"更新资产自定义字段值失败: {str(e)}")
 
 

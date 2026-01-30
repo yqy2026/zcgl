@@ -1,7 +1,6 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.rbac import Permission, Role
 from src.schemas.rbac import RoleCreate, UserRoleAssignmentCreate
@@ -11,9 +10,6 @@ TEST_ROLE_ID = "role_123"
 TEST_USER_ID = "user_456"
 
 
-@pytest.fixture
-def mock_db():
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

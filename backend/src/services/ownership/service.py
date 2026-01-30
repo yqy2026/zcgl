@@ -4,6 +4,12 @@ from typing import Any
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import (
+    BusinessValidationError,
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from ...crud.ownership import ownership as ownership_crud
 from ...models.asset import Asset, Ownership, Project, ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
@@ -78,7 +84,7 @@ class OwnershipService:
         """创建权属方"""
         # 检查名称是否已存在
         if ownership_crud.get_by_name(db, obj_in.name):
-            raise ValueError(f"权属方名称 {obj_in.name} 已存在")
+            raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         # 自动生成编码
         code = self.generate_ownership_code(db)
@@ -101,7 +107,7 @@ class OwnershipService:
         if obj_in.name and obj_in.name != db_obj.name:
             existing = ownership_crud.get_by_name(db, obj_in.name)
             if existing and existing.id != db_obj.id:
-                raise ValueError(f"权属方名称 {obj_in.name} 已存在")
+                raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         update_data = obj_in.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(UTC)
@@ -138,7 +144,7 @@ class OwnershipService:
         # 验证权属方是否存在
         ownership_obj = ownership_crud.get(db, id=ownership_id)
         if not ownership_obj:
-            raise ValueError(f"权属方ID {ownership_id} 不存在")
+            raise ResourceNotFoundError("权属方", ownership_id)
 
         # 验证项目是否存在
         valid_projects = db.query(Project).filter(Project.id.in_(project_ids)).all()
@@ -146,7 +152,10 @@ class OwnershipService:
 
         if len(valid_project_ids) != len(project_ids):
             invalid_ids = set(project_ids) - {str(p.id) for p in valid_projects}
-            raise ValueError(f"以下项目ID不存在: {invalid_ids}")
+            raise BusinessValidationError(
+                f"以下项目ID不存在: {invalid_ids}",
+                field_errors={"project_ids": [str(i) for i in invalid_ids]},
+            )
 
         # 删除现有关联
         db.query(ProjectOwnershipRelation).filter(
@@ -182,7 +191,7 @@ class OwnershipService:
         """删除权属方"""
         db_obj = ownership_crud.get(db, id=id)
         if not db_obj:
-            raise ValueError(f"权属方ID {id} 不存在")
+            raise ResourceNotFoundError("权属方", id)
 
         # 检查是否有关联的资产
         asset_count = (
@@ -190,7 +199,10 @@ class OwnershipService:
         )
 
         if asset_count > 0:
-            raise ValueError(f"该权属方还有 {asset_count} 个关联资产，无法删除")
+            raise OperationNotAllowedError(
+                f"该权属方还有 {asset_count} 个关联资产，无法删除",
+                reason="ownership_has_assets",
+            )
 
         ownership_crud.remove(db, id=id)
         return db_obj
@@ -201,7 +213,7 @@ class OwnershipService:
         """切换权属方状态"""
         db_obj = ownership_crud.get(db, id=id)
         if not db_obj:
-            raise ValueError(f"权属方ID {id} 不存在")
+            raise ResourceNotFoundError("权属方", id)
 
         # Convert Column[str] to str using getattr
         obj_name: str | None = name or getattr(db_obj, "name", None)

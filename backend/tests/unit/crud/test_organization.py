@@ -6,17 +6,11 @@ Organization CRUD unit tests
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.crud.organization import CRUDOrganization, organization
 from src.models.organization import Organization
 
-
 # ===================== Fixtures =====================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

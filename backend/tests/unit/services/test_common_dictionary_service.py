@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.core.exception_handler import BaseBusinessError
 from src.schemas.dictionary import (
@@ -14,8 +13,8 @@ from src.services.common_dictionary_service import common_dictionary_service
 
 class TestCommonDictionaryService:
     @pytest.fixture
-    def mock_db(self):
-        return MagicMock(spec=Session)
+    def mock_db(self, db_session):
+        return db_session
 
     @pytest.fixture
     def mock_enum_type_crud(self):

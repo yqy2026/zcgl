@@ -9,6 +9,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from ..core.exception_handler import BusinessValidationError
+
 # 危险的文件名字符
 DANGEROUS_FILENAME_CHARS = r'[<>:"/\\|?*\x00-\x1f]'
 DANGEROUS_PATH_PATTERNS = [
@@ -185,12 +187,18 @@ def generate_safe_filename(
         ValueError: 如果文件扩展名不被允许
     """
     if not original_filename:
-        raise ValueError("文件名不能为空")
+        raise BusinessValidationError(
+            "文件名不能为空",
+            field_errors={"filename": ["empty"]},
+        )
 
     # 🔒 安全修复: 验证文件扩展名
     if not validate_file_extension(original_filename, allowed_extensions):
         _, ext = os.path.splitext(original_filename.lower())
-        raise ValueError(f"不允许的文件扩展名: {ext}")
+        raise BusinessValidationError(
+            f"不允许的文件扩展名: {ext}",
+            field_errors={"extension": ["not_allowed"]},
+        )
 
     # 获取文件扩展名（已验证过）
     name, ext = os.path.splitext(original_filename)
@@ -219,7 +227,10 @@ def generate_safe_filename(
 
     # 最终验证：确保生成的文件名安全
     if ".." in safe_name or "/" in safe_name or "\\" in safe_name:
-        raise ValueError(f"生成的文件名不安全: {safe_name}")
+        raise BusinessValidationError(
+            f"生成的文件名不安全: {safe_name}",
+            field_errors={"filename": ["unsafe"]},
+        )
 
     return safe_name
 
@@ -292,7 +303,10 @@ def sanitize_file_content(
     """
     # 检查文件大小
     if len(content) > max_size:
-        raise ValueError(f"文件大小超过限制: {len(content)} > {max_size}")
+        raise BusinessValidationError(
+            f"文件大小超过限制: {len(content)} > {max_size}",
+            field_errors={"file_size": ["exceeds_limit"]},
+        )
 
     # 获取文件扩展名
     _, ext = os.path.splitext(filename.lower())

@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from ....constants.rent_contract_constants import PaymentStatus
 from ....core.exception_handler import (
     BaseBusinessError,
-    bad_request,
     internal_error,
     not_found,
     validation_error,
@@ -48,19 +48,11 @@ def get_contract_deposit_ledger(
     """
     获取指定合同的押金变动记录
     """
-    from ....models.rent_contract import RentContract, RentDepositLedger
-
-    contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+    contract = rent_contract_service.get_contract_by_id(db, contract_id=contract_id)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
-    ledgers = (
-        db.query(RentDepositLedger)
-        .filter(RentDepositLedger.contract_id == contract_id)
-        .order_by(RentDepositLedger.created_at.desc())
-        .all()
-    )
-
+    ledgers = rent_contract_service.get_deposit_ledger(db, contract_id=contract_id)
     return [DepositLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
@@ -78,19 +70,11 @@ def get_contract_service_fee_ledger(
     """
     获取指定合同的服务费台账记录
     """
-    from ....models.rent_contract import RentContract, ServiceFeeLedger
-
-    contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+    contract = rent_contract_service.get_contract_by_id(db, contract_id=contract_id)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
-    ledgers = (
-        db.query(ServiceFeeLedger)
-        .filter(ServiceFeeLedger.contract_id == contract_id)
-        .order_by(ServiceFeeLedger.year_month.desc())
-        .all()
-    )
-
+    ledgers = rent_contract_service.get_service_fee_ledger(db, contract_id=contract_id)
     return [ServiceFeeLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
@@ -113,8 +97,6 @@ def generate_monthly_ledger(
             "message": f"成功生成 {len(ledger_responses)} 条台账记录",
             "ledgers": ledger_responses,
         }
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -225,7 +207,7 @@ def update_rent_ledger(
         raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
 
     if ledger_in.payment_status is not None:
-        valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
+        valid_statuses = [s.value for s in PaymentStatus]
         if ledger_in.payment_status not in valid_statuses:
             raise validation_error(f"支付状态必须是: {', '.join(valid_statuses)}")
 

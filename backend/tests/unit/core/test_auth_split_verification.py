@@ -11,12 +11,6 @@ from src.services.core.user_management_service import UserManagementService
 
 
 @pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock()
-
-
-@pytest.fixture
 def auth_service(mock_db):
     """创建 AuthenticationService 实例"""
     return AuthenticationService(mock_db)

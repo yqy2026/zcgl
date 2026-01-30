@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -243,6 +244,32 @@ def sample_asset_data():
 
 
 @pytest.fixture
+def sample_ownership(test_db):
+    """创建示例权属方"""
+    from src.models.asset import Ownership
+
+    ownership = Ownership(name="测试权属方", code=f"OWN-{uuid4().hex[:8]}")
+    test_db.add(ownership)
+    test_db.flush()
+    test_db.refresh(ownership)
+    return ownership
+
+
+@pytest.fixture
+def sample_asset_with_ownership(test_db, sample_asset_data, sample_ownership):
+    """创建示例资产（绑定权属方）"""
+    from src.models.asset import Asset
+
+    asset_data = dict(sample_asset_data)
+    asset_data["ownership_id"] = sample_ownership.id
+    asset = Asset(**asset_data)
+    test_db.add(asset)
+    test_db.flush()
+    test_db.refresh(asset)
+    return asset
+
+
+@pytest.fixture
 def sample_asset(test_db, sample_asset_data):
     """创建示例资产"""
     from src.models.asset import Asset
@@ -252,6 +279,7 @@ def sample_asset(test_db, sample_asset_data):
     test_db.flush()  # Use flush instead of commit
     test_db.refresh(asset)
     return asset
+
 
 
 # =============================================================================

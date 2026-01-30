@@ -18,7 +18,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate } from '../../types/rentContract';
+import type { RentTermData } from '../../components/Forms/RentContract';
+import type { RentContractCreate, RentTerm } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import RenewalSummarySection from '../../components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '../../utils/logger';
@@ -31,7 +32,7 @@ const { Title, Text } = Typography;
 /**
  * 调整租金条款日期到新合同期间
  */
-function adjustRentTermsDate(originalTerms: any[], newStartDate: dayjs.Dayjs): any[] {
+function adjustRentTermsDate(originalTerms: RentTerm[], newStartDate: dayjs.Dayjs): RentTermData[] {
   if (originalTerms == null || originalTerms.length === 0) return [];
 
   const originalStart = dayjs(originalTerms[0].start_date);
@@ -49,7 +50,10 @@ function adjustRentTermsDate(originalTerms: any[], newStartDate: dayjs.Dayjs): a
     const termEndOffset = dayjs(term.end_date).diff(originalStart, 'day');
 
     return {
-      ...term,
+      monthly_rent: term.monthly_rent,
+      rent_description: term.rent_description,
+      management_fee: term.management_fee,
+      other_fees: term.other_fees,
       start_date: newStartDate.add(termStartOffset, 'day').format('YYYY-MM-DD'),
       end_date:
         index === originalTerms.length - 1

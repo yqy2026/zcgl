@@ -20,6 +20,7 @@ class NotFoundError(Exception):
 """
 
 import os
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import (
@@ -30,6 +31,8 @@ from fastapi import (
     Request,
     Response,
 )
+from pydantic import TypeAdapter
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
@@ -37,7 +40,7 @@ from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.history import history_crud
-from ....database import get_db
+from ....database import get_async_db, get_db
 from ....middleware.auth import (
     audit_action,
     get_current_active_user,
@@ -51,7 +54,7 @@ from ....schemas.asset import (
     AssetResponse,
     AssetUpdate,
 )
-from ....services.asset.asset_service import AssetService
+from ....services.asset.asset_service import AssetService, AsyncAssetService
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import
@@ -66,6 +69,9 @@ router = APIRouter()
 router.include_router(asset_batch.router, tags=["资产批量操作"])
 router.include_router(asset_import.router, tags=["资产导入"])
 router.include_router(asset_attachments.router, tags=["资产附件"])
+
+_asset_response_list_adapter = TypeAdapter(list[AssetResponse])
+_asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
 
 
 @router.get(
@@ -94,7 +100,7 @@ async def get_assets(
     max_area: float | None = Query(None, ge=0, description="最大面积筛选"),
     is_litigated: str | None = Query(None, description="是否涉诉筛选"),
     include_relations: bool = Query(False, description="是否加载关联数据"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     sort_field: str = Query(DateTimeFields.CREATED_AT, description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
@@ -134,8 +140,8 @@ async def get_assets(
     if is_litigated:
         filters["is_litigated"] = is_litigated
 
-    asset_service = AssetService(db)
-    assets, total = asset_service.get_assets(
+    asset_service = AsyncAssetService(db)
+    assets, total = await asset_service.get_assets(
         skip=(page - 1) * page_size,
         limit=page_size,
         search=search,
@@ -145,14 +151,17 @@ async def get_assets(
         include_relations=include_relations,
     )
 
-    items: list[AssetResponse | AssetListItemResponse]
+    items: Sequence[AssetResponse | AssetListItemResponse]
     if include_relations:
-        items = [AssetResponse.model_validate(asset) for asset in assets]
+        items = _asset_response_list_adapter.validate_python(
+            assets, from_attributes=True
+        )
     else:
-        items = [AssetListItemResponse.model_validate(asset) for asset in assets]
-
+        items = _asset_list_item_adapter.validate_python(
+            assets, from_attributes=True
+        )
     return ResponseHandler.paginated(
-        data=items,
+        data=list(items),
         page=page,
         page_size=page_size,
         total=total,
@@ -231,15 +240,15 @@ async def get_ownership_statuses(
 async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> AssetResponse:
     """
     根据ID获取单个资产的详细信息
 
     - **asset_id**: 资产ID
     """
-    asset_service = AssetService(db)
-    asset = asset_service.get_asset(asset_id)
+    asset_service = AsyncAssetService(db)
+    asset = await asset_service.get_asset(asset_id)
     return AssetResponse.model_validate(asset)
 
 
@@ -247,7 +256,7 @@ async def get_asset(
 async def create_asset(
     asset_in: AssetCreate,
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("asset", "create")),
     audit_logger: Any = Depends(audit_action("asset_create", "asset")),
 ) -> AssetResponse:
@@ -256,13 +265,13 @@ async def create_asset(
 
     - **asset_in**: 资产创建数据
     """
-    asset_service = AssetService(db)
+    asset_service = AsyncAssetService(db)
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "")
     session_id = request.headers.get("X-Session-ID") or request.headers.get(
         "X-Session-Id"
     )
-    asset = asset_service.create_asset(
+    asset = await asset_service.create_asset(
         asset_in,
         current_user,
         ip_address=ip_address,
@@ -277,7 +286,7 @@ async def update_asset(
     asset_id: str,
     asset_in: AssetUpdate,
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("asset", "update")),
     audit_logger: Any = Depends(audit_action("asset_update", "asset")),
 ) -> AssetResponse:
@@ -287,13 +296,13 @@ async def update_asset(
     - **asset_id**: 资产ID
     - **asset_in**: 资产更新数据
     """
-    asset_service = AssetService(db)
+    asset_service = AsyncAssetService(db)
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "")
     session_id = request.headers.get("X-Session-ID") or request.headers.get(
         "X-Session-Id"
     )
-    asset = asset_service.update_asset(
+    asset = await asset_service.update_asset(
         asset_id,
         asset_in,
         current_user,
@@ -307,7 +316,7 @@ async def update_asset(
 @router.delete("/{asset_id}", summary="删除资产")
 async def delete_asset(
     asset_id: str = Path(..., description="资产ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("asset", "delete")),
     audit_logger: Any = Depends(audit_action("asset_delete", "asset")),
 ) -> Response:
@@ -316,8 +325,8 @@ async def delete_asset(
 
     - **asset_id**: 资产ID
     """
-    asset_service = AssetService(db)
-    asset_service.delete_asset(asset_id, current_user)
+    asset_service = AsyncAssetService(db)
+    await asset_service.delete_asset(asset_id, current_user)
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 

@@ -18,6 +18,8 @@ import { COLORS } from '@/styles/colorMap';
 
 const { Text } = Typography;
 
+type TextType = 'secondary' | 'success' | 'warning' | 'danger';
+
 interface RenewalSummarySectionProps {
   contract: RentContract;
 }
@@ -40,11 +42,19 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
   const getContractStatusLabel = (status: string): { text: string; color: string } => {
     return {
       text: ContractStatusLabels[status as ContractStatus] || status,
-      color: ContractStatusColors[status as ContractStatus] || 'default'
+      color: ContractStatusColors[status as ContractStatus] || 'default',
     };
   };
 
   const statusInfo = getContractStatusLabel(contract.contract_status || '');
+  const statusTextType: TextType =
+    statusInfo.color === 'success'
+      ? 'success'
+      : statusInfo.color === 'warning'
+        ? 'warning'
+        : statusInfo.color === 'error' || statusInfo.color === 'magenta'
+          ? 'danger'
+          : 'secondary';
 
   return (
     <Card
@@ -80,7 +90,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="合同状态">
-          <Text type={statusInfo.color as any}>{statusInfo.text}</Text>
+          <Text type={statusTextType}>{statusInfo.text}</Text>
         </Descriptions.Item>
 
         <Descriptions.Item

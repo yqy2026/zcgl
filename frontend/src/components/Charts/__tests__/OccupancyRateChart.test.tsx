@@ -4,105 +4,113 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Mock @tanstack/react-query
+const mockUseQuery = vi.fn();
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: undefined,
-    isLoading: false,
-    error: null,
-  })),
+  useQuery: (options: unknown) => mockUseQuery(options),
 }));
 
 // Mock @ant-design/plots
 vi.mock('@ant-design/plots', () => ({
-  Line: ({ data, height }: any) => (
+  Line: ({ height }: { height?: number }) => (
     <div data-testid="line-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+      Line Chart
     </div>
   ),
-  Column: ({ data, height }: any) => (
+  Column: ({ height }: { height?: number }) => (
     <div data-testid="column-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+      Column Chart
     </div>
   ),
-  Pie: ({ data, height }: any) => (
+  Pie: ({ height }: { height?: number }) => (
     <div data-testid="pie-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} />
-      ))}
+      Pie Chart
     </div>
   ),
 }));
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, title, style, size }: any) => (
-    <div data-testid="card" data-title={title} data-size={size} style={style}>
+  Card: ({
+    children,
+    title,
+  }: {
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="card">
+      {title && <div data-testid="card-title">{title}</div>}
       {children}
     </div>
   ),
-  Row: ({ children, gutter, style }: any) => (
-    <div data-testid="row" data-gutter={gutter} style={style}>
-      {children}
-    </div>
+  Row: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="row">{children}</div>
   ),
-  Col: ({ children, xs, sm, md, lg }: any) => (
-    <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
-      {children}
-    </div>
+  Col: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="col">{children}</div>
   ),
   Statistic: ({
     title,
     value,
-    precision: _precision,
     suffix,
-    prefix,
-    valueStyle,
-    formatter,
-  }: any) => (
-    <div data-testid="statistic" data-title={title} data-value={value} style={valueStyle}>
-      {prefix && <span data-testid="statistic-prefix">{prefix}</span>}
-      <span>{formatter ? formatter(value) : value}</span>
-      {suffix && <span>{suffix}</span>}
+  }: {
+    title?: React.ReactNode;
+    value?: number;
+    suffix?: React.ReactNode;
+  }) => (
+    <div data-testid="statistic">
+      <span data-testid="statistic-title">{title}</span>
+      <span data-testid="statistic-value">{value}</span>
+      {suffix && <span data-testid="statistic-suffix">{suffix}</span>}
     </div>
   ),
-  Spin: ({ children, spinning }: any) => (
+  Spin: ({
+    children,
+    spinning,
+  }: {
+    children?: React.ReactNode;
+    spinning?: boolean;
+  }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
-    <div data-testid="alert" data-type={type} data-message={message}>
-      {description}
+  Alert: ({
+    message,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
+    <div data-testid="alert" data-type={type}>
+      <span data-testid="alert-message">{message}</span>
+      <span data-testid="alert-description">{description}</span>
     </div>
   ),
   Typography: {
-    Title: ({ children, level }: any) => (
-      <div data-testid="title" data-level={level}>
-        {children}
-      </div>
+    Title: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="typography-title">{children}</div>
     ),
-    Text: ({ children, type, strong, style }: any) => (
-      <span data-testid="text" data-type={type} data-strong={strong} style={style}>
-        {children}
-      </span>
+    Text: ({ children }: { children?: React.ReactNode }) => (
+      <span data-testid="typography-text">{children}</span>
     ),
   },
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+  Space: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  ),
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
-  PercentageOutlined: () => <div data-testid="icon-percentage" />,
-  RiseOutlined: () => <div data-testid="icon-rise" />,
-  FallOutlined: () => <div data-testid="icon-fall" />,
-  MinusOutlined: () => <div data-testid="icon-minus" />,
+  PercentageOutlined: () => <span data-testid="icon-percentage" />,
+  RiseOutlined: () => <span data-testid="icon-rise" />,
+  FallOutlined: () => <span data-testid="icon-fall" />,
+  MinusOutlined: () => <span data-testid="icon-minus" />,
 }));
 
 // Mock asset service
@@ -112,252 +120,249 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-describe('OccupancyRateChart - 组件导入测试', () => {
-  it('应该能够导入OccupancyRateChart组件', async () => {
-    const module = await import('../OccupancyRateChart');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
-  });
-});
+// Sample mock data
+const mockOccupancyData = {
+  overall_rate: 85.5,
+  trend: 'up' as const,
+  trend_percentage: 2.5,
+  by_property_nature: [
+    { property_nature: '经营类', rate: 90.0, total_area: 10000, rented_area: 9000 },
+    { property_nature: '非经营类', rate: 75.0, total_area: 5000, rented_area: 3750 },
+  ],
+  by_ownership_entity: [
+    { ownership_entity: '权属方A', rate: 88.0, asset_count: 10 },
+    { ownership_entity: '权属方B', rate: 82.0, asset_count: 8 },
+  ],
+  monthly_trend: [
+    { month: '2024-01', rate: 80.0, total_area: 15000, rented_area: 12000 },
+    { month: '2024-02', rate: 85.0, total_area: 15000, rented_area: 12750 },
+  ],
+  top_performers: [
+    { property_name: '资产A', rate: 98.0, area: 1000 },
+    { property_name: '资产B', rate: 95.0, area: 800 },
+  ],
+  low_performers: [
+    { property_name: '资产X', rate: 20.0, area: 500 },
+    { property_name: '资产Y', rate: 30.0, area: 600 },
+  ],
+};
 
-describe('OccupancyRateChart - 基础属性测试', () => {
+describe('OccupancyRateChart', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('应该支持filters属性', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const filters = { ownership_status: '自有' };
-    const element = React.createElement(OccupancyRateChart, { filters });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, { height: 500 });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认height应该是400', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 图表类型测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含趋势折线图', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含物业性质饼图', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含权属方柱状图', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 统计指标测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示总体出租率统计', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示趋势变化统计', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示经营类物业出租率', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示权属方数量', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 排行榜测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示出租率最高资产排行', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示出租率最低资产排行', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 数据查询测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该使用useQuery获取数据', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('查询键应该包含filters', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const filters = { ownership_status: '自有' };
-    const element = React.createElement(OccupancyRateChart, { filters });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 错误处理测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('错误状态应该显示Alert', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 加载状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('加载中应该显示Spin', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 样式属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('图表应该有可配置的height', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, { height: 500 });
-    expect(element).toBeTruthy();
-  });
-
-  it('卡片应该有合适的间距', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 响应式布局测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持xs屏幕尺寸', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持sm屏幕尺寸', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持md屏幕尺寸', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持lg屏幕尺寸', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 趋势图标测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('上升趋势应该显示RiseOutlined图标', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('下降趋势应该显示FallOutlined图标', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-
-  it('稳定趋势应该显示MinusOutlined图标', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {});
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('OccupancyRateChart - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理undefined filters', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {
-      filters: undefined,
+    // Default mock: loading complete with data
+    mockUseQuery.mockReturnValue({
+      data: mockOccupancyData,
+      isLoading: false,
+      error: null,
     });
-    expect(element).toBeTruthy();
   });
 
-  it('应该处理空filters', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {
-      filters: {},
+  describe('Component Import', () => {
+    it('should be able to import OccupancyRateChart component', async () => {
+      const module = await import('../OccupancyRateChart');
+      expect(module).toBeDefined();
+      expect(module.default).toBeDefined();
     });
-    expect(element).toBeTruthy();
   });
 
-  it('应该处理height为0', async () => {
-    const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
-    const element = React.createElement(OccupancyRateChart, {
-      height: 0,
+  describe('Basic Rendering', () => {
+    it('should render without crashing', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
-    expect(element).toBeTruthy();
+
+    it('should render with filters prop', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      const filters = { ownership_status: '自有' };
+      render(<OccupancyRateChart filters={filters} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should render with custom height prop', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart height={500} />);
+      const lineChart = screen.getByTestId('line-chart');
+      expect(lineChart).toHaveAttribute('data-height', '500');
+    });
+  });
+
+  describe('Statistics Display', () => {
+    it('should display overall occupancy rate statistic', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('总体出租率');
+    });
+
+    it('should display trend change statistic', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('趋势变化');
+    });
+
+    it('should display commercial property occupancy rate', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('经营类物业出租率');
+    });
+
+    it('should display ownership entity count', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const statisticTitles = screen.getAllByTestId('statistic-title');
+      const titles = statisticTitles.map(el => el.textContent);
+      expect(titles).toContain('权属方数量');
+    });
+  });
+
+  describe('Chart Components', () => {
+    it('should render trend line chart', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getByTestId('line-chart')).toBeInTheDocument();
+    });
+
+    it('should render property nature pie chart', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+    });
+
+    it('should render ownership entity column chart', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getByTestId('column-chart')).toBeInTheDocument();
+    });
+  });
+
+  describe('Card Titles', () => {
+    it('should display trend analysis card title', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('出租率趋势分析');
+    });
+
+    it('should display property nature distribution card title', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('物业性质出租率分布');
+    });
+
+    it('should display ownership entity comparison card title', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('权属方出租率对比');
+    });
+
+    it('should display top performers card title', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('出租率最高资产');
+    });
+
+    it('should display low performers card title', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const cardTitles = screen.getAllByTestId('card-title');
+      const titles = cardTitles.map(el => el.textContent);
+      expect(titles).toContain('出租率最低资产');
+    });
+  });
+
+  describe('Loading State', () => {
+    it('should show spin component when loading', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+      });
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      const spinElements = screen.getAllByTestId('spin');
+      expect(spinElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Error State', () => {
+    it('should display Alert when there is an error', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Failed to load'),
+      });
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getByTestId('alert')).toBeInTheDocument();
+      expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'error');
+    });
+
+    it('should display error message in Alert', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Failed to load'),
+      });
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getByTestId('alert-message')).toHaveTextContent('数据加载失败');
+    });
+  });
+
+  describe('Data Query', () => {
+    it('should call useQuery with correct query key', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(mockUseQuery).toHaveBeenCalled();
+      const callArgs = mockUseQuery.mock.calls[0][0];
+      expect(callArgs.queryKey).toContain('occupancy-rate-stats');
+    });
+
+    it('should include filters in query key', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      const filters = { ownership_status: '自有' };
+      render(<OccupancyRateChart filters={filters} />);
+      const callArgs = mockUseQuery.mock.calls[0][0];
+      expect(callArgs.queryKey).toContain(filters);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle undefined filters', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart filters={undefined} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty filters', async () => {
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart filters={{}} />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty data', async () => {
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+      });
+      const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
+      render(<OccupancyRateChart />);
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
+    });
   });
 });

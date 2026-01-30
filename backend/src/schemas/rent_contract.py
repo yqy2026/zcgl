@@ -8,7 +8,9 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
+from ..constants.rent_contract_constants import PaymentStatus
 from ..core.enums import ContractStatus
 
 
@@ -79,7 +81,11 @@ class RentTermBase(BaseModel):
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
         if start_date and v <= start_date:
-            raise ValueError("结束日期必须大于开始日期")
+            raise PydanticCustomError(
+                "invalid_date_range",
+                "结束日期必须大于开始日期",
+                {},
+            )
         return v
 
 
@@ -109,7 +115,7 @@ class RentTermResponse(RentTermBase):
 class RentContractBase(BaseModel):
     """租金合同基础Schema - V2"""
 
-    contract_number: str | None = Field(None, description="合同编号（空则自动生成）")
+    contract_number: str | None = Field(None, description="合同编号")
     # V2: 改为多资产关联
     asset_ids: list[str] = Field(
         default_factory=list[Any], description="关联资产ID列表"
@@ -157,13 +163,29 @@ class RentContractBase(BaseModel):
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
         if start_date and v <= start_date:
-            raise ValueError("结束日期必须大于开始日期")
+            raise PydanticCustomError(
+                "invalid_date_range",
+                "结束日期必须大于开始日期",
+                {},
+            )
         return v
+
+    @field_validator("contract_number")
+    @classmethod
+    def validate_contract_number(cls, v: str | None) -> str | None:
+        """校验合同编号不能为空"""
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            raise PydanticCustomError("empty_contract_number", "合同编号不能为空", {})
+        return normalized
 
 
 class RentContractCreate(RentContractBase):
     """创建租金合同Schema"""
 
+    contract_number: str | None = Field(None, description="合同编号（手工录入）")
     rent_terms: list[RentTermCreate] = Field(..., description="租金条款列表")
 
     @field_validator("rent_terms")
@@ -173,7 +195,7 @@ class RentContractCreate(RentContractBase):
     ) -> list[RentTermCreate]:
         """验证租金条款"""
         if not v:
-            raise ValueError("租金条款不能为空")
+            raise PydanticCustomError("empty_rent_terms", "租金条款不能为空", {})
 
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
@@ -185,19 +207,27 @@ class RentContractCreate(RentContractBase):
 
             # 检查第一个条款开始日期
             if terms_sorted[0].start_date != start_date:
-                raise ValueError(
-                    f"第一个条款的开始日期必须是合同开始日期: {start_date}"
+                raise PydanticCustomError(
+                    "invalid_rent_term_start",
+                    f"第一个条款的开始日期必须是合同开始日期: {start_date}",
+                    {},
                 )
 
             # 检查连续性
             for i in range(len(terms_sorted) - 1):
                 if terms_sorted[i].end_date != terms_sorted[i + 1].start_date:
-                    raise ValueError("租金条款时间范围必须连续")
+                    raise PydanticCustomError(
+                        "rent_terms_not_continuous",
+                        "租金条款时间范围必须连续",
+                        {},
+                    )
 
             # 检查最后一个条款结束日期
             if terms_sorted[-1].end_date != end_date:
-                raise ValueError(
-                    f"最后一个条款的结束日期必须是合同结束日期: {end_date}"
+                raise PydanticCustomError(
+                    "invalid_rent_term_end",
+                    f"最后一个条款的结束日期必须是合同结束日期: {end_date}",
+                    {},
                 )
 
         return v
@@ -227,6 +257,17 @@ class RentContractUpdate(BaseModel):
     payment_terms: str | None = Field(None, description="支付条款")
     contract_notes: str | None = Field(None, description="合同备注")
     rent_terms: list[RentTermUpdate] | None = Field(None, description="租金条款列表")
+
+    @field_validator("contract_number")
+    @classmethod
+    def validate_contract_number(cls, v: str | None) -> str | None:
+        """校验合同编号不能为空"""
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            raise PydanticCustomError("empty_contract_number", "合同编号不能为空", {})
+        return normalized
 
 
 class AssetSimpleResponse(BaseModel):
@@ -269,7 +310,7 @@ class RentLedgerBase(BaseModel):
     due_amount: Decimal = Field(..., ge=0, description="应收金额")
     paid_amount: Decimal = Field(Decimal("0"), ge=0, description="实收金额")
     overdue_amount: Decimal = Field(Decimal("0"), ge=0, description="逾期金额")
-    payment_status: str = Field("未支付", description="支付状态")
+    payment_status: str = Field(PaymentStatus.UNPAID, description="支付状态")
     payment_date: date | None = Field(None, description="支付日期")
     payment_method: str | None = Field(None, description="支付方式")
     payment_reference: str | None = Field(None, description="支付参考号")
@@ -282,22 +323,26 @@ class RentLedgerBase(BaseModel):
     def validate_year_month(cls, v: str) -> str:
         """验证年月格式"""
         if len(v) != 7 or v[4] != "-":
-            raise ValueError("年月格式必须是YYYY-MM")
+            raise PydanticCustomError("invalid_year_month", "年月格式必须是YYYY-MM", {})
         try:
             month = int(v[5:7])
-            if not (1 <= month <= 12):
-                raise ValueError("月份必须在1-12之间")
         except ValueError:
-            raise ValueError("年月格式无效")
+            raise PydanticCustomError("invalid_year_month", "年月格式无效", {})
+        if not (1 <= month <= 12):
+            raise PydanticCustomError("invalid_month", "月份必须在1-12之间", {})
         return v
 
     @field_validator("payment_status")
     @classmethod
     def validate_payment_status(cls, v: str) -> str:
         """验证支付状态"""
-        valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
+        valid_statuses = [s.value for s in PaymentStatus]
         if v not in valid_statuses:
-            raise ValueError(f"支付状态必须是: {', '.join(valid_statuses)}")
+            raise PydanticCustomError(
+                "invalid_payment_status",
+                f"支付状态必须是: {', '.join(valid_statuses)}",
+                {},
+            )
         return v
 
 
@@ -406,13 +451,13 @@ class GenerateLedgerRequest(BaseModel):
         if v is None:
             return v
         if len(v) != 7 or v[4] != "-":
-            raise ValueError("年月格式必须是YYYY-MM")
+            raise PydanticCustomError("invalid_year_month", "年月格式必须是YYYY-MM", {})
         try:
             month = int(v[5:7])
-            if not (1 <= month <= 12):
-                raise ValueError("月份必须在1-12之间")
         except ValueError:
-            raise ValueError("年月格式无效")
+            raise PydanticCustomError("invalid_year_month", "年月格式无效", {})
+        if not (1 <= month <= 12):
+            raise PydanticCustomError("invalid_month", "月份必须在1-12之间", {})
         return v
 
 

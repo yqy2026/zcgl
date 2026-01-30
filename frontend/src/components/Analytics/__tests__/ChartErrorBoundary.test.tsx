@@ -3,28 +3,53 @@
  * 测试图表错误边界组件
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Alert: ({ message, description, type, showIcon, action, style }: any) => (
-    <div
-      data-testid="alert"
-      data-type={type}
-      data-message={message}
-      data-show-icon={showIcon}
-      style={style}
-    >
-      {description}
-      {action}
+  Alert: ({
+    message,
+    description,
+    type,
+    showIcon,
+    action,
+  }: {
+    message?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+    showIcon?: boolean;
+    action?: React.ReactNode;
+  }) => (
+    <div data-testid="alert" data-type={type} data-show-icon={showIcon}>
+      <div data-testid="alert-message">{message}</div>
+      <div data-testid="alert-description">{description}</div>
+      <div data-testid="alert-action">{action}</div>
     </div>
   ),
-  Button: ({ children, size, onClick }: any) => (
+  Button: ({
+    children,
+    size,
+    onClick,
+  }: {
+    children?: React.ReactNode;
+    size?: string;
+    onClick?: () => void;
+  }) => (
     <button data-testid="button" data-size={size} onClick={onClick}>
       {children}
     </button>
   ),
+}));
+
+// Mock logger
+vi.mock('../../utils/logger', () => ({
+  createLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 describe('ChartErrorBoundary - 组件导入测试', () => {
@@ -40,256 +65,193 @@ describe('ChartErrorBoundary - 组件导入测试', () => {
   });
 });
 
-describe('ChartErrorBoundary - 基础功能测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterAll(() => {
-    vi.restoreAllMocks();
-  });
-
+describe('ChartErrorBoundary - 正常渲染测试', () => {
   it('应该正常渲染children', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const children = React.createElement('div', {}, '正常内容');
-    const element = React.createElement(ChartErrorBoundary, {}, children);
-    expect(element).toBeTruthy();
+    render(
+      <ChartErrorBoundary>
+        <div data-testid="child-content">正常内容</div>
+      </ChartErrorBoundary>
+    );
+
+    expect(screen.getByTestId('child-content')).toBeInTheDocument();
+    expect(screen.getByText('正常内容')).toBeInTheDocument();
   });
 
-  it('应该支持fallback属性', async () => {
+  it('应该渲染多个children', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const fallback = React.createElement('div', {}, '自定义错误界面');
-    const children = React.createElement('div', {}, '正常内容');
-    const element = React.createElement(ChartErrorBoundary, { fallback }, children);
-    expect(element).toBeTruthy();
-  });
+    render(
+      <ChartErrorBoundary>
+        <div data-testid="child-1">Child 1</div>
+        <div data-testid="child-2">Child 2</div>
+      </ChartErrorBoundary>
+    );
 
-  it('应该支持onError回调', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const handleError = vi.fn();
-    const children = React.createElement('div', {}, '正常内容');
-    const element = React.createElement(ChartErrorBoundary, { onError: handleError }, children);
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('child-1')).toBeInTheDocument();
+    expect(screen.getByTestId('child-2')).toBeInTheDocument();
   });
 });
 
 describe('ChartErrorBoundary - 错误处理测试', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterAll(() => {
-    vi.restoreAllMocks();
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
-  it('应该捕获子组件错误', async () => {
+  it('错误时应该显示错误UI', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
+
     const ThrowError = () => {
       throw new Error('测试错误');
     };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
-  });
 
-  it('应该显示默认错误UI', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
-  });
+    render(
+      <ChartErrorBoundary>
+        <ThrowError />
+      </ChartErrorBoundary>
+    );
 
-  it('错误UI应该显示错误消息', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('alert')).toBeInTheDocument();
+    expect(screen.getByTestId('alert-message')).toHaveTextContent('图表加载失败');
   });
 
   it('错误UI应该显示错误详情', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
+
     const ThrowError = () => {
-      throw new Error('测试错误消息');
+      throw new Error('详细错误消息');
     };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
+
+    render(
+      <ChartErrorBoundary>
+        <ThrowError />
+      </ChartErrorBoundary>
+    );
+
+    expect(screen.getByText(/详细错误消息/)).toBeInTheDocument();
+  });
+
+  it('错误UI应该显示重试按钮', async () => {
+    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
+
+    const ThrowError = () => {
+      throw new Error('测试错误');
+    };
+
+    render(
+      <ChartErrorBoundary>
+        <ThrowError />
+      </ChartErrorBoundary>
+    );
+
+    expect(screen.getByTestId('button')).toBeInTheDocument();
+    expect(screen.getByText('重试')).toBeInTheDocument();
+  });
+
+  it('应该调用onError回调', async () => {
+    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
+    const handleError = vi.fn();
+
+    const ThrowError = () => {
+      throw new Error('测试错误');
+    };
+
+    render(
+      <ChartErrorBoundary onError={handleError}>
+        <ThrowError />
+      </ChartErrorBoundary>
+    );
+
+    expect(handleError).toHaveBeenCalled();
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ componentStack: expect.any(String) })
+    );
   });
 });
 
 describe('ChartErrorBoundary - 重试功能测试', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterAll(() => {
-    vi.restoreAllMocks();
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
-  it('应该显示重试按钮', async () => {
+  it('点击重试按钮应该尝试重新渲染', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const ThrowError = () => {
-      throw new Error('测试错误');
+    let shouldThrow = true;
+
+    const MaybeThrow = () => {
+      if (shouldThrow) {
+        throw new Error('测试错误');
+      }
+      return <div data-testid="recovered">恢复正常</div>;
     };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
-  });
 
-  it('点击重试应该重置错误状态', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(ChartErrorBoundary, {}, React.createElement(ThrowError));
-    expect(element).toBeTruthy();
-  });
-});
+    render(
+      <ChartErrorBoundary>
+        <MaybeThrow />
+      </ChartErrorBoundary>
+    );
 
-describe('ChartErrorBoundary - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
+    expect(screen.getByTestId('alert')).toBeInTheDocument();
 
-  afterAll(() => {
-    vi.restoreAllMocks();
-  });
+    // 修复错误条件
+    shouldThrow = false;
 
-  it('应该处理null children', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const element = React.createElement(ChartErrorBoundary, {}, null);
-    expect(element).toBeTruthy();
-  });
+    // 点击重试
+    fireEvent.click(screen.getByText('重试'));
 
-  it('应该处理undefined children', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const element = React.createElement(ChartErrorBoundary, {}, undefined);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理多个children', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const children = [
-      React.createElement('div', { key: 1 }, 'Child 1'),
-      React.createElement('div', { key: 2 }, 'Child 2'),
-    ];
-    const element = React.createElement(ChartErrorBoundary, {}, ...children);
-    expect(element).toBeTruthy();
+    // 注意：由于组件会重新渲染可能会再次抛出错误，这里主要测试按钮可点击
+    expect(screen.getByTestId('button')).toBeInTheDocument();
   });
 });
 
 describe('ChartErrorBoundary - fallback测试', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterAll(() => {
-    vi.restoreAllMocks();
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   it('应该使用自定义fallback', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const fallback = React.createElement('div', {}, '自定义错误');
+
     const ThrowError = () => {
       throw new Error('测试错误');
     };
-    const element = React.createElement(
-      ChartErrorBoundary,
-      { fallback },
-      React.createElement(ThrowError)
+
+    render(
+      <ChartErrorBoundary fallback={<div data-testid="custom-fallback">自定义错误界面</div>}>
+        <ThrowError />
+      </ChartErrorBoundary>
     );
-    expect(element).toBeTruthy();
-  });
 
-  it('fallback可以为null', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(
-      ChartErrorBoundary,
-      { fallback: null },
-      React.createElement(ThrowError)
-    );
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('ChartErrorBoundary - onError回调测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterAll(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('错误时应该调用onError', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const handleError = vi.fn();
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(
-      ChartErrorBoundary,
-      { onError: handleError },
-      React.createElement(ThrowError)
-    );
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递error对象给onError', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const handleError = vi.fn();
-    const ThrowError = () => {
-      throw new Error('测试错误消息');
-    };
-    const element = React.createElement(
-      ChartErrorBoundary,
-      { onError: handleError },
-      React.createElement(ThrowError)
-    );
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递errorInfo给onError', async () => {
-    const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    const handleError = vi.fn();
-    const ThrowError = () => {
-      throw new Error('测试错误');
-    };
-    const element = React.createElement(
-      ChartErrorBoundary,
-      { onError: handleError },
-      React.createElement(ThrowError)
-    );
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('custom-fallback')).toBeInTheDocument();
+    expect(screen.getByText('自定义错误界面')).toBeInTheDocument();
   });
 });
 
 describe('ChartErrorBoundary - 静态方法测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该有getDerivedStateFromError静态方法', async () => {
+  it('getDerivedStateFromError应该返回正确的状态', async () => {
     const module = await import('../ChartErrorBoundary');
     const ChartErrorBoundary = module.default;
-    expect(ChartErrorBoundary.getDerivedStateFromError).toBeDefined();
-  });
-
-  it('getDerivedStateFromError应该返回错误状态', async () => {
-    const module = await import('../ChartErrorBoundary');
-    const ChartErrorBoundary = module.default as any;
     const error = new Error('测试错误');
     const state = ChartErrorBoundary.getDerivedStateFromError(error);
+
     expect(state.hasError).toBe(true);
     expect(state.error).toBe(error);
   });

@@ -64,10 +64,10 @@ describe('useContractList', () => {
     const mockAssets = { items: [{ id: 'a1' }] };
     const mockOwnerships = [{ id: 'o1' }];
 
-    (rentContractService.getContracts as any).mockResolvedValue(mockContracts);
-    (rentContractService.getRentStatistics as any).mockResolvedValue(mockStats);
-    (assetService.getAssets as any).mockResolvedValue(mockAssets);
-    (ownershipService.getOwnershipOptions as any).mockResolvedValue(mockOwnerships);
+    vi.mocked(rentContractService.getContracts).mockResolvedValue(mockContracts);
+    vi.mocked(rentContractService.getRentStatistics).mockResolvedValue(mockStats);
+    vi.mocked(assetService.getAssets).mockResolvedValue(mockAssets);
+    vi.mocked(ownershipService.getOwnershipOptions).mockResolvedValue(mockOwnerships);
 
     const { result } = renderHook(() => useContractList());
 
@@ -117,10 +117,10 @@ describe('useContractList', () => {
     const { result } = renderHook(() => useContractList());
 
     // Setup Modal.confirm mock to trigger onOk immediately
-    (Modal.confirm as any).mockImplementation(({ onOk }: any) => {
-      onOk();
+    vi.mocked(Modal.confirm).mockImplementation(({ onOk }: { onOk?: () => void }) => {
+      onOk?.();
     });
-    (rentContractService.deleteContract as any).mockResolvedValue({});
+    vi.mocked(rentContractService.deleteContract).mockResolvedValue({});
 
     await act(async () => {
       await result.current.handleDelete('123');

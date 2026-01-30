@@ -41,10 +41,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    return MagicMock()
 
 
 @pytest.fixture
@@ -85,9 +81,11 @@ def mock_collection_record():
 @pytest.fixture
 def mock_rent_ledger():
     """Create mock rent ledger"""
+    from src.constants.rent_contract_constants import PaymentStatus
+
     ledger = MagicMock()
     ledger.id = "ledger-123"
-    ledger.payment_status = "未支付"
+    ledger.payment_status = PaymentStatus.UNPAID
     ledger.due_date = date.today()
     ledger.overdue_amount = Decimal("5000.00")
     ledger.data_status = "正常"

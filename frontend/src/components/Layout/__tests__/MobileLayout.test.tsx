@@ -7,44 +7,76 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 
+interface LayoutSectionMockProps {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  size?: number | string;
+  style?: React.CSSProperties;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+  size?: number | string;
+}
+
+interface AvatarMockProps {
+  children?: React.ReactNode;
+  size?: number | string;
+  icon?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+  strong?: boolean;
+  type?: string;
+  style?: React.CSSProperties;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Layout: {
-    Header: ({ children, style }: any) => (
+    Header: ({ children, style }: LayoutSectionMockProps) => (
       <div data-testid="header" style={style}>
         {children}
       </div>
     ),
-    Content: ({ children, style }: any) => (
+    Content: ({ children, style }: LayoutSectionMockProps) => (
       <div data-testid="content" style={style}>
         {children}
       </div>
     ),
-    Footer: ({ children, style }: any) => (
+    Footer: ({ children, style }: LayoutSectionMockProps) => (
       <div data-testid="footer" style={style}>
         {children}
       </div>
     ),
   },
-  Button: ({ children, icon, type, size, style }: any) => (
+  Button: ({ children, icon, type, size, style }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} data-size={size} style={style}>
       {icon && <span data-testid="button-icon">{icon}</span>}
       {children}
     </button>
   ),
-  Space: ({ children, size }: any) => (
+  Space: ({ children, size }: SpaceMockProps) => (
     <div data-testid="space" data-size={size}>
       {children}
     </div>
   ),
-  Avatar: ({ children, size, icon, style }: any) => (
+  Avatar: ({ children, size, icon, style }: AvatarMockProps) => (
     <div data-testid="avatar" data-size={size} style={style}>
       {icon}
       {children}
     </div>
   ),
   Typography: {
-    Text: ({ children, strong, type, style }: any) => (
+    Text: ({ children, strong, type, style }: TypographyTextMockProps) => (
       <span data-testid="text" data-strong={strong} data-type={type} style={style}>
         {children}
       </span>

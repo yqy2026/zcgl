@@ -4,10 +4,9 @@ Comprehensive unit tests for CustomFieldService.
 Tests all major methods and code paths to achieve 80%+ coverage.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import AssetCustomField
 from src.schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
@@ -17,10 +16,6 @@ TEST_FIELD_ID = "field_123"
 TEST_ASSET_ID = "asset_456"
 
 
-@pytest.fixture
-def mock_db():
-    """Mock database session."""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

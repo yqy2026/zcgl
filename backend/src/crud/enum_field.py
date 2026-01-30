@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
+from ..core.exception_handler import OperationNotAllowedError
 from ..models.enum_field import (
     EnumFieldHistory,
     EnumFieldType,
@@ -200,7 +201,7 @@ class EnumFieldTypeCRUD:
         )
 
         if value_count > 0:
-            raise ValueError("无法删除包含枚举值的枚举类型")
+            raise OperationNotAllowedError("无法删除包含枚举值的枚举类型")
 
         # 检查是否有使用记录
         usage_count = (
@@ -215,7 +216,7 @@ class EnumFieldTypeCRUD:
         )
 
         if usage_count > 0:
-            raise ValueError("无法删除正在使用的枚举类型")
+            raise OperationNotAllowedError("无法删除正在使用的枚举类型")
 
         # 安全设置属性
         _set_attr(db_obj, "is_deleted", True)
@@ -481,7 +482,7 @@ class EnumFieldValueCRUD:
         )
 
         if children_count > 0:
-            raise ValueError("无法删除包含子枚举值的枚举值")
+            raise OperationNotAllowedError("无法删除包含子枚举值的枚举值")
 
         # 安全设置属性
         _set_attr(db_obj, "is_deleted", True)

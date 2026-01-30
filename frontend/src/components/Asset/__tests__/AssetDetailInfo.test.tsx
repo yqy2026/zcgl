@@ -1,737 +1,586 @@
 /**
  * AssetDetailInfo 组件测试
- *
- * 测试覆盖范围:
- * - 组件导入与导出
- * - 基本属性测试
- * - 基本信息卡片
- * - 面积信息卡片
- * - 接收信息卡片
- * - 协议详情卡片
- * - 合同信息卡片
- * - 备注信息卡片
- * - 经营性 vs 非经营性差异
- * - Descriptions 组件布局
- * - 空值处理
- * - 图标显示
- * - 卡片标题
+ * 测试资产详情信息展示
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-
-// Mock antd 组件
-vi.mock('antd', () => ({
-  Card: ({ children, title, extra, className }: any) => (
-    <div data-testid="card" data-title={title} data-class={className} className={className}>
-      <div className="card-title">{title}</div>
-      {extra && <div className="card-extra">{extra}</div>}
-      {children}
-    </div>
-  ),
-  Descriptions: ({ children, column, bordered, size, items, className }: any) => (
-    <div
-      data-testid="descriptions"
-      data-column={column}
-      data-bordered={bordered}
-      data-size={size}
-      className={className}
-    >
-      {items &&
-        items.map((item: any, index: number) => (
-          <div key={index} data-label={item.label}>
-            <span className="label">{item.label}</span>
-            <span className="value">{item.children || item.value}</span>
-          </div>
-        ))}
-      {children}
-    </div>
-  ),
-  Badge: ({ children, color }: any) => (
-    <span data-testid="badge" data-color={color}>
-      {children}
-    </span>
-  ),
-  Tag: ({ children, color }: any) => (
-    <span data-testid="tag" data-color={color}>
-      {children}
-    </span>
-  ),
-  Tooltip: ({ children, title }: any) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
-  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
-}));
-
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  EnvironmentOutlined: () => <span data-testid="icon-environment" />,
-  HomeOutlined: () => <span data-testid="icon-home" />,
-  UserOutlined: () => <span data-testid="icon-user" />,
-  FileTextOutlined: () => <span data-testid="icon-filetext" />,
-  FileProtectOutlined: () => <span data-testid="icon-fileprotect" />,
-  DollarOutlined: () => <span data-testid="icon-dollar" />,
-  InfoCircleOutlined: () => <span data-testid="icon-infocircle" />,
-  PhoneOutlined: () => <span data-testid="icon-phone" />,
-}));
+import { render, screen } from '@testing-library/react';
+import { createMockAsset } from '@/test-utils/factories';
 
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
-  formatArea: (value: number) => `${value.toLocaleString()} ㎡`,
-  formatPercentage: (value: number) => `${value.toFixed(2)}%`,
-  formatDate: (_date: string, _format?: string) => '2024-01-01',
-  formatCurrency: (value: number) => `¥${value.toLocaleString()}`,
-  getStatusColor: (_status: string, _type: string) => 'blue',
+  formatDate: (date: string, format?: string) =>
+    date ? (format === 'datetime' ? '2024-01-01 12:00' : '2024-01-01') : '-',
+  getStatusColor: (status: string, type: string) => {
+    if (type === 'ownership') return 'blue';
+    if (type === 'property') return 'green';
+    if (type === 'usage') return 'cyan';
+    return 'default';
+  },
+  calculateOccupancyRate: (rented: number, rentable: number) =>
+    rentable > 0 ? (rented / rentable) * 100 : 0,
 }));
 
-// Mock services
-vi.mock('@/services', () => ({
-  getAssetStatusLabel: (_status: string) => 'status',
-  getPropertyNatureLabel: (_nature: string) => 'nature',
-  getUsageStatusCategory: (_status: string) => 'operating',
+// Mock colorMap
+vi.mock('@/styles/colorMap', () => ({
+  getOccupancyRateColor: (rate: number) => {
+    if (rate >= 80) return '#52c41a';
+    if (rate >= 60) return '#faad14';
+    return '#ff4d4f';
+  },
+  COLORS: {
+    primary: '#1890ff',
+    success: '#52c41a',
+    warning: '#faad14',
+    error: '#ff4d4f',
+    textTertiary: '#999',
+  },
 }));
 
-describe('AssetDetailInfo 组件测试', () => {
+// Mock Ant Design components
+vi.mock('antd', () => {
+  const Card = ({
+    children,
+    title,
+    extra,
+    style,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+    extra?: React.ReactNode;
+    style?: React.CSSProperties;
+  }) => (
+    <div data-testid="card" style={style}>
+      {title && <div data-testid="card-title">{title}</div>}
+      {extra && <div data-testid="card-extra">{extra}</div>}
+      {children}
+    </div>
+  );
+
+  const Descriptions = ({
+    children,
+    bordered,
+    column,
+  }: {
+    children: React.ReactNode;
+    bordered?: boolean;
+    column?: number | object;
+  }) => (
+    <div
+      data-testid="descriptions"
+      data-bordered={bordered}
+      data-column={typeof column === 'object' ? JSON.stringify(column) : column}
+    >
+      {children}
+    </div>
+  );
+
+  Descriptions.Item = ({
+    children,
+    label,
+    span,
+  }: {
+    children: React.ReactNode;
+    label?: React.ReactNode;
+    span?: number;
+  }) => (
+    <div data-testid="descriptions-item" data-span={span}>
+      <span data-testid="item-label">{label}</span>
+      <span data-testid="item-content">{children}</span>
+    </div>
+  );
+
+  return {
+    Card,
+    Descriptions,
+    Tag: ({
+      children,
+      color,
+    }: {
+      children: React.ReactNode;
+      color?: string;
+    }) => (
+      <span data-testid="tag" data-color={color}>
+        {children}
+      </span>
+    ),
+    Progress: ({
+      percent,
+      strokeColor,
+    }: {
+      percent: number;
+      strokeColor?: string;
+    }) => (
+      <div
+        data-testid="progress"
+        data-percent={percent}
+        data-color={strokeColor}
+        role="progressbar"
+      />
+    ),
+    Row: ({ children, gutter }: { children: React.ReactNode; gutter?: number }) => (
+      <div data-testid="row" data-gutter={gutter}>
+        {children}
+      </div>
+    ),
+    Col: ({
+      children,
+      xs,
+      sm,
+      md,
+      lg,
+    }: {
+      children: React.ReactNode;
+      xs?: number;
+      sm?: number;
+      md?: number;
+      lg?: number;
+    }) => (
+      <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
+        {children}
+      </div>
+    ),
+    Statistic: ({
+      title,
+      value,
+      suffix,
+      valueStyle,
+    }: {
+      title: string;
+      value: number;
+      suffix?: string;
+      valueStyle?: React.CSSProperties;
+    }) => (
+      <div data-testid={`statistic-${title}`} style={valueStyle}>
+        <span>{title}</span>
+        <span data-testid="statistic-value">
+          {value}
+          {suffix}
+        </span>
+      </div>
+    ),
+    Divider: ({
+      children,
+      titlePlacement,
+    }: {
+      children: React.ReactNode;
+      titlePlacement?: string;
+    }) => (
+      <div data-testid="divider" data-placement={titlePlacement}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+// Mock icons
+vi.mock('@ant-design/icons', () => ({
+  HomeOutlined: () => <span data-testid="icon-home">HomeIcon</span>,
+  EnvironmentOutlined: () => <span data-testid="icon-environment">EnvIcon</span>,
+  UserOutlined: () => <span data-testid="icon-user">UserIcon</span>,
+  CalendarOutlined: () => <span data-testid="icon-calendar">CalendarIcon</span>,
+  PercentageOutlined: () => <span data-testid="icon-percentage">PercentIcon</span>,
+  InfoCircleOutlined: () => <span data-testid="icon-info">InfoIcon</span>,
+}));
+
+import AssetDetailInfo from '../AssetDetailInfo';
+
+describe('AssetDetailInfo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockAsset: any = {
-    id: '1',
-    property_name: '测试物业',
-    ownership_status: '自有',
-    property_nature: '商业',
-    usage_status: '在租',
-    address: '测试地址123号',
-    ownership_entity: '测试公司',
-    land_area: 1000,
-    actual_area: 1200,
-    rentable_area: 1100,
-    rented_area: 880,
-    occupancy_rate: 80,
-    certificated_usage: '商业服务',
-    actual_usage: '商铺出租',
-    ownership_certificate_number: '权证字001号',
-    land_certificate_number: '土地证002号',
-    registration_date: '2020-01-01',
-    land_nature: '出让',
-    land_use_year: 40,
-    land_end_date: '2060-01-01',
-    receiving_unit: '接收单位A',
-    receiving_person: '张三',
-    receiving_phone: '13800138000',
-    receiving_date: '2020-01-15',
-    receiving_notes: '接收备注信息',
-    agreement_number: '协议003号',
-    agreement_date: '2020-02-01',
-    agreement_amount: 5000000,
-    supplier_name: '供应商B',
-    supplier_contact: '李四',
-    supplier_phone: '13900139000',
-    contract_id: 'C001',
-    contract_number: '合同004号',
-    contract_type: '租赁合同',
-    contract_start_date: '2020-03-01',
-    contract_end_date: '2025-02-28',
-    contract_amount: 1000000,
-    annual_rent: 200000,
-    payment_cycle: '季度',
-    deposit_amount: 50000,
-    notes: '这是资产备注信息\n多行备注内容',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-15T00:00:00.000Z',
-  };
+  describe('基本渲染', () => {
+    it('应该正确渲染组件', () => {
+      const asset = createMockAsset({ property_name: '测试物业' });
+      render(<AssetDetailInfo asset={asset} />);
 
-  // Helper function to create component element
-  const createElement = async (props: any = {}) => {
-    const module = await import('../AssetDetailInfo');
-    const Component = module.default;
-    return React.createElement(Component, { asset: mockAsset, ...props });
-  };
-
-  describe('组件导入与导出', () => {
-    it('应该成功导入默认导出', async () => {
-      const module = await import('../AssetDetailInfo');
-      expect(module.default).toBeDefined();
+      expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
 
-    it('应该是React组件', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示基本信息卡片标题', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('基本信息')).toBeInTheDocument();
+    });
+
+    it('应该显示面积信息卡片', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('面积信息')).toBeInTheDocument();
+    });
+
+    it('应该显示接收信息卡片', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('接收信息')).toBeInTheDocument();
     });
   });
 
-  describe('基本属性测试', () => {
-    it('应该接收 asset 属性', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('基本信息显示', () => {
+    it('应该显示物业名称', () => {
+      const asset = createMockAsset({ property_name: '测试物业A栋' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('测试物业A栋')).toBeInTheDocument();
     });
 
-    it('应该接受 className 属性', async () => {
-      const element = await createElement({ className: 'custom-class' });
-      expect(element).toBeTruthy();
+    it('应该显示项目名称', () => {
+      const asset = createMockAsset({ project_name: '测试项目' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('测试项目')).toBeInTheDocument();
     });
 
-    it('应该接受 style 属性', async () => {
-      const element = await createElement({ style: { marginTop: 16 } });
-      expect(element).toBeTruthy();
+    it('应该显示权属方', () => {
+      const asset = createMockAsset({ ownership_entity: '测试集团有限公司' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('测试集团有限公司')).toBeInTheDocument();
     });
 
-    it('应该处理空 asset', async () => {
-      const module = await import('../AssetDetailInfo');
-      const Component = module.default;
-      const element = React.createElement(Component, { asset: {} });
-      expect(element).toBeTruthy();
+    it('应该显示地址', () => {
+      const asset = createMockAsset({ address: '深圳市南山区科技园' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('深圳市南山区科技园')).toBeInTheDocument();
     });
 
-    it('应该处理 null asset', async () => {
-      const module = await import('../AssetDetailInfo');
-      const Component = module.default;
-      const element = React.createElement(Component, { asset: null });
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该显示确权状态标签', () => {
+      const asset = createMockAsset({ ownership_status: '已确权' });
+      render(<AssetDetailInfo asset={asset} />);
 
-  describe('基本信息卡片', () => {
-    it('应该显示物业名称', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByText('已确权')).toBeInTheDocument();
     });
 
-    it('应该显示权属状态', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示使用状态标签', () => {
+      const asset = createMockAsset({ usage_status: '出租' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('出租')).toBeInTheDocument();
     });
 
-    it('应该显示物业性质', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示物业性质标签', () => {
+      const asset = createMockAsset({ property_nature: '经营性' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('经营性')).toBeInTheDocument();
     });
 
-    it('应该显示使用状态', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该显示是否涉诉', () => {
+      const asset = createMockAsset({ is_litigated: true });
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('应该显示地址', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示权属单位', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByText('是')).toBeInTheDocument();
     });
   });
 
-  describe('面积信息卡片', () => {
-    it('应该显示土地面积', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('面积信息显示', () => {
+    it('应该显示土地面积', () => {
+      const asset = createMockAsset({ land_area: 1000 });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
 
-    it('应该显示实际面积', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示实际房产面积', () => {
+      const asset = createMockAsset({ actual_property_area: 800 });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-实际房产面积')).toBeInTheDocument();
     });
 
-    it('应该显示可出租面积', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示已出租面积', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示出租率', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用面积格式化', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用百分比格式化', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('接收信息卡片', () => {
-    it('应该显示接收单位', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示接收人', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示联系电话', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示接收日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示接收备注', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('协议详情卡片', () => {
-    it('应该显示协议编号', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示协议日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示协议金额', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示供应商名称', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示供应商联系人', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示供应商电话', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用货币格式化', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该使用日期格式化', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('合同信息卡片', () => {
-    it('应该显示合同编号', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示合同类型', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示合同开始日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示合同结束日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示合同金额', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示年租金', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示付款周期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示保证金金额', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('备注信息卡片', () => {
-    it('应该显示备注内容', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理多行备注', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理空备注', async () => {
-      const element = await createElement({ asset: { ...mockAsset, notes: '' } });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理 undefined 备注', async () => {
-      const element = await createElement({ asset: { ...mockAsset, notes: undefined } });
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('经营性 vs 非经营性差异', () => {
-    it('经营性资产应该显示合同信息', async () => {
-      const element = await createElement({
-        asset: { ...mockAsset, usage_status_category: 'operating' },
+    it('经营性资产应该显示可出租面积', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 600,
       });
-      expect(element).toBeTruthy();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-可出租面积')).toBeInTheDocument();
     });
 
-    it('非经营性资产应该显示协议信息', async () => {
-      const element = await createElement({
-        asset: { ...mockAsset, usage_status_category: 'non-operating' },
+    it('经营性资产应该显示已出租面积', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rented_area: 300,
       });
-      expect(element).toBeTruthy();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-已出租面积')).toBeInTheDocument();
     });
 
-    it('应该根据 usage_status_category 判断经营性', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('经营性资产应该显示未出租面积', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        unrented_area: 100,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-未出租面积')).toBeInTheDocument();
+    });
+
+    it('非经营性资产不应该显示出租面积', () => {
+      const asset = createMockAsset({
+        property_nature: '非经营性',
+        rentable_area: 600,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.queryByTestId('statistic-可出租面积')).not.toBeInTheDocument();
     });
   });
 
-  describe('Descriptions 组件布局', () => {
-    it('应该使用 column=3 布局', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('出租率显示', () => {
+    it('经营性资产应该显示出租率', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 100,
+        rented_area: 80,
+        occupancy_rate: 80,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText(/出租率/)).toBeInTheDocument();
     });
 
-    it('应该使用 bordered 属性', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('有可出租面积时应该显示进度条', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 100,
+        rented_area: 80,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('progress')).toBeInTheDocument();
     });
 
-    it('应该使用 small 尺寸', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('rentable_area为0时不应该显示进度条', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 0,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.queryByTestId('progress')).not.toBeInTheDocument();
     });
   });
 
-  describe('空值处理', () => {
-    it('应该处理缺失的土地面积', async () => {
-      const element = await createElement({ asset: { ...mockAsset, land_area: undefined } });
-      expect(element).toBeTruthy();
+  describe('接收信息显示', () => {
+    it('应该显示接收模式', () => {
+      const asset = createMockAsset({ business_model: '委托经营' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('委托经营')).toBeInTheDocument();
     });
 
-    it('应该处理缺失的合同信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, contract_id: null } });
-      expect(element).toBeTruthy();
+    it('应该显示是否计入出租率', () => {
+      const asset = createMockAsset({ include_in_occupancy_rate: true });
+      render(<AssetDetailInfo asset={asset} />);
+
+      // 检查标签存在
+      const tags = screen.getAllByTestId('tag');
+      const includeTag = tags.find(tag => tag.textContent === '是');
+      expect(includeTag).toBeInTheDocument();
     });
 
-    it('应该处理缺失的协议信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, agreement_number: '' } });
-      expect(element).toBeTruthy();
-    });
+    it('应该显示权属类别', () => {
+      const asset = createMockAsset({ ownership_category: '自有物业' });
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('应该处理 0 值面积', async () => {
-      const element = await createElement({
-        asset: { ...mockAsset, land_area: 0, actual_area: 0 },
+      expect(screen.getByText('自有物业')).toBeInTheDocument();
+    });
+  });
+
+  describe('合同信息显示', () => {
+    it('出租状态应该显示合同信息卡片', () => {
+      const asset = createMockAsset({
+        usage_status: '出租',
+        tenant_name: '租户A',
       });
-      expect(element).toBeTruthy();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('合同信息')).toBeInTheDocument();
+    });
+
+    it('应该显示租户名称', () => {
+      const asset = createMockAsset({
+        usage_status: '出租',
+        tenant_name: '测试租户公司',
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('测试租户公司')).toBeInTheDocument();
+    });
+
+    it('应该显示租赁合同编号', () => {
+      const asset = createMockAsset({
+        usage_status: '出租',
+        lease_contract_number: 'LC-2024-001',
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('LC-2024-001')).toBeInTheDocument();
+    });
+
+    it('非出租状态不应该显示合同信息卡片', () => {
+      const asset = createMockAsset({ usage_status: '空置' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.queryByText('合同信息')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('备注信息显示', () => {
+    it('有备注时应该显示备注卡片', () => {
+      const asset = createMockAsset({ notes: '这是备注内容' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('备注信息')).toBeInTheDocument();
+      expect(screen.getByText('这是备注内容')).toBeInTheDocument();
+    });
+
+    it('无备注时不应该显示备注卡片', () => {
+      const asset = createMockAsset({ notes: '' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.queryByText('备注信息')).not.toBeInTheDocument();
+    });
+
+    it('备注为undefined时不应该显示备注卡片', () => {
+      const asset = createMockAsset({ notes: undefined });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.queryByText('备注信息')).not.toBeInTheDocument();
     });
   });
 
   describe('图标显示', () => {
-    it('基本信息应该显示 EnvironmentOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示基本信息图标', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('icon-info')).toBeInTheDocument();
     });
 
-    it('面积信息应该显示 HomeOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示位置图标', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('icon-environment')).toBeInTheDocument();
     });
 
-    it('接收信息应该显示 UserOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该显示用户图标', () => {
+      const asset = createMockAsset();
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('协议详情应该显示 FileTextOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('合同信息应该显示 FileProtectOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('备注信息应该显示 InfoCircleOutlined 图标', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('icon-user')).toBeInTheDocument();
     });
   });
 
-  describe('卡片标题', () => {
-    it('基本信息标题应该包含 Icon 和文本', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+  describe('空值处理', () => {
+    it('应该处理缺失的物业名称', () => {
+      const asset = createMockAsset({ property_name: undefined });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('-')).toBeInTheDocument();
     });
 
-    it('面积信息标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该处理缺失的地址', () => {
+      const asset = createMockAsset({ address: undefined });
+      render(<AssetDetailInfo asset={asset} />);
+
+      const dashElements = screen.getAllByText('-');
+      expect(dashElements.length).toBeGreaterThan(0);
     });
 
-    it('接收信息标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该处理缺失的权属方', () => {
+      const asset = createMockAsset({ ownership_entity: undefined });
+      render(<AssetDetailInfo asset={asset} />);
+
+      const dashElements = screen.getAllByText('-');
+      expect(dashElements.length).toBeGreaterThan(0);
     });
 
-    it('协议详情标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该处理0值面积', () => {
+      const asset = createMockAsset({
+        land_area: 0,
+        actual_property_area: 0,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
 
-    it('合同信息标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
+    it('应该处理null面积值', () => {
+      const asset = createMockAsset({
+        land_area: null as unknown as number,
+      });
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('备注信息标题应该正确显示', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('权属证书信息', () => {
-    it('应该显示权属证书编号', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示土地证号', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示登记日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('土地信息', () => {
-    it('应该显示土地性质', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示土地使用年限', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示土地到期日期', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('经营性质信息', () => {
-    it('应该显示证载用途', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示实际用途', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
-
-  describe('供应商信息', () => {
-    it('应该显示供应商名称', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示供应商联系人', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-
-    it('应该显示供应商电话', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+      expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
   });
 
   describe('时间信息', () => {
-    it('应该显示创建时间', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
+    it('应该显示创建时间', () => {
+      const asset = createMockAsset({ created_at: '2024-01-01T00:00:00.000Z' });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText(/创建时间/)).toBeInTheDocument();
     });
 
-    it('应该显示更新时间', async () => {
-      const element = await createElement();
-      expect(element).toBeTruthy();
-    });
-  });
+    it('应该显示更新时间', () => {
+      const asset = createMockAsset({ updated_at: '2024-01-15T00:00:00.000Z' });
+      render(<AssetDetailInfo asset={asset} />);
 
-  describe('空值保护修复验证', () => {
-    it('应该处理undefined可选字段不崩溃', async () => {
-      const minimalAsset = {
-        id: '1',
-        property_name: '测试资产',
-        // 缺失所有可选字段
-      };
-      const element = await createElement({ asset: minimalAsset });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该将null面积字段显示为0', async () => {
-      const assetWithNullAreas = {
-        ...mockAsset,
-        rentable_area: null,
-        rented_area: null,
-        land_area: null,
-      };
-      const element = await createElement({ asset: assetWithNullAreas });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该将undefined字段显示为占位符', async () => {
-      const assetWithUndefinedFields = {
-        ...mockAsset,
-        ownership_entity: undefined,
-        address: undefined,
-        property_nature: undefined,
-      };
-      const element = await createElement({ asset: assetWithUndefinedFields });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理空字符串日期', async () => {
-      const assetWithEmptyDates = {
-        ...mockAsset,
-        contract_start_date: '',
-        contract_end_date: '',
-        registration_date: '',
-      };
-      const element = await createElement({ asset: assetWithEmptyDates });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理property_nature为undefined', async () => {
-      const assetWithUndefinedNature = {
-        ...mockAsset,
-        property_nature: undefined,
-      };
-      const element = await createElement({ asset: assetWithUndefinedNature });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理property_nature为null', async () => {
-      const assetWithNullNature = {
-        ...mockAsset,
-        property_nature: null,
-      };
-      const element = await createElement({ asset: assetWithNullNature });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理usage_status为undefined', async () => {
-      const assetWithUndefinedStatus = {
-        ...mockAsset,
-        usage_status: undefined,
-      };
-      const element = await createElement({ asset: assetWithUndefinedStatus });
-      expect(element).toBeTruthy();
-    });
-
-    it('应该处理ownership_status为undefined', async () => {
-      const assetWithUndefinedOwnershipStatus = {
-        ...mockAsset,
-        ownership_status: undefined,
-      };
-      const element = await createElement({ asset: assetWithUndefinedOwnershipStatus });
-      expect(element).toBeTruthy();
+      expect(screen.getByText(/更新时间/)).toBeInTheDocument();
     });
   });
 
-  describe('format工具函数空值保护', () => {
-    it('getStatusColor应该处理undefined status', async () => {
-      const { getStatusColor } = await import('@/utils/format');
-      const color = getStatusColor(undefined as any, 'property');
-      expect(color).toBeDefined();
-      expect(typeof color).toBe('string');
+  describe('接收协议详情', () => {
+    it('有协议日期时应该显示接收协议详情卡片', () => {
+      const asset = createMockAsset({
+        operation_agreement_start_date: '2024-01-01',
+        operation_agreement_end_date: '2025-01-01',
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('接收协议详情')).toBeInTheDocument();
     });
 
-    it('getStatusColor应该处理空字符串status', async () => {
-      const { getStatusColor } = await import('@/utils/format');
-      const color = getStatusColor('', 'property');
-      expect(color).toBeDefined();
-      expect(typeof color).toBe('string');
-    });
+    it('无协议日期时不应该显示接收协议详情卡片', () => {
+      const asset = createMockAsset({
+        operation_agreement_start_date: undefined,
+        operation_agreement_end_date: undefined,
+        operation_agreement_attachments: undefined,
+      });
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('getStatusColor应该处理null status', async () => {
-      const { getStatusColor } = await import('@/utils/format');
-      const color = getStatusColor(null as any, 'property');
-      expect(color).toBeDefined();
-      expect(typeof color).toBe('string');
+      expect(screen.queryByText('接收协议详情')).not.toBeInTheDocument();
     });
   });
 
-  describe('property_nature可选链保护', () => {
-    it('应该安全处理property_nature可选链调用', async () => {
-      const assetWithUndefinedNature = {
-        ...mockAsset,
-        property_nature: undefined,
-      };
-      const element = await createElement({ asset: assetWithUndefinedNature });
-      expect(element).toBeTruthy();
+  describe('经营性 vs 非经营性', () => {
+    it('经营性资产应该显示出租率信息', () => {
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 100,
+      });
+      render(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByTestId('icon-percentage')).toBeInTheDocument();
     });
 
-    it('应该处理非经营类property_nature', async () => {
-      const assetWithNonOperatingNature = {
-        ...mockAsset,
-        property_nature: '非经营类',
-      };
-      const element = await createElement({ asset: assetWithNonOperatingNature });
-      expect(element).toBeTruthy();
-    });
+    it('非经营性资产不应该显示出租率信息', () => {
+      const asset = createMockAsset({ property_nature: '非经营性' });
+      render(<AssetDetailInfo asset={asset} />);
 
-    it('应该处理经营类property_nature', async () => {
-      const assetWithOperatingNature = {
-        ...mockAsset,
-        property_nature: '经营类',
-      };
-      const element = await createElement({ asset: assetWithOperatingNature });
-      expect(element).toBeTruthy();
+      expect(screen.queryByTestId('icon-percentage')).not.toBeInTheDocument();
     });
   });
 });

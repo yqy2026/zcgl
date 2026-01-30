@@ -9,6 +9,8 @@ All role comparisons should use RoleNormalizer for case-insensitive matching.
 
 from enum import Enum
 
+from ..core.exception_handler import BusinessValidationError
+
 
 # Centralized role definition (matches UserRole but with utility methods)
 class Role(str, Enum):
@@ -30,7 +32,7 @@ class Role(str, Enum):
             Role enum value
 
         Raises:
-            ValueError: If role string is invalid
+            BusinessValidationError: If role string is invalid
 
         Examples:
             >>> Role.from_string("admin")
@@ -45,7 +47,7 @@ class Role(str, Enum):
             "moderator": cls.MODERATOR,
         }
         if normalized not in role_map:
-            raise ValueError(f"Invalid role: {role_str}")
+            raise BusinessValidationError(f"Invalid role: {role_str}")
         return role_map[normalized]
 
 
@@ -125,7 +127,7 @@ class RoleNormalizer:
             Role enum value
 
         Raises:
-            ValueError: If role is invalid
+            BusinessValidationError: If role is invalid
 
         Examples:
             >>> RoleNormalizer.validate("admin")

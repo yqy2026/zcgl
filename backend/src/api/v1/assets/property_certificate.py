@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
+from ....core.exception_handler import BaseBusinessError
 from ....core.router_registry import route_registry
 from ....database import get_db
 from ....middleware.auth import require_permission
@@ -175,13 +176,8 @@ async def confirm_import(
         )
 
         return {"certificate_id": certificate.id, "status": "success"}
-
-    except ValueError as e:
-        logger.error(f"Validation error confirming import: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"数据验证失败: {str(e)}",
-        )
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error(f"Error confirming import: {e}", exc_info=True)
         raise HTTPException(

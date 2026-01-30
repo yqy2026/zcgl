@@ -26,12 +26,6 @@ from src.services.core.user_management_service import UserManagementService
 # ===================== Fixtures =====================
 
 
-@pytest.fixture
-def mock_db():
-    """Mock database session"""
-    db = MagicMock()
-    db.query.return_value.filter.return_value.first.return_value = None
-    return db
 
 
 @pytest.fixture

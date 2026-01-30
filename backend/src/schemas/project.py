@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class ProjectBase(BaseModel):
@@ -53,8 +54,10 @@ class ProjectBase(BaseModel):
 
             pattern = r"^[A-Z]{2}\d{7,8}$"  # pragma: no cover
             if not re.match(pattern, v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_project_code",
+                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001",
+                    {},
                 )  # pragma: no cover
             return v.upper()  # pragma: no cover
         return v  # pragma: no cover
@@ -114,8 +117,10 @@ class ProjectUpdate(BaseModel):
 
             pattern = r"^[A-Z]{2}\d{7,8}$"  # pragma: no cover
             if not re.match(pattern, v):  # pragma: no cover
-                raise ValueError(  # pragma: no cover
-                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001"  # pragma: no cover
+                raise PydanticCustomError(  # pragma: no cover
+                    "invalid_project_code",
+                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001",
+                    {},
                 )  # pragma: no cover
             return v.upper()  # pragma: no cover
         return v  # pragma: no cover

@@ -1,25 +1,18 @@
 """
 配置管理模块
-集中管理所有配置项
-
-整合说明:
-- 保留原有 Pydantic Settings 配置
-- 添加 get_config() 和 initialize_config() 兼容函数
-- 合并自 config_manager.py, unified_config.py, legacy_config.py 的功能
-@lastModified 2025-12-24
+集中管理所有配置项，基于 Pydantic Settings
+@lastModified 2026-01-29
 """
 
 import logging
 import os
-from typing import Any
 
-from pydantic import (
-    Field,
-    ValidationInfo,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from ..constants.rent_contract_constants import CONTRACT_ATTACHMENT_SUBDIR
+from .exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +125,11 @@ class Settings(BaseSettings):
         description="Encryption key for PII fields (format: base64:key:version)",
         json_schema_extra={"env": "DATA_ENCRYPTION_KEY"},
     )
+    REQUIRE_ENCRYPTION: bool = Field(
+        default=False,
+        description="强制要求 DATA_ENCRYPTION_KEY（生产环境默认启用）",
+        json_schema_extra={"env": "REQUIRE_ENCRYPTION"},
+    )
 
     # 文件上传配置
     MAX_FILE_SIZE: int = Field(
@@ -139,6 +137,10 @@ class Settings(BaseSettings):
     )  # 50MB
     UPLOAD_DIR: str = Field(
         default="./uploads", json_schema_extra={"env": "UPLOAD_DIR"}
+    )
+    RENT_CONTRACT_ATTACHMENT_SUBDIR: str = Field(
+        default=CONTRACT_ATTACHMENT_SUBDIR,
+        json_schema_extra={"env": "RENT_CONTRACT_ATTACHMENT_SUBDIR"},
     )
 
     # 分页配置
@@ -185,25 +187,7 @@ class Settings(BaseSettings):
         default=90, json_schema_extra={"env": "AUDIT_LOG_RETENTION_DAYS"}
     )
 
-    # LLM/ChatGLM3 配置（可选）
-    CHATGLM3_API_URL: str | None = Field(
-        default=None, json_schema_extra={"env": "CHATGLM3_API_URL"}
-    )
-    CHATGLM3_MAX_TOKENS: int = Field(
-        default=1500, json_schema_extra={"env": "CHATGLM3_MAX_TOKENS"}
-    )
-    CHATGLM3_TEMPERATURE: float = Field(
-        default=0.2, json_schema_extra={"env": "CHATGLM3_TEMPERATURE"}
-    )
-    CHATGLM3_TIMEOUT: int = Field(
-        default=30, json_schema_extra={"env": "CHATGLM3_TIMEOUT"}
-    )
-    CHATGLM3_MODEL_ID: str = Field(
-        default="THUDM/chatglm3-6b", json_schema_extra={"env": "CHATGLM3_MODEL_ID"}
-    )
-    CHATGLM3_DEVICE: str = Field(
-        default="cpu", json_schema_extra={"env": "CHATGLM3_DEVICE"}
-    )
+    # LLM 通用配置
     LLM_TRIGGER_THRESHOLD: float = Field(
         default=0.65, json_schema_extra={"env": "LLM_TRIGGER_THRESHOLD"}
     )
@@ -310,7 +294,11 @@ class Settings(BaseSettings):
     def validate_port_range(cls, v: int) -> int:
         """验证端口号在有效范围内 (1-65535)"""
         if not 1 <= v <= 65535:
-            raise ValueError(f"端口号必须在 1-65535 范围内，当前值: {v}")
+            raise PydanticCustomError(
+                "invalid_port",
+                "端口号必须在 1-65535 范围内，当前值: {port}",
+                {"port": v},
+            )
         return v
 
     @field_validator("REDIS_PORT")
@@ -329,8 +317,13 @@ class Settings(BaseSettings):
         valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         v_upper = v.upper()
         if v_upper not in valid_levels:
-            raise ValueError(
-                f"无效的日志级别: {v}. 有效值为: {', '.join(sorted(valid_levels))}"
+            raise PydanticCustomError(
+                "invalid_log_level",
+                "无效的日志级别: {level}. 有效值为: {valid_levels}",
+                {
+                    "level": v,
+                    "valid_levels": ", ".join(sorted(valid_levels)),
+                },
             )
         return v_upper
 
@@ -374,13 +367,17 @@ class Settings(BaseSettings):
 
         if environment == "production":
             if is_weak_pattern:
-                raise ValueError(
+                raise PydanticCustomError(
+                    "weak_secret_key",
                     "生产环境禁止使用弱密钥模式。检测到包含常见弱密钥标识符。"
-                    "请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。"
+                    "请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。",
+                    {},
                 )
             if is_too_short:
-                raise ValueError(
-                    f"生产环境 SECRET_KEY 长度必须至少 32 字符，当前: {len(v)} 字符"
+                raise PydanticCustomError(
+                    "secret_key_too_short",
+                    "生产环境 SECRET_KEY 长度必须至少 32 字符，当前: {length} 字符",
+                    {"length": len(v)},
                 )
         elif is_weak_pattern or is_too_short:
             # 非生产环境发出警告
@@ -427,26 +424,38 @@ class Settings(BaseSettings):
         }
         v_normalized = v.lower().strip()
         if v_normalized not in valid_providers:
-            raise ValueError(
-                f"无效的 LLM 提供商: {v}. "
-                f"有效值为: {', '.join(sorted(valid_providers))}"
+            raise PydanticCustomError(
+                "invalid_llm_provider",
+                "无效的 LLM 提供商: {provider}. 有效值为: {valid_providers}",
+                {
+                    "provider": v,
+                    "valid_providers": ", ".join(sorted(valid_providers)),
+                },
             )
         return v_normalized
 
-    @field_validator("CHATGLM3_TEMPERATURE")
+    @field_validator("CHATGLM3_TEMPERATURE", check_fields=False)
     @classmethod
     def validate_temperature(cls, v: float) -> float:
         """验证温度参数范围"""
         if not 0.0 <= v <= 2.0:
-            raise ValueError(f"温度参数必须在 0.0-2.0 范围内，当前值: {v}")
+            raise PydanticCustomError(
+                "invalid_temperature",
+                "温度参数必须在 0.0-2.0 范围内，当前值: {value}",
+                {"value": v},
+            )
         return v
 
-    @field_validator("CHATGLM3_MAX_TOKENS")
+    @field_validator("CHATGLM3_MAX_TOKENS", check_fields=False)
     @classmethod
     def validate_max_tokens(cls, v: int) -> int:
         """验证最大 tokens 范围"""
         if not 1 <= v <= 32000:
-            raise ValueError(f"最大 tokens 必须在 1-32000 范围内，当前值: {v}")
+            raise PydanticCustomError(
+                "invalid_max_tokens",
+                "最大 tokens 必须在 1-32000 范围内，当前值: {value}",
+                {"value": v},
+            )
         return v
 
     @field_validator("SLOW_QUERY_THRESHOLD")
@@ -454,7 +463,11 @@ class Settings(BaseSettings):
     def validate_slow_query_threshold(cls, v: float) -> float:
         """验证慢查询阈值"""
         if v < 0:
-            raise ValueError(f"慢查询阈值不能为负数，当前值: {v}")
+            raise PydanticCustomError(
+                "invalid_slow_query_threshold",
+                "慢查询阈值不能为负数，当前值: {value}",
+                {"value": v},
+            )
         if v > 60:
             logger.warning(f"慢查询阈值 {v} 秒过高，建议设置为 0.1-10 秒之间")
         return v
@@ -465,11 +478,20 @@ class Settings(BaseSettings):
         """验证最大文件大小"""
         max_allowed = 500 * 1024 * 1024  # 500MB
         if v > max_allowed:
-            raise ValueError(
-                f"最大文件大小不能超过 {max_allowed / (1024 * 1024)}MB，当前值: {v / (1024 * 1024)}MB"
+            raise PydanticCustomError(
+                "max_file_size_exceeded",
+                "最大文件大小不能超过 {max_mb}MB，当前值: {current_mb}MB",
+                {
+                    "max_mb": max_allowed / (1024 * 1024),
+                    "current_mb": v / (1024 * 1024),
+                },
             )
         if v < 1024:  # 1KB
-            raise ValueError(f"最大文件大小不能小于 1KB，当前值: {v} 字节")
+            raise PydanticCustomError(
+                "max_file_size_too_small",
+                "最大文件大小不能小于 1KB，当前值: {value} 字节",
+                {"value": v},
+            )
         return v
 
     @field_validator("DEFAULT_PAGE_SIZE", "MAX_PAGE_SIZE")
@@ -477,9 +499,17 @@ class Settings(BaseSettings):
     def validate_page_size(cls, v: int, info: ValidationInfo) -> int:
         """验证分页大小"""
         if v < 1:
-            raise ValueError(f"{info.field_name} 不能小于 1，当前值: {v}")
+            raise PydanticCustomError(
+                "page_size_too_small",
+                "{field} 不能小于 1，当前值: {value}",
+                {"field": info.field_name, "value": v},
+            )
         if v > 1000:
-            raise ValueError(f"{info.field_name} 不能大于 1000，当前值: {v}")
+            raise PydanticCustomError(
+                "page_size_too_large",
+                "{field} 不能大于 1000，当前值: {value}",
+                {"field": info.field_name, "value": v},
+            )
         return v
 
     @field_validator("DEFAULT_PAGE_SIZE")
@@ -489,15 +519,20 @@ class Settings(BaseSettings):
         # 这个验证器会在 MAX_PAGE_SIZE 之后运行
         return v
 
-    @field_validator("CHATGLM3_DEVICE")
+    @field_validator("CHATGLM3_DEVICE", check_fields=False)
     @classmethod
     def validate_device(cls, v: str) -> str:
         """验证设备类型"""
         valid_devices = {"cpu", "cuda", "mps", "xpu"}
         v_lower = v.lower()
         if v_lower not in valid_devices:
-            raise ValueError(
-                f"无效的设备类型: {v}. 有效值为: {', '.join(sorted(valid_devices))}"
+            raise PydanticCustomError(
+                "invalid_device",
+                "无效的设备类型: {device}. 有效值为: {valid_devices}",
+                {
+                    "device": v,
+                    "valid_devices": ", ".join(sorted(valid_devices)),
+                },
             )
         return v_lower
 
@@ -505,9 +540,13 @@ class Settings(BaseSettings):
     def validate_page_size_consistency(self) -> "Settings":
         """验证分页大小一致性 - DEFAULT_PAGE_SIZE 不能超过 MAX_PAGE_SIZE"""
         if self.DEFAULT_PAGE_SIZE > self.MAX_PAGE_SIZE:
-            raise ValueError(
-                f"DEFAULT_PAGE_SIZE ({self.DEFAULT_PAGE_SIZE}) "
-                f"不能超过 MAX_PAGE_SIZE ({self.MAX_PAGE_SIZE})"
+            raise PydanticCustomError(
+                "page_size_inconsistent",
+                "DEFAULT_PAGE_SIZE ({default_size}) 不能超过 MAX_PAGE_SIZE ({max_size})",
+                {
+                    "default_size": self.DEFAULT_PAGE_SIZE,
+                    "max_size": self.MAX_PAGE_SIZE,
+                },
             )
         return self
 
@@ -516,7 +555,11 @@ class Settings(BaseSettings):
         """验证 Redis 配置一致性"""
         if self.REDIS_ENABLED:
             if not self.REDIS_HOST:
-                raise ValueError("启用 Redis 时必须设置 REDIS_HOST")
+                raise PydanticCustomError(
+                    "missing_redis_host",
+                    "启用 Redis 时必须设置 REDIS_HOST",
+                    {},
+                )
             if not self.REDIS_PASSWORD:
                 logger.warning(
                     "Redis 已启用但未设置密码，生产环境建议配置 REDIS_PASSWORD"
@@ -583,7 +626,11 @@ class Settings(BaseSettings):
     def validate_cache_configuration(self) -> "Settings":
         """验证缓存配置一致性"""
         if self.CACHE_TTL < 0:
-            raise ValueError(f"CACHE_TTL 不能为负数，当前值: {self.CACHE_TTL}")
+            raise PydanticCustomError(
+                "invalid_cache_ttl",
+                "CACHE_TTL 不能为负数，当前值: {value}",
+                {"value": self.CACHE_TTL},
+            )
         if self.CACHE_TTL > 86400:  # 24小时
             logger.warning(
                 f"CACHE_TTL ({self.CACHE_TTL}s) 超过 24 小时，可能导致缓存数据过期"
@@ -616,13 +663,21 @@ class Settings(BaseSettings):
         if self.SECRET_KEY in insecure_keys:
             msg = "严重安全风险: 使用了默认或不安全的 JWT 密钥！请立即设置环境变量 SECRET_KEY 为强随机密钥。"
             if is_production and not is_testing:
-                raise ValueError(msg)
+                raise PydanticCustomError(
+                    "insecure_secret_key",
+                    msg,
+                    {},
+                )
             warnings.append(msg)
 
         if len(self.SECRET_KEY) < 32:
             msg = f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，建议使用至少 32 字符的密钥。"
             if is_production and not is_testing:
-                raise ValueError("生产环境要求 SECRET_KEY 至少 32 字符")
+                raise PydanticCustomError(
+                    "secret_key_too_short",
+                    "生产环境要求 SECRET_KEY 至少 32 字符",
+                    {},
+                )
             warnings.append(msg)
 
         # 2. DATA_ENCRYPTION_KEY 检查
@@ -697,7 +752,10 @@ def validate_config() -> None:
             missing_fields.append(field)
 
     if missing_fields:
-        raise ValueError(f"缺少必要配置: {', '.join(missing_fields)}")
+        raise ConfigurationError(
+            f"缺少必要配置: {', '.join(missing_fields)}",
+            config_key=",".join(missing_fields),
+        )
 
     # 非测试模式下强制检查SECRET_KEY安全性
     if not is_testing:  # pragma: no cover
@@ -711,13 +769,13 @@ def validate_config() -> None:
         ]  # pragma: no cover
 
         if settings.SECRET_KEY in insecure_keys:  # pragma: no cover
-            raise ValueError(  # pragma: no cover
+            raise ConfigurationError(  # pragma: no cover
                 "致命安全错误: SECRET_KEY 使用了不安全的默认值！\n"  # pragma: no cover
                 "请设置环境变量: export SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"  # pragma: no cover
             )  # pragma: no cover
 
         if len(settings.SECRET_KEY) < 32:  # pragma: no cover
-            raise ValueError(  # pragma: no cover
+            raise ConfigurationError(  # pragma: no cover
                 f"致命安全错误: SECRET_KEY 长度不足 ({len(settings.SECRET_KEY)}字符)，最少需要32字符！"  # pragma: no cover
             )  # pragma: no cover
 
@@ -725,7 +783,10 @@ def validate_config() -> None:
 
     # 检查Redis配置
     if settings.REDIS_ENABLED and not settings.REDIS_HOST:
-        raise ValueError("启用Redis时需要配置REDIS_HOST")
+        raise ConfigurationError(
+            "启用Redis时需要配置REDIS_HOST",
+            config_key="REDIS_HOST",
+        )
 
     logger.info(
         f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}"
@@ -733,108 +794,4 @@ def validate_config() -> None:
 
 
 # 导出配置实例
-__all__ = ["settings", "validate_config", "get_config", "initialize_config"]
-
-
-# ============================================================
-# 兼容性函数 (合并自 config_manager.py)
-# ============================================================
-
-
-def get_config(key: str, default: Any = None) -> Any:
-    """
-    获取配置值的便捷函数
-
-    支持点号分隔的配置键，如:
-    - "cors_origins" -> settings.CORS_ORIGINS
-    - "database.pool_size" -> settings.DATABASE_POOL_SIZE (需要添加)
-
-    Args:
-        key: 配置键名
-        default: 默认值
-
-    Returns:
-        配置值或默认值
-    """
-    # 首先尝试直接从 settings 获取
-    if hasattr(settings, key.upper()):
-        return getattr(settings, key.upper())
-
-    # 尝试带下划线的键名
-    upper_key = key.upper().replace(".", "_")
-    if hasattr(settings, upper_key):
-        return getattr(settings, upper_key)
-
-    # 特殊配置映射
-    config_mappings = {
-        "cors_origins": settings.CORS_ORIGINS,
-        "database.url": settings.DATABASE_URL,
-        "database.echo": settings.DATABASE_ECHO,
-        "database.pool_size": settings.DATABASE_POOL_SIZE,
-        "database.max_overflow": settings.DATABASE_MAX_OVERFLOW,
-        "database.pool_timeout": settings.DATABASE_POOL_TIMEOUT,
-        "database.pool_recycle": settings.DATABASE_POOL_RECYCLE,
-        "database.pool_pre_ping": settings.DATABASE_POOL_PRE_PING,
-        "database.enable_query_logging": False,
-        "rate_limit": {},
-        "security": {},
-        "slow_query_threshold_ms": int(settings.SLOW_QUERY_THRESHOLD * 1000),
-        "performance_monitoring_enabled": settings.ENABLE_METRICS,
-        "cache_enabled": settings.REDIS_ENABLED,
-        "cache_ttl_seconds": settings.CACHE_TTL,
-        "cache_max_size": 1000,
-        "permission_cache_ttl": 300,
-        "debug": settings.DEBUG,
-        "log_level": settings.LOG_LEVEL,
-        "log_file": settings.LOG_FILE,
-        "security_log_file": "logs/security.log",
-        "security_logging_enabled": True,
-        "request_log_file": "logs/requests.log",
-        "request_logging_enabled": True,
-    }
-
-    if key in config_mappings:
-        return config_mappings[key]
-
-    # 返回默认值
-    logger.debug(f"Config key '{key}' not found, using default: {default}")
-    return default
-
-
-def initialize_config() -> None:
-    """
-    初始化配置的便捷函数
-
-    验证配置并记录安全状态
-    """
-    logger.info("Initializing configuration...")
-
-    # 验证必要配置
-    try:
-        validate_config()
-    except ValueError as e:
-        logger.error(f"Configuration validation failed: {e}")
-        raise
-
-    logger.info("Configuration initialized successfully")
-
-
-def get_all_config() -> dict[str, Any]:
-    """
-    获取所有配置的便捷函数
-
-    Returns:
-        包含所有配置的字典
-    """
-    return {
-        "app_name": settings.APP_NAME,
-        "app_version": settings.APP_VERSION,
-        "debug": settings.DEBUG,
-        "api_v1_str": settings.API_V1_STR,
-        "host": settings.HOST,
-        "port": settings.PORT,
-        "database_url": settings.DATABASE_URL,
-        "redis_enabled": settings.REDIS_ENABLED,
-        "cors_origins": settings.CORS_ORIGINS,
-        "log_level": settings.LOG_LEVEL,
-    }
+__all__ = ["settings", "validate_config"]

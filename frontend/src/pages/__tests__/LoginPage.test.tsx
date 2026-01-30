@@ -1,0 +1,282 @@
+/**
+ * LoginPage 页面测试
+ */
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import LoginPage from '../LoginPage';
+
+// Mock useAuth hook
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
+
+// Mock react-router-dom
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ state: null }),
+  };
+});
+
+// Mock CSS modules
+vi.mock('../LoginPage.module.css', () => ({
+  default: {
+    'login-page': 'login-page',
+    'login-container': 'login-container',
+    'login-card': 'login-card',
+    'login-header': 'login-header',
+    'login-logo': 'login-logo',
+    'login-icon': 'login-icon',
+    'login-title': 'login-title',
+    'login-subtitle': 'login-subtitle',
+    'login-form': 'login-form',
+    'input-icon': 'input-icon',
+    'login-error': 'login-error',
+    'login-button': 'login-button',
+    'login-footer': 'login-footer',
+    'login-help': 'login-help',
+    'login-tips': 'login-tips',
+  },
+}));
+
+import { useAuth } from '../../contexts/AuthContext';
+
+describe('LoginPage', () => {
+  const mockLogin = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(useAuth).mockReturnValue({
+      login: mockLogin,
+      loading: false,
+      error: null,
+      user: null,
+      isAuthenticated: false,
+      logout: vi.fn(),
+      checkAuth: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+  });
+
+  describe('渲染', () => {
+    it('渲染登录页面标题', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
+      expect(screen.getByText('请输入您的用户名和密码进行登录')).toBeInTheDocument();
+    });
+
+    it('渲染用户名输入框', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByPlaceholderText('请输入用户名')).toBeInTheDocument();
+    });
+
+    it('渲染密码输入框', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByPlaceholderText('请输入密码')).toBeInTheDocument();
+    });
+
+    it('渲染记住我复选框', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('记住我的登录状态')).toBeInTheDocument();
+    });
+
+    it('渲染登录按钮', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('立即登录')).toBeInTheDocument();
+    });
+
+    it('渲染帮助信息', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText(/如遇登录问题，请联系系统管理员/)).toBeInTheDocument();
+      expect(screen.getByText('为保护账户安全，请定期更换密码')).toBeInTheDocument();
+    });
+  });
+
+  describe('表单交互', () => {
+    it('输入用户名', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const usernameInput = screen.getByPlaceholderText('请输入用户名');
+      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+
+      expect(usernameInput).toHaveValue('testuser');
+    });
+
+    it('输入密码', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const passwordInput = screen.getByPlaceholderText('请输入密码');
+      fireEvent.change(passwordInput, { target: { value: 'password123' } });
+
+      expect(passwordInput).toHaveValue('password123');
+    });
+
+    it('切换记住我复选框', () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const checkbox = screen.getByRole('checkbox');
+      fireEvent.click(checkbox);
+
+      expect(checkbox).toBeChecked();
+    });
+  });
+
+  describe('表单提交', () => {
+    it('成功登录后跳转到工作台', async () => {
+      mockLogin.mockResolvedValue(undefined);
+
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const usernameInput = screen.getByPlaceholderText('请输入用户名');
+      const passwordInput = screen.getByPlaceholderText('请输入密码');
+      const submitButton = screen.getByText('立即登录');
+
+      fireEvent.change(usernameInput, { target: { value: 'admin' } });
+      fireEvent.change(passwordInput, { target: { value: 'password123' } });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          username: 'admin',
+          password: 'password123',
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      });
+    });
+  });
+
+  describe('加载状态', () => {
+    it('加载中显示登录中文本', () => {
+      vi.mocked(useAuth).mockReturnValue({
+        login: mockLogin,
+        loading: true,
+        error: null,
+        user: null,
+        isAuthenticated: false,
+        logout: vi.fn(),
+        checkAuth: vi.fn(),
+      } as unknown as ReturnType<typeof useAuth>);
+
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('登录中...')).toBeInTheDocument();
+    });
+  });
+
+  describe('错误处理', () => {
+    it('显示登录错误信息', () => {
+      vi.mocked(useAuth).mockReturnValue({
+        login: mockLogin,
+        loading: false,
+        error: '用户名或密码错误',
+        user: null,
+        isAuthenticated: false,
+        logout: vi.fn(),
+        checkAuth: vi.fn(),
+      } as unknown as ReturnType<typeof useAuth>);
+
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('登录失败')).toBeInTheDocument();
+      expect(screen.getByText('用户名或密码错误')).toBeInTheDocument();
+    });
+  });
+
+  describe('表单验证', () => {
+    it('用户名必填验证', async () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const submitButton = screen.getByText('立即登录');
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('请输入用户名')).toBeInTheDocument();
+      });
+    });
+
+    it('密码必填验证', async () => {
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const usernameInput = screen.getByPlaceholderText('请输入用户名');
+      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+
+      const submitButton = screen.getByText('立即登录');
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('请输入密码')).toBeInTheDocument();
+      });
+    });
+  });
+});

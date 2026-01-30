@@ -22,6 +22,7 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
+from src.constants.rent_contract_constants import PaymentStatus
 from src.main import app
 
 
@@ -31,6 +32,7 @@ class TestCollectionSummary:
     def test_get_collection_summary_success(self, client):
         """Test successful retrieval of collection summary"""
         # Setup test data
+        from src.constants.rent_contract_constants import PaymentStatus
         from src.models.collection import CollectionRecord, CollectionStatus
         from src.models.rent_contract import RentLedger
 
@@ -41,7 +43,7 @@ class TestCollectionSummary:
             asset_id="test-asset-1",
             year_month="2024-01",
             due_date=date(2024, 1, 1),
-            payment_status="未支付",
+            payment_status=PaymentStatus.UNPAID,
             overdue_amount=Decimal("1000.00"),
             data_status="正常",
         )
@@ -227,7 +229,7 @@ class TestCreateCollectionRecord:
             contract_id="test-contract-1",
             tenant_id="test-tenant-1",
             due_date=date(2024, 1, 1),
-            payment_status="未支付",
+            payment_status=PaymentStatus.UNPAID,
             overdue_amount=Decimal("1000.00"),
             data_status="正常",
         )

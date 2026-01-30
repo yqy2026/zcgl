@@ -21,6 +21,14 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # Check if tables already exist (created by initial migration)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
+
+    # Skip if tables already exist (from initial migration)
+    if "property_owners" in existing_tables:
+        return
 
     # Create property_owners table
     op.create_table(
@@ -177,6 +185,14 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    # Check if tables exist before dropping
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
+
+    # Only drop if tables exist
+    if "property_cert_assets" not in existing_tables:
+        return
 
     # Drop indexes
     op.drop_index("idx_property_cert_assets_asset_id", "property_cert_assets")

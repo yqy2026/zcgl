@@ -7,6 +7,48 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+interface DrawerMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  placement?: string;
+  onClose?: () => void;
+  open?: boolean;
+  width?: number | string;
+  styles?: React.CSSProperties;
+  extra?: React.ReactNode;
+}
+
+interface MenuItemMock {
+  key?: React.Key;
+  label?: React.ReactNode;
+}
+
+interface MenuMockProps {
+  selectedKeys?: React.Key[];
+  defaultOpenKeys?: React.Key[];
+  items?: MenuItemMock[];
+  onClick?: () => void;
+  mode?: string;
+  style?: React.CSSProperties;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  type?: string;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface TextMockProps {
+  children?: React.ReactNode;
+  strong?: boolean;
+}
+
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({
@@ -17,7 +59,16 @@ vi.mock('react-router-dom', () => ({
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Drawer: ({ children, title, placement, onClose, open, width, styles: _styles, extra }: any) => (
+  Drawer: ({
+    children,
+    title,
+    placement,
+    onClose,
+    open,
+    width,
+    styles: _styles,
+    extra,
+  }: DrawerMockProps) => (
     <div
       data-testid="drawer"
       data-placement={placement}
@@ -30,7 +81,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode, style }: any) => (
+  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode, style }: MenuMockProps) => (
     <div
       data-testid="menu"
       data-selected-keys={JSON.stringify(selectedKeys)}
@@ -41,22 +92,22 @@ vi.mock('antd', () => ({
       style={style}
     >
       {items &&
-        items.map((item: any, index: number) => (
+        items.map((item, index) => (
           <div key={index} data-menu-key={item.key}>
             {item.label}
           </div>
         ))}
     </div>
   ),
-  Button: ({ children, icon, type, onClick, style }: any) => (
+  Button: ({ children, icon, type, onClick, style }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} onClick={onClick} style={style}>
       {icon && <span data-testid="button-icon">{icon}</span>}
       {children}
     </button>
   ),
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
   Typography: {
-    Text: ({ children, strong }: any) => (
+    Text: ({ children, strong }: TextMockProps) => (
       <span data-testid="text" data-strong={strong}>
         {children}
       </span>

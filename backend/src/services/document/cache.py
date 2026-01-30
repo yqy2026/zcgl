@@ -18,9 +18,12 @@ from typing import Any, cast
 
 from .config import get_config
 
-try:
-    import aiofiles  # type: ignore[import-untyped]
+aiofiles: Any | None
 
+try:
+    import importlib
+
+    aiofiles = importlib.import_module("aiofiles")
     AIOFILES_AVAILABLE = True
 except ImportError:
     AIOFILES_AVAILABLE = False
@@ -396,7 +399,7 @@ class AsyncDocumentCache:
         Returns:
             str: MD5 哈希值
         """
-        if self._use_async:
+        if self._use_async and aiofiles is not None:
             async with aiofiles.open(file_path, "rb") as f:
                 md5 = hashlib.md5(usedforsecurity=False)
                 while chunk := await f.read(8192):
@@ -444,7 +447,7 @@ class AsyncDocumentCache:
                 return None
 
             # 读取缓存
-            if self._use_async:
+            if self._use_async and aiofiles is not None:
                 async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
                     content = await f.read()
             else:
@@ -529,7 +532,7 @@ class AsyncDocumentCache:
 
                 content = json.dumps(cached_data, ensure_ascii=False, indent=2)
 
-                if self._use_async:
+                if self._use_async and aiofiles is not None:
                     async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
                         await f.write(content)
                 else:

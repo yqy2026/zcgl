@@ -6,20 +6,14 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.organization import Organization, OrganizationHistory
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

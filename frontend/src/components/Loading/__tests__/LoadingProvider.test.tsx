@@ -8,9 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import {} from '@testing-library/react';
 
+interface SpinMockProps {
+  tip?: React.ReactNode;
+  size?: 'small' | 'default' | 'large' | number;
+  delay?: number;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Spin: ({ tip, size, delay }: any) => (
+  Spin: ({ tip, size, delay }: SpinMockProps) => (
     <div data-testid="spin" data-tip={tip} data-size={size} data-delay={delay}>
       Loading...
     </div>

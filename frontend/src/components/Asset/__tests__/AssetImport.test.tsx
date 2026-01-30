@@ -8,6 +8,86 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AssetImport from '../AssetImport';
 
+interface UploadDraggerMockProps {
+  children?: React.ReactNode;
+}
+
+interface StepsMockProps {
+  current?: number;
+}
+
+interface StepMockProps {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+}
+
+interface ProgressMockProps {
+  percent?: number;
+}
+
+interface AlertMockProps {
+  message?: React.ReactNode;
+  type?: string;
+}
+
+interface CardMockProps {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+}
+
+interface ButtonMockProps {
+  children?: React.ReactNode;
+}
+
+interface TypographyTitleMockProps {
+  children?: React.ReactNode;
+}
+
+interface TypographyTextMockProps {
+  children?: React.ReactNode;
+}
+
+interface SpaceMockProps {
+  children?: React.ReactNode;
+}
+
+interface RowMockProps {
+  children?: React.ReactNode;
+}
+
+interface ColMockProps {
+  children?: React.ReactNode;
+}
+
+interface FormItemMockProps {
+  children?: React.ReactNode;
+}
+
+interface SwitchMockProps {
+  checked?: boolean;
+}
+
+interface InputNumberMockProps {
+  value?: number;
+}
+
+interface SelectMockProps {
+  children?: React.ReactNode;
+}
+
+interface SelectOptionMockProps {
+  children?: React.ReactNode;
+}
+
+interface StatisticMockProps {
+  title?: React.ReactNode;
+  value?: number;
+}
+
+interface TableMockProps {
+  dataSource?: unknown[];
+}
+
 // Mock apiClient before importing
 vi.mock('@/api/client', () => ({
   apiClient: {
@@ -22,12 +102,12 @@ vi.mock('antd', async () => {
 
   // Create mocks
   const mockUpload = {
-    Dragger: vi.fn(({ children }: any) =>
+    Dragger: vi.fn(({ children }: UploadDraggerMockProps) =>
       React.createElement('div', { 'data-testid': 'upload-dragger' }, children)
     ),
   };
 
-  const mockSteps = vi.fn(({ current }: any) =>
+  const mockSteps = vi.fn(({ current }: StepsMockProps) =>
     React.createElement(
       'div',
       {
@@ -38,11 +118,11 @@ vi.mock('antd', async () => {
     )
   );
 
-  const mockStep = vi.fn(({ title, description }: any) =>
+  const mockStep = vi.fn(({ title, description }: StepMockProps) =>
     React.createElement('div', { 'data-testid': 'step', 'data-title': title }, description)
   );
 
-  const mockProgress = vi.fn(({ percent }: any) =>
+  const mockProgress = vi.fn(({ percent }: ProgressMockProps) =>
     React.createElement(
       'div',
       { 'data-testid': 'progress', 'data-percent': percent },
@@ -50,15 +130,15 @@ vi.mock('antd', async () => {
     )
   );
 
-  const mockAlert = vi.fn(({ message, type }: any) =>
+  const mockAlert = vi.fn(({ message, type }: AlertMockProps) =>
     React.createElement('div', { 'data-testid': 'alert', 'data-type': type }, message)
   );
 
-  const mockCard = vi.fn(({ children, title }: any) =>
+  const mockCard = vi.fn(({ children, title }: CardMockProps) =>
     React.createElement('div', { 'data-card': title || 'card' }, children)
   );
 
-  const mockButton = vi.fn(({ children }: any) =>
+  const mockButton = vi.fn(({ children }: ButtonMockProps) =>
     React.createElement(
       'button',
       {
@@ -68,31 +148,33 @@ vi.mock('antd', async () => {
     )
   );
 
-  const mockTitle = vi.fn(({ children }: any) =>
+  const mockTitle = vi.fn(({ children }: TypographyTitleMockProps) =>
     React.createElement('div', { 'data-testid': 'title' }, children)
   );
 
-  const mockText = vi.fn(({ children }: any) => React.createElement('span', {}, children));
+  const mockText = vi.fn(({ children }: TypographyTextMockProps) =>
+    React.createElement('span', {}, children)
+  );
 
-  const mockSpace = vi.fn(({ children }: any) =>
+  const mockSpace = vi.fn(({ children }: SpaceMockProps) =>
     React.createElement('div', { 'data-testid': 'space' }, children)
   );
 
-  const mockRow = vi.fn(({ children }: any) =>
+  const mockRow = vi.fn(({ children }: RowMockProps) =>
     React.createElement('div', { 'data-testid': 'row' }, children)
   );
 
-  const mockCol = vi.fn(({ children }: any) =>
+  const mockCol = vi.fn(({ children }: ColMockProps) =>
     React.createElement('div', { 'data-testid': 'col' }, children)
   );
 
   const mockDivider = vi.fn(() => React.createElement('div', { 'data-testid': 'divider' }));
 
-  const mockFormItem = vi.fn(({ children }: any) =>
+  const mockFormItem = vi.fn(({ children }: FormItemMockProps) =>
     React.createElement('div', { 'data-testid': 'form-item' }, children)
   );
 
-  const mockSwitch = vi.fn(({ checked }: any) =>
+  const mockSwitch = vi.fn(({ checked }: SwitchMockProps) =>
     React.createElement('input', {
       type: 'checkbox',
       checked,
@@ -100,7 +182,7 @@ vi.mock('antd', async () => {
     })
   );
 
-  const mockInputNumber = vi.fn(({ value }: any) =>
+  const mockInputNumber = vi.fn(({ value }: InputNumberMockProps) =>
     React.createElement('input', {
       type: 'number',
       value,
@@ -108,15 +190,15 @@ vi.mock('antd', async () => {
     })
   );
 
-  const mockSelect = vi.fn(({ children }: any) =>
+  const mockSelect = vi.fn(({ children }: SelectMockProps) =>
     React.createElement('select', { 'data-testid': 'select' }, children)
   );
 
-  const mockSelectOption = vi.fn(({ children }: any) =>
+  const mockSelectOption = vi.fn(({ children }: SelectOptionMockProps) =>
     React.createElement('option', { value: children }, children)
   );
 
-  const mockStatistic = vi.fn(({ title, value }: any) =>
+  const mockStatistic = vi.fn(({ title, value }: StatisticMockProps) =>
     React.createElement(
       'div',
       {
@@ -127,7 +209,7 @@ vi.mock('antd', async () => {
     )
   );
 
-  const mockTable = vi.fn(({ dataSource }: any) =>
+  const mockTable = vi.fn(({ dataSource }: TableMockProps) =>
     React.createElement('div', {
       'data-testid': 'error-table',
       'data-row-count': dataSource?.length ?? 0,

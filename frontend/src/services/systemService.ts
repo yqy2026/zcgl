@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { apiClient } from '@/api/client';
 import { SYSTEM_API, BACKUP_API } from '../constants/api';
 
@@ -72,26 +73,7 @@ export const userService = {
     organization_id?: string;
   }): Promise<UserListResponse> {
     const response = await api.get<UserListResponse>(SYSTEM_API.USERS, { params });
-
-    if (!response.success) {
-      return {
-        items: [],
-        total: 0,
-        page: 1,
-        page_size: 20,
-        pages: 0,
-      };
-    }
-
-    return (
-      response.data ?? {
-        items: [],
-        total: 0,
-        page: 1,
-        page_size: 20,
-        pages: 0,
-      }
-    );
+    return response.data ?? { items: [], total: 0, page: 1, page_size: 20, pages: 0 };
   },
 
   // 获取用户详情
@@ -288,7 +270,17 @@ export const logService = {
     response_status?: string;
   }): Promise<OperationLogListResult> {
     const response = await api.get<OperationLogListResult>(SYSTEM_API.AUDIT_LOGS, { params });
-    return response.data as OperationLogListResult;
+    if (!response.success || response.data == null) {
+      return {
+        items: [],
+        total: 0,
+        page: params?.page ?? 1,
+        page_size: params?.page_size ?? 20,
+        pages: 0,
+      };
+    }
+
+    return response.data;
   },
 
   // 获取操作日志详情
@@ -298,11 +290,69 @@ export const logService = {
   },
 
   // 获取操作日志统计
-  async getLogStatistics(_params?: { start_date?: string; end_date?: string }) {
-    // 暂时注释，后端可能没有这个端点
-    // const response = await api.get('/logs/statistics', { params })
-    // return response.data
-    return { total: 0, today: 0, thisWeek: 0, thisMonth: 0 };
+  async getLogStatistics(params?: { start_date?: string; end_date?: string; days?: number }) {
+    const derivedDays = (() => {
+      if (typeof params?.days === 'number') {
+        return params.days;
+      }
+      if (params?.start_date && params?.end_date) {
+        const start = dayjs(params.start_date);
+        const end = dayjs(params.end_date);
+        if (start.isValid() && end.isValid()) {
+          return Math.max(end.diff(start, 'day') + 1, 1);
+        }
+      }
+      return 30;
+    })();
+
+    const result = await api.get<{
+      total_logs?: number;
+      daily_statistics?: Record<string, number>;
+      error_statistics?: { total_errors?: number };
+    }>(SYSTEM_API.AUDIT_LOG_STATISTICS, { params: { days: derivedDays } });
+
+    if (!result.success || result.data == null) {
+      return {
+        total: 0,
+        today: 0,
+        this_week: 0,
+        this_month: 0,
+        by_action: {},
+        by_module: {},
+        error_count: 0,
+        avg_response_time: 0,
+      };
+    }
+
+    const dailyStats = result.data.daily_statistics ?? {};
+    const todayKey = dayjs().format('YYYY-MM-DD');
+    const today = dailyStats[todayKey] ?? 0;
+
+    let thisWeek = 0;
+    let thisMonth = 0;
+
+    for (const [dateKey, count] of Object.entries(dailyStats)) {
+      const date = dayjs(dateKey);
+      if (date.isValid()) {
+        if (date.isSame(dayjs(), 'week')) {
+          thisWeek += count;
+        }
+        if (date.isSame(dayjs(), 'month')) {
+          thisMonth += count;
+        }
+      }
+    }
+
+    return {
+      total: result.data.total_logs ?? 0,
+      today,
+      this_week: thisWeek,
+      this_month: thisMonth,
+      by_action: {},
+      by_module: {},
+      error_count: result.data.error_statistics?.total_errors ?? 0,
+      avg_response_time: 0,
+    };
   },
 
   // 导出操作日志
@@ -327,8 +377,25 @@ export const logService = {
 export const organizationService = {
   // 获取组织统计信息
   async getOrganizationStatistics() {
-    // 暂时返回模拟数据，因为后端可能没有这个端点
-    return { total: 0, active: 0, inactive: 0 };
+    const response = await api.get<{
+      total: number;
+      active: number;
+      inactive: number;
+      by_type?: Record<string, number>;
+      by_level?: Record<string, number>;
+    }>(SYSTEM_API.ORGANIZATION_STATISTICS);
+
+    if (!response.success || response.data == null) {
+      return {
+        total: 0,
+        active: 0,
+        inactive: 0,
+        by_type: {},
+        by_level: {},
+      };
+    }
+
+    return response.data;
   },
 
   // 获取组织成员

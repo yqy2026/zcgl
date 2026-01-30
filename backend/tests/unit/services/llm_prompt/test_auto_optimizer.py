@@ -8,7 +8,6 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.llm_prompt import ExtractionFeedback, PromptStatus, PromptTemplate
 from src.services.llm_prompt.auto_optimizer import AutoOptimizer
@@ -24,11 +23,6 @@ def auto_optimizer():
     return AutoOptimizer(min_feedback_count=50, accuracy_threshold=0.85)
 
 
-@pytest.fixture
-def mock_db():
-    """Mock数据库会话"""
-    db = MagicMock(spec=Session)
-    return db
 
 
 @pytest.fixture

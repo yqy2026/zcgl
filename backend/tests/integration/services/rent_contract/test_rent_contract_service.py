@@ -11,10 +11,13 @@ RentContractService 集成测试
 
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from src.constants.rent_contract_constants import PaymentStatus
 from src.models.asset import Asset, Ownership
 from src.models.rent_contract import (
     ContractType,
@@ -62,6 +65,7 @@ class RentContractTestDataFactory:
     def create_contract_dict(**kwargs):
         """生成合同创建数据"""
         default_data = {
+            "contract_number": f"CT{uuid4().hex[:10].upper()}",
             "owner_name": "张三",
             "owner_phone": "13800138000",
             "tenant_name": "李四",
@@ -165,7 +169,7 @@ class TestContractCreation:
         contract = self.service.create_contract(self.db, obj_in=contract_data)
 
         assert contract.id is not None
-        assert contract.contract_number.startswith("ZJ")
+        assert contract.contract_number == contract_data.contract_number
         assert contract.owner_name == "张三"
         assert contract.contract_status == "有效"
         assert contract.ownership_id == self.ownership.id
@@ -215,24 +219,18 @@ class TestContractCreation:
         assert contract.rent_terms[0].monthly_rent == Decimal("5000.00")
         assert contract.rent_terms[0].total_monthly_amount == Decimal("5500.00")
 
-    def test_create_contract_auto_generates_number(self):
-        """测试自动生成合同编号"""
+    def test_create_contract_requires_number(self):
+        """测试合同编号必填"""
         term = RentTermCreate(**self.factory.create_rent_term_dict())
 
-        contract_data = RentContractCreate(
-            **self.factory.create_contract_dict(
-                ownership_id=self.ownership.id,
-                contract_number=None,  # 不提供编号
-                rent_terms=[term],
+        with pytest.raises(ValidationError, match="contract_number"):
+            RentContractCreate(
+                **self.factory.create_contract_dict(
+                    ownership_id=self.ownership.id,
+                    contract_number=None,
+                    rent_terms=[term],
+                )
             )
-        )
-
-        contract = self.service.create_contract(self.db, obj_in=contract_data)
-
-        assert contract.contract_number is not None
-        assert contract.contract_number.startswith("ZJ")
-        # 格式: ZJ20240124001 (13个字符: ZJ + 8位日期 + 3位序号)
-        assert len(contract.contract_number) == 13
 
     def test_create_contract_calculates_total_monthly_amount(self):
         """测试自动计算月度总额"""
@@ -738,7 +736,7 @@ class TestMonthlyLedger:
         assert len(ledgers) == 3
         assert ledgers[0].year_month == "2024-01"
         assert ledgers[0].due_amount == Decimal("5500.00")
-        assert ledgers[0].payment_status == "未支付"
+        assert ledgers[0].payment_status == PaymentStatus.UNPAID
 
     def test_generate_ledger_skips_existing(self):
         """测试跳过已存在的台账"""

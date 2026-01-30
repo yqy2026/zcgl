@@ -40,14 +40,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    db = MagicMock()
-    # Mock database bind with URL
-    db.bind = MagicMock()
-    db.bind.url = "postgresql+psycopg://user:pass@localhost/test_database"
-    return db
 
 
 @pytest.fixture

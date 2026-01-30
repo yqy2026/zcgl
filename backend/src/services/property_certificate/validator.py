@@ -3,8 +3,9 @@ Property Certificate Validator
 产权证数据验证器
 """
 
+import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from src.models.property_certificate import CertificateType
@@ -69,6 +70,137 @@ class PropertyCertificateValidator:
                     errors.append("土地使用终止日期必须晚于起始日期")
 
         return ValidationResult(errors=errors, warnings=warnings)
+
+    def validate_certificate_number(self, number: str | None) -> bool:
+        if not number:
+            raise ValueError("证书编号不能为空")
+        if len(number) != 18:
+            raise ValueError("证书编号长度必须为 18 位")
+        return True
+
+    def validate_area(self, area: float | int | str | None) -> bool:
+        if area is None:
+            raise ValueError("面积不能为空")
+        try:
+            value = float(area)
+        except (TypeError, ValueError):
+            raise ValueError("面积格式不正确") from None
+        if value <= 0:
+            raise ValueError("面积必须为正数")
+        if value > 100000000:
+            raise ValueError("面积过大")
+        return True
+
+    def validate_issue_date(self, issue_date: datetime | date | None) -> bool:
+        if issue_date is None:
+            raise ValueError("发证日期不能为空")
+        if isinstance(issue_date, date) and not isinstance(issue_date, datetime):
+            issue_date = datetime.combine(issue_date, datetime.min.time(), tzinfo=UTC)
+        if isinstance(issue_date, datetime):
+            if issue_date.tzinfo is None:
+                issue_date = issue_date.replace(tzinfo=UTC)
+            if issue_date > datetime.now(UTC):
+                raise ValueError("发证日期不能晚于当前日期")
+            return True
+        raise ValueError("发证日期格式不正确")
+
+    def validate_expiry_date(
+        self, expiry_date: datetime | date | None, issue_date: datetime | date | None
+    ) -> bool:
+        if expiry_date is None:
+            raise ValueError("到期日期不能为空")
+        if issue_date is None:
+            raise ValueError("发证日期不能为空")
+        if isinstance(expiry_date, date) and not isinstance(expiry_date, datetime):
+            expiry_date = datetime.combine(
+                expiry_date, datetime.min.time(), tzinfo=UTC
+            )
+        if isinstance(issue_date, date) and not isinstance(issue_date, datetime):
+            issue_date = datetime.combine(issue_date, datetime.min.time(), tzinfo=UTC)
+        if not isinstance(expiry_date, datetime) or not isinstance(
+            issue_date, datetime
+        ):
+            raise ValueError("日期格式不正确")
+        if expiry_date.tzinfo is None:
+            expiry_date = expiry_date.replace(tzinfo=UTC)
+        if issue_date.tzinfo is None:
+            issue_date = issue_date.replace(tzinfo=UTC)
+        if expiry_date <= issue_date:
+            raise ValueError("到期日期必须晚于发证日期")
+        return True
+
+    def validate_property_name(self, name: str | None) -> bool:
+        if not name:
+            raise ValueError("房产名称不能为空")
+        if len(name.strip()) < 3:
+            raise ValueError("房产名称过短")
+        return True
+
+    def validate_address(self, address: str | None) -> bool:
+        if not address or not address.strip():
+            raise ValueError("地址不能为空")
+        return True
+
+    def validate_certificate_data(self, data: dict[str, Any]) -> bool:
+        required_fields = [
+            "certificate_number",
+            "property_name",
+            "area",
+            "issue_date",
+            "expiry_date",
+            "address",
+        ]
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"缺少必填字段: {field}")
+        self.validate_certificate_number(data.get("certificate_number"))
+        self.validate_property_name(data.get("property_name"))
+        self.validate_area(data.get("area"))
+        self.validate_issue_date(data.get("issue_date"))
+        self.validate_expiry_date(data.get("expiry_date"), data.get("issue_date"))
+        self.validate_address(data.get("address"))
+        return True
+
+    def validate_registration_number(self, number: str | None) -> bool:
+        if not number:
+            raise ValueError("注册号不能为空")
+        pattern = r"^REG-\d{4}-\d{6}$"
+        if not re.match(pattern, number):
+            raise ValueError("注册号格式不正确")
+        return True
+
+    def validate_owner_name(self, name: str | None) -> bool:
+        if not name or not name.strip():
+            raise ValueError("业主姓名不能为空")
+        return True
+
+    def validate_certificate_type(self, cert_type: str | None) -> bool:
+        allowed = {"house", "land", "real_estate", "other"}
+        if not cert_type or cert_type not in allowed:
+            raise ValueError("无效的产权证类型")
+        return True
+
+    def validate_land_use_right(self, right: str | None) -> bool:
+        allowed = {"residential", "commercial", "industrial", "mixed", "other"}
+        if not right or right not in allowed:
+            raise ValueError("无效的土地使用权")
+        return True
+
+    def validate_land_term(self, term: int | None) -> bool:
+        if term is None:
+            raise ValueError("土地年限不能为空")
+        if term <= 0:
+            raise ValueError("土地年限必须为正数")
+        if term > 70:
+            raise ValueError("土地年限过长")
+        return True
+
+    def validate_certificate_copy_number(self, count: int | None) -> bool:
+        if count is None:
+            raise ValueError("份数不能为空")
+        if count <= 0:
+            raise ValueError("份数必须为正数")
+        return True
 
     @staticmethod
     def _validate_certificate_number(number: str) -> bool:

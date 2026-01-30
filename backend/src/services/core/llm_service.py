@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from ...core.exception_handler import ConfigurationError
 from ..document.config import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -220,9 +221,10 @@ class LLMServiceFactory:
         """
         service_class = cls._services.get(provider)
         if not service_class:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Unknown LLM provider: {provider}. "
-                f"Registered providers: {list[Any](cls._services.keys())}"
+                f"Registered providers: {list[Any](cls._services.keys())}",
+                config_key="LLM_PROVIDER",
             )
 
         # 合并配置
@@ -257,7 +259,10 @@ class LLMServiceFactory:
         elif provider == LLMProvider.HUNYUAN:
             return cls._create_hunyuan_service()
         else:
-            raise ValueError(f"Unsupported provider: {provider}")
+            raise ConfigurationError(
+                f"Unsupported provider: {provider}",
+                config_key="LLM_PROVIDER",
+            )
 
     @classmethod
     def _create_glm_service(cls) -> LLMServiceInterface:

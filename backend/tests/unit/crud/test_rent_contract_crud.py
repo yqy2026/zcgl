@@ -8,7 +8,6 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.crud.rent_contract import rent_contract
 from src.models.rent_contract import (
@@ -18,12 +17,7 @@ from src.models.rent_contract import (
     RentTerm,
 )
 
-
 # ===================== Fixtures =====================
-@pytest.fixture
-def mock_db():
-    """模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

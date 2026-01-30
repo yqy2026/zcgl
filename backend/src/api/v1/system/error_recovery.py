@@ -383,7 +383,7 @@ async def test_error_recovery(
             raise bad_request(f"无效的错误类别: {category}")
 
         # 执行测试
-        async def test_function():
+        async def test_function() -> dict[str, str]:
             if simulate_error:
                 raise Exception(f"模拟 {category} 错误")
             return {"test": "success"}

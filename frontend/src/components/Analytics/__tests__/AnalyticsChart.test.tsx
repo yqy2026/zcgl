@@ -3,52 +3,58 @@
  * 测试分析图表组件
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
+
+// Mock color utilities
+vi.mock('@/styles/colorMap', () => ({
+  CHART_COLORS: ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1'],
+  CHART_LABEL_COLORS: {
+    light: '#fff',
+    medium: '#666',
+  },
+}));
 
 // Mock @ant-design/plots
 vi.mock('@ant-design/plots', () => ({
-  Pie: ({ data, height }: any) => (
+  Pie: ({ height }: { height?: number }) => (
     <div data-testid="pie-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} data-type={d.type} data-value={d.value} />
-      ))}
+      Pie Chart
     </div>
   ),
-  Column: ({ data, height }: any) => (
+  Column: ({ height }: { height?: number }) => (
     <div data-testid="column-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} data-x={d.x} data-y={d.y} />
-      ))}
+      Column Chart
     </div>
   ),
-  Line: ({ data, height }: any) => (
+  Line: ({ height }: { height?: number }) => (
     <div data-testid="line-chart" data-height={height}>
-      {data?.map((d: any, i: number) => (
-        <div key={i} data-x={d.x} data-y={d.y} />
-      ))}
+      Line Chart
     </div>
   ),
 }));
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ title, children, className, loading }: any) => (
-    <div data-testid="card" data-title={title} data-loading={loading} data-class-name={className}>
+  Card: ({
+    children,
+    title,
+    className,
+  }: {
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+    className?: string;
+  }) => (
+    <div data-testid="card" className={className}>
+      {title && <div data-testid="card-title">{title}</div>}
       {children}
     </div>
   ),
-  Empty: ({ description, imageStyle: _imageStyle }: any) => (
-    <div data-testid="empty" data-description={description}>
-      Empty
-    </div>
+  Empty: ({ description }: { description?: React.ReactNode }) => (
+    <div data-testid="empty">{description}</div>
   ),
-  Spin: ({ size }: any) => <div data-testid="spin" data-size={size} />,
-}));
-
-// Mock ChartErrorBoundary
-vi.mock('../ChartErrorBoundary', () => ({
-  default: ({ children }: any) => <div data-testid="chart-error-boundary">{children}</div>,
+  Spin: ({ size }: { size?: string }) => <div data-testid="spin" data-size={size} />,
 }));
 
 describe('AnalyticsChart - 组件导出测试', () => {
@@ -73,736 +79,152 @@ describe('AnalyticsChart - 组件导出测试', () => {
   });
 });
 
-describe('AnalyticsPieChart - 基础属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsPieChart - 渲染测试', () => {
+  it('有数据时应该渲染饼图', async () => {
+    const { AnalyticsPieChart } = await import('../AnalyticsChart');
+    const data = [
+      { type: '选项1', value: 100 },
+      { type: '选项2', value: 200 },
+    ];
+    render(<AnalyticsPieChart title="测试饼图" data={data} />);
+
+    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByTestId('card-title')).toHaveTextContent('测试饼图');
+    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, { data });
-    expect(element).toBeTruthy();
+    render(<AnalyticsPieChart title="空饼图" data={[]} />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 
-  it('应该支持dataKey属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ type: '选项1', value: 100 }];
+    render(<AnalyticsPieChart title="测试" data={data} height={400} />);
 
-  it('应该支持labelKey属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      labelKey: 'name',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认labelKey应该是name', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持title属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      title: '测试标题',
-      data,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持loading属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认loading应该是false', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      height: 400,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '400');
   });
 
   it('默认height应该是300', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ type: '选项1', value: 100 }];
+    render(<AnalyticsPieChart title="测试" data={data} />);
 
-  it('应该支持showLegend属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认showLegend应该是true', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showTooltip属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认showTooltip应该是true', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持innerRadius属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      innerRadius: 60,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持outerRadius属性', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      outerRadius: 100,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认outerRadius应该是80', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '300');
   });
 });
 
-describe('AnalyticsBarChart - 基础属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsBarChart - 渲染测试', () => {
+  it('有数据时应该渲染柱状图', async () => {
+    const { AnalyticsBarChart } = await import('../AnalyticsChart');
+    const data = [
+      { name: '项目1', value: 100 },
+      { name: '项目2', value: 200 },
+    ];
+    render(<AnalyticsBarChart title="测试柱状图" data={data} xAxisKey="name" barKey="value" />);
+
+    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByTestId('card-title')).toHaveTextContent('测试柱状图');
+    expect(screen.getByTestId('column-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
+    render(<AnalyticsBarChart title="空柱状图" data={[]} xAxisKey="name" barKey="value" />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 
-  it('应该支持xAxisKey属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ name: '项目1', value: 100 }];
+    render(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" height={400} />);
 
-  it('应该支持barKey属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持title属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      title: '测试标题',
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持loading属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      height: 400,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持barSize属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      barSize: 40,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showLegend属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showTooltip属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showGrid属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      showGrid: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持color属性', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      color: '#ff0000',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认color应该是#0088FE', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('column-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('AnalyticsLineChart - 基础属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('AnalyticsLineChart - 渲染测试', () => {
+  it('有数据时应该渲染折线图', async () => {
+    const { AnalyticsLineChart } = await import('../AnalyticsChart');
+    const data = [
+      { date: '2024-01', value: 100 },
+      { date: '2024-02', value: 200 },
+    ];
+    const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
+    render(<AnalyticsLineChart title="测试折线图" data={data} xAxisKey="date" lines={lines} />);
+
+    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByTestId('card-title')).toHaveTextContent('测试折线图');
+    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
   });
 
-  it('应该支持data属性', async () => {
+  it('空数据时应该显示Empty', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-    });
-    expect(element).toBeTruthy();
+    const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
+    render(<AnalyticsLineChart title="空折线图" data={[]} xAxisKey="date" lines={lines} />);
+
+    expect(screen.getByTestId('empty')).toBeInTheDocument();
   });
 
-  it('应该支持xAxisKey属性', async () => {
+  it('应该支持自定义height', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-    });
-    expect(element).toBeTruthy();
-  });
+    const data = [{ date: '2024-01', value: 100 }];
+    const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
+    render(<AnalyticsLineChart title="测试" data={data} xAxisKey="date" lines={lines} height={400} />);
 
-  it('应该支持lines属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持title属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      title: '测试标题',
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持loading属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持height属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-      height: 400,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showLegend属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showTooltip属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#00888FE' }],
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showGrid属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#00888E' }],
-      showGrid: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持showDots属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#00888E' }],
-      showDots: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持stroke属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E' }],
-      stroke: '#FF0000',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持strokeWidth属性', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E', strokeWidth: 3 }],
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('line-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
-describe('AnalyticsChart - 数据格式化工具测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('chartDataUtils.toPieData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toPieData).toBeDefined();
-  });
-
-  it('chartDataUtils.toBusinessCategoryData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toBusinessCategoryData).toBeDefined();
-  });
-
-  it('chartDataUtils.toOccupancyData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toOccupancyData).toBeDefined();
-  });
-
-  it('chartDataUtils.toTrendData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toTrendData).toBeDefined();
-  });
-
-  it('chartDataUtils.toAreaData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toAreaData).toBeDefined();
-  });
-
-  it('chartDataUtils.toAreaBarData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toAreaBarData).toBeDefined();
-  });
-
-  it('chartDataUtils.toBusinessCategoryAreaData应该存在', async () => {
-    const { chartDataUtils } = await import('../AnalyticsChart');
-    expect(chartDataUtils.toBusinessCategoryAreaData).toBeDefined();
-  });
-});
-
-describe('AnalyticsChart - 空数据测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart data为空时应该显示Empty', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: [],
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsPieChart data为undefined时应该显示Empty', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const element = React.createElement(AnalyticsPieChart, {
-      data: undefined as any,
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart data为空时应该显示Empty', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const element = React.createElement(AnalyticsBarChart, {
-      data: [],
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart data为空时应该显示Empty', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const element = React.createElement(AnalyticsLineChart, {
-      data: [],
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088FE' }],
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsChart - Loading状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart loading时应该显示Spin', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart loading时应该显示Spin', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart loading时应该显示Spin', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E' }],
-      loading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsChart - 图表组件边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理value为0的选项', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 0 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理负数value', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: -100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsChart - Tooltip测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart应该有Tooltip', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart应该有Tooltip', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart应该有Tooltip', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E' }],
-      showTooltip: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsChart - Legend测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AnalyticsPieChart应该有Legend', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsBarChart应该有Legend', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    const data = [{ name: '选项1', value: 100 }];
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('AnalyticsLineChart应该有Legend', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart');
-    const data = [{ date: '2024-01-01', value: 100 }];
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E' }],
-      showLegend: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AnalyticsChart - chartDataUtils测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('toPieData应该转换数据格式', async () => {
+describe('chartDataUtils - 数据转换工具测试', () => {
+  it('toPieData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [
       { name: '选项1', count: 100, percentage: 10 },
       { name: '选项2', count: 200, percentage: 20 },
     ];
     const result = chartDataUtils.toPieData(input);
+
     expect(result).toEqual([
       { type: '选项1', value: 100, count: 100, percentage: 10 },
       { type: '选项2', value: 200, count: 200, percentage: 20 },
     ]);
   });
 
-  it('toBusinessCategoryData应该转换数据格式', async () => {
+  it('toBusinessCategoryData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [
       { category: '类别1', count: 100, occupancy_rate: 80 },
       { category: '类别2', count: 200, occupancy_rate: 90 },
     ];
     const result = chartDataUtils.toBusinessCategoryData(input);
+
     expect(result).toEqual([
       { name: '类别1', value: 100, count: 100, occupancy_rate: 80 },
       { name: '类别2', value: 200, count: 200, occupancy_rate: 90 },
     ]);
   });
 
-  it('toOccupancyData应该转换数据格式', async () => {
+  it('toOccupancyData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [
       { range: '0-20%', count: 10, percentage: 10 },
       { range: '20-40%', count: 20, percentage: 20 },
     ];
     const result = chartDataUtils.toOccupancyData(input);
+
     expect(result).toEqual([
       { name: '0-20%', value: 10, count: 10, percentage: 10 },
       { name: '20-40%', value: 20, count: 20, percentage: 20 },
     ]);
   });
 
-  it('toTrendData应该转换数据格式', async () => {
+  it('toTrendData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [
       {
@@ -813,6 +235,7 @@ describe('AnalyticsChart - chartDataUtils测试', () => {
       },
     ];
     const result = chartDataUtils.toTrendData(input);
+
     expect(result).toEqual([
       {
         date: '2024-01-01',
@@ -823,12 +246,55 @@ describe('AnalyticsChart - chartDataUtils测试', () => {
     ]);
   });
 
-  it('toAreaData应该转换数据格式', async () => {
+  it('toAreaData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [{ name: '商业', total_area: 1000, area_percentage: 10, average_area: 100 }];
     const result = chartDataUtils.toAreaData(input);
+
     expect(result).toEqual([
       { type: '商业', value: 1000, total_area: 1000, percentage: 10, average_area: 100 },
     ]);
+  });
+
+  it('toAreaBarData应该正确转换数据格式', async () => {
+    const { chartDataUtils } = await import('../AnalyticsChart');
+    const input = [{ name: '办公', total_area: 500, count: 10, average_area: 50 }];
+    const result = chartDataUtils.toAreaBarData(input);
+
+    expect(result[0]).toHaveProperty('name', '办公');
+    expect(result[0]).toHaveProperty('value', 500);
+    expect(result[0]).toHaveProperty('count', 10);
+  });
+
+  it('toBusinessCategoryAreaData应该正确转换数据格式', async () => {
+    const { chartDataUtils } = await import('../AnalyticsChart');
+    const input = [
+      { category: '零售', total_area: 800, area_percentage: 40, occupancy_rate: 75 },
+    ];
+    const result = chartDataUtils.toBusinessCategoryAreaData(input);
+
+    expect(result[0]).toHaveProperty('name', '零售');
+    expect(result[0]).toHaveProperty('value', 800);
+    expect(result[0]).toHaveProperty('occupancy_rate', 75);
+  });
+});
+
+describe('AnalyticsChart - 边界情况测试', () => {
+  it('应该处理value为0的选项', async () => {
+    const { AnalyticsPieChart } = await import('../AnalyticsChart');
+    const data = [{ type: '选项1', value: 0 }];
+    render(<AnalyticsPieChart title="测试" data={data} />);
+
+    // 应该正常渲染
+    expect(screen.getByTestId('card')).toBeInTheDocument();
+  });
+
+  it('应该处理负数value', async () => {
+    const { AnalyticsBarChart } = await import('../AnalyticsChart');
+    const data = [{ name: '选项1', value: -100 }];
+    render(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" />);
+
+    // 应该正常渲染
+    expect(screen.getByTestId('card')).toBeInTheDocument();
   });
 });

@@ -86,12 +86,16 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
           default:
             errorInfo.message = (data?.message as string) ?? `服务器错误 (${status})`;
         }
-      } else if ((error as any)?.request != null) {
+      } else if (error?.request != null) {
         // 网络错误
         errorInfo = {
           code: 'NETWORK_ERROR',
           message: '网络连接失败，请检查网络设置',
-          details: error as any,
+          details: {
+            request: error.request,
+            response: error.response,
+            message: error.message,
+          },
           timestamp: new Date().toISOString(),
         };
       } else if (error?.message != null) {
@@ -99,7 +103,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
         errorInfo = {
           code: 'CLIENT_ERROR',
           message: error.message,
-          details: error as any,
+          details: { message: error.message },
           timestamp: new Date().toISOString(),
         };
       }

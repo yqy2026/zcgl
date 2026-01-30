@@ -3,26 +3,28 @@ LLM Prompt管理API路由
 提供Prompt模板的CRUD操作和版本管理
 """
 
-from typing import Any, cast
-from uuid import uuid4
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import BaseBusinessError
 from ...core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
-from ...models.llm_prompt import PromptTemplate, PromptVersion
+from ...models.llm_prompt import PromptTemplate
 from ...schemas.llm_prompt import (
+    ExtractionFeedbackCreate,
+    ExtractionFeedbackResponse,
     PromptRollbackRequest,
     PromptTemplateCreate,
     PromptTemplateResponse,
     PromptTemplateUpdate,
     PromptVersionResponse,
 )
+from ...services.llm_prompt.feedback_service import FeedbackService
 from ...services.llm_prompt.prompt_manager import PromptManager
 
 router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
@@ -49,6 +51,8 @@ def create_prompt(
     try:
         prompt = manager.create_prompt(db, prompt_in, user_id=current_user.id)
         return prompt
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -70,28 +74,21 @@ def get_prompts(
 
     支持分页和多条件筛选
     """
-    query = db.query(PromptTemplate)
-
-    # 应用筛选
-    if doc_type:
-        query = query.filter(PromptTemplate.doc_type == doc_type)
-    if status:
-        query = query.filter(PromptTemplate.status == status)
-    if provider:
-        query = query.filter(PromptTemplate.provider == provider)
-
-    # 计算总数
-    total = query.count()
-
-    # 分页
-    skip = (page - 1) * page_size
-    prompts = query.offset(skip).limit(page_size).all()
-
-    return ResponseHandler.paginated(
-        data=[PromptTemplateResponse.model_validate(p) for p in prompts],
+    manager = PromptManager()
+    result = manager.list_templates(
+        db,
+        doc_type=doc_type,
+        status=status,
+        provider=provider,
         page=page,
         page_size=page_size,
-        total=total,
+    )
+
+    return ResponseHandler.paginated(
+        data=[PromptTemplateResponse.model_validate(p) for p in result["items"]],
+        page=result["page"],
+        page_size=result["page_size"],
+        total=result["total"],
         message="获取Prompt模板列表成功",
     )
 
@@ -103,7 +100,8 @@ def get_prompt(
     current_user: User = Depends(get_current_active_user),
 ) -> PromptTemplate:
     """获取Prompt模板详情"""
-    prompt = cast(PromptTemplate | None, db.query(PromptTemplate).get(prompt_id))
+    manager = PromptManager()
+    prompt = manager.get_by_id(db, template_id=prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt不存在")
     return prompt
@@ -128,6 +126,8 @@ def update_prompt(
             db, prompt_id, prompt_in, user_id=current_user.id
         )
         return prompt
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -154,6 +154,8 @@ def activate_prompt(
     try:
         prompt = manager.activate_prompt(db, prompt_id)
         return prompt
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -179,6 +181,8 @@ def rollback_prompt(
             db, prompt_id, request.version_id, user_id=current_user.id
         )
         return prompt
+    except BaseBusinessError:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -194,13 +198,8 @@ def get_prompt_versions(
 
     返回按创建时间倒序的版本列表
     """
-    versions = (
-        db.query(PromptVersion)
-        .filter(PromptVersion.template_id == prompt_id)
-        .order_by(PromptVersion.created_at.desc())
-        .all()
-    )
-
+    manager = PromptManager()
+    versions = manager.get_prompt_history(db, prompt_id)
     return [PromptVersionResponse.model_validate(v) for v in versions]
 
 
@@ -220,46 +219,8 @@ def get_statistics(
     - 总数统计(按状态、按类型、按提供商)
     - 平均准确率和置信度
     """
-    # 总数统计
-    total_prompts = db.query(PromptTemplate).count()
-
-    # 按状态统计
-    status_stats = (
-        db.query(PromptTemplate.status, func.count(PromptTemplate.id))
-        .group_by(PromptTemplate.status)
-        .all()
-    )
-
-    # 按文档类型统计
-    doc_type_stats = (
-        db.query(PromptTemplate.doc_type, func.count(PromptTemplate.id))
-        .group_by(PromptTemplate.doc_type)
-        .all()
-    )
-
-    # 按提供商统计
-    provider_stats = (
-        db.query(PromptTemplate.provider, func.count(PromptTemplate.id))
-        .group_by(PromptTemplate.provider)
-        .all()
-    )
-
-    # 平均准确率
-    avg_accuracy = db.query(func.avg(PromptTemplate.avg_accuracy)).scalar() or 0.0
-    avg_confidence = db.query(func.avg(PromptTemplate.avg_confidence)).scalar() or 0.0
-
-    return {
-        "total_prompts": total_prompts,
-        "status_distribution": [{"status": s[0], "count": s[1]} for s in status_stats],
-        "doc_type_distribution": [
-            {"doc_type": dt[0], "count": dt[1]} for dt in doc_type_stats
-        ],
-        "provider_distribution": [
-            {"provider": p[0], "count": p[1]} for p in provider_stats
-        ],
-        "overall_avg_accuracy": float(avg_accuracy),
-        "overall_avg_confidence": float(avg_confidence),
-    }
+    manager = PromptManager()
+    return manager.get_statistics(db)
 
 
 # ============================================================================
@@ -267,21 +228,13 @@ def get_statistics(
 # ============================================================================
 
 
-@router.post("/feedback")
+@router.post("/feedback", response_model=ExtractionFeedbackResponse)
 async def collect_feedback(
     *,
     db: Session = Depends(get_db),
-    template_id: str,
-    field_name: str,
-    original_value: str,
-    corrected_value: str,
-    confidence_before: float,
-    doc_type: str,
-    file_path: str,
-    session_id: str | None = None,
-    user_action: str = "corrected",
-    current_user: User = Depends(get_current_active_user),  # 🔒 安全修复: 添加身份验证
-) -> dict[str, Any]:
+    feedback_in: ExtractionFeedbackCreate,
+    current_user: User = Depends(get_current_active_user),
+) -> ExtractionFeedbackResponse:
     """
     收集用户反馈(修正数据)
 
@@ -292,38 +245,14 @@ async def collect_feedback(
     - **original_value**: 原始识别值
     - **corrected_value**: 用户修正后的值
     - **confidence_before**: 修正前的置信度
-    - **current_user**: 当前登录用户（自动注入）
     """
-
-    from ...models.llm_prompt import ExtractionFeedback
-
-    # 验证Prompt存在
-    template = db.query(PromptTemplate).get(template_id)
-    if not template:
-        raise HTTPException(status_code=404, detail="Prompt不存在")
-
-    # 获取当前版本ID
-    current_version_id = template.current_version_id
-
-    # 创建反馈记录（包含用户ID用于审计）
-    feedback = ExtractionFeedback()
-    feedback.id = str(uuid4())
-    feedback.template_id = template_id
-    feedback.version_id = current_version_id
-    feedback.doc_type = doc_type
-    feedback.file_path = file_path
-    feedback.session_id = session_id
-    feedback.field_name = field_name
-    feedback.original_value = original_value
-    feedback.corrected_value = corrected_value
-    feedback.confidence_before = confidence_before
-    feedback.user_action = user_action
-    feedback.user_id = current_user.id
-
-    db.add(feedback)
-    db.commit()
-
-    return {"success": True, "feedback_id": feedback.id}
+    service = FeedbackService()
+    try:
+        return service.collect(db, feedback_in, user_id=current_user.id)
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # 注册路由

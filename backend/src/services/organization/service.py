@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.organization import organization as organization_crud
 from ...models.organization import Organization, OrganizationHistory
 from ...schemas.organization import OrganizationCreate, OrganizationUpdate
@@ -23,7 +24,7 @@ class OrganizationService:
         if obj_in.parent_id:
             parent = organization_crud.get(db, obj_in.parent_id)
             if not parent:
-                raise ValueError(f"上级组织 {obj_in.parent_id} 不存在")
+                raise ResourceNotFoundError("组织", obj_in.parent_id)
             parent_level: int = getattr(parent, "level") or 0
             level = parent_level + 1
             # path will be set after ID is generated or we need to generate ID first?
@@ -67,7 +68,7 @@ class OrganizationService:
         """更新组织"""
         db_obj: Organization | None = organization_crud.get(db, org_id)
         if not db_obj:
-            raise ValueError(f"组织ID {org_id} 不存在")
+            raise ResourceNotFoundError("组织", org_id)
 
         # 记录变更前的值
         old_values = {}
@@ -87,7 +88,10 @@ class OrganizationService:
                 if new_parent_id:
                     # 检查是否会形成循环引用
                     if self._would_create_cycle(db, org_id, new_parent_id):
-                        raise ValueError("不能将组织移动到其子组织下")
+                        raise OperationNotAllowedError(
+                            "不能将组织移动到其子组织下",
+                            reason="organization_cycle",
+                        )
 
                     parent = organization_crud.get(db, new_parent_id)
                     if parent:
@@ -100,7 +104,7 @@ class OrganizationService:
                             else f"/{parent.id}/{db_obj.id}",
                         )
                     else:
-                        raise ValueError(f"上级组织 {new_parent_id} 不存在")
+                        raise ResourceNotFoundError("组织", new_parent_id)
                 else:
                     object.__setattr__(db_obj, "level", 1)
                     object.__setattr__(db_obj, "path", f"/{db_obj.id}")
@@ -143,7 +147,10 @@ class OrganizationService:
         # 检查是否有子组织
         children = organization_crud.get_children(db, org_id)
         if children:
-            raise ValueError("不能删除有子组织的组织，请先删除或移动子组织")
+            raise OperationNotAllowedError(
+                "不能删除有子组织的组织，请先删除或移动子组织",
+                reason="organization_has_children",
+            )
 
         setattr(db_obj, "is_deleted", True)
         setattr(db_obj, "updated_at", datetime.now())

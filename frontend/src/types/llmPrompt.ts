@@ -29,6 +29,8 @@ export enum LLMProvider {
   GLM = 'glm', // 智谱 GLM
 }
 
+export type FewShotExamples = Record<string, unknown>;
+
 /**
  * Prompt 模板
  */
@@ -40,7 +42,7 @@ export interface PromptTemplate {
   description?: string;
   system_prompt: string;
   user_prompt_template: string;
-  few_shot_examples?: Record<string, any>;
+  few_shot_examples?: FewShotExamples;
   version: string;
   status: PromptStatus;
   tags?: string[];
@@ -64,7 +66,7 @@ export interface PromptTemplateCreate {
   description?: string;
   system_prompt: string;
   user_prompt_template: string;
-  few_shot_examples?: Record<string, any>;
+  few_shot_examples?: FewShotExamples;
   tags?: string[];
 }
 
@@ -76,7 +78,7 @@ export interface PromptTemplateUpdate {
   description?: string;
   system_prompt?: string;
   user_prompt_template?: string;
-  few_shot_examples?: Record<string, any>;
+  few_shot_examples?: FewShotExamples;
   tags?: string[];
   change_description?: string;
 }
@@ -90,7 +92,7 @@ export interface PromptVersion {
   version: string;
   system_prompt: string;
   user_prompt_template: string;
-  few_shot_examples?: Record<string, any>;
+  few_shot_examples?: FewShotExamples;
   change_description?: string;
   change_type?: string;
   auto_generated?: boolean;

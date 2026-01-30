@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import bad_request, internal_error, not_found
+from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....crud.rent_contract import rent_contract
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
@@ -54,9 +54,9 @@ async def upload_contract_attachment(
             uploader_name=current_user.full_name or current_user.username,
         )
         return result
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"上传合同附件失败: {str(e)}")
 
 

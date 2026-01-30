@@ -8,7 +8,10 @@ import { Row, Col, Steps, message, Card } from 'antd';
 import { PropertyCertificateUpload } from '@/components/PropertyCertificate/PropertyCertificateUpload';
 import { PropertyCertificateReview } from '@/components/PropertyCertificate/PropertyCertificateReview';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
-import type { CertificateExtractionResult } from '@/types/propertyCertificate';
+import type {
+  CertificateExtractionResult,
+  CertificateImportConfirm,
+} from '@/types/propertyCertificate';
 
 export const PropertyCertificateImport: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -22,7 +25,7 @@ export const PropertyCertificateImport: React.FC = () => {
     setCurrentStep(1);
   };
 
-  const handleConfirm = async (data: any) => {
+  const handleConfirm = async (data: CertificateImportConfirm) => {
     setLoading(true);
     try {
       const response = await propertyCertificateService.confirmImport(data);

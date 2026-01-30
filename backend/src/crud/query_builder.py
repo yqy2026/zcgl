@@ -4,6 +4,7 @@ from typing import Any, TypeVar
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
 
+from ..core.exception_handler import InvalidRequestError
 from .field_whitelist import EmptyWhitelist, get_whitelist_for_model
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
@@ -90,11 +91,14 @@ class QueryBuilder[ModelType]:
             base_query: Optional existing query to build upon.
 
         Raises:
-            ValueError: If blocked field is used in filters or sort
+            InvalidRequestError: If blocked field is used in filters or sort
 
         Security: All field access is validated against model whitelist.
         """
         query = base_query if base_query is not None else select(self.model)
+
+        # 0. Apply Soft Delete Filter (自动过滤已删除记录)
+        query = self._apply_soft_delete_filter(query)
 
         # 1. Apply Filters (with validation)
         if filters:
@@ -126,7 +130,7 @@ class QueryBuilder[ModelType]:
             field_name: The field name to validate
 
         Raises:
-            ValueError: If field is blocked for filtering
+            InvalidRequestError: If field is blocked for filtering
 
         Security: Logs all blocked access attempts for monitoring.
         """
@@ -135,10 +139,25 @@ class QueryBuilder[ModelType]:
                 f"Blocked filter on '{field_name}' for {self.model.__name__}. "
                 f"Field not in filter whitelist or explicitly blocked."
             )
-            raise ValueError(
+            raise InvalidRequestError(
                 f"Filtering by field '{field_name}' is not allowed for {self.model.__name__}. "
                 f"Field is either blocked or not in the filter whitelist."
             )
+
+    def _apply_soft_delete_filter(self, query: Select[Any]) -> Select[Any]:
+        """
+        自动过滤已软删除的记录
+
+        检查模型是否有 data_status 字段，如果有则自动添加过滤条件。
+        这确保了所有查询默认排除已删除的数据。
+
+        Returns:
+            添加了软删除过滤条件的查询对象
+        """
+        if hasattr(self.model, "data_status"):
+            data_status_column = getattr(self.model, "data_status")
+            query = query.where(data_status_column != "已删除")
+        return query
 
     def _apply_filters(
         self, query: Select[Any], filters: dict[str, Any]
@@ -249,7 +268,7 @@ class QueryBuilder[ModelType]:
             The modified query with sorting applied
 
         Raises:
-            ValueError: If field is blocked for sorting
+            InvalidRequestError: If field is blocked for sorting
 
         Security: Validates sort field against sort whitelist.
         """
@@ -259,7 +278,7 @@ class QueryBuilder[ModelType]:
                 f"Blocked sort on '{sort_by}' for {self.model.__name__}. "
                 f"Field not in sort whitelist or explicitly blocked."
             )
-            raise ValueError(
+            raise InvalidRequestError(
                 f"Sorting by field '{sort_by}' is not allowed for {self.model.__name__}. "
                 f"Field is either blocked or not in the sort whitelist."
             )

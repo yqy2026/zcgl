@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Space, Card, Select, Tag } from 'antd';
+import type { RuleObject } from 'antd/es/form';
 import { MessageManager } from '@/utils/messageManager';
 
 import { ownershipService } from '@/services/ownershipService';
@@ -111,19 +112,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
     }
   };
 
-  // 表单验证规则接口
-  interface FormValidationRule {
-    field?: string;
-    fullField?: string;
-    type?: string;
-    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>;
-  }
-
   // 验证项目名称
-  const validateProjectName = async (rule: FormValidationRule, value: string) => {
-    if (value == null) return Promise.reject('请输入项目名称');
-    if (value.length < 1) return Promise.reject('项目名称至少1个字符');
-    if (value.length > 200) return Promise.reject('项目名称不能超过200个字符');
+  const validateProjectName: RuleObject['validator'] = async (_rule, value) => {
+    if (value == null || value === '') return Promise.reject('请输入项目名称');
+    if (String(value).length < 1) return Promise.reject('项目名称至少1个字符');
+    if (String(value).length > 200) return Promise.reject('项目名称不能超过200个字符');
     return Promise.resolve();
   };
 
@@ -133,7 +126,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         <Form.Item
           label="项目名称"
           name="name"
-          rules={[{ required: true, validator: validateProjectName as any }]}
+          rules={[{ required: true, validator: validateProjectName }]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />
         </Form.Item>

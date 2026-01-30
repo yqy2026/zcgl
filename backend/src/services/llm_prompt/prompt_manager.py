@@ -5,11 +5,16 @@ Prompt管理服务
 
 import logging
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import (
+    DuplicateResourceError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from ...models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
 
@@ -72,7 +77,7 @@ class PromptManager:
         )
 
         if existing:
-            raise ValueError(f"Prompt名称已存在: {data.name}")
+            raise DuplicateResourceError("Prompt", "name", data.name)
 
         # 2. 生成版本号
         version = "v1.0.0"
@@ -135,7 +140,7 @@ class PromptManager:
             PromptTemplate | None, db.query(PromptTemplate).get(template_id)
         )
         if not template:
-            raise ValueError(f"Prompt不存在: {template_id}")
+            raise ResourceNotFoundError("Prompt", template_id)
 
         # 1. 生成新版本号
         new_version = self._increment_version(template.version)
@@ -196,7 +201,7 @@ class PromptManager:
             PromptTemplate | None, db.query(PromptTemplate).get(template_id)
         )
         if not template:
-            raise ValueError(f"Prompt不存在: {template_id}")
+            raise ResourceNotFoundError("Prompt", template_id)
 
         # 1. 停用同类型的其他Prompt
         db.query(PromptTemplate).filter(
@@ -233,14 +238,20 @@ class PromptManager:
         target_version = cast(
             PromptVersion | None, db.query(PromptVersion).get(version_id)
         )
-        if not target_version or target_version.template_id != template_id:
-            raise ValueError(f"版本不存在或不匹配: {version_id}")
+        if not target_version:
+            raise ResourceNotFoundError("Prompt版本", version_id)
+        if target_version.template_id != template_id:
+            raise ResourceConflictError(
+                f"版本不存在或不匹配: {version_id}",
+                resource_type="Prompt",
+                details={"template_id": template_id, "version_id": version_id},
+            )
 
         template = cast(
             PromptTemplate | None, db.query(PromptTemplate).get(template_id)
         )
         if not template:
-            raise ValueError(f"Prompt不存在: {template_id}")
+            raise ResourceNotFoundError("Prompt", template_id)
 
         # 2. 生成新版本号
         new_version = self._increment_version(template.version)
@@ -294,6 +305,121 @@ class PromptManager:
 
         logger.info(f"📜 Prompt历史: {template_id}, 共{len(versions)}个版本")
         return versions
+
+    def list_templates(
+        self,
+        db: Session,
+        *,
+        doc_type: str | None = None,
+        status: str | None = None,
+        provider: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict[str, Any]:
+        """
+        获取Prompt模板列表
+
+        Args:
+            db: 数据库会话
+            doc_type: 文档类型筛选
+            status: 状态筛选
+            provider: 提供商筛选
+            page: 页码
+            page_size: 每页记录数
+
+        Returns:
+            包含 items, total, page, page_size 的字典
+        """
+        query = db.query(PromptTemplate)
+
+        # 应用筛选
+        if doc_type:
+            query = query.filter(PromptTemplate.doc_type == doc_type)
+        if status:
+            query = query.filter(PromptTemplate.status == status)
+        if provider:
+            query = query.filter(PromptTemplate.provider == provider)
+
+        # 计算总数
+        total = query.count()
+
+        # 分页
+        skip = (page - 1) * page_size
+        prompts = query.offset(skip).limit(page_size).all()
+
+        return {
+            "items": prompts,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    def get_by_id(self, db: Session, *, template_id: str) -> PromptTemplate | None:
+        """
+        获取单个Prompt模板
+
+        Args:
+            db: 数据库会话
+            template_id: 模板ID
+
+        Returns:
+            PromptTemplate or None
+        """
+        from typing import cast
+
+        return cast(PromptTemplate | None, db.query(PromptTemplate).get(template_id))
+
+    def get_statistics(self, db: Session) -> dict[str, Any]:
+        """
+        获取Prompt统计概览
+
+        Returns:
+            包含总数统计、按状态/类型/提供商分布、平均准确率等
+        """
+        from sqlalchemy import func
+
+        # 总数统计
+        total_prompts = db.query(PromptTemplate).count()
+
+        # 按状态统计
+        status_stats = (
+            db.query(PromptTemplate.status, func.count(PromptTemplate.id))
+            .group_by(PromptTemplate.status)
+            .all()
+        )
+
+        # 按文档类型统计
+        doc_type_stats = (
+            db.query(PromptTemplate.doc_type, func.count(PromptTemplate.id))
+            .group_by(PromptTemplate.doc_type)
+            .all()
+        )
+
+        # 按提供商统计
+        provider_stats = (
+            db.query(PromptTemplate.provider, func.count(PromptTemplate.id))
+            .group_by(PromptTemplate.provider)
+            .all()
+        )
+
+        # 平均准确率
+        avg_accuracy = db.query(func.avg(PromptTemplate.avg_accuracy)).scalar() or 0.0
+        avg_confidence = db.query(func.avg(PromptTemplate.avg_confidence)).scalar() or 0.0
+
+        return {
+            "total_prompts": total_prompts,
+            "status_distribution": [
+                {"status": s[0], "count": s[1]} for s in status_stats
+            ],
+            "doc_type_distribution": [
+                {"doc_type": dt[0], "count": dt[1]} for dt in doc_type_stats
+            ],
+            "provider_distribution": [
+                {"provider": p[0], "count": p[1]} for p in provider_stats
+            ],
+            "overall_avg_accuracy": float(avg_accuracy),
+            "overall_avg_confidence": float(avg_confidence),
+        }
 
     @staticmethod
     def _increment_version(current_version: str) -> str:

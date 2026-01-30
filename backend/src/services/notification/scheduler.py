@@ -14,6 +14,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ...constants.business_constants import DataStatusValues
+from ...constants.rent_contract_constants import PaymentStatus
 from ...core.enums import ContractStatus
 from ...database import get_db
 from ...models.auth import User
@@ -230,7 +231,7 @@ class NotificationSchedulerService:
             self.db.query(RentLedger)
             .filter(
                 and_(
-                    RentLedger.payment_status.in_(["未支付", "部分支付"]),
+                    RentLedger.payment_status.in_([PaymentStatus.UNPAID, PaymentStatus.PARTIAL]),
                     RentLedger.due_date < today,  # 应缴日期已过
                     RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )
@@ -321,7 +322,7 @@ class NotificationSchedulerService:
             self.db.query(RentLedger)
             .filter(
                 and_(
-                    RentLedger.payment_status == "未支付",
+                    RentLedger.payment_status == PaymentStatus.UNPAID,
                     RentLedger.due_date <= warning_date,
                     RentLedger.due_date >= today,
                     RentLedger.data_status == DataStatusValues.ASSET_NORMAL,

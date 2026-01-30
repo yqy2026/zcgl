@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.task import excel_task_config_crud, task_crud
 from ...enums.task import TaskStatus
 from ...models.task import AsyncTask, ExcelTaskConfig, TaskHistory
@@ -58,7 +59,7 @@ class TaskService:
         """更新任务状态"""
         task: AsyncTask | None = task_crud.get(db, task_id)
         if not task:
-            raise ValueError(f"任务 {task_id} 不存在")
+            raise ResourceNotFoundError("任务", task_id)
 
         old_status = task.status
 
@@ -115,7 +116,7 @@ class TaskService:
         """通用更新任务"""
         task: AsyncTask | None = task_crud.get(db, task_id)
         if not task:
-            raise ValueError(f"任务 {task_id} 不存在")
+            raise ResourceNotFoundError("任务", task_id)
 
         # Check permissions/state logic if any (from API)
         if task.status in [
@@ -125,7 +126,10 @@ class TaskService:
         ]:
             # Only allow updating active tasks generally, unless specific fields?
             # API says: "已完成的任务无法更新"
-            raise ValueError("已完成的任务无法更新")
+            raise OperationNotAllowedError(
+                "已完成的任务无法更新",
+                reason="task_status_final",
+            )
 
         # Reuse update_task_status logic if status changes, OR just generic update?
         # If status is in obj_in, we should be careful.
@@ -183,10 +187,13 @@ class TaskService:
         """取消任务"""
         task = task_crud.get(db, task_id)
         if not task:
-            raise ValueError("任务不存在")
+            raise ResourceNotFoundError("任务", task_id)
 
         if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
-            raise ValueError("任务无法取消")
+            raise OperationNotAllowedError(
+                "任务无法取消",
+                reason="task_status_not_cancelable",
+            )
 
         error_msg = f"任务被取消: {reason if reason else '无原因'}"
         return self.update_task_status(
@@ -197,7 +204,7 @@ class TaskService:
         """删除任务"""
         task = task_crud.get(db, task_id)
         if not task:
-            raise ValueError("任务不存在")
+            raise ResourceNotFoundError("任务", task_id)
 
         setattr(task, "is_active", False)
         db.add(task)

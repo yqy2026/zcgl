@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.pdf_import_session import (
     PDFImportSession,
@@ -23,14 +22,9 @@ from src.services.document.processing_tracker import (
     track_processing_step,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

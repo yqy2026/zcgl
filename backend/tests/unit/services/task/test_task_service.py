@@ -6,21 +6,15 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.enums.task import TaskStatus
 from src.models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 from src.schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 from src.services.task.service import TaskService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

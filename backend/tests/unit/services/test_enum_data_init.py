@@ -8,7 +8,7 @@ Tests cover:
 - Database operation mocking
 """
 
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -18,12 +18,6 @@ from src.services.enum_data_init import (
     add_legacy_enum_values,
     init_enum_data,
 )
-
-
-@pytest.fixture
-def mock_db():
-    """Mock database session."""
-    return MagicMock()
 
 
 @pytest.fixture

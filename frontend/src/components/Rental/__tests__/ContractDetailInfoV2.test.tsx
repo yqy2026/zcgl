@@ -15,19 +15,100 @@ import { render, screen } from '@testing-library/react';
 
 // Mock antd
 vi.mock('antd', () => {
-  const DescriptionsItemMock = ({ children, label }: any) => (
+  interface DescriptionsItemMockProps {
+    children?: React.ReactNode;
+    label?: React.ReactNode;
+  }
+
+  interface DescriptionItem {
+    key?: React.Key;
+    label?: React.ReactNode;
+    children?: React.ReactNode;
+  }
+
+  interface DescriptionsMockProps {
+    items?: DescriptionItem[];
+    children?: React.ReactNode;
+  }
+
+  interface CardMockProps {
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+  }
+
+  interface TagMockProps {
+    children?: React.ReactNode;
+    color?: string;
+  }
+
+  interface TableColumnMock {
+    title?: React.ReactNode;
+    dataIndex?: string;
+  }
+
+  interface TableMockProps {
+    dataSource?: Record<string, React.ReactNode>[];
+    columns?: TableColumnMock[];
+  }
+
+  interface TabsItemMock {
+    key: string;
+    label?: React.ReactNode;
+    children?: React.ReactNode;
+  }
+
+  interface TabsMockProps {
+    items?: TabsItemMock[];
+    defaultActiveKey?: string;
+  }
+
+  interface SpaceMockProps {
+    children?: React.ReactNode;
+  }
+
+  interface TimelineItemMock {
+    children?: React.ReactNode;
+  }
+
+  interface TimelineMockProps {
+    items?: TimelineItemMock[];
+  }
+
+  interface EmptyMockProps {
+    description?: React.ReactNode;
+  }
+
+  interface StatisticMockProps {
+    title?: React.ReactNode;
+    value?: React.ReactNode;
+    suffix?: React.ReactNode;
+  }
+
+  interface RowMockProps {
+    children?: React.ReactNode;
+  }
+
+  interface ColMockProps {
+    children?: React.ReactNode;
+  }
+
+  interface TypographyMockProps {
+    children?: React.ReactNode;
+  }
+
+  const DescriptionsItemMock = ({ children, label }: DescriptionsItemMockProps) => (
     <div data-testid="descriptions-item" data-label={label}>
       {label && <span className="item-label">{label}</span>}
       <span className="item-content">{children}</span>
     </div>
   );
 
-  const DescriptionsMock: any = ({ items, children }: any) => {
+  const DescriptionsMock = ({ items, children }: DescriptionsMockProps) => {
     return children ? (
       <div data-testid="descriptions">{children}</div>
     ) : (
       <div data-testid="descriptions">
-        {items?.map((item: any, index: number) => (
+        {items?.map((item, index) => (
           <div key={index} data-testid={`desc-item-${item.key || index}`}>
             <span className="label">{item.label}</span>
             <span className="value">{item.children}</span>
@@ -38,74 +119,75 @@ vi.mock('antd', () => {
   };
 
   // Attach Item as a property before returning
-  DescriptionsMock.Item = DescriptionsItemMock;
+  (DescriptionsMock as typeof DescriptionsMock & { Item?: React.FC<DescriptionsItemMockProps> }).Item =
+    DescriptionsItemMock;
 
   return {
-    Card: ({ children, title }: any) => (
+    Card: ({ children, title }: CardMockProps) => (
       <div data-testid="card" data-title={title}>
         <div className="card-title">{title}</div>
         {children}
       </div>
     ),
     Descriptions: DescriptionsMock,
-    Tag: ({ children, color }: any) => (
+    Tag: ({ children, color }: TagMockProps) => (
       <span data-testid="tag" data-color={color}>
         {children}
       </span>
     ),
-    Table: ({ dataSource, columns }: any) => (
+    Table: ({ dataSource, columns }: TableMockProps) => (
       <table data-testid="table">
         <thead>
           <tr>
-            {columns?.map((col: any, i: number) => (
+            {columns?.map((col, i) => (
               <th key={i}>{col.title}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {dataSource?.map((row: any, i: number) => (
+          {dataSource?.map((row, i) => (
             <tr key={i} data-testid={`table-row-${i}`}>
-              {columns?.map((col: any, j: number) => (
-                <td key={j}>{row[col.dataIndex]}</td>
+              {columns?.map((col, j) => (
+                <td key={j}>{col.dataIndex ? row[col.dataIndex] : null}</td>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
     ),
-    Tabs: ({ items, defaultActiveKey }: any) => (
+    Tabs: ({ items, defaultActiveKey }: TabsMockProps) => (
       <div data-testid="tabs" data-default-key={defaultActiveKey}>
-        {items?.map((item: any) => (
+        {items?.map(item => (
           <div key={item.key} data-testid={`tab-${item.key}`}>
             {item.label}: {item.children}
           </div>
         ))}
       </div>
     ),
-    Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+    Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
     Divider: () => <hr data-testid="divider" />,
-    Timeline: ({ items }: any) => (
+    Timeline: ({ items }: TimelineMockProps) => (
       <div data-testid="timeline">
-        {items?.map((item: any, i: number) => (
+        {items?.map((item, i) => (
           <div key={i} data-testid={`timeline-item-${i}`}>
             {item.children}
           </div>
         ))}
       </div>
     ),
-    Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
-    Statistic: ({ title, value, suffix }: any) => (
+    Empty: ({ description }: EmptyMockProps) => <div data-testid="empty">{description}</div>,
+    Statistic: ({ title, value, suffix }: StatisticMockProps) => (
       <div data-testid="statistic" data-title={title}>
         <span>{title}</span>: <span>{value}</span>
         {suffix && <span>{suffix}</span>}
       </div>
     ),
-    Row: ({ children }: any) => <div data-testid="row">{children}</div>,
-    Col: ({ children }: any) => <div data-testid="col">{children}</div>,
+    Row: ({ children }: RowMockProps) => <div data-testid="row">{children}</div>,
+    Col: ({ children }: ColMockProps) => <div data-testid="col">{children}</div>,
     Typography: {
-      Text: ({ children }: any) => <span>{children}</span>,
-      Title: ({ children }: any) => <h1>{children}</h1>,
-      Paragraph: ({ children }: any) => <p>{children}</p>,
+      Text: ({ children }: TypographyMockProps) => <span>{children}</span>,
+      Title: ({ children }: TypographyMockProps) => <h1>{children}</h1>,
+      Paragraph: ({ children }: TypographyMockProps) => <p>{children}</p>,
     },
   };
 });
@@ -126,7 +208,7 @@ vi.mock('@ant-design/icons', () => ({
 
 // Mock child components
 vi.mock('../DepositLedgerHistory', () => ({
-  default: ({ ledgers, loading }: any) => (
+  default: ({ ledgers, loading }: { ledgers?: unknown[]; loading?: boolean }) => (
     <div data-testid="deposit-ledger-history" data-loading={loading}>
       {ledgers?.length ?? 0} 条押金记录
     </div>
@@ -134,7 +216,7 @@ vi.mock('../DepositLedgerHistory', () => ({
 }));
 
 vi.mock('../ServiceFeeLedgerTable', () => ({
-  default: ({ ledgers, loading }: any) => (
+  default: ({ ledgers, loading }: { ledgers?: unknown[]; loading?: boolean }) => (
     <div data-testid="service-fee-ledger-table" data-loading={loading}>
       {ledgers?.length ?? 0} 条服务费记录
     </div>

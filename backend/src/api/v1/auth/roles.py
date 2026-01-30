@@ -158,9 +158,9 @@ async def create_role(
         )
 
         return RoleDetailResponse.model_validate(new_role)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise bad_request(str(e))
 
 
@@ -206,11 +206,9 @@ async def update_role(
         )
 
         return RoleDetailResponse.model_validate(updated_role)
-    except ValueError as e:
-        if "不存在" in str(e):
-            raise not_found(str(e), resource_type="role", resource_id=role_id)
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise bad_request(str(e))
 
 
@@ -233,9 +231,9 @@ async def delete_role(
 
         if not success:
             raise not_found("角色不存在", resource_type="role", resource_id=role_id)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise bad_request(str(e))
 
 
@@ -303,11 +301,9 @@ async def set_role_permissions(
                 "permission_count": len(role.permissions) if role else 0,
             },
         }
-    except ValueError as e:
-        if "不存在" in str(e):
-            raise not_found(str(e), resource_type="role", resource_id=role_id)
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise bad_request(str(e))
 
 

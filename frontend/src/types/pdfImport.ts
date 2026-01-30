@@ -570,6 +570,8 @@ export interface ProcessingSession {
   fileInfo: UploadFileInfo;
   status: SessionStatus;
   progress: number;
+  steps?: ProcessingStepResult[];
+  estimatedRemaining?: number;
   result?: CompleteResult;
   error?: string;
 }

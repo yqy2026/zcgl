@@ -13,16 +13,13 @@ from fastapi import HTTPException
 
 pytestmark = pytest.mark.api
 
+from src.constants.rent_contract_constants import PaymentStatus
 
 # ============================================================================
 # Fixtures
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Create mock database session"""
-    return MagicMock()
 
 
 @pytest.fixture
@@ -105,13 +102,15 @@ def mock_contract():
 @pytest.fixture
 def mock_ledger():
     """Create mock ledger with proper string attributes"""
+    from src.constants.rent_contract_constants import PaymentStatus
+
     ledger = MagicMock()
     ledger.id = "ledger-123"
     ledger.contract_id = "contract-123"
     ledger.asset_id = "asset-123"
     ledger.ownership_id = "ownership-123"
     ledger.year_month = "2024-01"
-    ledger.payment_status = "未支付"
+    ledger.payment_status = PaymentStatus.UNPAID
     ledger.due_date = date(2024, 1, 1)
     ledger.due_amount = Decimal("1000.00")
     ledger.paid_amount = Decimal("0.00")
@@ -600,6 +599,7 @@ class TestGetRentLedger:
     def test_get_rent_ledger_default_params(
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
+        from src.constants.rent_contract_constants import PaymentStatus
         """Test listing rent ledger with default parameters"""
         from src.api.v1.rent_contract.ledger import get_rent_ledger
 
@@ -616,7 +616,7 @@ class TestGetRentLedger:
             ledger.due_amount = Decimal("1000.00")
             ledger.paid_amount = Decimal("0.00")
             ledger.overdue_amount = Decimal("0.00")
-            ledger.payment_status = "未支付"
+            ledger.payment_status = PaymentStatus.UNPAID
             ledger.payment_date = None
             ledger.payment_method = None
             ledger.payment_reference = None
@@ -704,7 +704,7 @@ class TestUpdateRentLedger:
         from src.api.v1.rent_contract.ledger import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
 
-        ledger_in = RentLedgerUpdate(payment_status="已支付")
+        ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
         mock_rent_ledger.get.return_value = mock_ledger
         mock_rent_ledger.update.return_value = mock_ledger
@@ -726,7 +726,7 @@ class TestUpdateRentLedger:
         from src.api.v1.rent_contract.ledger import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
 
-        ledger_in = RentLedgerUpdate(payment_status="已支付")
+        ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
         mock_rent_ledger.get.return_value = None
 

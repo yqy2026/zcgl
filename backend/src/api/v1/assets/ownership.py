@@ -7,7 +7,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import bad_request, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    internal_error,
+    not_found,
+)
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.ownership import ownership
 from ....database import get_db
@@ -72,9 +76,9 @@ async def create_ownership(
     try:
         db_ownership = ownership_service.create_ownership(db, obj_in=ownership_in)
         return OwnershipResponse.model_validate(db_ownership)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"创建权属方失败: {str(e)}")
 
 
@@ -98,9 +102,9 @@ async def update_ownership(
             db, db_obj=db_ownership, obj_in=ownership_in
         )
         return OwnershipResponse.model_validate(updated_ownership)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"更新权属方失败: {str(e)}")
 
 
@@ -134,6 +138,8 @@ async def update_ownership_projects(
         response.project_count = actual_project_count
         return response
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"更新关联项目失败: {str(e)}")
 
 
@@ -157,9 +163,9 @@ async def delete_ownership(
             id=deleted_ownership.id,
             affected_assets=asset_count,
         )
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"删除权属方失败: {str(e)}")
 
 
@@ -280,9 +286,9 @@ async def toggle_ownership_status(
     try:
         db_ownership = ownership_service.toggle_status(db, id=ownership_id)
         return OwnershipResponse.model_validate(db_ownership)
-    except ValueError as e:
-        raise bad_request(str(e))
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"切换状态失败: {str(e)}")
 
 
@@ -304,10 +310,7 @@ async def get_ownership_financial_summary(
     - 应收未收金额
     - 已收金额
     """
-
-    from sqlalchemy import and_, func
-
-    from ....models.rent_contract import RentContract, RentLedger
+    from ....services.asset.ownership_financial_service import OwnershipFinancialService
 
     # 验证权属方是否存在
     ownership_obj = ownership.get(db, id=ownership_id)
@@ -316,68 +319,12 @@ async def get_ownership_financial_summary(
             "权属方不存在", resource_type="ownership", resource_id=ownership_id
         )
 
-    # 查询该权属方下所有合同的台账
-    subquery = (
-        db.query(RentContract.id)
-        .filter(RentContract.ownership_id == ownership_id)
-        .scalar_subquery()
+    # 使用 Service 层计算财务汇总
+    service = OwnershipFinancialService()
+    result = service.get_financial_summary(
+        db,
+        ownership_id=ownership_id,
+        ownership_name=ownership_obj.name,
     )
 
-    # 统计应收总额
-    due_amount_result = (
-        db.query(func.coalesce(func.sum(RentLedger.due_amount), 0))
-        .filter(RentLedger.contract_id == subquery)
-        .scalar()
-    )
-
-    # 统计实收总额
-    paid_amount_result = (
-        db.query(func.coalesce(func.sum(RentLedger.paid_amount), 0))
-        .filter(RentLedger.contract_id == subquery)
-        .scalar()
-    )
-
-    # 统计欠款总额
-    arrears_amount_result = (
-        db.query(func.coalesce(func.sum(RentLedger.overdue_amount), 0))
-        .filter(RentLedger.contract_id == subquery)
-        .scalar()
-    )
-
-    # 统计合同数量
-    contract_count = (
-        db.query(func.count(RentContract.id))
-        .filter(RentContract.ownership_id == ownership_id)
-        .scalar()
-    )
-
-    # 统计活跃合同数
-    active_contract_count = (
-        db.query(func.count(RentContract.id))
-        .filter(
-            and_(
-                RentContract.ownership_id == ownership_id,
-                RentContract.contract_status == "有效",
-            )
-        )
-        .scalar()
-    )
-
-    return {
-        "ownership_id": ownership_id,
-        "ownership_name": ownership_obj.name,
-        "financial_summary": {
-            "total_due_amount": float(due_amount_result or 0),
-            "total_paid_amount": float(paid_amount_result or 0),
-            "total_arrears_amount": float(arrears_amount_result or 0),
-            "payment_rate": float(
-                (paid_amount_result / due_amount_result * 100)
-                if due_amount_result > 0
-                else 0
-            ),
-        },
-        "contract_summary": {
-            "total_contracts": contract_count or 0,
-            "active_contracts": active_contract_count or 0,
-        },
-    }
+    return result.to_dict()

@@ -12,13 +12,13 @@ import type { ApiClientError, ApiErrorType } from '@/types/apiResponse';
 // Mock数据
 // =============================================================================
 
-const createMockResponse = (data: any, status = 200): AxiosResponse => {
+const createMockResponse = (data: unknown, status = 200): AxiosResponse => {
   return {
     data,
     status,
     statusText: 'OK',
     headers: {},
-    config: {} as any,
+    config: {} as AxiosResponse['config'],
   } as AxiosResponse;
 };
 
@@ -283,7 +283,7 @@ describe('ResponseExtractor - 便捷方法', () => {
     });
 
     it('异常时应该返回完成消息', () => {
-      const response = null as any;
+      const response = null as unknown as AxiosResponse;
       const message = ResponseExtractor.extractMessage(response);
 
       expect(message).toBe('操作完成');
@@ -336,7 +336,7 @@ describe('ResponseExtractor - 便捷方法', () => {
 
   describe('extractAndTransform', () => {
     it('应该提取并转换数据', () => {
-      const transformer = (data: any) => ({
+      const transformer = (data: Record<string, unknown>) => ({
         ...data,
         transformed: true,
       });
@@ -556,14 +556,14 @@ describe('ApiErrorHandler - 错误处理', () => {
 
 describe('ResponseExtractor - 边界情况', () => {
   it('应该处理null响应', () => {
-    const result = ResponseExtractor.smartExtract(null as any);
+    const result = ResponseExtractor.smartExtract(null as unknown as AxiosResponse);
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
   });
 
   it('应该处理undefined响应', () => {
-    const result = ResponseExtractor.smartExtract(undefined as any);
+    const result = ResponseExtractor.smartExtract(undefined as unknown as AxiosResponse);
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
@@ -582,7 +582,7 @@ describe('ResponseExtractor - 边界情况', () => {
       get data() {
         throw new Error('访问异常');
       },
-    } as any;
+    } as unknown as AxiosResponse;
 
     const result = ResponseExtractor.smartExtract(problematicResponse);
 

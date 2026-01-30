@@ -86,11 +86,11 @@ result = await manager.extract("property.pdf", doc_type=DocumentType.PROPERTY_CE
 cd backend
 
 # 测试 Qwen
-python scripts/test_qwen_extract.py
+python scripts/devtools/experiments/test_qwen_extract.py
 
 # 测试智谱
-python scripts/test_zhipu_extract.py
+python scripts/devtools/experiments/test_zhipu_extract.py
 
 # 测试腾讯混元
-python scripts/test_hunyuan_extract.py
+python scripts/devtools/experiments/test_hunyuan_extract.py
 ```

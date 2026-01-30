@@ -6,6 +6,7 @@ TaskService 集成测试
 import pytest
 from sqlalchemy.orm import Session
 
+from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.enums.task import TaskStatus
 from src.models.task import AsyncTask, TaskHistory
 from src.schemas.task import TaskCreate, TaskUpdate
@@ -155,7 +156,7 @@ class TestTaskStatusUpdate:
 
     def test_update_nonexistent_task_raises_error(self):
         """测试更新不存在的任务抛出异常"""
-        with pytest.raises(ValueError, match="任务.*不存在"):
+        with pytest.raises(ResourceNotFoundError, match="任务.*不存在"):
             TaskService().update_task_status(
                 self.db, task_id="nonexistent-id", status=TaskStatus.RUNNING
             )
@@ -226,7 +227,7 @@ class TestTaskUpdate:
         # 尝试更新已完成的任务
         update_data = TaskUpdate(title="新标题")
 
-        with pytest.raises(ValueError, match="已完成的任务无法更新"):
+        with pytest.raises(OperationNotAllowedError, match="已完成的任务无法更新"):
             TaskService().update_task(self.db, task_id=self.task.id, obj_in=update_data)
 
 
@@ -283,12 +284,12 @@ class TestTaskCancellation:
         )
 
         # 尝试取消
-        with pytest.raises(ValueError, match="任务无法取消"):
+        with pytest.raises(OperationNotAllowedError, match="任务无法取消"):
             TaskService().cancel_task(self.db, task_id=task.id)
 
     def test_cancel_nonexistent_task_raises_error(self):
         """测试取消不存在的任务抛出异常"""
-        with pytest.raises(ValueError, match="任务不存在"):
+        with pytest.raises(ResourceNotFoundError, match="任务不存在"):
             TaskService().cancel_task(self.db, task_id="nonexistent-id")
 
 
@@ -320,5 +321,5 @@ class TestTaskDeletion:
 
     def test_delete_nonexistent_task_raises_error(self):
         """测试删除不存在的任务抛出异常"""
-        with pytest.raises(ValueError, match="任务不存在"):
+        with pytest.raises(ResourceNotFoundError, match="任务不存在"):
             TaskService().delete_task(self.db, task_id="nonexistent-id")

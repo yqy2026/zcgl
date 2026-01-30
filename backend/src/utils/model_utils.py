@@ -10,6 +10,8 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Mapper, class_mapper
 
+from ..core.exception_handler import BusinessValidationError
+
 # Type alias for SQLAlchemy models
 SQLAlchemyModel = Any
 
@@ -173,7 +175,13 @@ def generate_month_range(start_month: str, end_month: str) -> list[str]:
 
         return months
     except ValueError:
-        raise ValueError(f"无效的月份格式: {start_month}, {end_month}")
+        raise BusinessValidationError(
+            f"无效的月份格式: {start_month}, {end_month}",
+            field_errors={
+                "start_month": ["invalid_format"],
+                "end_month": ["invalid_format"],
+            },
+        )
 
 
 def safe_divide(

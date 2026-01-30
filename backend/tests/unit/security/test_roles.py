@@ -5,6 +5,7 @@ Tests case-insensitive role comparison and normalization
 
 import pytest
 
+from src.core.exception_handler import BusinessValidationError
 from src.models.auth import UserRole
 from src.security.roles import Role, RoleNormalizer
 
@@ -32,7 +33,7 @@ def test_role_normalizer_standardizes():
 
 def test_role_normalizer_validates():
     """Test that invalid roles raise errors"""
-    with pytest.raises(ValueError, match="Invalid role"):
+    with pytest.raises(BusinessValidationError, match="Invalid role"):
         RoleNormalizer.validate("superadmin")
 
 
@@ -59,11 +60,11 @@ def test_role_normalizer_equals():
 
 
 def test_role_from_string_invalid():
-    """Test that from_string raises ValueError for invalid roles"""
-    with pytest.raises(ValueError, match="Invalid role"):
+    """Test that from_string raises BusinessValidationError for invalid roles"""
+    with pytest.raises(BusinessValidationError, match="Invalid role"):
         Role.from_string("superadmin")
 
-    with pytest.raises(ValueError, match="Invalid role"):
+    with pytest.raises(BusinessValidationError, match="Invalid role"):
         Role.from_string("")
 
 

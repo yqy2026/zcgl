@@ -5,20 +5,14 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from src.services.system_dictionary.service import SystemDictionaryService
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
-@pytest.fixture
-def mock_db():
-    """创建模拟数据库会话"""
-    return MagicMock(spec=Session)
 
 
 @pytest.fixture

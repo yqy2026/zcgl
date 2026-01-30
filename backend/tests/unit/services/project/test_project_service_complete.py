@@ -17,7 +17,6 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
 
 from src.models.asset import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
@@ -31,18 +30,6 @@ pytestmark = pytest.mark.unit
 # ============================================================================
 
 
-@pytest.fixture
-def mock_db():
-    """Mock database session"""
-    db = MagicMock(spec=Session)
-    db.add = MagicMock()
-    db.flush = MagicMock()
-    db.commit = MagicMock()
-    db.refresh = MagicMock()
-    db.execute = MagicMock()
-    db.scalar = MagicMock()
-    db.query = MagicMock()
-    return db
 
 
 @pytest.fixture
