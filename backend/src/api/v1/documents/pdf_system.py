@@ -47,7 +47,6 @@ def get_system_info() -> SystemInfoResponse:
             capabilities=SystemCapabilities(
                 pdfplumber_available=True,
                 pymupdf_available=True,
-                spacy_available=True,
                 vision_available=True,
                 supported_formats=[".pdf", ".jpg", ".jpeg", ".png"],
                 max_file_size_mb=50,

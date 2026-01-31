@@ -16,13 +16,6 @@ class EnvironmentSetup:
 
     def __init__(self):
         self.required_packages = {
-            "NLP依赖": {
-                "spacy": "3.8.0",
-                "jieba": "0.42.1",
-                "rapidfuzz": "3.6.0",
-                "python-Levenshtein": "0.25.1",
-                "regex": "2023.0.0",
-            },
             "PDF处理依赖": {"markitdown": "0.1.0", "pdfplumber": "0.11.0"},
             "异步处理依赖": {"aiofiles": "23.0.0"},
         }
@@ -191,11 +184,6 @@ class EnvironmentSetup:
 === PDF导入功能环境配置说明 ===
 
 1. Python依赖包安装：
-   pip install spacy>=3.8.0
-   pip install jieba>=0.42.1
-   pip install rapidfuzz>=3.6.0
-   pip install python-Levenshtein>=0.25.1
-   pip install regex>=2023.0.0
    pip install markitdown>=0.1.0
    pip install pdfplumber>=0.11.0
    pip install aiofiles>=23.0.0

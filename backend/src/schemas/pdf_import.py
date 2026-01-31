@@ -120,7 +120,6 @@ class SystemCapabilities(BaseModel):
 
     pdfplumber_available: bool = True
     pymupdf_available: bool = True
-    spacy_available: bool = True
     vision_available: bool = True
     supported_formats: list[str] = [".pdf", ".jpg", ".jpeg", ".png"]
     max_file_size_mb: int = 50

@@ -18,11 +18,6 @@ dependencies = [
     "redis>=7.0.0",
     "pyjwt>=2.8.0",
     "aiofiles>=23.0.0",
-    # 基础NLP工具
-    "jieba>=0.42.1",
-    "regex>=2023.0.0",
-    "rapidfuzz>=3.6.0",
-    "python-Levenshtein>=0.25.1",
     "psutil>=7.1.3",
     "python-dotenv>=1.2.1",
     "pillow>=12.0.0",
@@ -40,11 +35,6 @@ pdf-basic = [
     "python-magic-bin>=0.4.14; sys_platform != 'linux'",
 ]
 
-# NLP增强功能（中等重量级）
-nlp = [
-    "spacy>=3.6.0",
-]
-
 # 文档生成功能
 docs = [
     "mkdocs>=1.6.1",
@@ -57,7 +47,7 @@ docs = [
 
 # 完整功能（所有可选依赖）
 all = [
-    "land-property-management[pdf-basic,nlp,docs]",
+    "land-property-management[pdf-basic,docs]",
 ]
 dev = [
     "httpx>=0.28.1",
