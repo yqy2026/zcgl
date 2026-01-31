@@ -16,6 +16,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from src.core.exception_handler import InternalServerError
 from src.models.security_event import (
     SecurityEvent,
     SecurityEventType,
@@ -108,7 +109,7 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError(
+                    raise InternalServerError(
                         "Database not initialized. Call init_database() first."
                     )
                 db = SessionLocal()
@@ -373,7 +374,7 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError(
+                    raise InternalServerError(
                         "Database not initialized. Call init_database() first."
                     )
                 db = SessionLocal()
@@ -431,7 +432,7 @@ class SecurityEventLogger:
             else:
                 # SessionLocal should never be None at runtime
                 if SessionLocal is None:
-                    raise RuntimeError(
+                    raise InternalServerError(
                         "Database not initialized. Call init_database() first."
                     )
                 db = SessionLocal()

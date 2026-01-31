@@ -57,9 +57,7 @@ def create_prompt(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get(
-    "/", response_model=APIResponse[PaginatedData[PromptTemplateResponse]]
-)
+@router.get("/", response_model=APIResponse[PaginatedData[PromptTemplateResponse]])
 def get_prompts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -229,7 +227,7 @@ def get_statistics(
 
 
 @router.post("/feedback", response_model=ExtractionFeedbackResponse)
-async def collect_feedback(
+def collect_feedback(
     *,
     db: Session = Depends(get_db),
     feedback_in: ExtractionFeedbackCreate,

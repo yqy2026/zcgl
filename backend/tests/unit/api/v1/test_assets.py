@@ -32,8 +32,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_asset_service():
     """Create mock asset service"""

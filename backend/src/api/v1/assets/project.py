@@ -29,7 +29,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=ProjectResponse, summary="创建项目")
-async def create_project(
+def create_project(
     project_in: ProjectCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -49,12 +49,16 @@ async def create_project(
 
 
 @router.get(
-    "", response_model=APIResponse[PaginatedData[ProjectResponse]], summary="获取项目列表"
+    "",
+    response_model=APIResponse[PaginatedData[ProjectResponse]],
+    summary="获取项目列表",
 )
 @router.get(
-    "/", response_model=APIResponse[PaginatedData[ProjectResponse]], summary="获取项目列表"
+    "/",
+    response_model=APIResponse[PaginatedData[ProjectResponse]],
+    summary="获取项目列表",
 )
-async def list_projects(
+def list_projects(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: int = 1,
@@ -101,7 +105,7 @@ async def list_projects(
     response_model=APIResponse[PaginatedData[ProjectResponse]],
     summary="搜索项目",
 )
-async def search_projects(
+def search_projects(
     search_params: ProjectSearchRequest,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -126,7 +130,7 @@ async def search_projects(
 
 
 @router.get("/dropdown-options", summary="获取项目下拉选项")
-async def get_project_options(
+def get_project_options(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     is_active: bool | None = Query(True, description="是否仅返回启用项目"),
@@ -137,7 +141,7 @@ async def get_project_options(
 
 
 @router.get("/stats/overview", summary="获取项目统计")
-async def get_project_statistics(
+def get_project_statistics(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, Any]:
@@ -149,7 +153,7 @@ async def get_project_statistics(
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")
-async def get_project(
+def get_project(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -164,7 +168,7 @@ async def get_project(
 
 
 @router.put("/{project_id}", response_model=ProjectResponse, summary="更新项目")
-async def update_project(
+def update_project(
     project_id: Annotated[str, Path(description="项目ID")],
     project_in: ProjectUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -185,7 +189,7 @@ async def update_project(
 
 
 @router.delete("/{project_id}", summary="删除项目")
-async def delete_project(
+def delete_project(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -203,7 +207,7 @@ async def delete_project(
 
 
 @router.put("/{project_id}/status", response_model=ProjectResponse, summary="切换状态")
-async def toggle_project_status(
+def toggle_project_status(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],

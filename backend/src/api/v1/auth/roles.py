@@ -86,7 +86,7 @@ class RoleUserListResponse(BaseModel):
 @router.get(
     "", response_model=APIResponse[PaginatedData[RoleResponse]], summary="获取角色列表"
 )
-async def get_roles(
+def get_roles(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     search: str | None = Query(None, description="搜索关键词"),
@@ -137,7 +137,7 @@ async def get_roles(
     status_code=status.HTTP_201_CREATED,
     summary="创建角色",
 )
-async def create_role(
+def create_role(
     role_data: RoleCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -165,7 +165,7 @@ async def create_role(
 
 
 @router.get("/{role_id}", response_model=RoleDetailResponse, summary="获取角色详情")
-async def get_role(
+def get_role(
     role_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -185,7 +185,7 @@ async def get_role(
 
 
 @router.put("/{role_id}", response_model=RoleDetailResponse, summary="更新角色")
-async def update_role(
+def update_role(
     role_id: str,
     role_data: RoleUpdate,
     db: Session = Depends(get_db),
@@ -213,7 +213,7 @@ async def update_role(
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, summary="删除角色")
-async def delete_role(
+def delete_role(
     role_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -241,7 +241,7 @@ async def delete_role(
 
 
 @router.get("/permissions/list", response_model=dict[str, Any], summary="获取所有权限")
-async def get_all_permissions(
+def get_all_permissions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
@@ -271,7 +271,7 @@ async def get_all_permissions(
 @router.put(
     "/{role_id}/permissions", response_model=dict[str, Any], summary="设置角色权限"
 )
-async def set_role_permissions(
+def set_role_permissions(
     role_id: str,
     request: RolePermissionUpdateRequest,
     db: Session = Depends(get_db),
@@ -315,7 +315,7 @@ async def set_role_permissions(
     response_model=APIResponse[PaginatedData[dict[str, Any]]],
     summary="获取角色的用户列表",
 )
-async def get_role_users(
+def get_role_users(
     role_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -367,7 +367,7 @@ async def get_role_users(
 @router.get(
     "/statistics/summary", response_model=dict[str, Any], summary="获取角色统计信息"
 )
-async def get_role_statistics(
+def get_role_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:

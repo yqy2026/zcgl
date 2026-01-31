@@ -4,7 +4,6 @@
 Complete tests for Ownership Service to maximize coverage
 """
 
-
 import pytest
 from sqlalchemy.orm import Session
 

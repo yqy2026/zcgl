@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 interface AlertMockProps {
   message?: React.ReactNode;
@@ -40,6 +41,12 @@ interface TypographyTextMockProps {
   type?: string;
 }
 
+interface TypographyTitleMockProps {
+  children?: React.ReactNode;
+  level?: number;
+  style?: React.CSSProperties;
+}
+
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Alert: ({ message, description, type, showIcon }: AlertMockProps) => (
@@ -70,6 +77,11 @@ vi.mock('antd', () => ({
         {children}
       </div>
     ),
+    Title: ({ children, level, style }: TypographyTitleMockProps) => (
+      <div data-testid="title" data-level={level} style={style}>
+        {children}
+      </div>
+    ),
   },
 }));
 
@@ -81,6 +93,7 @@ vi.mock('@ant-design/icons', () => ({
   ApiOutlined: () => <div data-testid="icon-api" />,
   DatabaseOutlined: () => <div data-testid="icon-database" />,
   WifiOutlined: () => <div data-testid="icon-wifi" />,
+  BulbOutlined: () => <div data-testid="icon-bulb" />,
 }));
 
 describe('FriendlyErrorDisplay - 组件导入测试', () => {
@@ -91,54 +104,23 @@ describe('FriendlyErrorDisplay - 组件导入测试', () => {
   });
 });
 
-describe('FriendlyErrorDisplay - 基础属性测试', () => {
+describe('FriendlyErrorDisplay - 基础渲染测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该支持error属性', async () => {
+  it('error为undefined且showDetails为false时应返回空渲染', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = {
-      message: '测试错误',
-      status: 500,
-      code: 'TEST_ERROR',
-    };
-    const element = React.createElement(FriendlyErrorDisplay, { error });
-    expect(element).toBeTruthy();
-  });
+    render(<FriendlyErrorDisplay error={undefined} showDetails={false} />);
 
-  it('应该支持type属性', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'network',
-    });
-    expect(element).toBeTruthy();
+    expect(screen.queryByTestId('result')).not.toBeInTheDocument();
   });
 
   it('默认type应该是network', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, { error });
-    expect(element).toBeTruthy();
-  });
+    render(<FriendlyErrorDisplay error={{ message: '测试错误' }} />);
 
-  it('应该支持showDetails属性', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('默认showDetails应该是false', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, { error });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('result')).toHaveAttribute('data-title', '网络连接问题');
   });
 });
 
@@ -147,163 +129,58 @@ describe('FriendlyErrorDisplay - 错误类型测试', () => {
     vi.clearAllMocks();
   });
 
-  it('type为network应该显示网络错误', async () => {
+  it.each([
+    ['network', '网络连接问题', 'icon-wifi'],
+    ['data', '数据加载失败', 'icon-database'],
+    ['server', '服务器错误', 'icon-api'],
+    ['permission', '权限不足', 'icon-exclamation-circle'],
+    ['not-found', '未找到数据', 'icon-exclamation-circle'],
+  ])('type=%s 应该显示对应标题与图标', async (type, title, iconTestId) => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '网络错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'network',
-    });
-    expect(element).toBeTruthy();
-  });
+    render(<FriendlyErrorDisplay error={{ message: '测试' }} type={type as any} />);
 
-  it('type为data应该显示数据错误', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '数据错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'data',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为server应该显示服务器错误', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '服务器错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'server',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为permission应该显示权限错误', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '权限错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'permission',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为not-found应该显示未找到错误', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '未找到' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'not-found',
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('result')).toHaveAttribute('data-title', title);
+    expect(screen.getByTestId(iconTestId)).toBeInTheDocument();
   });
 });
 
-describe('FriendlyErrorDisplay - 按钮测试', () => {
+describe('FriendlyErrorDisplay - 按钮与详情测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该支持onRetry回调', async () => {
+  it('应该触发onRetry与onGoHome回调', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
     const handleRetry = vi.fn();
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      onRetry: handleRetry,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持onGoHome回调', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
     const handleGoHome = vi.fn();
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      onGoHome: handleGoHome,
-    });
-    expect(element).toBeTruthy();
+
+    render(
+      <FriendlyErrorDisplay
+        error={{ message: '测试错误' }}
+        onRetry={handleRetry}
+        onGoHome={handleGoHome}
+      />
+    );
+
+    fireEvent.click(screen.getByText('重试'));
+    fireEvent.click(screen.getByText('返回首页'));
+    expect(handleRetry).toHaveBeenCalledTimes(1);
+    expect(handleGoHome).toHaveBeenCalledTimes(1);
   });
 
-  it('应该同时显示两个按钮', async () => {
+  it('showDetails为true时应该展示错误详情', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      onRetry: vi.fn(),
-      onGoHome: vi.fn(),
-    });
-    expect(element).toBeTruthy();
-  });
-});
+    render(
+      <FriendlyErrorDisplay
+        error={{ status: 500, code: 'TEST_ERROR', message: '测试错误' }}
+        showDetails={true}
+      />
+    );
 
-describe('FriendlyErrorDisplay - 错误详情测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('showDetails为true时应该显示错误详情', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = {
-      message: '测试错误',
-      status: 500,
-      code: 'TEST_ERROR',
-    };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示status状态码', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { status: 404 };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示code错误代码', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { code: 'ERR_001' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示message错误信息', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误消息' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示details详细信息', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { details: { key: 'value' } };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('details为null时不应该显示详细信息', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { details: null };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('alert')).toBeInTheDocument();
+    expect(screen.getByText('状态码:')).toBeInTheDocument();
+    expect(screen.getByText('错误代码:')).toBeInTheDocument();
+    expect(screen.getByText('错误信息:')).toBeInTheDocument();
   });
 });
 
@@ -312,161 +189,11 @@ describe('FriendlyErrorDisplay - 建议解决方案测试', () => {
     vi.clearAllMocks();
   });
 
-  it('type为network应该显示网络问题建议', async () => {
+  it('network类型应包含网络建议', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '网络错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'network',
-    });
-    expect(element).toBeTruthy();
-  });
+    render(<FriendlyErrorDisplay error={{ message: '网络错误' }} type="network" />);
 
-  it('type为data应该显示数据问题建议', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '数据错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'data',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为server应该显示服务器问题建议', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '服务器错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'server',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为permission应该显示权限问题建议', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '权限错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'permission',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为not-found应该显示未找到问题建议', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '未找到' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'not-found',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('FriendlyErrorDisplay - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('error为undefined且showDetails为false应该返回null', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error: undefined,
-      showDetails: false,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('error为undefined但showDetails为true应该显示组件', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error: undefined,
-      showDetails: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理空error对象', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error: {},
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理无效的type', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'invalid' as unknown as 'network' | 'server' | 'auth' | 'notFound' | 'unknown',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('FriendlyErrorDisplay - 图标测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('type为network应该显示Wifi图标', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '网络错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'network',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为data应该显示Database图标', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '数据错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'data',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为server应该显示API图标', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '服务器错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'server',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('type为permission应该显示Exclamation图标', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '权限错误' };
-    const element = React.createElement(FriendlyErrorDisplay, {
-      error,
-      type: 'permission',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('FriendlyErrorDisplay - 布局测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该居中显示', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, { error });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有适当的内边距', async () => {
-    const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const error = { message: '测试错误' };
-    const element = React.createElement(FriendlyErrorDisplay, { error });
-    expect(element).toBeTruthy();
+    expect(screen.getByText('检查网络连接是否正常')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-bulb')).toBeInTheDocument();
   });
 });

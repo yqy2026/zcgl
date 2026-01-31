@@ -25,8 +25,6 @@ from src.services.asset.batch_service import (
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def batch_service(mock_db):
     """创建 AssetBatchService 实例"""

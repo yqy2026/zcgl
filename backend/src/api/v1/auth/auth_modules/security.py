@@ -15,7 +15,7 @@ router = APIRouter(prefix="/security", tags=["安全配置"])
 
 
 @router.get("/config", response_model=dict[str, Any], summary="获取安全配置")
-async def get_security_config(
+def get_security_config(
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
     """

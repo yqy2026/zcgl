@@ -269,13 +269,6 @@ export class ApiClient {
           }
         }
 
-        const accessToken = AuthStorage.getToken();
-        if (accessToken != null && accessToken.trim() !== '') {
-          if (config.headers != null && !config.headers.has('Authorization')) {
-            config.headers.set('Authorization', `Bearer ${accessToken}`);
-          }
-        }
-
         // 添加请求ID
         if (config.headers != null) {
           config.headers.set('X-Request-ID', this.generateRequestId());
@@ -344,12 +337,7 @@ export class ApiClient {
 
           try {
             // Try to refresh using cookie-based auth
-            const storedRefreshToken = AuthStorage.getRefreshToken();
-            const refreshPayload =
-              storedRefreshToken != null && storedRefreshToken.trim() !== ''
-                ? { refresh_token: storedRefreshToken }
-                : {};
-            await this.instance.post('/auth/refresh', refreshPayload);
+            await this.instance.post('/auth/refresh');
 
             apiLogger.info('Token refresh successful, retrying original request', {
               url: originalRequest.url,

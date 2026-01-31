@@ -404,7 +404,9 @@ class PromptManager:
 
         # 平均准确率
         avg_accuracy = db.query(func.avg(PromptTemplate.avg_accuracy)).scalar() or 0.0
-        avg_confidence = db.query(func.avg(PromptTemplate.avg_confidence)).scalar() or 0.0
+        avg_confidence = (
+            db.query(func.avg(PromptTemplate.avg_confidence)).scalar() or 0.0
+        )
 
         return {
             "total_prompts": total_prompts,

@@ -1,10 +1,17 @@
 /**
  * PromptListPage 页面测试
- * 测试 LLM Prompt 管理列表页面的核心功能
+ * 验证 Prompt 列表加载、操作与筛选的核心行为
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { message, Modal } from 'antd';
+
+import PromptListPage from '../PromptListPage';
+import { llmPromptService } from '@/services/llmPromptService';
+import PromptEditor from '@/components/System/PromptEditor';
+import { DocType, LLMProvider, PromptStatus } from '@/types/llmPrompt';
 
 // Mock dependencies
 vi.mock('@/services/llmPromptService', () => ({
@@ -26,7 +33,9 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 vi.mock('@/components/System/PromptEditor', () => ({
-  default: vi.fn(() => null),
+  default: vi.fn(({ visible }) =>
+    visible ? <div data-testid="prompt-editor" /> : null
+  ),
 }));
 
 vi.mock('dayjs', () => ({
@@ -37,26 +46,86 @@ vi.mock('dayjs', () => ({
 
 // Mock Ant Design
 vi.mock('antd', () => {
+  const Table = vi.fn(({ columns = [], dataSource = [], rowKey }) => (
+    <div data-testid="table">
+      {dataSource.map((record: Record<string, unknown>, index: number) => {
+        const key =
+          typeof rowKey === 'function'
+            ? rowKey(record)
+            : rowKey
+              ? record[rowKey]
+              : index;
+        return (
+          <div key={String(key)} data-testid="table-row">
+            {columns.map(
+              (
+                column: {
+                  key?: string | number;
+                  dataIndex?: string;
+                  render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
+                },
+                colIndex: number
+              ) => {
+                const columnKey = String(column.key ?? column.dataIndex ?? colIndex);
+                if (column.render) {
+                  const value = column.dataIndex ? record[column.dataIndex] : undefined;
+                  return (
+                    <div key={columnKey}>{column.render(value, record)}</div>
+                  );
+                }
+                if (column.dataIndex) {
+                  return <div key={columnKey}>{record[column.dataIndex]}</div>;
+                }
+                return <div key={columnKey} />;
+              }
+            )}
+          </div>
+        );
+      })}
+    </div>
+  ));
+
   return {
-    Table: vi.fn(() => null),
-    Card: vi.fn(({ children }) => <div data-testid="card">{children}</div>),
-    Button: vi.fn(({ children, onClick }) => (
-      <button onClick={onClick} data-testid="button">
+    Table,
+    Card: vi.fn(({ children, title, extra }) => (
+      <div data-testid="card">
+        <div>{title}</div>
+        <div>{extra}</div>
+        {children}
+      </div>
+    )),
+    Button: vi.fn(({ children, onClick, icon, type }) => (
+      <button data-testid="button" data-type={type} onClick={onClick}>
+        {icon}
         {children}
       </button>
     )),
     Space: vi.fn(({ children }) => <div data-testid="space">{children}</div>),
     Tag: vi.fn(({ children }) => <span data-testid="tag">{children}</span>),
-    Select: Object.assign(vi.fn(() => null), {
-      Option: vi.fn(() => null),
-    }),
+    Select: Object.assign(
+      vi.fn(({ children, onChange, placeholder }) => (
+        <select
+          data-testid={`select-${placeholder}`}
+          onChange={event => onChange?.((event.target as HTMLSelectElement).value)}
+        >
+          {children}
+        </select>
+      )),
+      {
+        Option: vi.fn(({ children, value }) => <option value={value}>{children}</option>),
+      }
+    ),
     Modal: Object.assign(vi.fn(() => null), {
       info: vi.fn(),
     }),
-    Tooltip: vi.fn(({ children }) => children),
+    Tooltip: vi.fn(({ children, title }) => (
+      <span data-testid={`tooltip-${title}`}>{children}</span>
+    )),
     Row: vi.fn(({ children }) => <div data-testid="row">{children}</div>),
     Col: vi.fn(({ children }) => <div data-testid="col">{children}</div>),
-    Statistic: vi.fn(() => null),
+    Statistic: vi.fn(({ title, value }) => (
+      <div data-testid={`statistic-${title}`}>{value}</div>
+    )),
     Typography: {
       Title: vi.fn(({ children }) => <h4>{children}</h4>),
     },
@@ -89,16 +158,13 @@ vi.mock('@/styles/colorMap', () => ({
   },
 }));
 
-import { PromptStatus, DocType, LLMProvider } from '@/types/llmPrompt';
-
-// Helper to create mock prompt
 const createMockPrompt = (overrides = {}) => ({
   id: 'prompt-001',
   name: '租赁合同提取',
   version: 1,
   doc_type: DocType.CONTRACT,
   provider: LLMProvider.QWEN,
-  status: PromptStatus.ACTIVE,
+  status: PromptStatus.DRAFT,
   avg_accuracy: 0.92,
   avg_confidence: 0.88,
   total_usage: 150,
@@ -106,7 +172,6 @@ const createMockPrompt = (overrides = {}) => ({
   ...overrides,
 });
 
-// Helper to create mock statistics
 const createMockStatistics = () => ({
   total_prompts: 10,
   status_distribution: [
@@ -118,101 +183,73 @@ const createMockStatistics = () => ({
   overall_avg_confidence: 0.82,
 });
 
-describe('PromptListPage - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../PromptListPage');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(llmPromptService.getPrompts).mockResolvedValue({ items: [], total: 0 });
+  vi.mocked(llmPromptService.getStatistics).mockResolvedValue(createMockStatistics());
+});
+
+describe('PromptListPage - 基础渲染', () => {
+  it('应该渲染标题和新建按钮', () => {
+    render(<PromptListPage />);
+    expect(screen.getByText('LLM Prompt 管理')).toBeInTheDocument();
+    expect(screen.getByText('新建 Prompt')).toBeInTheDocument();
   });
 
-  it('组件应该是React函数组件', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-    expect(typeof PromptListPage).toBe('function');
+  it('应该渲染筛选器', () => {
+    render(<PromptListPage />);
+    expect(screen.getByTestId('select-文档类型')).toBeInTheDocument();
+    expect(screen.getByTestId('select-提供商')).toBeInTheDocument();
+    expect(screen.getByTestId('select-状态')).toBeInTheDocument();
   });
 });
 
-describe('PromptListPage - 组件结构测试', () => {
-  it('应该可以创建组件实例', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
+describe('PromptListPage - 数据加载', () => {
+  it('应该加载Prompt列表与统计数据', async () => {
+    render(<PromptListPage />);
 
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-    expect(element.type).toBe(PromptListPage);
-  });
-
-  it('组件不需要任何必需属性', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage, {});
-    expect(element).toBeTruthy();
+    await waitFor(() => {
+      expect(llmPromptService.getPrompts).toHaveBeenCalled();
+      expect(llmPromptService.getStatistics).toHaveBeenCalled();
+    });
   });
 });
 
-describe('PromptListPage - 数据加载测试', () => {
-  it('应该加载Prompt列表', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
+describe('PromptListPage - Prompt操作', () => {
+  it('点击新建按钮应显示编辑器', () => {
+    render(<PromptListPage />);
+    fireEvent.click(screen.getByText('新建 Prompt'));
+    expect(screen.getByTestId('prompt-editor')).toBeInTheDocument();
+  });
 
+  it('点击激活按钮应调用激活接口并提示成功', async () => {
+    vi.mocked(llmPromptService.getPrompts).mockResolvedValue({
+      items: [createMockPrompt({ status: PromptStatus.DRAFT })],
+      total: 1,
+    });
+    vi.mocked(llmPromptService.activatePrompt).mockResolvedValue(undefined);
+
+    render(<PromptListPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const activateWrapper = screen.getByTestId('tooltip-激活');
+    const activateButton = activateWrapper.querySelector('button');
+    fireEvent.click(activateButton!);
+
+    await waitFor(() => {
+      expect(llmPromptService.activatePrompt).toHaveBeenCalledWith('prompt-001');
+      expect(message.success).toHaveBeenCalledWith('Prompt "租赁合同提取" 已激活');
+    });
+  });
+
+  it('点击版本历史应弹出信息框', async () => {
     vi.mocked(llmPromptService.getPrompts).mockResolvedValue({
       items: [createMockPrompt()],
       total: 1,
     });
-
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该加载统计数据', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
-
-    vi.mocked(llmPromptService.getStatistics).mockResolvedValue(createMockStatistics());
-
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('PromptListPage - 筛选功能测试', () => {
-  it('应该支持按文档类型筛选', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-    // 筛选器应该包含文档类型选项
-  });
-
-  it('应该支持按提供商筛选', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-    // 筛选器应该包含提供商选项
-  });
-
-  it('应该支持按状态筛选', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-    // 筛选器应该包含状态选项
-  });
-});
-
-describe('PromptListPage - Prompt操作测试', () => {
-  it('应该支持激活Prompt', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
-
-    vi.mocked(llmPromptService.activatePrompt).mockResolvedValue(undefined);
-
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持查看版本历史', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
-
     vi.mocked(llmPromptService.getPromptVersions).mockResolvedValue([
       {
         id: 'version-001',
@@ -223,129 +260,37 @@ describe('PromptListPage - Prompt操作测试', () => {
       },
     ]);
 
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
+    render(<PromptListPage />);
 
-  it('应该支持新建Prompt', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
 
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
+    const historyWrapper = screen.getByTestId('tooltip-版本历史');
+    const historyButton = historyWrapper.querySelector('button');
+    fireEvent.click(historyButton!);
 
-  it('应该支持编辑Prompt', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
+    await waitFor(() => {
+      expect(Modal.info).toHaveBeenCalled();
+    });
   });
 });
 
-describe('PromptListPage - 状态显示测试', () => {
-  it('活跃状态应该显示success标签', async () => {
-    const mockPrompt = createMockPrompt({ status: PromptStatus.ACTIVE });
-    expect(mockPrompt.status).toBe(PromptStatus.ACTIVE);
-  });
-
-  it('草稿状态应该显示default标签', async () => {
-    const mockPrompt = createMockPrompt({ status: PromptStatus.DRAFT });
-    expect(mockPrompt.status).toBe(PromptStatus.DRAFT);
-  });
-
-  it('归档状态应该显示default标签', async () => {
-    const mockPrompt = createMockPrompt({ status: PromptStatus.ARCHIVED });
-    expect(mockPrompt.status).toBe(PromptStatus.ARCHIVED);
-  });
-});
-
-describe('PromptListPage - 准确率显示测试', () => {
-  it('高准确率 (>=90%) 应该显示success颜色', async () => {
-    const mockPrompt = createMockPrompt({ avg_accuracy: 0.95 });
-    expect(mockPrompt.avg_accuracy).toBeGreaterThanOrEqual(0.9);
-  });
-
-  it('中等准确率 (70-90%) 应该显示warning颜色', async () => {
-    const mockPrompt = createMockPrompt({ avg_accuracy: 0.75 });
-    expect(mockPrompt.avg_accuracy).toBeGreaterThanOrEqual(0.7);
-    expect(mockPrompt.avg_accuracy).toBeLessThan(0.9);
-  });
-
-  it('低准确率 (<70%) 应该显示error颜色', async () => {
-    const mockPrompt = createMockPrompt({ avg_accuracy: 0.5 });
-    expect(mockPrompt.avg_accuracy).toBeLessThan(0.7);
-  });
-});
-
-describe('PromptListPage - 文档类型显示测试', () => {
-  it('租赁合同类型应该显示blue标签', async () => {
-    const mockPrompt = createMockPrompt({ doc_type: DocType.CONTRACT });
-    expect(mockPrompt.doc_type).toBe(DocType.CONTRACT);
-  });
-
-  it('产权证类型应该显示green标签', async () => {
-    const mockPrompt = createMockPrompt({ doc_type: DocType.PROPERTY_CERT });
-    expect(mockPrompt.doc_type).toBe(DocType.PROPERTY_CERT);
-  });
-});
-
-describe('PromptListPage - 提供商显示测试', () => {
-  it('应该正确显示Qwen提供商', async () => {
-    const mockPrompt = createMockPrompt({ provider: LLMProvider.QWEN });
-    expect(mockPrompt.provider).toBe(LLMProvider.QWEN);
-  });
-
-  it('应该正确显示混元提供商', async () => {
-    const mockPrompt = createMockPrompt({ provider: LLMProvider.HUNYUAN });
-    expect(mockPrompt.provider).toBe(LLMProvider.HUNYUAN);
-  });
-
-  it('应该正确显示DeepSeek提供商', async () => {
-    const mockPrompt = createMockPrompt({ provider: LLMProvider.DEEPSEEK });
-    expect(mockPrompt.provider).toBe(LLMProvider.DEEPSEEK);
-  });
-
-  it('应该正确显示智谱提供商', async () => {
-    const mockPrompt = createMockPrompt({ provider: LLMProvider.GLM });
-    expect(mockPrompt.provider).toBe(LLMProvider.GLM);
-  });
-});
-
-describe('PromptListPage - 分页测试', () => {
-  it('应该支持分页', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持改变每页数量', async () => {
-    const PromptListPage = (await import('../PromptListPage')).default;
-
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('PromptListPage - 错误处理测试', () => {
-  it('加载失败应该显示错误消息', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
-
+describe('PromptListPage - 错误处理', () => {
+  it('加载失败应提示错误', async () => {
     vi.mocked(llmPromptService.getPrompts).mockRejectedValue(new Error('Load failed'));
 
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
+    render(<PromptListPage />);
+
+    await waitFor(() => {
+      expect(message.error).toHaveBeenCalledWith('加载 Prompt 列表失败');
+    });
   });
+});
 
-  it('激活失败应该显示错误消息', async () => {
-    const { llmPromptService } = await import('@/services/llmPromptService');
-
-    vi.mocked(llmPromptService.activatePrompt).mockRejectedValue(new Error('Activate failed'));
-
-    const PromptListPage = (await import('../PromptListPage')).default;
-    const element = React.createElement(PromptListPage);
-    expect(element).toBeTruthy();
+describe('PromptListPage - 组件契约', () => {
+  it('PromptEditor 接收可见性控制', () => {
+    render(<PromptListPage />);
+    expect(PromptEditor).toHaveBeenCalled();
   });
 });

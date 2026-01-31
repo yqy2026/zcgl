@@ -32,7 +32,7 @@ router = APIRouter()
 
 
 @router.get("/dropdown-options", summary="获取权属方选项列表")
-async def get_ownership_dropdown_options(
+def get_ownership_dropdown_options(
     current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
     is_active: bool | None = Query(True, description="是否启用"),
@@ -66,7 +66,7 @@ async def get_ownership_dropdown_options(
 
 
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
-async def create_ownership(
+def create_ownership(
     *,
     db: Annotated[Session, Depends(get_db)],
     ownership_in: OwnershipCreate,
@@ -83,7 +83,7 @@ async def create_ownership(
 
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
-async def update_ownership(
+def update_ownership(
     *,
     db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
@@ -109,7 +109,7 @@ async def update_ownership(
 
 
 @router.put("/{ownership_id}/projects", summary="更新权属方关联项目")
-async def update_ownership_projects(
+def update_ownership_projects(
     *,
     db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
@@ -146,7 +146,7 @@ async def update_ownership_projects(
 @router.delete(
     "/{ownership_id}", response_model=OwnershipDeleteResponse, summary="删除权属方"
 )
-async def delete_ownership(
+def delete_ownership(
     *,
     db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
@@ -179,7 +179,7 @@ async def delete_ownership(
     response_model=APIResponse[PaginatedData[OwnershipResponse]],
     summary="获取权属方列表",
 )
-async def get_ownerships(
+def get_ownerships(
     current_user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_db)],
     page: int = Query(1, ge=1, description="页码"),
@@ -218,7 +218,7 @@ async def get_ownerships(
     response_model=APIResponse[PaginatedData[OwnershipResponse]],
     summary="搜索权属方",
 )
-async def search_ownerships(
+def search_ownerships(
     *,
     db: Annotated[Session, Depends(get_db)],
     search_params: OwnershipSearchRequest,
@@ -251,7 +251,7 @@ async def search_ownerships(
     response_model=OwnershipStatisticsResponse,
     summary="获取权属方统计",
 )
-async def get_ownership_statistics(
+def get_ownership_statistics(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipStatisticsResponse:
@@ -276,7 +276,7 @@ async def get_ownership_statistics(
     response_model=OwnershipResponse,
     summary="切换权属方状态",
 )
-async def toggle_ownership_status(
+def toggle_ownership_status(
     *,
     db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
@@ -296,7 +296,7 @@ async def toggle_ownership_status(
     "/{ownership_id}/financial-summary",
     summary="获取权属方收支汇总",
 )
-async def get_ownership_financial_summary(
+def get_ownership_financial_summary(
     ownership_id: str,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],

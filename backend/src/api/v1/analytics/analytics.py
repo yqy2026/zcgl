@@ -22,6 +22,7 @@ from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....security.route_guards import debug_only
 from ....services.analytics.analytics_service import AnalyticsService
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ router = APIRouter()
 
 
 @router.get("/comprehensive", summary="获取综合统计分析数据")
-async def get_comprehensive_analytics(
+def get_comprehensive_analytics(
     request: Request,
     should_include_deleted: bool = False,
     date_from: str | None = None,
@@ -87,7 +88,7 @@ async def get_comprehensive_analytics(
 
 
 @router.get("/cache/stats", summary="获取缓存统计信息")
-async def get_cache_stats(
+def get_cache_stats(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -118,7 +119,7 @@ async def get_cache_stats(
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
-async def clear_cache(
+def clear_cache(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -149,9 +150,11 @@ async def clear_cache(
 
 
 @router.get("/debug/cache", summary="调试缓存状态")
+@debug_only
 async def debug_cache_status(
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
     调试端点：获取详细的缓存状态
@@ -186,7 +189,7 @@ async def debug_cache_status(
 
 
 @router.get("/trend", summary="获取趋势数据")
-async def get_trend_data(
+def get_trend_data(
     request: Request,
     trend_type: str = Query(..., description="趋势类型: occupancy, area, financial"),
     time_dimension: str = Query(
@@ -235,7 +238,7 @@ async def get_trend_data(
 
 
 @router.get("/distribution", summary="获取分布数据")
-async def get_distribution_data(
+def get_distribution_data(
     request: Request,
     distribution_type: str = Query(
         ..., description="分布类型: property_nature, business_category, usage_status"

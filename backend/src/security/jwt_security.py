@@ -8,8 +8,9 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import jwt
-from jose.exceptions import ExpiredSignatureError, JWTError
+import jwt
+from jwt import ExpiredSignatureError
+from jwt import PyJWTError as JWTError
 
 from ..core.config import settings
 

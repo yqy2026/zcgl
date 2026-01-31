@@ -34,8 +34,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_auth_service():
     """Create mock authentication service"""

@@ -37,7 +37,7 @@ router = APIRouter()
 @router.post(
     "/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产"
 )
-async def batch_update_assets(
+def batch_update_assets(
     request: AssetBatchUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
@@ -77,7 +77,9 @@ async def batch_update_assets(
                     id=error.get("asset_id"),
                     row_index=row_index,
                     field=error.get("field_context") or error.get("field"),
-                    message=error.get("error") or error.get("message") or "批量更新失败",
+                    message=error.get("error")
+                    or error.get("message")
+                    or "批量更新失败",
                     code=error.get("error_type") or error.get("code"),
                 )
             )
@@ -96,7 +98,7 @@ async def batch_update_assets(
 @router.post(
     "/validate", response_model=AssetValidationResponse, summary="验证资产数据"
 )
-async def validate_asset_data(
+def validate_asset_data(
     request: AssetValidationRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -163,7 +165,7 @@ async def validate_asset_data(
     response_model=BatchCustomFieldUpdateResponse,
     summary="批量更新自定义字段",
 )
-async def batch_update_custom_fields(
+def batch_update_custom_fields(
     request: BatchCustomFieldUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
@@ -225,7 +227,7 @@ async def batch_update_custom_fields(
 
 
 @router.get("/all", summary="获取所有资产（不分页）")
-async def get_all_assets(
+def get_all_assets(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     search: str | None = Query(None, description="搜索关键字"),
@@ -304,7 +306,7 @@ async def get_all_assets(
 
 
 @router.post("/by-ids", summary="根据ID列表获取资产")
-async def get_assets_by_ids(
+def get_assets_by_ids(
     request: dict[str, Any],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -347,7 +349,7 @@ async def get_assets_by_ids(
 
 
 @router.post("/batch-delete", summary="批量删除资产")
-async def batch_delete_assets(
+def batch_delete_assets(
     request: dict[str, Any],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

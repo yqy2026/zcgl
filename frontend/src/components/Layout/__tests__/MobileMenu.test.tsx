@@ -1,107 +1,114 @@
 /**
  * MobileMenu 组件测试
- * 测试移动端菜单组件
- * 增强版本 - 添加更全面的测试用例
+ * 覆盖打开/关闭、菜单点击与路由联动
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import type { CSSProperties, ReactNode } from 'react';
+
+import MobileMenu from '../MobileMenu';
+import { getOpenKeys, getSelectedKeys, MENU_ITEMS } from '@/config/menuConfig';
 
 interface DrawerMockProps {
-  children?: React.ReactNode;
-  title?: React.ReactNode;
+  children?: ReactNode;
+  title?: ReactNode;
   placement?: string;
   onClose?: () => void;
   open?: boolean;
   width?: number | string;
-  styles?: React.CSSProperties;
-  extra?: React.ReactNode;
+  styles?: CSSProperties;
+  extra?: ReactNode;
 }
 
 interface MenuItemMock {
-  key?: React.Key;
-  label?: React.ReactNode;
+  key?: string;
+  label?: ReactNode;
 }
 
 interface MenuMockProps {
-  selectedKeys?: React.Key[];
-  defaultOpenKeys?: React.Key[];
+  selectedKeys?: string[];
+  defaultOpenKeys?: string[];
   items?: MenuItemMock[];
-  onClick?: () => void;
+  onClick?: (info: { key: string }) => void;
   mode?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 interface ButtonMockProps {
-  children?: React.ReactNode;
-  icon?: React.ReactNode;
+  children?: ReactNode;
+  icon?: ReactNode;
   type?: string;
   onClick?: () => void;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 interface SpaceMockProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 interface TextMockProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   strong?: boolean;
 }
 
-// Mock react-router-dom
+const navigateMock = vi.fn();
+
 vi.mock('react-router-dom', () => ({
-  useLocation: () => ({
-    pathname: '/dashboard',
-  }),
-  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/dashboard' }),
+  useNavigate: () => navigateMock,
 }));
 
-// Mock Ant Design components
+vi.mock('@/config/menuConfig', () => ({
+  MENU_ITEMS: [
+    { key: '/dashboard', label: '工作台' },
+    { key: '/assets/list', label: '资产列表' },
+  ],
+  getSelectedKeys: vi.fn(() => ['/dashboard']),
+  getOpenKeys: vi.fn(() => ['/assets']),
+}));
+
 vi.mock('antd', () => ({
-  Drawer: ({
-    children,
-    title,
-    placement,
-    onClose,
-    open,
-    width,
-    styles: _styles,
-    extra,
-  }: DrawerMockProps) => (
+  Drawer: ({ children, title, placement, onClose, open, width, extra }: DrawerMockProps) => (
     <div
       data-testid="drawer"
       data-placement={placement}
       data-open={open}
       data-width={width}
-      data-onclose={onClose ? 'defined' : 'undefined'}
     >
       {title && <div data-testid="drawer-title">{title}</div>}
       {extra && <div data-testid="drawer-extra">{extra}</div>}
       {children}
+      {onClose && (
+        <button data-testid="drawer-close" type="button" onClick={onClose}>
+          Close
+        </button>
+      )}
     </div>
   ),
-  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode, style }: MenuMockProps) => (
+  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode }: MenuMockProps) => (
     <div
       data-testid="menu"
       data-selected-keys={JSON.stringify(selectedKeys)}
       data-default-open-keys={JSON.stringify(defaultOpenKeys)}
       data-mode={mode}
-      data-items-count={items?.length ?? 0}
-      onClick={onClick}
-      style={style}
     >
-      {items &&
-        items.map((item, index) => (
-          <div key={index} data-menu-key={item.key}>
-            {item.label}
-          </div>
-        ))}
+      {items?.map(item => (
+        <button
+          key={item.key}
+          type="button"
+          data-testid="menu-item"
+          data-key={item.key}
+          onClick={() => item.key && onClick?.({ key: item.key })}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   ),
   Button: ({ children, icon, type, onClick, style }: ButtonMockProps) => (
     <button data-testid="button" data-type={type} onClick={onClick} style={style}>
-      {icon && <span data-testid="button-icon">{icon}</span>}
+      {icon}
       {children}
     </button>
   ),
@@ -115,376 +122,76 @@ vi.mock('antd', () => ({
   },
 }));
 
-// Mock icons
 vi.mock('@ant-design/icons', () => ({
   MenuOutlined: () => <div data-testid="icon-menu" />,
   CloseOutlined: () => <div data-testid="icon-close" />,
-  DashboardOutlined: () => <div data-testid="icon-dashboard" />,
   HomeOutlined: () => <div data-testid="icon-home" />,
-  SearchOutlined: () => <div data-testid="icon-search" />,
-  FileExcelOutlined: () => <div data-testid="icon-file-excel" />,
-  BarChartOutlined: () => <div data-testid="icon-bar-chart" />,
-  SettingOutlined: () => <div data-testid="icon-setting" />,
-  PlusOutlined: () => <div data-testid="icon-plus" />,
-  UnorderedListOutlined: () => <div data-testid="icon-unordered-list" />,
-  UploadOutlined: () => <div data-testid="icon-upload" />,
-  DownloadOutlined: () => <div data-testid="icon-download" />,
-  LineChartOutlined: () => <div data-testid="icon-line-chart" />,
-  PieChartOutlined: () => <div data-testid="icon-pie-chart" />,
 }));
 
-describe('MobileMenu - 组件导入测试', () => {
-  it('应该能够导入MobileMenu组件', async () => {
-    const module = await import('../MobileMenu');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
-  });
-});
-
-describe('MobileMenu - 基础渲染测试', () => {
+describe('MobileMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应该能够渲染组件', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+  it('renders menu trigger button and closed drawer by default', () => {
+    render(<MobileMenu />);
+
+    expect(screen.getByTestId('button')).toBeInTheDocument();
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
   });
 
-  it('应该接受无props', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
+  it('opens drawer when trigger button clicked', () => {
+    render(<MobileMenu />);
 
-describe('MobileMenu - 触发按钮测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    fireEvent.click(screen.getByTestId('button'));
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
   });
 
-  it('应该有触发按钮', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+  it('closes drawer when close button clicked', () => {
+    render(<MobileMenu />);
+
+    fireEvent.click(screen.getByTestId('button'));
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+
+    fireEvent.click(screen.getByTestId('drawer-close'));
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
   });
 
-  it('触发按钮应该有MenuOutlined图标', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+  it('navigates and closes drawer when menu item clicked', () => {
+    render(<MobileMenu />);
+
+    fireEvent.click(screen.getByTestId('button'));
+
+    const menuItems = screen.getAllByTestId('menu-item');
+    fireEvent.click(menuItems[1]);
+
+    expect(navigateMock).toHaveBeenCalledWith('/assets/list');
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
   });
 
-  it('触发按钮应该有固定尺寸', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
+  it('passes selected/open keys to Menu based on location', () => {
+    render(<MobileMenu />);
 
-describe('MobileMenu - Drawer测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    expect(getSelectedKeys).toHaveBeenCalledWith('/dashboard');
+    expect(getOpenKeys).toHaveBeenCalledWith('/dashboard');
 
-  it('应该有Drawer组件', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+    const menu = screen.getByTestId('menu');
+    expect(menu).toHaveAttribute('data-selected-keys', JSON.stringify(['/dashboard']));
+    expect(menu).toHaveAttribute('data-default-open-keys', JSON.stringify(['/assets']));
   });
 
-  it('Drawer应该是左侧放置', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+  it('renders drawer title with Home icon', () => {
+    render(<MobileMenu />);
+
+    const title = screen.getByTestId('drawer-title');
+    expect(title).toBeInTheDocument();
+    expect(screen.getByTestId('icon-home')).toBeInTheDocument();
   });
 
-  it('Drawer应该有固定宽度', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
+  it('uses menu items from config', () => {
+    render(<MobileMenu />);
 
-  it('Drawer应该有标题', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('Drawer标题应该包含图标', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('Drawer应该有关闭按钮', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 菜单结构测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含数据看板菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含资产管理菜单组', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据管理菜单组', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据分析菜单组', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含系统管理菜单组', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 资产管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含资产列表菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含新增资产菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含高级搜索菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 数据管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含数据导入菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据导出菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含导入导出菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 数据分析子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含出租率分析菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含资产分布菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含面积统计菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 系统管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含用户管理菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含角色管理菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含操作日志菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 状态管理测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该有visible状态', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('点击按钮应该打开菜单', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('点击关闭按钮应该关闭菜单', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('点击菜单项应该关闭菜单', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 路由导航测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('点击菜单项应该导航到对应路径', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持根路径重定向', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持资产详情路径', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持资产编辑路径', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 菜单选中状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该根据路径高亮选中菜单项', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该自动展开相关菜单组', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 样式测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('Drawer body应该无padding', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('Menu应该占满高度', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('Menu应该无边框', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理未定义的路径', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('MobileMenu - 与AppSidebar菜单一致性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该有相同的菜单项数量', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
-  });
-
-  it('资产管理菜单应该对应', async () => {
-    const MobileMenu = (await import('../MobileMenu')).default;
-    const element = React.createElement(MobileMenu);
-    expect(element).toBeTruthy();
+    const items = screen.getAllByTestId('menu-item');
+    expect(items).toHaveLength(MENU_ITEMS.length);
   });
 });

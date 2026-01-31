@@ -28,6 +28,8 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import bad_request, internal_error
 from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
 from ....models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
@@ -53,6 +55,7 @@ async def upload_pdf_file(
     db: Session = Depends(get_db),
     pdf_service: PDFImportService = Depends(get_pdf_import_service),
     optional: Any = Depends(get_optional_services),
+    current_user: User = Depends(get_current_active_user),
 ) -> FileUploadResponse:
     """上传PDF文件并开始处理"""
 
@@ -150,6 +153,7 @@ async def upload_and_extract_pdf_v1_compatible(
     should_validate_fields: bool = Form(default=True),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     optional: Any = Depends(get_optional_services),
+    current_user: User = Depends(get_current_active_user),
 ) -> ExtractionResponse:
     """上传PDF文件并提取信息（V1兼容端点；如不需要可后续移除）"""
 

@@ -493,7 +493,9 @@ class TestEnumFieldTypeCRUD:
 
         crud = EnumFieldTypeCRUD(mock_db)
 
-        with pytest.raises(OperationNotAllowedError, match="无法删除包含枚举值的枚举类型"):
+        with pytest.raises(
+            OperationNotAllowedError, match="无法删除包含枚举值的枚举类型"
+        ):
             crud.delete("enum_type_123")
 
     def test_delete_enum_type_with_usage_raises_error(self, mock_db, sample_enum_type):
@@ -900,7 +902,9 @@ class TestEnumFieldValueCRUD:
 
         crud = EnumFieldValueCRUD(mock_db)
 
-        with pytest.raises(OperationNotAllowedError, match="无法删除包含子枚举值的枚举值"):
+        with pytest.raises(
+            OperationNotAllowedError, match="无法删除包含子枚举值的枚举值"
+        ):
             crud.delete("enum_value_123")
 
     def test_batch_create_enum_values(self, mock_db, sample_enum_value_create):

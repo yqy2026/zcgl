@@ -8,8 +8,8 @@ password expiration, device fingerprinting, and session management.
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, Mock, patch
 
+import jwt
 import pytest
-from jose import jwt
 from sqlalchemy.orm import Session
 
 from src.core.config import settings

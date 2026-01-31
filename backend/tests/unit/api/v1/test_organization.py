@@ -32,8 +32,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_organization_service():
     """Create mock organization service"""

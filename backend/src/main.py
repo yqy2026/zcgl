@@ -20,7 +20,11 @@ from .core.environment import (
     is_production,
     is_testing,
 )
-from .core.exception_handler import setup_exception_handlers
+from .core.exception_handler import (
+    ConfigurationError,
+    InternalServerError,
+    setup_exception_handlers,
+)
 from .core.import_utils import (
     create_lambda_none,
     create_mock_registry,
@@ -59,14 +63,20 @@ if hasattr(router_registry_module, "route_registry"):
 elif allow_mock_registry:
     route_registry = create_mock_registry()
 else:
-    raise RuntimeError("缺少 route_registry 且未启用 ALLOW_MOCK_REGISTRY")
+    raise ConfigurationError(
+        "缺少 route_registry 且未启用 ALLOW_MOCK_REGISTRY",
+        config_key="ALLOW_MOCK_REGISTRY",
+    )
 
 if hasattr(router_registry_module, "register_api_routes"):
     register_api_routes = router_registry_module.register_api_routes
 elif allow_mock_registry:
     register_api_routes = create_lambda_none
 else:
-    raise RuntimeError("缺少 register_api_routes 且未启用 ALLOW_MOCK_REGISTRY")
+    raise ConfigurationError(
+        "缺少 register_api_routes 且未启用 ALLOW_MOCK_REGISTRY",
+        config_key="ALLOW_MOCK_REGISTRY",
+    )
 
 # 安全中间件 - 关键依赖
 setup_security_middleware = safe_import_from(
@@ -147,8 +157,9 @@ async def lifespan(app: FastAPI) -> Any:
                 logger.error(f"JWT安全问题: {issue}")
             # 非测试模式下拒绝启动
             if not is_testing():
-                raise RuntimeError(
-                    "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。"
+                raise ConfigurationError(
+                    "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。",
+                    config_key="SECRET_KEY",
                 )
         else:
             logger.info("JWT配置安全检查通过")
@@ -158,14 +169,17 @@ async def lifespan(app: FastAPI) -> Any:
     except ImportError as e:
         logger.warning(f"JWT安全模块导入失败: {e}")
         # 模块缺失时记录警告但仍允许启动
-    except RuntimeError:
+    except ConfigurationError:
         # 安全检查失败，重新抛出以阻止启动
         raise
     except Exception as e:
         logger.warning(f"JWT配置检查出现异常: {e}")
         if not is_testing():
             logger.error("安全检查失败，拒绝在非测试模式下继续启动")
-            raise RuntimeError(f"JWT安全检查失败: {e}")
+            raise InternalServerError(
+                message=f"JWT安全检查失败: {e}",
+                original_error=e,
+            )
 
     # 初始化枚举字段数据
     if not is_testing():

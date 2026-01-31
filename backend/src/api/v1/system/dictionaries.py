@@ -34,7 +34,7 @@ router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
 
 
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])
-async def get_dictionary_options(
+def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
     is_active: bool = Query(True, description="是否只返回启用的选项"),
     db: Session = Depends(get_db),
@@ -55,7 +55,7 @@ async def get_dictionary_options(
 
 
 @router.post("/{dict_type}/quick-create")
-async def quick_create_dictionary(
+def quick_create_dictionary(
     dict_type: str = Path(..., description="字典类型"),
     dictionary_data: SimpleDictionaryCreate = Body(...),
     db: Session = Depends(get_db),
@@ -82,7 +82,7 @@ async def quick_create_dictionary(
 
 
 @router.get("/types", response_model=list[str])
-async def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
+def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
     """
     获取所有字典类型列表
 
@@ -92,7 +92,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
 
 
 @router.get("/validation/stats", summary="获取枚举验证统计信息")
-async def get_validation_statistics(
+def get_validation_statistics(
     enum_type: str | None = Query(None, description="枚举类型编码（可选）"),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
@@ -142,7 +142,7 @@ async def get_validation_statistics(
 
 
 @router.post("/{dict_type}/values")
-async def add_dictionary_value(
+def add_dictionary_value(
     dict_type: str = Path(..., description="字典类型"),
     value_data: DictionaryValueCreate = Body(...),
     db: Session = Depends(get_db),
@@ -168,7 +168,7 @@ async def add_dictionary_value(
 
 
 @router.delete("/{dict_type}")
-async def delete_dictionary_type(
+def delete_dictionary_type(
     dict_type: str = Path(..., description="字典类型"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

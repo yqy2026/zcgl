@@ -2,14 +2,13 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
 from src.models.rbac import Permission, Role
 from src.schemas.rbac import RoleCreate, UserRoleAssignmentCreate
 from src.services.rbac.service import RBACService
 
 TEST_ROLE_ID = "role_123"
 TEST_USER_ID = "user_456"
-
-
 
 
 @pytest.fixture
@@ -34,7 +33,7 @@ class TestRBACService:
         obj_in = RoleCreate(name="Existing Role", display_name="Display Name")
 
         with patch("src.crud.rbac.role_crud.get_by_name", return_value=Role()):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_role(mock_db, obj_in=obj_in, created_by="admin")
 
             assert "已存在" in str(excinfo.value)
@@ -61,7 +60,7 @@ class TestRBACService:
         role = Role(id=TEST_ROLE_ID, is_system_role=True)
 
         with patch("src.crud.rbac.role_crud.get", return_value=role):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(OperationNotAllowedError) as excinfo:
                 service.delete_role(mock_db, role_id=TEST_ROLE_ID, deleted_by="admin")
 
             assert "系统角色" in str(excinfo.value)
@@ -74,7 +73,7 @@ class TestRBACService:
             with patch(
                 "src.crud.rbac.user_role_assignment_crud.count_by_role", return_value=5
             ):
-                with pytest.raises(ValueError) as excinfo:
+                with pytest.raises(OperationNotAllowedError) as excinfo:
                     service.delete_role(
                         mock_db, role_id=TEST_ROLE_ID, deleted_by="admin"
                     )

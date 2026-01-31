@@ -1,8 +1,6 @@
 import type { User } from '@/types/auth';
 
 export interface AuthData {
-  token: string;
-  refreshToken: string;
   user: User;
   permissions: Array<{
     resource: string;
@@ -13,18 +11,20 @@ export interface AuthData {
 
 export class AuthStorageClass {
   private readonly AUTH_DATA_KEY = 'authData';
-  private readonly TOKEN_KEY = 'token';
-  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
+  private readonly USER_KEY = 'user';
+  private readonly PERMISSIONS_KEY = 'permissions';
+  private readonly LEGACY_TOKEN_KEYS = ['token', 'refresh_token', 'auth_token', 'refreshToken'];
 
   /**
-   * Store authentication data in localStorage
+   * Store authentication data in localStorage (no tokens)
    */
   setAuthData(data: AuthData): void {
     try {
       localStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
-      // Also set individual keys for backward compatibility
-      localStorage.setItem(this.TOKEN_KEY, data.token);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, data.refreshToken);
+      // Store user and permissions for legacy consumers
+      localStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
+      localStorage.setItem(this.PERMISSIONS_KEY, JSON.stringify(data.permissions));
+      this.clearLegacyTokenKeys();
     } catch (error) {
       console.error('Failed to store auth data:', error);
       throw error;
@@ -45,22 +45,6 @@ export class AuthStorageClass {
       console.error('Failed to retrieve auth data:', error);
       return null;
     }
-  }
-
-  /**
-   * Get access token
-   */
-  getToken(): string | null {
-    const authData = this.getAuthData();
-    return authData?.token ?? null;
-  }
-
-  /**
-   * Get refresh token
-   */
-  getRefreshToken(): string | null {
-    const authData = this.getAuthData();
-    return authData?.refreshToken ?? null;
   }
 
   /**
@@ -85,12 +69,10 @@ export class AuthStorageClass {
   clearAuthData(): void {
     try {
       localStorage.removeItem(this.AUTH_DATA_KEY);
-      localStorage.removeItem(this.TOKEN_KEY);
-      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-      localStorage.removeItem('refreshToken'); // Remove old camelCase key
-      localStorage.removeItem('user');
-      localStorage.removeItem('permissions');
+      localStorage.removeItem(this.USER_KEY);
+      localStorage.removeItem(this.PERMISSIONS_KEY);
       localStorage.removeItem('currentUser');
+      this.clearLegacyTokenKeys();
     } catch (error) {
       console.error('Failed to clear auth data:', error);
     }
@@ -100,8 +82,14 @@ export class AuthStorageClass {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const token = this.getToken();
-    return token != null && token.trim() !== '';
+    const user = this.getCurrentUser();
+    return user != null;
+  }
+
+  private clearLegacyTokenKeys(): void {
+    for (const key of this.LEGACY_TOKEN_KEYS) {
+      localStorage.removeItem(key);
+    }
   }
 }
 

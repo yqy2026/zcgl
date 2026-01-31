@@ -34,7 +34,7 @@ router = APIRouter()
     response_model=DistributionResponse,
     summary="获取权属分布统计",
 )
-async def get_ownership_distribution(
+def get_ownership_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> DistributionResponse:
@@ -97,7 +97,7 @@ async def get_ownership_distribution(
     response_model=DistributionResponse,
     summary="获取物业性质分布统计",
 )
-async def get_property_nature_distribution(
+def get_property_nature_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> DistributionResponse:
@@ -149,7 +149,7 @@ async def get_property_nature_distribution(
     response_model=DistributionResponse,
     summary="获取使用状态分布统计",
 )
-async def get_usage_status_distribution(
+def get_usage_status_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> DistributionResponse:
@@ -206,7 +206,7 @@ async def get_usage_status_distribution(
 
 
 @router.get("/asset-distribution", summary="获取资产分布统计")
-async def get_asset_distribution(
+def get_asset_distribution(
     group_by: str = Query("ownership_status", description="分组字段"),
     should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),

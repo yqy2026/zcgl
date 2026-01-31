@@ -5,6 +5,7 @@ import { MessageManager } from '@/utils/messageManager';
 import type { ErrorResponse } from '@/types/api';
 import { HTTP_STATUS, ERROR_CODES } from '../api/config';
 import { createLogger } from '../utils/logger';
+import { AuthStorage } from '@/utils/AuthStorage';
 
 const errorLogger = createLogger('ErrorHandler');
 
@@ -169,9 +170,8 @@ export class ApiErrorHandler {
 
   // 处理未授权
   private handleUnauthorized(): void {
-    // 清除本地存储的token
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    // 清除本地存储的认证信息（无token）
+    AuthStorage.clearAuthData();
 
     // 跳转到登录页
     if (window.location.pathname !== '/login') {

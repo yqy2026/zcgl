@@ -36,8 +36,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_current_user():
     """Create mock authenticated user"""

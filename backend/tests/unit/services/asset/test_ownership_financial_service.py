@@ -19,8 +19,6 @@ TEST_OWNERSHIP_ID = "ownership_123"
 TEST_OWNERSHIP_NAME = "测试权属方"
 
 
-
-
 @pytest.fixture
 def service():
     """创建服务实例"""
@@ -125,10 +123,10 @@ class TestGetFinancialSummary:
         # 设置各查询的返回值
         mock_query.scalar.side_effect = [
             10000.0,  # due_amount
-            8000.0,   # paid_amount
-            2000.0,   # arrears_amount
-            10,       # total_contracts
-            8,        # active_contracts
+            8000.0,  # paid_amount
+            2000.0,  # arrears_amount
+            10,  # total_contracts
+            8,  # active_contracts
         ]
 
         result = service.get_financial_summary(
@@ -158,8 +156,8 @@ class TestGetFinancialSummary:
             None,  # due_amount
             None,  # paid_amount
             None,  # arrears_amount
-            0,     # total_contracts
-            0,     # active_contracts
+            0,  # total_contracts
+            0,  # active_contracts
         ]
 
         result = service.get_financial_summary(
@@ -183,11 +181,11 @@ class TestGetFinancialSummary:
         mock_query.scalar_subquery.return_value = "subquery"
 
         mock_query.scalar.side_effect = [
-            0,     # due_amount = 0
-            0,     # paid_amount
-            0,     # arrears_amount
-            5,     # total_contracts
-            3,     # active_contracts
+            0,  # due_amount = 0
+            0,  # paid_amount
+            0,  # arrears_amount
+            5,  # total_contracts
+            3,  # active_contracts
         ]
 
         result = service.get_financial_summary(
@@ -209,9 +207,9 @@ class TestGetFinancialSummary:
         mock_query.scalar.side_effect = [
             10000.0,  # due_amount
             10000.0,  # paid_amount (全额付款)
-            0.0,      # arrears_amount
-            5,        # total_contracts
-            5,        # active_contracts
+            0.0,  # arrears_amount
+            5,  # total_contracts
+            5,  # active_contracts
         ]
 
         result = service.get_financial_summary(
@@ -233,9 +231,9 @@ class TestGetFinancialSummary:
         mock_query.scalar.side_effect = [
             20000.0,  # due_amount
             15000.0,  # paid_amount
-            5000.0,   # arrears_amount
-            3,        # total_contracts
-            2,        # active_contracts
+            5000.0,  # arrears_amount
+            3,  # total_contracts
+            2,  # active_contracts
         ]
 
         result = service.get_financial_summary(
@@ -257,9 +255,9 @@ class TestGetFinancialSummary:
         mock_query.scalar.side_effect = [
             5000.0,  # due_amount
             5000.0,  # paid_amount
-            0.0,     # arrears_amount
-            10,      # total_contracts
-            0,       # active_contracts (无活跃)
+            0.0,  # arrears_amount
+            10,  # total_contracts
+            0,  # active_contracts (无活跃)
         ]
 
         result = service.get_financial_summary(

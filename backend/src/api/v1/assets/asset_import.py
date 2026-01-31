@@ -60,7 +60,7 @@ async def import_assets(
                 validation_request = AssetValidationRequest(
                     data=asset_data, validate_rules=None
                 )
-                validation_result = await validate_asset_data(
+                validation_result = validate_asset_data(
                     validation_request, db, current_user
                 )
 

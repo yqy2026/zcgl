@@ -1,5 +1,5 @@
 """
-Comprehensive Unit Tests for Authentication API Routes (src/api/v1/auth_modules/authentication.py)
+Comprehensive Unit Tests for Authentication API Routes (src/api/v1/auth/auth_modules/authentication.py)
 
 This test module covers all endpoints in the authentication router to achieve 70%+ coverage:
 
@@ -21,12 +21,13 @@ Testing Approach:
 - Test security features (token blacklisting, session management)
 """
 
+import asyncio
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
+import jwt
 import pytest
 from fastapi import Response, status
-from jose import jwt
 
 pytestmark = pytest.mark.api
 
@@ -34,8 +35,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 
 
 @pytest.fixture
@@ -145,11 +144,10 @@ def mock_session():
 class TestLogin:
     """Tests for POST /api/v1/auth/login endpoint"""
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_success(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_success(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -158,8 +156,7 @@ class TestLogin:
         mock_db,
     ):
         """Test successful user login"""
-        from src.api.v1.auth_modules.authentication import login
-
+        from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="testuser", password="password123")
@@ -187,7 +184,7 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await login(
+        result = login(
             request=mock_request,
             credentials=credentials,
             response=Response(),
@@ -202,11 +199,10 @@ class TestLogin:
         )
         mock_auth_service.create_tokens.assert_called_once()
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_invalid_credentials(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_invalid_credentials(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -215,8 +211,7 @@ class TestLogin:
         mock_db,
     ):
         """Test login with invalid credentials"""
-        from src.api.v1.auth_modules.authentication import login
-
+        from src.api.v1.auth.auth_modules.authentication import login
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
@@ -237,7 +232,7 @@ class TestLogin:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         with pytest.raises(AuthenticationError) as exc_info:
-            await login(
+            login(
                 request=mock_request,
                 credentials=credentials,
                 response=Response(),
@@ -247,11 +242,10 @@ class TestLogin:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "用户名或密码错误" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_invalid_credentials_no_user(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_invalid_credentials_no_user(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -260,8 +254,7 @@ class TestLogin:
         mock_db,
     ):
         """Test login with invalid credentials when user doesn't exist"""
-        from src.api.v1.auth_modules.authentication import login
-
+        from src.api.v1.auth.auth_modules.authentication import login
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
@@ -279,7 +272,7 @@ class TestLogin:
         mock_audit_crud_class.return_value = mock_audit_crud
 
         with pytest.raises(AuthenticationError) as exc_info:
-            await login(
+            login(
                 request=mock_request,
                 credentials=credentials,
                 response=Response(),
@@ -288,11 +281,10 @@ class TestLogin:
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_server_error(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_server_error(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -301,8 +293,7 @@ class TestLogin:
         mock_db,
     ):
         """Test login with server error"""
-        from src.api.v1.auth_modules.authentication import login
-
+        from src.api.v1.auth.auth_modules.authentication import login
         from src.core.exception_handler import InternalServerError
         from src.schemas.auth import LoginRequest
 
@@ -313,7 +304,7 @@ class TestLogin:
         mock_auth_service_class.return_value = mock_auth_service
 
         with pytest.raises(InternalServerError) as exc_info:
-            await login(
+            login(
                 request=mock_request,
                 credentials=credentials,
                 response=Response(),
@@ -323,11 +314,10 @@ class TestLogin:
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "登录服务暂时不可用" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_business_logic_error(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_business_logic_error(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -335,9 +325,9 @@ class TestLogin:
         mock_request,
         mock_db,
     ):
-        """Test login with business logic error - note: caught as general exception"""
-        from src.api.v1.auth_modules.authentication import login
-
+        """Test login with business logic error"""
+        from src.api.v1.auth.auth_modules.authentication import login
+        from src.core.exception_handler import InvalidRequestError
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import LoginRequest
 
@@ -349,8 +339,8 @@ class TestLogin:
         )
         mock_auth_service_class.return_value = mock_auth_service
 
-        with pytest.raises(BusinessLogicError) as exc_info:
-            await login(
+        with pytest.raises(InvalidRequestError) as exc_info:
+            login(
                 request=mock_request,
                 credentials=credentials,
                 response=Response(),
@@ -360,11 +350,10 @@ class TestLogin:
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "账户已被锁定" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.UserCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_login_with_bool_is_active(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_login_with_bool_is_active(
         self,
         mock_auth_service_class,
         mock_user_crud_class,
@@ -373,8 +362,7 @@ class TestLogin:
         mock_db,
     ):
         """Test login when is_active is a boolean"""
-        from src.api.v1.auth_modules.authentication import login
-
+        from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
         credentials = LoginRequest(username="testuser", password="password123")
@@ -402,7 +390,7 @@ class TestLogin:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await login(
+        result = login(
             request=mock_request,
             credentials=credentials,
             response=Response(),
@@ -420,10 +408,9 @@ class TestLogin:
 class TestLogout:
     """Tests for POST /api/v1/auth/logout endpoint"""
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_logout_success(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_success(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -432,7 +419,7 @@ class TestLogout:
         mock_admin_user,
     ):
         """Test successful user logout"""
-        from src.api.v1.auth_modules.authentication import logout
+        from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.headers = {
             "Authorization": "Bearer valid_token",
@@ -446,7 +433,7 @@ class TestLogout:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await logout(
+        result = logout(
             request=mock_request,
             response=Response(),
             current_user=mock_admin_user,
@@ -457,10 +444,9 @@ class TestLogout:
         assert result["revoked_sessions"] == 2
         mock_auth_service.revoke_all_user_sessions.assert_called_once_with("admin-id")
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_logout_without_auth_header(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_without_auth_header(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -469,7 +455,7 @@ class TestLogout:
         mock_admin_user,
     ):
         """Test logout without Authorization header"""
-        from src.api.v1.auth_modules.authentication import logout
+        from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.headers = {"user-agent": "test-agent"}
 
@@ -480,7 +466,7 @@ class TestLogout:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await logout(
+        result = logout(
             request=mock_request,
             response=Response(),
             current_user=mock_admin_user,
@@ -490,10 +476,9 @@ class TestLogout:
         assert result["message"] == "登出成功"
         mock_auth_service.revoke_all_user_sessions.assert_called_once()
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_logout_with_valid_token_blacklist(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_with_valid_token_blacklist(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -502,8 +487,7 @@ class TestLogout:
         mock_admin_user,
     ):
         """Test logout successfully blacklists token"""
-        from src.api.v1.auth_modules.authentication import logout
-
+        from src.api.v1.auth.auth_modules.authentication import logout
         from src.core.config import settings
 
         mock_request.headers = {
@@ -528,7 +512,7 @@ class TestLogout:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await logout(
+        result = logout(
             request=mock_request,
             response=Response(),
             current_user=mock_admin_user,
@@ -539,10 +523,9 @@ class TestLogout:
         mock_auth_service.revoke_all_user_sessions.assert_called_once()
         # Token blacklist code is executed (lines 182-188) - covered by this test
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_logout_with_invalid_token(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_with_invalid_token(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -551,7 +534,7 @@ class TestLogout:
         mock_admin_user,
     ):
         """Test logout with invalid token (should still logout)"""
-        from src.api.v1.auth_modules.authentication import logout
+        from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.headers = {
             "Authorization": "Bearer invalid_token",
@@ -565,7 +548,7 @@ class TestLogout:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await logout(
+        result = logout(
             request=mock_request,
             response=Response(),
             current_user=mock_admin_user,
@@ -576,10 +559,9 @@ class TestLogout:
         # Should still revoke sessions even if token blacklisting fails
         mock_auth_service.revoke_all_user_sessions.assert_called_once()
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_logout_no_client(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_no_client(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -588,7 +570,7 @@ class TestLogout:
         mock_admin_user,
     ):
         """Test logout when request.client is None"""
-        from src.api.v1.auth_modules.authentication import logout
+        from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.client = None
         mock_request.headers = {"user-agent": "test-agent"}
@@ -600,7 +582,7 @@ class TestLogout:
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await logout(
+        result = logout(
             request=mock_request,
             response=Response(),
             current_user=mock_admin_user,
@@ -618,10 +600,9 @@ class TestLogout:
 class TestRefreshToken:
     """Tests for POST /api/v1/auth/refresh endpoint"""
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_success(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_success(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -632,38 +613,37 @@ class TestRefreshToken:
         mock_tokens,
     ):
         """Test successful token refresh"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
 
         mock_auth_service = MagicMock()
-        mock_auth_service.validate_refresh_token.return_value = mock_session
-        mock_auth_service.get_user_by_id.return_value = mock_user_model
+        mock_auth_service.validate_refresh_token.return_value = mock_user_model
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await refresh_token(
-            request=mock_request, refresh_data=refresh_data, db=mock_db
+        result = refresh_token(
+            request=mock_request,
+            response=Response(),
+            refresh_data=refresh_data,
+            db=mock_db,
         )
 
         assert result.access_token == "mock_access_token"
         assert result.refresh_token == "mock_refresh_token"
         mock_auth_service.validate_refresh_token.assert_called_once()
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_invalid(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_invalid(
         self, mock_auth_service_class, mock_audit_crud_class, mock_request, mock_db
     ):
         """Test refresh with invalid token"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -675,21 +655,23 @@ class TestRefreshToken:
 
         # Note: AuditLogCRUD is imported inside the function, so we need to patch at the right location
         with patch(
-            "src.api.v1.auth_modules.authentication.AuditLogCRUD",
+            "src.api.v1.auth.auth_modules.authentication.AuditLogCRUD",
             return_value=mock_audit_crud_class,
         ):
             with pytest.raises(AuthenticationError) as exc_info:
-                await refresh_token(
-                    request=mock_request, refresh_data=refresh_data, db=mock_db
+                refresh_token(
+                    request=mock_request,
+                    response=Response(),
+                    refresh_data=refresh_data,
+                    db=mock_db,
                 )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "无效的刷新令牌" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_user_not_found(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_user_not_found(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -698,8 +680,7 @@ class TestRefreshToken:
         mock_session,
     ):
         """Test refresh when user not found"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -712,17 +693,19 @@ class TestRefreshToken:
         mock_auth_service_class.return_value = mock_auth_service
 
         with pytest.raises(AuthenticationError) as exc_info:
-            await refresh_token(
-                request=mock_request, refresh_data=refresh_data, db=mock_db
+            refresh_token(
+                request=mock_request,
+                response=Response(),
+                refresh_data=refresh_data,
+                db=mock_db,
             )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "无效的刷新令牌" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_user_inactive(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_user_inactive(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -732,8 +715,7 @@ class TestRefreshToken:
         mock_session,
     ):
         """Test refresh when user is inactive"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import RefreshTokenRequest
 
@@ -747,17 +729,19 @@ class TestRefreshToken:
         mock_auth_service_class.return_value = mock_auth_service
 
         with pytest.raises(AuthenticationError) as exc_info:
-            await refresh_token(
-                request=mock_request, refresh_data=refresh_data, db=mock_db
+            refresh_token(
+                request=mock_request,
+                response=Response(),
+                refresh_data=refresh_data,
+                db=mock_db,
             )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "用户不存在或已被禁用" in exc_info.value.message
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_ip_change(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_ip_change(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -768,8 +752,7 @@ class TestRefreshToken:
         mock_tokens,
     ):
         """Test refresh with IP change (should succeed with warning)"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
@@ -777,24 +760,25 @@ class TestRefreshToken:
         mock_session.ip_address = "192.168.1.1"  # Different from request.client.host
 
         mock_auth_service = MagicMock()
-        mock_auth_service.validate_refresh_token.return_value = mock_session
-        mock_auth_service.get_user_by_id.return_value = mock_user_model
+        mock_auth_service.validate_refresh_token.return_value = mock_user_model
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await refresh_token(
-            request=mock_request, refresh_data=refresh_data, db=mock_db
+        result = refresh_token(
+            request=mock_request,
+            response=Response(),
+            refresh_data=refresh_data,
+            db=mock_db,
         )
 
         assert result.access_token == "mock_access_token"
 
-    @patch("src.api.v1.auth_modules.authentication.AuditLogCRUD")
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_refresh_token_no_client(
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_refresh_token_no_client(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -805,8 +789,7 @@ class TestRefreshToken:
         mock_tokens,
     ):
         """Test refresh when request.client is None"""
-        from src.api.v1.auth_modules.authentication import refresh_token
-
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.schemas.auth import RefreshTokenRequest
 
         refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
@@ -814,16 +797,18 @@ class TestRefreshToken:
         mock_request.client = None
 
         mock_auth_service = MagicMock()
-        mock_auth_service.validate_refresh_token.return_value = mock_session
-        mock_auth_service.get_user_by_id.return_value = mock_user_model
+        mock_auth_service.validate_refresh_token.return_value = mock_user_model
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = await refresh_token(
-            request=mock_request, refresh_data=refresh_data, db=mock_db
+        result = refresh_token(
+            request=mock_request,
+            response=Response(),
+            refresh_data=refresh_data,
+            db=mock_db,
         )
 
         assert result.access_token == "mock_access_token"
@@ -837,12 +822,11 @@ class TestRefreshToken:
 class TestGetCurrentUserInfo:
     """Tests for GET /api/v1/auth/me endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_info_success(self, mock_admin_user):
+    def test_get_current_user_info_success(self, mock_admin_user):
         """Test getting current user info successfully"""
-        from src.api.v1.auth_modules.authentication import get_current_user_info
+        from src.api.v1.auth.auth_modules.authentication import get_current_user_info
 
-        result = await get_current_user_info(current_user=mock_admin_user)
+        result = get_current_user_info(current_user=mock_admin_user)
 
         assert result["username"] == "admin"
         assert result["email"] == "admin@example.com"
@@ -854,12 +838,11 @@ class TestGetCurrentUserInfo:
         assert result["session_status"] == "active"
         assert "timestamp" in result
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_info_regular_user(self, mock_regular_user):
+    def test_get_current_user_info_regular_user(self, mock_regular_user):
         """Test getting current user info for regular user"""
-        from src.api.v1.auth_modules.authentication import get_current_user_info
+        from src.api.v1.auth.auth_modules.authentication import get_current_user_info
 
-        result = await get_current_user_info(current_user=mock_regular_user)
+        result = get_current_user_info(current_user=mock_regular_user)
 
         assert result["username"] == "testuser"
         assert result["role"] == "user"
@@ -872,19 +855,18 @@ class TestGetCurrentUserInfo:
 
 
 class TestTestFeatures:
-    """Tests for GET /api/v1/auth/test-features endpoint"""
+    """Tests for GET /api/v1/debug/test-features endpoint"""
 
     @patch.dict("os.environ", {"DEBUG": "true"})
-    @pytest.mark.asyncio
-    async def test_test_features(self):
+    def test_test_features(self):
         """Test features endpoint"""
         import os
 
         os.environ["DEBUG"] = "true"
 
-        from src.api.v1.auth_modules.authentication import test_features
+        from src.api.v1.debug.auth_debug import test_features
 
-        result = await test_features()
+        result = asyncio.run(test_features())
 
         assert result["success"] is True
         assert result["message"] == "功能测试正常"
@@ -897,17 +879,17 @@ class TestTestFeatures:
 
 
 class TestDebugAuth:
-    """Tests for GET /api/v1/auth/debug-auth endpoint"""
+    """Tests for GET /api/v1/debug/auth endpoint"""
 
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_debug_auth_success(self, mock_auth_service_class, mock_db):
+    @patch("src.api.v1.debug.auth_debug.AuthService")
+    def test_debug_auth_success(self, mock_auth_service_class, mock_db):
         """Test debug authentication endpoint"""
         import os
 
         os.environ["DEBUG"] = "true"
+        os.environ["DEBUG_AUTH_PASSWORD"] = "test-password"
 
-        from src.api.v1.auth_modules.authentication import debug_auth
+        from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
         mock_admin_user.username = "admin"
@@ -926,7 +908,7 @@ class TestDebugAuth:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
 
-        result = await debug_auth(db=mock_db)
+        result = asyncio.run(debug_auth(db=mock_db))
 
         assert result["admin_user_found"] is True
         assert result["admin_username"] == "admin"
@@ -935,35 +917,33 @@ class TestDebugAuth:
         assert result["auth_success"] is True
         assert result["token_success"] is True
 
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_debug_auth_admin_not_found(self, mock_auth_service_class, mock_db):
+    @patch("src.api.v1.debug.auth_debug.AuthService")
+    def test_debug_auth_admin_not_found(self, mock_auth_service_class, mock_db):
         """Test debug auth when admin user not found"""
         import os
 
         os.environ["DEBUG"] = "true"
+        os.environ["DEBUG_AUTH_PASSWORD"] = "test-password"
 
-        from src.api.v1.auth_modules.authentication import debug_auth
+        from src.api.v1.debug.auth_debug import debug_auth
 
         mock_auth_service = MagicMock()
         mock_auth_service.get_user_by_username.return_value = None
         mock_auth_service_class.return_value = mock_auth_service
 
-        result = await debug_auth(db=mock_db)
+        result = asyncio.run(debug_auth(db=mock_db))
 
-        assert result["error"] == "Admin user not found"
+        assert result["error"] == "Test user 'admin' not found"
 
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_debug_auth_authenticate_exception(
-        self, mock_auth_service_class, mock_db
-    ):
+    @patch("src.api.v1.debug.auth_debug.AuthService")
+    def test_debug_auth_authenticate_exception(self, mock_auth_service_class, mock_db):
         """Test debug auth when authenticate raises exception"""
         import os
 
         os.environ["DEBUG"] = "true"
+        os.environ["DEBUG_AUTH_PASSWORD"] = "test-password"
 
-        from src.api.v1.auth_modules.authentication import debug_auth
+        from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
         mock_admin_user.username = "admin"
@@ -976,21 +956,21 @@ class TestDebugAuth:
         mock_auth_service.authenticate_user.side_effect = Exception("Auth failed")
         mock_auth_service_class.return_value = mock_auth_service
 
-        result = await debug_auth(db=mock_db)
+        result = asyncio.run(debug_auth(db=mock_db))
 
         assert result["admin_user_found"] is True
         assert result["auth_success"] is False
         assert result["auth_error"] == "Auth failed"
 
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_debug_auth_token_exception(self, mock_auth_service_class, mock_db):
+    @patch("src.api.v1.debug.auth_debug.AuthService")
+    def test_debug_auth_token_exception(self, mock_auth_service_class, mock_db):
         """Test debug auth when token creation raises exception"""
         import os
 
         os.environ["DEBUG"] = "true"
+        os.environ["DEBUG_AUTH_PASSWORD"] = "test-password"
 
-        from src.api.v1.auth_modules.authentication import debug_auth
+        from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
         mock_admin_user.username = "admin"
@@ -1007,7 +987,7 @@ class TestDebugAuth:
         mock_auth_service.create_tokens.side_effect = Exception("Token creation failed")
         mock_auth_service_class.return_value = mock_auth_service
 
-        result = await debug_auth(db=mock_db)
+        result = asyncio.run(debug_auth(db=mock_db))
 
         assert result["admin_user_found"] is True
         assert result["auth_success"] is True
@@ -1015,20 +995,20 @@ class TestDebugAuth:
         assert result["token_error"] == "Token creation failed"
         assert result["access_token_length"] == 0
 
-    @patch("src.api.v1.auth_modules.authentication.AuthService")
-    @pytest.mark.asyncio
-    async def test_debug_auth_general_exception(self, mock_auth_service_class, mock_db):
+    @patch("src.api.v1.debug.auth_debug.AuthService")
+    def test_debug_auth_general_exception(self, mock_auth_service_class, mock_db):
         """Test debug auth with general exception"""
         import os
 
         os.environ["DEBUG"] = "true"
+        os.environ["DEBUG_AUTH_PASSWORD"] = "test-password"
 
-        from src.api.v1.auth_modules.authentication import debug_auth
+        from src.api.v1.debug.auth_debug import debug_auth
 
         MagicMock()
         mock_auth_service_class.side_effect = Exception("Service init failed")
 
-        result = await debug_auth(db=mock_db)
+        result = asyncio.run(debug_auth(db=mock_db))
 
         assert "error" in result
         assert "Debug endpoint error" in result["error"]
@@ -1040,18 +1020,17 @@ class TestDebugAuth:
 
 
 class TestTestMeDebug:
-    """Tests for GET /api/v1/auth/test-me-debug endpoint"""
+    """Tests for GET /api/v1/debug/me endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_me_debug(self, mock_admin_user):
+    def test_me_debug(self, mock_admin_user):
         """Test ME debug endpoint"""
         import os
 
         os.environ["DEBUG"] = "true"
 
-        from src.api.v1.auth_modules.authentication import test_me_debug
+        from src.api.v1.debug.auth_debug import test_me_debug
 
-        result = await test_me_debug(current_user=mock_admin_user)
+        result = asyncio.run(test_me_debug(current_user=mock_admin_user))
 
         assert result["username"] == "admin"
         assert result["email"] == "admin@example.com"

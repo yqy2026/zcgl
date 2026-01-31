@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import ExternalServiceError
 from src.services.document.extractors.base import (
     BaseVisionAdapter,
     ContractExtractorInterface,
@@ -458,14 +459,14 @@ class TestBaseVisionAdapterExtractWithRetry:
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_retry_raises_after_max_attempts(self):
-        """Should raise RuntimeError after max retry attempts"""
+        """Should raise ExternalServiceError after max retry attempts"""
         adapter = ConcreteAdapter(is_available=True)
 
         adapter.vision_service.extract_from_images.side_effect = ConnectionError(
             "Persistent error"
         )
 
-        with pytest.raises(RuntimeError, match="failed after 3 attempts"):
+        with pytest.raises(ExternalServiceError, match="failed after 3 attempts"):
             await adapter._extract_with_retry(image_paths=["page1.png"], prompt="test")
 
         assert adapter.vision_service.extract_from_images.call_count == 3
@@ -621,10 +622,10 @@ class TestBaseVisionAdapterParseJson:
 
     @pytest.mark.unit
     def test_parse_json_raises_on_invalid_json(self):
-        """Should raise ValueError on completely invalid JSON"""
+        """Should raise ExternalServiceError on completely invalid JSON"""
         adapter = ConcreteAdapter()
 
-        with pytest.raises(ValueError, match="Could not parse JSON"):
+        with pytest.raises(ExternalServiceError, match="模型响应无法解析为JSON"):
             adapter._parse_json("This is not JSON at all")
 
     @pytest.mark.unit
@@ -632,11 +633,12 @@ class TestBaseVisionAdapterParseJson:
         """Error message should include snippet of content"""
         adapter = ConcreteAdapter()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ExternalServiceError) as exc_info:
             adapter._parse_json("invalid json content here")
 
-        error_msg = str(exc_info.value)
-        assert "invalid json content here" in error_msg or "invalid json" in error_msg
+        details = exc_info.value.details
+        assert "content_preview" in details
+        assert "invalid json content here" in details["content_preview"]
 
     @pytest.mark.unit
     def test_parse_json_with_nested_json(self):

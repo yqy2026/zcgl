@@ -258,9 +258,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     async def get_async(
         self, db: AsyncSession, id: Any, use_cache: bool = False
     ) -> Asset | None:
-        result = await db.execute(
-            select(Asset).filter(getattr(self.model, "id") == id)
-        )
+        result = await db.execute(select(Asset).filter(getattr(self.model, "id") == id))
         asset = result.scalars().first()
         if asset is not None:
             self._decrypt_asset_object(asset)
@@ -652,8 +650,12 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     history.asset_id = db_obj.id
                     history.operation_type = "UPDATE"
                     history.field_name = field
-                    history.old_value = str(old_value) if old_value is not None else None
-                    history.new_value = str(new_value) if new_value is not None else None
+                    history.old_value = (
+                        str(old_value) if old_value is not None else None
+                    )
+                    history.new_value = (
+                        str(new_value) if new_value is not None else None
+                    )
                     history.description = (
                         f"更新字段 {field}: {old_value} -> {new_value}"
                     )

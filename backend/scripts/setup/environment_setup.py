@@ -25,7 +25,7 @@ class EnvironmentSetup:
             "NLP依赖": {
                 "spacy": "3.8.0",
                 "jieba": "0.42.1",
-                "fuzzywuzzy": "0.18.0",
+                "rapidfuzz": "3.6.0",
                 "python-Levenshtein": "0.25.1",
                 "regex": "2023.0.0",
             },
@@ -230,7 +230,7 @@ class EnvironmentSetup:
    pip install opencv-python>=4.12.0
    pip install spacy>=3.8.0
    pip install jieba>=0.42.1
-   pip install fuzzywuzzy>=0.18.0
+   pip install rapidfuzz>=3.6.0
    pip install python-Levenshtein>=0.25.1
    pip install regex>=2023.0.0
    pip install markitdown>=0.1.0

@@ -35,18 +35,31 @@ def upgrade() -> None:
         sa.Column("level", sa.Integer(), nullable=False, default=1, comment="组织层级"),
         sa.Column("sort_order", sa.Integer(), default=0, comment="排序"),
         sa.Column("type", sa.String(20), nullable=False, comment="组织类型"),
-        sa.Column("status", sa.String(20), nullable=False, default="active", comment="状态"),
+        sa.Column(
+            "status", sa.String(20), nullable=False, default="active", comment="状态"
+        ),
         sa.Column("phone", sa.String(20), comment="联系电话"),
         sa.Column("email", sa.String(100), comment="邮箱"),
         sa.Column("address", sa.String(200), comment="地址"),
         sa.Column("leader_name", sa.String(50), comment="负责人姓名"),
         sa.Column("leader_phone", sa.String(20), comment="负责人电话"),
         sa.Column("leader_email", sa.String(100), comment="负责人邮箱"),
-        sa.Column("parent_id", sa.String(), sa.ForeignKey("organizations.id"), comment="上级组织ID"),
+        sa.Column(
+            "parent_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            comment="上级组织ID",
+        ),
         sa.Column("path", sa.String(1000), comment="组织路径"),
         sa.Column("description", sa.Text(), comment="组织描述"),
         sa.Column("functions", sa.Text(), comment="主要职能"),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, default=False, comment="是否删除"),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否删除",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -61,13 +74,25 @@ def upgrade() -> None:
         sa.Column("name", sa.String(100), nullable=False, comment="职位名称"),
         sa.Column("level", sa.Integer(), nullable=False, default=1, comment="职位级别"),
         sa.Column("category", sa.String(50), comment="职位类别"),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), nullable=False, comment="所属组织ID"),
+        sa.Column(
+            "organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            nullable=False,
+            comment="所属组织ID",
+        ),
         sa.Column("description", sa.Text(), comment="职位描述"),
         sa.Column("responsibilities", sa.Text(), comment="岗位职责"),
         sa.Column("requirements", sa.Text(), comment="任职要求"),
         sa.Column("salary_min", sa.Integer(), comment="最低薪资"),
         sa.Column("salary_max", sa.Integer(), comment="最高薪资"),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, default=False, comment="是否删除"),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否删除",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -79,16 +104,35 @@ def upgrade() -> None:
     op.create_table(
         "employees",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("employee_no", sa.String(50), unique=True, nullable=False, comment="员工编号"),
+        sa.Column(
+            "employee_no",
+            sa.String(50),
+            unique=True,
+            nullable=False,
+            comment="员工编号",
+        ),
         sa.Column("name", sa.String(100), nullable=False, comment="姓名"),
         sa.Column("gender", sa.String(10), comment="性别"),
         sa.Column("birth_date", sa.DateTime(), comment="出生日期"),
         sa.Column("id_card", sa.String(20), comment="身份证号"),
         sa.Column("emergency_contact", sa.String(100), comment="紧急联系人"),
         sa.Column("emergency_phone", sa.String(20), comment="紧急联系电话"),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), nullable=False, comment="所属组织ID"),
-        sa.Column("position_id", sa.String(), sa.ForeignKey("positions.id"), comment="职位ID"),
-        sa.Column("direct_supervisor_id", sa.String(), sa.ForeignKey("employees.id"), comment="直接上级ID"),
+        sa.Column(
+            "organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            nullable=False,
+            comment="所属组织ID",
+        ),
+        sa.Column(
+            "position_id", sa.String(), sa.ForeignKey("positions.id"), comment="职位ID"
+        ),
+        sa.Column(
+            "direct_supervisor_id",
+            sa.String(),
+            sa.ForeignKey("employees.id"),
+            comment="直接上级ID",
+        ),
         sa.Column("hire_date", sa.DateTime(), comment="入职日期"),
         sa.Column("probation_end_date", sa.DateTime(), comment="试用期结束日期"),
         sa.Column("employment_type", sa.String(20), comment="用工类型"),
@@ -102,7 +146,13 @@ def upgrade() -> None:
         sa.Column("major", sa.String(100), comment="专业"),
         sa.Column("skills", sa.Text(), comment="技能"),
         sa.Column("notes", sa.Text(), comment="备注"),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, default=False, comment="是否删除"),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否删除",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -114,20 +164,44 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("username", sa.String(50), unique=True, nullable=False, comment="用户名"),
+        sa.Column(
+            "username", sa.String(50), unique=True, nullable=False, comment="用户名"
+        ),
         sa.Column("email", sa.String(100), unique=True, nullable=False, comment="邮箱"),
         sa.Column("full_name", sa.String(100), nullable=False, comment="全名"),
         sa.Column("password_hash", sa.String(255), nullable=False, comment="密码哈希"),
         sa.Column("password_history", sa.JSON(), comment="密码历史记录"),
-        sa.Column("role", sa.String(20), nullable=False, default="user", comment="用户角色"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"),
-        sa.Column("is_locked", sa.Boolean(), nullable=False, default=False, comment="是否锁定"),
+        sa.Column(
+            "role", sa.String(20), nullable=False, default="user", comment="用户角色"
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"
+        ),
+        sa.Column(
+            "is_locked", sa.Boolean(), nullable=False, default=False, comment="是否锁定"
+        ),
         sa.Column("last_login_at", sa.DateTime(), comment="最后登录时间"),
-        sa.Column("failed_login_attempts", sa.Integer(), nullable=False, default=0, comment="失败登录次数"),
+        sa.Column(
+            "failed_login_attempts",
+            sa.Integer(),
+            nullable=False,
+            default=0,
+            comment="失败登录次数",
+        ),
         sa.Column("locked_until", sa.DateTime(), comment="锁定到期时间"),
         sa.Column("password_last_changed", sa.DateTime(), comment="密码最后修改时间"),
-        sa.Column("employee_id", sa.String(), sa.ForeignKey("employees.id"), comment="关联员工ID"),
-        sa.Column("default_organization_id", sa.String(), sa.ForeignKey("organizations.id"), comment="默认组织ID"),
+        sa.Column(
+            "employee_id",
+            sa.String(),
+            sa.ForeignKey("employees.id"),
+            comment="关联员工ID",
+        ),
+        sa.Column(
+            "default_organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            comment="默认组织ID",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -141,13 +215,23 @@ def upgrade() -> None:
     op.create_table(
         "permissions",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(100), unique=True, nullable=False, comment="权限名称"),
+        sa.Column(
+            "name", sa.String(100), unique=True, nullable=False, comment="权限名称"
+        ),
         sa.Column("display_name", sa.String(200), nullable=False, comment="显示名称"),
         sa.Column("description", sa.Text(), comment="权限描述"),
         sa.Column("resource", sa.String(50), nullable=False, comment="资源类型"),
         sa.Column("action", sa.String(50), nullable=False, comment="操作类型"),
-        sa.Column("is_system_permission", sa.Boolean(), nullable=False, default=False, comment="是否系统权限"),
-        sa.Column("requires_approval", sa.Boolean(), default=False, comment="是否需要审批"),
+        sa.Column(
+            "is_system_permission",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否系统权限",
+        ),
+        sa.Column(
+            "requires_approval", sa.Boolean(), default=False, comment="是否需要审批"
+        ),
         sa.Column("max_level", sa.Integer(), comment="最大级别"),
         sa.Column("conditions", sa.JSON(), comment="权限条件"),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
@@ -161,14 +245,29 @@ def upgrade() -> None:
     op.create_table(
         "roles",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(100), unique=True, nullable=False, comment="角色名称"),
+        sa.Column(
+            "name", sa.String(100), unique=True, nullable=False, comment="角色名称"
+        ),
         sa.Column("display_name", sa.String(200), nullable=False, comment="显示名称"),
         sa.Column("description", sa.Text(), comment="角色描述"),
         sa.Column("level", sa.Integer(), nullable=False, default=1, comment="角色级别"),
         sa.Column("category", sa.String(50), comment="角色类别"),
-        sa.Column("is_system_role", sa.Boolean(), nullable=False, default=False, comment="是否系统角色"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), comment="所属组织ID"),
+        sa.Column(
+            "is_system_role",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否系统角色",
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"
+        ),
+        sa.Column(
+            "organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            comment="所属组织ID",
+        ),
         sa.Column("scope", sa.String(50), default="global", comment="权限范围"),
         sa.Column("scope_id", sa.String(), comment="范围ID"),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
@@ -182,7 +281,12 @@ def upgrade() -> None:
     op.create_table(
         "role_permissions",
         sa.Column("role_id", sa.String(), sa.ForeignKey("roles.id"), primary_key=True),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), primary_key=True),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            primary_key=True,
+        ),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
     )
@@ -196,7 +300,9 @@ def upgrade() -> None:
         sa.Column("assigned_by", sa.String(100), comment="分配人"),
         sa.Column("assigned_at", sa.DateTime(), nullable=False, comment="分配时间"),
         sa.Column("expires_at", sa.DateTime(), comment="过期时间"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"
+        ),
         sa.Column("reason", sa.Text(), comment="分配原因"),
         sa.Column("notes", sa.Text(), comment="备注"),
         sa.Column("context", sa.JSON(), comment="上下文信息"),
@@ -211,16 +317,22 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("session_id", sa.String(100), unique=True, comment="会话ID"),
-        sa.Column("refresh_token", sa.Text(), unique=True, nullable=False, comment="刷新令牌"),
+        sa.Column(
+            "refresh_token", sa.Text(), unique=True, nullable=False, comment="刷新令牌"
+        ),
         sa.Column("device_info", sa.Text(), comment="设备信息"),
         sa.Column("device_id", sa.String(100), comment="设备ID"),
         sa.Column("platform", sa.String(50), comment="平台"),
         sa.Column("ip_address", sa.String(45), comment="IP地址"),
         sa.Column("user_agent", sa.Text(), comment="用户代理"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否活跃"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否活跃"
+        ),
         sa.Column("expires_at", sa.DateTime(), nullable=False, comment="过期时间"),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
-        sa.Column("last_accessed_at", sa.DateTime(), nullable=False, comment="最后访问时间"),
+        sa.Column(
+            "last_accessed_at", sa.DateTime(), nullable=False, comment="最后访问时间"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -253,7 +365,13 @@ def upgrade() -> None:
     op.create_table(
         "organization_history",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), nullable=False, comment="组织ID"),
+        sa.Column(
+            "organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            nullable=False,
+            comment="组织ID",
+        ),
         sa.Column("action", sa.String(20), nullable=False, comment="操作类型"),
         sa.Column("field_name", sa.String(100), comment="变更字段"),
         sa.Column("old_value", sa.Text(), comment="原值"),
@@ -271,17 +389,45 @@ def upgrade() -> None:
         "enum_field_types",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(100), nullable=False, comment="枚举类型名称"),
-        sa.Column("code", sa.String(50), unique=True, nullable=False, comment="枚举类型编码"),
+        sa.Column(
+            "code", sa.String(50), unique=True, nullable=False, comment="枚举类型编码"
+        ),
         sa.Column("category", sa.String(50), comment="枚举类别"),
         sa.Column("description", sa.Text(), comment="枚举类型描述"),
-        sa.Column("is_system", sa.Boolean(), nullable=False, default=False, comment="是否系统内置"),
-        sa.Column("is_multiple", sa.Boolean(), nullable=False, default=False, comment="是否支持多选"),
-        sa.Column("is_hierarchical", sa.Boolean(), nullable=False, default=False, comment="是否层级结构"),
+        sa.Column(
+            "is_system",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否系统内置",
+        ),
+        sa.Column(
+            "is_multiple",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否支持多选",
+        ),
+        sa.Column(
+            "is_hierarchical",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否层级结构",
+        ),
         sa.Column("default_value", sa.String(100), comment="默认值"),
         sa.Column("validation_rules", sa.JSON(), comment="验证规则"),
         sa.Column("display_config", sa.JSON(), comment="显示配置"),
-        sa.Column("status", sa.String(20), nullable=False, default="active", comment="状态"),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, default=False, comment="是否删除"),
+        sa.Column(
+            "status", sa.String(20), nullable=False, default="active", comment="状态"
+        ),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否删除",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -293,21 +439,46 @@ def upgrade() -> None:
     op.create_table(
         "enum_field_values",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("enum_type_id", sa.String(), sa.ForeignKey("enum_field_types.id"), nullable=False, comment="枚举类型ID"),
+        sa.Column(
+            "enum_type_id",
+            sa.String(),
+            sa.ForeignKey("enum_field_types.id"),
+            nullable=False,
+            comment="枚举类型ID",
+        ),
         sa.Column("label", sa.String(100), nullable=False, comment="显示标签"),
         sa.Column("value", sa.String(100), nullable=False, comment="枚举值"),
         sa.Column("code", sa.String(50), comment="枚举编码"),
         sa.Column("description", sa.Text(), comment="描述"),
-        sa.Column("parent_id", sa.String(), sa.ForeignKey("enum_field_values.id"), comment="父级枚举值ID"),
+        sa.Column(
+            "parent_id",
+            sa.String(),
+            sa.ForeignKey("enum_field_values.id"),
+            comment="父级枚举值ID",
+        ),
         sa.Column("level", sa.Integer(), default=1, comment="层级级别"),
         sa.Column("path", sa.String(1000), comment="层级路径"),
         sa.Column("sort_order", sa.Integer(), default=0, comment="排序"),
         sa.Column("color", sa.String(20), comment="颜色标识"),
         sa.Column("icon", sa.String(50), comment="图标"),
         sa.Column("extra_properties", sa.JSON(), comment="扩展属性"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"),
-        sa.Column("is_default", sa.Boolean(), nullable=False, default=False, comment="是否默认值"),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, default=False, comment="是否删除"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"
+        ),
+        sa.Column(
+            "is_default",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否默认值",
+        ),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否删除",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -319,15 +490,29 @@ def upgrade() -> None:
     op.create_table(
         "enum_field_usage",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("enum_type_id", sa.String(), sa.ForeignKey("enum_field_types.id"), nullable=False, comment="枚举类型ID"),
+        sa.Column(
+            "enum_type_id",
+            sa.String(),
+            sa.ForeignKey("enum_field_types.id"),
+            nullable=False,
+            comment="枚举类型ID",
+        ),
         sa.Column("table_name", sa.String(100), nullable=False, comment="使用表名"),
         sa.Column("field_name", sa.String(100), nullable=False, comment="使用字段名"),
         sa.Column("field_label", sa.String(100), comment="字段显示名称"),
         sa.Column("module_name", sa.String(100), comment="所属模块"),
-        sa.Column("is_required", sa.Boolean(), nullable=False, default=False, comment="是否必填"),
+        sa.Column(
+            "is_required",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否必填",
+        ),
         sa.Column("default_value", sa.String(100), comment="默认值"),
         sa.Column("validation_config", sa.JSON(), comment="验证配置"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -339,8 +524,18 @@ def upgrade() -> None:
     op.create_table(
         "enum_field_history",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("enum_type_id", sa.String(), sa.ForeignKey("enum_field_types.id"), comment="枚举类型ID"),
-        sa.Column("enum_value_id", sa.String(), sa.ForeignKey("enum_field_values.id"), comment="枚举值ID"),
+        sa.Column(
+            "enum_type_id",
+            sa.String(),
+            sa.ForeignKey("enum_field_types.id"),
+            comment="枚举类型ID",
+        ),
+        sa.Column(
+            "enum_value_id",
+            sa.String(),
+            sa.ForeignKey("enum_field_values.id"),
+            comment="枚举值ID",
+        ),
         sa.Column("action", sa.String(20), nullable=False, comment="操作类型"),
         sa.Column("target_type", sa.String(20), nullable=False, comment="目标类型"),
         sa.Column("field_name", sa.String(100), comment="变更字段"),
@@ -362,10 +557,18 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), nullable=False),
         sa.Column("name", sa.String(200), nullable=False, comment="项目名称"),
         sa.Column("short_name", sa.String(100), comment="项目简称"),
-        sa.Column("code", sa.String(100), unique=True, nullable=False, comment="项目编码"),
+        sa.Column(
+            "code", sa.String(100), unique=True, nullable=False, comment="项目编码"
+        ),
         sa.Column("project_type", sa.String(50), comment="项目类型"),
         sa.Column("project_scale", sa.String(50), comment="项目规模"),
-        sa.Column("project_status", sa.String(50), nullable=False, default="规划中", comment="项目状态"),
+        sa.Column(
+            "project_status",
+            sa.String(50),
+            nullable=False,
+            default="规划中",
+            comment="项目状态",
+        ),
         sa.Column("start_date", sa.Date(), comment="开始日期"),
         sa.Column("end_date", sa.Date(), comment="结束日期"),
         sa.Column("expected_completion_date", sa.Date(), comment="预计完成日期"),
@@ -389,8 +592,16 @@ def upgrade() -> None:
         sa.Column("construction_company", sa.String(200), comment="施工单位"),
         sa.Column("design_company", sa.String(200), comment="设计单位"),
         sa.Column("supervision_company", sa.String(200), comment="监理单位"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"),
-        sa.Column("data_status", sa.String(20), nullable=False, default="正常", comment="数据状态"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"
+        ),
+        sa.Column(
+            "data_status",
+            sa.String(20),
+            nullable=False,
+            default="正常",
+            comment="数据状态",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -408,8 +619,16 @@ def upgrade() -> None:
         sa.Column("address", sa.String(500), comment="地址"),
         sa.Column("management_entity", sa.String(200), comment="管理单位"),
         sa.Column("notes", sa.Text(), comment="备注"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="状态"),
-        sa.Column("data_status", sa.String(20), nullable=False, default="正常", comment="数据状态"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="状态"
+        ),
+        sa.Column(
+            "data_status",
+            sa.String(20),
+            nullable=False,
+            default="正常",
+            comment="数据状态",
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -421,17 +640,37 @@ def upgrade() -> None:
     op.create_table(
         "project_ownership_relations",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("project_id", sa.String(), sa.ForeignKey("projects.id"), nullable=False, comment="项目ID"),
-        sa.Column("ownership_id", sa.String(), sa.ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否有效"),
+        sa.Column(
+            "project_id",
+            sa.String(),
+            sa.ForeignKey("projects.id"),
+            nullable=False,
+            comment="项目ID",
+        ),
+        sa.Column(
+            "ownership_id",
+            sa.String(),
+            sa.ForeignKey("ownerships.id"),
+            nullable=False,
+            comment="权属方ID",
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否有效"
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
         sa.Column("updated_by", sa.String(100), comment="更新人"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_project_ownership_project_id", "project_ownership_relations", ["project_id"])
-    op.create_index("ix_project_ownership_ownership_id", "project_ownership_relations", ["ownership_id"])
+    op.create_index(
+        "ix_project_ownership_project_id", "project_ownership_relations", ["project_id"]
+    )
+    op.create_index(
+        "ix_project_ownership_ownership_id",
+        "project_ownership_relations",
+        ["ownership_id"],
+    )
 
     # ==================== TIER 4: Asset Tables ====================
 
@@ -444,19 +683,33 @@ def upgrade() -> None:
         sa.Column("project_name", sa.String(200), comment="项目名称"),
         sa.Column("property_name", sa.String(200), nullable=False, comment="物业名称"),
         sa.Column("address", sa.String(500), nullable=False, comment="物业地址"),
-        sa.Column("ownership_status", sa.String(50), nullable=False, comment="确权状态"),
+        sa.Column(
+            "ownership_status", sa.String(50), nullable=False, comment="确权状态"
+        ),
         sa.Column("property_nature", sa.String(50), nullable=False, comment="物业性质"),
         sa.Column("usage_status", sa.String(50), nullable=False, comment="使用状态"),
         sa.Column("management_entity", sa.String(200), comment="经营管理单位"),
         sa.Column("business_category", sa.String(100), comment="业态类别"),
-        sa.Column("is_litigated", sa.Boolean(), nullable=False, default=False, comment="是否涉诉"),
+        sa.Column(
+            "is_litigated",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否涉诉",
+        ),
         sa.Column("notes", sa.Text(), comment="备注"),
         sa.Column("land_area", sa.DECIMAL(12, 2), comment="土地面积"),
         sa.Column("actual_property_area", sa.DECIMAL(12, 2), comment="实际房产面积"),
         sa.Column("rentable_area", sa.DECIMAL(12, 2), comment="可出租面积"),
         sa.Column("rented_area", sa.DECIMAL(12, 2), comment="已出租面积"),
         sa.Column("non_commercial_area", sa.DECIMAL(12, 2), comment="非经营物业面积"),
-        sa.Column("include_in_occupancy_rate", sa.Boolean(), nullable=False, default=True, comment="是否计入出租率统计"),
+        sa.Column(
+            "include_in_occupancy_rate",
+            sa.Boolean(),
+            nullable=False,
+            default=True,
+            comment="是否计入出租率统计",
+        ),
         sa.Column("certificated_usage", sa.String(100), comment="证载用途"),
         sa.Column("actual_usage", sa.String(100), comment="实际用途"),
         sa.Column("tenant_name", sa.String(200), comment="租户名称"),
@@ -466,16 +719,32 @@ def upgrade() -> None:
         sa.Column("contract_end_date", sa.Date(), comment="合同结束日期"),
         sa.Column("monthly_rent", sa.DECIMAL(15, 2), comment="月租金"),
         sa.Column("deposit", sa.DECIMAL(15, 2), comment="押金"),
-        sa.Column("is_sublease", sa.Boolean(), nullable=False, default=False, comment="是否分租/转租"),
+        sa.Column(
+            "is_sublease",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否分租/转租",
+        ),
         sa.Column("sublease_notes", sa.Text(), comment="分租/转租备注"),
         sa.Column("business_model", sa.String(50), comment="接收模式"),
         sa.Column("operation_status", sa.String(20), comment="经营状态"),
         sa.Column("manager_name", sa.String(100), comment="管理责任人"),
-        sa.Column("operation_agreement_start_date", sa.Date(), comment="接收协议开始日期"),
-        sa.Column("operation_agreement_end_date", sa.Date(), comment="接收协议结束日期"),
+        sa.Column(
+            "operation_agreement_start_date", sa.Date(), comment="接收协议开始日期"
+        ),
+        sa.Column(
+            "operation_agreement_end_date", sa.Date(), comment="接收协议结束日期"
+        ),
         sa.Column("operation_agreement_attachments", sa.Text(), comment="接收协议文件"),
         sa.Column("terminal_contract_files", sa.Text(), comment="终端合同文件"),
-        sa.Column("data_status", sa.String(20), nullable=False, default="正常", comment="数据状态"),
+        sa.Column(
+            "data_status",
+            sa.String(20),
+            nullable=False,
+            default="正常",
+            comment="数据状态",
+        ),
         sa.Column("version", sa.Integer(), nullable=False, default=1, comment="版本号"),
         sa.Column("tags", sa.Text(), comment="标签"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -484,8 +753,15 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), comment="更新时间"),
         sa.Column("tenant_id", sa.String(50), comment="租户ID"),
-        sa.Column("project_id", sa.String(), sa.ForeignKey("projects.id"), comment="项目ID"),
-        sa.Column("ownership_id", sa.String(), sa.ForeignKey("ownerships.id"), comment="权属方ID"),
+        sa.Column(
+            "project_id", sa.String(), sa.ForeignKey("projects.id"), comment="项目ID"
+        ),
+        sa.Column(
+            "ownership_id",
+            sa.String(),
+            sa.ForeignKey("ownerships.id"),
+            comment="权属方ID",
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_assets_project_id", "assets", ["project_id"])
@@ -495,7 +771,13 @@ def upgrade() -> None:
     op.create_table(
         "asset_history",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("asset_id", sa.String(), sa.ForeignKey("assets.id"), nullable=False, comment="资产ID"),
+        sa.Column(
+            "asset_id",
+            sa.String(),
+            sa.ForeignKey("assets.id"),
+            nullable=False,
+            comment="资产ID",
+        ),
         sa.Column("operation_type", sa.String(50), nullable=False, comment="操作类型"),
         sa.Column("field_name", sa.String(100), comment="字段名称"),
         sa.Column("old_value", sa.Text(), comment="原值"),
@@ -515,7 +797,13 @@ def upgrade() -> None:
     op.create_table(
         "asset_documents",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("asset_id", sa.String(), sa.ForeignKey("assets.id"), nullable=False, comment="资产ID"),
+        sa.Column(
+            "asset_id",
+            sa.String(),
+            sa.ForeignKey("assets.id"),
+            nullable=False,
+            comment="资产ID",
+        ),
         sa.Column("document_name", sa.String(200), nullable=False, comment="文档名称"),
         sa.Column("document_type", sa.String(50), nullable=False, comment="文档类型"),
         sa.Column("file_path", sa.String(500), comment="文件路径"),
@@ -536,14 +824,22 @@ def upgrade() -> None:
         sa.Column("dict_code", sa.String(50), nullable=False, comment="字典编码"),
         sa.Column("dict_label", sa.String(100), nullable=False, comment="字典标签"),
         sa.Column("dict_value", sa.String(100), nullable=False, comment="字典值"),
-        sa.Column("sort_order", sa.Integer(), nullable=False, default=0, comment="排序"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"),
+        sa.Column(
+            "sort_order", sa.Integer(), nullable=False, default=0, comment="排序"
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), nullable=False, comment="更新时间"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_system_dictionaries_dict_type", "system_dictionaries", ["dict_type"])
-    op.create_index("ix_system_dictionaries_dict_code", "system_dictionaries", ["dict_code"])
+    op.create_index(
+        "ix_system_dictionaries_dict_type", "system_dictionaries", ["dict_type"]
+    )
+    op.create_index(
+        "ix_system_dictionaries_dict_code", "system_dictionaries", ["dict_code"]
+    )
 
     # asset_custom_fields - 资产自定义字段表
     op.create_table(
@@ -552,9 +848,19 @@ def upgrade() -> None:
         sa.Column("field_name", sa.String(100), nullable=False, comment="字段名称"),
         sa.Column("display_name", sa.String(100), nullable=False, comment="显示名称"),
         sa.Column("field_type", sa.String(20), nullable=False, comment="字段类型"),
-        sa.Column("is_required", sa.Boolean(), nullable=False, default=False, comment="是否必填"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"),
-        sa.Column("sort_order", sa.Integer(), nullable=False, default=0, comment="排序"),
+        sa.Column(
+            "is_required",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            comment="是否必填",
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否启用"
+        ),
+        sa.Column(
+            "sort_order", sa.Integer(), nullable=False, default=0, comment="排序"
+        ),
         sa.Column("default_value", sa.Text(), comment="默认值"),
         sa.Column("field_options", sa.Text(), comment="字段选项"),
         sa.Column("validation_rules", sa.Text(), comment="验证规则"),
@@ -571,10 +877,33 @@ def upgrade() -> None:
     op.create_table(
         "rent_contracts",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_number", sa.String(100), unique=True, nullable=False, comment="合同编号"),
-        sa.Column("ownership_id", sa.String(), sa.ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"),
-        sa.Column("contract_type", sa.String(50), nullable=False, default="lease_downstream", comment="合同类型"),
-        sa.Column("upstream_contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), comment="上游合同ID"),
+        sa.Column(
+            "contract_number",
+            sa.String(100),
+            unique=True,
+            nullable=False,
+            comment="合同编号",
+        ),
+        sa.Column(
+            "ownership_id",
+            sa.String(),
+            sa.ForeignKey("ownerships.id"),
+            nullable=False,
+            comment="权属方ID",
+        ),
+        sa.Column(
+            "contract_type",
+            sa.String(50),
+            nullable=False,
+            default="lease_downstream",
+            comment="合同类型",
+        ),
+        sa.Column(
+            "upstream_contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            comment="上游合同ID",
+        ),
         sa.Column("owner_name", sa.String(200), comment="甲方名称"),
         sa.Column("owner_contact", sa.String(100), comment="甲方联系人"),
         sa.Column("owner_phone", sa.String(20), comment="甲方联系电话"),
@@ -589,8 +918,12 @@ def upgrade() -> None:
         sa.Column("end_date", sa.Date(), nullable=False, comment="租期结束日期"),
         sa.Column("total_deposit", sa.DECIMAL(15, 2), default=0, comment="总押金金额"),
         sa.Column("monthly_rent_base", sa.DECIMAL(15, 2), comment="基础月租金"),
-        sa.Column("payment_cycle", sa.String(20), default="monthly", comment="付款周期"),
-        sa.Column("contract_status", sa.String(20), default="ACTIVE", comment="合同状态"),
+        sa.Column(
+            "payment_cycle", sa.String(20), default="monthly", comment="付款周期"
+        ),
+        sa.Column(
+            "contract_status", sa.String(20), default="ACTIVE", comment="合同状态"
+        ),
         sa.Column("payment_terms", sa.Text(), comment="支付条款"),
         sa.Column("contract_notes", sa.Text(), comment="合同备注"),
         sa.Column("data_status", sa.String(20), default="正常", comment="数据状态"),
@@ -605,8 +938,15 @@ def upgrade() -> None:
     # rent_contract_assets - 合同资产关联表
     op.create_table(
         "rent_contract_assets",
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), primary_key=True),
-        sa.Column("asset_id", sa.String(), sa.ForeignKey("assets.id"), primary_key=True),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "asset_id", sa.String(), sa.ForeignKey("assets.id"), primary_key=True
+        ),
         sa.Column("created_at", sa.DateTime(), comment="关联创建时间"),
     )
 
@@ -614,10 +954,18 @@ def upgrade() -> None:
     op.create_table(
         "rent_terms",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
         sa.Column("start_date", sa.Date(), nullable=False, comment="条款开始日期"),
         sa.Column("end_date", sa.Date(), nullable=False, comment="条款结束日期"),
-        sa.Column("monthly_rent", sa.DECIMAL(15, 2), nullable=False, comment="月租金金额"),
+        sa.Column(
+            "monthly_rent", sa.DECIMAL(15, 2), nullable=False, comment="月租金金额"
+        ),
         sa.Column("rent_description", sa.String(500), comment="租金描述"),
         sa.Column("management_fee", sa.DECIMAL(15, 2), default=0, comment="管理费"),
         sa.Column("other_fees", sa.DECIMAL(15, 2), default=0, comment="其他费用"),
@@ -631,15 +979,31 @@ def upgrade() -> None:
     op.create_table(
         "rent_ledger",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
-        sa.Column("asset_id", sa.String(), sa.ForeignKey("assets.id"), comment="关联资产ID"),
-        sa.Column("ownership_id", sa.String(), sa.ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
+        sa.Column(
+            "asset_id", sa.String(), sa.ForeignKey("assets.id"), comment="关联资产ID"
+        ),
+        sa.Column(
+            "ownership_id",
+            sa.String(),
+            sa.ForeignKey("ownerships.id"),
+            nullable=False,
+            comment="权属方ID",
+        ),
         sa.Column("year_month", sa.String(7), nullable=False, comment="年月"),
         sa.Column("due_date", sa.Date(), nullable=False, comment="应缴日期"),
         sa.Column("due_amount", sa.DECIMAL(15, 2), nullable=False, comment="应收金额"),
         sa.Column("paid_amount", sa.DECIMAL(15, 2), default=0, comment="实收金额"),
         sa.Column("overdue_amount", sa.DECIMAL(15, 2), default=0, comment="逾期金额"),
-        sa.Column("payment_status", sa.String(20), default="未支付", comment="支付状态"),
+        sa.Column(
+            "payment_status", sa.String(20), default="未支付", comment="支付状态"
+        ),
         sa.Column("payment_date", sa.Date(), comment="支付日期"),
         sa.Column("payment_method", sa.String(50), comment="支付方式"),
         sa.Column("payment_reference", sa.String(100), comment="支付参考号"),
@@ -657,11 +1021,24 @@ def upgrade() -> None:
     op.create_table(
         "rent_deposit_ledger",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
-        sa.Column("transaction_type", sa.String(20), nullable=False, comment="交易类型"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
+        sa.Column(
+            "transaction_type", sa.String(20), nullable=False, comment="交易类型"
+        ),
         sa.Column("amount", sa.DECIMAL(15, 2), nullable=False, comment="金额"),
         sa.Column("transaction_date", sa.Date(), nullable=False, comment="交易日期"),
-        sa.Column("related_contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), comment="关联合同ID"),
+        sa.Column(
+            "related_contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            comment="关联合同ID",
+        ),
         sa.Column("notes", sa.Text(), comment="备注"),
         sa.Column("operator", sa.String(100), comment="操作人"),
         sa.Column("operator_id", sa.String(50), comment="操作人ID"),
@@ -673,13 +1050,30 @@ def upgrade() -> None:
     op.create_table(
         "service_fee_ledger",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
-        sa.Column("source_ledger_id", sa.String(), sa.ForeignKey("rent_ledger.id"), comment="关联租金台账ID"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
+        sa.Column(
+            "source_ledger_id",
+            sa.String(),
+            sa.ForeignKey("rent_ledger.id"),
+            comment="关联租金台账ID",
+        ),
         sa.Column("year_month", sa.String(7), nullable=False, comment="年月"),
-        sa.Column("paid_rent_amount", sa.DECIMAL(15, 2), nullable=False, comment="实收租金"),
+        sa.Column(
+            "paid_rent_amount", sa.DECIMAL(15, 2), nullable=False, comment="实收租金"
+        ),
         sa.Column("fee_rate", sa.DECIMAL(5, 4), nullable=False, comment="服务费率"),
-        sa.Column("fee_amount", sa.DECIMAL(15, 2), nullable=False, comment="服务费金额"),
-        sa.Column("settlement_status", sa.String(20), default="待结算", comment="结算状态"),
+        sa.Column(
+            "fee_amount", sa.DECIMAL(15, 2), nullable=False, comment="服务费金额"
+        ),
+        sa.Column(
+            "settlement_status", sa.String(20), default="待结算", comment="结算状态"
+        ),
         sa.Column("settlement_date", sa.Date(), comment="结算日期"),
         sa.Column("notes", sa.Text(), comment="备注"),
         sa.Column("operator", sa.String(100), comment="操作人"),
@@ -693,7 +1087,13 @@ def upgrade() -> None:
     op.create_table(
         "rent_contract_history",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
         sa.Column("change_type", sa.String(50), nullable=False, comment="变更类型"),
         sa.Column("change_description", sa.Text(), comment="变更描述"),
         sa.Column("old_data", sa.JSON(), comment="变更前数据"),
@@ -708,7 +1108,13 @@ def upgrade() -> None:
     op.create_table(
         "rent_contract_attachments",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
         sa.Column("file_name", sa.String(255), nullable=False, comment="文件名"),
         sa.Column("file_path", sa.String(500), nullable=False, comment="文件存储路径"),
         sa.Column("file_size", sa.Integer(), comment="文件大小"),
@@ -725,11 +1131,27 @@ def upgrade() -> None:
     op.create_table(
         "collection_records",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("ledger_id", sa.String(), sa.ForeignKey("rent_ledger.id"), nullable=False, comment="关联租金台账ID"),
-        sa.Column("contract_id", sa.String(), sa.ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"),
-        sa.Column("collection_method", sa.String(20), nullable=False, comment="催缴方式"),
+        sa.Column(
+            "ledger_id",
+            sa.String(),
+            sa.ForeignKey("rent_ledger.id"),
+            nullable=False,
+            comment="关联租金台账ID",
+        ),
+        sa.Column(
+            "contract_id",
+            sa.String(),
+            sa.ForeignKey("rent_contracts.id"),
+            nullable=False,
+            comment="关联合同ID",
+        ),
+        sa.Column(
+            "collection_method", sa.String(20), nullable=False, comment="催缴方式"
+        ),
         sa.Column("collection_date", sa.Date(), nullable=False, comment="催缴日期"),
-        sa.Column("collection_status", sa.String(20), default="pending", comment="催缴状态"),
+        sa.Column(
+            "collection_status", sa.String(20), default="pending", comment="催缴状态"
+        ),
         sa.Column("contacted_person", sa.String(100), comment="被联系人"),
         sa.Column("contact_phone", sa.String(20), comment="联系电话"),
         sa.Column("promised_amount", sa.DECIMAL(15, 2), comment="承诺付款金额"),
@@ -760,12 +1182,26 @@ def upgrade() -> None:
         sa.Column("email", sa.String(200), comment="电子邮箱"),
         sa.Column("wechat", sa.String(100), comment="微信号"),
         sa.Column("address", sa.String(500), comment="地址"),
-        sa.Column("contact_type", sa.String(20), nullable=False, default="general", comment="联系人类型"),
-        sa.Column("is_primary", sa.Boolean(), default=False, nullable=False, comment="是否主要联系人"),
+        sa.Column(
+            "contact_type",
+            sa.String(20),
+            nullable=False,
+            default="general",
+            comment="联系人类型",
+        ),
+        sa.Column(
+            "is_primary",
+            sa.Boolean(),
+            default=False,
+            nullable=False,
+            comment="是否主要联系人",
+        ),
         sa.Column("notes", sa.Text(), comment="备注"),
         sa.Column("preferred_contact_time", sa.String(100), comment="偏好联系时间"),
         sa.Column("preferred_contact_method", sa.String(50), comment="偏好联系方式"),
-        sa.Column("is_active", sa.Boolean(), default=True, nullable=False, comment="是否启用"),
+        sa.Column(
+            "is_active", sa.Boolean(), default=True, nullable=False, comment="是否启用"
+        ),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人"),
@@ -779,7 +1215,13 @@ def upgrade() -> None:
     op.create_table(
         "notifications",
         sa.Column("id", sa.String(36), nullable=False),
-        sa.Column("recipient_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False, comment="接收用户ID"),
+        sa.Column(
+            "recipient_id",
+            sa.String(36),
+            sa.ForeignKey("users.id"),
+            nullable=False,
+            comment="接收用户ID",
+        ),
         sa.Column("type", sa.String(50), nullable=False, comment="通知类型"),
         sa.Column("priority", sa.String(20), default="normal", comment="通知优先级"),
         sa.Column("title", sa.String(200), nullable=False, comment="通知标题"),
@@ -788,7 +1230,9 @@ def upgrade() -> None:
         sa.Column("related_entity_id", sa.String(36), comment="关联实体ID"),
         sa.Column("is_read", sa.Boolean(), default=False, comment="是否已读"),
         sa.Column("read_at", sa.DateTime(), comment="已读时间"),
-        sa.Column("is_sent_wecom", sa.Boolean(), default=False, comment="是否已发送企业微信"),
+        sa.Column(
+            "is_sent_wecom", sa.Boolean(), default=False, comment="是否已发送企业微信"
+        ),
         sa.Column("wecom_sent_at", sa.DateTime(), comment="企业微信发送时间"),
         sa.Column("wecom_send_error", sa.Text(), comment="企业微信发送错误信息"),
         sa.Column("extra_data", sa.Text(), comment="额外数据"),
@@ -833,55 +1277,88 @@ def upgrade() -> None:
         "dynamic_permissions",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), nullable=False),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            nullable=False,
+        ),
         sa.Column("permission_type", sa.String(), nullable=False),
         sa.Column("scope", sa.String(), nullable=False),
         sa.Column("scope_id", sa.String()),
         sa.Column("conditions", sa.JSON()),
         sa.Column("expires_at", sa.DateTime()),
-        sa.Column("assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("assigned_at", sa.DateTime(), nullable=False),
         sa.Column("revoked_by", sa.String(), sa.ForeignKey("users.id")),
         sa.Column("revoked_at", sa.DateTime()),
         sa.Column("is_active", sa.Boolean(), default=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_dynamic_permissions_user_id", "dynamic_permissions", ["user_id"])
-    op.create_index("ix_dynamic_permissions_permission_id", "dynamic_permissions", ["permission_id"])
-    op.create_index("ix_dynamic_permissions_is_active", "dynamic_permissions", ["is_active"])
+    op.create_index(
+        "ix_dynamic_permissions_user_id", "dynamic_permissions", ["user_id"]
+    )
+    op.create_index(
+        "ix_dynamic_permissions_permission_id", "dynamic_permissions", ["permission_id"]
+    )
+    op.create_index(
+        "ix_dynamic_permissions_is_active", "dynamic_permissions", ["is_active"]
+    )
 
     # temporary_permissions - 临时权限表
     op.create_table(
         "temporary_permissions",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), nullable=False),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            nullable=False,
+        ),
         sa.Column("scope", sa.String(), nullable=False),
         sa.Column("scope_id", sa.String()),
         sa.Column("expires_at", sa.DateTime(), nullable=False),
-        sa.Column("assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("assigned_at", sa.DateTime(), nullable=False),
         sa.Column("is_active", sa.Boolean(), default=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_temporary_permissions_user_id", "temporary_permissions", ["user_id"])
-    op.create_index("ix_temporary_permissions_expires_at", "temporary_permissions", ["expires_at"])
+    op.create_index(
+        "ix_temporary_permissions_user_id", "temporary_permissions", ["user_id"]
+    )
+    op.create_index(
+        "ix_temporary_permissions_expires_at", "temporary_permissions", ["expires_at"]
+    )
 
     # conditional_permissions - 条件权限表
     op.create_table(
         "conditional_permissions",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), nullable=False),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            nullable=False,
+        ),
         sa.Column("scope", sa.String(), nullable=False),
         sa.Column("scope_id", sa.String()),
         sa.Column("conditions", sa.JSON(), nullable=False),
-        sa.Column("assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("assigned_at", sa.DateTime(), nullable=False),
         sa.Column("is_active", sa.Boolean(), default=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_conditional_permissions_user_id", "conditional_permissions", ["user_id"])
+    op.create_index(
+        "ix_conditional_permissions_user_id", "conditional_permissions", ["user_id"]
+    )
 
     # permission_templates - 权限模板表
     op.create_table(
@@ -904,19 +1381,30 @@ def upgrade() -> None:
         "dynamic_permission_audit",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), nullable=False),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            nullable=False,
+        ),
         sa.Column("action", sa.String(), nullable=False),
         sa.Column("permission_type", sa.String(), nullable=False),
         sa.Column("scope", sa.String(), nullable=False),
         sa.Column("scope_id", sa.String()),
-        sa.Column("assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "assigned_by", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("reason", sa.Text()),
         sa.Column("conditions", sa.JSON()),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_dynamic_permission_audit_user_id", "dynamic_permission_audit", ["user_id"])
-    op.create_index("ix_dynamic_permission_audit_action", "dynamic_permission_audit", ["action"])
+    op.create_index(
+        "ix_dynamic_permission_audit_user_id", "dynamic_permission_audit", ["user_id"]
+    )
+    op.create_index(
+        "ix_dynamic_permission_audit_action", "dynamic_permission_audit", ["action"]
+    )
 
     # permission_requests - 权限申请表
     op.create_table(
@@ -937,15 +1425,21 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_permission_requests_user_id", "permission_requests", ["user_id"])
+    op.create_index(
+        "ix_permission_requests_user_id", "permission_requests", ["user_id"]
+    )
     op.create_index("ix_permission_requests_status", "permission_requests", ["status"])
 
     # permission_delegations - 权限委托表
     op.create_table(
         "permission_delegations",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("delegator_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("delegatee_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "delegator_id", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
+        sa.Column(
+            "delegatee_id", sa.String(), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("permission_ids", sa.JSON(), nullable=False),
         sa.Column("scope", sa.String(), nullable=False),
         sa.Column("scope_id", sa.String()),
@@ -957,8 +1451,16 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_permission_delegations_delegator_id", "permission_delegations", ["delegator_id"])
-    op.create_index("ix_permission_delegations_delegatee_id", "permission_delegations", ["delegatee_id"])
+    op.create_index(
+        "ix_permission_delegations_delegator_id",
+        "permission_delegations",
+        ["delegator_id"],
+    )
+    op.create_index(
+        "ix_permission_delegations_delegatee_id",
+        "permission_delegations",
+        ["delegatee_id"],
+    )
 
     # resource_permissions - 资源权限表
     op.create_table(
@@ -968,11 +1470,20 @@ def upgrade() -> None:
         sa.Column("resource_id", sa.String(), nullable=False, comment="资源ID"),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), comment="用户ID"),
         sa.Column("role_id", sa.String(), sa.ForeignKey("roles.id"), comment="角色ID"),
-        sa.Column("permission_id", sa.String(), sa.ForeignKey("permissions.id"), comment="权限ID"),
-        sa.Column("permission_level", sa.String(20), default="read", comment="权限级别"),
+        sa.Column(
+            "permission_id",
+            sa.String(),
+            sa.ForeignKey("permissions.id"),
+            comment="权限ID",
+        ),
+        sa.Column(
+            "permission_level", sa.String(20), default="read", comment="权限级别"
+        ),
         sa.Column("granted_at", sa.DateTime(), nullable=False, comment="授权时间"),
         sa.Column("expires_at", sa.DateTime(), comment="过期时间"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, default=True, comment="是否激活"
+        ),
         sa.Column("granted_by", sa.String(100), comment="授权人"),
         sa.Column("reason", sa.Text(), comment="授权原因"),
         sa.Column("conditions", sa.JSON(), comment="权限条件"),
@@ -989,7 +1500,9 @@ def upgrade() -> None:
         sa.Column("resource_type", sa.String(50), comment="资源类型"),
         sa.Column("resource_id", sa.String(), comment="资源ID"),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), comment="用户ID"),
-        sa.Column("operator_id", sa.String(), sa.ForeignKey("users.id"), comment="操作人ID"),
+        sa.Column(
+            "operator_id", sa.String(), sa.ForeignKey("users.id"), comment="操作人ID"
+        ),
         sa.Column("old_permissions", sa.JSON(), comment="原权限"),
         sa.Column("new_permissions", sa.JSON(), comment="新权限"),
         sa.Column("reason", sa.Text(), comment="变更原因"),
@@ -1006,12 +1519,19 @@ def upgrade() -> None:
         "property_owners",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("owner_type", sa.String(20), nullable=False, comment="权利人类型"),
-        sa.Column("name", sa.String(200), nullable=False, comment="权利人姓名/单位名称"),
+        sa.Column(
+            "name", sa.String(200), nullable=False, comment="权利人姓名/单位名称"
+        ),
         sa.Column("id_type", sa.String(50), comment="证件类型"),
         sa.Column("id_number", sa.String(100), comment="证件号码"),
         sa.Column("phone", sa.String(20), comment="联系电话"),
         sa.Column("address", sa.String(500), comment="地址"),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), comment="关联组织ID"),
+        sa.Column(
+            "organization_id",
+            sa.String(),
+            sa.ForeignKey("organizations.id"),
+            comment="关联组织ID",
+        ),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), comment="更新时间"),
         sa.PrimaryKeyConstraint("id"),
@@ -1023,10 +1543,20 @@ def upgrade() -> None:
     op.create_table(
         "property_certificates",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("certificate_number", sa.String(100), unique=True, nullable=False, comment="证书编号"),
-        sa.Column("certificate_type", sa.String(20), nullable=False, comment="证书类型"),
+        sa.Column(
+            "certificate_number",
+            sa.String(100),
+            unique=True,
+            nullable=False,
+            comment="证书编号",
+        ),
+        sa.Column(
+            "certificate_type", sa.String(20), nullable=False, comment="证书类型"
+        ),
         sa.Column("extraction_confidence", sa.Float(), comment="LLM提取置信度"),
-        sa.Column("extraction_source", sa.String(20), default="manual", comment="数据来源"),
+        sa.Column(
+            "extraction_source", sa.String(20), default="manual", comment="数据来源"
+        ),
         sa.Column("verified", sa.Boolean(), default=False, comment="是否人工审核"),
         sa.Column("registration_date", sa.Date(), comment="登记日期"),
         sa.Column("property_address", sa.String(500), comment="坐落地址"),
@@ -1045,14 +1575,32 @@ def upgrade() -> None:
         sa.Column("created_by", sa.String(100), comment="创建人ID"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_property_certificates_certificate_number", "property_certificates", ["certificate_number"])
-    op.create_index("ix_property_certificates_certificate_type", "property_certificates", ["certificate_type"])
+    op.create_index(
+        "ix_property_certificates_certificate_number",
+        "property_certificates",
+        ["certificate_number"],
+    )
+    op.create_index(
+        "ix_property_certificates_certificate_type",
+        "property_certificates",
+        ["certificate_type"],
+    )
 
     # property_certificate_owners - 产权证权利人关联表
     op.create_table(
         "property_certificate_owners",
-        sa.Column("certificate_id", sa.String(), sa.ForeignKey("property_certificates.id"), primary_key=True),
-        sa.Column("owner_id", sa.String(), sa.ForeignKey("property_owners.id"), primary_key=True),
+        sa.Column(
+            "certificate_id",
+            sa.String(),
+            sa.ForeignKey("property_certificates.id"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "owner_id",
+            sa.String(),
+            sa.ForeignKey("property_owners.id"),
+            primary_key=True,
+        ),
         sa.Column("ownership_share", sa.Numeric(5, 2), comment="拥有权比例"),
         sa.Column("owner_category", sa.String(50), comment="权利人类别"),
     )
@@ -1060,8 +1608,15 @@ def upgrade() -> None:
     # property_cert_assets - 产权证资产关联表
     op.create_table(
         "property_cert_assets",
-        sa.Column("certificate_id", sa.String(), sa.ForeignKey("property_certificates.id"), primary_key=True),
-        sa.Column("asset_id", sa.String(), sa.ForeignKey("assets.id"), primary_key=True),
+        sa.Column(
+            "certificate_id",
+            sa.String(),
+            sa.ForeignKey("property_certificates.id"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "asset_id", sa.String(), sa.ForeignKey("assets.id"), primary_key=True
+        ),
         sa.Column("link_type", sa.String(50), comment="关联类型"),
         sa.Column("notes", sa.String(500), comment="关联备注"),
     )
@@ -1072,12 +1627,16 @@ def upgrade() -> None:
     op.create_table(
         "prompt_templates",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(100), unique=True, nullable=False, comment="Prompt名称"),
+        sa.Column(
+            "name", sa.String(100), unique=True, nullable=False, comment="Prompt名称"
+        ),
         sa.Column("doc_type", sa.String(50), nullable=False, comment="文档类型"),
         sa.Column("provider", sa.String(50), nullable=False, comment="LLM提供商"),
         sa.Column("description", sa.String(500), comment="Prompt描述"),
         sa.Column("system_prompt", sa.Text(), nullable=False, comment="系统提示词"),
-        sa.Column("user_prompt_template", sa.Text(), nullable=False, comment="用户提示词模板"),
+        sa.Column(
+            "user_prompt_template", sa.Text(), nullable=False, comment="用户提示词模板"
+        ),
         sa.Column("few_shot_examples", sa.JSON(), comment="Few-shot示例"),
         sa.Column("version", sa.String(20), nullable=False, comment="版本号"),
         sa.Column("status", sa.String(20), default="draft", comment="状态"),
@@ -1086,7 +1645,12 @@ def upgrade() -> None:
         sa.Column("avg_confidence", sa.Float(), default=0.0, comment="平均置信度"),
         sa.Column("total_usage", sa.Integer(), default=0, comment="总使用次数"),
         sa.Column("current_version_id", sa.String(), comment="当前版本ID"),
-        sa.Column("parent_id", sa.String(), sa.ForeignKey("prompt_templates.id"), comment="父模板ID"),
+        sa.Column(
+            "parent_id",
+            sa.String(),
+            sa.ForeignKey("prompt_templates.id"),
+            comment="父模板ID",
+        ),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.Column("updated_at", sa.DateTime(), comment="更新时间"),
         sa.Column("created_by", sa.String(100), comment="创建人ID"),
@@ -1099,14 +1663,26 @@ def upgrade() -> None:
     op.create_table(
         "prompt_versions",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("template_id", sa.String(), sa.ForeignKey("prompt_templates.id"), nullable=False),
+        sa.Column(
+            "template_id",
+            sa.String(),
+            sa.ForeignKey("prompt_templates.id"),
+            nullable=False,
+        ),
         sa.Column("version", sa.String(20), nullable=False, comment="版本号"),
         sa.Column("system_prompt", sa.Text(), nullable=False, comment="系统提示词快照"),
-        sa.Column("user_prompt_template", sa.Text(), nullable=False, comment="用户提示词模板快照"),
+        sa.Column(
+            "user_prompt_template",
+            sa.Text(),
+            nullable=False,
+            comment="用户提示词模板快照",
+        ),
         sa.Column("few_shot_examples", sa.JSON(), comment="Few-shot示例快照"),
         sa.Column("change_description", sa.String(500), comment="变更描述"),
         sa.Column("change_type", sa.String(50), comment="变更类型"),
-        sa.Column("auto_generated", sa.Boolean(), default=False, comment="是否为自动生成"),
+        sa.Column(
+            "auto_generated", sa.Boolean(), default=False, comment="是否为自动生成"
+        ),
         sa.Column("accuracy", sa.Float(), comment="该版本的准确率"),
         sa.Column("confidence", sa.Float(), comment="该版本的平均置信度"),
         sa.Column("usage_count", sa.Integer(), default=0, comment="使用次数"),
@@ -1114,7 +1690,9 @@ def upgrade() -> None:
         sa.Column("created_by", sa.String(100), comment="创建人ID"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_prompt_versions_template_id", "prompt_versions", ["template_id"])
+    op.create_index(
+        "ix_prompt_versions_template_id", "prompt_versions", ["template_id"]
+    )
 
     # 添加外键: prompt_templates.current_version_id -> prompt_versions.id
     op.create_foreign_key(
@@ -1129,7 +1707,12 @@ def upgrade() -> None:
     op.create_table(
         "extraction_feedback",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("template_id", sa.String(), sa.ForeignKey("prompt_templates.id"), nullable=False),
+        sa.Column(
+            "template_id",
+            sa.String(),
+            sa.ForeignKey("prompt_templates.id"),
+            nullable=False,
+        ),
         sa.Column("version_id", sa.String(), sa.ForeignKey("prompt_versions.id")),
         sa.Column("doc_type", sa.String(50), comment="文档类型"),
         sa.Column("file_path", sa.String(500), comment="文件路径"),
@@ -1139,24 +1722,44 @@ def upgrade() -> None:
         sa.Column("corrected_value", sa.Text(), comment="用户修正后的值"),
         sa.Column("confidence_before", sa.Float(), comment="修正前的置信度"),
         sa.Column("user_action", sa.String(50), comment="用户动作"),
-        sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), comment="提交反馈的用户ID"),
+        sa.Column(
+            "user_id",
+            sa.String(),
+            sa.ForeignKey("users.id"),
+            comment="提交反馈的用户ID",
+        ),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_extraction_feedback_template_id", "extraction_feedback", ["template_id"])
-    op.create_index("ix_extraction_feedback_version_id", "extraction_feedback", ["version_id"])
-    op.create_index("ix_extraction_feedback_user_id", "extraction_feedback", ["user_id"])
+    op.create_index(
+        "ix_extraction_feedback_template_id", "extraction_feedback", ["template_id"]
+    )
+    op.create_index(
+        "ix_extraction_feedback_version_id", "extraction_feedback", ["version_id"]
+    )
+    op.create_index(
+        "ix_extraction_feedback_user_id", "extraction_feedback", ["user_id"]
+    )
 
     # prompt_metrics - Prompt性能指标表
     op.create_table(
         "prompt_metrics",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("template_id", sa.String(), sa.ForeignKey("prompt_templates.id"), nullable=False),
+        sa.Column(
+            "template_id",
+            sa.String(),
+            sa.ForeignKey("prompt_templates.id"),
+            nullable=False,
+        ),
         sa.Column("version_id", sa.String(), sa.ForeignKey("prompt_versions.id")),
         sa.Column("date", sa.Date(), nullable=False, comment="统计日期"),
         sa.Column("total_extractions", sa.Integer(), default=0, comment="总提取次数"),
-        sa.Column("successful_extractions", sa.Integer(), default=0, comment="成功提取次数"),
-        sa.Column("corrected_fields", sa.Integer(), default=0, comment="用户修正的字段数"),
+        sa.Column(
+            "successful_extractions", sa.Integer(), default=0, comment="成功提取次数"
+        ),
+        sa.Column(
+            "corrected_fields", sa.Integer(), default=0, comment="用户修正的字段数"
+        ),
         sa.Column("avg_accuracy", sa.Float(), default=0.0, comment="平均准确率"),
         sa.Column("avg_confidence", sa.Float(), default=0.0, comment="平均置信度"),
         sa.Column("created_at", sa.DateTime(), comment="创建时间"),
@@ -1195,7 +1798,9 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer()),
         sa.Column("organization_id", sa.Integer()),
     )
-    op.create_index("ix_pdf_import_sessions_session_id", "pdf_import_sessions", ["session_id"])
+    op.create_index(
+        "ix_pdf_import_sessions_session_id", "pdf_import_sessions", ["session_id"]
+    )
 
     # pdf_import_session_logs - PDF导入会话日志表
     op.create_table(
@@ -1210,7 +1815,11 @@ def upgrade() -> None:
         sa.Column("duration_ms", sa.Float()),
         sa.Column("memory_usage_mb", sa.Float()),
     )
-    op.create_index("ix_pdf_import_session_logs_session_id", "pdf_import_session_logs", ["session_id"])
+    op.create_index(
+        "ix_pdf_import_session_logs_session_id",
+        "pdf_import_session_logs",
+        ["session_id"],
+    )
 
     # pdf_import_configurations - PDF导入配置表
     op.create_table(
@@ -1233,14 +1842,24 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True)),
         sa.Column("updated_at", sa.DateTime(timezone=True)),
     )
-    op.create_index("ix_pdf_import_configurations_session_id", "pdf_import_configurations", ["session_id"])
+    op.create_index(
+        "ix_pdf_import_configurations_session_id",
+        "pdf_import_configurations",
+        ["session_id"],
+    )
 
     # async_tasks - 异步任务表
     op.create_table(
         "async_tasks",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("task_type", sa.String(50), nullable=False, comment="任务类型"),
-        sa.Column("status", sa.String(20), nullable=False, default="pending", comment="任务状态"),
+        sa.Column(
+            "status",
+            sa.String(20),
+            nullable=False,
+            default="pending",
+            comment="任务状态",
+        ),
         sa.Column("title", sa.String(200), nullable=False, comment="任务标题"),
         sa.Column("description", sa.Text(), comment="任务描述"),
         sa.Column("created_at", sa.DateTime(), nullable=False, comment="创建时间"),
@@ -1304,17 +1923,35 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), comment="User ID if applicable"),
         sa.Column("ip_address", sa.String(45), comment="IP address"),
         sa.Column("metadata", sa.JSON(), comment="Event metadata"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, comment="Event timestamp"),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=False, comment="Event timestamp"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_security_events_event_type", "security_events", ["event_type"])
     op.create_index("ix_security_events_user_id", "security_events", ["user_id"])
     op.create_index("ix_security_events_ip_address", "security_events", ["ip_address"])
     op.create_index("ix_security_events_created_at", "security_events", ["created_at"])
-    op.create_index("ix_security_events_event_type_created_at", "security_events", ["event_type", "created_at"])
-    op.create_index("ix_security_events_user_id_created_at", "security_events", ["user_id", "created_at"])
-    op.create_index("ix_security_events_ip_created_at", "security_events", ["ip_address", "created_at"])
-    op.create_index("ix_security_events_severity_created_at", "security_events", ["severity", "created_at"])
+    op.create_index(
+        "ix_security_events_event_type_created_at",
+        "security_events",
+        ["event_type", "created_at"],
+    )
+    op.create_index(
+        "ix_security_events_user_id_created_at",
+        "security_events",
+        ["user_id", "created_at"],
+    )
+    op.create_index(
+        "ix_security_events_ip_created_at",
+        "security_events",
+        ["ip_address", "created_at"],
+    )
+    op.create_index(
+        "ix_security_events_severity_created_at",
+        "security_events",
+        ["severity", "created_at"],
+    )
 
 
 def downgrade() -> None:
@@ -1334,7 +1971,9 @@ def downgrade() -> None:
     # TIER 9: LLM Prompt
     op.drop_table("prompt_metrics")
     op.drop_table("extraction_feedback")
-    op.drop_constraint("fk_prompt_templates_current_version", "prompt_templates", type_="foreignkey")
+    op.drop_constraint(
+        "fk_prompt_templates_current_version", "prompt_templates", type_="foreignkey"
+    )
     op.drop_table("prompt_versions")
     op.drop_table("prompt_templates")
 

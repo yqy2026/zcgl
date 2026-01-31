@@ -161,7 +161,7 @@ def blacklist_token_on_revoke(revoke_func: Callable[..., Any]) -> Callable[..., 
 
         # 解析令牌并添加到黑名单
         try:
-            from jose import jwt
+            import jwt
 
             from ..core.config import settings
 

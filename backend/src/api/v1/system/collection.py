@@ -29,7 +29,7 @@ router = APIRouter(prefix="/collection", tags=["催缴管理"])
 @router.get(
     "/summary", response_model=CollectionTaskSummary, summary="获取催缴任务汇总"
 )
-async def get_collection_summary(
+def get_collection_summary(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> CollectionTaskSummary:
@@ -50,7 +50,7 @@ async def get_collection_summary(
     response_model=APIResponse[PaginatedData[CollectionRecordResponse]],
     summary="获取催缴记录列表",
 )
-async def list_collection_records(
+def list_collection_records(
     ledger_id: str | None = Query(None, description="租金台账ID"),
     contract_id: str | None = Query(None, description="合同ID"),
     collection_status: CollectionStatus | None = Query(None, description="催缴状态"),
@@ -87,7 +87,7 @@ async def list_collection_records(
     response_model=CollectionRecordResponse,
     summary="获取催缴记录详情",
 )
-async def get_collection_record(
+def get_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -106,7 +106,7 @@ async def get_collection_record(
 @router.post(
     "/records", response_model=CollectionRecordResponse, summary="创建催缴记录"
 )
-async def create_collection_record(
+def create_collection_record(
     record_data: CollectionRecordCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -130,7 +130,7 @@ async def create_collection_record(
     response_model=CollectionRecordResponse,
     summary="更新催缴记录",
 )
-async def update_collection_record(
+def update_collection_record(
     record_id: str,
     update_data: CollectionRecordUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -149,7 +149,7 @@ async def update_collection_record(
 
 
 @router.delete("/records/{record_id}", summary="删除催缴记录")
-async def delete_collection_record(
+def delete_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),

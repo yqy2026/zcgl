@@ -82,7 +82,7 @@ class OperationLogStatisticsResponse(BaseModel):
     response_model=APIResponse[PaginatedData[OperationLogResponse]],
     summary="获取操作日志列表",
 )
-async def get_operation_logs(
+def get_operation_logs(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     user_id: str | None = Query(None, description="用户ID"),
@@ -172,7 +172,7 @@ async def get_operation_logs(
 
 
 @router.get("/{log_id}", response_model=OperationLogResponse, summary="获取日志详情")
-async def get_operation_log(
+def get_operation_log(
     log_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -207,7 +207,7 @@ async def get_operation_log(
     response_model=OperationLogStatisticsResponse,
     summary="获取用户操作统计",
 )
-async def get_user_operation_statistics(
+def get_user_operation_statistics(
     user_id: str = Query(..., description="用户ID"),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
@@ -231,7 +231,7 @@ async def get_user_operation_statistics(
     response_model=OperationLogStatisticsResponse,
     summary="获取模块操作统计",
 )
-async def get_module_operation_statistics(
+def get_module_operation_statistics(
     module: str = Query(..., description="模块名称"),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
@@ -255,7 +255,7 @@ async def get_module_operation_statistics(
     response_model=OperationLogStatisticsResponse,
     summary="获取每日操作统计",
 )
-async def get_daily_operation_statistics(
+def get_daily_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -278,7 +278,7 @@ async def get_daily_operation_statistics(
     response_model=OperationLogStatisticsResponse,
     summary="获取错误操作统计",
 )
-async def get_error_operation_statistics(
+def get_error_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -299,7 +299,7 @@ async def get_error_operation_statistics(
 @router.get(
     "/statistics/summary", response_model=dict[str, Any], summary="获取日志汇总统计"
 )
-async def get_operation_log_summary(
+def get_operation_log_summary(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -329,7 +329,7 @@ async def get_operation_log_summary(
 
 
 @router.post("/export", summary="导出操作日志")
-async def export_operation_logs(
+def export_operation_logs(
     filters: dict[str, Any] | None = None,
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: Session = Depends(get_db),
@@ -371,7 +371,7 @@ async def export_operation_logs(
 
 
 @router.post("/cleanup", summary="清理过期日志")
-async def cleanup_old_logs(
+def cleanup_old_logs(
     days: int = Query(90, ge=1, le=365, description="保留天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),

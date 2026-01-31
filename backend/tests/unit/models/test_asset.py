@@ -22,11 +22,11 @@ class TestAssetModelCreation:
     @pytest.fixture
     def engine(self):
         """Create database engine for testing"""
-        database_url = (
-            os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
-        )
+        database_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
         if not database_url:
-            pytest.skip("TEST_DATABASE_URL or DATABASE_URL is required", allow_module_level=True)
+            pytest.skip(
+                "TEST_DATABASE_URL or DATABASE_URL is required", allow_module_level=True
+            )
         if not database_url.startswith("postgresql"):
             raise RuntimeError("测试必须使用 PostgreSQL")
         engine = create_engine(database_url, pool_pre_ping=True)
@@ -225,7 +225,7 @@ class TestAssetTimestamps:
 
     def test_timestamps_use_utc(self, asset):
         """Test that timestamps use UTC timezone"""
-        assert asset.created_at.tzinfo() is not None  # Has timezone info
+        assert asset.created_at.tzinfo is not None
         # datetime.now(UTC) creates timezone-aware datetime
 
 
@@ -292,7 +292,6 @@ class TestAssetSystemFields:
             usage_status="Status",
             created_by="admin",
             updated_by="admin",
-            tenant_id="tenant123",
             tags="tag1,tag2,tag3",
         )
 
@@ -300,7 +299,6 @@ class TestAssetSystemFields:
         """Test system field values"""
         assert system_asset.created_by == "admin"
         assert system_asset.updated_by == "admin"
-        assert system_asset.tenant_id == "tenant123"
 
     def test_tags_field(self, system_asset):
         """Test tags field"""

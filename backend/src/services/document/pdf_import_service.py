@@ -16,7 +16,11 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
-from ...core.exception_handler import BaseBusinessError, BusinessValidationError
+from ...core.exception_handler import (
+    BaseBusinessError,
+    BusinessValidationError,
+    InternalServerError,
+)
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
@@ -752,13 +756,21 @@ class PDFImportService:
                 }
             elif isinstance(e, OperationalError):
                 # 数据库操作错误 - 系统问题
+                db.rollback()
                 logger.error(
                     f"Database operation failed creating contract: {e}",
                     exc_info=True,
                     extra={"error_id": "CONTRACT_DB_ERROR", "session_id": session_id},
                 )
                 # 重新抛出 - 这是服务器错误，不是用户错误
-                raise RuntimeError("Database error creating contract") from e
+                raise InternalServerError(
+                    message="Database error creating contract",
+                    original_error=e,
+                    details={
+                        "error_id": "CONTRACT_DB_ERROR",
+                        "session_id": session_id,
+                    },
+                ) from e
             else:
                 # 其他未预期错误 - 系统问题
                 db.rollback()
@@ -771,7 +783,14 @@ class PDFImportService:
                     },
                 )
                 # 重新抛出未预期错误，不要静默处理
-                raise
+                raise InternalServerError(
+                    message="Unexpected error creating contract",
+                    original_error=e,
+                    details={
+                        "error_id": "CONTRACT_CREATE_ERROR",
+                        "session_id": session_id,
+                    },
+                ) from e
 
     def _parse_date(self, date_value: Any) -> date | None:
         """

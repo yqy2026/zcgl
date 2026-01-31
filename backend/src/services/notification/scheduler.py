@@ -231,7 +231,9 @@ class NotificationSchedulerService:
             self.db.query(RentLedger)
             .filter(
                 and_(
-                    RentLedger.payment_status.in_([PaymentStatus.UNPAID, PaymentStatus.PARTIAL]),
+                    RentLedger.payment_status.in_(
+                        [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
+                    ),
                     RentLedger.due_date < today,  # 应缴日期已过
                     RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )

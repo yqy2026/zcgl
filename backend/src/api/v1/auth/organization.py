@@ -39,7 +39,7 @@ router = APIRouter(tags=["组织架构管理"])
     "/",
     response_model=APIResponse[PaginatedData[OrganizationResponse]],
 )
-async def get_organizations(
+def get_organizations(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: Session = Depends(get_db),
@@ -52,9 +52,7 @@ async def get_organizations(
         db, skip=skip, limit=page_size
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
-    total = (
-        db.query(Organization).filter(Organization.is_deleted.is_(False)).count()
-    )
+    total = db.query(Organization).filter(Organization.is_deleted.is_(False)).count()
     return ResponseHandler.paginated(
         data=items,
         page=page,
@@ -65,7 +63,7 @@ async def get_organizations(
 
 
 @router.get("/tree", response_model=list[OrganizationTree])
-async def get_organization_tree(
+def get_organization_tree(
     parent_id: str | None = Query(None, description="父组织ID，为空则获取根组织"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -99,7 +97,7 @@ async def get_organization_tree(
     "/search",
     response_model=APIResponse[PaginatedData[OrganizationResponse]],
 )
-async def search_organizations(
+def search_organizations(
     keyword: str = Query(..., min_length=1, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
@@ -138,7 +136,7 @@ async def search_organizations(
 
 
 @router.get("/statistics", response_model=OrganizationStatistics)
-async def get_organization_statistics(
+def get_organization_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationStatistics:
@@ -148,7 +146,7 @@ async def get_organization_statistics(
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)
-async def get_organization(
+def get_organization(
     org_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -163,7 +161,7 @@ async def get_organization(
 
 
 @router.get("/{org_id}/children", response_model=list[OrganizationResponse])
-async def get_organization_children(
+def get_organization_children(
     org_id: str,
     is_recursive: bool = Query(False, description="是否递归获取所有子组织"),
     db: Session = Depends(get_db),
@@ -182,7 +180,7 @@ async def get_organization_children(
 
 
 @router.get("/{org_id}/path", response_model=list[OrganizationResponse])
-async def get_organization_path(
+def get_organization_path(
     org_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -201,7 +199,7 @@ async def get_organization_path(
     "/{org_id}/history",
     response_model=APIResponse[PaginatedData[OrganizationHistoryResponse]],
 )
-async def get_organization_history(
+def get_organization_history(
     org_id: str,
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
@@ -235,7 +233,7 @@ async def get_organization_history(
 
 
 @router.post("/", response_model=OrganizationResponse)
-async def create_organization(
+def create_organization(
     organization: OrganizationCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -253,7 +251,7 @@ async def create_organization(
 
 
 @router.put("/{org_id}", response_model=OrganizationResponse)
-async def update_organization(
+def update_organization(
     org_id: str,
     organization: OrganizationUpdate,
     db: Session = Depends(get_db),
@@ -274,7 +272,7 @@ async def update_organization(
 
 
 @router.delete("/{org_id}")
-async def delete_organization(
+def delete_organization(
     org_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: Session = Depends(get_db),
@@ -297,7 +295,7 @@ async def delete_organization(
 
 
 @router.post("/{org_id}/move")
-async def move_organization(
+def move_organization(
     org_id: str,
     move_request: OrganizationMoveRequest,
     db: Session = Depends(get_db),
@@ -326,7 +324,7 @@ async def move_organization(
 
 
 @router.post("/batch")
-async def batch_organization_operation(
+def batch_organization_operation(
     batch_request: OrganizationBatchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -364,7 +362,7 @@ async def batch_organization_operation(
     "/advanced-search",
     response_model=APIResponse[PaginatedData[OrganizationResponse]],
 )
-async def advanced_search_organizations(
+def advanced_search_organizations(
     search_request: OrganizationSearchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -395,11 +393,7 @@ async def advanced_search_organizations(
 
     items = [OrganizationResponse.model_validate(org) for org in organizations]
     page_size = search_request.page_size
-    page = (
-        (search_request.skip // page_size) + 1
-        if page_size > 0
-        else 1
-    )
+    page = (search_request.skip // page_size) + 1 if page_size > 0 else 1
 
     return ResponseHandler.paginated(
         data=items,

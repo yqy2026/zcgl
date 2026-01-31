@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     DECIMAL,
@@ -43,7 +43,9 @@ class Asset(Base):
     ownership_category: Mapped[str | None] = mapped_column(
         String(100), comment="权属类别"
     )
-    project_name: Mapped[str | None] = mapped_column(String(200), index=True, comment="项目名称")
+    project_name: Mapped[str | None] = mapped_column(
+        String(200), index=True, comment="项目名称"
+    )
     property_name: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="物业名称"
     )
@@ -176,9 +178,6 @@ class Asset(Base):
         comment="更新时间",
     )
 
-    # 多租户支持
-    tenant_id: Mapped[str | None] = mapped_column(String(50), comment="租户ID")
-
     # 关联关系
     history_records: Mapped[list["AssetHistory"]] = relationship(
         "AssetHistory", back_populates="asset", cascade="all, delete-orphan"
@@ -229,6 +228,17 @@ class Asset(Base):
         rented = self.rented_area or Decimal("0")
         rate = (rented / rentable) * Decimal("100")
         return round(rate, 2)
+
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs.setdefault("id", str(uuid.uuid4()))
+        kwargs.setdefault("data_status", "正常")
+        kwargs.setdefault("version", 1)
+        kwargs.setdefault("is_litigated", False)
+        kwargs.setdefault("include_in_occupancy_rate", True)
+        kwargs.setdefault("is_sublease", False)
+        kwargs.setdefault("created_at", datetime.now(UTC))
+        kwargs.setdefault("updated_at", datetime.now(UTC))
+        super().__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<Asset(id={self.id}, name={self.property_name})>"

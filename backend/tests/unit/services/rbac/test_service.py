@@ -6,6 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import (
+    DuplicateResourceError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
     RoleCreate,
@@ -79,7 +84,7 @@ class TestCreateRole:
         )
 
         with patch("src.crud.rbac.role_crud.get_by_name", return_value=mock_role):
-            with pytest.raises(ValueError, match="角色名称.*已存在"):
+            with pytest.raises(DuplicateResourceError, match="角色.*已存在"):
                 rbac_service.create_role(mock_db, obj_in=obj_in, created_by="user_123")
 
     def test_create_role_with_permissions(self, rbac_service, mock_db, mock_role):
@@ -126,7 +131,7 @@ class TestUpdateRole:
         obj_in = RoleUpdate(description="新描述")
 
         with patch("src.crud.rbac.role_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="角色不存在"):
+            with pytest.raises(ResourceNotFoundError, match="角色.*不存在"):
                 rbac_service.update_role(
                     mock_db, role_id="nonexistent", obj_in=obj_in, updated_by="user_123"
                 )
@@ -246,7 +251,7 @@ class TestAssignRoleToUser:
             "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
             return_value=mock_existing,
         ):
-            with pytest.raises(ValueError, match="用户已分配.*角色"):
+            with pytest.raises(ResourceConflictError, match="用户已分配此角色"):
                 rbac_service.assign_role_to_user(
                     mock_db, obj_in=obj_in, assigned_by="admin"
                 )

@@ -64,7 +64,7 @@ class HealthCheck(BaseModel):
 
 
 @router.post("/route-performance", summary="上报路由性能指标")
-async def report_route_performance(
+def report_route_performance(
     report: PerformanceReport, db: Session = Depends(get_db)
 ) -> dict[str, str]:
     """
@@ -107,7 +107,7 @@ async def report_route_performance(
 
 
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)
-async def get_system_health() -> HealthCheck:
+def get_system_health() -> HealthCheck:
     """
     获取系统健康状态
     """

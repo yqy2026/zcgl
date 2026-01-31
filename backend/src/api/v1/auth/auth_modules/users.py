@@ -59,7 +59,7 @@ router = APIRouter(prefix="/users", tags=["用户管理"])
     response_model=APIResponse[PaginatedData[UserResponse]],
     summary="搜索用户",
 )
-async def get_users(
+def get_users(
     params: UserQueryParamsSchema = Depends(),
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -94,7 +94,7 @@ async def get_users(
 
 
 @router.post("", response_model=UserResponse, summary="创建用户")
-async def create_user(
+def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -114,7 +114,7 @@ async def create_user(
 
 
 @router.get("/{user_id}", response_model=UserResponse, summary="获取用户详情")
-async def get_user(
+def get_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
@@ -141,7 +141,7 @@ async def get_user(
 
 
 @router.put("/{user_id}", response_model=UserResponse, summary="更新用户")
-async def update_user(
+def update_user(
     user_id: str,
     user_data: UserUpdate,
     db: Session = Depends(get_db),
@@ -173,7 +173,7 @@ async def update_user(
 
 
 @router.post("/{user_id}/change-password", summary="修改密码")
-async def change_password(
+def change_password(
     user_id: str,
     password_data: PasswordChangeRequest,
     db: Session = Depends(get_db),
@@ -228,7 +228,7 @@ def _deactivate_user(user_id: str, db: Session) -> dict[str, str]:
 
 
 @router.post("/{user_id}/deactivate", summary="停用用户")
-async def deactivate_user(
+def deactivate_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -243,7 +243,7 @@ async def deactivate_user(
 
 
 @router.delete("/{user_id}", summary="删除用户")
-async def delete_user(
+def delete_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -258,7 +258,7 @@ async def delete_user(
 
 
 @router.post("/{user_id}/activate", summary="激活用户")
-async def activate_user(
+def activate_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -282,7 +282,7 @@ async def activate_user(
 
 
 @router.post("/{user_id}/lock", summary="锁定用户")
-async def lock_user(
+def lock_user(
     user_id: str,
     request: Request,
     db: Session = Depends(get_db),
@@ -326,7 +326,7 @@ async def lock_user(
 
 
 @router.post("/{user_id}/unlock", summary="解锁用户账户")
-async def unlock_user_account(
+def unlock_user_account(
     user_id: str,
     request: Request,
     db: Session = Depends(get_db),
@@ -373,7 +373,7 @@ async def unlock_user_account(
 
 
 @router.post("/{user_id}/reset-password", summary="重置用户密码")
-async def reset_user_password(
+def reset_user_password(
     user_id: str,
     password_data: AdminPasswordResetRequest,
     request: Request,
@@ -433,7 +433,7 @@ async def reset_user_password(
 @router.get(
     "/statistics/summary", response_model=dict[str, Any], summary="获取用户统计"
 )
-async def get_user_statistics(
+def get_user_statistics(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:

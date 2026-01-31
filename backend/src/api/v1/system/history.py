@@ -30,7 +30,7 @@ router = APIRouter()
     response_model=APIResponse[PaginatedData[AssetHistoryResponse]],
     summary="获取历史记录列表",
 )
-async def get_history_list(
+def get_history_list(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
@@ -61,7 +61,9 @@ async def get_history_list(
             .all()
         )
 
-        items = [AssetHistoryResponse.model_validate(record) for record in history_records]
+        items = [
+            AssetHistoryResponse.model_validate(record) for record in history_records
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=page,
@@ -79,7 +81,7 @@ async def get_history_list(
 @router.get(
     "/{history_id}", response_model=AssetHistoryResponse, summary="获取历史记录详情"
 )
-async def get_history_detail(
+def get_history_detail(
     history_id: str = Path(..., description="历史记录ID"), db: Session = Depends(get_db)
 ) -> AssetHistoryResponse:
     """
@@ -105,7 +107,7 @@ async def get_history_detail(
 
 
 @router.delete("/{history_id}", summary="删除历史记录")
-async def delete_history(
+def delete_history(
     history_id: str = Path(..., description="历史记录ID"), db: Session = Depends(get_db)
 ) -> dict[str, Any]:
     """

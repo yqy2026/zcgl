@@ -5,6 +5,7 @@
 import logging
 import os
 import tempfile
+import uuid
 from datetime import date
 from typing import Any
 
@@ -14,11 +15,14 @@ from fastapi.responses import FileResponse
 from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import (
     BaseBusinessError,
+    BusinessValidationError,
+    bad_request,
     internal_error,
     service_unavailable,
 )
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....utils.file_security import generate_safe_filename
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +108,16 @@ def import_contracts_from_excel(
 
     try:
         temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, file.filename or "upload.xlsx")
+        try:
+            safe_filename = generate_safe_filename(
+                file.filename or "upload.xlsx",
+                prefix=str(uuid.uuid4()),
+                allowed_extensions=["xlsx", "xls"],
+            )
+        except BusinessValidationError as e:
+            raise bad_request(str(e))
+
+        file_path = os.path.join(temp_dir, safe_filename)
 
         with open(file_path, "wb") as buffer:
             content = file.file.read()

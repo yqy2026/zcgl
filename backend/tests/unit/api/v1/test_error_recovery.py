@@ -27,7 +27,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -142,11 +142,11 @@ def mock_error_recovery_engine():
 class TestGetRecoveryStatistics:
     """Tests for GET /api/v1/error-recovery/statistics endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_get_statistics_success(self, mock_engine, mock_current_user):
         """Test getting statistics successfully"""
-        from src.api.v1.error_recovery import get_recovery_statistics
+        from src.api.v1.system.error_recovery import get_recovery_statistics
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -179,13 +179,13 @@ class TestGetRecoveryStatistics:
         assert result.average_time == 1.2
         assert len(result.by_category) == 1
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_get_statistics_with_category_filter(
         self, mock_engine, mock_current_user
     ):
         """Test getting statistics with category filter"""
-        from src.api.v1.error_recovery import get_recovery_statistics
+        from src.api.v1.system.error_recovery import get_recovery_statistics
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -211,13 +211,13 @@ class TestGetRecoveryStatistics:
         assert len(result.by_category) == 1
         assert "database" in result.by_category
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_get_statistics_invalid_category_filter(
         self, mock_engine, mock_current_user
     ):
         """Test getting statistics with non-existent category filter"""
-        from src.api.v1.error_recovery import get_recovery_statistics
+        from src.api.v1.system.error_recovery import get_recovery_statistics
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -241,15 +241,15 @@ class TestGetRecoveryStatistics:
         result = response["data"]
         assert len(result.by_category) == 0
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_get_statistics_engine_error(self, mock_engine, mock_current_user):
         """Test getting statistics when engine raises exception"""
-        from src.api.v1.error_recovery import get_recovery_statistics
+        from src.api.v1.system.error_recovery import get_recovery_statistics
 
         mock_engine.get_recovery_statistics.side_effect = Exception("Engine error")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BaseBusinessError) as exc_info:
             await get_recovery_statistics(
                 category=None,
                 start_time=None,
@@ -258,7 +258,7 @@ class TestGetRecoveryStatistics:
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取统计信息失败" in exc_info.value.detail
+        assert "获取统计信息失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -274,10 +274,10 @@ class TestGetRecoveryStrategies:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting all strategies successfully"""
-        from src.api.v1.error_recovery import get_recovery_strategies
+        from src.api.v1.system.error_recovery import get_recovery_strategies
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_strategies(current_user=mock_current_user)
@@ -295,10 +295,10 @@ class TestGetRecoveryStrategies:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test strategy response content"""
-        from src.api.v1.error_recovery import get_recovery_strategies
+        from src.api.v1.system.error_recovery import get_recovery_strategies
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_strategies(current_user=mock_current_user)
@@ -323,17 +323,17 @@ class TestGetRecoveryStrategies:
     @pytest.mark.asyncio
     async def test_get_strategies_engine_error(self, mock_current_user):
         """Test getting strategies when engine raises exception"""
-        from src.api.v1.error_recovery import get_recovery_strategies
+        from src.api.v1.system.error_recovery import get_recovery_strategies
 
         mock_engine = MagicMock()
         mock_engine.strategies.side_effect = Exception("Strategy error")
 
-        with patch("src.api.v1.error_recovery.error_recovery_engine", mock_engine):
-            with pytest.raises(HTTPException) as exc_info:
+        with patch("src.api.v1.system.error_recovery.error_recovery_engine", mock_engine):
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await get_recovery_strategies(current_user=mock_current_user)
 
             assert exc_info.value.status_code == 500
-            assert "获取策略配置失败" in exc_info.value.detail
+            assert "获取策略配置失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -349,13 +349,13 @@ class TestUpdateRecoveryStrategy:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test updating strategy successfully"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             strategy_update = RecoveryStrategyUpdate(max_attempts=5, base_delay=2.0)
@@ -376,13 +376,13 @@ class TestUpdateRecoveryStrategy:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test updating multiple strategy fields"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             strategy_update = RecoveryStrategyUpdate(
@@ -412,18 +412,18 @@ class TestUpdateRecoveryStrategy:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test updating strategy with invalid category"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             strategy_update = RecoveryStrategyUpdate(max_attempts=5)
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await update_recovery_strategy(
                     category="invalid_category",
                     strategy_update=strategy_update,
@@ -431,20 +431,20 @@ class TestUpdateRecoveryStrategy:
                 )
 
             assert exc_info.value.status_code == 400
-            assert "无效的错误类别" in exc_info.value.detail
+            assert "无效的错误类别" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_update_strategy_partial_update(
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test updating strategy with partial fields"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             # Only update max_attempts, other fields should remain unchanged
@@ -467,7 +467,7 @@ class TestUpdateRecoveryStrategy:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test updating strategy when strategy doesn't exist"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
@@ -478,12 +478,12 @@ class TestUpdateRecoveryStrategy:
         del mock_error_recovery_engine.strategies[ErrorCategory.DATABASE]
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             strategy_update = RecoveryStrategyUpdate(max_attempts=5)
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await update_recovery_strategy(
                     category="database",
                     strategy_update=strategy_update,
@@ -491,7 +491,7 @@ class TestUpdateRecoveryStrategy:
                 )
 
             assert exc_info.value.status_code == 404
-            assert "未找到错误类别" in exc_info.value.detail
+            assert "未找到错误类别" in exc_info.value.message
 
 
 # ============================================================================
@@ -507,10 +507,10 @@ class TestGetCircuitBreakerStatus:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting circuit breaker status successfully"""
-        from src.api.v1.error_recovery import get_circuit_breaker_status
+        from src.api.v1.system.error_recovery import get_circuit_breaker_status
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_circuit_breaker_status(current_user=mock_current_user)
@@ -527,7 +527,7 @@ class TestGetCircuitBreakerStatus:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test circuit breaker in closed state"""
-        from src.api.v1.error_recovery import get_circuit_breaker_status
+        from src.api.v1.system.error_recovery import get_circuit_breaker_status
 
         mock_error_recovery_engine.circuit_breakers["database"] = {
             "state": "closed",
@@ -537,7 +537,7 @@ class TestGetCircuitBreakerStatus:
         }
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_circuit_breaker_status(current_user=mock_current_user)
@@ -555,7 +555,7 @@ class TestGetCircuitBreakerStatus:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test circuit breaker in open state"""
-        from src.api.v1.error_recovery import get_circuit_breaker_status
+        from src.api.v1.system.error_recovery import get_circuit_breaker_status
 
         opened_time = datetime.now().timestamp()
         mock_error_recovery_engine.circuit_breakers["database"] = {
@@ -566,7 +566,7 @@ class TestGetCircuitBreakerStatus:
         }
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_circuit_breaker_status(current_user=mock_current_user)
@@ -582,7 +582,7 @@ class TestGetCircuitBreakerStatus:
     @pytest.mark.asyncio
     async def test_get_circuit_breakers_engine_error(self, mock_current_user):
         """Test getting circuit breakers when engine raises exception"""
-        from src.api.v1.error_recovery import get_circuit_breaker_status
+        from src.api.v1.system.error_recovery import get_circuit_breaker_status
 
         mock_engine = MagicMock()
         # Accessing circuit_breakers.items() will raise the exception during iteration
@@ -590,12 +590,12 @@ class TestGetCircuitBreakerStatus:
             "Circuit breaker error"
         )
 
-        with patch("src.api.v1.error_recovery.error_recovery_engine", mock_engine):
-            with pytest.raises(HTTPException) as exc_info:
+        with patch("src.api.v1.system.error_recovery.error_recovery_engine", mock_engine):
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await get_circuit_breaker_status(current_user=mock_current_user)
 
             assert exc_info.value.status_code == 500
-            assert "获取熔断器状态失败" in exc_info.value.detail
+            assert "获取熔断器状态失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -611,7 +611,7 @@ class TestResetCircuitBreaker:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test resetting circuit breaker successfully"""
-        from src.api.v1.error_recovery import reset_circuit_breaker
+        from src.api.v1.system.error_recovery import reset_circuit_breaker
 
         # Set circuit breaker to open state
         mock_error_recovery_engine.circuit_breakers["database"] = {
@@ -622,7 +622,7 @@ class TestResetCircuitBreaker:
         }
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await reset_circuit_breaker(
@@ -646,32 +646,32 @@ class TestResetCircuitBreaker:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test resetting circuit breaker with invalid category"""
-        from src.api.v1.error_recovery import reset_circuit_breaker
+        from src.api.v1.system.error_recovery import reset_circuit_breaker
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await reset_circuit_breaker(
                     category="invalid_category", current_user=mock_current_user
                 )
 
             assert exc_info.value.status_code == 400
-            assert "无效的错误类别" in exc_info.value.detail
+            assert "无效的错误类别" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_reset_circuit_breaker_nonexistent(
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test resetting circuit breaker that doesn't exist"""
-        from src.api.v1.error_recovery import reset_circuit_breaker
+        from src.api.v1.system.error_recovery import reset_circuit_breaker
 
         # Remove database circuit breaker
         del mock_error_recovery_engine.circuit_breakers["database"]
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await reset_circuit_breaker(
@@ -687,7 +687,7 @@ class TestResetCircuitBreaker:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test resetting circuit breaker when a generic exception occurs"""
-        from src.api.v1.error_recovery import reset_circuit_breaker
+        from src.api.v1.system.error_recovery import reset_circuit_breaker
 
         # Make circuit_breakers[__setitem__] raise an exception
         mock_cb = MagicMock()
@@ -695,16 +695,16 @@ class TestResetCircuitBreaker:
         mock_error_recovery_engine.circuit_breakers = {"database": mock_cb}
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await reset_circuit_breaker(
                     category="database", current_user=mock_current_user
                 )
 
             assert exc_info.value.status_code == 500
-            assert "重置熔断器失败" in exc_info.value.detail
+            assert "重置熔断器失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -720,10 +720,10 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history successfully"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -748,10 +748,10 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history with category filter"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -773,10 +773,10 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history with success filter"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -797,7 +797,7 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history with pagination"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         # Add more history records
         for i in range(10):
@@ -812,7 +812,7 @@ class TestGetRecoveryHistory:
             )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -835,10 +835,10 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history with offset"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -860,12 +860,12 @@ class TestGetRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test getting history when empty"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         mock_error_recovery_engine.recovery_history = []
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -895,10 +895,10 @@ class TestErrorRecoveryTest:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test successful error recovery"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await test_error_recovery(
@@ -917,10 +917,10 @@ class TestErrorRecoveryTest:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test error recovery without simulating error"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await test_error_recovery(
@@ -939,13 +939,13 @@ class TestErrorRecoveryTest:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test error recovery with invalid category"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await test_error_recovery(
                     category="invalid_category",
                     simulate_error=True,
@@ -953,14 +953,14 @@ class TestErrorRecoveryTest:
                 )
 
             assert exc_info.value.status_code == 400
-            assert "无效的错误类别" in exc_info.value.detail
+            assert "无效的错误类别" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_error_recovery_failed_recovery(
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test error recovery when recovery fails"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         from src.services.error_recovery_service import RecoveryResult
 
@@ -976,7 +976,7 @@ class TestErrorRecoveryTest:
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await test_error_recovery(
@@ -993,10 +993,10 @@ class TestErrorRecoveryTest:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test error recovery with simulate_error=True to cover the exception raising path"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             # This should trigger the simulate_error=True branch
@@ -1011,15 +1011,15 @@ class TestErrorRecoveryTest:
     @pytest.mark.asyncio
     async def test_error_recovery_generic_exception(self, mock_current_user):
         """Test error recovery when a generic exception occurs"""
-        from src.api.v1.error_recovery import test_error_recovery
+        from src.api.v1.system.error_recovery import test_error_recovery
 
         mock_engine = MagicMock()
         mock_engine.recover_from_error = AsyncMock(
             side_effect=Exception("Recovery error")
         )
 
-        with patch("src.api.v1.error_recovery.error_recovery_engine", mock_engine):
-            with pytest.raises(HTTPException) as exc_info:
+        with patch("src.api.v1.system.error_recovery.error_recovery_engine", mock_engine):
+            with pytest.raises(BaseBusinessError) as exc_info:
                 await test_error_recovery(
                     category="database",
                     simulate_error=True,
@@ -1027,7 +1027,7 @@ class TestErrorRecoveryTest:
                 )
 
             assert exc_info.value.status_code == 500
-            assert "测试失败" in exc_info.value.detail
+            assert "测试失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -1043,12 +1043,12 @@ class TestClearRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test clearing all history"""
-        from src.api.v1.error_recovery import clear_recovery_history
+        from src.api.v1.system.error_recovery import clear_recovery_history
 
         initial_count = len(mock_error_recovery_engine.recovery_history)
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await clear_recovery_history(
@@ -1065,7 +1065,7 @@ class TestClearRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test clearing history with time filter"""
-        from src.api.v1.error_recovery import clear_recovery_history
+        from src.api.v1.system.error_recovery import clear_recovery_history
 
         # Add old and new records - make sure the difference in timestamps is clear
         old_time = datetime(2024, 1, 1, 12, 0, 0)
@@ -1091,7 +1091,7 @@ class TestClearRecoveryHistory:
         ]
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             # Clear records before middle_time (this should clear old_error only)
@@ -1114,12 +1114,12 @@ class TestClearRecoveryHistory:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test clearing empty history"""
-        from src.api.v1.error_recovery import clear_recovery_history
+        from src.api.v1.system.error_recovery import clear_recovery_history
 
         mock_error_recovery_engine.recovery_history = []
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await clear_recovery_history(
@@ -1139,12 +1139,12 @@ class TestClearRecoveryHistory:
 class TestGetErrorRecoveryHealth:
     """Tests for GET /api/v1/error-recovery/health endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_health_healthy(self, mock_engine):
         """Test health endpoint when system is healthy (90%+ success rate)"""
         from fastapi.responses import JSONResponse
-        from src.api.v1.error_recovery import get_error_recovery_health
+        from src.api.v1.system.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -1159,7 +1159,7 @@ class TestGetErrorRecoveryHealth:
             "network": {"state": "closed"},
         }
 
-        response = await get_error_recovery_health()
+        response = get_error_recovery_health()
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 200
@@ -1168,12 +1168,12 @@ class TestGetErrorRecoveryHealth:
         content = json.loads(response.body.decode())
         assert content["status"] == "healthy"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_health_degraded(self, mock_engine):
         """Test health endpoint when system is degraded (70-90% success rate)"""
         from fastapi.responses import JSONResponse
-        from src.api.v1.error_recovery import get_error_recovery_health
+        from src.api.v1.system.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -1188,7 +1188,7 @@ class TestGetErrorRecoveryHealth:
             "network": {"state": "open"},
         }
 
-        response = await get_error_recovery_health()
+        response = get_error_recovery_health()
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 200
@@ -1197,12 +1197,12 @@ class TestGetErrorRecoveryHealth:
         content = json.loads(response.body.decode())
         assert content["status"] == "degraded"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_health_unhealthy(self, mock_engine):
         """Test health endpoint when system is unhealthy (<70% success rate)"""
         from fastapi.responses import JSONResponse
-        from src.api.v1.error_recovery import get_error_recovery_health
+        from src.api.v1.system.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -1217,7 +1217,7 @@ class TestGetErrorRecoveryHealth:
             "network": {"state": "open"},
         }
 
-        response = await get_error_recovery_health()
+        response = get_error_recovery_health()
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 503
@@ -1226,18 +1226,18 @@ class TestGetErrorRecoveryHealth:
         content = json.loads(response.body.decode())
         assert content["status"] == "unhealthy"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_health_error(self, mock_engine):
         """Test health endpoint when engine raises exception"""
         from fastapi.responses import JSONResponse
-        from src.api.v1.error_recovery import get_error_recovery_health
+        from src.api.v1.system.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.side_effect = Exception(
             "Health check error"
         )
 
-        response = await get_error_recovery_health()
+        response = get_error_recovery_health()
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 500
@@ -1246,12 +1246,12 @@ class TestGetErrorRecoveryHealth:
         content = json.loads(response.body.decode())
         assert content["status"] == "error"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
     @pytest.mark.asyncio
     async def test_health_active_circuit_breakers(self, mock_engine):
         """Test health endpoint counts active circuit breakers"""
         from fastapi.responses import JSONResponse
-        from src.api.v1.error_recovery import get_error_recovery_health
+        from src.api.v1.system.error_recovery import get_error_recovery_health
 
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -1268,7 +1268,7 @@ class TestGetErrorRecoveryHealth:
             "validation": {"state": "closed"},
         }
 
-        response = await get_error_recovery_health()
+        response = get_error_recovery_health()
 
         assert isinstance(response, JSONResponse)
         import json
@@ -1288,7 +1288,7 @@ class TestErrorRecoveryEdgeCases:
     @pytest.mark.asyncio
     async def test_all_error_categories_valid(self, mock_current_user):
         """Test that all error categories are valid"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
@@ -1314,7 +1314,7 @@ class TestErrorRecoveryEdgeCases:
                 requires_manual_intervention=False,
             )
 
-        with patch("src.api.v1.error_recovery.error_recovery_engine", mock_engine):
+        with patch("src.api.v1.system.error_recovery.error_recovery_engine", mock_engine):
             for category in ErrorCategory:
                 strategy_update = RecoveryStrategyUpdate(max_attempts=5)
                 response = await update_recovery_strategy(
@@ -1329,13 +1329,13 @@ class TestErrorRecoveryEdgeCases:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test strategy update with boundary values"""
-        from src.api.v1.error_recovery import (
+        from src.api.v1.system.error_recovery import (
             RecoveryStrategyUpdate,
             update_recovery_strategy,
         )
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             # Test minimum and maximum allowed values
@@ -1359,13 +1359,13 @@ class TestErrorRecoveryEdgeCases:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test pagination edge cases"""
-        from src.api.v1.error_recovery import get_recovery_history
+        from src.api.v1.system.error_recovery import get_recovery_history
 
         # Empty history
         mock_error_recovery_engine.recovery_history = []
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             response = await get_recovery_history(
@@ -1388,7 +1388,7 @@ class TestErrorRecoveryEdgeCases:
         self, mock_error_recovery_engine, mock_current_user
     ):
         """Test time filter edge cases"""
-        from src.api.v1.error_recovery import clear_recovery_history
+        from src.api.v1.system.error_recovery import clear_recovery_history
 
         # History with specific timestamps
         mock_error_recovery_engine.recovery_history = [
@@ -1409,7 +1409,7 @@ class TestErrorRecoveryEdgeCases:
         ]
 
         with patch(
-            "src.api.v1.error_recovery.error_recovery_engine",
+            "src.api.v1.system.error_recovery.error_recovery_engine",
             mock_error_recovery_engine,
         ):
             # Clear before a time that's between the two records

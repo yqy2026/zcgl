@@ -121,7 +121,7 @@ vi.mock('@/utils/format', () => ({
   formatArea: vi.fn((value: number | undefined) => (value ? `${value} m²` : '-')),
   formatPercentage: vi.fn((value: number) => `${value.toFixed(1)}%`),
   formatDate: vi.fn((date: string) => (date ? new Date(date).toLocaleDateString() : '-')),
-  getStatusColor: vi.fn((_status: string, _type: string) => {
+  getStatusColor: vi.fn((status: string, _type: string) => {
     const colors: Record<string, string> = {
       已确权: 'green',
       未确权: 'red',
@@ -132,6 +132,15 @@ vi.mock('@/utils/format', () => ({
     };
     return colors[status] || 'default';
   }),
+}));
+
+vi.mock('@/hooks/useSystemDictionary', () => ({
+  useSystemDictionary: vi.fn(() => ({
+    options: [],
+    loading: false,
+    error: null,
+    getLabel: vi.fn(() => '-'),
+  })),
 }));
 
 describe('AssetList - 组件导入测试', () => {
@@ -183,13 +192,7 @@ describe('AssetList - 基础渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table).toBeTruthy();
@@ -205,13 +208,7 @@ describe('AssetList - 基础渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: true,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={true} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-loading')).toBe('true');
@@ -227,11 +224,11 @@ describe('AssetList - 基础渲染测试', () => {
     };
 
     render(
-      React.createElement(AssetList, {
-        data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
-        loading: false,
-        ...mockHandlers,
-      })
+      <AssetList
+        data={{ items: [], total: 0, page: 1, page_size: 20, pages: 0 }}
+        loading={false}
+        {...mockHandlers}
+      />
     );
 
     const table = screen.getByTestId('table');
@@ -298,13 +295,7 @@ describe('AssetList - 数据渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     expect(screen.getByTestId('table-row-0').getAttribute('data-property-name')).toBe('物业1');
     expect(screen.getByTestId('table-row-1').getAttribute('data-property-name')).toBe('物业2');
@@ -349,13 +340,7 @@ describe('AssetList - 交互操作测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     // 验证组件正常渲染且回调函数被接收
     const table = screen.getByTestId('table');
@@ -414,12 +399,12 @@ describe('AssetList - 行选择测试', () => {
     const selectedRowKeys = ['1'];
 
     render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        selectedRowKeys,
-        ...mockHandlers,
-      })
+      <AssetList
+        data={mockData}
+        loading={false}
+        selectedRowKeys={selectedRowKeys}
+        {...mockHandlers}
+      />
     );
 
     const table = screen.getByTestId('table');
@@ -435,13 +420,7 @@ describe('AssetList - 行选择测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-has-selection')).toBe('false');
@@ -466,13 +445,7 @@ describe('AssetList - 分页测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     const paginationData = JSON.parse(table.getAttribute('data-pagination') || '{}');
@@ -536,13 +509,7 @@ describe('AssetList - 汇总行测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
-      React.createElement(AssetList, {
-        data: mockData,
-        loading: false,
-        ...mockHandlers,
-      })
-    );
+    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-has-summary')).toBe('true');
@@ -560,11 +527,11 @@ describe('AssetList - 汇总行测试', () => {
     // 应该正常渲染而不报错，即使没有数据
     expect(() => {
       render(
-        React.createElement(AssetList, {
-          data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
-          loading: false,
-          ...mockHandlers,
-        })
+        <AssetList
+          data={{ items: [], total: 0, page: 1, page_size: 20, pages: 0 }}
+          loading={false}
+          {...mockHandlers}
+        />
       );
     }).not.toThrow();
 

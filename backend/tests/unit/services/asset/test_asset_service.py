@@ -22,8 +22,6 @@ TEST_ASSET_ID = "asset_123"
 TEST_USER_ID = "user_123"
 
 
-
-
 @pytest.fixture
 def mock_asset():
     """模拟资产对象"""

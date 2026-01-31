@@ -1,294 +1,209 @@
 /**
  * RouteBuilder 组件测试
- * 测试路由构建器的功能
- * 增强版本 - 添加更全面的测试用例
+ * 覆盖路由构建与重定向逻辑
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import React from 'react';
+import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
+
 import RouteBuilder, { AssetRoutes, SystemRoutes } from '../RouteBuilder';
+import { PERMISSIONS } from '@/hooks/usePermission';
 
 interface RouteMockProps {
   path?: string;
-  element?: React.ReactNode;
-  children?: React.ReactNode;
+  element?: ReactNode;
+  children?: ReactNode;
 }
 
-// Mock all dependencies before importing
 vi.mock('../ProtectedRoute', () => ({
-  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ..._props }) => {
-    return React.createElement(
-      'div',
-      {
-        'data-testid': 'protected-route',
-        'data-path': path,
-        'data-permissions': permissions ? JSON.stringify(permissions) : 'none',
-        'data-error-boundary': errorBoundary,
-      },
-      'Protected Route'
-    );
-  }),
+  default: ({ path, title, permissions }: { path?: string; title?: string; permissions?: unknown }) => (
+    <div
+      data-testid="protected-route"
+      data-path={path}
+      data-title={title}
+      data-permissions={permissions ? JSON.stringify(permissions) : 'none'}
+    >
+      Protected Route
+    </div>
+  ),
 }));
 
 vi.mock('../LazyRoute', () => ({
-  default: vi.fn(({ path, component, preload, permissions, ..._props }) => {
-    return React.createElement(
-      'div',
-      {
-        'data-testid': 'lazy-route',
-        'data-path': path,
-        'data-permissions': permissions ? JSON.stringify(permissions) : 'none',
-        'data-has-preload': !!preload,
-      },
-      'Lazy Route'
-    );
-  }),
+  default: ({ path, preload, permissions }: { path?: string; preload?: () => void; permissions?: unknown }) => (
+    <div
+      data-testid="lazy-route"
+      data-path={path}
+      data-has-preload={!!preload}
+      data-permissions={permissions ? JSON.stringify(permissions) : 'none'}
+    >
+      Lazy Route
+    </div>
+  ),
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    Navigate: ({ to, replace }: { to: string; replace?: boolean }) =>
-      React.createElement(
-        'div',
-        { 'data-testid': 'navigate', 'data-to': to, 'data-replace': replace },
-        `Navigate to ${to}`
-      ),
-    Route: ({ path, element, children }: RouteMockProps) =>
-      React.createElement(
-        'div',
-        {
-          'data-testid': 'route',
-          'data-path': path,
-          'data-has-children': !!children,
-          'data-has-element': !!element,
-        },
-        children || element || 'Route'
-      ),
-  };
-});
+vi.mock('react-router-dom', () => ({
+  Navigate: ({ to, replace }: { to: string; replace?: boolean }) => (
+    <div data-testid="navigate" data-to={to} data-replace={replace} />
+  ),
+  Route: ({ path, element, children }: RouteMockProps) => (
+    <div
+      data-testid="route"
+      data-path={path}
+      data-has-children={!!children}
+      data-has-element={!!element}
+    >
+      {children ?? element}
+    </div>
+  ),
+}));
 
-// Test wrapper
-describe('RouteBuilder - 组件导入测试', () => {
-  it('应该能够导入组件', () => {
-    expect(RouteBuilder).toBeDefined();
-  });
-
-  it('应该导出RouteBuilder类', () => {
-    expect(RouteBuilder).toBeDefined();
-    expect(typeof RouteBuilder.buildRoute).toBe('function');
-  });
-});
-
-describe('RouteBuilder - 路由构建测试', () => {
-  it('应该能够构建路由配置', () => {
+describe('RouteBuilder', () => {
+  it('buildRoute uses ProtectedRoute for non-lazy routes', () => {
     const TestComponent = () => <div>Dashboard</div>;
 
-    const config = {
+    const element = RouteBuilder.buildRoute({
       path: '/dashboard',
       title: '工作台',
       component: TestComponent,
-    };
+    });
 
-    const element = RouteBuilder.buildRoute(config);
+    render(element);
 
-    expect(element).toBeTruthy();
+    const protectedRoute = screen.getByTestId('protected-route');
+    expect(protectedRoute).toHaveAttribute('data-path', '/dashboard');
   });
 
-  it('应该支持懒加载路由', () => {
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Lazy Page</div> })
-    );
+  it('buildRoute uses LazyRoute for lazy routes', () => {
+    const TestComponent = React.lazy(async () => ({
+      default: () => <div>Lazy Page</div>,
+    }));
 
-    const config = {
+    const element = RouteBuilder.buildRoute({
       path: '/lazy',
       title: '懒加载页面',
       component: TestComponent,
       lazy: true,
-    };
+    });
 
-    const element = RouteBuilder.buildRoute(config);
+    render(element);
 
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('lazy-route')).toHaveAttribute('data-path', '/lazy');
   });
 
-  it('应该支持嵌套路由', () => {
-    const ChildComponent = () => <div>Child Page</div>;
+  it('buildRoute uses Route when element is provided', () => {
+    const element = RouteBuilder.buildRoute({
+      path: '/custom',
+      title: '自定义',
+      element: <div data-testid="custom-element">Custom</div>,
+    });
 
-    const config = {
-      path: '/assets',
-      title: '资产管理',
+    render(element);
+
+    expect(screen.getByTestId('route')).toHaveAttribute('data-has-element', 'true');
+    expect(screen.getByTestId('custom-element')).toBeInTheDocument();
+  });
+
+  it('buildRoute creates container route when only children provided', () => {
+    const ChildComponent = () => <div>Child</div>;
+
+    const element = RouteBuilder.buildRoute({
+      path: '/parent',
+      title: '父级',
       children: [
         {
-          path: '/list',
-          title: '资产列表',
+          path: '/child',
+          title: '子级',
           component: ChildComponent,
         },
       ],
-    };
+    });
 
-    const element = RouteBuilder.buildRoute(config);
+    render(element);
 
-    expect(element).toBeTruthy();
-  });
-});
-
-// =============================================================================
-// 增强测试 - 静态方法测试
-// =============================================================================
-
-describe('RouteBuilder - 静态方法测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByTestId('route')).toHaveAttribute('data-has-children', 'true');
+    expect(screen.getByTestId('protected-route')).toHaveAttribute('data-path', '/child');
   });
 
-  it('buildRoutes应该构建多个路由', () => {
+  it('buildRoute redirects when no component and no children', () => {
+    const element = RouteBuilder.buildRoute({
+      path: '/orphan',
+      title: '孤立',
+    });
+
+    render(element);
+
+    expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/');
+  });
+
+  it('buildRoutes renders multiple routes', () => {
     const ComponentA = () => <div>A</div>;
     const ComponentB = () => <div>B</div>;
 
-    const configs = [
-      { path: '/a', component: ComponentA },
-      { path: '/b', component: ComponentB },
-    ];
+    const elements = RouteBuilder.buildRoutes([
+      { path: '/a', title: 'A', component: ComponentA },
+      { path: '/b', title: 'B', component: ComponentB },
+    ]);
 
-    const elements = RouteBuilder.buildRoutes(configs);
+    render(<>{elements}</>);
 
-    expect(elements).toHaveLength(2);
-    expect(elements[0]).toBeTruthy();
-    expect(elements[1]).toBeTruthy();
+    expect(screen.getAllByTestId('protected-route')).toHaveLength(2);
   });
 
-  it('createRedirect应该创建重定向路由', () => {
-    const element = RouteBuilder.createRedirect('/old-path', '/new-path', true);
+  it('createRedirect produces navigate element', () => {
+    render(RouteBuilder.createRedirect('/old', '/new', true));
 
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/new');
   });
 
-  it('createLazyRoute应该创建懒加载路由', () => {
-    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
-
-    const element = RouteBuilder.createLazyRoute('/lazy', TestComponent, {
-      title: '懒加载页面',
-    });
-
-    expect(element).toBeTruthy();
-  });
-
-  it('createProtectedRoute应该创建受保护路由', () => {
+  it('createProtectedRoute passes permissions', () => {
     const TestComponent = () => <div>Protected</div>;
 
-    const element = RouteBuilder.createProtectedRoute(
-      '/protected',
-      TestComponent,
-      'ASSET_VIEW',
-      '资产查看'
+    render(
+      RouteBuilder.createProtectedRoute(
+        '/protected',
+        TestComponent,
+        'ASSET_VIEW',
+        '资产查看'
+      )
     );
 
-    expect(element).toBeTruthy();
-  });
-});
-
-// =============================================================================
-// 边界情况测试
-// =============================================================================
-
-describe('RouteBuilder - 边界情况', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByTestId('protected-route')).toHaveAttribute(
+      'data-permissions',
+      JSON.stringify([PERMISSIONS.ASSET_VIEW])
+    );
   });
 
-  it('没有组件但有子路由时应该创建容器路由', () => {
-    const ChildComponent = () => <div>Child</div>;
+  it('createLazyRoute uses LazyRoute with permissions', () => {
+    const TestComponent = React.lazy(async () => ({
+      default: () => <div>Lazy</div>,
+    }));
 
-    const config = {
-      path: '/parent',
-      children: [{ path: '/child', component: ChildComponent }],
-    };
+    render(
+      RouteBuilder.createLazyRoute('/lazy', TestComponent, {
+        title: '懒加载页面',
+        permissions: [PERMISSIONS.ASSET_VIEW],
+      })
+    );
 
-    const element = RouteBuilder.buildRoute(config);
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('lazy-route')).toHaveAttribute(
+      'data-permissions',
+      JSON.stringify([PERMISSIONS.ASSET_VIEW])
+    );
   });
 
-  it('既没有组件也没有子路由时应该创建重定向', () => {
-    const config = {
-      path: '/orphan',
-    };
+  it('AssetRoutes/SystemRoutes produce protected routes', () => {
+    const TestComponent = () => <div>Page</div>;
 
-    const element = RouteBuilder.buildRoute(config);
-    expect(element).toBeTruthy();
-  });
+    render(
+      <>
+        {AssetRoutes.list(TestComponent)}
+        {SystemRoutes.roles(TestComponent)}
+      </>
+    );
 
-  it('有element属性时应该直接使用Route', () => {
-    const customElement = <div>Custom</div>;
-
-    const config = {
-      path: '/custom',
-      element: customElement,
-    };
-
-    const element = RouteBuilder.buildRoute(config);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递所有额外的props', () => {
-    const TestComponent = () => <div>Test</div>;
-
-    const config = {
-      path: '/test',
-      component: TestComponent,
-      extraProp: 'extra-value',
-    };
-
-    const element = RouteBuilder.buildRoute(config);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理空children数组', () => {
-    const config = {
-      path: '/test',
-      children: [],
-    };
-
-    const element = RouteBuilder.buildRoute(config);
-    expect(element).toBeTruthy();
-  });
-});
-
-// =============================================================================
-// 预定义路由测试
-// =============================================================================
-
-describe('RouteBuilder - 预定义路由', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('AssetRoutes应该预定义正确的路由', () => {
-    const TestComponent = () => <div>Asset Page</div>;
-
-    const listRoute = AssetRoutes.list(TestComponent);
-    const newRoute = AssetRoutes.new(TestComponent);
-    const importRoute = AssetRoutes.import(TestComponent);
-    const analyticsRoute = AssetRoutes.analytics(TestComponent);
-
-    expect(listRoute).toBeTruthy();
-    expect(newRoute).toBeTruthy();
-    expect(importRoute).toBeTruthy();
-    expect(analyticsRoute).toBeTruthy();
-  });
-
-  it('SystemRoutes应该预定义正确的路由', () => {
-    const TestComponent = () => <div>System Page</div>;
-
-    const usersRoute = SystemRoutes.users(TestComponent);
-    const rolesRoute = SystemRoutes.roles(TestComponent);
-    const organizationsRoute = SystemRoutes.organizations(TestComponent);
-    const logsRoute = SystemRoutes.logs(TestComponent);
-
-    expect(usersRoute).toBeTruthy();
-    expect(rolesRoute).toBeTruthy();
-    expect(organizationsRoute).toBeTruthy();
-    expect(logsRoute).toBeTruthy();
+    const protectedRoutes = screen.getAllByTestId('protected-route');
+    expect(protectedRoutes.length).toBeGreaterThanOrEqual(2);
   });
 });

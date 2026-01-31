@@ -70,7 +70,7 @@ def get_area_summary(
 
 
 @router.get("/area-statistics", summary="获取面积统计")
-async def get_area_statistics(
+def get_area_statistics(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),

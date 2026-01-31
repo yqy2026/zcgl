@@ -11,8 +11,9 @@ from collections.abc import Awaitable, Callable
 from http import HTTPStatus
 from typing import Any
 
+import jwt
 from fastapi import Request, Response
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 

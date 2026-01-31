@@ -153,7 +153,7 @@ async def get_statistics_summary(
 @router.get(
     "/dashboard", response_model=DashboardDataResponse, summary="获取仪表板数据"
 )
-async def get_dashboard_data(
+def get_dashboard_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> DashboardDataResponse:
@@ -227,7 +227,7 @@ async def get_dashboard_data(
 
 
 @router.get("/comprehensive", summary="获取综合统计")
-async def get_comprehensive_statistics(
+def get_comprehensive_statistics(
     should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

@@ -18,7 +18,7 @@ router = APIRouter(prefix="/sessions", tags=["会话管理"])
 
 
 @router.get("", response_model=list[UserSessionResponse], summary="获取用户会话列表")
-async def get_user_sessions(
+def get_user_sessions(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> list[UserSessionResponse]:
@@ -29,7 +29,7 @@ async def get_user_sessions(
 
 
 @router.delete("/{session_id}", summary="撤销会话")
-async def revoke_session(
+def revoke_session(
     session_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),

@@ -27,7 +27,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..constants.rent_contract_constants import PaymentStatus
+from ..constants.rent_contract_constants import PaymentStatus, SettlementStatus
 from ..core.enums import ContractStatus
 from ..database import Base
 
@@ -194,11 +194,6 @@ class RentContract(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
         comment="更新时间",
-    )
-
-    # 多租户支持
-    tenant_id: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, comment="租户ID"
     )
 
     # PDF导入追踪
@@ -418,7 +413,9 @@ class RentLedger(Base):
 
     # 支付状态
     payment_status: Mapped[str] = mapped_column(
-        String(20), default=PaymentStatus.UNPAID, comment="支付状态：未支付/部分支付/已支付/逾期"
+        String(20),
+        default=PaymentStatus.UNPAID,
+        comment="支付状态：未支付/部分支付/已支付/逾期",
     )
     payment_date: Mapped[date | None] = mapped_column(Date, comment="支付日期")
     payment_method: Mapped[str | None] = mapped_column(String(50), comment="支付方式")
@@ -502,7 +499,9 @@ class ServiceFeeLedger(Base):
 
     # 结算状态
     settlement_status: Mapped[str] = mapped_column(
-        String(20), default="待结算", comment="结算状态：待结算/已结算"
+        String(20),
+        default=SettlementStatus.UNSETTLED,
+        comment="结算状态：待结算/已结算",
     )
     settlement_date: Mapped[date | None] = mapped_column(Date, comment="结算日期")
 

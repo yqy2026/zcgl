@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError
 from src.models.asset import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
@@ -9,8 +10,6 @@ from src.services.ownership.service import OwnershipService
 # Constants
 TEST_OWNERSHIP_ID = "ownership_123"
 TEST_OWNERSHIP_NAME = "Test Ownership"
-
-
 
 
 @pytest.fixture
@@ -73,7 +72,7 @@ class TestOwnershipService:
             mock_query.count.return_value = 5  # 5 assets
 
             # Execute & Verify
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(OperationNotAllowedError) as excinfo:
                 service.delete_ownership(mock_db, id=TEST_OWNERSHIP_ID)
 
             assert "关联资产" in str(excinfo.value)

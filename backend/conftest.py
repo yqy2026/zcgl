@@ -29,7 +29,9 @@ if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 elif not os.getenv("DATABASE_URL"):
     # Fallback placeholder to satisfy settings import in non-DB tests
-    os.environ["DATABASE_URL"] = "postgresql+psycopg://user:pass@localhost:5432/zcgl_test"
+    os.environ["DATABASE_URL"] = (
+        "postgresql+psycopg://user:pass@localhost:5432/zcgl_test"
+    )
     TEST_DATABASE_URL = None
 
 # 设置测试环境必需的环境变量
@@ -279,7 +281,6 @@ def sample_asset(test_db, sample_asset_data):
     test_db.flush()  # Use flush instead of commit
     test_db.refresh(asset)
     return asset
-
 
 
 # =============================================================================

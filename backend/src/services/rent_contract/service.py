@@ -6,7 +6,7 @@ from fastapi import UploadFile
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session, selectinload
 
-from ...constants.rent_contract_constants import PaymentStatus
+from ...constants.rent_contract_constants import PaymentStatus, SettlementStatus
 from ...core.config import settings
 from ...core.enums import ContractStatus
 from ...core.exception_handler import (
@@ -88,7 +88,9 @@ class RentContractService:
         # V2: 关联资产
         if asset_ids:
             assets = db.query(Asset).filter(Asset.id.in_(asset_ids)).all()
-            sa_assets = [asset for asset in assets if hasattr(asset, "_sa_instance_state")]
+            sa_assets = [
+                asset for asset in assets if hasattr(asset, "_sa_instance_state")
+            ]
             if sa_assets:
                 setattr(db_contract, "assets", sa_assets)
 
@@ -141,7 +143,9 @@ class RentContractService:
         # V2: 更新资产关联
         if obj_in.asset_ids is not None:
             assets = db.query(Asset).filter(Asset.id.in_(obj_in.asset_ids)).all()
-            sa_assets = [asset for asset in assets if hasattr(asset, "_sa_instance_state")]
+            sa_assets = [
+                asset for asset in assets if hasattr(asset, "_sa_instance_state")
+            ]
             if sa_assets:
                 setattr(db_obj, "assets", sa_assets)
 
@@ -832,7 +836,9 @@ class RentContractService:
                 if start_date <= contract.end_date and end_date >= contract.start_date:
                     # 获取重叠资产的名称
                     overlapping_asset_names = [
-                        a.property_name if getattr(a, "property_name", None) else getattr(a, "name", None)
+                        a.property_name
+                        if getattr(a, "property_name", None)
+                        else getattr(a, "name", None)
                         for a in contract.assets
                         if a.id in overlapping_assets
                     ]
@@ -953,7 +959,7 @@ class RentContractService:
         service_fee.paid_rent_amount = ledger.paid_amount
         service_fee.fee_rate = contract.service_fee_rate
         service_fee.fee_amount = fee_amount
-        service_fee.settlement_status = "待结算"
+        service_fee.settlement_status = SettlementStatus.UNSETTLED
         service_fee.notes = (
             f"自动生成：基于租金台账 {ledger.year_month} 实收 {ledger.paid_amount}"
         )
@@ -1061,8 +1067,9 @@ class RentContractService:
         rate = (Decimal(str(renewed)) / Decimal(str(total_ended))) * 100
         return rate.quantize(Decimal("0.00"))
 
-
-    def get_contract_by_id(self, db: Session, *, contract_id: str) -> RentContract | None:
+    def get_contract_by_id(
+        self, db: Session, *, contract_id: str
+    ) -> RentContract | None:
         """获取合同详情"""
         return db.query(RentContract).filter(RentContract.id == contract_id).first()
 

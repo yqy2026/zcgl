@@ -15,12 +15,20 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.config import settings
-from ....core.exception_handler import bad_request, not_found, service_unavailable
+from ....core.exception_handler import (
+    BusinessValidationError,
+    bad_request,
+    not_found,
+    service_unavailable,
+)
 from ....core.response_handler import success_response
 from ....database import get_db
+from ....middleware.auth import get_current_active_user
+from ....models.auth import User
 from ....models.pdf_import_session import PDFImportSession, SessionStatus
 from ....services.document.pdf_import_service import PDFImportService
 from ....services.document.processing_tracker import BatchStatusTracker
+from ....utils.file_security import generate_safe_filename
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +130,7 @@ async def batch_upload_pdfs(
     prefer_ocr: Annotated[bool, Form()] = False,
     prefer_vision: Annotated[bool, Form()] = False,
     auto_confirm: Annotated[bool, Form()] = False,
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
     批量上传 PDF 文件进行智能识别
@@ -171,7 +180,7 @@ async def batch_upload_pdfs(
     batch_id = _generate_batch_id()
 
     # 验证文件
-    valid_files: list[tuple[UploadFile, bytes, int]] = []
+    valid_files: list[tuple[UploadFile, bytes, int, str]] = []
     for file in files:
         if file.filename is None or not file.filename.lower().endswith(".pdf"):
             logger.warning(f"跳过非 PDF 文件: {file.filename}")
@@ -189,7 +198,15 @@ async def batch_upload_pdfs(
             )
             continue
 
-        valid_files.append((file, content, file_size))
+        try:
+            safe_filename = generate_safe_filename(
+                file.filename, prefix=batch_id, allowed_extensions=["pdf"]
+            )
+        except BusinessValidationError as e:
+            logger.warning(f"文件名不安全，已跳过: {file.filename} ({e})")
+            continue
+
+        valid_files.append((file, content, file_size, safe_filename))
 
     if not valid_files:
         raise bad_request("没有有效的 PDF 文件（请检查文件格式和大小）")
@@ -208,12 +225,12 @@ async def batch_upload_pdfs(
     service = PDFImportService()
     session_ids: list[str] = []
 
-    for file, content, file_size in valid_files:
+    for file, content, file_size, safe_filename in valid_files:
         try:
             # 保存临时文件
             temp_dir = "uploads/temp"
             os.makedirs(temp_dir, exist_ok=True)
-            temp_path = os.path.join(temp_dir, f"{batch_id}_{file.filename}")
+            temp_path = os.path.join(temp_dir, safe_filename)
 
             with open(temp_path, "wb") as f:
                 f.write(content)
@@ -280,7 +297,7 @@ async def batch_upload_pdfs(
 
 
 @router.get("/status/{batch_id}")
-async def get_batch_status(
+def get_batch_status(
     batch_id: str,
     db: Annotated[Session, Depends(get_db)],
 ) -> JSONResponse:
@@ -363,7 +380,7 @@ async def get_batch_status(
 
 
 @router.get("/list")
-async def list_batches(
+def list_batches(
     status_filter: str | None = None,
     limit: int = 20,
 ) -> JSONResponse:
@@ -476,7 +493,7 @@ async def cancel_batch(
 
 
 @router.delete("/cleanup")
-async def cleanup_completed_batches(
+def cleanup_completed_batches(
     older_than_hours: int = 24,
 ) -> JSONResponse:
     """
@@ -585,13 +602,18 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
                     else:
                         pending += 1
 
-        # 更新统计到 tracker
+        # 更新统计到 tracker（增量更新，避免重复累加）
         total = len(batch.get("session_ids", []))
-        tracker.update_progress(
-            batch_id,
-            processed=0,  # 已通过查询获取
-            failed=0,  # 已通过查询获取
-        )
+        current_processed = int(batch.get("processed", 0))
+        current_failed = int(batch.get("failed", 0))
+        delta_processed = max(0, completed - current_processed)
+        delta_failed = max(0, failed - current_failed)
+        if delta_processed or delta_failed:
+            tracker.update_progress(
+                batch_id,
+                processed=delta_processed,
+                failed=delta_failed,
+            )
 
         # 判断是否全部完成
         if completed + failed >= total:
@@ -617,7 +639,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 
 
 @router.get("/health")
-async def batch_health_check() -> JSONResponse:
+def batch_health_check() -> JSONResponse:
     """
     批处理系统健康检查
 

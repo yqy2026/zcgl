@@ -254,9 +254,15 @@ class BaseVisionAdapter(ContractExtractorInterface):
                     )
 
         # All retries exhausted
-        raise RuntimeError(
-            f"Vision API call failed after {max_attempts} attempts. "
-            f"Last error: {type(last_error).__name__}: {last_error}"
+        last_error_name = type(last_error).__name__ if last_error else "UnknownError"
+        raise ExternalServiceError(
+            message=f"Vision API call failed after {max_attempts} attempts",
+            service_name=self.provider_name,
+            service_error=last_error_name,
+            details={
+                "attempts": max_attempts,
+                "last_error": str(last_error) if last_error else None,
+            },
         ) from last_error
 
     def _parse_json(self, content: str) -> dict[str, Any]:

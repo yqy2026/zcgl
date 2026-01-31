@@ -8,6 +8,7 @@ import tempfile
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from src.config.excel_config import STANDARD_SHEET_NAME
@@ -82,7 +83,8 @@ async def import_excel(
         import_service = ExcelImportService(db)
 
         # 执行导入
-        result = await import_service.import_assets_from_excel(
+        result = await run_in_threadpool(
+            import_service.import_assets_from_excel,
             file_path=tmp_file_path,
             sheet_name=sheet_name,
             should_skip_errors=should_skip_errors,
@@ -213,7 +215,8 @@ async def _process_excel_import_async(
         import_service = ExcelImportService(db_session)
 
         # 执行导入
-        result = await import_service.import_assets_from_excel(
+        result = await run_in_threadpool(
+            import_service.import_assets_from_excel,
             file_path=file_path,
             sheet_name=STANDARD_SHEET_NAME,
             should_validate_data=request.should_validate_data,

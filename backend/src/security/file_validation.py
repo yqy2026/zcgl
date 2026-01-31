@@ -76,7 +76,10 @@ def validate_file_magic(
         return True, normalized_mime
 
     if detected_mime != normalized_mime:
-        return False, f"文件内容与声明类型不符：期望 {normalized_mime}，检测到 {detected_mime}"
+        return (
+            False,
+            f"文件内容与声明类型不符：期望 {normalized_mime}，检测到 {detected_mime}",
+        )
 
     return True, detected_mime
 

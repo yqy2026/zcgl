@@ -23,8 +23,6 @@ TEST_ASSET_ID = "asset_123"
 TEST_OWNERSHIP_ID = "ownership_123"
 
 
-
-
 @pytest.fixture
 def service():
     return RentContractService()
@@ -61,7 +59,9 @@ class TestRentContractService:
         assert result.contract_number == contract_number
         assert len(result.rent_terms) == 1
         assert result.rent_terms[0].monthly_rent == Decimal("1000")
-        assert any(asset.id == sample_asset_with_ownership.id for asset in result.assets)
+        assert any(
+            asset.id == sample_asset_with_ownership.id for asset in result.assets
+        )
 
     def test_update_contract(self, service, mock_db):
         # Prepare
@@ -170,7 +170,9 @@ class TestRentContractService:
         mock_query.all.return_value = [ledger1, ledger2]
 
         request = RentLedgerBatchUpdate(
-            ledger_ids=["1", "2"], payment_status=PaymentStatus.PAID, notes="Batch update"
+            ledger_ids=["1", "2"],
+            payment_status=PaymentStatus.PAID,
+            notes="Batch update",
         )
 
         # Execute

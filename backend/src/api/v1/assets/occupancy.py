@@ -20,7 +20,7 @@ router = APIRouter()
 
 
 @router.get("/rate", summary="计算出租率")
-async def calculate_occupancy_rate(
+def calculate_occupancy_rate(
     property_nature: str | None = Query(None, description="物业性质筛选"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     ownership_entity: str | None = Query(None, description="权属方筛选"),
@@ -99,7 +99,7 @@ async def calculate_occupancy_rate(
 
 
 @router.get("/analysis", summary="出租率分析")
-async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
+def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     出租率分析
 
@@ -110,7 +110,7 @@ async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
         logger.info("开始进行出租率分析")
 
         # 总体出租率
-        overall_rate = await calculate_occupancy_rate(db=db)
+        overall_rate = calculate_occupancy_rate(db=db)
 
         if not overall_rate["success"]:
             raise bad_request(overall_rate["message"])
@@ -180,7 +180,7 @@ async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
 
 
 @router.get("/trends", summary="出租率趋势")
-async def get_occupancy_trends(
+def get_occupancy_trends(
     months: int = Query(12, ge=1, le=36, description="分析月数"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:

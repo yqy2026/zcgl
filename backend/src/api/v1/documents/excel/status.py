@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get(
     "/status/{task_id}", response_model=ExcelStatusResponse, summary="获取任务状态"
 )
-async def get_excel_task_status(
+def get_excel_task_status(
     task_id: str, db: Session = Depends(get_db)
 ) -> ExcelStatusResponse:
     """
@@ -56,7 +56,7 @@ async def get_excel_task_status(
 
 
 @router.get("/history", summary="获取Excel操作历史")
-async def get_excel_history(
+def get_excel_history(
     task_type: str | None = Query(None, description="任务类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     page: int = Query(1, ge=1, description="页码"),

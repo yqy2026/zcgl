@@ -2,14 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError
 from src.models.organization import Organization
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService
 
 TEST_ORG_ID = "org_123"
 TEST_PARENT_ID = "org_root"
-
-
 
 
 @pytest.fixture
@@ -75,7 +74,7 @@ class TestOrganizationService:
             # Mock _would_create_cycle to return True
             service._would_create_cycle = MagicMock(return_value=True)
 
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(OperationNotAllowedError) as excinfo:
                 service.update_organization(mock_db, org_id=TEST_ORG_ID, obj_in=obj_in)
 
             assert "不能将组织移动到其子组织下" in str(excinfo.value)
@@ -90,7 +89,7 @@ class TestOrganizationService:
             ):
                 # Returns children
 
-                with pytest.raises(ValueError) as excinfo:
+                with pytest.raises(OperationNotAllowedError) as excinfo:
                     service.delete_organization(mock_db, org_id=TEST_ORG_ID)
 
                 assert "子组织" in str(excinfo.value)

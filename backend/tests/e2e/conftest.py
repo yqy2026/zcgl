@@ -66,7 +66,10 @@ def test_database_url():
 def engine(test_database_url):
     """Create database engine for tests."""
     if not test_database_url:
-        pytest.skip("E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required", allow_module_level=True)
+        pytest.skip(
+            "E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required",
+            allow_module_level=True,
+        )
 
     if not test_database_url.startswith("postgresql"):
         raise RuntimeError("测试必须使用 PostgreSQL")

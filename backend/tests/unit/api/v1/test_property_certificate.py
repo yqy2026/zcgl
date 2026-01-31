@@ -19,12 +19,8 @@ from fastapi import status
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already bypasses authentication
+    return {"Authorization": "Bearer mocked_token"}
 
 
 # ============================================================================
@@ -41,9 +37,9 @@ class TestUploadCertificate:
         # 实际测试可能需要mock文件上传
         pass
 
-    def test_upload_certificate_unauthorized(self, client):
+    def test_upload_certificate_unauthorized(self, unauthenticated_client):
         """测试未授权上传"""
-        response = client.post("/api/v1/property-certificates/upload")
+        response = unauthenticated_client.post("/api/v1/property-certificates/upload")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_upload_certificate_no_file(self, client, admin_user_headers):

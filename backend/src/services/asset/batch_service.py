@@ -277,29 +277,18 @@ class AssetBatchService:
         # 使用事务管理批量操作
         try:
             for asset_id in asset_ids:
-                try:
-                    with self.db.begin_nested():
-                        asset = asset_crud.get(db=self.db, id=asset_id)
-                        if not asset:
-                            result.errors.append(
-                                {"asset_id": asset_id, "error": "资产不存在"}
-                            )
-                            result.failed_count += 1
-                            continue
+                with self.db.begin_nested():
+                    asset = asset_crud.get(db=self.db, id=asset_id)
+                    if not asset:
+                        result.errors.append(
+                            {"asset_id": asset_id, "error": "资产不存在"}
+                        )
+                        result.failed_count += 1
+                        continue
 
-                        asset_crud.remove(db=self.db, id=asset_id, commit=False)
-                        result.success_count += 1
-                except Exception as e:
-                    result.errors.append(
-                        {
-                            "asset_id": asset_id,
-                            "error": str(e),
-                            "error_type": type(e).__name__,
-                        }
-                    )
-                    result.failed_count += 1
+                    asset_crud.remove(db=self.db, id=asset_id, commit=False)
+                    result.success_count += 1
 
-            # 提交事务
             self.db.commit()
             logger.info(
                 f"批量删除完成: 成功={result.success_count}, 失败={result.failed_count}"
@@ -307,7 +296,14 @@ class AssetBatchService:
             return result
 
         except Exception as e:
-            # 回滚事务
+            result.errors.append(
+                {
+                    "asset_id": asset_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+            )
+            result.failed_count += 1
             self.db.rollback()
             logger.error(f"批量删除失败，已回滚: {str(e)}")
             raise

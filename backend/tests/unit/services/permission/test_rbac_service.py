@@ -4,7 +4,6 @@ RBAC服务单元测试
 测试 RBACService 的角色管理、权限管理、用户角色分配等功能
 """
 
-import json
 from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
@@ -24,8 +23,6 @@ from src.services.permission.rbac_service import RBACService
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 
 
 @pytest.fixture
@@ -154,7 +151,6 @@ class TestCreateRole:
             description="无权限角色",
             level=1,
             category="business",
-            permission_ids=None,  # 无权限
         )
 
         mock_query = Mock()
@@ -544,7 +540,7 @@ class TestCreatePermission:
 
         permission = rbac_service.create_permission(perm_data, created_by="admin")
 
-        assert permission.conditions == json.dumps(conditions)
+        assert permission.conditions == conditions
 
 
 # ============================================================================

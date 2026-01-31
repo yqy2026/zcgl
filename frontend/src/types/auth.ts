@@ -66,8 +66,6 @@ export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   permissions: Permission[];
-  token: string | null;
-  refreshToken: string | null;
   loading: boolean;
   error: string | null;
 }

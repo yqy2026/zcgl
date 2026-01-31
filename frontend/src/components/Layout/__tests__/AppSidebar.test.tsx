@@ -1,11 +1,11 @@
 /**
  * AppSidebar 组件测试
  * 测试应用侧边栏组件
- * 增强版本 - 添加更全面的测试用例
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 interface SiderMockProps {
   children?: React.ReactNode;
@@ -17,31 +17,48 @@ interface SiderMockProps {
 interface MenuItemMock {
   key: string;
   label?: React.ReactNode;
+  children?: MenuItemMock[];
 }
 
 interface MenuMockProps {
   selectedKeys?: string[];
   defaultOpenKeys?: string[];
   items?: MenuItemMock[];
-  onClick?: () => void;
+  onClick?: (info: { key: string }) => void;
   mode?: string;
   theme?: string;
   style?: React.CSSProperties;
 }
 
-interface TypographyTextMockProps {
-  children?: React.ReactNode;
-  strong?: boolean;
-  style?: React.CSSProperties;
-}
+const navigateMock = vi.fn();
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({
     pathname: '/dashboard',
   }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }));
+
+const renderMenuItems = (items: MenuItemMock[] | undefined, onClick?: MenuMockProps['onClick']) =>
+  items?.map(item => (
+    <div key={item.key}>
+      <div
+        data-menu-key={item.key}
+        role="button"
+        tabIndex={0}
+        onClick={() => onClick?.({ key: item.key })}
+        onKeyDown={event => {
+          if (event.key === 'Enter') {
+            onClick?.({ key: item.key });
+          }
+        }}
+      >
+        {item.label}
+      </div>
+      {item.children && <div data-testid={`submenu-${item.key}`}>{renderMenuItems(item.children, onClick)}</div>}
+    </div>
+  ));
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
@@ -68,24 +85,11 @@ vi.mock('antd', () => ({
       data-mode={mode}
       data-theme={theme}
       data-items-count={items?.length ?? 0}
-      onClick={onClick}
       style={style}
     >
-      {items &&
-        items.map((item, index) => (
-          <div key={index} data-menu-key={item.key}>
-            {item.label}
-          </div>
-        ))}
+      {renderMenuItems(items, onClick)}
     </div>
   ),
-  Typography: {
-    Text: ({ children, strong, style }: TypographyTextMockProps) => (
-      <span data-testid="text" data-strong={strong} style={style}>
-        {children}
-      </span>
-    ),
-  },
 }));
 
 // Mock icons
@@ -121,254 +125,49 @@ describe('AppSidebar - 组件导入测试', () => {
   });
 });
 
-describe('AppSidebar - 基础属性测试', () => {
+describe('AppSidebar - 渲染与交互测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockClear();
   });
 
-  it('应该支持collapsed属性', async () => {
+  it('应该渲染主要菜单项与子菜单项', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
+    render(<AppSidebar collapsed={false} />);
+
+    expect(screen.getByText('数据看板')).toBeInTheDocument();
+    expect(screen.getAllByText('资产管理').length).toBeGreaterThan(0);
+    expect(screen.getByText('资产列表')).toBeInTheDocument();
+    expect(screen.getByText('租赁管理')).toBeInTheDocument();
+    expect(screen.getByText('合同列表')).toBeInTheDocument();
+    expect(screen.getByText('系统管理')).toBeInTheDocument();
+    expect(screen.getByText('用户管理')).toBeInTheDocument();
   });
 
-  it('应该支持collapsed为true', async () => {
+  it('应该设置选中与展开的菜单Key', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: true });
-    expect(element).toBeTruthy();
-  });
-});
+    render(<AppSidebar collapsed={false} />);
 
-describe('AppSidebar - 菜单结构测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const menu = screen.getByTestId('menu');
+    expect(menu).toHaveAttribute('data-selected-keys', JSON.stringify(['/dashboard']));
+    expect(menu).toHaveAttribute('data-default-open-keys', JSON.stringify([]));
   });
 
-  it('应该包含数据看板菜单项', async () => {
+  it('折叠时隐藏Logo文本，展开时显示', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
+    const { rerender } = render(<AppSidebar collapsed={true} />);
+
+    expect(screen.getAllByText('资产管理')).toHaveLength(1);
+
+    rerender(<AppSidebar collapsed={false} />);
+    expect(screen.getAllByText('资产管理')).toHaveLength(2);
   });
 
-  it('应该包含资产管理菜单组', async () => {
+  it('点击菜单项应触发导航', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
+    render(<AppSidebar collapsed={false} />);
 
-  it('应该包含租赁管理菜单组', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含系统管理菜单组', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含权属方管理菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含项目管理菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 资产管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含资产列表菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含新增资产菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据导入菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据分析菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 租赁管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含合同列表菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含新建合同菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含PDF智能导入菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含租金台账菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含统计报表菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 系统管理子菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含用户管理菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含角色管理菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含组织架构菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含字典管理菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含数据模板菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含操作日志菜单项', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - Logo区域测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('折叠状态应该显示简化的Logo', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('展开状态应该显示完整的Logo', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 样式属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('Sider应该有固定的宽度', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('Sider应该有深色背景', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('Menu应该是暗色主题', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理undefined collapsed', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: undefined });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理null collapsed', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: null });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppSidebar - 路由匹配测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持根路径重定向到dashboard', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持资产详情页面路径', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持资产编辑页面路径', async () => {
-    const AppSidebar = (await import('../AppSidebar')).default;
-    const element = React.createElement(AppSidebar, { collapsed: false });
-    expect(element).toBeTruthy();
+    fireEvent.click(screen.getByText('数据看板'));
+    expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 });

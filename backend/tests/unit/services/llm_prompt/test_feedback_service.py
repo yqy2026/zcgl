@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.core.exception_handler import ResourceNotFoundError
 from src.services.llm_prompt.feedback_service import FeedbackService
 
 
@@ -31,13 +32,13 @@ class TestCollect:
         return FeedbackService(prompt_manager=mock_pm)
 
     @pytest.fixture
-    def mock_db(self, db_session):
-        """使用真实数据库会话"""
-        db_session.add = MagicMock(wraps=db_session.add)
-        db_session.commit = MagicMock(wraps=db_session.commit)
-        db_session.refresh = MagicMock(wraps=db_session.refresh)
-        return db_session
-
+    def mock_db(self):
+        """使用Mock数据库会话"""
+        mock_db = MagicMock()
+        mock_db.add = MagicMock()
+        mock_db.commit = MagicMock()
+        mock_db.refresh = MagicMock()
+        return mock_db
 
     @pytest.fixture
     def feedback_create(self):
@@ -59,12 +60,8 @@ class TestCollect:
         """测试模板不存在时抛出异常"""
         service.prompt_manager.get_by_id.return_value = None
 
-        with pytest.raises(ValueError, match="Prompt模板不存在"):
-            service.collect(
-                db=mock_db,
-                feedback_in=feedback_create,
-                user_id="user-001"
-            )
+        with pytest.raises(ResourceNotFoundError, match="Prompt"):
+            service.collect(db=mock_db, feedback_in=feedback_create, user_id="user-001")
 
 
 class TestGetByTemplate:
@@ -89,9 +86,7 @@ class TestGetByTemplate:
         mock_query.all.return_value = mock_feedbacks
 
         result = service.get_by_template(
-            db=mock_db,
-            template_id="template-123",
-            limit=100
+            db=mock_db, template_id="template-123", limit=100
         )
 
         assert len(result) == 3
@@ -107,9 +102,6 @@ class TestGetByTemplate:
         mock_query.limit.return_value = mock_query
         mock_query.all.return_value = []
 
-        result = service.get_by_template(
-            db=mock_db,
-            template_id="nonexistent-template"
-        )
+        result = service.get_by_template(db=mock_db, template_id="nonexistent-template")
 
         assert result == []

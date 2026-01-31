@@ -60,7 +60,9 @@ system_settings_router: APIRouter | None = None
 try:
     from .system.system_settings import router as system_settings_router
 except ImportError:  # pragma: no cover
-    logging.getLogger(__name__).debug("系统设置路由模块不存在，跳过")  # pragma: no cover
+    logging.getLogger(__name__).debug(
+        "系统设置路由模块不存在，跳过"
+    )  # pragma: no cover
 
 # 创建统一API路由器 - 版本化架构
 api_router = APIRouter()
@@ -81,7 +83,6 @@ api_router.include_router(
     tasks_router, tags=["任务管理"]
 )  # Remove prefix - router defines its own paths
 api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
-api_router.include_router(backup_router, prefix="/backup", tags=["数据备份和恢复"])
 api_router.include_router(admin_router, tags=["系统管理"])
 
 # REMOVED CONFLICTING ROUTER
@@ -119,6 +120,7 @@ api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
+api_router.include_router(backup_router, prefix="/system/backup", tags=["数据备份"])
 api_router.include_router(pdf_import_router, prefix="/pdf-import", tags=["PDF智能导入"])
 if pdf_batch_router is not None:
     api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])

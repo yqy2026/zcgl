@@ -65,9 +65,7 @@ class TestGet:
         """测试获取时解密敏感数据"""
         mock_db.query.return_value.filter.return_value.first.return_value = mock_contact
 
-        with patch.object(
-            crud.sensitive_data_handler, "decrypt_data"
-        ) as mock_decrypt:
+        with patch.object(crud.sensitive_data_handler, "decrypt_data") as mock_decrypt:
             crud.get(mock_db, "contact_123")
             mock_decrypt.assert_called_once()
 
@@ -211,9 +209,7 @@ class TestCreate:
             "phone": "13800138000",
         }
 
-        with patch.object(
-            crud.sensitive_data_handler, "encrypt_data"
-        ) as mock_encrypt:
+        with patch.object(crud.sensitive_data_handler, "encrypt_data") as mock_encrypt:
             mock_encrypt.return_value = contact_data
             with patch.object(crud.sensitive_data_handler, "decrypt_data"):
                 crud.create(mock_db, contact_data)

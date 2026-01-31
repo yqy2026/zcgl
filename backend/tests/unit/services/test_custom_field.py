@@ -2,13 +2,12 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import DuplicateResourceError
 from src.models.asset import AssetCustomField
 from src.schemas.asset import AssetCustomFieldCreate
 from src.services.custom_field.service import CustomFieldService
 
 TEST_FIELD_ID = "field_123"
-
-
 
 
 @pytest.fixture
@@ -45,7 +44,7 @@ class TestCustomFieldService:
             "src.crud.custom_field.custom_field_crud.get_by_field_name",
             return_value=AssetCustomField(),
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_custom_field(mock_db, obj_in=obj_in)
 
             assert "已存在" in str(excinfo.value)

@@ -47,7 +47,9 @@ class CollectionService:
             )
             .filter(
                 and_(
-                    RentLedger.payment_status.in_([PaymentStatus.UNPAID, PaymentStatus.PARTIAL]),
+                    RentLedger.payment_status.in_(
+                        [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
+                    ),
                     RentLedger.due_date < today,
                     RentLedger.data_status == "正常",
                 )
@@ -128,7 +130,9 @@ class CollectionService:
         if contract_id:
             query = query.filter(CollectionRecord.contract_id == contract_id)
         if collection_status:
-            query = query.filter(CollectionRecord.collection_status == collection_status)
+            query = query.filter(
+                CollectionRecord.collection_status == collection_status
+            )
 
         # 计算总数
         total = query.count()
@@ -152,9 +156,7 @@ class CollectionService:
     def get_by_id(self, db: Session, *, record_id: str) -> CollectionRecord | None:
         """获取单条催缴记录"""
         return (
-            db.query(CollectionRecord)
-            .filter(CollectionRecord.id == record_id)
-            .first()
+            db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
         )
 
     def get_ledger_by_id(self, db: Session, *, ledger_id: str) -> RentLedger | None:

@@ -77,7 +77,7 @@ class RouteBuilder {
     };
 
     // 根据是否懒加载选择不同的路由组件
-    if (lazy !== undefined && lazy !== null) {
+    if (lazy === true) {
       return (
         <LazyRoute
           {...routeProps}

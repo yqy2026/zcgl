@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, UploadFile
@@ -19,13 +20,25 @@ from ....utils import file_security
 
 router = APIRouter()
 
+def _resolve_attachment_path(asset_id: str, filename: str) -> Path:
+    """Resolve a safe attachment path under the asset directory."""
+    base_dir = Path("uploads") / "attachments" / asset_id
+    safe_name = file_security.secure_filename(filename)
+    file_path = (base_dir / safe_name).resolve()
+    base_dir_resolved = base_dir.resolve()
+    try:
+        file_path.relative_to(base_dir_resolved)
+    except ValueError:
+        raise InvalidRequestError("非法文件路径")
+    return file_path
+
 
 @router.post(
     "/{asset_id}/attachments",
     response_model=dict[str, Any],
     summary="上传资产附件",
 )
-async def upload_asset_attachments(
+def upload_asset_attachments(
     asset_id: str,
     files: list[UploadFile] = File(..., description="附件文件列表"),
     db: Session = Depends(get_db),
@@ -97,7 +110,7 @@ async def upload_asset_attachments(
     response_model=list[dict[str, Any]],
     summary="获取资产附件列表",
 )
-async def get_asset_attachments(
+def get_asset_attachments(
     asset_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -107,15 +120,15 @@ async def get_asset_attachments(
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
-        base_dir = os.path.join("uploads", "attachments", asset_id)
-        if not os.path.exists(base_dir):
+        base_dir = Path("uploads") / "attachments" / asset_id
+        if not base_dir.exists():
             return []
 
         attachments: list[dict[str, Any]] = []
         for filename in os.listdir(base_dir):
             if not filename.lower().endswith(".pdf"):
                 continue
-            file_path = os.path.join(base_dir, filename)
+            file_path = base_dir / filename
             stat = os.stat(file_path)
             attachments.append(
                 {
@@ -137,7 +150,7 @@ async def get_asset_attachments(
     "/{asset_id}/attachments/{filename}",
     summary="下载资产附件",
 )
-async def download_asset_attachment(
+def download_asset_attachment(
     asset_id: str,
     filename: str,
     db: Session = Depends(get_db),
@@ -151,11 +164,13 @@ async def download_asset_attachment(
         if not filename.lower().endswith(".pdf"):
             raise InvalidRequestError("仅支持PDF文件")
 
-        file_path = f"uploads/attachments/{asset_id}/{filename}"
-        if not os.path.exists(file_path):
+        file_path = _resolve_attachment_path(asset_id, filename)
+        if not file_path.exists():
             raise ResourceNotFoundError("attachment", filename)
 
-        return FileResponse(file_path, filename=filename, media_type="application/pdf")
+        return FileResponse(
+            str(file_path), filename=file_path.name, media_type="application/pdf"
+        )
     except BaseBusinessError:
         raise
     except Exception as e:
@@ -167,7 +182,7 @@ async def download_asset_attachment(
     response_model=dict[str, str],
     summary="删除资产附件",
 )
-async def delete_asset_attachment(
+def delete_asset_attachment(
     asset_id: str,
     attachment_id: str,
     db: Session = Depends(get_db),
@@ -178,8 +193,8 @@ async def delete_asset_attachment(
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
-        file_path = f"uploads/attachments/{asset_id}/{attachment_id}"
-        if not os.path.exists(file_path):
+        file_path = _resolve_attachment_path(asset_id, attachment_id)
+        if not file_path.exists():
             raise ResourceNotFoundError("attachment", attachment_id)
 
         os.remove(file_path)

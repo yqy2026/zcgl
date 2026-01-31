@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
     response_model=dict[str, AnyType],
     summary="上传合同附件",
 )
-async def upload_contract_attachment(
+def upload_contract_attachment(
     contract_id: str,
     file: UploadFile = File(..., description="附件文件"),
     file_type: str = Form("other", description="文件类型: contract_scan/id_card/other"),
@@ -63,7 +63,7 @@ async def upload_contract_attachment(
 @router.get(
     "/{contract_id}/attachments", response_model=list[Any], summary="获取合同附件列表"
 )
-async def get_contract_attachments(
+def get_contract_attachments(
     contract_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -102,7 +102,7 @@ async def get_contract_attachments(
 @router.get(
     "/{contract_id}/attachments/{attachment_id}/download", summary="下载合同附件"
 )
-async def download_contract_attachment(
+def download_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -143,7 +143,7 @@ async def download_contract_attachment(
     response_model=dict[str, Any],
     summary="删除合同附件",
 )
-async def delete_contract_attachment(
+def delete_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),

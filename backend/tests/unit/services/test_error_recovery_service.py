@@ -28,7 +28,7 @@ class TestErrorRecoveryService:
             operation="create_asset",
             user_id="user123",
             component="AssetService",
-            additional_data={"key": "value"}
+            additional_data={"key": "value"},
         )
 
         assert context.error_id == "ERR001"
@@ -39,8 +39,7 @@ class TestErrorRecoveryService:
     def test_recovery_strategy_initialization(self):
         """Test RecoveryStrategy initialization with defaults and custom values"""
         strategy = RecoveryStrategy(
-            name="test_strategy",
-            category=ErrorCategory.NETWORK
+            name="test_strategy", category=ErrorCategory.NETWORK
         )
 
         assert strategy.name == "test_strategy"
@@ -51,7 +50,7 @@ class TestErrorRecoveryService:
             name="custom",
             category=ErrorCategory.DATABASE,
             max_attempts=5,
-            backoff_multiplier=1.5
+            backoff_multiplier=1.5,
         )
         assert custom_strategy.max_attempts == 5
         assert custom_strategy.backoff_multiplier == 1.5
@@ -63,7 +62,7 @@ class TestErrorRecoveryService:
             attempts_made=2,
             total_time=1.5,
             strategy_used="retry_strategy",
-            recovery_actions=["retry_1", "retry_2"]
+            recovery_actions=["retry_1", "retry_2"],
         )
 
         assert result.success is True
@@ -105,7 +104,7 @@ class TestErrorRecoveryService:
             stack_trace="",
             severity=ErrorSeverity.MEDIUM,
             category=ErrorCategory.NETWORK,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         async def recovery_func():

@@ -33,6 +33,7 @@ class DuplicateAssetError(Exception):
 
 logger = logging.getLogger(__name__)
 
+
 def permission_required[**P, R](
     resource: str, action: str, resource_id_param: str | None = None
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
@@ -110,7 +111,9 @@ def permission_required[**P, R](
     return decorator
 
 
-def admin_required[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+def admin_required[**P, R](
+    func: Callable[P, Awaitable[R]],
+) -> Callable[P, Awaitable[R]]:
     """
     管理员权限装饰器
     """

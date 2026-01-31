@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from ...core.exception_handler import ConfigurationError
 from .base_vision_service import (
     VisionAPIError,
     handle_http_status_error,
@@ -125,11 +126,13 @@ class QwenVisionService:
             QwenVisionResponse with extracted content
 
         Raises:
-            RuntimeError: If API key not configured
+            ConfigurationError: If API key not configured
             httpx.HTTPStatusError: If API request fails
         """
         if not self.is_available:
-            raise RuntimeError("DASHSCOPE_API_KEY not configured")
+            raise ConfigurationError(
+                "DASHSCOPE_API_KEY not configured", config_key="DASHSCOPE_API_KEY"
+            )
 
         # Build multimodal content array (OpenAI-compatible format)
         content: list[dict[str, Any]] = []

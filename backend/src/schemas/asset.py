@@ -134,9 +134,6 @@ class AssetBase(BaseModel):
     version: int = Field(1, description="版本号")
     tags: str | None = Field(None, description="标签")
 
-    # 多租户支持
-    tenant_id: str | None = Field(None, max_length=50, description="租户ID")
-
     # 审核相关字段已简化
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
@@ -171,7 +168,9 @@ class AssetBase(BaseModel):
 
     @field_validator("contract_end_date")
     @classmethod
-    def validate_contract_dates(cls, v: date | None, info: ValidationInfo) -> date | None:
+    def validate_contract_dates(
+        cls, v: date | None, info: ValidationInfo
+    ) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("contract_start_date")  # pragma: no cover
@@ -184,7 +183,9 @@ class AssetBase(BaseModel):
 
     @field_validator("operation_agreement_end_date")
     @classmethod
-    def validate_agreement_dates(cls, v: date | None, info: ValidationInfo) -> date | None:
+    def validate_agreement_dates(
+        cls, v: date | None, info: ValidationInfo
+    ) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("operation_agreement_start_date")  # pragma: no cover
@@ -416,9 +417,6 @@ class AssetResponseBase(BaseModel):
     version: int = Field(1, description="版本号")
     tags: str | None = Field(None, description="标签")
 
-    # 多租户支持
-    tenant_id: str | None = Field(None, description="租户ID")
-
     # 审核相关字段
     audit_notes: str | None = Field(None, description="审核备注")
 
@@ -604,9 +602,9 @@ class AssetCustomFieldResponse(BaseModel):
 # ===== 批量操作相关模型 =====
 
 
-
 class BatchProcessingError(BaseModel):
     """批量处理错误详情"""
+
     id: str | None = Field(None, description="对象ID")
     row_index: int | None = Field(None, description="行号")
     field: str | None = Field(None, description="字段名")
@@ -616,6 +614,7 @@ class BatchProcessingError(BaseModel):
 
 class ValidationWarning(BaseModel):
     """验证警告详情"""
+
     field: str | None = Field(None, description="字段名")
     message: str = Field(..., description="警告信息")
     code: str | None = Field(None, description="警告代码")
@@ -703,7 +702,9 @@ class BatchCustomFieldUpdateRequest(BaseModel):
     """批量自定义字段更新请求模型"""
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
-    field_values: dict[str, str | int | float | bool | None] = Field(..., description="自定义字段值")
+    field_values: dict[str, str | int | float | bool | None] = Field(
+        ..., description="自定义字段值"
+    )
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 

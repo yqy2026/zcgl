@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Depends, Query
 
 from ....constants.message_constants import ErrorIDs
-from ....core.exception_handler import internal_error, not_found
+from ....core.exception_handler import ConfigurationError, internal_error, not_found
 from .collectors import (
     check_performance_alerts,
     collect_application_metrics,
@@ -39,10 +39,11 @@ except ImportError as e:
             "module": "system_monitoring",
         },
     )
-    raise RuntimeError(
+    raise ConfigurationError(
         "系统监控模块缺少必要依赖，无法启动。\n"
         "这表明应用程序安装不完整。请运行: poetry install 或 pip install -e .\n"
-        f"导入错误详情: {e}"
+        f"导入错误详情: {e}",
+        config_key="system_monitoring",
     )
 
 
@@ -50,7 +51,7 @@ router = APIRouter()
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
-async def get_system_metrics(
+def get_system_metrics(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> SystemMetrics:
     """获取当前系统性能指标"""
@@ -62,7 +63,7 @@ async def get_system_metrics(
     response_model=ApplicationMetrics,
     summary="获取应用性能指标",
 )
-async def get_application_metrics(
+def get_application_metrics(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> ApplicationMetrics:
     """获取应用性能指标"""
@@ -95,7 +96,7 @@ async def get_health_status(
 @router.get(
     "/metrics/history", response_model=list[SystemMetrics], summary="获取系统指标历史"
 )
-async def get_history(
+def get_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> list[SystemMetrics]:
@@ -105,7 +106,7 @@ async def get_history(
 
 
 @router.get("/alerts", response_model=list[PerformanceAlert], summary="获取性能告警")
-async def get_performance_alerts(
+def get_performance_alerts(
     level: str | None = Query(
         default=None, regex="^(info|warning|critical)$", description="告警级别过滤"
     ),
@@ -125,7 +126,7 @@ async def get_performance_alerts(
 
 
 @router.post("/alerts/{alert_id}/resolve", summary="解决告警")
-async def resolve_alert(
+def resolve_alert(
     alert_id: str,
     current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
@@ -179,7 +180,7 @@ async def get_monitoring_dashboard(
 
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
-async def trigger_metrics_collection(
+def trigger_metrics_collection(
     current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
     """手动触发一次指标收集"""
@@ -197,7 +198,7 @@ async def trigger_metrics_collection(
 
 
 @router.get("/encryption-status", summary="获取加密状态")
-async def get_encryption_status(
+def get_encryption_status(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """获取数据加密系统状态"""

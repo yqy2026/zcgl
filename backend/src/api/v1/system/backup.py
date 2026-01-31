@@ -34,7 +34,7 @@ if not os.path.exists(BACKUP_DIR):
 
 
 @router.post("/create", summary="创建数据备份")
-async def create_backup(
+def create_backup(
     backup_name: str | None = Query(None, description="备份名称，默认使用时间戳"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -77,7 +77,7 @@ async def create_backup(
 
 
 @router.get("/list[Any]", summary="获取备份列表")
-async def list_backups() -> dict[str, Any]:
+def list_backups() -> dict[str, Any]:
     """
     获取所有备份文件列表
 
@@ -105,7 +105,7 @@ async def list_backups() -> dict[str, Any]:
 
 
 @router.get("/download/{backup_name}", summary="下载备份文件")
-async def download_backup(backup_name: str) -> FileResponse:
+def download_backup(backup_name: str) -> FileResponse:
     """
     下载指定的备份文件
 
@@ -141,7 +141,7 @@ async def download_backup(backup_name: str) -> FileResponse:
 
 
 @router.post("/restore/{backup_name}", summary="恢复数据备份")
-async def restore_backup(
+def restore_backup(
     backup_name: str,
     confirm: bool = Query(False, description="确认恢复操作"),
     should_confirm: bool | None = Query(
@@ -202,7 +202,7 @@ async def restore_backup(
 
 
 @router.delete("/delete/{backup_name}", summary="删除备份文件")
-async def delete_backup(backup_name: str) -> dict[str, Any]:
+def delete_backup(backup_name: str) -> dict[str, Any]:
     """
     删除指定的备份文件
 
@@ -235,7 +235,7 @@ async def delete_backup(backup_name: str) -> dict[str, Any]:
 
 
 @router.get("/stats", summary="获取备份统计信息")
-async def get_backup_stats() -> dict[str, Any]:
+def get_backup_stats() -> dict[str, Any]:
     """
     获取备份统计信息
 
@@ -259,7 +259,7 @@ async def get_backup_stats() -> dict[str, Any]:
 
 
 @router.post("/validate/{backup_name}", summary="验证备份文件")
-async def validate_backup(backup_name: str) -> dict[str, Any]:
+def validate_backup(backup_name: str) -> dict[str, Any]:
     """
     验证备份文件的完整性
 
@@ -286,7 +286,7 @@ async def validate_backup(backup_name: str) -> dict[str, Any]:
 
 
 @router.post("/cleanup", summary="清理旧备份")
-async def cleanup_old_backups(
+def cleanup_old_backups(
     keep_count: int = Query(10, ge=1, le=100, description="保留的备份数量"),
 ) -> dict[str, Any]:
     """

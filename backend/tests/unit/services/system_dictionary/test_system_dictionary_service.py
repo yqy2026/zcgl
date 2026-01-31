@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from src.models.asset import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from src.services.system_dictionary.service import SystemDictionaryService
@@ -79,7 +80,7 @@ class TestCreateDictionary:
             "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code",
             return_value=mock_dictionary,
         ):
-            with pytest.raises(ValueError, match="字典代码.*已存在"):
+            with pytest.raises(DuplicateResourceError, match="字典项已存在"):
                 dictionary_service.create_dictionary(mock_db, obj_in=obj_in)
 
 
@@ -116,7 +117,7 @@ class TestUpdateDictionary:
         with patch(
             "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
         ):
-            with pytest.raises(ValueError, match="字典项不存在"):
+            with pytest.raises(ResourceNotFoundError, match="字典项不存在"):
                 dictionary_service.update_dictionary(
                     mock_db, id="nonexistent", obj_in=obj_in
                 )
@@ -149,7 +150,7 @@ class TestDeleteDictionary:
         with patch(
             "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
         ):
-            with pytest.raises(ValueError, match="字典项不存在"):
+            with pytest.raises(ResourceNotFoundError, match="字典项不存在"):
                 dictionary_service.delete_dictionary(mock_db, id="nonexistent")
 
 
@@ -193,7 +194,7 @@ class TestToggleActiveStatus:
         with patch(
             "src.crud.system_dictionary.system_dictionary_crud.get", return_value=None
         ):
-            with pytest.raises(ValueError, match="字典项不存在"):
+            with pytest.raises(ResourceNotFoundError, match="字典项不存在"):
                 dictionary_service.toggle_active_status(mock_db, id="nonexistent")
 
 

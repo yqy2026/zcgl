@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....schemas.auth import UserResponse
+from ....security.route_guards import debug_only
 from ....services import AuthService
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ router = APIRouter(tags=["Auth Debug"])
 
 
 @router.get("/test-features", summary="测试功能端点")
+@debug_only
 async def test_features() -> dict[str, Any]:
     """测试端点，验证功能可用性"""
     return {
@@ -33,6 +35,7 @@ async def test_features() -> dict[str, Any]:
 
 
 @router.get("/auth", summary="调试认证流程")
+@debug_only
 async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
     """调试认证流程，测试各个步骤"""
     try:
@@ -104,6 +107,7 @@ async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
 
 
 @router.get("/me", summary="调试ME端点")
+@debug_only
 async def test_me_debug(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, Any]:

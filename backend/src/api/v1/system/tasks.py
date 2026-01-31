@@ -37,7 +37,7 @@ router = APIRouter(prefix="/tasks", tags=["任务管理"])
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
-async def create_task(
+def create_task(
     task_in: TaskCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -64,7 +64,7 @@ async def create_task(
     response_model=APIResponse[PaginatedData[TaskResponse]],
     summary="获取任务列表",
 )
-async def get_tasks(
+def get_tasks(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     task_type: str | None = Query(None, description="任务类型筛选"),
@@ -121,7 +121,7 @@ async def get_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
-async def get_task(
+def get_task(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -137,7 +137,7 @@ async def get_task(
 
 
 @router.put("/{task_id}", response_model=TaskResponse, summary="更新任务")
-async def update_task(
+def update_task(
     task_id: str = Path(..., description="任务ID"),
     task_in: TaskUpdate = Body(...),
     db: Session = Depends(get_db),
@@ -156,7 +156,7 @@ async def update_task(
 
 
 @router.post("/{task_id}/cancel", response_model=TaskResponse, summary="取消任务")
-async def cancel_task(
+def cancel_task(
     task_id: str = Path(..., description="任务ID"),
     cancel_request: TaskCancelRequest | None = Body(None),
     db: Session = Depends(get_db),
@@ -179,7 +179,7 @@ async def cancel_task(
 
 
 @router.delete("/{task_id}", summary="删除任务")
-async def delete_task(
+def delete_task(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -201,7 +201,7 @@ async def delete_task(
     response_model=list[TaskHistoryResponse],
     summary="获取任务历史",
 )
-async def get_task_history(
+def get_task_history(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -225,7 +225,7 @@ async def get_task_history(
 
 
 @router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
-async def get_task_statistics(
+def get_task_statistics(
     user_id: str | None = Query(None, description="用户ID筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -241,7 +241,7 @@ async def get_task_statistics(
 
 
 @router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
-async def get_running_tasks(
+def get_running_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[TaskResponse]:
@@ -262,7 +262,7 @@ async def get_running_tasks(
 
 
 @router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
-async def get_recent_tasks(
+def get_recent_tasks(
     page_size: int = Query(10, ge=1, le=50, description="返回数量"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -287,7 +287,7 @@ async def get_recent_tasks(
     response_model=ExcelTaskConfigResponse,
     summary="创建Excel任务配置",
 )
-async def create_excel_config(
+def create_excel_config(
     config_in: ExcelTaskConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -309,7 +309,7 @@ async def create_excel_config(
     response_model=list[ExcelTaskConfigResponse],
     summary="获取Excel配置列表",
 )
-async def get_excel_configs(
+def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
@@ -331,7 +331,7 @@ async def get_excel_configs(
     response_model=ExcelTaskConfigResponse,
     summary="获取默认Excel配置",
 )
-async def get_default_excel_config(
+def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
@@ -357,7 +357,7 @@ async def get_default_excel_config(
     response_model=ExcelTaskConfigResponse,
     summary="获取Excel配置详情",
 )
-async def get_excel_config(
+def get_excel_config(
     config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
 ) -> ExcelTaskConfigResponse:
     """
@@ -377,7 +377,7 @@ async def get_excel_config(
     response_model=ExcelTaskConfigResponse,
     summary="更新Excel配置",
 )
-async def update_excel_config(
+def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
     config_in: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
@@ -404,7 +404,7 @@ async def update_excel_config(
 
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
-async def delete_excel_config(
+def delete_excel_config(
     config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
 ) -> dict[str, str]:
     """
@@ -425,7 +425,7 @@ async def delete_excel_config(
 
 
 @router.get("/cleanup", summary="清理过期任务")
-async def cleanup_old_tasks(
+def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
     is_dry_run: bool = Query(False, description="是否为试运行"),
     db: Session = Depends(get_db),

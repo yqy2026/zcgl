@@ -10,11 +10,11 @@ Auth API 集成测试 - 测试重构后的认证模块
 """
 
 import pytest
+from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.skip(
     reason="Integration API tests require real JWT authentication setup"
 )
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -310,7 +310,7 @@ class TestModuleImports:
 
     def test_auth_modules_imports(self):
         """测试所有auth子模块可以正确导入"""
-        from src.api.v1.auth_modules import (
+        from src.api.v1.auth.auth_modules import (
             audit,
             authentication,
             security,

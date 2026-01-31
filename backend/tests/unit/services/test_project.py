@@ -2,14 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
 from src.models.asset import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
 from src.services.project.service import ProjectService
 
 TEST_PROJECT_ID = "proj_123"
 TEST_USER_ID = "user_123"
-
-
 
 
 @pytest.fixture
@@ -40,7 +39,7 @@ class TestProjectService:
         obj_in = ProjectCreate(name="Test Project", code="PJ2501002")
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=Project()):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_project(mock_db, obj_in=obj_in)
 
             assert "已存在" in str(excinfo.value)
@@ -77,7 +76,7 @@ class TestProjectService:
 
     def test_delete_project_with_assets(self, service, mock_db):
         with patch("src.crud.project.project_crud.get_asset_count", return_value=5):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(OperationNotAllowedError) as excinfo:
                 service.delete_project(mock_db, project_id=TEST_PROJECT_ID)
 
             assert "包含 5 个资产" in str(excinfo.value)

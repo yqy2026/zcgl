@@ -8,6 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.core.exception_handler import (
+    DuplicateResourceError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from src.models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from src.schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
 from src.services.llm_prompt.prompt_manager import PromptManager
@@ -21,8 +26,6 @@ from src.services.llm_prompt.prompt_manager import PromptManager
 def prompt_manager():
     """创建PromptManager实例"""
     return PromptManager()
-
-
 
 
 @pytest.fixture
@@ -374,7 +377,7 @@ class TestCreatePrompt:
     def test_create_prompt_with_existing_name_raises_error(
         self, prompt_manager, mock_db, sample_prompt_create_data
     ):
-        """TC-PM-017: 名称已存在时抛出ValueError"""
+        """TC-PM-017: 名称已存在时抛出DuplicateResourceError"""
         # Arrange
         existing_prompt = MagicMock(spec=PromptTemplate)
         mock_query = MagicMock()
@@ -383,7 +386,7 @@ class TestCreatePrompt:
         mock_query.first.return_value = existing_prompt
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Prompt名称已存在"):
+        with pytest.raises(DuplicateResourceError, match="Prompt已存在"):
             prompt_manager.create_prompt(mock_db, sample_prompt_create_data)
 
     def test_create_prompt_initial_version_v1_0_0(
@@ -451,7 +454,7 @@ class TestCreatePrompt:
             provider="qwen",
             system_prompt="System",
             user_prompt_template="User",
-            few_shot_examples=None,
+            few_shot_examples={},
         )
 
         mock_query = MagicMock()
@@ -497,7 +500,7 @@ class TestCreatePrompt:
             provider="qwen",
             system_prompt="System",
             user_prompt_template="User",
-            tags=None,
+            tags=[],
         )
 
         mock_query = MagicMock()
@@ -754,17 +757,15 @@ class TestUpdatePrompt:
         mock_db.commit.assert_called()
 
     def test_update_prompt_not_found_raises_error(self, prompt_manager, mock_db):
-        """TC-PM-036: Prompt不存在时抛出ValueError"""
+        """TC-PM-036: Prompt不存在时抛出ResourceNotFoundError"""
         # Arrange
         template_id = "non-existent"
         update_data = PromptTemplateUpdate(system_prompt="New prompt")
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value.first.return_value = None
+        mock_db.query.return_value.get.return_value = None
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Prompt不存在"):
+        with pytest.raises(ResourceNotFoundError, match="Prompt"):
             prompt_manager.update_prompt(mock_db, template_id, update_data)
 
     def test_update_prompt_increments_version(
@@ -1083,12 +1084,9 @@ class TestActivatePrompt:
         """TC-PM-053: 成功激活Prompt"""
         # Arrange
         template_id = "prompt-123"
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_update_result.update.return_value = None
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         result = prompt_manager.activate_prompt(mock_db, template_id)
@@ -1098,15 +1096,13 @@ class TestActivatePrompt:
         assert result.status == PromptStatus.ACTIVE
 
     def test_activate_prompt_not_found_raises_error(self, prompt_manager, mock_db):
-        """TC-PM-054: Prompt不存在时抛出ValueError"""
+        """TC-PM-054: Prompt不存在时抛出ResourceNotFoundError"""
         # Arrange
         template_id = "non-existent"
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value.first.return_value = None
+        mock_db.query.return_value.get.return_value = None
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Prompt不存在"):
+        with pytest.raises(ResourceNotFoundError, match="Prompt"):
             prompt_manager.activate_prompt(mock_db, template_id)
 
     def test_activate_prompt_archives_others(
@@ -1117,17 +1113,15 @@ class TestActivatePrompt:
         template_id = "prompt-123"
         sample_prompt_template.doc_type = "CONTRACT"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         prompt_manager.activate_prompt(mock_db, template_id)
 
         # Assert
-        mock_update_result.update.assert_called()
+        mock_query.filter.return_value.update.assert_called_once()
 
     def test_activate_prompt_sets_status_active(
         self, prompt_manager, mock_db, sample_prompt_template
@@ -1135,11 +1129,9 @@ class TestActivatePrompt:
         """TC-PM-056: 设置状态为ACTIVE"""
         # Arrange
         template_id = "prompt-123"
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         result = prompt_manager.activate_prompt(mock_db, template_id)
@@ -1153,11 +1145,9 @@ class TestActivatePrompt:
         """TC-PM-057: 更新时设置updated_at"""
         # Arrange
         template_id = "prompt-123"
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         prompt_manager.activate_prompt(mock_db, template_id)
@@ -1173,17 +1163,15 @@ class TestActivatePrompt:
         template_id = "prompt-123"
         sample_prompt_template.doc_type = "CONTRACT"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         prompt_manager.activate_prompt(mock_db, template_id)
 
         # Assert
-        mock_update_result.update.assert_called()
+        mock_query.filter.return_value.update.assert_called_once()
 
     def test_activate_prompt_excludes_current(
         self, prompt_manager, mock_db, sample_prompt_template
@@ -1191,17 +1179,15 @@ class TestActivatePrompt:
         """TC-PM-059: 归档时排除当前Prompt"""
         # Arrange
         template_id = "prompt-123"
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         prompt_manager.activate_prompt(mock_db, template_id)
 
         # Assert
-        mock_update_result.update.assert_called()
+        mock_query.filter.return_value.update.assert_called_once()
 
     def test_activate_prompt_from_draft_status(self, prompt_manager, mock_db):
         """TC-PM-060: 从DRAFT状态激活"""
@@ -1212,9 +1198,9 @@ class TestActivatePrompt:
         draft_prompt.status = PromptStatus.DRAFT
         draft_prompt.doc_type = "CONTRACT"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = draft_prompt
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = draft_prompt
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         result = prompt_manager.activate_prompt(mock_db, template_id)
@@ -1231,11 +1217,9 @@ class TestActivatePrompt:
         archived_prompt.status = PromptStatus.ARCHIVED
         archived_prompt.doc_type = "CONTRACT"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            archived_prompt
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = archived_prompt
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         result = prompt_manager.activate_prompt(mock_db, template_id)
@@ -1249,11 +1233,9 @@ class TestActivatePrompt:
         """TC-PM-062: 验证commit被调用"""
         # Arrange
         template_id = "prompt-123"
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_prompt_template
-        )
-        mock_update_result = MagicMock()
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.update.return_value = mock_update_result
+        mock_query = mock_db.query.return_value
+        mock_query.get.return_value = sample_prompt_template
+        mock_query.filter.return_value.update.return_value = 1
 
         # Act
         prompt_manager.activate_prompt(mock_db, template_id)
@@ -1278,10 +1260,13 @@ class TestRollbackToVersion:
         template_id = "prompt-123"
         version_id = "version-123"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
         sample_prompt_template.version = "v1.2.0"
         sample_prompt_version.version = "v1.0.0"
 
@@ -1293,51 +1278,58 @@ class TestRollbackToVersion:
         mock_db.commit.assert_called()
 
     def test_rollback_version_not_found_raises_error(self, prompt_manager, mock_db):
-        """TC-PM-064: 版本不存在时抛出ValueError"""
+        """TC-PM-064: 版本不存在时抛出ResourceNotFoundError"""
         # Arrange
         template_id = "prompt-123"
         version_id = "non-existent"
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value.first.return_value = None
+        version_query = MagicMock()
+        version_query.get.return_value = None
+        mock_db.query.side_effect = lambda model: version_query
 
         # Act & Assert
-        with pytest.raises(ValueError, match="版本不存在或不匹配"):
+        with pytest.raises(ResourceNotFoundError, match="Prompt版本"):
             prompt_manager.rollback_to_version(mock_db, template_id, version_id)
 
-    def test_rollback_version_mismatch_raises_error(
-        self, prompt_manager, mock_db, sample_prompt_version
-    ):
-        """TC-PM-065: 版本不匹配时抛出ValueError"""
+    def test_rollback_version_mismatch_raises_error(self, prompt_manager, mock_db):
+        """TC-PM-065: 版本不匹配时抛出ResourceConflictError"""
         # Arrange
         template_id = "prompt-123"
         version_id = "version-456"
 
-        sample_prompt_version.template_id = "prompt-789"  # 不同的template
+        mismatch_version = MagicMock(spec=PromptVersion)
+        mismatch_version.template_id = "prompt-789"
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value.first.return_value = sample_prompt_version
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = mismatch_version
+        template_query.get.return_value = MagicMock(spec=PromptTemplate)
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="版本不存在或不匹配"):
+        with pytest.raises(ResourceConflictError, match="版本不存在或不匹配"):
             prompt_manager.rollback_to_version(mock_db, template_id, version_id)
 
-    def test_rollback_template_not_found_raises_error(
-        self, prompt_manager, mock_db, sample_prompt_version
-    ):
-        """TC-PM-066: Prompt不存在时抛出ValueError"""
+    def test_rollback_template_not_found_raises_error(self, prompt_manager, mock_db):
+        """TC-PM-066: Prompt不存在时抛出ResourceNotFoundError"""
         # Arrange
         template_id = "non-existent"
         version_id = "version-123"
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value.first.side_effect = [sample_prompt_version, None]
+        matching_version = MagicMock(spec=PromptVersion)
+        matching_version.template_id = template_id
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = matching_version
+        template_query.get.return_value = None
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Prompt不存在"):
+        with pytest.raises(ResourceNotFoundError, match="Prompt"):
             prompt_manager.rollback_to_version(mock_db, template_id, version_id)
 
     def test_rollback_creates_new_version(
@@ -1348,10 +1340,13 @@ class TestRollbackToVersion:
         template_id = "prompt-123"
         version_id = "version-123"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
         sample_prompt_template.version = "v1.2.0"
         sample_prompt_version.version = "v1.0.0"
 
@@ -1369,10 +1364,13 @@ class TestRollbackToVersion:
         template_id = "prompt-123"
         version_id = "version-123"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
         sample_prompt_template.version = "v1.2.0"
         sample_prompt_version.version = "v1.0.0"
 
@@ -1393,10 +1391,13 @@ class TestRollbackToVersion:
         sample_prompt_version.system_prompt = "Old system prompt"
         sample_prompt_template.system_prompt = "New system prompt"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act
         prompt_manager.rollback_to_version(mock_db, template_id, version_id)
@@ -1415,10 +1416,13 @@ class TestRollbackToVersion:
         sample_prompt_version.user_prompt_template = "Old user template"
         sample_prompt_template.user_prompt_template = "New user template"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act
         prompt_manager.rollback_to_version(mock_db, template_id, version_id)
@@ -1435,10 +1439,13 @@ class TestRollbackToVersion:
         version_id = "version-123"
         sample_prompt_version.version = "v1.0.0"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act
         prompt_manager.rollback_to_version(mock_db, template_id, version_id)
@@ -1454,10 +1461,13 @@ class TestRollbackToVersion:
         template_id = "prompt-123"
         version_id = "version-123"
 
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            sample_prompt_version,
-            sample_prompt_template,
-        ]
+        version_query = MagicMock()
+        template_query = MagicMock()
+        version_query.get.return_value = sample_prompt_version
+        template_query.get.return_value = sample_prompt_template
+        mock_db.query.side_effect = (
+            lambda model: version_query if model == PromptVersion else template_query
+        )
 
         # Act
         prompt_manager.rollback_to_version(mock_db, template_id, version_id)

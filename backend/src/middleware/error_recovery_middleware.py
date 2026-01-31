@@ -28,6 +28,7 @@ from ..services.error_recovery_service import (
 
 logger = logging.getLogger(__name__)
 
+
 class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
     """错误恢复中间件"""
 

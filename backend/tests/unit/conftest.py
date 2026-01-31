@@ -28,7 +28,10 @@ def test_database_url():
 def engine(test_database_url):
     """Create database engine for unit tests."""
     if not test_database_url:
-        pytest.skip("TEST_DATABASE_URL is required for db-backed unit tests", allow_module_level=True)
+        pytest.skip(
+            "TEST_DATABASE_URL is required for db-backed unit tests",
+            allow_module_level=True,
+        )
 
     engine = create_engine(test_database_url, pool_pre_ping=True)
     yield engine
@@ -88,6 +91,22 @@ def test_db(db_session):
     return db_session
 
 
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    query = MagicMock()
+    query.filter.return_value = query
+    query.first.return_value = None
+    query.all.return_value = []
+    query.count.return_value = 0
+    db.query.return_value = query
+    db.add = MagicMock()
+    db.commit = MagicMock()
+    db.refresh = MagicMock()
+    db.delete = MagicMock()
+    db.flush = MagicMock()
+    db.execute = MagicMock()
+    return db
 
 
 @pytest.fixture(autouse=True)

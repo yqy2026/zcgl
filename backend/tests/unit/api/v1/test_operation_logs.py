@@ -14,12 +14,8 @@ from fastapi import status
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already bypasses authentication
+    return {"Authorization": "Bearer mocked_token"}
 
 
 class TestOperationLogsAPI:
@@ -53,7 +49,7 @@ class TestOperationLogsAPI:
         )
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
-    def test_unauthorized_access(self, client):
+    def test_unauthorized_access(self, unauthenticated_client):
         """测试未授权访问"""
-        response = client.get("/api/v1/operation-logs/")
+        response = unauthenticated_client.get("/api/v1/operation-logs/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

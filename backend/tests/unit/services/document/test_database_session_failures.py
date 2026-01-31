@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
+from src.core.exception_handler import InternalServerError
 from src.services.document.pdf_import_service import PDFImportService
 
 
@@ -209,7 +210,7 @@ class TestDatabaseSessionManagement:
         }
 
         # 系统错误应该抛出异常而不是返回错误字典
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(InternalServerError) as exc_info:
             await service.confirm_import(mock_db, session_id, confirmed_data, user_id=1)
 
         assert "Database error creating contract" in str(exc_info.value)

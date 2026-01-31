@@ -128,9 +128,7 @@ class OwnershipFinancialService:
         ) or 0
 
         # 计算收款率
-        payment_rate = (
-            float(paid_amount / due_amount * 100) if due_amount > 0 else 0.0
-        )
+        payment_rate = float(paid_amount / due_amount * 100) if due_amount > 0 else 0.0
 
         logger.info(
             f"计算权属方财务汇总: ownership={ownership_id}, "

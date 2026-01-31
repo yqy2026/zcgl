@@ -4,22 +4,25 @@ Comprehensive Unit Tests for Rent Contract API Routes (src/api/v1/rent_contract.
 This test module covers all endpoints in the rent_contract router to achieve 70%+ coverage.
 """
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
 pytestmark = pytest.mark.api
 
 from src.constants.rent_contract_constants import PaymentStatus
+from src.core.exception_handler import (
+    BusinessValidationError,
+    PermissionDeniedError,
+    ResourceNotFoundError,
+)
 
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 
 
 @pytest.fixture
@@ -88,14 +91,13 @@ def mock_contract():
     contract.total_deposit = Decimal("0")
     contract.monthly_rent_base = None
     contract.payment_cycle = "monthly"
-    contract.contract_status = "active"
+    contract.contract_status = "ACTIVE"
     contract.payment_terms = None
     contract.contract_notes = None
     contract.data_status = "正常"
     contract.version = 1
     contract.created_at = datetime.now()
     contract.updated_at = datetime.now()
-    contract.tenant_id = None
     return contract
 
 
@@ -199,13 +201,13 @@ class TestCreateContract:
 
         mock_asset_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             create_contract(
                 db=mock_db, contract_in=contract_in, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "关联的资产不存在" in exc_info.value.detail
+        assert "asset不存在" in str(exc_info.value)
 
     @patch("src.api.v1.rent_contract.contracts.asset_crud")
     @patch("src.api.v1.rent_contract.contracts.ownership")
@@ -236,13 +238,13 @@ class TestCreateContract:
         mock_asset_crud.get.return_value = MagicMock()
         mock_ownership.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             create_contract(
                 db=mock_db, contract_in=contract_in, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "关联的权属方不存在" in exc_info.value.detail
+        assert "ownership不存在" in str(exc_info.value)
 
 
 # ============================================================================
@@ -276,13 +278,13 @@ class TestGetContract:
 
         mock_rent_contract.get_with_details.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             get_contract(
                 contract_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "合同不存在" in exc_info.value.detail
+        assert "contract不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -315,12 +317,11 @@ class TestGetContracts:
             contract.end_date = date(2024, 12, 31)
             contract.total_deposit = Decimal("0")
             contract.payment_cycle = "monthly"
-            contract.contract_status = "active"
+            contract.contract_status = "ACTIVE"
             contract.data_status = "正常"
             contract.version = 1
             contract.created_at = datetime.now()
             contract.updated_at = datetime.now()
-            contract.tenant_id = None
             contract.asset_ids = []
             contract.owner_name = None
             contract.owner_contact = None
@@ -342,7 +343,7 @@ class TestGetContracts:
             db=mock_db,
             current_user=mock_current_user,
             page=1,
-            limit=10,
+            page_size=10,
             contract_number=None,
             tenant_name=None,
             asset_id=None,
@@ -352,9 +353,11 @@ class TestGetContracts:
             end_date=None,
         )
 
-        assert result.total == 3
-        assert result.page == 1
-        assert result.limit == 10
+        body = json.loads(result.body.decode())
+        pagination = body["data"]["pagination"]
+        assert pagination["total"] == 3
+        assert pagination["page"] == 1
+        assert pagination["page_size"] == 10
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
     def test_get_contracts_with_pagination(
@@ -378,12 +381,11 @@ class TestGetContracts:
             contract.end_date = date(2024, 12, 31)
             contract.total_deposit = Decimal("0")
             contract.payment_cycle = "monthly"
-            contract.contract_status = "active"
+            contract.contract_status = "ACTIVE"
             contract.data_status = "正常"
             contract.version = 1
             contract.created_at = datetime.now()
             contract.updated_at = datetime.now()
-            contract.tenant_id = None
             contract.asset_ids = []
             contract.owner_name = None
             contract.owner_contact = None
@@ -407,7 +409,7 @@ class TestGetContracts:
             db=mock_db,
             current_user=mock_current_user,
             page=2,
-            limit=10,
+            page_size=10,
             contract_number=None,
             tenant_name=None,
             asset_id=None,
@@ -417,10 +419,12 @@ class TestGetContracts:
             end_date=None,
         )
 
-        assert result.total == 25
-        assert result.page == 2
-        assert result.limit == 10
-        assert result.pages == 3
+        body = json.loads(result.body.decode())
+        pagination = body["data"]["pagination"]
+        assert pagination["total"] == 25
+        assert pagination["page"] == 2
+        assert pagination["page_size"] == 10
+        assert pagination["total_pages"] == 3
 
 
 # ============================================================================
@@ -474,7 +478,7 @@ class TestUpdateContract:
 
         mock_can_edit.return_value = False
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(PermissionDeniedError) as exc_info:
             update_contract(
                 contract_id="contract-123",
                 db=mock_db,
@@ -483,7 +487,7 @@ class TestUpdateContract:
             )
 
         assert exc_info.value.status_code == 403
-        assert "权限不足" in exc_info.value.detail
+        assert "权限不足" in exc_info.value.message
 
 
 # ============================================================================
@@ -516,7 +520,7 @@ class TestDeleteContract:
         """Test contract deletion by non-admin user"""
         from src.api.v1.rent_contract.contracts import delete_contract
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(PermissionDeniedError) as exc_info:
             delete_contract(
                 contract_id="contract-123",
                 db=mock_db,
@@ -600,6 +604,7 @@ class TestGetRentLedger:
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         from src.constants.rent_contract_constants import PaymentStatus
+
         """Test listing rent ledger with default parameters"""
         from src.api.v1.rent_contract.ledger import get_rent_ledger
 
@@ -633,7 +638,7 @@ class TestGetRentLedger:
             db=mock_db,
             current_user=mock_current_user,
             page=1,
-            limit=10,
+            page_size=10,
             contract_id=None,
             asset_id=None,
             ownership_id=None,
@@ -643,9 +648,11 @@ class TestGetRentLedger:
             end_date=None,
         )
 
-        assert result.total == 5
-        assert result.page == 1
-        assert result.limit == 10
+        body = json.loads(result.body.decode())
+        pagination = body["data"]["pagination"]
+        assert pagination["total"] == 5
+        assert pagination["page"] == 1
+        assert pagination["page_size"] == 10
 
 
 # ============================================================================
@@ -680,7 +687,7 @@ class TestGetRentLedgerDetail:
 
         mock_rent_ledger.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             get_rent_ledger_detail(
                 ledger_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
@@ -730,7 +737,7 @@ class TestUpdateRentLedger:
 
         mock_rent_ledger.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             update_rent_ledger(
                 ledger_id="nonexistent",
                 ledger_in=ledger_in,
@@ -752,7 +759,7 @@ class TestUpdateRentLedger:
 
         mock_rent_ledger.get.return_value = mock_ledger
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BusinessValidationError) as exc_info:
             update_rent_ledger(
                 ledger_id="ledger-123",
                 ledger_in=ledger_in,
@@ -914,7 +921,7 @@ class TestGetAssetContracts:
 class TestExcelOperations:
     """Tests for Excel operations endpoints"""
 
-    @patch("src.api.v1.rent_contract.EXCEL_SERVICE_AVAILABLE", True)
+    @patch("src.api.v1.rent_contract.excel_ops.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.excel_ops.rent_contract_excel_service")
     def test_download_excel_template_success(
         self, mock_excel_service, mock_current_user
@@ -934,7 +941,7 @@ class TestExcelOperations:
 
         assert isinstance(result, FileResponse)
 
-    @patch("src.api.v1.rent_contract.EXCEL_SERVICE_AVAILABLE", True)
+    @patch("src.api.v1.rent_contract.excel_ops.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.excel_ops.rent_contract_excel_service")
     def test_export_contracts_to_excel_success(
         self, mock_excel_service, mock_current_user
@@ -953,8 +960,8 @@ class TestExcelOperations:
         result = export_contracts_to_excel(
             contract_ids=["contract-1", "contract-2"],
             current_user=mock_current_user,
-            include_terms=True,
-            include_ledger=True,
+            should_include_terms=True,
+            should_include_ledger=True,
         )
 
         assert isinstance(result, FileResponse)
@@ -1018,7 +1025,7 @@ class TestAttachmentManagement:
 
         mock_rent_contract.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             await get_contract_attachments(
                 contract_id="nonexistent",
                 current_user=mock_current_user,
@@ -1040,7 +1047,7 @@ class TestAttachmentManagement:
         mock_query.filter.return_value = mock_filter
         mock_filter.first.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             await download_contract_attachment(
                 contract_id="contract-123",
                 attachment_id="nonexistent",
@@ -1063,7 +1070,7 @@ class TestAttachmentManagement:
         mock_query.filter.return_value = mock_filter
         mock_filter.first.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             await delete_contract_attachment(
                 contract_id="contract-123",
                 attachment_id="nonexistent",
@@ -1094,7 +1101,7 @@ class TestAdditionalErrorCases:
 
         mock_rent_contract.get_with_details.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             update_contract(
                 contract_id="nonexistent",
                 db=mock_db,
@@ -1113,7 +1120,7 @@ class TestAdditionalErrorCases:
 
         mock_rent_contract.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             delete_contract(
                 contract_id="nonexistent",
                 db=mock_db,
@@ -1138,7 +1145,7 @@ class TestAdditionalErrorCases:
 
         mock_rent_contract.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ResourceNotFoundError) as exc_info:
             add_rent_term(
                 contract_id="nonexistent",
                 db=mock_db,

@@ -228,9 +228,7 @@ class TestCRUDSystemDictionaryGetTypes:
 
     def test_get_types_empty(self, crud, mock_db):
         """测试无类型时返回空列表"""
-        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
-            []
-        )
+        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = []
 
         with patch(
             "src.crud.system_dictionary.CRUDSystemDictionary.get_types"

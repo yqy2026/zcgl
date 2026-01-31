@@ -18,6 +18,7 @@ import httpx
 import pytest
 from PIL import Image
 
+from src.core.exception_handler import ConfigurationError
 from src.services.core.base_vision_service import VisionAPIError
 from src.services.core.deepseek_vision_service import (
     DeepSeekVisionResponse,
@@ -611,7 +612,7 @@ class TestDeepSeekVisionService:
 
         service = DeepSeekVisionService()
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             await service.extract_from_images([temp_image_file], "Extract")
 
         assert "DEEPSEEK_API_KEY not configured" in str(exc_info.value)
@@ -792,7 +793,7 @@ class TestHunyuanVisionService:
 
         service = HunyuanVisionService()
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             await service.extract_from_images([temp_image_file], "Extract")
 
         assert "HUNYUAN_API_KEY not configured" in str(exc_info.value)
@@ -950,7 +951,7 @@ class TestQwenVisionService:
 
         service = QwenVisionService()
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             await service.extract_from_images([temp_image_file], "Extract")
 
         assert "DASHSCOPE_API_KEY not configured" in str(exc_info.value)
@@ -1080,7 +1081,7 @@ class TestVisionServiceCommonPatterns:
     def test_all_services_raise_error_without_api_key(
         self, service_class, env_key, temp_image_file, monkeypatch
     ):
-        """Test all services raise RuntimeError when API key not configured."""
+        """Test all services raise ConfigurationError when API key not configured."""
         import asyncio
 
         monkeypatch.delenv(env_key, raising=False)
@@ -1092,7 +1093,7 @@ class TestVisionServiceCommonPatterns:
         async def test_extract():
             return await service.extract_from_images([temp_image_file], "Extract")
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             asyncio.run(test_extract())
 
         assert "API_KEY not configured" in str(exc_info.value)

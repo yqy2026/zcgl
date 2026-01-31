@@ -177,7 +177,7 @@ server: {
 ### 1. 登录页面 (LoginPage)
 
 - 用户身份验证
-- JWT Token获取
+- 使用 httpOnly Cookie 认证（不在 localStorage 存储 token）
 
 ### 2. 仪表板页面 (DashboardPage)
 

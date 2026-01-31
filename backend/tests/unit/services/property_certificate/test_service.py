@@ -8,14 +8,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.core.exception_handler import BusinessValidationError
 from src.models.property_certificate import PropertyCertificate
 from src.services.property_certificate.service import PropertyCertificateService
 
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 
 
 @pytest.fixture
@@ -682,7 +681,7 @@ class TestConfirmImport:
         }
 
         # Act & Assert
-        with pytest.raises(ValueError, match="缺少证书编号"):
+        with pytest.raises(BusinessValidationError, match="缺少证书编号"):
             await property_certificate_service.confirm_import(data)
 
     @pytest.mark.asyncio
@@ -1346,7 +1345,7 @@ class TestConfirmImport:
 
         def capture_call(db, obj_in, owner_ids):
             nonlocal captured_number
-            captured_number = obj_in.get("certificate_number")
+            captured_number = obj_in.certificate_number
             return MagicMock(spec=PropertyCertificate, id="cert-123")
 
         property_certificate_crud.create_with_owners = MagicMock(

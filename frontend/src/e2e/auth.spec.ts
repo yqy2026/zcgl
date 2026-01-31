@@ -37,10 +37,10 @@ test.describe('Authentication Flow', () => {
     });
 
     expect(authData).not.toBeNull();
-    expect(authData?.token).toBeDefined();
-    expect(authData?.refreshToken).toBeDefined();
     expect(authData?.user).toBeDefined();
     expect(authData?.permissions).toBeInstanceOf(Array);
+    expect(authData?.token).toBeUndefined();
+    expect(authData?.refreshToken).toBeUndefined();
   });
 
   test('should display user permissions in profile', async ({ page }) => {
@@ -252,6 +252,7 @@ test.describe('Authentication Flow', () => {
 
     expect(authData).not.toBeNull();
     expect(authData?.user?.username).toBe('admin');
+    expect(authData?.token).toBeUndefined();
   });
 
   test('should display correct role badge in UI', async ({ page }) => {

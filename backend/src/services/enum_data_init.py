@@ -169,9 +169,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                 enum_type = EnumFieldType()
                 _set_attr(enum_type, "code", enum_code)
                 _set_attr(enum_type, "name", enum_config["name"])
-                _set_attr(
-                    enum_type, "category", enum_config.get("category", "其他")
-                )
+                _set_attr(enum_type, "category", enum_config.get("category", "其他"))
                 _set_attr(
                     enum_type,
                     "description",
@@ -221,9 +219,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                     _set_attr(new_value, "enum_type_id", enum_type.id)
                     _set_attr(new_value, "value", value_dict["value"])
                     _set_attr(new_value, "label", value_dict["label"])
-                    _set_attr(
-                        new_value, "sort_order", value_dict.get("sort_order", 0)
-                    )
+                    _set_attr(new_value, "sort_order", value_dict.get("sort_order", 0))
                     _set_attr(new_value, "is_active", True)
                     _set_attr(new_value, "is_deleted", False)
                     _set_attr(new_value, "created_by", created_by)
@@ -302,9 +298,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
                     _set_attr(new_value, "enum_type_id", enum_type.id)
                     _set_attr(new_value, "value", value_dict["value"])
                     _set_attr(new_value, "label", value_dict["label"])
-                    _set_attr(
-                        new_value, "sort_order", value_dict.get("sort_order", 99)
-                    )
+                    _set_attr(new_value, "sort_order", value_dict.get("sort_order", 99))
                     _set_attr(new_value, "is_active", True)
                     _set_attr(new_value, "is_deleted", False)
                     _set_attr(new_value, "created_by", created_by)

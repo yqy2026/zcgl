@@ -3,8 +3,17 @@
  * 测试产权证上传组件的核心功能
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, act } from '@testing-library/react';
+import { PropertyCertificateUpload } from '../PropertyCertificateUpload';
+import type { CertificateExtractionResult, CertificateType } from '@/types/propertyCertificate';
+
+const { uploadDraggerMock, messageSuccessMock, messageErrorMock } = vi.hoisted(() => ({
+  uploadDraggerMock: vi.fn(),
+  messageSuccessMock: vi.fn(),
+  messageErrorMock: vi.fn(),
+}));
 
 // Mock service
 vi.mock('@/services/propertyCertificateService', () => ({
@@ -15,14 +24,16 @@ vi.mock('@/services/propertyCertificateService', () => ({
 
 // Mock Ant Design
 vi.mock('antd', () => {
-  const Upload = vi.fn(({ children }) => <div data-testid="upload">{children}</div>);
-  (Upload as unknown as Record<string, unknown>).Dragger = vi.fn(
-    ({ children, disabled }) => (
+  uploadDraggerMock.mockImplementation(
+    ({ children, disabled }: { children?: React.ReactNode; disabled?: boolean }) => (
       <div data-testid="upload-dragger" data-disabled={disabled}>
         {children}
       </div>
     )
   );
+
+  const Upload = vi.fn(({ children }) => <div data-testid="upload">{children}</div>);
+  (Upload as unknown as Record<string, unknown>).Dragger = uploadDraggerMock;
 
   return {
     Upload,
@@ -35,8 +46,8 @@ vi.mock('antd', () => {
     )),
     Space: vi.fn(({ children }) => <div data-testid="space">{children}</div>),
     message: {
-      success: vi.fn(),
-      error: vi.fn(),
+      success: messageSuccessMock,
+      error: messageErrorMock,
       warning: vi.fn(),
       info: vi.fn(),
     },
@@ -47,8 +58,6 @@ vi.mock('antd', () => {
 vi.mock('@ant-design/icons', () => ({
   InboxOutlined: () => <span data-testid="inbox-icon" />,
 }));
-
-import type { CertificateExtractionResult, CertificateType } from '@/types/propertyCertificate';
 
 // Helper to create mock extraction result
 const createMockExtractionResult = (): CertificateExtractionResult => ({
@@ -65,199 +74,119 @@ const createMockExtractionResult = (): CertificateExtractionResult => ({
 });
 
 describe('PropertyCertificateUpload - 组件导入测试', () => {
-  it('应该能够导入组件', async () => {
-    const module = await import('../PropertyCertificateUpload');
-    expect(module).toBeDefined();
-    expect(module.PropertyCertificateUpload).toBeDefined();
-  });
-
-  it('组件应该是React函数组件', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('应该能够导入组件', () => {
+    expect(PropertyCertificateUpload).toBeDefined();
     expect(typeof PropertyCertificateUpload).toBe('function');
   });
 });
 
-describe('PropertyCertificateUpload - 基础属性测试', () => {
-  it('应该接受onSuccess回调', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element).toBeTruthy();
-    expect(element.props.onSuccess).toEqual(onSuccess);
+describe('PropertyCertificateUpload - 渲染与交互测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    uploadDraggerMock.mockClear();
+    messageSuccessMock.mockClear();
+    messageErrorMock.mockClear();
   });
 
-  it('应该接受loading属性', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('应该渲染上传说明与拖拽区域', () => {
+    render(<PropertyCertificateUpload onSuccess={vi.fn()} />);
 
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, {
-      onSuccess,
-      loading: true,
-    });
-
-    expect(element.props.loading).toBe(true);
+    expect(screen.getByTestId('alert')).toBeInTheDocument();
+    expect(screen.getByTestId('upload-dragger')).toHaveAttribute('data-disabled', 'false');
+    expect(screen.getByText('点击或拖拽文件到此区域上传')).toBeInTheDocument();
   });
 
-  it('loading属性应该有默认值false', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('loading为true时应禁用上传并显示处理中提示', () => {
+    render(<PropertyCertificateUpload onSuccess={vi.fn()} loading={true} />);
 
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element.props.loading).toBeUndefined();
-  });
-});
-
-describe('PropertyCertificateUpload - 文件验证测试', () => {
-  it('应该支持PDF文件类型', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element).toBeTruthy();
-    // 组件内部 accept 属性应该包含 .pdf
+    expect(screen.getByTestId('upload-dragger')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByText('正在处理...')).toBeInTheDocument();
   });
 
-  it('应该支持JPG文件类型', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('beforeUpload应校验文件类型与大小', () => {
+    render(<PropertyCertificateUpload onSuccess={vi.fn()} />);
+    const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
+      beforeUpload?: (file: File) => boolean;
+    };
 
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
+    const invalidTypeFile = { type: 'text/plain', size: 1024 * 1024 } as File;
+    const validTypeOversizeFile = {
+      type: 'application/pdf',
+      size: 11 * 1024 * 1024,
+    } as File;
 
-    expect(element).toBeTruthy();
-    // 组件内部 accept 属性应该包含 .jpg, .jpeg
+    expect(draggerProps.beforeUpload?.(invalidTypeFile)).toBe(false);
+    expect(messageErrorMock).toHaveBeenCalledWith('只支持 PDF、JPG、PNG 格式');
+
+    expect(draggerProps.beforeUpload?.(validTypeOversizeFile)).toBe(false);
+    expect(messageErrorMock).toHaveBeenCalledWith('文件大小不能超过 10MB');
   });
 
-  it('应该支持PNG文件类型', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element).toBeTruthy();
-    // 组件内部 accept 属性应该包含 .png
-  });
-});
-
-describe('PropertyCertificateUpload - 上传流程测试', () => {
-  it('应该在上传成功时调用onSuccess', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('上传成功应调用服务与回调', async () => {
     const { propertyCertificateService } = await import(
       '@/services/propertyCertificateService'
     );
-
     const mockResult = createMockExtractionResult();
     vi.mocked(propertyCertificateService.uploadCertificate).mockResolvedValue(mockResult);
 
     const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element).toBeTruthy();
-    expect(element.props.onSuccess).toBe(onSuccess);
-  });
-
-  it('应该在loading时禁用上传', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, {
-      onSuccess,
-      loading: true,
-    });
-
-    expect(element.props.loading).toBe(true);
-  });
-});
-
-describe('PropertyCertificateUpload - 组件结构测试', () => {
-  it('应该有正确的命名导出', async () => {
-    const module = await import('../PropertyCertificateUpload');
-
-    expect(module.PropertyCertificateUpload).toBeDefined();
-    expect(typeof module.PropertyCertificateUpload).toBe('function');
-  });
-
-  it('应该可以创建组件实例', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const element = React.createElement(PropertyCertificateUpload, {
-      onSuccess: vi.fn(),
-    });
-
-    expect(element).toBeTruthy();
-    expect(element.type).toBe(PropertyCertificateUpload);
-  });
-
-  it('所有必需属性都应该被接受', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const props = {
-      onSuccess: vi.fn(),
-      loading: false,
+    render(<PropertyCertificateUpload onSuccess={onSuccess} />);
+    const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
+      customRequest?: (options: {
+        file: File;
+        onSuccess?: (result: unknown) => void;
+        onError?: (error: Error) => void;
+      }) => Promise<void>;
     };
 
-    const element = React.createElement(PropertyCertificateUpload, props);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('PropertyCertificateUpload - 状态管理测试', () => {
-  it('应该处理上传中状态', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const element = React.createElement(PropertyCertificateUpload, {
-      onSuccess: vi.fn(),
-      loading: true,
+    const uploadSuccess = vi.fn();
+    const uploadError = vi.fn();
+    await act(async () => {
+      await draggerProps.customRequest?.({
+        file: { type: 'application/pdf', size: 1024 } as File,
+        onSuccess: uploadSuccess,
+        onError: uploadError,
+      });
     });
 
-    expect(element.props.loading).toBe(true);
+    expect(propertyCertificateService.uploadCertificate).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith(mockResult);
+    expect(uploadSuccess).toHaveBeenCalled();
+    expect(messageSuccessMock).toHaveBeenCalledWith('文件上传并提取成功');
+    expect(uploadError).not.toHaveBeenCalled();
   });
 
-  it('应该处理空闲状态', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-
-    const element = React.createElement(PropertyCertificateUpload, {
-      onSuccess: vi.fn(),
-      loading: false,
-    });
-
-    expect(element.props.loading).toBe(false);
-  });
-});
-
-describe('PropertyCertificateUpload - 错误处理测试', () => {
-  it('应该处理上传失败的情况', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
+  it('上传失败应提示错误并触发onError', async () => {
     const { propertyCertificateService } = await import(
       '@/services/propertyCertificateService'
     );
-
     vi.mocked(propertyCertificateService.uploadCertificate).mockRejectedValue(
       new Error('Upload failed')
     );
 
     const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
+    render(<PropertyCertificateUpload onSuccess={onSuccess} />);
+    const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
+      customRequest?: (options: {
+        file: File;
+        onSuccess?: (result: unknown) => void;
+        onError?: (error: Error) => void;
+      }) => Promise<void>;
+    };
 
-    expect(element).toBeTruthy();
-  });
+    const uploadSuccess = vi.fn();
+    const uploadError = vi.fn();
+    await act(async () => {
+      await draggerProps.customRequest?.({
+        file: { type: 'application/pdf', size: 1024 } as File,
+        onSuccess: uploadSuccess,
+        onError: uploadError,
+      });
+    });
 
-  it('应该处理网络错误', async () => {
-    const { PropertyCertificateUpload } = await import('../PropertyCertificateUpload');
-    const { propertyCertificateService } = await import(
-      '@/services/propertyCertificateService'
-    );
-
-    vi.mocked(propertyCertificateService.uploadCertificate).mockRejectedValue(
-      new Error('Network error')
-    );
-
-    const onSuccess = vi.fn();
-    const element = React.createElement(PropertyCertificateUpload, { onSuccess });
-
-    expect(element).toBeTruthy();
+    expect(propertyCertificateService.uploadCertificate).toHaveBeenCalledTimes(1);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(uploadError).toHaveBeenCalled();
+    expect(messageErrorMock).toHaveBeenCalledWith('上传失败，请重试');
   });
 });

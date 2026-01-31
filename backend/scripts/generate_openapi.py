@@ -9,8 +9,12 @@ sys.path.append(str(project_root))
 
 # Set environment to testing to avoid startup checks/db connections
 os.environ["ENVIRONMENT"] = "testing"
-os.environ["SECRET_KEY"] = "mock-secret-key-for-openapi-generation-only-do-not-use-in-production"
-os.environ["DATA_ENCRYPTION_KEY"] = "mock-data-encryption-key-for-openapi-generation-only"
+os.environ["SECRET_KEY"] = (
+    "mock-secret-key-for-openapi-generation-only-do-not-use-in-production"
+)
+os.environ["DATA_ENCRYPTION_KEY"] = (
+    "mock-data-encryption-key-for-openapi-generation-only"
+)
 
 try:
     from fastapi.openapi.utils import get_openapi
@@ -19,6 +23,7 @@ try:
 except ImportError as e:
     print(f"Error importing app: {e}")
     sys.exit(1)
+
 
 def generate_openapi_spec():
     print("Generating OpenAPI schema...")
@@ -38,6 +43,7 @@ def generate_openapi_spec():
         json.dump(openapi_schema, f, ensure_ascii=False, indent=2)
 
     print(f"✅ OpenAPI spec generated successfully at: {output_path}")
+
 
 if __name__ == "__main__":
     generate_openapi_spec()

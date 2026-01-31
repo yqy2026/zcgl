@@ -15,12 +15,8 @@ from fastapi import status
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already bypasses authentication
+    return {"Authorization": "Bearer mocked_token"}
 
 
 class TestRolesCRUD:
@@ -130,9 +126,9 @@ class TestUserRoleAssignments:
 class TestRolesAuthentication:
     """测试认证和授权"""
 
-    def test_unauthorized_access(self, client):
+    def test_unauthorized_access(self, unauthenticated_client):
         """测试未授权访问"""
-        response = client.get("/api/v1/roles/")
+        response = unauthenticated_client.get("/api/v1/roles/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_normal_user_cannot_create_roles(self, client, normal_user_headers):
@@ -152,9 +148,7 @@ class TestRolesAuthentication:
 @pytest.fixture
 def normal_user_headers(client, normal_user):
     """普通用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": normal_user.username, "password": "user123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    from src.middleware.auth import get_current_active_user
+
+    client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
+    return {"Authorization": "Bearer mocked_token"}

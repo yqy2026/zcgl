@@ -1,11 +1,11 @@
 /**
  * ConfirmDialog 组件测试
  * 测试确认对话框组件
- * 增强版本 - 添加更全面的测试用例
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 interface ModalOkButtonPropsMock {
   danger?: boolean;
@@ -52,9 +52,11 @@ interface IconMockProps {
   style?: React.CSSProperties;
 }
 
+const confirmSpy = vi.fn();
+
 // Mock Ant Design components
-vi.mock('antd', () => ({
-  Modal: ({
+vi.mock('antd', () => {
+  const Modal = ({
     title,
     open,
     onOk,
@@ -85,27 +87,33 @@ vi.mock('antd', () => ({
         {cancelText}
       </button>
     </div>
-  ),
-  Typography: {
-    Text: ({ children, type, strong }: TypographyTextMockProps) => (
-      <span data-testid="text" data-type={type} data-strong={strong}>
+  );
+
+  Modal.confirm = confirmSpy;
+
+  return {
+    Modal,
+    Typography: {
+      Text: ({ children, type, strong }: TypographyTextMockProps) => (
+        <span data-testid="text" data-type={type} data-strong={strong}>
+          {children}
+        </span>
+      ),
+      Paragraph: ({ children, type }: TypographyParagraphMockProps) => (
+        <p data-testid="paragraph" data-type={type}>
+          {children}
+        </p>
+      ),
+    },
+    Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
+    Button: ({ children, icon, type, onClick }: ButtonMockProps) => (
+      <button data-testid="button" data-type={type} onClick={onClick}>
+        {icon && <span data-testid="button-icon">{icon}</span>}
         {children}
-      </span>
+      </button>
     ),
-    Paragraph: ({ children, type }: TypographyParagraphMockProps) => (
-      <p data-testid="paragraph" data-type={type}>
-        {children}
-      </p>
-    ),
-  },
-  Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
-  Button: ({ children, icon, type, onClick }: ButtonMockProps) => (
-    <button data-testid="button" data-type={type} onClick={onClick}>
-      {icon && <span data-testid="button-icon">{icon}</span>}
-      {children}
-    </button>
-  ),
-}));
+  };
+});
 
 vi.mock('@ant-design/icons', () => ({
   ExclamationCircleOutlined: ({ style }: IconMockProps) => (
@@ -147,384 +155,173 @@ describe('ConfirmDialog - 组件导入测试', () => {
   });
 });
 
-describe('ConfirmDialog - 基础属性测试', () => {
+describe('ConfirmDialog - 基础渲染测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
-  it('应该支持type属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'delete', visible: true });
-    expect(element).toBeTruthy();
+  it('应该支持title与content属性', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(
+      <ConfirmDialog
+        type="warning"
+        visible={true}
+        title="自定义标题"
+        content={<div>自定义内容</div>}
+      />
+    );
+
+    expect(screen.getByText('自定义标题')).toBeInTheDocument();
+    expect(screen.getByText('自定义内容')).toBeInTheDocument();
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-open', 'true');
   });
 
-  it('应该支持title属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      title: '自定义标题',
-    });
-    expect(element).toBeTruthy();
-  });
+  it('visible为false时应该关闭对话框', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(<ConfirmDialog type="warning" visible={false} />);
 
-  it('应该支持content属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const customContent = React.createElement('div', {}, '自定义内容');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      content: customContent,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持visible属性控制显示', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'warning', visible: false });
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-open', 'false');
   });
 });
 
 describe('ConfirmDialog - 预设类型测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
-  it('应该支持delete类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'delete', visible: true });
-    expect(element).toBeTruthy();
-  });
+  it.each([
+    ['delete', '确认删除', '删除'],
+    ['edit', '确认编辑', '继续编辑'],
+    ['save', '确认保存', '保存'],
+    ['logout', '确认退出', '退出'],
+    ['cancel', '确认取消', '确认取消'],
+    ['warning', '警告', '确定'],
+    ['info', '提示', '确定'],
+  ])('type=%s 应该显示默认标题与按钮文案', async (type, title, okText) => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(<ConfirmDialog type={type as any} visible={true} />);
 
-  it('应该支持edit类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'edit', visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持save类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'save', visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持logout类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'logout', visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持cancel类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'cancel', visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持warning类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'warning', visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持info类型', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, { type: 'info', visible: true });
-    expect(element).toBeTruthy();
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByTestId('ok-button')).toHaveTextContent(okText);
   });
 });
 
-describe('ConfirmDialog - 回调函数测试', () => {
+describe('ConfirmDialog - 回调与配置测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
-  it('应该支持onConfirm回调', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
+  it('点击确定应该触发onConfirm', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
     const handleConfirm = vi.fn();
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      onConfirm: handleConfirm,
-    });
-    expect(element).toBeTruthy();
+    render(<ConfirmDialog type="delete" visible={true} onConfirm={handleConfirm} />);
+
+    fireEvent.click(screen.getByTestId('ok-button'));
+    expect(handleConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('应该支持onCancel回调', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
+  it('点击取消应该触发onCancel', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
     const handleCancel = vi.fn();
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      onCancel: handleCancel,
-    });
-    expect(element).toBeTruthy();
+    render(<ConfirmDialog type="warning" visible={true} onCancel={handleCancel} />);
+
+    fireEvent.click(screen.getByTestId('cancel-button'));
+    expect(handleCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('应该支持按钮与对话框配置', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(
+      <ConfirmDialog
+        type="warning"
+        visible={true}
+        confirmText="确认"
+        cancelText="放弃"
+        confirmLoading={true}
+        danger={true}
+        width={600}
+        centered={false}
+        maskClosable={true}
+      />
+    );
+
+    expect(screen.getByTestId('ok-button')).toHaveTextContent('确认');
+    expect(screen.getByTestId('cancel-button')).toHaveTextContent('放弃');
+    expect(screen.getByTestId('ok-button')).toHaveAttribute('data-danger', 'true');
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-confirm-loading', 'true');
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-width', '600');
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-centered', 'false');
+    expect(screen.getByTestId('modal')).toHaveAttribute('data-mask-closable', 'true');
   });
 });
 
-describe('ConfirmDialog - 按钮配置测试', () => {
+describe('ConfirmDialog - 内容渲染测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
-  it('应该支持confirmText属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      confirmText: '确定',
-    });
-    expect(element).toBeTruthy();
+  it('delete类型应显示itemName与itemCount信息', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(
+      <ConfirmDialog type="delete" visible={true} itemName="测试项目" itemCount={2} />
+    );
+
+    expect(screen.getByText('确定要删除这 2 个测试项目吗？')).toBeInTheDocument();
   });
 
-  it('应该支持cancelText属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      cancelText: '放弃',
-    });
-    expect(element).toBeTruthy();
-  });
+  it('details应渲染在内容区域', async () => {
+    const ConfirmDialog = (await import('../ConfirmDialog')).default;
+    render(
+      <ConfirmDialog type="save" visible={true} details={['更改1', '更改2']} />
+    );
 
-  it('应该支持confirmLoading属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      confirmLoading: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持danger属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      danger: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('ConfirmDialog - 对话框配置测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持width属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      width: 600,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持centered属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      centered: false,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持maskClosable属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      maskClosable: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('ConfirmDialog - 特殊属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持itemName属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      itemName: '测试项目',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持itemCount属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      itemCount: 5,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持details属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      details: ['详情1', '详情2', '详情3'],
-    });
-    expect(element).toBeTruthy();
+    expect(screen.getByText('更改1')).toBeInTheDocument();
+    expect(screen.getByText('更改2')).toBeInTheDocument();
   });
 });
 
 describe('ConfirmDialog - 预设组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
   it('DeleteConfirmDialog应该正确渲染', async () => {
     const { DeleteConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(DeleteConfirmDialog, { visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('EditConfirmDialog应该正确渲染', async () => {
-    const { EditConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(EditConfirmDialog, { visible: true });
-    expect(element).toBeTruthy();
+    render(<DeleteConfirmDialog visible={true} />);
+    expect(screen.getByText('确认删除')).toBeInTheDocument();
   });
 
   it('SaveConfirmDialog应该正确渲染', async () => {
     const { SaveConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(SaveConfirmDialog, { visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('LogoutConfirmDialog应该正确渲染', async () => {
-    const { LogoutConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(LogoutConfirmDialog, { visible: true });
-    expect(element).toBeTruthy();
-  });
-
-  it('CancelConfirmDialog应该正确渲染', async () => {
-    const { CancelConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(CancelConfirmDialog, { visible: true });
-    expect(element).toBeTruthy();
+    render(<SaveConfirmDialog visible={true} />);
+    expect(screen.getByText('确认保存')).toBeInTheDocument();
   });
 });
 
 describe('ConfirmDialog - 便捷方法测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy.mockClear();
   });
 
-  it('showDeleteConfirm应该返回Promise', async () => {
+  it('showDeleteConfirm应该调用Modal.confirm并返回Promise', async () => {
     const { showDeleteConfirm } = await import('../ConfirmDialog');
-    // 由于方法内部使用Modal.confirm，我们只验证方法可调用
-    expect(typeof showDeleteConfirm).toBe('function');
+    const result = showDeleteConfirm({ title: '删除标题' });
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(result).toBeInstanceOf(Promise);
   });
 
-  it('showSaveConfirm应该返回Promise', async () => {
+  it('showSaveConfirm应该调用Modal.confirm并返回Promise', async () => {
     const { showSaveConfirm } = await import('../ConfirmDialog');
-    expect(typeof showSaveConfirm).toBe('function');
-  });
-});
+    const result = showSaveConfirm({ title: '保存标题' });
 
-describe('ConfirmDialog - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理空字符串title', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      title: '',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理undefined回调', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'warning',
-      visible: true,
-      onConfirm: undefined,
-      onCancel: undefined,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理空details数组', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      details: [],
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理itemCount为0', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      itemCount: 0,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理itemName为空字符串', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      itemName: '',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('ConfirmDialog - 组合属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('delete类型应该支持所有属性组合', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const handleConfirm = vi.fn();
-    const handleCancel = vi.fn();
-    const element = React.createElement(ConfirmDialog, {
-      type: 'delete',
-      visible: true,
-      title: '确认删除',
-      itemName: '项目',
-      itemCount: 3,
-      details: ['文件1', '文件2'],
-      confirmText: '确认删除',
-      cancelText: '取消',
-      confirmLoading: false,
-      onConfirm: handleConfirm,
-      onCancel: handleCancel,
-      width: 500,
-      centered: true,
-      maskClosable: false,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('save类型应该支持details属性', async () => {
-    const { ConfirmDialog } = await import('../ConfirmDialog');
-    const element = React.createElement(ConfirmDialog, {
-      type: 'save',
-      visible: true,
-      details: ['更改1', '更改2', '更改3'],
-    });
-    expect(element).toBeTruthy();
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(result).toBeInstanceOf(Promise);
   });
 });

@@ -33,7 +33,11 @@ from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
 
 from .core.config import settings
-from .core.exception_handler import ConfigurationError
+from .core.exception_handler import (
+    ConfigurationError,
+    InternalServerError,
+    ServiceUnavailableError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -186,14 +190,22 @@ class DatabaseManager:
                     "hint": hint,
                 },
             )
-            raise RuntimeError(
-                f"数据库连接失败\n"
-                f"  连接目标: {safe_url}\n"
-                f"  错误原因: {hint}\n"
-                f"  原始错误: {e}\n"
-                f"  解决建议:\n"
-                f"    {suggestion}\n"
-                f"  帮助文档: docs/POSTGRESQL_MIGRATION.md"
+            raise ServiceUnavailableError(
+                message=(
+                    "数据库连接失败\n"
+                    f"  连接目标: {safe_url}\n"
+                    f"  错误原因: {hint}\n"
+                    f"  原始错误: {e}\n"
+                    "  解决建议:\n"
+                    f"    {suggestion}\n"
+                    "  帮助文档: docs/POSTGRESQL_MIGRATION.md"
+                ),
+                service_name="PostgreSQL",
+                details={
+                    "error_id": ErrorIDs.Database.CONNECTION_FAILED,
+                    "database": safe_url,
+                    "hint": hint,
+                },
             ) from e
 
         except (ValueError, AttributeError) as e:
@@ -302,7 +314,7 @@ class DatabaseManager:
     def get_session(self) -> Generator[Session, None, None]:
         """获取数据库会话"""
         if not self.session_factory:
-            raise RuntimeError("数据库引擎未初始化")
+            raise InternalServerError("数据库引擎未初始化")
 
         session = self.session_factory()
         try:
@@ -423,9 +435,13 @@ def get_database_url() -> str:
 
             # 检查必需组件
             if not parsed.hostname:
-                raise ConfigurationError("缺少主机名 (hostname)", config_key="DATABASE_URL")
+                raise ConfigurationError(
+                    "缺少主机名 (hostname)", config_key="DATABASE_URL"
+                )
             if not parsed.username:
-                raise ConfigurationError("缺少用户名 (username)", config_key="DATABASE_URL")
+                raise ConfigurationError(
+                    "缺少用户名 (username)", config_key="DATABASE_URL"
+                )
             if not parsed.password:
                 logger.warning("DATABASE_URL缺少密码 (password)")
             if not parsed.path or len(parsed.path) <= 1:
@@ -549,7 +565,7 @@ def get_db() -> Generator[Session, None, None]:
     db_manager = _get_database_manager()
     session_factory = db_manager.session_factory
     if session_factory is None:
-        raise RuntimeError("Database session factory is not initialized")
+        raise InternalServerError("Database session factory is not initialized")
     session = session_factory()
     try:
         yield session
@@ -574,7 +590,7 @@ def get_db() -> Generator[Session, None, None]:
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     _init_async_globals()
     if AsyncSessionLocal is None:
-        raise RuntimeError("Async database session factory is not initialized")
+        raise InternalServerError("Async database session factory is not initialized")
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -598,7 +614,7 @@ def get_database_engine() -> Engine:
     _init_globals()
     db_manager = _get_database_manager()
     if db_manager.engine is None:
-        raise RuntimeError("Database engine is not initialized")
+        raise InternalServerError("Database engine is not initialized")
     return db_manager.engine
 
 
@@ -607,7 +623,7 @@ def get_session_factory() -> sessionmaker[Session]:
     _init_globals()
     db_manager = _get_database_manager()
     if db_manager.session_factory is None:
-        raise RuntimeError("Database session factory is not initialized")
+        raise InternalServerError("Database session factory is not initialized")
     return db_manager.session_factory
 
 

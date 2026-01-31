@@ -198,9 +198,7 @@ class TestTaskCRUDGetHistory:
             MagicMock(spec=TaskHistory),
             MagicMock(spec=TaskHistory),
         ]
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = (
-            mock_histories
-        )
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_histories
 
         result = crud.get_history(mock_db, task_id="task-1")
 
@@ -208,9 +206,7 @@ class TestTaskCRUDGetHistory:
 
     def test_get_history_empty(self, crud, mock_db):
         """测试获取空历史"""
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = (
-            []
-        )
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
         result = crud.get_history(mock_db, task_id="task-not-exist")
 

@@ -18,13 +18,13 @@ class TestBackupServiceInit:
 
     def test_init_with_default_dir(self):
         """测试使用默认备份目录初始化"""
-        with patch.object(BackupService, '_ensure_backup_dir'):
+        with patch.object(BackupService, "_ensure_backup_dir"):
             service = BackupService()
             assert service.backup_dir == "backups"
 
     def test_init_with_custom_dir(self):
         """测试使用自定义备份目录初始化"""
-        with patch.object(BackupService, '_ensure_backup_dir'):
+        with patch.object(BackupService, "_ensure_backup_dir"):
             service = BackupService(backup_dir="/custom/backup/path")
             assert service.backup_dir == "/custom/backup/path"
 
@@ -55,17 +55,16 @@ class TestCreateBackup:
         with pytest.raises(ValueError, match="仅支持 PostgreSQL"):
             service.create_backup(database_url="mysql://localhost/test")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_create_backup_success(self, mock_run, service):
         """测试成功创建备份"""
         mock_run.return_value = MagicMock(returncode=0)
 
         backup_name = "test_backup"
 
-        with patch('os.path.getsize', return_value=1024):
+        with patch("os.path.getsize", return_value=1024):
             result = service.create_backup(
-                backup_name=backup_name,
-                database_url="postgresql://localhost/testdb"
+                backup_name=backup_name, database_url="postgresql://localhost/testdb"
             )
 
         assert result["backup_name"] == backup_name
@@ -90,7 +89,7 @@ class TestListBackups:
 
             for i in range(3):
                 backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
-                with open(backup_file, 'w') as f:
+                with open(backup_file, "w") as f:
                     f.write(f"test content {i}")
 
             result = service.list_backups()
@@ -108,7 +107,7 @@ class TestGetBackup:
             service = BackupService(backup_dir=tmpdir)
 
             backup_file = os.path.join(tmpdir, "test_backup.dump")
-            with open(backup_file, 'w') as f:
+            with open(backup_file, "w") as f:
                 f.write("test content")
 
             result = service.get_backup("test_backup")
@@ -133,7 +132,7 @@ class TestDeleteBackup:
             service = BackupService(backup_dir=tmpdir)
 
             backup_file = os.path.join(tmpdir, "test_backup.dump")
-            with open(backup_file, 'w') as f:
+            with open(backup_file, "w") as f:
                 f.write("test content")
 
             result = service.delete_backup("test_backup")
@@ -159,7 +158,7 @@ class TestValidateBackup:
             service = BackupService(backup_dir=tmpdir)
 
             backup_file = os.path.join(tmpdir, "test_backup.dump")
-            with open(backup_file, 'w') as f:
+            with open(backup_file, "w") as f:
                 f.write("valid content")
 
             result = service.validate_backup("test_backup")
@@ -190,7 +189,7 @@ class TestCleanupOldBackups:
 
             for i in range(3):
                 backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
-                with open(backup_file, 'w') as f:
+                with open(backup_file, "w") as f:
                     f.write(f"content {i}")
 
             result = service.cleanup_old_backups(keep_count=10)
@@ -216,7 +215,7 @@ class TestGetBackupStats:
 
             for i in range(3):
                 backup_file = os.path.join(tmpdir, f"backup_{i}.dump")
-                with open(backup_file, 'w') as f:
+                with open(backup_file, "w") as f:
                     f.write("x" * 1000)
 
             result = service.get_backup_stats()

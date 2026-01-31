@@ -20,6 +20,7 @@ from ....core.exception_handler import (
 from ....middleware.auth import PermissionChecker
 from ....middleware.error_recovery_middleware import api_error_recovery
 from ....models.auth import User
+from ....security.route_guards import debug_only
 from ....services.error_recovery_service import (
     ErrorCategory,
     ErrorSeverity,
@@ -364,6 +365,7 @@ async def get_recovery_history(
     description="手动触发错误恢复测试，验证恢复策略的有效性",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
+@debug_only
 async def test_error_recovery(
     category: str = Body(..., description="错误类别"),
     simulate_error: bool = Body(True, description="是否模拟错误"),
@@ -464,7 +466,7 @@ async def clear_recovery_history(
     summary="获取错误恢复系统健康状态",
     description="检查错误恢复系统的整体健康状态",
 )
-async def get_error_recovery_health() -> JSONResponse:
+def get_error_recovery_health() -> JSONResponse:
     """获取错误恢复系统健康状态"""
 
     try:

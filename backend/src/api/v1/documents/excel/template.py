@@ -2,7 +2,7 @@
 Excel模板下载模块
 """
 
-from collections.abc import AsyncGenerator
+from collections.abc import Generator
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.get("/template", summary="下载Excel导入模板")
-async def download_template(
+def download_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> StreamingResponse:
@@ -29,7 +29,7 @@ async def download_template(
     buffer = service.generate_template()
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()

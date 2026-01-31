@@ -11,10 +11,16 @@ describe('AuthStorage', () => {
 
   it('should store auth data with correct structure', () => {
     const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test' },
-      permissions: [{ resource: 'assets', action: 'read' }]
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: [{ resource: 'assets', action: 'read' }],
     };
 
     AuthStorage.setAuthData(authData);
@@ -22,14 +28,22 @@ describe('AuthStorage', () => {
     const stored = localStorage.getItem('authData');
     expect(stored).toBeDefined();
     expect(JSON.parse(stored!)).toEqual(authData);
+    expect(localStorage.getItem('user')).toBe(JSON.stringify(authData.user));
+    expect(localStorage.getItem('permissions')).toBe(JSON.stringify(authData.permissions));
   });
 
   it('should retrieve auth data correctly', () => {
     const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test' },
-      permissions: [{ resource: 'assets', action: 'read' }]
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: [{ resource: 'assets', action: 'read' }],
     };
 
     AuthStorage.setAuthData(authData);
@@ -47,63 +61,53 @@ describe('AuthStorage', () => {
     // Set multiple auth-related keys
     localStorage.setItem('token', 'test');
     localStorage.setItem('refresh_token', 'test');
-    localStorage.setItem('authData', JSON.stringify({ token: 'test' }));
+    localStorage.setItem('authData', JSON.stringify({ user: { id: '1' }, permissions: [] }));
+    localStorage.setItem('auth_token', 'legacy');
+    localStorage.setItem('refreshToken', 'legacy-refresh');
 
     AuthStorage.clearAuthData();
 
     expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('refresh_token')).toBeNull();
+    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(localStorage.getItem('refreshToken')).toBeNull();
     expect(localStorage.getItem('authData')).toBeNull();
-  });
-
-  it('should get token from authData', () => {
-    const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1' },
-      permissions: []
-    };
-
-    AuthStorage.setAuthData(authData);
-    const token = AuthStorage.getToken();
-
-    expect(token).toBe('test-token');
-  });
-
-  it('should get refresh token from authData', () => {
-    const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1' },
-      permissions: []
-    };
-
-    AuthStorage.setAuthData(authData);
-    const refreshToken = AuthStorage.getRefreshToken();
-
-    expect(refreshToken).toBe('test-refresh');
+    expect(localStorage.getItem('user')).toBeNull();
+    expect(localStorage.getItem('permissions')).toBeNull();
   });
 
   it('should get current user from authData', () => {
     const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test' },
-      permissions: []
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: [],
     };
 
     AuthStorage.setAuthData(authData);
     const user = AuthStorage.getCurrentUser();
 
-    expect(user).toEqual({ id: '1', username: 'test' });
+    expect(user).toEqual(authData.user);
   });
 
   it('should get permissions from authData', () => {
     const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1' },
-      permissions: [{ resource: 'assets', action: 'read' }]
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: [{ resource: 'assets', action: 'read' }],
     };
 
     AuthStorage.setAuthData(authData);
@@ -118,23 +122,19 @@ describe('AuthStorage', () => {
 
     // Test when authenticated
     const authData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1' },
-      permissions: []
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: [],
     };
 
     AuthStorage.setAuthData(authData);
     expect(AuthStorage.isAuthenticated()).toBe(true);
-
-    // Test with empty token
-    localStorage.clear();
-    AuthStorage.setAuthData({
-      token: '   ',  // whitespace
-      refreshToken: 'test-refresh',
-      user: { id: '1' },
-      permissions: []
-    });
-    expect(AuthStorage.isAuthenticated()).toBe(false);
   });
 });

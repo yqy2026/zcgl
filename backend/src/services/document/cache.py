@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
+from ...core.exception_handler import InternalServerError
 from .config import get_config
 
 aiofiles: Any | None
@@ -90,13 +91,13 @@ class PDFCache:
 
         Raises:
             OSError, PermissionError: 文件系统错误会重新抛出
-            RuntimeError: 缓存系统故障时抛出（需要立即处理的严重问题）
+            InternalServerError: 缓存系统故障时抛出（需要立即处理的严重问题）
 
         Note:
             - 缓存未命中（文件不存在、已过期）返回 None
             - JSON 损坏会删除缓存文件并返回 None
             - 文件系统错误（权限、磁盘故障）会抛出异常
-            - 其他严重错误会抛出 RuntimeError
+            - 其他严重错误会抛出 InternalServerError
         """
         try:
             hash_key = self.get_file_hash(file_path)
@@ -164,7 +165,14 @@ class PDFCache:
                 extra={"error_id": "CACHE_SYSTEM_FAILURE", "file_path": file_path},
             )
             # 抛出运行时错误而不是静默返回 None
-            raise RuntimeError(f"Cache system malfunction: {e}") from e
+            raise InternalServerError(
+                message="Cache system malfunction",
+                original_error=e,
+                details={
+                    "error_id": "CACHE_SYSTEM_FAILURE",
+                    "file_path": file_path,
+                },
+            ) from e
 
     def set(self, file_path: str, result: dict[str, Any]) -> bool:
         """
@@ -179,7 +187,7 @@ class PDFCache:
 
         Raises:
             OSError: 磁盘空间不足、权限错误或其他文件系统错误
-            RuntimeError: 磁盘满或缓存目录不可写时抛出
+            InternalServerError: 磁盘满或缓存目录不可写时抛出
 
         Note:
             - 序列化错误（TypeError, ValueError）返回 False，不抛出异常
@@ -212,7 +220,14 @@ class PDFCache:
                     f"Disk full - cannot cache {file_path}",
                     extra={"error_id": "CACHE_DISK_FULL", "file_path": file_path},
                 )
-                raise RuntimeError("Disk space exhausted, cannot cache results") from e
+                raise InternalServerError(
+                    message="Disk space exhausted, cannot cache results",
+                    original_error=e,
+                    details={
+                        "error_id": "CACHE_DISK_FULL",
+                        "file_path": file_path,
+                    },
+                ) from e
             # 权限错误
             elif "Permission denied" in str(e) or getattr(e, "errno", None) == 13:
                 logger.error(
@@ -222,7 +237,14 @@ class PDFCache:
                         "file_path": file_path,
                     },
                 )
-                raise RuntimeError("Cache directory not writable") from e
+                raise InternalServerError(
+                    message="Cache directory not writable",
+                    original_error=e,
+                    details={
+                        "error_id": "CACHE_PERMISSION_ERROR",
+                        "file_path": file_path,
+                    },
+                ) from e
             else:
                 # 其他文件系统错误
                 logger.error(
@@ -246,7 +268,14 @@ class PDFCache:
                 exc_info=True,
                 extra={"error_id": "CACHE_WRITE_FAILURE"},
             )
-            raise
+            raise InternalServerError(
+                message="Unexpected cache write error",
+                original_error=e,
+                details={
+                    "error_id": "CACHE_WRITE_FAILURE",
+                    "file_path": file_path,
+                },
+            ) from e
 
     def invalidate(self, file_path: str) -> bool:
         """
@@ -500,7 +529,14 @@ class AsyncDocumentCache:
                     "file_hash": file_hash,
                 },
             )
-            raise RuntimeError(f"Async cache system malfunction: {e}") from e
+            raise InternalServerError(
+                message="Async cache system malfunction",
+                original_error=e,
+                details={
+                    "error_id": "ASYNC_CACHE_SYSTEM_FAILURE",
+                    "file_hash": file_hash,
+                },
+            ) from e
 
     async def set(
         self, file_hash: str, data: dict[str, Any], ttl: int | None = None
@@ -553,7 +589,14 @@ class AsyncDocumentCache:
                         "file_hash": file_hash[:8],
                     },
                 )
-                raise RuntimeError("Disk space exhausted, cannot cache results") from e
+                raise InternalServerError(
+                    message="Disk space exhausted, cannot cache results",
+                    original_error=e,
+                    details={
+                        "error_id": "ASYNC_CACHE_DISK_FULL",
+                        "file_hash": file_hash,
+                    },
+                ) from e
             # 权限错误
             elif "Permission denied" in str(e) or getattr(e, "errno", None) == 13:
                 logger.error(
@@ -563,7 +606,14 @@ class AsyncDocumentCache:
                         "file_hash": file_hash[:8],
                     },
                 )
-                raise RuntimeError("Cache directory not writable") from e
+                raise InternalServerError(
+                    message="Cache directory not writable",
+                    original_error=e,
+                    details={
+                        "error_id": "ASYNC_CACHE_PERMISSION_ERROR",
+                        "file_hash": file_hash,
+                    },
+                ) from e
             else:
                 logger.error(
                     f"File system error caching async: {e}",
@@ -587,7 +637,14 @@ class AsyncDocumentCache:
                 exc_info=True,
                 extra={"error_id": "ASYNC_CACHE_WRITE_FAILURE"},
             )
-            raise
+            raise InternalServerError(
+                message="Unexpected async cache write error",
+                original_error=e,
+                details={
+                    "error_id": "ASYNC_CACHE_WRITE_FAILURE",
+                    "file_hash": file_hash,
+                },
+            ) from e
 
     async def invalidate(self, file_hash: str) -> bool:
         """

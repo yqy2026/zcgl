@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.post("/configs", summary="创建Excel配置")
-async def create_excel_config(
+def create_excel_config(
     config_in: ExcelConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -38,7 +38,7 @@ async def create_excel_config(
 
 
 @router.get("/configs", summary="获取Excel配置列表")
-async def get_excel_configs(
+def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
@@ -59,7 +59,7 @@ async def get_excel_configs(
 
 
 @router.get("/configs/default", summary="获取默认Excel配置")
-async def get_default_excel_config(
+def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
@@ -85,7 +85,7 @@ async def get_default_excel_config(
 
 
 @router.get("/configs/{config_id}", summary="获取Excel配置详情")
-async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any:
+def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any:
     """
     获取单个Excel配置的详细信息
 
@@ -102,7 +102,7 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
 
 @router.put("/configs/{config_id}", summary="更新Excel配置")
-async def update_excel_config(
+def update_excel_config(
     config_id: str, config_in: dict[str, Any], db: Session = Depends(get_db)
 ) -> dict[str, Any]:
     """
@@ -126,7 +126,7 @@ async def update_excel_config(
 
 
 @router.delete("/configs/{config_id}", summary="删除Excel配置")
-async def delete_excel_config(
+def delete_excel_config(
     config_id: str, db: Session = Depends(get_db)
 ) -> dict[str, str]:
     """

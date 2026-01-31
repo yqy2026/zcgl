@@ -48,8 +48,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_admin_user():
     """Create mock admin user with monitoring permissions"""

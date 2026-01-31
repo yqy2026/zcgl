@@ -31,7 +31,7 @@ router = APIRouter()
 @router.get(
     "/", response_model=list[AssetCustomFieldResponse], summary="获取自定义字段列表"
 )
-async def get_custom_fields(
+def get_custom_fields(
     asset_id: str | None = Query(None, description="资产ID筛选"),
     field_type: str | None = Query(None, description="字段类型筛选"),
     is_required: bool | None = Query(None, description="是否必填筛选"),
@@ -69,7 +69,7 @@ async def get_custom_fields(
 @router.get(
     "/{field_id}", response_model=AssetCustomFieldResponse, summary="获取自定义字段详情"
 )
-async def get_custom_field(
+def get_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -103,7 +103,7 @@ async def get_custom_field(
     summary="创建自定义字段",
     status_code=201,
 )
-async def create_custom_field(
+def create_custom_field(
     field_in: AssetCustomFieldCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -125,7 +125,7 @@ async def create_custom_field(
 @router.put(
     "/{field_id}", response_model=AssetCustomFieldResponse, summary="更新自定义字段"
 )
-async def update_custom_field(
+def update_custom_field(
     field_in: AssetCustomFieldUpdate,
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
@@ -149,7 +149,7 @@ async def update_custom_field(
 
 
 @router.delete("/{field_id}", summary="删除自定义字段")
-async def delete_custom_field(
+def delete_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -169,7 +169,7 @@ async def delete_custom_field(
 
 
 @router.post("/validate", summary="验证自定义字段值")
-async def validate_custom_field_value(
+def validate_custom_field_value(
     field_id: str,
     value: Any,
     db: Session = Depends(get_db),
@@ -208,7 +208,7 @@ async def validate_custom_field_value(
 
 
 @router.get("/types/list[Any]", summary="获取字段类型列表")
-async def get_field_types(
+def get_field_types(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """
@@ -237,7 +237,7 @@ async def get_field_types(
 
 # 资产自定义字段值相关接口
 @router.get("/assets/{asset_id}/values", summary="获取资产自定义字段值")
-async def get_asset_custom_field_values(
+def get_asset_custom_field_values(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -256,7 +256,7 @@ async def get_asset_custom_field_values(
 
 
 @router.put("/assets/{asset_id}/values", summary="更新资产自定义字段值")
-async def update_asset_custom_field_values(
+def update_asset_custom_field_values(
     values_update: CustomFieldValueUpdate,
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
@@ -280,7 +280,7 @@ async def update_asset_custom_field_values(
 
 
 @router.post("/assets/batch-values", summary="批量设置自定义字段值")
-async def batch_set_custom_field_values(
+def batch_set_custom_field_values(
     updates: list[dict[str, Any]],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

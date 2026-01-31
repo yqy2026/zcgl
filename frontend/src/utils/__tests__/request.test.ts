@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { AuthStorage } from '@/utils/AuthStorage';
 
 describe('Request工具 - 错误处理增强', () => {
   beforeEach(() => {
@@ -56,60 +57,35 @@ describe('Request工具 - 错误处理增强', () => {
     });
   });
 
-  describe('Token兼容性', () => {
-    it('应该同时支持auth_token和token键', () => {
-      // 设置两种token
-      localStorage.setItem('auth_token', 'token-auth-value');
-      localStorage.setItem('token', 'token-old-value');
-
-      // 验证两者都存在
-      expect(localStorage.getItem('auth_token')).toBe('token-auth-value');
-      expect(localStorage.getItem('token')).toBe('token-old-value');
-    });
-
-    it('auth_token应该具有优先级', () => {
+  describe('Token存储策略', () => {
+    it('应该清理本地存储中的旧token键', () => {
       localStorage.setItem('auth_token', 'token-auth');
       localStorage.setItem('token', 'token-old');
+      localStorage.setItem('refresh_token', 'refresh-old');
+      localStorage.setItem('refreshToken', 'refresh-legacy');
 
-      // 模拟token读取逻辑: auth_token || token
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      AuthStorage.setAuthData({
+        user: {
+          id: '1',
+          username: 'test',
+          full_name: 'Test User',
+          role: 'user',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        permissions: [],
+      });
 
-      expect(token).toBe('token-auth');
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
+      expect(localStorage.getItem('refreshToken')).toBeNull();
     });
 
-    it('应该回退到token键', () => {
-      localStorage.removeItem('auth_token');
-      localStorage.setItem('token', 'token-fallback');
-
+    it('本地存储不再作为token来源', () => {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-      expect(token).toBe('token-fallback');
-    });
-
-    it('应该处理无token的情况', () => {
-      localStorage.clear();
-
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
       expect(token).toBeNull();
-    });
-
-    it('应该只设置auth_token的情况', () => {
-      localStorage.setItem('auth_token', 'only-auth');
-      localStorage.removeItem('token');
-
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-      expect(token).toBe('only-auth');
-    });
-
-    it('应该只设置token的情况', () => {
-      localStorage.removeItem('auth_token');
-      localStorage.setItem('token', 'only-token');
-
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-      expect(token).toBe('only-token');
     });
   });
 

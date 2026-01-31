@@ -89,12 +89,8 @@ def multiple_notifications(db: Session, admin_user):
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already bypasses authentication
+    return {"Authorization": "Bearer mocked_token"}
 
 
 # ============================================================================
@@ -172,9 +168,9 @@ class TestGetNotifications:
         for item in data["items"]:
             assert item["type"] == "alert"
 
-    def test_get_notifications_unauthorized(self, client):
+    def test_get_notifications_unauthorized(self, unauthenticated_client):
         """测试未授权获取通知"""
-        response = client.get("/api/v1/notifications/")
+        response = unauthenticated_client.get("/api/v1/notifications/")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -220,9 +216,9 @@ class TestGetUnreadCount:
         data = response.json()
         assert data["unread_count"] == 0
 
-    def test_get_unread_count_unauthorized(self, client):
+    def test_get_unread_count_unauthorized(self, unauthenticated_client):
         """测试未授权获取未读数量"""
-        response = client.get("/api/v1/notifications/unread-count")
+        response = unauthenticated_client.get("/api/v1/notifications/unread-count")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -258,9 +254,13 @@ class TestMarkAsRead:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_mark_notification_as_read_unauthorized(self, client, sample_notification):
+    def test_mark_notification_as_read_unauthorized(
+        self, unauthenticated_client, sample_notification
+    ):
         """测试未授权标记通知"""
-        response = client.post(f"/api/v1/notifications/{sample_notification.id}/read")
+        response = unauthenticated_client.post(
+            f"/api/v1/notifications/{sample_notification.id}/read"
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -301,9 +301,9 @@ class TestMarkAllAsRead:
         )
         assert unread_count == 0
 
-    def test_mark_all_as_read_unauthorized(self, client):
+    def test_mark_all_as_read_unauthorized(self, unauthenticated_client):
         """测试未授权全部标记已读"""
-        response = client.post("/api/v1/notifications/read-all")
+        response = unauthenticated_client.post("/api/v1/notifications/read-all")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -344,9 +344,13 @@ class TestDeleteNotification:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_delete_notification_unauthorized(self, client, sample_notification):
+    def test_delete_notification_unauthorized(
+        self, unauthenticated_client, sample_notification
+    ):
         """测试未授权删除通知"""
-        response = client.delete(f"/api/v1/notifications/{sample_notification.id}")
+        response = unauthenticated_client.delete(
+            f"/api/v1/notifications/{sample_notification.id}"
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 

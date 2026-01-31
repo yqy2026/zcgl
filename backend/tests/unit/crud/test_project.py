@@ -23,21 +23,20 @@ class TestCRUDProjectGet:
     def mock_db(self, db_session):
         return db_session
 
-
     def test_get_existing_project(self, crud, mock_db):
         """测试获取存在的项目"""
         mock_project = MagicMock(spec=Project)
         mock_project.id = "1"
         mock_project.name = "测试项目"
 
-        with patch.object(crud, 'get', return_value=mock_project):
+        with patch.object(crud, "get", return_value=mock_project):
             result = crud.get(mock_db, id="1")
 
         assert result is not None
 
     def test_get_nonexistent_project(self, crud, mock_db):
         """测试获取不存在的项目"""
-        with patch.object(crud, 'get', return_value=None):
+        with patch.object(crud, "get", return_value=None):
             result = crud.get(mock_db, id="999")
 
         assert result is None
@@ -54,7 +53,6 @@ class TestCRUDProjectGetByName:
     def mock_db(self, db_session):
         db_session.query = MagicMock()
         return db_session
-
 
     def test_get_by_name_exists(self, crud, mock_db):
         """测试通过名称获取存在的项目"""
@@ -88,7 +86,6 @@ class TestCRUDProjectGetByCode:
     def mock_db(self, db_session):
         db_session.query = MagicMock()
         return db_session
-
 
     def test_get_by_code_exists(self, crud, mock_db):
         """测试通过编码获取存在的项目"""
@@ -125,10 +122,9 @@ class TestCRUDProjectGetMultiWithFilters:
         db_session.execute = MagicMock(return_value=mock_result)
         return db_session
 
-
     def test_get_multi_default_params(self, crud, mock_db):
         """测试默认参数获取多个项目"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             result = crud.get_multi_with_filters(mock_db)
 
@@ -136,7 +132,7 @@ class TestCRUDProjectGetMultiWithFilters:
 
     def test_get_multi_with_is_active_filter(self, crud, mock_db):
         """测试带活跃状态筛选"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             crud.get_multi_with_filters(mock_db, is_active=True)
 
@@ -144,7 +140,7 @@ class TestCRUDProjectGetMultiWithFilters:
 
     def test_get_multi_with_keyword(self, crud, mock_db):
         """测试带关键词搜索"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             crud.get_multi_with_filters(mock_db, keyword="测试")
 
@@ -152,7 +148,7 @@ class TestCRUDProjectGetMultiWithFilters:
 
     def test_get_multi_with_ownership_filter(self, crud, mock_db):
         """测试带权属方ID筛选"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             crud.get_multi_with_filters(mock_db, ownership_id="own-1")
 
@@ -174,7 +170,6 @@ class TestCRUDProjectSearch:
         db_session.scalar = MagicMock(return_value=0)
         return db_session
 
-
     def test_search_returns_dict(self, crud, mock_db):
         """测试搜索返回字典结构"""
         search_params = MagicMock()
@@ -184,8 +179,8 @@ class TestCRUDProjectSearch:
         search_params.is_active = None
         search_params.ownership_id = None
 
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
-            with patch.object(crud.query_builder, 'build_count_query') as mock_count:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            with patch.object(crud.query_builder, "build_count_query") as mock_count:
                 mock_build.return_value = MagicMock()
                 mock_count.return_value = MagicMock()
                 result = crud.search(mock_db, search_params)

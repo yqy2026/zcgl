@@ -1,236 +1,121 @@
 /**
  * AppBreadcrumb 组件测试
- * 测试应用面包屑导航组件
- * 增强版本 - 添加更全面的测试用例
+ * 覆盖常见路径与特殊路径的面包屑生成
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import type { CSSProperties, ReactNode } from 'react';
 
-interface LinkMockProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+import AppBreadcrumb from '../AppBreadcrumb';
+
+let mockPathname = '/dashboard';
+
+interface LinkMockProps {
   to: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 interface BreadcrumbItem {
-  title?: React.ReactNode;
+  title?: ReactNode;
 }
 
 interface BreadcrumbMockProps {
   items?: BreadcrumbItem[];
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
-// Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  useLocation: () => ({
-    pathname: '/dashboard',
-  }),
-  Link: ({ children, to, ...props }: LinkMockProps) => (
-    <a href={to} data-link-to={to} {...props}>
+  useLocation: () => ({ pathname: mockPathname }),
+  Link: ({ children, to }: LinkMockProps) => (
+    <a href={to} data-testid="link" data-link-to={to}>
       {children}
     </a>
   ),
 }));
 
-// Mock Ant Design components
 vi.mock('antd', () => ({
   Breadcrumb: ({ items, style }: BreadcrumbMockProps) => (
-    <div data-testid="breadcrumb" data-items-count={items?.length ?? 0} style={style}>
-      {items &&
-        items.map((item, index) => (
-          <div key={index} data-breadcrumb-item={index}>
-            {item.title}
-          </div>
-        ))}
+    <div data-testid="breadcrumb" style={style}>
+      {items?.map((item, index) => (
+        <div key={index} data-testid="breadcrumb-item">
+          {item.title}
+        </div>
+      ))}
     </div>
   ),
 }));
 
-// Mock icons
 vi.mock('@ant-design/icons', () => ({
-  HomeOutlined: () => <div data-testid="icon-home" />,
-  DashboardOutlined: () => <div data-testid="icon-dashboard" />,
-  UnorderedListOutlined: () => <div data-testid="icon-unordered-list" />,
-  PlusOutlined: () => <div data-testid="icon-plus" />,
-  SearchOutlined: () => <div data-testid="icon-search" />,
-  FileExcelOutlined: () => <div data-testid="icon-file-excel" />,
-  UploadOutlined: () => <div data-testid="icon-upload" />,
-  DownloadOutlined: () => <div data-testid="icon-download" />,
-  BarChartOutlined: () => <div data-testid="icon-bar-chart" />,
-  LineChartOutlined: () => <div data-testid="icon-line-chart" />,
-  PieChartOutlined: () => <div data-testid="icon-pie-chart" />,
-  SettingOutlined: () => <div data-testid="icon-setting" />,
-  EditOutlined: () => <div data-testid="icon-edit" />,
-  EyeOutlined: () => <div data-testid="icon-eye" />,
+  HomeOutlined: () => <span data-testid="icon-home" />,
+  DashboardOutlined: () => <span data-testid="icon-dashboard" />,
+  UnorderedListOutlined: () => <span data-testid="icon-unordered-list" />,
+  PlusOutlined: () => <span data-testid="icon-plus" />,
+  SearchOutlined: () => <span data-testid="icon-search" />,
+  FileExcelOutlined: () => <span data-testid="icon-file-excel" />,
+  UploadOutlined: () => <span data-testid="icon-upload" />,
+  DownloadOutlined: () => <span data-testid="icon-download" />,
+  BarChartOutlined: () => <span data-testid="icon-bar-chart" />,
+  LineChartOutlined: () => <span data-testid="icon-line-chart" />,
+  PieChartOutlined: () => <span data-testid="icon-pie-chart" />,
+  SettingOutlined: () => <span data-testid="icon-setting" />,
+  EditOutlined: () => <span data-testid="icon-edit" />,
+  EyeOutlined: () => <span data-testid="icon-eye" />,
+  FileTextOutlined: () => <span data-testid="icon-file-text" />,
 }));
 
-describe('AppBreadcrumb - 组件导入测试', () => {
-  it('应该能够导入AppBreadcrumb组件', async () => {
-    const module = await import('../AppBreadcrumb');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
-  });
-});
+const renderBreadcrumb = (pathname: string) => {
+  mockPathname = pathname;
+  return render(<AppBreadcrumb />);
+};
 
-describe('AppBreadcrumb - 基础渲染测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('AppBreadcrumb', () => {
+  it('renders dashboard breadcrumb for /dashboard', () => {
+    renderBreadcrumb('/dashboard');
 
-  it('应该能够渲染组件', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
+    expect(screen.getByText('数据看板')).toBeInTheDocument();
+    expect(screen.queryByText('首页')).toBeNull();
   });
 
-  it('应该接受无props', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-});
+  it('renders asset list breadcrumb path', () => {
+    renderBreadcrumb('/assets/list');
 
-describe('AppBreadcrumb - 面包屑结构测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByText('首页')).toBeInTheDocument();
+    expect(screen.getByText('资产管理')).toBeInTheDocument();
+    expect(screen.getByText('资产列表')).toBeInTheDocument();
   });
 
-  it('应该包含Breadcrumb组件', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
+  it('renders asset detail breadcrumb path', () => {
+    renderBreadcrumb('/assets/123');
+
+    expect(screen.getByText('资产详情')).toBeInTheDocument();
+    expect(screen.getByText('资产列表')).toBeInTheDocument();
   });
 
-  it('应该生成面包屑项', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-});
+  it('renders asset edit breadcrumb path', () => {
+    renderBreadcrumb('/assets/123/edit');
 
-describe('AppBreadcrumb - 菜单配置测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByText('编辑资产')).toBeInTheDocument();
+    expect(screen.getByText('资产详情')).toBeInTheDocument();
   });
 
-  it('应该有首页配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
+  it('renders data import breadcrumb with category', () => {
+    renderBreadcrumb('/data/import');
+
+    expect(screen.getByText('数据管理')).toBeInTheDocument();
+    expect(screen.getByText('数据导入')).toBeInTheDocument();
   });
 
-  it('应该有数据看板配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
+  it('renders system users breadcrumb with category', () => {
+    renderBreadcrumb('/system/users');
+
+    expect(screen.getByText('系统管理')).toBeInTheDocument();
+    expect(screen.getByText('用户管理')).toBeInTheDocument();
   });
 
-  it('应该有资产列表配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
+  it('applies breadcrumb font size', () => {
+    renderBreadcrumb('/assets/list');
 
-  it('应该有新增资产配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有数据导入配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有数据导出配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有用户管理配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有角色管理配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有操作日志配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有权属方管理配置', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppBreadcrumb - 特殊路径处理测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理资产详情页面', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理资产编辑页面', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppBreadcrumb - 分类面包屑测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持资产管理分类', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持数据管理分类', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持数据分析分类', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持系统管理分类', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppBreadcrumb - 样式测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该有固定的字体大小', async () => {
-    const AppBreadcrumb = (await import('../AppBreadcrumb')).default;
-    const element = React.createElement(AppBreadcrumb);
-    expect(element).toBeTruthy();
+    expect(screen.getByTestId('breadcrumb')).toHaveStyle({ fontSize: '14px' });
   });
 });

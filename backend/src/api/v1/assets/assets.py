@@ -76,9 +76,7 @@ _asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
 
 @router.get(
     "",
-    response_model=APIResponse[
-        PaginatedData[AssetResponse | AssetListItemResponse]
-    ],
+    response_model=APIResponse[PaginatedData[AssetResponse | AssetListItemResponse]],
     summary="获取资产列表",
 )
 async def get_assets(
@@ -157,9 +155,7 @@ async def get_assets(
             assets, from_attributes=True
         )
     else:
-        items = _asset_list_item_adapter.validate_python(
-            assets, from_attributes=True
-        )
+        items = _asset_list_item_adapter.validate_python(assets, from_attributes=True)
     return ResponseHandler.paginated(
         data=list(items),
         page=page,
@@ -173,7 +169,7 @@ async def get_assets(
 
 
 @router.get("/ownership-entities", response_model=list[str], summary="获取权属方列表")
-async def get_ownership_entities(
+def get_ownership_entities(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
@@ -187,7 +183,7 @@ async def get_ownership_entities(
 @router.get(
     "/business-categories", response_model=list[str], summary="获取业态类别列表"
 )
-async def get_business_categories(
+def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
@@ -199,7 +195,7 @@ async def get_business_categories(
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
-async def get_usage_statuses(
+def get_usage_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
@@ -210,7 +206,7 @@ async def get_usage_statuses(
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
-async def get_property_natures(
+def get_property_natures(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
@@ -222,7 +218,7 @@ async def get_property_natures(
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
-async def get_ownership_statuses(
+def get_ownership_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
@@ -331,7 +327,7 @@ async def delete_asset(
 
 
 @router.get("/{asset_id}/history", summary="获取资产历史")
-async def get_asset_history(
+def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

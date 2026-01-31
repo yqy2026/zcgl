@@ -3,8 +3,12 @@
  * 测试角色权限管理页面的核心功能
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import RoleManagementPage from '../RoleManagementPage';
+import { roleService } from '../../services/systemService';
+import { MessageManager } from '@/utils/messageManager';
 
 // Mock dependencies
 vi.mock('../../services/systemService', () => ({
@@ -40,46 +44,161 @@ vi.mock('dayjs', () => ({
 
 // Mock Ant Design
 vi.mock('antd', () => {
-  const mockForm = vi.fn(() => null);
+  const formInstance = {
+    resetFields: vi.fn(),
+    setFieldsValue: vi.fn(),
+    validateFields: vi.fn(),
+  };
+  const Form = vi.fn(({ children, onFinish }) => (
+    <form
+      data-testid="form"
+      onSubmit={event => {
+        event.preventDefault();
+        onFinish?.({
+          name: '资产管理员',
+          code: 'asset_admin',
+          description: '负责资产管理的角色',
+          status: 'active',
+        });
+      }}
+    >
+      {children}
+    </form>
+  ));
+  Form.Item = vi.fn(({ children }) => <div data-testid="form-item">{children}</div>);
+  Form.useForm = vi.fn(() => [formInstance]);
+
+  const Table = vi.fn(({ columns = [], dataSource = [], rowKey }) => (
+    <div data-testid="table">
+      {dataSource.map((record: Record<string, unknown>, index: number) => {
+        const key =
+          typeof rowKey === 'function'
+            ? rowKey(record)
+            : rowKey
+              ? record[rowKey]
+              : index;
+        return (
+          <div key={String(key)} data-testid="table-row">
+            {columns.map(
+              (
+                column: {
+                  key?: string | number;
+                  dataIndex?: string;
+                  render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
+                },
+                colIndex: number
+              ) => {
+                const columnKey = String(column.key ?? column.dataIndex ?? colIndex);
+                if (column.render) {
+                  const value = column.dataIndex ? record[column.dataIndex] : undefined;
+                  return (
+                    <div key={columnKey}>{column.render(value, record)}</div>
+                  );
+                }
+                if (column.dataIndex) {
+                  return <div key={columnKey}>{record[column.dataIndex]}</div>;
+                }
+                return <div key={columnKey} />;
+              }
+            )}
+          </div>
+        );
+      })}
+    </div>
+  ));
 
   return {
     Card: vi.fn(({ children }) => <div data-testid="card">{children}</div>),
-    Table: vi.fn(() => null),
-    Button: vi.fn(({ children, onClick }) => (
-      <button onClick={onClick} data-testid="button">
+    Table,
+    Button: vi.fn(({ children, onClick, disabled, danger, icon, type }) => (
+      <button
+        data-testid="button"
+        data-danger={danger ? 'true' : 'false'}
+        data-type={type}
+        onClick={disabled ? undefined : onClick}
+        disabled={disabled}
+      >
+        {icon}
         {children}
       </button>
     )),
     Space: vi.fn(({ children }) => <div data-testid="space">{children}</div>),
-    Modal: vi.fn(() => null),
-    Form: Object.assign(mockForm, {
-      Item: vi.fn(() => null),
-      useForm: vi.fn(() => [
-        {
-          resetFields: vi.fn(),
-          setFieldsValue: vi.fn(),
-          validateFields: vi.fn(),
-        },
-      ]),
-    }),
-    Input: Object.assign(vi.fn(() => null), {
-      Search: vi.fn(() => null),
-      TextArea: vi.fn(() => null),
-    }),
-    Select: Object.assign(vi.fn(() => null), {
-      Option: vi.fn(() => null),
-    }),
-    Popconfirm: vi.fn(({ children }) => children),
+    Modal: vi.fn(({ children, open, onOk }) =>
+      open ? (
+        <div data-testid="modal">
+          {children}
+          {onOk && (
+            <button data-testid="modal-ok" onClick={onOk}>
+              OK
+            </button>
+          )}
+        </div>
+      ) : null
+    ),
+    Form,
+    Input: Object.assign(
+      vi.fn(({ placeholder, disabled }) => (
+        <input data-testid="input" placeholder={placeholder} disabled={disabled} />
+      )),
+      {
+        Search: vi.fn(({ placeholder, onSearch }) => (
+          <input
+            data-testid="role-search"
+            placeholder={placeholder}
+            onChange={event => {
+              const value = (event.target as HTMLInputElement).value;
+              onSearch?.(value);
+            }}
+          />
+        )),
+        TextArea: vi.fn(({ placeholder }) => (
+          <textarea data-testid="textarea" placeholder={placeholder} />
+        )),
+      }
+    ),
+    Select: Object.assign(
+      vi.fn(({ children, onChange }) => (
+        <select
+          data-testid="select"
+          onChange={event => onChange?.((event.target as HTMLSelectElement).value)}
+        >
+          {children}
+        </select>
+      )),
+      {
+        Option: vi.fn(({ children, value }) => <option value={value}>{children}</option>),
+      }
+    ),
+    Popconfirm: vi.fn(({ children, onConfirm, disabled }) => (
+      <div data-testid="popconfirm" onClick={disabled ? undefined : onConfirm}>
+        {children}
+      </div>
+    )),
     Tag: vi.fn(({ children }) => <span data-testid="tag">{children}</span>),
-    Tooltip: vi.fn(({ children }) => children),
+    Tooltip: vi.fn(({ children, title }) => (
+      <span data-testid={`tooltip-${title}`}>{children}</span>
+    )),
     Row: vi.fn(({ children }) => <div data-testid="row">{children}</div>),
     Col: vi.fn(({ children }) => <div data-testid="col">{children}</div>),
-    Statistic: vi.fn(() => null),
-    Switch: vi.fn(() => null),
-    Badge: vi.fn(() => null),
-    Tree: vi.fn(() => null),
-    Transfer: vi.fn(() => null),
-    Divider: vi.fn(() => null),
+    Statistic: vi.fn(({ title, value }) => (
+      <div data-testid={`statistic-${title}`}>{value}</div>
+    )),
+    Switch: vi.fn(({ checked, onChange, disabled }) => (
+      <button
+        data-testid="switch"
+        data-checked={checked ? 'true' : 'false'}
+        onClick={() => {
+          if (!disabled) {
+            onChange?.(!checked);
+          }
+        }}
+        disabled={disabled}
+      />
+    )),
+    Badge: vi.fn(({ count }) => <span data-testid="badge">{count}</span>),
+    Tree: vi.fn(() => <div data-testid="tree" />),
+    Transfer: vi.fn(() => <div data-testid="transfer" />),
+    Divider: vi.fn(() => <div data-testid="divider" />),
     Typography: {
       Text: vi.fn(({ children }) => <span>{children}</span>),
     },
@@ -126,6 +245,19 @@ const createMockRole = (overrides = {}) => ({
   ...overrides,
 });
 
+const createMockRoleApiItem = (overrides = {}) => ({
+  id: 'role-001',
+  name: 'asset_admin',
+  display_name: '资产管理员',
+  is_active: true,
+  permissions: [],
+  user_count: 5,
+  created_at: '2024-01-01',
+  updated_at: '2024-01-15',
+  is_system_role: false,
+  ...overrides,
+});
+
 // Helper to create mock permission
 const createMockPermission = (overrides = {}) => ({
   id: 'perm-001',
@@ -147,6 +279,18 @@ const createMockStatistics = () => ({
   avg_permissions: 12,
 });
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(roleService.getRoles).mockResolvedValue({ items: [], total: 0 });
+  vi.mocked(roleService.getPermissions).mockResolvedValue({ data: {} });
+  vi.mocked(roleService.getRoleStatistics).mockResolvedValue({
+    total_roles: 0,
+    active_roles: 0,
+    system_roles: 0,
+    custom_roles: 0,
+  });
+});
+
 describe('RoleManagementPage - 组件导入测试', () => {
   it('应该能够导入组件', async () => {
     const module = await import('../RoleManagementPage');
@@ -161,49 +305,27 @@ describe('RoleManagementPage - 组件导入测试', () => {
 });
 
 describe('RoleManagementPage - 组件结构测试', () => {
-  it('应该可以创建组件实例', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
-    expect(element.type).toBe(RoleManagementPage);
+  it('应该可以渲染页面', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByText('新建角色')).toBeInTheDocument();
   });
 
-  it('组件不需要任何必需属性', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage, {});
-    expect(element).toBeTruthy();
+  it('组件不需要任何必需属性', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByTestId('role-search')).toBeInTheDocument();
   });
 });
 
 describe('RoleManagementPage - 数据加载测试', () => {
   it('应该加载角色列表', async () => {
-    const { roleService } = await import('../../services/systemService');
+    render(<RoleManagementPage />);
 
-    vi.mocked(roleService.getRoles).mockResolvedValue({
-      items: [
-        {
-          id: 'role-001',
-          name: 'asset_admin',
-          display_name: '资产管理员',
-          is_active: true,
-          permissions: [],
-          created_at: '2024-01-01',
-          updated_at: '2024-01-15',
-        },
-      ],
-      total: 1,
+    await waitFor(() => {
+      expect(roleService.getRoles).toHaveBeenCalled();
     });
-
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
   });
 
   it('应该加载权限列表', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.getPermissions).mockResolvedValue({
       data: {
         assets: [
@@ -218,107 +340,209 @@ describe('RoleManagementPage - 数据加载测试', () => {
       },
     });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(roleService.getPermissions).toHaveBeenCalled();
+    });
   });
 
   it('应该加载统计数据', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.getRoleStatistics).mockResolvedValue({
       total_roles: 10,
       active_roles: 8,
       system_roles: 3,
     });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(roleService.getRoleStatistics).toHaveBeenCalled();
+    });
   });
 });
 
 describe('RoleManagementPage - 角色操作测试', () => {
   it('应该支持创建角色', async () => {
-    const { roleService } = await import('../../services/systemService');
+    render(<RoleManagementPage />);
 
-    vi.mocked(roleService.createRole).mockResolvedValue({ id: 'new-role' });
-
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    fireEvent.click(screen.getByText('新建角色'));
+    expect(screen.getByTestId('modal')).toBeInTheDocument();
   });
 
   it('应该支持编辑角色', async () => {
-    const { roleService } = await import('../../services/systemService');
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
 
-    vi.mocked(roleService.updateRole).mockResolvedValue({ id: 'role-001' });
+    render(<RoleManagementPage />);
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const editWrapper = screen.getByTestId('tooltip-编辑');
+    const editButton = editWrapper.querySelector('button');
+    fireEvent.click(editButton!);
+
+    expect(screen.getByTestId('modal')).toBeInTheDocument();
   });
 
   it('应该支持删除角色', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.deleteRole).mockResolvedValue(undefined);
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const deleteWrapper = screen.getByTestId('tooltip-删除');
+    const deleteButton = deleteWrapper.querySelector('button');
+    fireEvent.click(deleteButton!);
+
+    await waitFor(() => {
+      expect(roleService.deleteRole).toHaveBeenCalledWith('role-001');
+    });
   });
 
   it('应该支持切换角色状态', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.updateRole).mockResolvedValue({ id: 'role-001' });
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem({ is_active: true })],
+      total: 1,
+    });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    fireEvent.click(screen.getByTestId('switch'));
+
+    await waitFor(() => {
+      expect(roleService.updateRole).toHaveBeenCalledWith('role-001', {
+        is_active: false,
+      });
+    });
   });
 });
 
 describe('RoleManagementPage - 权限管理测试', () => {
   it('应该支持配置角色权限', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.updateRolePermissions).mockResolvedValue(undefined);
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
+    vi.mocked(roleService.getPermissions).mockResolvedValueOnce({
+      data: {
+        assets: [
+          {
+            id: 'perm-001',
+            name: 'assets:view',
+            display_name: '查看资产',
+            resource: 'assets',
+            action: 'view',
+          },
+        ],
+      },
+    });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const permissionWrapper = screen.getByTestId('tooltip-权限配置');
+    const permissionButton = permissionWrapper.querySelector('button');
+    fireEvent.click(permissionButton!);
+
+    expect(screen.getByTestId('modal')).toBeInTheDocument();
+    expect(screen.getByTestId('transfer')).toBeInTheDocument();
   });
 
   it('应该显示权限树形结构', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
+    vi.mocked(roleService.getPermissions).mockResolvedValueOnce({
+      data: {
+        assets: [
+          {
+            id: 'perm-001',
+            name: 'assets:view',
+            display_name: '查看资产',
+            resource: 'assets',
+            action: 'view',
+          },
+        ],
+      },
+    });
 
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const permissionWrapper = screen.getByTestId('tooltip-权限配置');
+    const permissionButton = permissionWrapper.querySelector('button');
+    fireEvent.click(permissionButton!);
+
+    expect(screen.getByTestId('tree')).toBeInTheDocument();
   });
 
   it('应该支持权限穿梭框', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
+    vi.mocked(roleService.getPermissions).mockResolvedValueOnce({
+      data: {
+        assets: [
+          {
+            id: 'perm-001',
+            name: 'assets:view',
+            display_name: '查看资产',
+            resource: 'assets',
+            action: 'view',
+          },
+        ],
+      },
+    });
 
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const permissionWrapper = screen.getByTestId('tooltip-权限配置');
+    const permissionButton = permissionWrapper.querySelector('button');
+    fireEvent.click(permissionButton!);
+
+    expect(screen.getByTestId('transfer')).toBeInTheDocument();
   });
 });
 
 describe('RoleManagementPage - 搜索和筛选测试', () => {
-  it('应该支持搜索角色', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+  it('应该支持搜索角色', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByTestId('role-search')).toBeInTheDocument();
   });
 
-  it('应该支持按状态筛选', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+  it('应该支持按状态筛选', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByTestId('select')).toBeInTheDocument();
   });
 });
 
@@ -379,50 +603,62 @@ describe('RoleManagementPage - 统计卡片测试', () => {
 });
 
 describe('RoleManagementPage - 分页测试', () => {
-  it('应该支持分页', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+  it('应该支持分页', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByTestId('table')).toBeInTheDocument();
   });
 
-  it('应该支持改变每页数量', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+  it('应该支持改变每页数量', () => {
+    render(<RoleManagementPage />);
+    expect(screen.getByTestId('table')).toBeInTheDocument();
   });
 });
 
 describe('RoleManagementPage - 错误处理测试', () => {
   it('加载角色失败应该显示错误消息', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.getRoles).mockRejectedValue(new Error('Load failed'));
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(MessageManager.error).toHaveBeenCalledWith('加载角色列表失败');
+    });
   });
 
   it('创建角色失败应该显示错误消息', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.createRole).mockRejectedValue(new Error('Create failed'));
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    fireEvent.click(screen.getByText('新建角色'));
+    await waitFor(() => expect(screen.getByTestId('form')).toBeInTheDocument());
+    fireEvent.submit(screen.getByTestId('form'));
+
+    await waitFor(() => {
+      expect(MessageManager.error).toHaveBeenCalledWith('创建失败');
+    });
   });
 
   it('删除角色失败应该显示错误消息', async () => {
-    const { roleService } = await import('../../services/systemService');
-
     vi.mocked(roleService.deleteRole).mockRejectedValue(new Error('Delete failed'));
+    vi.mocked(roleService.getRoles).mockResolvedValueOnce({
+      items: [createMockRoleApiItem()],
+      total: 1,
+    });
 
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
-    const element = React.createElement(RoleManagementPage);
-    expect(element).toBeTruthy();
+    render(<RoleManagementPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+    });
+
+    const deleteWrapper = screen.getByTestId('tooltip-删除');
+    const deleteButton = deleteWrapper.querySelector('button');
+    fireEvent.click(deleteButton!);
+
+    await waitFor(() => {
+      expect(MessageManager.error).toHaveBeenCalledWith('删除失败');
+    });
   });
 });
 

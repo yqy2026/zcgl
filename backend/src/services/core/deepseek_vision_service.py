@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from ...core.exception_handler import ConfigurationError
 from .base_vision_service import (
     VisionAPIError,
     handle_http_status_error,
@@ -128,7 +129,9 @@ class DeepSeekVisionService:
             DeepSeekVisionResponse with extracted content
         """
         if not self.is_available:
-            raise RuntimeError("DEEPSEEK_API_KEY not configured")
+            raise ConfigurationError(
+                "DEEPSEEK_API_KEY not configured", config_key="DEEPSEEK_API_KEY"
+            )
 
         # Build multimodal content array (OpenAI-compatible format)
         content: list[dict[str, Any]] = []

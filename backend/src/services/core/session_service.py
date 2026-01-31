@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 
-from jose import jwt
+import jwt
 from sqlalchemy.orm import Session
 
 from ...core.config import settings

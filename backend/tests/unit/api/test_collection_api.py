@@ -227,7 +227,6 @@ class TestCreateCollectionRecord:
         ledger = RentLedger(
             id="test-ledger-1",
             contract_id="test-contract-1",
-            tenant_id="test-tenant-1",
             due_date=date(2024, 1, 1),
             payment_status=PaymentStatus.UNPAID,
             overdue_amount=Decimal("1000.00"),

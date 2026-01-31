@@ -6,9 +6,11 @@ Property Certificate Validator
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, NoReturn
 
 from src.models.property_certificate import CertificateType
+
+from ...core.exception_handler import BusinessValidationError
 
 
 @dataclass
@@ -73,72 +75,76 @@ class PropertyCertificateValidator:
 
     def validate_certificate_number(self, number: str | None) -> bool:
         if not number:
-            raise ValueError("证书编号不能为空")
+            self._raise_validation_error("证书编号不能为空", field="certificate_number")
         if len(number) != 18:
-            raise ValueError("证书编号长度必须为 18 位")
+            self._raise_validation_error(
+                "证书编号长度必须为 18 位", field="certificate_number"
+            )
         return True
 
     def validate_area(self, area: float | int | str | None) -> bool:
         if area is None:
-            raise ValueError("面积不能为空")
+            self._raise_validation_error("面积不能为空", field="area")
         try:
             value = float(area)
         except (TypeError, ValueError):
-            raise ValueError("面积格式不正确") from None
+            self._raise_validation_error("面积格式不正确", field="area")
         if value <= 0:
-            raise ValueError("面积必须为正数")
+            self._raise_validation_error("面积必须为正数", field="area")
         if value > 100000000:
-            raise ValueError("面积过大")
+            self._raise_validation_error("面积过大", field="area")
         return True
 
     def validate_issue_date(self, issue_date: datetime | date | None) -> bool:
         if issue_date is None:
-            raise ValueError("发证日期不能为空")
+            self._raise_validation_error("发证日期不能为空", field="issue_date")
         if isinstance(issue_date, date) and not isinstance(issue_date, datetime):
             issue_date = datetime.combine(issue_date, datetime.min.time(), tzinfo=UTC)
         if isinstance(issue_date, datetime):
             if issue_date.tzinfo is None:
                 issue_date = issue_date.replace(tzinfo=UTC)
             if issue_date > datetime.now(UTC):
-                raise ValueError("发证日期不能晚于当前日期")
+                self._raise_validation_error(
+                    "发证日期不能晚于当前日期", field="issue_date"
+                )
             return True
-        raise ValueError("发证日期格式不正确")
+        self._raise_validation_error("发证日期格式不正确", field="issue_date")
 
     def validate_expiry_date(
         self, expiry_date: datetime | date | None, issue_date: datetime | date | None
     ) -> bool:
         if expiry_date is None:
-            raise ValueError("到期日期不能为空")
+            self._raise_validation_error("到期日期不能为空", field="expiry_date")
         if issue_date is None:
-            raise ValueError("发证日期不能为空")
+            self._raise_validation_error("发证日期不能为空", field="issue_date")
         if isinstance(expiry_date, date) and not isinstance(expiry_date, datetime):
-            expiry_date = datetime.combine(
-                expiry_date, datetime.min.time(), tzinfo=UTC
-            )
+            expiry_date = datetime.combine(expiry_date, datetime.min.time(), tzinfo=UTC)
         if isinstance(issue_date, date) and not isinstance(issue_date, datetime):
             issue_date = datetime.combine(issue_date, datetime.min.time(), tzinfo=UTC)
-        if not isinstance(expiry_date, datetime) or not isinstance(
-            issue_date, datetime
-        ):
-            raise ValueError("日期格式不正确")
+        if not isinstance(expiry_date, datetime):
+            self._raise_validation_error("日期格式不正确", field="expiry_date")
+        if not isinstance(issue_date, datetime):
+            self._raise_validation_error("日期格式不正确", field="issue_date")
         if expiry_date.tzinfo is None:
             expiry_date = expiry_date.replace(tzinfo=UTC)
         if issue_date.tzinfo is None:
             issue_date = issue_date.replace(tzinfo=UTC)
         if expiry_date <= issue_date:
-            raise ValueError("到期日期必须晚于发证日期")
+            self._raise_validation_error(
+                "到期日期必须晚于发证日期", field="expiry_date"
+            )
         return True
 
     def validate_property_name(self, name: str | None) -> bool:
         if not name:
-            raise ValueError("房产名称不能为空")
+            self._raise_validation_error("房产名称不能为空", field="property_name")
         if len(name.strip()) < 3:
-            raise ValueError("房产名称过短")
+            self._raise_validation_error("房产名称过短", field="property_name")
         return True
 
     def validate_address(self, address: str | None) -> bool:
         if not address or not address.strip():
-            raise ValueError("地址不能为空")
+            self._raise_validation_error("地址不能为空", field="address")
         return True
 
     def validate_certificate_data(self, data: dict[str, Any]) -> bool:
@@ -152,7 +158,9 @@ class PropertyCertificateValidator:
         ]
         for field in required_fields:
             if field not in data:
-                raise ValueError(f"缺少必填字段: {field}")
+                self._raise_validation_error(
+                    "缺少必填字段", field=field, details={"missing_field": field}
+                )
         self.validate_certificate_number(data.get("certificate_number"))
         self.validate_property_name(data.get("property_name"))
         self.validate_area(data.get("area"))
@@ -163,44 +171,64 @@ class PropertyCertificateValidator:
 
     def validate_registration_number(self, number: str | None) -> bool:
         if not number:
-            raise ValueError("注册号不能为空")
+            self._raise_validation_error("注册号不能为空", field="registration_number")
         pattern = r"^REG-\d{4}-\d{6}$"
         if not re.match(pattern, number):
-            raise ValueError("注册号格式不正确")
+            self._raise_validation_error(
+                "注册号格式不正确", field="registration_number"
+            )
         return True
 
     def validate_owner_name(self, name: str | None) -> bool:
         if not name or not name.strip():
-            raise ValueError("业主姓名不能为空")
+            self._raise_validation_error("业主姓名不能为空", field="owner_name")
         return True
 
     def validate_certificate_type(self, cert_type: str | None) -> bool:
         allowed = {"house", "land", "real_estate", "other"}
         if not cert_type or cert_type not in allowed:
-            raise ValueError("无效的产权证类型")
+            self._raise_validation_error("无效的产权证类型", field="certificate_type")
         return True
 
     def validate_land_use_right(self, right: str | None) -> bool:
         allowed = {"residential", "commercial", "industrial", "mixed", "other"}
         if not right or right not in allowed:
-            raise ValueError("无效的土地使用权")
+            self._raise_validation_error("无效的土地使用权", field="land_use_right")
         return True
 
     def validate_land_term(self, term: int | None) -> bool:
         if term is None:
-            raise ValueError("土地年限不能为空")
+            self._raise_validation_error("土地年限不能为空", field="land_term")
         if term <= 0:
-            raise ValueError("土地年限必须为正数")
+            self._raise_validation_error("土地年限必须为正数", field="land_term")
         if term > 70:
-            raise ValueError("土地年限过长")
+            self._raise_validation_error("土地年限过长", field="land_term")
         return True
 
     def validate_certificate_copy_number(self, count: int | None) -> bool:
         if count is None:
-            raise ValueError("份数不能为空")
+            self._raise_validation_error(
+                "份数不能为空", field="certificate_copy_number"
+            )
         if count <= 0:
-            raise ValueError("份数必须为正数")
+            self._raise_validation_error(
+                "份数必须为正数", field="certificate_copy_number"
+            )
         return True
+
+    @staticmethod
+    def _raise_validation_error(
+        message: str,
+        *,
+        field: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> NoReturn:
+        field_errors = {field: [message]} if field else None
+        raise BusinessValidationError(
+            message=message,
+            field_errors=field_errors,
+            details=details,
+        )
 
     @staticmethod
     def _validate_certificate_number(number: str) -> bool:

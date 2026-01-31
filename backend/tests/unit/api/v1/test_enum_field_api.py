@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -39,8 +39,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 
 
 @pytest.fixture
@@ -156,21 +154,20 @@ class TestDebugEndpoint:
 class TestGetEnumFieldTypes:
     """Tests for GET /api/v1/enum-fields/types endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_types_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_types_success(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test getting enum field types successfully"""
-        from src.api.v1.enum_field import get_enum_field_types
+        from src.api.v1.system.enum_field import get_enum_field_types
 
         mock_crud = MagicMock()
         mock_crud.get_multi.return_value = [mock_enum_type]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_types(
-            skip=0,
-            limit=100,
+        result = get_enum_field_types(
+            page=1,
+            page_size=100,
             category=None,
             status=None,
             is_system=None,
@@ -184,21 +181,20 @@ class TestGetEnumFieldTypes:
             skip=0, limit=100, category=None, status=None, is_system=None, keyword=None
         )
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_types_with_filters(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_types_with_filters(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test getting enum field types with filters"""
-        from src.api.v1.enum_field import get_enum_field_types
+        from src.api.v1.system.enum_field import get_enum_field_types
 
         mock_crud = MagicMock()
         mock_crud.get_multi.return_value = [mock_enum_type]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_types(
-            skip=0,
-            limit=50,
+        result = get_enum_field_types(
+            page=1,
+            page_size=50,
             category="test_category",
             status="active",
             is_system=False,
@@ -216,19 +212,18 @@ class TestGetEnumFieldTypes:
             keyword="test",
         )
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_types_empty_list(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_types_empty_list(self, mock_get_crud, mock_db):
         """Test getting enum field types with empty result"""
-        from src.api.v1.enum_field import get_enum_field_types
+        from src.api.v1.system.enum_field import get_enum_field_types
 
         mock_crud = MagicMock()
         mock_crud.get_multi.return_value = []
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_types(
-            skip=0,
-            limit=100,
+        result = get_enum_field_types(
+            page=1,
+            page_size=100,
             category=None,
             status=None,
             is_system=None,
@@ -247,11 +242,10 @@ class TestGetEnumFieldTypes:
 class TestGetEnumFieldStatistics:
     """Tests for GET /api/v1/enum-fields/types/statistics endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_statistics_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_statistics_success(self, mock_get_crud, mock_db):
         """Test getting enum field statistics successfully"""
-        from src.api.v1.enum_field import get_enum_field_statistics
+        from src.api.v1.system.enum_field import get_enum_field_statistics
 
         mock_crud = MagicMock()
         mock_crud.get_statistics.return_value = {
@@ -278,7 +272,7 @@ class TestGetEnumFieldStatistics:
         mock_query.filter.return_value.count.side_effect = lambda: 15
         mock_db.query.return_value = mock_query
 
-        result = await get_enum_field_statistics(db=mock_db)
+        result = get_enum_field_statistics(db=mock_db)
 
         assert result.total_types == 10
         assert result.active_types == 8
@@ -297,39 +291,37 @@ class TestGetEnumFieldStatistics:
 class TestGetEnumFieldType:
     """Tests for GET /api/v1/enum-fields/types/{type_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_type_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_type_success(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test getting enum field type successfully"""
-        from src.api.v1.enum_field import get_enum_field_type
+        from src.api.v1.system.enum_field import get_enum_field_type
 
         mock_crud = MagicMock()
         mock_crud.get.return_value = mock_enum_type
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_type(type_id="test-type-id", db=mock_db)
+        result = get_enum_field_type(type_id="test-type-id", db=mock_db)
 
         assert result.id == "test-type-id"
         assert result.name == "Test Enum Type"
         mock_crud.get.assert_called_once_with("test-type-id")
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_type_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_type_not_found(self, mock_get_crud, mock_db):
         """Test getting non-existent enum field type"""
-        from src.api.v1.enum_field import get_enum_field_type
+        from src.api.v1.system.enum_field import get_enum_field_type
 
         mock_crud = MagicMock()
         mock_crud.get.return_value = None
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_enum_field_type(type_id="nonexistent-id", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_enum_field_type(type_id="nonexistent-id", db=mock_db)
 
         assert exc_info.value.status_code == 404
-        assert "枚举类型不存在" in exc_info.value.detail
+        assert "enum_type不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -340,13 +332,12 @@ class TestGetEnumFieldType:
 class TestCreateEnumFieldType:
     """Tests for POST /api/v1/enum-fields/types endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_type_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_create_enum_field_type_success(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test creating enum field type successfully"""
-        from src.api.v1.enum_field import create_enum_field_type
+        from src.api.v1.system.enum_field import create_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeCreate
 
@@ -363,17 +354,16 @@ class TestCreateEnumFieldType:
         mock_crud.create.return_value = mock_enum_type
         mock_get_crud.return_value = mock_crud
 
-        result = await create_enum_field_type(enum_type=enum_type_data, db=mock_db)
+        result = create_enum_field_type(enum_type=enum_type_data, db=mock_db)
 
         assert result.id == "test-type-id"
         mock_crud.get_by_code.assert_called_once_with("new_enum")
         mock_crud.create.assert_called_once()
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_type_duplicate_code(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_create_enum_field_type_duplicate_code(self, mock_get_crud, mock_db):
         """Test creating enum field type with duplicate code"""
-        from src.api.v1.enum_field import create_enum_field_type
+        from src.api.v1.system.enum_field import create_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeCreate
 
@@ -388,19 +378,18 @@ class TestCreateEnumFieldType:
         mock_crud.get_by_code.return_value = MagicMock()  # Code exists
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_enum_field_type(enum_type=enum_type_data, db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            create_enum_field_type(enum_type=enum_type_data, db=mock_db)
 
-        assert exc_info.value.status_code == 400
-        assert "编码 existing_enum 已存在" in exc_info.value.detail
+        assert exc_info.value.status_code == 409
+        assert "编码 existing_enum 已存在" in exc_info.value.message
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_type_validation_error(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_create_enum_field_type_validation_error(
         self, mock_get_crud, mock_db
     ):
         """Test creating enum field type with validation error"""
-        from src.api.v1.enum_field import create_enum_field_type
+        from src.api.v1.system.enum_field import create_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeCreate
 
@@ -416,11 +405,11 @@ class TestCreateEnumFieldType:
         mock_crud.create.side_effect = ValueError("Invalid validation rules")
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_enum_field_type(enum_type=enum_type_data, db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            create_enum_field_type(enum_type=enum_type_data, db=mock_db)
 
         assert exc_info.value.status_code == 400
-        assert "Invalid validation rules" in exc_info.value.detail
+        assert "Invalid validation rules" in exc_info.value.message
 
 
 # ============================================================================
@@ -431,13 +420,12 @@ class TestCreateEnumFieldType:
 class TestUpdateEnumFieldType:
     """Tests for PUT /api/v1/enum-fields/types/{type_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_type_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_update_enum_field_type_success(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test updating enum field type successfully"""
-        from src.api.v1.enum_field import update_enum_field_type
+        from src.api.v1.system.enum_field import update_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
@@ -452,7 +440,7 @@ class TestUpdateEnumFieldType:
         mock_crud.update.return_value = mock_enum_type
         mock_get_crud.return_value = mock_crud
 
-        result = await update_enum_field_type(
+        result = update_enum_field_type(
             type_id="test-type-id", enum_type=update_data, db=mock_db
         )
 
@@ -460,11 +448,10 @@ class TestUpdateEnumFieldType:
         mock_crud.get.assert_called_once_with("test-type-id")
         mock_crud.update.assert_called_once()
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_type_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_update_enum_field_type_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field type"""
-        from src.api.v1.enum_field import update_enum_field_type
+        from src.api.v1.system.enum_field import update_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
@@ -474,21 +461,20 @@ class TestUpdateEnumFieldType:
         mock_crud.get.return_value = None
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_enum_field_type(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_enum_field_type(
                 type_id="nonexistent-id", enum_type=update_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举类型不存在" in exc_info.value.detail
+        assert "enum_type不存在" in exc_info.value.message
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_type_duplicate_code(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_update_enum_field_type_duplicate_code(
         self, mock_get_crud, mock_db, mock_enum_type
     ):
         """Test updating enum field type with duplicate code"""
-        from src.api.v1.enum_field import update_enum_field_type
+        from src.api.v1.system.enum_field import update_enum_field_type
 
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
@@ -502,13 +488,13 @@ class TestUpdateEnumFieldType:
         mock_crud.get_by_code.return_value = mock_existing
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_enum_field_type(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_enum_field_type(
                 type_id="test-type-id", enum_type=update_data, db=mock_db
             )
 
-        assert exc_info.value.status_code == 400
-        assert "编码 existing_code 已存在" in exc_info.value.detail
+        assert exc_info.value.status_code == 409
+        assert "编码 existing_code 已存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -519,40 +505,38 @@ class TestUpdateEnumFieldType:
 class TestDeleteEnumFieldType:
     """Tests for DELETE /api/v1/enum-fields/types/{type_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_type_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_delete_enum_field_type_success(self, mock_get_crud, mock_db):
         """Test deleting enum field type successfully"""
-        from src.api.v1.enum_field import delete_enum_field_type
+        from src.api.v1.system.enum_field import delete_enum_field_type
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = True
         mock_get_crud.return_value = mock_crud
 
-        result = await delete_enum_field_type(
+        result = delete_enum_field_type(
             type_id="test-type-id", deleted_by="test-user", db=mock_db
         )
 
         assert result["message"] == "枚举类型删除成功"
         mock_crud.delete.assert_called_once_with("test-type-id", deleted_by="test-user")
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_type_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_delete_enum_field_type_not_found(self, mock_get_crud, mock_db):
         """Test deleting non-existent enum field type"""
-        from src.api.v1.enum_field import delete_enum_field_type
+        from src.api.v1.system.enum_field import delete_enum_field_type
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = False
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_enum_field_type(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_enum_field_type(
                 type_id="nonexistent-id", deleted_by="test-user", db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举类型不存在" in exc_info.value.detail
+        assert "enum_type不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -563,17 +547,16 @@ class TestDeleteEnumFieldType:
 class TestGetEnumFieldCategories:
     """Tests for GET /api/v1/enum-fields/types/categories endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_categories_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    def test_get_enum_field_categories_success(self, mock_get_crud, mock_db):
         """Test getting enum field categories successfully"""
-        from src.api.v1.enum_field import get_enum_field_categories
+        from src.api.v1.system.enum_field import get_enum_field_categories
 
         mock_crud = MagicMock()
         mock_crud.get_categories.return_value = ["category1", "category2", "category3"]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_categories(db=mock_db)
+        result = get_enum_field_categories(db=mock_db)
 
         assert "categories" in result
         assert len(result["categories"]) == 3
@@ -588,19 +571,18 @@ class TestGetEnumFieldCategories:
 class TestGetEnumFieldValues:
     """Tests for GET /api/v1/enum-fields/types/{type_id}/values endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_values_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_get_enum_field_values_success(
         self, mock_get_crud, mock_db, mock_enum_value
     ):
         """Test getting enum field values successfully"""
-        from src.api.v1.enum_field import get_enum_field_values
+        from src.api.v1.system.enum_field import get_enum_field_values
 
         mock_crud = MagicMock()
         mock_crud.get_by_type.return_value = [mock_enum_value]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_values(
+        result = get_enum_field_values(
             type_id="test-type-id", parent_id=None, is_active=None, db=mock_db
         )
 
@@ -619,19 +601,18 @@ class TestGetEnumFieldValues:
 class TestGetEnumFieldValuesTree:
     """Tests for GET /api/v1/enum-fields/types/{type_id}/values/tree endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_values_tree_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_get_enum_field_values_tree_success(
         self, mock_get_crud, mock_db, mock_enum_value
     ):
         """Test getting enum field values tree successfully"""
-        from src.api.v1.enum_field import get_enum_field_values_tree
+        from src.api.v1.system.enum_field import get_enum_field_values_tree
 
         mock_crud = MagicMock()
         mock_crud.get_tree.return_value = [mock_enum_value]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_values_tree(type_id="test-type-id", db=mock_db)
+        result = get_enum_field_values_tree(type_id="test-type-id", db=mock_db)
 
         assert len(result) == 1
         assert result[0].id == "test-value-id"
@@ -648,39 +629,37 @@ class TestGetEnumFieldValuesTree:
 class TestGetEnumFieldValue:
     """Tests for GET /api/v1/enum-fields/values/{value_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_value_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_get_enum_field_value_success(
         self, mock_get_crud, mock_db, mock_enum_value
     ):
         """Test getting enum field value successfully"""
-        from src.api.v1.enum_field import get_enum_field_value
+        from src.api.v1.system.enum_field import get_enum_field_value
 
         mock_crud = MagicMock()
         mock_crud.get.return_value = mock_enum_value
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_value(value_id="test-value-id", db=mock_db)
+        result = get_enum_field_value(value_id="test-value-id", db=mock_db)
 
         assert result.id == "test-value-id"
         assert result.label == "Test Label"
         mock_crud.get.assert_called_once_with("test-value-id")
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_value_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_get_enum_field_value_not_found(self, mock_get_crud, mock_db):
         """Test getting non-existent enum field value"""
-        from src.api.v1.enum_field import get_enum_field_value
+        from src.api.v1.system.enum_field import get_enum_field_value
 
         mock_crud = MagicMock()
         mock_crud.get.return_value = None
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_enum_field_value(value_id="nonexistent-id", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_enum_field_value(value_id="nonexistent-id", db=mock_db)
 
         assert exc_info.value.status_code == 404
-        assert "枚举值不存在" in exc_info.value.detail
+        assert "enum_value不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -691,10 +670,9 @@ class TestGetEnumFieldValue:
 class TestCreateEnumFieldValue:
     """Tests for POST /api/v1/enum-fields/types/{type_id}/values endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_value_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_create_enum_field_value_success(
         self,
         mock_get_value_crud,
         mock_get_type_crud,
@@ -703,7 +681,7 @@ class TestCreateEnumFieldValue:
         mock_enum_value,
     ):
         """Test creating enum field value successfully"""
-        from src.api.v1.enum_field import create_enum_field_value
+        from src.api.v1.system.enum_field import create_enum_field_value
 
         from src.schemas.enum_field import EnumFieldValueCreate
 
@@ -724,21 +702,20 @@ class TestCreateEnumFieldValue:
         mock_value_crud.create.return_value = mock_enum_value
         mock_get_value_crud.return_value = mock_value_crud
 
-        result = await create_enum_field_value(
+        result = create_enum_field_value(
             type_id="test-type-id", enum_value=value_data, db=mock_db
         )
 
         assert result.id == "test-value-id"
         mock_type_crud.get.assert_called_once_with("test-type-id")
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_value_type_not_found(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_create_enum_field_value_type_not_found(
         self, mock_get_value_crud, mock_get_type_crud, mock_db
     ):
         """Test creating enum field value with non-existent type"""
-        from src.api.v1.enum_field import create_enum_field_value
+        from src.api.v1.system.enum_field import create_enum_field_value
 
         from src.schemas.enum_field import EnumFieldValueCreate
 
@@ -750,13 +727,13 @@ class TestCreateEnumFieldValue:
         mock_type_crud.get.return_value = None
         mock_get_type_crud.return_value = mock_type_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_enum_field_value(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            create_enum_field_value(
                 type_id="nonexistent-type-id", enum_value=value_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举类型不存在" in exc_info.value.detail
+        assert "enum_type不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -767,13 +744,12 @@ class TestCreateEnumFieldValue:
 class TestUpdateEnumFieldValue:
     """Tests for PUT /api/v1/enum-fields/values/{value_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_value_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_update_enum_field_value_success(
         self, mock_get_crud, mock_db, mock_enum_value
     ):
         """Test updating enum field value successfully"""
-        from src.api.v1.enum_field import update_enum_field_value
+        from src.api.v1.system.enum_field import update_enum_field_value
 
         from src.schemas.enum_field import EnumFieldValueUpdate
 
@@ -786,18 +762,17 @@ class TestUpdateEnumFieldValue:
         mock_crud.update.return_value = mock_enum_value
         mock_get_crud.return_value = mock_crud
 
-        result = await update_enum_field_value(
+        result = update_enum_field_value(
             value_id="test-value-id", enum_value=update_data, db=mock_db
         )
 
         assert result.id == "test-value-id"
         mock_crud.get.assert_called_once_with("test-value-id")
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_value_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_update_enum_field_value_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field value"""
-        from src.api.v1.enum_field import update_enum_field_value
+        from src.api.v1.system.enum_field import update_enum_field_value
 
         from src.schemas.enum_field import EnumFieldValueUpdate
 
@@ -807,13 +782,13 @@ class TestUpdateEnumFieldValue:
         mock_crud.get.return_value = None
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_enum_field_value(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_enum_field_value(
                 value_id="nonexistent-id", enum_value=update_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举值不存在" in exc_info.value.detail
+        assert "enum_value不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -824,17 +799,16 @@ class TestUpdateEnumFieldValue:
 class TestDeleteEnumFieldValue:
     """Tests for DELETE /api/v1/enum-fields/values/{value_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_value_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_delete_enum_field_value_success(self, mock_get_crud, mock_db):
         """Test deleting enum field value successfully"""
-        from src.api.v1.enum_field import delete_enum_field_value
+        from src.api.v1.system.enum_field import delete_enum_field_value
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = True
         mock_get_crud.return_value = mock_crud
 
-        result = await delete_enum_field_value(
+        result = delete_enum_field_value(
             value_id="test-value-id", deleted_by="test-user", db=mock_db
         )
 
@@ -843,23 +817,22 @@ class TestDeleteEnumFieldValue:
             "test-value-id", deleted_by="test-user"
         )
 
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_value_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_delete_enum_field_value_not_found(self, mock_get_crud, mock_db):
         """Test deleting non-existent enum field value"""
-        from src.api.v1.enum_field import delete_enum_field_value
+        from src.api.v1.system.enum_field import delete_enum_field_value
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = False
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_enum_field_value(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_enum_field_value(
                 value_id="nonexistent-id", deleted_by="test-user", db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举值不存在" in exc_info.value.detail
+        assert "enum_value不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -870,10 +843,9 @@ class TestDeleteEnumFieldValue:
 class TestBatchCreateEnumFieldValues:
     """Tests for POST /api/v1/enum-fields/types/{type_id}/values/batch endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_batch_create_enum_field_values_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_batch_create_enum_field_values_success(
         self,
         mock_get_value_crud,
         mock_get_type_crud,
@@ -882,7 +854,7 @@ class TestBatchCreateEnumFieldValues:
         mock_enum_value,
     ):
         """Test batch creating enum field values successfully"""
-        from src.api.v1.enum_field import batch_create_enum_field_values
+        from src.api.v1.system.enum_field import batch_create_enum_field_values
 
         from src.schemas.enum_field import EnumFieldBatchCreate
 
@@ -903,21 +875,20 @@ class TestBatchCreateEnumFieldValues:
         mock_value_crud.batch_create.return_value = [mock_enum_value, mock_enum_value]
         mock_get_value_crud.return_value = mock_value_crud
 
-        result = await batch_create_enum_field_values(
+        result = batch_create_enum_field_values(
             type_id="test-type-id", batch_data=batch_data, db=mock_db
         )
 
         assert len(result) == 2
         mock_type_crud.get.assert_called_once_with("test-type-id")
 
-    @patch("src.api.v1.enum_field.get_enum_field_type_crud")
-    @patch("src.api.v1.enum_field.get_enum_field_value_crud")
-    @pytest.mark.asyncio
-    async def test_batch_create_enum_field_values_type_not_found(
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    def test_batch_create_enum_field_values_type_not_found(
         self, mock_get_value_crud, mock_get_type_crud, mock_db
     ):
         """Test batch creating enum field values with non-existent type"""
-        from src.api.v1.enum_field import batch_create_enum_field_values
+        from src.api.v1.system.enum_field import batch_create_enum_field_values
 
         from src.schemas.enum_field import EnumFieldBatchCreate
 
@@ -930,13 +901,13 @@ class TestBatchCreateEnumFieldValues:
         mock_type_crud.get.return_value = None
         mock_get_type_crud.return_value = mock_type_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await batch_create_enum_field_values(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            batch_create_enum_field_values(
                 type_id="nonexistent-type-id", batch_data=batch_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "枚举类型不存在" in exc_info.value.detail
+        assert "enum_type不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -947,35 +918,33 @@ class TestBatchCreateEnumFieldValues:
 class TestGetEnumFieldUsage:
     """Tests for GET /api/v1/enum-fields/usage endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_usage_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_get_enum_field_usage_success(
         self, mock_get_crud, mock_db, mock_enum_usage
     ):
         """Test getting enum field usage records successfully"""
-        from src.api.v1.enum_field import get_enum_field_usage
+        from src.api.v1.system.enum_field import get_enum_field_usage
 
         mock_crud = MagicMock()
         mock_crud.get_by_enum_type.return_value = [mock_enum_usage]
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_usage(
+        result = get_enum_field_usage(
             enum_type_id="test-type-id", table_name=None, module_name=None, db=mock_db
         )
 
         assert len(result) == 1
         assert result[0].id == "test-usage-id"
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_get_enum_field_usage_no_type_filter(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_get_enum_field_usage_no_type_filter(self, mock_get_crud, mock_db):
         """Test getting enum field usage records without type filter"""
-        from src.api.v1.enum_field import get_enum_field_usage
+        from src.api.v1.system.enum_field import get_enum_field_usage
 
         mock_crud = MagicMock()
         mock_get_crud.return_value = mock_crud
 
-        result = await get_enum_field_usage(
+        result = get_enum_field_usage(
             enum_type_id=None, table_name=None, module_name=None, db=mock_db
         )
 
@@ -990,13 +959,12 @@ class TestGetEnumFieldUsage:
 class TestCreateEnumFieldUsage:
     """Tests for POST /api/v1/enum-fields/usage endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_create_enum_field_usage_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_create_enum_field_usage_success(
         self, mock_get_crud, mock_db, mock_enum_usage
     ):
         """Test creating enum field usage record successfully"""
-        from src.api.v1.enum_field import create_enum_field_usage
+        from src.api.v1.system.enum_field import create_enum_field_usage
 
         from src.schemas.enum_field import EnumFieldUsageCreate
 
@@ -1014,7 +982,7 @@ class TestCreateEnumFieldUsage:
         mock_crud.create.return_value = mock_enum_usage
         mock_get_crud.return_value = mock_crud
 
-        result = await create_enum_field_usage(usage=usage_data, db=mock_db)
+        result = create_enum_field_usage(usage=usage_data, db=mock_db)
 
         assert result.id == "test-usage-id"
         mock_crud.get_by_field.assert_called_once_with("test_table", "test_field")
@@ -1028,13 +996,12 @@ class TestCreateEnumFieldUsage:
 class TestUpdateEnumFieldUsage:
     """Tests for PUT /api/v1/enum-fields/usage/{usage_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_usage_success(
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_update_enum_field_usage_success(
         self, mock_get_crud, mock_db, mock_enum_usage
     ):
         """Test updating enum field usage record successfully"""
-        from src.api.v1.enum_field import update_enum_field_usage
+        from src.api.v1.system.enum_field import update_enum_field_usage
 
         from src.schemas.enum_field import EnumFieldUsageUpdate
 
@@ -1047,17 +1014,16 @@ class TestUpdateEnumFieldUsage:
         mock_crud.update.return_value = mock_enum_usage
         mock_get_crud.return_value = mock_crud
 
-        result = await update_enum_field_usage(
+        result = update_enum_field_usage(
             usage_id="test-usage-id", usage=update_data, db=mock_db
         )
 
         assert result.id == "test-usage-id"
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_update_enum_field_usage_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_update_enum_field_usage_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field usage record"""
-        from src.api.v1.enum_field import update_enum_field_usage
+        from src.api.v1.system.enum_field import update_enum_field_usage
 
         from src.schemas.enum_field import EnumFieldUsageUpdate
 
@@ -1067,13 +1033,13 @@ class TestUpdateEnumFieldUsage:
         mock_crud.get.return_value = None
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_enum_field_usage(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_enum_field_usage(
                 usage_id="nonexistent-id", usage=update_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "使用记录不存在" in exc_info.value.detail
+        assert "enum_usage不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -1084,35 +1050,33 @@ class TestUpdateEnumFieldUsage:
 class TestDeleteEnumFieldUsage:
     """Tests for DELETE /api/v1/enum-fields/usage/{usage_id} endpoint"""
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_usage_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_delete_enum_field_usage_success(self, mock_get_crud, mock_db):
         """Test deleting enum field usage record successfully"""
-        from src.api.v1.enum_field import delete_enum_field_usage
+        from src.api.v1.system.enum_field import delete_enum_field_usage
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = True
         mock_get_crud.return_value = mock_crud
 
-        result = await delete_enum_field_usage(usage_id="test-usage-id", db=mock_db)
+        result = delete_enum_field_usage(usage_id="test-usage-id", db=mock_db)
 
         assert result["message"] == "使用记录删除成功"
 
-    @patch("src.api.v1.enum_field.get_enum_field_usage_crud")
-    @pytest.mark.asyncio
-    async def test_delete_enum_field_usage_not_found(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    def test_delete_enum_field_usage_not_found(self, mock_get_crud, mock_db):
         """Test deleting non-existent enum field usage record"""
-        from src.api.v1.enum_field import delete_enum_field_usage
+        from src.api.v1.system.enum_field import delete_enum_field_usage
 
         mock_crud = MagicMock()
         mock_crud.delete.return_value = False
         mock_get_crud.return_value = mock_crud
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_enum_field_usage(usage_id="nonexistent-id", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_enum_field_usage(usage_id="nonexistent-id", db=mock_db)
 
         assert exc_info.value.status_code == 404
-        assert "使用记录不存在" in exc_info.value.detail
+        assert "enum_usage不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -1123,12 +1087,11 @@ class TestDeleteEnumFieldUsage:
 class TestGetEnumFieldTypeHistory:
     """Tests for GET /api/v1/enum-fields/types/{type_id}/history endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_get_enum_field_type_history_success(
+    def test_get_enum_field_type_history_success(
         self, mock_db, mock_enum_history
     ):
         """Test getting enum field type history successfully"""
-        from src.api.v1.enum_field import get_enum_field_type_history
+        from src.api.v1.system.enum_field import get_enum_field_type_history
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
@@ -1136,24 +1099,23 @@ class TestGetEnumFieldTypeHistory:
         ]
         mock_db.query.return_value = mock_query
 
-        result = await get_enum_field_type_history(
-            type_id="test-type-id", skip=0, limit=100, db=mock_db
+        result = get_enum_field_type_history(
+            type_id="test-type-id", page=1, page_size=100, db=mock_db
         )
 
         assert len(result) == 1
         assert result[0].id == "test-history-id"
 
-    @pytest.mark.asyncio
-    async def test_get_enum_field_type_history_empty(self, mock_db):
+    def test_get_enum_field_type_history_empty(self, mock_db):
         """Test getting enum field type history with empty result"""
-        from src.api.v1.enum_field import get_enum_field_type_history
+        from src.api.v1.system.enum_field import get_enum_field_type_history
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
         mock_db.query.return_value = mock_query
 
-        result = await get_enum_field_type_history(
-            type_id="test-type-id", skip=0, limit=100, db=mock_db
+        result = get_enum_field_type_history(
+            type_id="test-type-id", page=1, page_size=100, db=mock_db
         )
 
         assert len(result) == 0
@@ -1167,12 +1129,11 @@ class TestGetEnumFieldTypeHistory:
 class TestGetEnumFieldValueHistory:
     """Tests for GET /api/v1/enum-fields/values/{value_id}/history endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_get_enum_field_value_history_success(
+    def test_get_enum_field_value_history_success(
         self, mock_db, mock_enum_history
     ):
         """Test getting enum field value history successfully"""
-        from src.api.v1.enum_field import get_enum_field_value_history
+        from src.api.v1.system.enum_field import get_enum_field_value_history
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
@@ -1180,24 +1141,23 @@ class TestGetEnumFieldValueHistory:
         ]
         mock_db.query.return_value = mock_query
 
-        result = await get_enum_field_value_history(
-            value_id="test-value-id", skip=0, limit=100, db=mock_db
+        result = get_enum_field_value_history(
+            value_id="test-value-id", page=1, page_size=100, db=mock_db
         )
 
         assert len(result) == 1
         assert result[0].id == "test-history-id"
 
-    @pytest.mark.asyncio
-    async def test_get_enum_field_value_history_empty(self, mock_db):
+    def test_get_enum_field_value_history_empty(self, mock_db):
         """Test getting enum field value history with empty result"""
-        from src.api.v1.enum_field import get_enum_field_value_history
+        from src.api.v1.system.enum_field import get_enum_field_value_history
 
         mock_query = MagicMock()
         mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
         mock_db.query.return_value = mock_query
 
-        result = await get_enum_field_value_history(
-            value_id="test-value-id", skip=0, limit=100, db=mock_db
+        result = get_enum_field_value_history(
+            value_id="test-value-id", page=1, page_size=100, db=mock_db
         )
 
         assert len(result) == 0

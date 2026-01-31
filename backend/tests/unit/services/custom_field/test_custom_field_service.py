@@ -16,8 +16,6 @@ TEST_FIELD_ID = "field_123"
 TEST_ASSET_ID = "asset_456"
 
 
-
-
 @pytest.fixture
 def service():
     """CustomFieldService instance."""

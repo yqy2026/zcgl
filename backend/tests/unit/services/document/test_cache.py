@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import InternalServerError
 from src.services.document.cache import (
     AsyncDocumentCache,
     CachedExtractor,
@@ -609,13 +610,15 @@ class TestPDFCacheErrorHandling:
             with pytest.raises(OSError):
                 cache.get(sample_pdf_file)
 
-    def test_cache_unexpected_error_raises_runtime_error(self, cache, sample_pdf_file):
-        """测试未预期错误抛出 RuntimeError (Lines 155-164)"""
+    def test_cache_unexpected_error_raises_internal_server_error(
+        self, cache, sample_pdf_file
+    ):
+        """测试未预期错误抛出 InternalServerError (Lines 155-164)"""
         # Mock get_file_hash to raise unexpected error
         with patch.object(
             cache, "get_file_hash", side_effect=ValueError("Unexpected error")
         ):
-            with pytest.raises(RuntimeError, match="Cache system malfunction"):
+            with pytest.raises(InternalServerError, match="Cache system malfunction"):
                 cache.get(sample_pdf_file)
 
 
@@ -651,7 +654,7 @@ class TestPDFCacheSetErrorHandling:
         disk_full_error = OSError("No space left on device")
         disk_full_error.errno = 28
         with patch("builtins.open", side_effect=disk_full_error):
-            with pytest.raises(RuntimeError, match="Disk space exhausted"):
+            with pytest.raises(InternalServerError, match="Disk space exhausted"):
                 cache.set(sample_pdf_file, {"test": "data"})
 
     def test_cache_set_permission_denied_error(self, cache, sample_pdf_file):
@@ -660,7 +663,9 @@ class TestPDFCacheSetErrorHandling:
         perm_error = OSError("Permission denied")
         perm_error.errno = 13
         with patch("builtins.open", side_effect=perm_error):
-            with pytest.raises(RuntimeError, match="Cache directory not writable"):
+            with pytest.raises(
+                InternalServerError, match="Cache directory not writable"
+            ):
                 cache.set(sample_pdf_file, {"test": "data"})
 
     def test_cache_set_other_oserror(self, cache, sample_pdf_file):
@@ -697,7 +702,7 @@ class TestPDFCacheSetErrorHandling:
         with patch.object(
             cache, "get_file_hash", side_effect=RuntimeError("Unexpected")
         ):
-            with pytest.raises(RuntimeError):
+            with pytest.raises(InternalServerError):
                 cache.set(sample_pdf_file, {"test": "data"})
 
 
@@ -900,7 +905,9 @@ class TestAsyncDocumentCache:
                 raise ValueError("Unexpected")
 
         with patch("asyncio.to_thread", side_effect=mock_to_thread):
-            with pytest.raises(RuntimeError, match="Async cache system malfunction"):
+            with pytest.raises(
+                InternalServerError, match="Async cache system malfunction"
+            ):
                 await async_cache.get("test_hash")
 
     @pytest.mark.asyncio
@@ -939,7 +946,7 @@ class TestAsyncDocumentCache:
         disk_full_error.errno = 28
 
         with patch("asyncio.to_thread", side_effect=disk_full_error):
-            with pytest.raises(RuntimeError, match="Disk space exhausted"):
+            with pytest.raises(InternalServerError, match="Disk space exhausted"):
                 await cache.set("test_hash", {"data": "test"})
 
     @pytest.mark.asyncio
@@ -955,7 +962,9 @@ class TestAsyncDocumentCache:
         perm_error.errno = 13
 
         with patch("asyncio.to_thread", side_effect=perm_error):
-            with pytest.raises(RuntimeError, match="Cache directory not writable"):
+            with pytest.raises(
+                InternalServerError, match="Cache directory not writable"
+            ):
                 await cache.set("test_hash", {"data": "test"})
 
     @pytest.mark.asyncio
@@ -977,7 +986,7 @@ class TestAsyncDocumentCache:
         """测试异步缓存未预期错误 (Lines 581-587)"""
         # Mock json.dumps to raise unexpected error
         with patch("json.dumps", side_effect=RuntimeError("Unexpected")):
-            with pytest.raises(RuntimeError):
+            with pytest.raises(InternalServerError):
                 await async_cache.set("test_hash", {"data": "test"})
 
     @pytest.mark.asyncio

@@ -149,7 +149,7 @@ def get_occupancy_rate_by_category(
 
 
 @router.get("/occupancy-rate", summary="获取出租率统计")
-async def get_occupancy_rate_statistics(
+def get_occupancy_rate_statistics(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),

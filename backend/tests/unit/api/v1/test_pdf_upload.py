@@ -29,8 +29,6 @@ pytestmark = pytest.mark.api
 # ============================================================================
 
 
-
-
 @pytest.fixture
 def mock_pdf_file():
     """Create mock PDF upload file"""

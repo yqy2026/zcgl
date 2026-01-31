@@ -29,7 +29,9 @@ except ImportError:
 
 # Integration tests use file database (not memory)
 # Unit tests use memory database to avoid lock contention
-TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
+TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL") or os.getenv(
+    "TEST_DATABASE_URL"
+)
 
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
@@ -63,7 +65,10 @@ def engine(test_database_url):
         return
 
     if not test_database_url:
-        pytest.skip("INTEGRATION_TEST_DATABASE_URL or TEST_DATABASE_URL is required", allow_module_level=True)
+        pytest.skip(
+            "INTEGRATION_TEST_DATABASE_URL or TEST_DATABASE_URL is required",
+            allow_module_level=True,
+        )
 
     engine = create_engine(test_database_url, pool_pre_ping=True)
     yield engine

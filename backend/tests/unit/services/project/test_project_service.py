@@ -7,6 +7,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import (
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.models import Project
 from src.schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from src.services.project.service import ProjectService
@@ -89,7 +94,7 @@ class TestCreateProject:
         with patch(
             "src.crud.project.project_crud.get_by_code", return_value=mock_project
         ):
-            with pytest.raises(ValueError, match="项目编码.*已存在"):
+            with pytest.raises(DuplicateResourceError, match="项目已存在"):
                 project_service.create_project(mock_db, obj_in=obj_in)
 
     def test_create_project_with_user(self, project_service, mock_db, mock_project):
@@ -136,7 +141,7 @@ class TestUpdateProject:
         obj_in = ProjectUpdate(name="新名称")
 
         with patch("src.crud.project.project_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="项目.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="项目.*不存在"):
                 project_service.update_project(
                     mock_db, project_id="nonexistent", obj_in=obj_in
                 )
@@ -212,7 +217,7 @@ class TestToggleStatus:
     def test_toggle_status_not_found(self, project_service, mock_db):
         """测试项目不存在"""
         with patch("src.crud.project.project_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="项目.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="项目.*不存在"):
                 project_service.toggle_status(mock_db, project_id="nonexistent")
 
     def test_toggle_status_with_user(self, project_service, mock_db, mock_project):
@@ -244,7 +249,7 @@ class TestDeleteProject:
     def test_delete_project_with_assets_fails(self, project_service, mock_db):
         """测试包含资产的项目无法删除"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=5):
-            with pytest.raises(ValueError, match="项目包含.*个资产"):
+            with pytest.raises(OperationNotAllowedError, match="项目包含.*个资产"):
                 project_service.delete_project(mock_db, project_id="project_123")
 
     def test_delete_project_not_found(self, project_service, mock_db):

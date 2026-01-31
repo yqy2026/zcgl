@@ -8,8 +8,8 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+import jwt
 from fastapi import APIRouter, Depends, Request, Response
-from jose import jwt
 from sqlalchemy.orm import Session
 
 from .....core.exception_handler import (
@@ -46,7 +46,7 @@ router = APIRouter(tags=["认证管理"])
 
 
 @router.post("/login", summary="用户登录")
-async def login(
+def login(
     request: Request,
     credentials: LoginRequest,
     response: Response,
@@ -184,7 +184,7 @@ async def login(
 
 
 @router.post("/logout", summary="用户登出")
-async def logout(
+def logout(
     request: Request,
     response: Response,
     current_user: UserResponse = Depends(get_current_active_user),
@@ -255,7 +255,7 @@ async def logout(
 
 
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
-async def refresh_token(
+def refresh_token(
     request: Request,
     response: Response,
     refresh_data: RefreshTokenRequest | None = None,
@@ -362,7 +362,7 @@ async def refresh_token(
 
 
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
-async def get_current_user_info(
+def get_current_user_info(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """

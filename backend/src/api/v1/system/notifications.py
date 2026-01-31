@@ -68,13 +68,9 @@ class UnreadCountResponse(BaseModel):
 # ==================== API 端点 ====================
 
 
-@router.get(
-    "", response_model=APIResponse[PaginatedData[NotificationResponse]]
-)
-@router.get(
-    "/", response_model=APIResponse[PaginatedData[NotificationResponse]]
-)
-async def get_notifications(
+@router.get("", response_model=APIResponse[PaginatedData[NotificationResponse]])
+@router.get("/", response_model=APIResponse[PaginatedData[NotificationResponse]])
+def get_notifications(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     is_read: bool | None = Query(None, description="筛选已读/未读"),
@@ -130,7 +126,7 @@ async def get_notifications(
 
 
 @router.get("/unread-count", response_model=UnreadCountResponse)
-async def get_unread_count(
+def get_unread_count(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> UnreadCountResponse:
@@ -153,7 +149,7 @@ async def get_unread_count(
 
 
 @router.post("/{notification_id}/read", response_model=NotificationResponse)
-async def mark_notification_as_read(
+def mark_notification_as_read(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -182,7 +178,7 @@ async def mark_notification_as_read(
 
 
 @router.post("/read-all", response_model=dict)
-async def mark_all_as_read(
+def mark_all_as_read(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
@@ -200,7 +196,7 @@ async def mark_all_as_read(
 
 
 @router.delete("/{notification_id}", response_model=dict)
-async def delete_notification(
+def delete_notification(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -229,7 +225,7 @@ async def delete_notification(
 
 
 @router.post("/run-tasks", response_model=dict)
-async def run_notification_tasks_endpoint(
+def run_notification_tasks_endpoint(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, str]:

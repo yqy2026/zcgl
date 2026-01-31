@@ -12,8 +12,6 @@ file types, file limits, and database pool configuration.
 
 from typing import Final
 
-from ..core.exception_handler import BusinessValidationError, ConfigurationError
-
 
 class FileTypes:
     """
@@ -102,6 +100,8 @@ class FileTypes:
             cls.TEXT_TYPE: cls.TEXT,
         }
         if file_type not in extensions:
+            from ..core.exception_handler import BusinessValidationError
+
             raise BusinessValidationError(
                 f"Unknown file type: {file_type}",
                 field_errors={"file_type": ["unsupported"]},
@@ -167,6 +167,8 @@ class FileTypes:
         }
 
         if extension not in mime_types:
+            from ..core.exception_handler import BusinessValidationError
+
             raise BusinessValidationError(
                 f"Unknown file extension: {extension}",
                 field_errors={"extension": ["unsupported"]},
@@ -258,6 +260,8 @@ class FileLimits:
         }
 
         if file_type not in limits:
+            from ..core.exception_handler import BusinessValidationError
+
             raise BusinessValidationError(
                 f"Unknown file type: {file_type}",
                 field_errors={"file_type": ["unsupported"]},
@@ -291,16 +295,22 @@ class DatabasePoolConfig:
             ValueError: If configuration values are inconsistent.
         """
         if cls.MAX_OVERFLOW < 0:
+            from ..core.exception_handler import ConfigurationError
+
             raise ConfigurationError(
                 "MAX_OVERFLOW must be non-negative",
                 config_key="DATABASE_MAX_OVERFLOW",
             )
         if cls.SIZE_DEFAULT <= 0:
+            from ..core.exception_handler import ConfigurationError
+
             raise ConfigurationError(
                 "SIZE_DEFAULT must be positive",
                 config_key="DATABASE_POOL_SIZE",
             )
         if cls.TIMEOUT_SECONDS <= 0:
+            from ..core.exception_handler import ConfigurationError
+
             raise ConfigurationError(
                 "TIMEOUT_SECONDS must be positive",
                 config_key="DATABASE_POOL_TIMEOUT",

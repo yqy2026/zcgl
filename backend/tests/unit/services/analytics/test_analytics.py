@@ -27,8 +27,6 @@ from src.services.analytics.area_service import AreaCalculationError, AreaServic
 # =============================================================================
 
 
-
-
 @pytest.fixture
 def analytics_service(mock_db):
     """Create AnalyticsService instance"""

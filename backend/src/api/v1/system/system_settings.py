@@ -1,5 +1,3 @@
-from typing import Annotated, Any
-
 """
 系统设置API路由
 """
@@ -10,6 +8,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -27,12 +26,14 @@ from sqlalchemy.orm import Session
 
 from src.constants.message_constants import ErrorIDs
 
+from ....core.exception_handler import BaseBusinessError, InternalServerError
 from ....crud.auth import AuditLogCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.roles import RoleNormalizer
+from ....security.route_guards import debug_only
 
 # 创建系统设置路由器
 router = APIRouter()
@@ -241,12 +242,21 @@ def handle_audit_log_failure(
                 )
 
                 # 🔒 安全修复: 审计失败是致命错误 - 不允许继续操作
-                raise RuntimeError(
-                    f"审计日志系统完全故障 - 主错误: {error}, "
-                    f"文件回退失败: {fallback_errors['file_error']}, "
-                    f"syslog回退失败: {fallback_errors['syslog_error']}, "
-                    f"Windows事件日志失败: {fallback_errors['windows_eventlog_error']}, "
-                    f"紧急回退失败: {fallback_errors['emergency_error']}"
+                raise InternalServerError(
+                    message=(
+                        "审计日志系统完全故障 - 主错误: "
+                        f"{error}, 文件回退失败: {fallback_errors['file_error']}, "
+                        f"syslog回退失败: {fallback_errors['syslog_error']}, "
+                        "Windows事件日志失败: "
+                        f"{fallback_errors['windows_eventlog_error']}, "
+                        f"紧急回退失败: {fallback_errors['emergency_error']}"
+                    ),
+                    original_error=error,
+                    details={
+                        "error_id": ErrorIDs.AuditLog.ALL_FALLBACKS_FAILED,
+                        "fallback_errors": fallback_errors,
+                        "action": action,
+                    },
                 ) from error
 
     # 如果审计日志写入成功，至少记录一个警告
@@ -299,6 +309,7 @@ def create_audit_log_with_fallback(
         SQLAlchemyError,
         ValueError,
         RuntimeError,
+        BaseBusinessError,
         AttributeError,
         ImportError,
         TypeError,
@@ -317,6 +328,7 @@ def create_audit_log_with_fallback(
 
 
 @router.post("/security/alerts/test", summary="测试安全警报系统")
+@debug_only
 async def test_security_alert(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
@@ -351,7 +363,7 @@ async def test_security_alert(
 
 
 @router.get("/security/events", summary="获取安全事件日志")
-async def get_security_events(
+def get_security_events(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     skip: int = 0,
@@ -469,7 +481,7 @@ _system_settings = SystemSettings()
 
 
 @router.get("/settings", summary="获取系统设置", response_model=SystemSettingsResponse)
-async def get_system_settings(
+def get_system_settings(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
 ) -> SystemSettingsResponse:
@@ -505,7 +517,7 @@ async def get_system_settings(
 
 
 @router.put("/settings", summary="更新系统设置", response_model=SystemSettingsResponse)
-async def update_system_settings(
+def update_system_settings(
     settings: SystemSettings,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
@@ -540,7 +552,7 @@ async def update_system_settings(
 
 
 @router.get("/info", summary="获取系统信息", response_model=SystemInfoResponse)
-async def get_system_info(
+def get_system_info(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
 ) -> SystemInfoResponse:
@@ -587,7 +599,7 @@ async def get_system_info(
 
 
 @router.post("/backup", summary="备份系统数据", response_model=SystemBackupResponse)
-async def backup_system(
+def backup_system(
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],

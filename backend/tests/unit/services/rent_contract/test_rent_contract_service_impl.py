@@ -12,6 +12,12 @@ from pydantic import ValidationError
 
 from src.constants.rent_contract_constants import PaymentStatus
 from src.core.enums import ContractStatus
+from src.core.exception_handler import (
+    BusinessValidationError,
+    OperationNotAllowedError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from src.models.asset import Asset, Ownership
 from src.models.rent_contract import (
     ContractType as ContractTypeModel,
@@ -308,7 +314,7 @@ class TestCreateContract:
         with patch.object(
             contract_service, "_check_asset_rent_conflicts", return_value=conflicts
         ):
-            with pytest.raises(ValueError, match="资产租金冲突检测"):
+            with pytest.raises(ResourceConflictError, match="资产租金冲突检测"):
                 contract_service.create_contract(mock_db, obj_in=obj_in)
 
     def test_create_contract_calculates_total_monthly_amount(
@@ -458,7 +464,7 @@ class TestRenewContract:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(ValueError, match="原合同不存在"):
+        with pytest.raises(ResourceNotFoundError, match="合同.*不存在"):
             contract_service.renew_contract(
                 mock_db,
                 original_contract_id="nonexistent",
@@ -475,7 +481,7 @@ class TestRenewContract:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(ValueError, match="原合同状态不可续签"):
+        with pytest.raises(OperationNotAllowedError, match="原合同状态不可续签"):
             contract_service.renew_contract(
                 mock_db,
                 original_contract_id="contract_123",
@@ -566,7 +572,7 @@ class TestTerminateContract:
         mock_query.filter.return_value.first.return_value = None
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(ValueError, match="合同不存在"):
+        with pytest.raises(ResourceNotFoundError, match="合同.*不存在"):
             contract_service.terminate_contract(
                 mock_db,
                 contract_id="nonexistent",
@@ -584,7 +590,7 @@ class TestTerminateContract:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(ValueError, match="合同状态不可终止"):
+        with pytest.raises(OperationNotAllowedError, match="合同状态不可终止"):
             contract_service.terminate_contract(
                 mock_db,
                 contract_id="contract_123",
@@ -618,7 +624,7 @@ class TestTerminateContract:
         mock_query.filter.return_value.first.return_value = mock_contract
         mock_db.query.return_value = mock_query
 
-        with pytest.raises(ValueError, match="抵扣金额.*超过押金余额"):
+        with pytest.raises(BusinessValidationError, match="抵扣金额.*超过押金余额"):
             contract_service.terminate_contract(
                 mock_db,
                 contract_id="contract_123",
@@ -708,7 +714,7 @@ class TestGenerateMonthlyLedger:
         ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = None
 
-            with pytest.raises(ValueError, match="合同不存在"):
+            with pytest.raises(ResourceNotFoundError, match="合同不存在"):
                 contract_service.generate_monthly_ledger(mock_db, request=request)
 
     def test_generate_ledger_no_terms(self, contract_service, mock_db, mock_contract):
@@ -733,7 +739,7 @@ class TestGenerateMonthlyLedger:
             ) as mock_rent_term_crud:
                 mock_rent_term_crud.get_by_contract.return_value = []
 
-                with pytest.raises(ValueError, match="合同没有租金条款"):
+                with pytest.raises(BusinessValidationError, match="合同没有租金条款"):
                     contract_service.generate_monthly_ledger(mock_db, request=request)
 
     def test_generate_ledger_skip_existing(

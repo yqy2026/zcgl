@@ -19,9 +19,15 @@ describe('usePermission', () => {
 
   it('should load permissions from AuthStorage', () => {
     const mockAuthData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test' },
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
       permissions: [
         { resource: 'assets', action: 'read' },
         { resource: 'users', action: 'write' }
@@ -36,7 +42,7 @@ describe('usePermission', () => {
     expect(result.current.userPermissions).toEqual({
       userId: '1',
       username: 'test',
-      roles: [],
+      roles: ['user'],
       permissions: [
         { resource: 'assets', action: 'read' },
         { resource: 'users', action: 'write' }
@@ -55,9 +61,15 @@ describe('usePermission', () => {
 
   it('should check permissions correctly', () => {
     const mockAuthData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test' },
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
       permissions: [
         { resource: 'assets', action: 'read' }
       ]
@@ -73,9 +85,15 @@ describe('usePermission', () => {
 
   it('should check admin role correctly', () => {
     const mockAuthData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'admin', role: 'admin' },
+      user: {
+        id: '1',
+        username: 'admin',
+        full_name: 'Admin User',
+        role: 'admin',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
       permissions: []
     };
 
@@ -91,9 +109,15 @@ describe('usePermission', () => {
 
   it('should handle role from auth data', () => {
     const mockAuthData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'manager', role: 'manager' },
+      user: {
+        id: '1',
+        username: 'manager',
+        full_name: 'Manager User',
+        role: 'manager',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
       permissions: [
         { resource: 'assets', action: 'read' }
       ]
@@ -110,9 +134,16 @@ describe('usePermission', () => {
 
   it('should handle organizationId', () => {
     const mockAuthData = {
-      token: 'test-token',
-      refreshToken: 'test-refresh',
-      user: { id: '1', username: 'test', organization_id: 'org-123' },
+      user: {
+        id: '1',
+        username: 'test',
+        full_name: 'Test User',
+        role: 'user',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        organization_id: 'org-123',
+      },
       permissions: []
     };
 

@@ -64,11 +64,7 @@ export class AuthService {
       logger.debug('API响应数据', { responseData });
 
       // 验证响应数据结构
-      if (
-        responseData.user === undefined ||
-        (responseData.tokens === undefined &&
-          (responseData.token === undefined || responseData.token === ''))
-      ) {
+      if (responseData.user === undefined) {
         logger.error('登录响应数据格式不正确', undefined, { responseData });
         throw new Error('登录响应数据格式不正确');
       }
@@ -98,41 +94,27 @@ export class AuthService {
           ? tokenPayload?.permissions
           : []) as AuthResponse['permissions'];
 
-      if (accessToken && refreshToken) {
-
-        // Store in AuthStorage with permissions from API
-        // Note: Tokens are in httpOnly cookies, but we keep metadata
-        const authData = {
-          token: accessToken, // Kept for compatibility, but actual auth uses cookie
-          refreshToken: refreshToken, // Kept for compatibility
-          user,
-          permissions,
-        };
-
-        AuthStorage.setAuthData(authData);
-
-        // Save user and permissions to localStorage for AuthContext to restore
-        // Legacy keys removed - tokens are now in httpOnly cookies
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('permissions', JSON.stringify(permissions));
-
-        return {
-          success: true,
-          data: {
-            user,
-            tokens: {
-              access_token: accessToken,
-              refresh_token: refreshToken,
-              token_type: tokenPayload?.token_type ?? 'Bearer',
-              expires_in: tokenPayload?.expires_in ?? 3600,
-            },
-            permissions,
-          },
-          message: (responseData.message as string) || '登录成功',
-        };
+      if (!accessToken || !refreshToken) {
+        throw new Error('Access token or refresh token not found');
       }
 
-      throw new Error('Access token or refresh token not found');
+      // Store user/permissions locally (tokens stay in httpOnly cookies)
+      AuthStorage.setAuthData({ user, permissions });
+
+      return {
+        success: true,
+        data: {
+          user,
+          tokens: {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: tokenPayload?.token_type ?? 'Bearer',
+            expires_in: tokenPayload?.expires_in ?? 3600,
+          },
+          permissions,
+        },
+        message: (responseData.message as string) || '登录成功',
+      };
     } catch (error) {
       // 使用统一的错误处理器
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -159,14 +141,9 @@ export class AuthService {
   // 刷新令牌
   static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
     try {
-      const storedRefreshToken = AuthStorage.getRefreshToken();
-      const refreshPayload =
-        storedRefreshToken != null && storedRefreshToken.trim() !== ''
-          ? { refresh_token: storedRefreshToken }
-          : {};
       const result = await apiClient.post(
         AUTH_API.REFRESH,
-        refreshPayload,
+        undefined,
         {
           retry: {
             maxAttempts: 2,
@@ -228,14 +205,8 @@ export class AuthService {
   // 检查认证状态 - 验证cookie是否有效
   static isAuthenticated(): boolean {
     // 检查本地存储的用户信息作为快速检查
-    const user = localStorage.getItem('user') ?? '';
-    if (user === '') {
-      return false;
-    }
-
-    // 注意：实际认证由httpOnly cookie处理
-    // 这个方法只做本地快速检查，真实的认证验证在API调用时通过cookie完成
-    return true;
+    const user = AuthStorage.getCurrentUser();
+    return user != null;
   }
 
   // 验证认证状态 - 通过API调用验证cookie有效性
@@ -254,22 +225,12 @@ export class AuthService {
 
   // 获取本地存储的用户信息
   static getLocalUser(): User | null {
-    const userStr = localStorage.getItem('user') ?? '';
-    try {
-      return userStr !== '' ? (JSON.parse(userStr) as User) : null;
-    } catch {
-      return null;
-    }
+    return AuthStorage.getCurrentUser();
   }
 
   // 获取本地存储的权限信息
   static getLocalPermissions(): Permission[] {
-    const permissionsStr = localStorage.getItem('permissions') ?? '';
-    try {
-      return permissionsStr !== '' ? (JSON.parse(permissionsStr) as Permission[]) : [];
-    } catch {
-      return [];
-    }
+    return AuthStorage.getPermissions() as Permission[];
   }
 
   // 检查用户是否有特定权限
@@ -297,9 +258,8 @@ export class AuthService {
   // 清除认证数据
   private static clearAuthData(): void {
     // Tokens are in httpOnly cookies, cleared by backend logout endpoint
-    // Only clear user metadata from localStorage
-    localStorage.removeItem('user');
-    localStorage.removeItem('permissions');
+    // Only clear local auth metadata
+    AuthStorage.clearAuthData();
     // Note: auth_token and refreshToken keys removed - tokens are now in cookies
   }
 
@@ -348,7 +308,11 @@ export class AuthService {
 
       // 更新本地存储的用户信息
       const updatedUser = result.data as User;
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      const existing = AuthStorage.getAuthData();
+      AuthStorage.setAuthData({
+        user: updatedUser,
+        permissions: existing?.permissions ?? [],
+      });
       return updatedUser;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

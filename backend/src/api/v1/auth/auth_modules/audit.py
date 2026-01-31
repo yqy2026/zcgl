@@ -18,7 +18,7 @@ router = APIRouter(prefix="/audit", tags=["审计日志"])
 
 
 @router.get("/logs", response_model=dict[str, Any], summary="获取审计日志统计")
-async def get_audit_statistics(
+def get_audit_statistics(
     days: int = 30,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),

@@ -12,7 +12,7 @@ router = APIRouter(tags=["PDF智能导入"])
 
 
 @router.get("/pdf-import/info")
-async def get_pdf_import_info() -> JSONResponse:
+def get_pdf_import_info() -> JSONResponse:
     """
     获取PDF导入系统信息
     迁移自 main.py 的PDF导入信息功能
@@ -29,7 +29,7 @@ async def get_pdf_import_info() -> JSONResponse:
 
 
 @router.get("/pdf-import/sessions")
-async def get_pdf_import_sessions() -> JSONResponse:
+def get_pdf_import_sessions() -> JSONResponse:
     """
     获取PDF导入会话列表
     迁移自 main.py 的PDF导入会话功能
@@ -40,7 +40,7 @@ async def get_pdf_import_sessions() -> JSONResponse:
 
 
 @router.post("/pdf-import/upload")
-async def upload_pdf_for_import() -> JSONResponse:
+def upload_pdf_for_import() -> JSONResponse:
     """
     上传PDF进行智能导入
     迁移自 main.py 的PDF上传功能

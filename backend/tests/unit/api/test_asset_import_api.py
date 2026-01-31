@@ -8,11 +8,11 @@ This test module covers the asset import functionality:
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.skip(
     reason="Unit API tests require proper authentication and database mocking setup"
 )
-from fastapi.testclient import TestClient
 
 
 class TestAssetImport:

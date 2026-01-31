@@ -33,7 +33,7 @@ router = APIRouter(tags=["PDF系统信息"])
 
 
 @router.get("/info", response_model=SystemInfoResponse)
-async def get_system_info() -> SystemInfoResponse:
+def get_system_info() -> SystemInfoResponse:
     """
     获取系统信息和能力
 

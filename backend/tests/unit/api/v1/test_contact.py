@@ -70,12 +70,8 @@ def contact_data(db: Session, sample_ownership):
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already bypasses authentication
+    return {"Authorization": "Bearer mocked_token"}
 
 
 # ============================================================================
@@ -130,7 +126,7 @@ class TestCreateContact:
         data = response.json()
         assert data["is_primary"] is True
 
-    def test_create_contact_unauthorized(self, client, sample_ownership):
+    def test_create_contact_unauthorized(self, unauthenticated_client, sample_ownership):
         """测试未授权创建联系人"""
         contact_data = {
             "name": "赵六",
@@ -139,7 +135,7 @@ class TestCreateContact:
             "entity_id": sample_ownership.id,
         }
 
-        response = client.post("/api/v1/contact/", json=contact_data)
+        response = unauthenticated_client.post("/api/v1/contact/", json=contact_data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -227,9 +223,9 @@ class TestGetContact:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_get_contact_unauthorized(self, client, contact_data):
+    def test_get_contact_unauthorized(self, unauthenticated_client, contact_data):
         """测试未授权获取联系人"""
-        response = client.get(f"/api/v1/contact/{contact_data.id}")
+        response = unauthenticated_client.get(f"/api/v1/contact/{contact_data.id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -271,9 +267,11 @@ class TestGetEntityContacts:
         assert data["page"] == 1
         assert data["page_size"] == 10
 
-    def test_get_entity_contacts_unauthorized(self, client, contact_data):
+    def test_get_entity_contacts_unauthorized(
+        self, unauthenticated_client, contact_data
+    ):
         """测试未授权获取实体联系人"""
-        response = client.get(
+        response = unauthenticated_client.get(
             f"/api/v1/contact/entity/ownership/{contact_data.entity_id}"
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -326,9 +324,11 @@ class TestGetPrimaryContact:
         # 应该返回404
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_get_primary_contact_unauthorized(self, client, contact_data):
+    def test_get_primary_contact_unauthorized(
+        self, unauthenticated_client, contact_data
+    ):
         """测试未授权获取主要联系人"""
-        response = client.get(
+        response = unauthenticated_client.get(
             f"/api/v1/contact/entity/ownership/{contact_data.entity_id}/primary"
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -429,9 +429,9 @@ class TestDeleteContact:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_delete_contact_unauthorized(self, client, contact_data):
+    def test_delete_contact_unauthorized(self, unauthenticated_client, contact_data):
         """测试未授权删除联系人"""
-        response = client.delete(f"/api/v1/contact/{contact_data.id}")
+        response = unauthenticated_client.delete(f"/api/v1/contact/{contact_data.id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -488,11 +488,13 @@ class TestBatchCreateContacts:
         assert isinstance(data, list)
         assert len(data) == 0
 
-    def test_batch_create_contacts_unauthorized(self, client, sample_ownership):
+    def test_batch_create_contacts_unauthorized(
+        self, unauthenticated_client, sample_ownership
+    ):
         """测试未授权批量创建"""
         contacts_data = [{"name": "测试", "phone": "13800138000"}]
 
-        response = client.post(
+        response = unauthenticated_client.post(
             f"/api/v1/contact/batch/ownership/{sample_ownership.id}", json=contacts_data
         )
 

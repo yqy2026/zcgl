@@ -12,6 +12,7 @@ import os
 import pytest
 from sqlalchemy import text
 
+from src.core.exception_handler import ServiceUnavailableError
 from src.database import (
     DatabaseManager,
     get_database_manager,
@@ -285,7 +286,7 @@ class TestPostgreSQLErrorHandling:
         invalid_url = "postgresql+psycopg://invalid:invalid@localhost:9999/invalid_db"
 
         mgr = DatabaseManager()
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(ServiceUnavailableError) as exc_info:
             mgr.initialize_engine(invalid_url)
 
         # 验证错误消息包含有用信息

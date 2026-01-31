@@ -29,14 +29,14 @@ class TestCRUDAssetGet:
         mock_asset.id = "1"
         mock_asset.name = "测试资产"
 
-        with patch.object(crud, 'get', return_value=mock_asset):
+        with patch.object(crud, "get", return_value=mock_asset):
             result = crud.get(mock_db, id="1")
 
         assert result is not None
 
     def test_get_nonexistent_asset(self, crud, mock_db):
         """测试获取不存在的资产"""
-        with patch.object(crud, 'get', return_value=None):
+        with patch.object(crud, "get", return_value=None):
             result = crud.get(mock_db, id="999")
 
         assert result is None
@@ -91,7 +91,7 @@ class TestCRUDAssetGetMulti:
 
     def test_get_multi_default_params(self, crud, mock_db):
         """测试默认参数获取多个资产"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             result = crud.get_multi(mock_db)
 
@@ -99,7 +99,7 @@ class TestCRUDAssetGetMulti:
 
     def test_get_multi_with_pagination(self, crud, mock_db):
         """测试分页参数"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             crud.get_multi(mock_db, skip=10, limit=20)
 
@@ -129,7 +129,7 @@ class TestCRUDAssetCreate:
             "asset_code": "A002",
         }
 
-        with patch.object(crud, 'create') as mock_create:
+        with patch.object(crud, "create") as mock_create:
             mock_asset = MagicMock()
             mock_asset.id = "new-id"
             mock_create.return_value = mock_asset
@@ -157,7 +157,7 @@ class TestCRUDAssetUpdate:
 
         update_data = {"name": "更新后的名称"}
 
-        with patch.object(crud, 'update') as mock_update:
+        with patch.object(crud, "update") as mock_update:
             mock_update.return_value = mock_asset
             result = crud.update(mock_db, db_obj=mock_asset, obj_in=update_data)
 
@@ -183,7 +183,7 @@ class TestCRUDAssetDelete:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
 
-        with patch.object(crud, 'remove') as mock_remove:
+        with patch.object(crud, "remove") as mock_remove:
             mock_remove.return_value = mock_asset
             result = crud.remove(mock_db, id="1")
 
@@ -208,8 +208,8 @@ class TestCRUDAssetSearch:
 
     def test_search_with_filters(self, crud, mock_db):
         """测试带筛选条件的搜索"""
-        with patch.object(crud.query_builder, 'build_query') as mock_build:
-            with patch.object(crud.query_builder, 'build_count_query') as mock_count:
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            with patch.object(crud.query_builder, "build_count_query") as mock_count:
                 mock_build.return_value = MagicMock()
                 mock_count.return_value = MagicMock()
 

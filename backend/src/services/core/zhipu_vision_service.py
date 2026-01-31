@@ -14,6 +14,7 @@ import httpx
 from httpx import HTTPStatusError, NetworkError, TimeoutException
 from pydantic import BaseModel
 
+from ...core.exception_handler import ConfigurationError
 from .base_vision_service import (
     BaseVisionService,
     VisionAPIError,
@@ -107,10 +108,12 @@ class ZhipuVisionService(BaseVisionService):
 
         Raises:
             VisionAPIError: If API request fails (with status code and retry info)
-            RuntimeError: If API key not configured
+            ConfigurationError: If API key not configured
         """
         if not self.is_available:
-            raise RuntimeError("ZHIPU_API_KEY not configured")
+            raise ConfigurationError(
+                "ZHIPU_API_KEY not configured", config_key="ZHIPU_API_KEY"
+            )
 
         # Extract kwargs with defaults
         temperature: float = kwargs.get("temperature", 0.1)

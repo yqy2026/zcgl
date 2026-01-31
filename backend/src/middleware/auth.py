@@ -1,14 +1,14 @@
-from typing import Any
-
 """
 认证中间件
 """
 
 import logging
+from typing import Any
 
+import jwt
 from fastapi import Cookie, Depends, Header, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -59,7 +59,7 @@ _token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = "HS256"
+ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
 
 
 def _validate_jwt_token(token: str) -> TokenData:

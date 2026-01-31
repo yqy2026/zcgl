@@ -64,7 +64,7 @@ class ExcelImportService:
         self.db = db
         self.validator = AssetBatchValidator()
 
-    async def import_assets_from_excel(
+    def import_assets_from_excel(
         self,
         file_path: str,
         sheet_name: str = STANDARD_SHEET_NAME,

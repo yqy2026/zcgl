@@ -34,7 +34,7 @@ import io
 import logging
 import os
 import tempfile
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -48,6 +48,7 @@ from fastapi import (
     Query,
     UploadFile,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -82,8 +83,69 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/excel", tags=["Excel导入导出"])
 
 
+def _build_excel_preview(
+    content: bytes, max_rows: int
+) -> tuple[int, list[str], list[dict[str, Any]]]:
+    df = pd.read_excel(io.BytesIO(content))
+    total = len(df)
+    columns = df.columns.tolist()
+    preview_rows = min(max_rows, total)
+    preview_df = df.head(preview_rows)
+
+    preview_data: list[dict[str, Any]] = []
+    for _, row in preview_df.iterrows():
+        row_dict: dict[str, Any] = {}
+        for col in columns:
+            value = row[col]
+            if pd.isna(value):
+                row_dict[col] = None
+            else:
+                row_dict[col] = (
+                    str(value) if not isinstance(value, (str, int, float)) else value
+                )
+        preview_data.append(row_dict)
+
+    return total, columns, preview_data
+
+
+def _build_excel_preview_advanced(
+    content: bytes, max_rows: int
+) -> tuple[int, list[str], list[dict[str, Any]], list[dict[str, Any]]]:
+    total, columns, preview_data = _build_excel_preview(content, max_rows)
+
+    detected_mapping: list[dict[str, Any]] = []
+    field_mapping_rules = {
+        "物业名称": ["property_name", "物业名称", "资产名称"],
+        "地址": ["address", "物业地址", "地址", "位置"],
+        "确权状态": ["ownership_status", "确权状态", "权属状态"],
+        "物业性质": ["property_nature", "物业性质", "资产性质"],
+        "使用状态": ["usage_status", "使用状态", "状态"],
+        "权属方": ["ownership_entity", "权属方", "所有权人"],
+        "土地面积": ["land_area", "土地面积", "占地面积"],
+        "实际房产面积": ["actual_property_area", "实际房产面积", "建筑面积"],
+        "可出租面积": ["rentable_area", "可出租面积", "出租面积"],
+        "已出租面积": ["rented_area", "已出租面积", "已租面积"],
+    }
+
+    for col in columns:
+        for chinese_name, possible_names in field_mapping_rules.items():
+            if any(name.lower() in str(col).lower() for name in possible_names):
+                detected_mapping.append(
+                    {
+                        "excel_column": col,
+                        "system_field": possible_names[0],
+                        "data_type": "string",
+                        "required": chinese_name in ["物业名称", "地址"],
+                        "confidence": 0.8,
+                    }
+                )
+                break
+
+    return total, columns, preview_data, detected_mapping
+
+
 @router.get("/template", summary="下载Excel导入模板")
-async def download_template(
+def download_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> StreamingResponse:
@@ -95,7 +157,7 @@ async def download_template(
     buffer = service.generate_template()
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()
@@ -120,7 +182,7 @@ async def test_endpoint():
 
 
 @router.post("/configs", summary="创建Excel配置")
-async def create_excel_config(
+def create_excel_config(
     config_in: ExcelConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -141,7 +203,7 @@ async def create_excel_config(
 
 
 @router.get("/configs", summary="获取Excel配置列表")
-async def get_excel_configs(
+def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
@@ -162,7 +224,7 @@ async def get_excel_configs(
 
 
 @router.get("/configs/default", summary="获取默认Excel配置")
-async def get_default_excel_config(
+def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
@@ -188,7 +250,7 @@ async def get_default_excel_config(
 
 
 @router.get("/configs/{config_id}", summary="获取Excel配置详情")
-async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any:
+def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any:
     """
     获取单个Excel配置的详细信息
 
@@ -205,7 +267,7 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
 
 @router.put("/configs/{config_id}", summary="更新Excel配置")
-async def update_excel_config(
+def update_excel_config(
     config_id: str, config_in: dict[str, Any], db: Session = Depends(get_db)
 ) -> dict[str, Any]:
     """
@@ -229,7 +291,7 @@ async def update_excel_config(
 
 
 @router.delete("/configs/{config_id}", summary="删除Excel配置")
-async def delete_excel_config(
+def delete_excel_config(
     config_id: str, db: Session = Depends(get_db)
 ) -> dict[str, str]:
     """
@@ -291,60 +353,9 @@ async def preview_excel_advanced(
     # 读取文件内容
     content = await file.read()
 
-    # 直接从内存读取Excel
-    df = pd.read_excel(io.BytesIO(content))
-
-    # 获取基本信息
-    total = len(df)
-    columns = df.columns.tolist()
-
-    # 限制预览行数
-    preview_rows = min(request.max_rows, total)
-    preview_df = df.head(preview_rows)
-
-    # 转换为字典格式，处理NaN值
-    preview_data: list[dict[str, Any]] = []
-    for _, row in preview_df.iterrows():
-        row_dict: dict[str, Any] = {}
-        for col in columns:
-            value = row[col]
-            # 处理NaN和None值
-            if pd.isna(value):
-                row_dict[col] = None
-            else:
-                row_dict[col] = (
-                    str(value) if not isinstance(value, (str, int, float)) else value
-                )
-        preview_data.append(row_dict)
-
-    # 检测字段映射（简化版本）
-    detected_mapping = []
-    field_mapping_rules = {
-        "物业名称": ["property_name", "物业名称", "资产名称"],
-        "地址": ["address", "物业地址", "地址", "位置"],
-        "确权状态": ["ownership_status", "确权状态", "权属状态"],
-        "物业性质": ["property_nature", "物业性质", "资产性质"],
-        "使用状态": ["usage_status", "使用状态", "状态"],
-        "权属方": ["ownership_entity", "权属方", "所有权人"],
-        "土地面积": ["land_area", "土地面积", "占地面积"],
-        "实际房产面积": ["actual_property_area", "实际房产面积", "建筑面积"],
-        "可出租面积": ["rentable_area", "可出租面积", "出租面积"],
-        "已出租面积": ["rented_area", "已出租面积", "已租面积"],
-    }
-
-    for col in columns:
-        for chinese_name, possible_names in field_mapping_rules.items():
-            if any(name.lower() in str(col).lower() for name in possible_names):
-                detected_mapping.append(
-                    {
-                        "excel_column": col,
-                        "system_field": possible_names[0],
-                        "data_type": "string",
-                        "required": chinese_name in ["物业名称", "地址"],
-                        "confidence": 0.8,
-                    }
-                )
-                break
+    total, columns, preview_data, detected_mapping = await run_in_threadpool(
+        _build_excel_preview_advanced, content, request.max_rows
+    )
 
     return ExcelPreviewResponse(
         file_name=file.filename or "unknown.xlsx",
@@ -382,37 +393,15 @@ async def preview_excel(
     # 读取文件内容
     content = await file.read()
 
-    # 直接从内存读取Excel
-    df = pd.read_excel(io.BytesIO(content))
-
-    # 获取基本信息
-    total = len(df)
-    columns = df.columns.tolist()
-
-    # 限制预览行数
-    preview_rows = min(max_rows, total)
-    preview_df = df.head(preview_rows)
-
-    # 转换为字典格式，处理NaN值
-    preview_data: list[dict[str, Any]] = []
-    for _, row in preview_df.iterrows():
-        row_dict: dict[str, Any] = {}
-        for col in columns:
-            value = row[col]
-            # 处理NaN和None值
-            if pd.isna(value):
-                row_dict[col] = None
-            else:
-                row_dict[col] = (
-                    str(value) if not isinstance(value, (str, int, float)) else value
-                )
-        preview_data.append(row_dict)
+    total, columns, preview_data = await run_in_threadpool(
+        _build_excel_preview, content, max_rows
+    )
 
     return {
         "message": "预览成功",
         "filename": file.filename,
         "total": total,
-        "preview_rows": preview_rows,
+        "preview_rows": len(preview_data),
         "columns": columns,
         "data": preview_data,
     }
@@ -471,7 +460,8 @@ async def import_excel(
         import_service = ExcelImportService(db)
 
         # 执行导入
-        result = await import_service.import_assets_from_excel(
+        result = await run_in_threadpool(
+            import_service.import_assets_from_excel,
             file_path=tmp_file_path,
             sheet_name=sheet_name,
             should_skip_errors=should_skip_errors,
@@ -603,7 +593,8 @@ async def _process_excel_import_async(
         import_service = ExcelImportService(db_session)
 
         # 执行导入
-        result = await import_service.import_assets_from_excel(
+        result = await run_in_threadpool(
+            import_service.import_assets_from_excel,
             file_path=file_path,
             sheet_name=STANDARD_SHEET_NAME,
             should_validate_data=request.should_validate_data,
@@ -663,7 +654,7 @@ async def _process_excel_import_async(
 
 
 @router.get("/export", summary="导出Excel文件")
-async def export_excel(
+def export_excel(
     search: str | None = Query(None, description="搜索关键词"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
@@ -694,7 +685,7 @@ async def export_excel(
     )
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()
@@ -707,7 +698,7 @@ async def export_excel(
 
 
 @router.post("/export/async", summary="异步导出Excel文件")
-async def export_excel_async(
+def export_excel_async(
     background_tasks: BackgroundTasks,
     request: ExcelExportRequest = Body(...),
     db: Session = Depends(get_db),
@@ -842,7 +833,7 @@ async def _process_excel_export_async(
 
 
 @router.get("/download/{task_id}", summary="下载导出文件")
-async def download_export_file(
+def download_export_file(
     task_id: str, db: Session = Depends(get_db)
 ) -> StreamingResponse:
     """
@@ -885,7 +876,7 @@ async def download_export_file(
 @router.get(
     "/status/{task_id}", response_model=ExcelStatusResponse, summary="获取任务状态"
 )
-async def get_excel_task_status(
+def get_excel_task_status(
     task_id: str, db: Session = Depends(get_db)
 ) -> ExcelStatusResponse:
     """
@@ -923,7 +914,7 @@ async def get_excel_task_status(
 
 
 @router.get("/history", summary="获取Excel操作历史")
-async def get_excel_history(
+def get_excel_history(
     task_type: str | None = Query(None, description="任务类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     page: int = Query(1, ge=1, description="页码"),
@@ -985,7 +976,7 @@ async def get_excel_history(
 
 
 @router.post("/export", summary="导出选中资产Excel文件")
-async def export_selected_assets(
+def export_selected_assets(
     asset_ids: list[str] | None = Body(None, description="资产ID列表"),
     export_format: str = Query("excel", description="导出格式"),
     search: str | None = Query(None, description="搜索关键词"),
@@ -1024,7 +1015,7 @@ async def export_selected_assets(
     )
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()

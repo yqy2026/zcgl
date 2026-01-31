@@ -25,7 +25,7 @@ router = APIRouter()
 
 
 @router.get("/trend/{metric}", response_model=TrendDataResponse, summary="获取趋势数据")
-async def get_trend_data(
+def get_trend_data(
     metric: str = Path(..., description="指标名称"),
     period: str = Query(
         "monthly", pattern="^(daily|weekly|monthly|yearly)$", description="时间周期"

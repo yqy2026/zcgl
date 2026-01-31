@@ -19,23 +19,32 @@ from fastapi import status
 @pytest.fixture
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    # client fixture already overrides authentication to an admin user
+    return {"Authorization": "Bearer mocked_token"}
 
 
 @pytest.fixture
 def normal_user_headers(client, normal_user):
     """普通用户认证头"""
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": normal_user.username, "password": "user123"},
+    # Force admin dependency to reject normal users
+    from src.core.exception_handler import forbidden
+    from src.middleware.auth import get_current_active_user, require_admin
+
+    client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
+    client.app.dependency_overrides[require_admin] = lambda: (_ for _ in ()).throw(
+        forbidden("需要管理员权限")
     )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return {"Authorization": "Bearer mocked_token"}
+
+
+@pytest.fixture
+def mock_db_reset(monkeypatch):
+    """Avoid touching real tables during reset tests."""
+    from src.api.v1.auth import admin as admin_module
+
+    monkeypatch.setattr(admin_module, "drop_tables", lambda: None)
+    monkeypatch.setattr(admin_module, "create_tables", lambda: None)
+    return None
 
 
 # ============================================================================
@@ -70,7 +79,9 @@ class TestHealthCheck:
 class TestDatabaseReset:
     """测试数据库重置API"""
 
-    def test_database_reset_as_admin_success(self, client, admin_user_headers):
+    def test_database_reset_as_admin_success(
+        self, client, admin_user_headers, mock_db_reset
+    ):
         """测试管理员成功重置数据库"""
         # 注意：这个测试会真正重置数据库，可能会影响其他测试
         # 在实际测试环境中，你可能需要mock这个操作或使用测试数据库
@@ -87,7 +98,9 @@ class TestDatabaseReset:
             status.HTTP_401_UNAUTHORIZED,
         ]
 
-    def test_database_reset_as_normal_user_forbidden(self, client, normal_user_headers):
+    def test_database_reset_as_normal_user_forbidden(
+        self, client, normal_user_headers, mock_db_reset
+    ):
         """测试普通用户重置数据库被禁止"""
         response = client.post(
             "/api/v1/admin/database/reset", headers=normal_user_headers
@@ -96,9 +109,9 @@ class TestDatabaseReset:
         # 普通用户应该被拒绝
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_database_reset_unauthorized(self, client):
+    def test_database_reset_unauthorized(self, unauthenticated_client):
         """测试未授权重置数据库"""
-        response = client.post("/api/v1/admin/database/reset")
+        response = unauthenticated_client.post("/api/v1/admin/database/reset")
 
         # 未认证用户应该被拒绝
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -112,15 +125,15 @@ class TestDatabaseReset:
 class TestAdminAccessControl:
     """测试管理员访问控制"""
 
-    def test_admin_endpoint_protected(self, client):
+    def test_admin_endpoint_protected(self, unauthenticated_client):
         """测试管理员端点受保护"""
         # 测试需要管理员权限的端点
-        response = client.post("/api/v1/admin/database/reset")
+        response = unauthenticated_client.post("/api/v1/admin/database/reset")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_normal_user_cannot_access_admin_functions(
-        self, client, normal_user_headers
+        self, client, normal_user_headers, mock_db_reset
     ):
         """测试普通用户无法访问管理员功能"""
         response = client.post(
@@ -147,7 +160,9 @@ class TestAdminAPIEdgeCases:
         assert isinstance(data, dict)
         assert "status" in data
 
-    def test_database_reset_idempotent(self, client, admin_user_headers):
+    def test_database_reset_idempotent(
+        self, client, admin_user_headers, mock_db_reset
+    ):
         """测试数据库重置幂等性"""
         # 多次调用应该都能成功（虽然实际不应该在测试中执行）
         response1 = client.post(

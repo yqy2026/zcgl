@@ -15,7 +15,7 @@ router = APIRouter(prefix="/admin", tags=["系统管理"])
 
 
 @router.get("/health")
-async def health_check() -> dict[str, str]:
+def health_check() -> dict[str, str]:
     """
     健康检查
     """
@@ -23,7 +23,7 @@ async def health_check() -> dict[str, str]:
 
 
 @router.post("/database/reset")
-async def reset_database(
+def reset_database(
     current_user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, Any]:
     """

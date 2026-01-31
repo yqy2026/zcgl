@@ -5,10 +5,11 @@ Unit tests for AutoOptimizer service
 
 from collections import Counter
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.core.exception_handler import ResourceNotFoundError
 from src.models.llm_prompt import ExtractionFeedback, PromptStatus, PromptTemplate
 from src.services.llm_prompt.auto_optimizer import AutoOptimizer
 
@@ -21,8 +22,6 @@ from src.services.llm_prompt.auto_optimizer import AutoOptimizer
 def auto_optimizer():
     """创建AutoOptimizer实例"""
     return AutoOptimizer(min_feedback_count=50, accuracy_threshold=0.85)
-
-
 
 
 @pytest.fixture
@@ -76,12 +75,13 @@ class TestCheckAndOptimizeAll:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.all.return_value = [sample_active_prompt]
+        auto_optimizer._should_optimize = AsyncMock(return_value=(False, "正常"))
 
         # Act
         await auto_optimizer.check_and_optimize_all(mock_db)
 
         # Assert
-        mock_db.query.assert_called_once_with(PromptTemplate)
+        mock_db.query.assert_any_call(PromptTemplate)
 
     @pytest.mark.asyncio
     async def test_no_prompts_need_optimization(
@@ -95,7 +95,7 @@ class TestCheckAndOptimizeAll:
         mock_query.all.return_value = [sample_active_prompt]
 
         # Mock _should_optimize to return False
-        AutoOptimizer._should_optimize = MagicMock(return_value=(False, "正常"))
+        auto_optimizer._should_optimize = AsyncMock(return_value=(False, "正常"))
 
         # Act
         results = await auto_optimizer.check_and_optimize_all(mock_db)
@@ -120,7 +120,7 @@ class TestCheckAndOptimizeAll:
         mock_query.all.return_value = [prompt1, prompt2]
 
         # Mock to return optimization needed
-        AutoOptimizer._should_optimize = MagicMock(return_value=(False, "正常"))
+        auto_optimizer._should_optimize = AsyncMock(return_value=(False, "正常"))
 
         # Act
         results = await auto_optimizer.check_and_optimize_all(mock_db)
@@ -140,7 +140,7 @@ class TestCheckAndOptimizeAll:
         mock_query.all.return_value = [sample_active_prompt]
 
         # Mock to raise exception
-        AutoOptimizer._should_optimize = MagicMock(side_effect=Exception("Test error"))
+        auto_optimizer._should_optimize = AsyncMock(side_effect=Exception("Test error"))
 
         # Act
         results = await auto_optimizer.check_and_optimize_all(mock_db)
@@ -190,7 +190,7 @@ class TestCheckAndOptimizeAll:
         mock_query.filter.return_value = mock_query
         mock_query.all.return_value = [sample_active_prompt]
 
-        AutoOptimizer._should_optimize = MagicMock(return_value=(False, "正常"))
+        auto_optimizer._should_optimize = AsyncMock(return_value=(False, "正常"))
 
         # Act
         await auto_optimizer.check_and_optimize_all(mock_db)
@@ -210,8 +210,8 @@ class TestCheckAndOptimizeAll:
         mock_query.filter.return_value = mock_query
         mock_query.all.return_value = [sample_active_prompt]
 
-        AutoOptimizer._should_optimize = MagicMock(return_value=(True, "需要优化"))
-        AutoOptimizer.optimize_prompt = MagicMock(return_value={"success": True})
+        auto_optimizer._should_optimize = AsyncMock(return_value=(True, "需要优化"))
+        auto_optimizer.optimize_prompt = AsyncMock(return_value={"success": True})
 
         # Act
         results = await auto_optimizer.check_and_optimize_all(mock_db)
@@ -230,7 +230,7 @@ class TestCheckAndOptimizeAll:
         mock_query.filter.return_value = mock_query
         mock_query.all.return_value = [sample_active_prompt]
 
-        AutoOptimizer._should_optimize = MagicMock(return_value=(False, "正常"))
+        auto_optimizer._should_optimize = AsyncMock(return_value=(False, "正常"))
 
         # Act
         results = await auto_optimizer.check_and_optimize_all(mock_db)
@@ -262,19 +262,20 @@ class TestCheckAndOptimizeAll:
 class TestShouldOptimize:
     """测试_should_optimize方法"""
 
-    def test_feedback_count_above_threshold(
+    @pytest.mark.asyncio
+    async def test_feedback_count_above_threshold(
         self, auto_optimizer, mock_db, sample_active_prompt
     ):
         """TC-AO-011: 反馈数量超过阈值"""
         # Arrange
         mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
+        mock_db.query.side_effect = [mock_query]
         mock_query.filter.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.count.return_value = 60  # > min_feedback_count(50)
 
         # Act
-        should_opt, reason = auto_optimizer._should_optimize(
+        should_opt, reason = await auto_optimizer._should_optimize(
             mock_db, sample_active_prompt
         )
 
@@ -288,15 +289,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-012: 反馈数量低于阈值"""
         # Arrange
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 30  # < min_feedback_count(50)
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = 0.90  # > accuracy_threshold(0.85)
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 30  # < min_feedback_count(50)
 
         # Act
         should_opt, reason = await auto_optimizer._should_optimize(
@@ -313,15 +312,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-013: 准确率低于阈值"""
         # Arrange
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 10  # < min_feedback_count
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = 0.75  # < accuracy_threshold(0.85)
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 10  # < min_feedback_count
 
         # Act
         should_opt, reason = await auto_optimizer._should_optimize(
@@ -338,11 +335,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-014: 检查最近7天的反馈"""
         # Arrange
+        mock_query2 = MagicMock()
+        mock_query2.filter.return_value = mock_query2
+        mock_query2.scalar.return_value = 0.90
         mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
+        mock_db.query.side_effect = [mock_query, mock_query2]
         mock_query.filter.return_value = mock_query
         mock_query.count.return_value = 0
-
         # Act
         await auto_optimizer._should_optimize(mock_db, sample_active_prompt)
 
@@ -356,15 +355,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-015: 无反馈且准确率正常"""
         # Arrange
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 0
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = 0.90
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 0
 
         # Act
         should_opt, reason = await auto_optimizer._should_optimize(
@@ -380,15 +377,13 @@ class TestShouldOptimize:
         # Arrange
         optimizer = AutoOptimizer(min_feedback_count=100, accuracy_threshold=0.90)
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 90  # < 100
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = 0.88  # < 0.90
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 90  # < 100
 
         # Act
         should_opt, reason = await optimizer._should_optimize(
@@ -405,7 +400,7 @@ class TestShouldOptimize:
         """TC-AO-017: 反馈数量恰好等于阈值"""
         # Arrange
         mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
+        mock_db.query.side_effect = [mock_query]
         mock_query.filter.return_value = mock_query
         mock_query.count.return_value = 50  # == min_feedback_count
 
@@ -423,15 +418,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-018: 准确率恰好等于阈值"""
         # Arrange
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 0
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = 0.85  # == accuracy_threshold
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 0
 
         # Act
         should_opt, reason = await auto_optimizer._should_optimize(
@@ -447,15 +440,13 @@ class TestShouldOptimize:
     ):
         """TC-AO-019: 准确率指标为空"""
         # Arrange
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 0
-
         mock_query2 = MagicMock()
-        mock_db.query.return_value = mock_query2
         mock_query2.filter.return_value = mock_query2
         mock_query2.scalar.return_value = None
+        mock_query = MagicMock()
+        mock_db.query.side_effect = [mock_query, mock_query2]
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 0
 
         # Act
         should_opt, reason = await auto_optimizer._should_optimize(
@@ -471,8 +462,11 @@ class TestShouldOptimize:
     ):
         """TC-AO-020: 按template_id筛选反馈"""
         # Arrange
+        mock_query2 = MagicMock()
+        mock_query2.filter.return_value = mock_query2
+        mock_query2.scalar.return_value = 0.90
         mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
+        mock_db.query.side_effect = [mock_query, mock_query2]
         mock_query.filter.return_value = mock_query
         mock_query.count.return_value = 0
 
@@ -552,7 +546,7 @@ class TestOptimizePrompt:
         mock_query.get.return_value = None
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Prompt不存在"):
+        with pytest.raises(ResourceNotFoundError, match="Prompt不存在"):
             await auto_optimizer.optimize_prompt(mock_db, template_id)
 
     @pytest.mark.asyncio
@@ -692,7 +686,7 @@ class TestOptimizePrompt:
         mock_query.get.return_value = sample_active_prompt
 
         # Mock _generate_optimization_rules to return empty
-        AutoOptimizer._generate_optimization_rules = MagicMock(return_value=[])
+        auto_optimizer._generate_optimization_rules = MagicMock(return_value=[])
 
         # Act
         result = await auto_optimizer.optimize_prompt(mock_db, template_id)

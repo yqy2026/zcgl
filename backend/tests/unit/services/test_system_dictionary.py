@@ -2,13 +2,12 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import DuplicateResourceError
 from src.models.asset import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate
 from src.services.system_dictionary.service import SystemDictionaryService
 
 TEST_DICT_ID = "dict_123"
-
-
 
 
 @pytest.fixture
@@ -47,7 +46,7 @@ class TestSystemDictionaryService:
             "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code",
             return_value=SystemDictionary(),
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_dictionary(mock_db, obj_in=obj_in)
 
             assert "已存在" in str(excinfo.value)

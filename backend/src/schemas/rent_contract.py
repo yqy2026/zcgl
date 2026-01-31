@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
 
-from ..constants.rent_contract_constants import PaymentStatus
+from ..constants.rent_contract_constants import PaymentStatus, SettlementStatus
 from ..core.enums import ContractStatus
 
 
@@ -147,9 +147,7 @@ class RentContractBase(BaseModel):
     total_deposit: Decimal = Field(Decimal("0"), ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
     # V2: 付款周期
-    payment_cycle: PaymentCycle = Field(
-        PaymentCycle.MONTHLY, description="付款周期"
-    )
+    payment_cycle: PaymentCycle = Field(PaymentCycle.MONTHLY, description="付款周期")
     contract_status: ContractStatus = Field(
         ContractStatus.ACTIVE, description="合同状态"
     )
@@ -289,7 +287,6 @@ class RentContractResponse(RentContractBase):
     version: int = Field(1, description="版本号")
     created_at: datetime
     updated_at: datetime
-    tenant_id: str | None = Field(None, description="租户ID")
     rent_terms: list[RentTermResponse] = Field([], description="租金条款列表")
     # V2: 返回资产对象列表
     assets: list[AssetSimpleResponse] = Field([], description="关联资产列表")
@@ -510,7 +507,7 @@ class ServiceFeeLedgerResponse(BaseModel):
     paid_rent_amount: Decimal
     fee_rate: Decimal
     fee_amount: Decimal
-    settlement_status: str
+    settlement_status: SettlementStatus
     settlement_date: date | None = None
     notes: str | None = None
     operator: str | None = None

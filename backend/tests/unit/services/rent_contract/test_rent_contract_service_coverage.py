@@ -7,6 +7,7 @@ import pytest
 
 from src.constants.rent_contract_constants import PaymentStatus
 from src.core.enums import ContractStatus
+from src.core.exception_handler import ResourceConflictError
 from src.models.asset import Asset
 from src.models.rent_contract import ContractType, RentContract, RentLedger, RentTerm
 from src.schemas.rent_contract import (
@@ -45,7 +46,7 @@ class TestRentContractServiceCoverage:
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
             monthly_rent=Decimal("1000.00"),
-            management_fee=Decimal("100.00")
+            management_fee=Decimal("100.00"),
         )
 
         contract_data = RentContractCreate(
@@ -57,14 +58,19 @@ class TestRentContractServiceCoverage:
             asset_ids=["asset_1"],
             tenant_name="Test Tenant",
             contract_type=ContractType.LEASE_DOWNSTREAM,
-            rent_terms=[term_data]
+            rent_terms=[term_data],
         )
 
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_asset]
 
         # Use string path patching for reliability
-        with patch('src.services.rent_contract.service.RentContractService._check_asset_rent_conflicts', return_value=[]):
-            with patch('src.services.rent_contract.service.model_to_dict', return_value={}):
+        with patch(
+            "src.services.rent_contract.service.RentContractService._check_asset_rent_conflicts",
+            return_value=[],
+        ):
+            with patch(
+                "src.services.rent_contract.service.model_to_dict", return_value={}
+            ):
                 result = service.create_contract(mock_db, obj_in=contract_data)
 
         assert isinstance(result, RentContract)
@@ -76,7 +82,7 @@ class TestRentContractServiceCoverage:
         term_data = RentTermCreate(
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
-            monthly_rent=Decimal("1000.00")
+            monthly_rent=Decimal("1000.00"),
         )
 
         contract_data = RentContractCreate(
@@ -87,38 +93,45 @@ class TestRentContractServiceCoverage:
             ownership_id="owner_1",
             asset_ids=["asset_1"],
             tenant_name="Test Tenant",
-            rent_terms=[term_data]
+            rent_terms=[term_data],
         )
 
-        conflict_info = [{
-            "asset_name": "Asset A",
-            "contract_number": "OLD001",
-            "contract_start_date": "2023-01-01",
-            "contract_end_date": "2024-06-01"
-        }]
+        conflict_info = [
+            {
+                "asset_name": "Asset A",
+                "contract_number": "OLD001",
+                "contract_start_date": "2023-01-01",
+                "contract_end_date": "2024-06-01",
+            }
+        ]
 
-        with patch('src.services.rent_contract.service.RentContractService._check_asset_rent_conflicts', return_value=conflict_info):
-            with pytest.raises(ValueError) as excinfo:
+        with patch(
+            "src.services.rent_contract.service.RentContractService._check_asset_rent_conflicts",
+            return_value=conflict_info,
+        ):
+            with pytest.raises(ResourceConflictError) as excinfo:
                 service.create_contract(mock_db, obj_in=contract_data)
             assert "资产租金冲突检测" in str(excinfo.value)
 
     def test_update_contract(self, service, mock_db, mock_asset):
         """Test contract update logic"""
         db_contract = RentContract(
-            id="contract_1",
-            contract_number="OLD001",
-            assets=[mock_asset]
+            id="contract_1", contract_number="OLD001", assets=[mock_asset]
         )
 
         update_data = RentContractUpdate(
-            tenant_name="Updated Tenant",
-            asset_ids=["asset_1"]
+            tenant_name="Updated Tenant", asset_ids=["asset_1"]
         )
 
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_asset]
 
-        with patch('src.services.rent_contract.service.model_to_dict', return_value={"id": "contract_1"}):
-            result = service.update_contract(mock_db, db_obj=db_contract, obj_in=update_data)
+        with patch(
+            "src.services.rent_contract.service.model_to_dict",
+            return_value={"id": "contract_1"},
+        ):
+            result = service.update_contract(
+                mock_db, db_obj=db_contract, obj_in=update_data
+            )
 
         assert result.tenant_name == "Updated Tenant"
         mock_db.commit.assert_called()
@@ -129,13 +142,13 @@ class TestRentContractServiceCoverage:
             id="old_1",
             contract_number="OLD001",
             contract_status=ContractStatus.ACTIVE,
-            total_deposit=Decimal("5000.00")
+            total_deposit=Decimal("5000.00"),
         )
 
         term_data = RentTermCreate(
             start_date=date(2025, 1, 1),
             end_date=date(2025, 12, 31),
-            monthly_rent=Decimal("1000.00")
+            monthly_rent=Decimal("1000.00"),
         )
 
         new_contract_data = RentContractCreate(
@@ -145,18 +158,25 @@ class TestRentContractServiceCoverage:
             sign_date=date(2025, 1, 1),
             ownership_id="owner_1",
             tenant_name="Test Tenant",
-            rent_terms=[term_data]
+            rent_terms=[term_data],
         )
 
-        mock_db.query.return_value.filter.return_value.first.return_value = original_contract
+        mock_db.query.return_value.filter.return_value.first.return_value = (
+            original_contract
+        )
         new_contract_mock = RentContract(id="new_1", contract_number="NEW001")
 
-        with patch('src.services.rent_contract.service.RentContractService.create_contract', return_value=new_contract_mock):
-            with patch('src.services.rent_contract.service.model_to_dict', return_value={}):
-                 result = service.renew_contract(
+        with patch(
+            "src.services.rent_contract.service.RentContractService.create_contract",
+            return_value=new_contract_mock,
+        ):
+            with patch(
+                "src.services.rent_contract.service.model_to_dict", return_value={}
+            ):
+                result = service.renew_contract(
                     mock_db,
                     original_contract_id="old_1",
-                    new_contract_data=new_contract_data
+                    new_contract_data=new_contract_data,
                 )
 
         assert original_contract.contract_status == ContractStatus.RENEWED
@@ -168,19 +188,19 @@ class TestRentContractServiceCoverage:
         contract = RentContract(
             id="c1",
             contract_status=ContractStatus.ACTIVE,
-            total_deposit=Decimal("2000.00")
+            total_deposit=Decimal("2000.00"),
         )
         mock_db.query.return_value.filter.return_value.first.return_value = contract
         termination_date = date(2024, 6, 30)
 
-        with patch('src.services.rent_contract.service.model_to_dict', return_value={}):
+        with patch("src.services.rent_contract.service.model_to_dict", return_value={}):
             service.terminate_contract(
                 mock_db,
                 contract_id="c1",
                 termination_date=termination_date,
                 should_refund_deposit=True,
                 deduction_amount=Decimal("500.00"),
-                termination_reason="Early exit"
+                termination_reason="Early exit",
             )
 
         assert contract.contract_status == ContractStatus.TERMINATED
@@ -193,18 +213,24 @@ class TestRentContractServiceCoverage:
             id="c1",
             start_date=date(2024, 1, 1),
             end_date=date(2024, 3, 31),
-            ownership_id="own1"
+            ownership_id="own1",
         )
         term = RentTerm(
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
-            total_monthly_amount=Decimal("1000.00")
+            total_monthly_amount=Decimal("1000.00"),
         )
 
-        with patch("src.crud.rent_contract.rent_contract.get", return_value=contract), \
-             patch("src.crud.rent_contract.rent_term.get_by_contract", return_value=[term]), \
-             patch("src.crud.rent_contract.rent_ledger.get_by_contract_and_month", return_value=None):
-
+        with (
+            patch("src.crud.rent_contract.rent_contract.get", return_value=contract),
+            patch(
+                "src.crud.rent_contract.rent_term.get_by_contract", return_value=[term]
+            ),
+            patch(
+                "src.crud.rent_contract.rent_ledger.get_by_contract_and_month",
+                return_value=None,
+            ),
+        ):
             request = GenerateLedgerRequest(contract_id="c1")
             ledgers = service.generate_monthly_ledger(mock_db, request=request)
 
@@ -218,14 +244,14 @@ class TestRentContractServiceCoverage:
             id="l1",
             due_amount=Decimal("1000.00"),
             paid_amount=Decimal("0"),
-            contract_id="c1"
+            contract_id="c1",
         )
         mock_db.query.return_value.filter.return_value.all.return_value = [ledger]
 
         request = RentLedgerBatchUpdate(
             ledger_ids=["l1"],
             payment_status=PaymentStatus.PAID,
-            payment_date=date(2024, 1, 5)
+            payment_date=date(2024, 1, 5),
         )
 
         service.batch_update_payment(mock_db, request=request)
@@ -265,7 +291,7 @@ class TestRentContractServiceCoverage:
         mock_results = [
             (ContractStatus.RENEWED, 2),
             (ContractStatus.EXPIRED, 1),
-            (ContractStatus.TERMINATED, 1)
+            (ContractStatus.TERMINATED, 1),
         ]
         mock_db.query.return_value.group_by.return_value.all.return_value = mock_results
 

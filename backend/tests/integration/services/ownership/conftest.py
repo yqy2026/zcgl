@@ -12,7 +12,9 @@ from sqlalchemy.orm import sessionmaker
 # 设置测试数据库URL为 PostgreSQL
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 if not TEST_DATABASE_URL:
-    pytest.skip("TEST_DATABASE_URL is required for integration tests", allow_module_level=True)
+    pytest.skip(
+        "TEST_DATABASE_URL is required for integration tests", allow_module_level=True
+    )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 from src.database import Base

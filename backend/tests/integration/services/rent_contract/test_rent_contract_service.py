@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from src.constants.rent_contract_constants import PaymentStatus
+from src.core.exception_handler import OperationNotAllowedError
 from src.models.asset import Asset, Ownership
 from src.models.rent_contract import (
     ContractType,
@@ -560,7 +561,7 @@ class TestContractRenewal:
             )
         )
 
-        with pytest.raises(ValueError, match="原合同状态不可续签"):
+        with pytest.raises(OperationNotAllowedError, match="原合同状态不可续签"):
             self.service.renew_contract(
                 self.db,
                 original_contract_id=self.original_contract.id,

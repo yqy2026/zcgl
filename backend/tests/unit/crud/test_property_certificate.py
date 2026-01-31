@@ -149,9 +149,7 @@ class TestCRUDPropertyOwnerGetMulti:
 
     def test_get_multi_empty_list(self, crud, mock_db):
         """测试批量获取空列表"""
-        with patch.object(
-            CRUDPropertyOwner.__bases__[0], "get_multi", return_value=[]
-        ):
+        with patch.object(CRUDPropertyOwner.__bases__[0], "get_multi", return_value=[]):
             result = crud.get_multi(mock_db)
 
         assert result == []
@@ -218,17 +216,13 @@ class TestCRUDPropertyOwnerSearchByIdNumber:
     def test_search_by_id_number_encrypts_query(self, crud, mock_db):
         """测试使用加密值搜索"""
         mock_owners = [MagicMock(spec=PropertyOwner, __dict__={"id": "1"})]
-        mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = (
-            mock_owners
-        )
+        mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = mock_owners
 
         with patch.object(
             crud.sensitive_data_handler, "encrypt_field"
         ) as mock_encrypt_field:
             mock_encrypt_field.return_value = "encrypted_search_id"
-            with patch.object(
-                crud.sensitive_data_handler, "decrypt_data"
-            ):
+            with patch.object(crud.sensitive_data_handler, "decrypt_data"):
                 result = crud.search_by_id_number(
                     mock_db, id_number="110101199001011234"
                 )
@@ -240,9 +234,7 @@ class TestCRUDPropertyOwnerSearchByIdNumber:
 
     def test_search_by_id_number_not_found(self, crud, mock_db):
         """测试搜索不存在的证件号码"""
-        mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = (
-            []
-        )
+        mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = []
 
         with patch.object(
             crud.sensitive_data_handler, "encrypt_field"
@@ -281,9 +273,7 @@ class TestCRUDPropertyCertificateGetByCertificateNumber:
         """测试根据证书编号获取不存在的产权证"""
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
-        result = crud.get_by_certificate_number(
-            mock_db, certificate_number="NOT-EXIST"
-        )
+        result = crud.get_by_certificate_number(mock_db, certificate_number="NOT-EXIST")
 
         assert result is None
 
@@ -321,7 +311,9 @@ class TestCRUDPropertyCertificateCreateWithOwners:
                 result = MagicMock(spec=PropertyCertificate)
                 result.owners = []
 
-                with patch("src.crud.property_certificate.PropertyCertificate") as mock_cert_class:
+                with patch(
+                    "src.crud.property_certificate.PropertyCertificate"
+                ) as mock_cert_class:
                     mock_cert_class.return_value = result
                     mock_cert_class.return_value.owners = []
 
@@ -340,7 +332,9 @@ class TestCRUDPropertyCertificateCreateWithOwners:
             "certificate_number": "CERT-003",
         }
 
-        with patch("src.crud.property_certificate.PropertyCertificate") as mock_cert_class:
+        with patch(
+            "src.crud.property_certificate.PropertyCertificate"
+        ) as mock_cert_class:
             mock_cert = MagicMock(spec=PropertyCertificate)
             mock_cert.owners = []
             mock_cert_class.return_value = mock_cert

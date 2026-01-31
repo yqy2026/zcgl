@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.models.organization import Organization, OrganizationHistory
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService
@@ -127,7 +128,7 @@ class TestCreateOrganization:
 
         mock_db.query.side_effect = query_side_effect
 
-        with pytest.raises(ValueError, match="上级组织.*不存在"):
+        with pytest.raises(ResourceNotFoundError, match="组织"):
             org_service.create_organization(mock_db, obj_in=obj_in)
 
     def test_create_organization_creates_history(self, org_service, mock_db):
@@ -192,7 +193,7 @@ class TestUpdateOrganization:
 
         mock_db.query.side_effect = query_side_effect
 
-        with pytest.raises(ValueError, match="组织ID.*不存在"):
+        with pytest.raises(ResourceNotFoundError, match="组织"):
             org_service.update_organization(
                 mock_db, org_id="nonexistent", obj_in=obj_in
             )
@@ -219,7 +220,9 @@ class TestUpdateOrganization:
         mock_db.query.side_effect = query_side_effect
 
         with patch.object(org_service, "_would_create_cycle", return_value=True):
-            with pytest.raises(ValueError, match="不能将组织移动到其子组织下"):
+            with pytest.raises(
+                OperationNotAllowedError, match="不能将组织移动到其子组织下"
+            ):
                 org_service.update_organization(
                     mock_db, org_id="org_123", obj_in=obj_in
                 )
@@ -341,7 +344,7 @@ class TestDeleteOrganization:
 
         mock_db.query.side_effect = query_side_effect
 
-        with pytest.raises(ValueError, match="不能删除有子组织的组织"):
+        with pytest.raises(OperationNotAllowedError, match="不能删除有子组织的组织"):
             org_service.delete_organization(mock_db, org_id="org_123")
 
     def test_delete_organization_creates_history(

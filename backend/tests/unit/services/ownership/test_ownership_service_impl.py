@@ -7,6 +7,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import (
+    BusinessValidationError,
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.models.asset import Asset, Ownership, Project
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
@@ -194,7 +200,7 @@ class TestCreateOwnership:
         with patch(
             "src.crud.ownership.ownership.get_by_name", return_value=MagicMock()
         ):
-            with pytest.raises(ValueError, match="权属方名称.*已存在"):
+            with pytest.raises(DuplicateResourceError, match="权属方已存在"):
                 ownership_service.create_ownership(mock_db, obj_in=obj_in)
 
     def test_create_ownership_auto_generates_code(self, ownership_service, mock_db):
@@ -247,7 +253,7 @@ class TestUpdateOwnership:
         existing.id = "other_123"
 
         with patch("src.crud.ownership.ownership.get_by_name", return_value=existing):
-            with pytest.raises(ValueError, match="权属方名称.*已存在"):
+            with pytest.raises(DuplicateResourceError, match="权属方已存在"):
                 ownership_service.update_ownership(
                     mock_db, db_obj=mock_ownership, obj_in=obj_in
                 )
@@ -453,7 +459,7 @@ class TestUpdateRelatedProjects:
         mock_db.query.return_value = mock_query
 
         with patch("src.crud.ownership.ownership.get", return_value=None):
-            with pytest.raises(ValueError, match="权属方ID.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="权属方"):
                 ownership_service.update_related_projects(
                     mock_db, ownership_id="nonexistent", project_ids=["project_123"]
                 )
@@ -467,7 +473,7 @@ class TestUpdateRelatedProjects:
         mock_db.query.return_value = mock_query
 
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
-            with pytest.raises(ValueError, match="以下项目ID不存在"):
+            with pytest.raises(BusinessValidationError, match="以下项目ID不存在"):
                 ownership_service.update_related_projects(
                     mock_db,
                     ownership_id="ownership_123",
@@ -582,7 +588,7 @@ class TestDeleteOwnership:
     def test_delete_ownership_not_found(self, ownership_service, mock_db):
         """测试权属方不存在"""
         with patch("src.crud.ownership.ownership.get", return_value=None):
-            with pytest.raises(ValueError, match="权属方ID.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="权属方.*不存在"):
                 ownership_service.delete_ownership(mock_db, id="nonexistent")
 
     def test_delete_ownership_with_assets_fails(
@@ -594,7 +600,9 @@ class TestDeleteOwnership:
         mock_db.query.return_value = mock_query
 
         with patch("src.crud.ownership.ownership.get", return_value=mock_ownership):
-            with pytest.raises(ValueError, match="该权属方还有.*个关联资产"):
+            with pytest.raises(
+                OperationNotAllowedError, match="该权属方还有.*关联资产"
+            ):
                 ownership_service.delete_ownership(mock_db, id="ownership_123")
 
 
@@ -627,7 +635,7 @@ class TestToggleStatus:
     def test_toggle_status_not_found(self, ownership_service, mock_db):
         """测试权属方不存在"""
         with patch("src.crud.ownership.ownership.get", return_value=None):
-            with pytest.raises(ValueError, match="权属方ID.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="权属方.*不存在"):
                 ownership_service.toggle_status(mock_db, id="nonexistent")
 
     def test_toggle_status_with_custom_params(

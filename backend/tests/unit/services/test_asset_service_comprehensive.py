@@ -4,7 +4,6 @@
 Comprehensive tests for Asset Service to maximize coverage
 """
 
-
 import pytest
 from sqlalchemy.orm import Session
 
@@ -54,12 +53,12 @@ class TestAssetServiceBusinessLogic:
         assert result.code == sample_asset.code
         assert result.id == sample_asset.id
 
-    def test_search_assets_advanced_filters(self, asset_service, db: Session, sample_asset):
+    def test_search_assets_advanced_filters(
+        self, asset_service, db: Session, sample_asset
+    ):
         """测试高级搜索筛选"""
         # Basic search
-        result, count = asset_service.get_assets(
-            search=sample_asset.property_name[:2]
-        )
+        result, count = asset_service.get_assets(search=sample_asset.property_name[:2])
         assert count >= 1
         assert result[0].id == sample_asset.id
 
@@ -79,35 +78,29 @@ class TestAssetServiceBusinessLogic:
             asset_type="building",
             usage="office",
             project_id="project-001",
-            ownership_id="owner-001"
+            ownership_id="owner-001",
         )
 
         # Mock enum validation and calculator to avoid dependencies for this unit test
         # or rely on integration if dependencies are available.
         # Given this is "unit" but uses "db" fixture, it's an integration test.
 
-        asset = asset_service.create_asset(
-            asset_in,
-            current_user=admin_user
-        )
+        asset = asset_service.create_asset(asset_in, current_user=admin_user)
 
         assert asset.id is not None
         assert asset.property_name == "新测试资产"
         assert asset.status == "idle"  # Default
 
-    def test_update_asset_logic(self, asset_service, sample_asset, db: Session, admin_user):
+    def test_update_asset_logic(
+        self, asset_service, sample_asset, db: Session, admin_user
+    ):
         """测试更新资产逻辑"""
         from src.schemas.asset import AssetUpdate
 
-        update_data = AssetUpdate(
-            name="更新后的资产",
-            usage="retail"
-        )
+        update_data = AssetUpdate(name="更新后的资产", usage="retail")
 
         updated = asset_service.update_asset(
-            sample_asset.id,
-            update_data,
-            current_user=admin_user
+            sample_asset.id, update_data, current_user=admin_user
         )
 
         assert updated.property_name == "更新后的资产"

@@ -1,17 +1,21 @@
 /**
  * DictionarySelect 组件测试
- * 测试字典选择器组件
+ * 覆盖默认渲染、loading 与过滤逻辑
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import type { DictionaryOption } from '../../services/dictionary';
 
+import DictionarySelect from '../DictionarySelect';
+import { useDictionary } from '../../hooks/useDictionary';
+import { dictionaryService } from '../../services/dictionary';
+
 interface SelectMockProps {
-  children?: React.ReactNode;
   loading?: boolean;
   placeholder?: string;
-  notFoundContent?: React.ReactNode;
+  notFoundContent?: ReactNode;
   options?: DictionaryOption[];
   filterOption?: (input: string, option?: DictionaryOption) => boolean;
   virtual?: boolean;
@@ -23,453 +27,141 @@ interface SpinMockProps {
   size?: 'small' | 'default' | 'large' | number;
 }
 
-// Mock hooks
+let lastFilterOption: SelectMockProps['filterOption'];
+
 vi.mock('../../hooks/useDictionary', () => ({
-  useDictionary: vi.fn((_dictType: string, _isActive?: boolean) => ({
-    options: [
-      { label: '选项1', value: 'opt1' },
-      { label: '选项2', value: 'opt2' },
-    ],
-    isLoading: false,
-    error: null,
-  })),
+  useDictionary: vi.fn(),
 }));
 
-// Mock services
 vi.mock('../../services/dictionary', () => ({
   dictionaryService: {
     isTypeAvailable: vi.fn(() => true),
   },
 }));
 
-// Mock Ant Design components
 vi.mock('antd', () => ({
   Select: ({
-    children: _children,
     loading,
     placeholder,
     notFoundContent,
     options,
-    filterOption: _filterOption,
+    filterOption,
     virtual,
     listHeight,
     showSearch,
-  }: SelectMockProps) => (
-    <div
-      data-testid="select"
-      data-loading={loading}
-      data-placeholder={placeholder}
-      data-show-search={showSearch}
-      data-virtual={virtual}
-      data-list-height={listHeight}
-    >
-      {notFoundContent}
-      {options &&
-        options.map((opt) => (
-          <div key={opt.value} data-value={opt.value}>
-            {opt.label}
+  }: SelectMockProps) => {
+    lastFilterOption = filterOption;
+    return (
+      <div
+        data-testid="select"
+        data-loading={loading}
+        data-placeholder={placeholder}
+        data-show-search={showSearch}
+        data-virtual={virtual}
+        data-list-height={listHeight}
+      >
+        <div data-testid="not-found">{notFoundContent}</div>
+        {options?.map(option => (
+          <div key={option.value} data-testid="option" data-value={option.value}>
+            {option.label}
           </div>
         ))}
-    </div>
-  ),
+      </div>
+    );
+  },
   Spin: ({ size }: SpinMockProps) => <div data-testid="spin" data-size={size} />,
 }));
 
-describe('DictionarySelect - 组件导入测试', () => {
-  it('应该能够导入DictionarySelect组件', async () => {
-    const module = await import('../DictionarySelect');
-    expect(module).toBeDefined();
-    expect(module.default).toBeDefined();
-  });
-});
-
-describe('DictionarySelect - 基础属性测试', () => {
+describe('DictionarySelect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('应该支持dictType属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
+    lastFilterOption = undefined;
+    vi.mocked(useDictionary).mockReturnValue({
+      options: [
+        { label: '选项1', value: 'opt1' },
+        { label: '选项2', value: 'opt2' },
+      ],
+      isLoading: false,
+      error: null,
     });
-    expect(element).toBeTruthy();
   });
 
-  it('应该支持isActive属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      isActive: true,
+  it('renders options from useDictionary', () => {
+    render(<DictionarySelect dictType="test_type" />);
+
+    const options = screen.getAllByTestId('option');
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveTextContent('选项1');
+  });
+
+  it('uses default placeholder derived from dictType', () => {
+    render(<DictionarySelect dictType="asset_type" />);
+
+    expect(screen.getByTestId('select')).toHaveAttribute('data-placeholder', '请选择assettype');
+  });
+
+  it('uses custom placeholder when provided', () => {
+    render(<DictionarySelect dictType="test_type" placeholder="请选择" />);
+
+    expect(screen.getByTestId('select')).toHaveAttribute('data-placeholder', '请选择');
+  });
+
+  it('shows Spin when loading', () => {
+    vi.mocked(useDictionary).mockReturnValue({
+      options: [],
+      isLoading: true,
+      error: null,
     });
-    expect(element).toBeTruthy();
+
+    render(<DictionarySelect dictType="test_type" />);
+
+    expect(screen.getByTestId('spin')).toBeInTheDocument();
   });
 
-  it('默认isActive应该是true', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
+  it('uses notFoundContent when not loading', () => {
+    vi.mocked(useDictionary).mockReturnValue({
+      options: [],
+      isLoading: false,
+      error: null,
     });
-    expect(element).toBeTruthy();
+
+    render(<DictionarySelect dictType="test_type" />);
+
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 
-  it('应该支持showColor属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      showColor: true,
-    });
-    expect(element).toBeTruthy();
+  it('invokes useDictionary with dictType and isActive', () => {
+    render(<DictionarySelect dictType="test_type" isActive={false} />);
+
+    expect(useDictionary).toHaveBeenCalledWith('test_type', false);
   });
 
-  it('默认showColor应该是false', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
+  it('checks dictionary type availability', () => {
+    render(<DictionarySelect dictType="test_type" />);
+
+    expect(dictionaryService.isTypeAvailable).toHaveBeenCalledWith('test_type');
   });
 
-  it('应该支持showIcon属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      showIcon: true,
-    });
-    expect(element).toBeTruthy();
+  it('filterOption matches string labels', () => {
+    render(<DictionarySelect dictType="test_type" />);
+
+    expect(lastFilterOption?.('选项', { label: '选项1', value: 'opt1' })).toBe(true);
+    expect(lastFilterOption?.('其他', { label: '选项1', value: 'opt1' })).toBe(false);
   });
 
-  it('默认showIcon应该是false', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
+  it('filterOption matches React element labels', () => {
+    render(<DictionarySelect dictType="test_type" />);
 
-describe('DictionarySelect - optionRender测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const labelElement = <span>Alpha</span>;
+    expect(lastFilterOption?.('alpha', { label: labelElement, value: 'opt3' })).toBe(true);
   });
 
-  it('应该支持optionRender属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const optionRender = vi.fn((option: DictionaryOption) => (
-      <div>自定义: {option.label}</div>
-    ));
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      optionRender,
-    });
-    expect(element).toBeTruthy();
-  });
+  it('enables search and virtual list by default', () => {
+    render(<DictionarySelect dictType="test_type" />);
 
-  it('optionRender为undefined时使用默认渲染', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      optionRender: undefined,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - placeholder测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持placeholder属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      placeholder: '请选择',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('placeholder为undefined时使用默认值', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - loading状态测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示loading状态', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('loading时应该显示Spin', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - notFoundContent测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('无数据时应该显示暂无数据', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - filterOption测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持filterOption', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理字符串label', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理React元素label', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - 虚拟滚动测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该启用虚拟滚动', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该设置listHeight为256', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - showSearch测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该启用搜索', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理空dictType', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: '',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理isActive为false', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      isActive: false,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - SelectProps传递测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该支持value属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      value: 'opt1',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持onChange属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const handleChange = vi.fn();
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      onChange: handleChange,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持disabled属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      disabled: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持allowClear属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      allowClear: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该支持mode属性', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      mode: 'multiple',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - useDictionary hook测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该调用useDictionary hook', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递dictType给hook', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该传递isActive给hook', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      isActive: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - 字典服务测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该检查字典类型是否可用', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该使用dictionaryService', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - 选项渲染测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('showColor为true时应该显示颜色', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      showColor: true,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('showIcon为true时应该显示图标', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-      showIcon: true,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('DictionarySelect - 选项数据测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示options', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('options应该包含label和value', async () => {
-    const DictionarySelect = (await import('../DictionarySelect')).default;
-    const element = React.createElement(DictionarySelect, {
-      dictType: 'test_type',
-    });
-    expect(element).toBeTruthy();
+    const select = screen.getByTestId('select');
+    expect(select).toHaveAttribute('data-show-search', 'true');
+    expect(select).toHaveAttribute('data-virtual', 'true');
+    expect(select).toHaveAttribute('data-list-height', '256');
   });
 });

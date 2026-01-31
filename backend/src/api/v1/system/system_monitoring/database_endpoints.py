@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import (
     BaseBusinessError,
+    ConfigurationError,
     internal_error,
     service_unavailable,
 )
@@ -35,10 +36,11 @@ except ImportError as e:
             "module": "system_monitoring.database_endpoints",
         },
     )
-    raise RuntimeError(
+    raise ConfigurationError(
         "数据库监控模块缺少必要依赖，无法启动。\n"
         "请运行: poetry install 或 pip install -e .\n"
-        f"导入错误详情: {e}"
+        f"导入错误详情: {e}",
+        config_key="system_monitoring.database_endpoints",
     )
 
 
@@ -50,7 +52,7 @@ router = APIRouter()
     response_model=DatabaseHealthMetrics,
     summary="获取数据库健康指标",
 )
-async def get_database_health_metrics(
+def get_database_health_metrics(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> DatabaseHealthMetrics:
     """获取数据库健康状态和性能指标"""
@@ -108,7 +110,7 @@ async def get_database_health_metrics(
 
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
-async def get_slow_queries(
+def get_slow_queries(
     page_size: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
@@ -138,7 +140,7 @@ async def get_slow_queries(
     response_model=DatabaseOptimizationReport,
     summary="执行数据库优化",
 )
-async def optimize_database(
+def optimize_database(
     current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> DatabaseOptimizationReport:
     """执行数据库优化操作"""
@@ -193,7 +195,7 @@ async def optimize_database(
 
 
 @router.post("/database/cleanup", summary="清理数据库过期数据")
-async def cleanup_database(
+def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
     current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
@@ -219,7 +221,7 @@ async def cleanup_database(
 
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
-async def get_connection_pool_status(
+def get_connection_pool_status(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """获取数据库连接池详细状态"""

@@ -18,6 +18,10 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
+from src.core.exception_handler import (
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.models.rent_contract import (
     ContractType,
     DepositTransactionType,
@@ -403,7 +407,7 @@ class TestRenewalErrorHandling:
         self, test_db: Session, renewal_contract_data: RentContractCreate
     ):
         """TC-REN-008: Renewal fails when original contract doesn't exist"""
-        with pytest.raises(ValueError, match="原合同不存在"):
+        with pytest.raises(ResourceNotFoundError, match="合同.*不存在"):
             rent_contract_service.renew_contract(
                 db=test_db,
                 original_contract_id="nonexistent_id",
@@ -440,7 +444,7 @@ class TestRenewalErrorHandling:
         )
 
         with pytest.raises(
-            ValueError, match="只能续签有效|原合同状态"
+            OperationNotAllowedError, match="只能续签有效|原合同状态"
         ):  # More flexible matching
             rent_contract_service.renew_contract(
                 db=test_db,

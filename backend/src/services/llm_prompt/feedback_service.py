@@ -50,7 +50,9 @@ class FeedbackService:
             ValueError: 当模板不存在时
         """
         # 验证模板存在
-        template = self.prompt_manager.get_by_id(db, template_id=feedback_in.template_id)
+        template = self.prompt_manager.get_by_id(
+            db, template_id=feedback_in.template_id
+        )
         if not template:
             raise ResourceNotFoundError("Prompt", feedback_in.template_id)
 

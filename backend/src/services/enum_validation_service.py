@@ -454,9 +454,9 @@ class AsyncEnumValidationService:
         return len(errors) == 0, errors
 
 
-_ASYNC_SERVICE_CACHE: WeakKeyDictionary[
-    AsyncSession, AsyncEnumValidationService
-] = WeakKeyDictionary()
+_ASYNC_SERVICE_CACHE: WeakKeyDictionary[AsyncSession, AsyncEnumValidationService] = (
+    WeakKeyDictionary()
+)
 
 
 def get_enum_validation_service_async(

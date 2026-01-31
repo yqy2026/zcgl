@@ -19,4 +19,11 @@ class PaymentStatus(str, Enum):
     OVERDUE = "逾期"
 
 
-__all__ = ["CONTRACT_ATTACHMENT_SUBDIR", "PaymentStatus"]
+class SettlementStatus(str, Enum):
+    """结算状态枚举"""
+
+    UNSETTLED = "待结算"
+    SETTLED = "已结算"
+
+
+__all__ = ["CONTRACT_ATTACHMENT_SUBDIR", "PaymentStatus", "SettlementStatus"]

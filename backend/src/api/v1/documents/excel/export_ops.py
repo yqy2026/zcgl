@@ -5,7 +5,7 @@ Excel导出操作模块 - 同步与异步导出
 import logging
 import os
 import tempfile
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from datetime import datetime
 from typing import Any
 
@@ -37,7 +37,7 @@ router = APIRouter()
 
 
 @router.get("/export", summary="导出Excel文件")
-async def export_excel(
+def export_excel(
     search: str | None = Query(None, description="搜索关键词"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
@@ -68,7 +68,7 @@ async def export_excel(
     )
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()
@@ -81,7 +81,7 @@ async def export_excel(
 
 
 @router.post("/export", summary="导出选中资产Excel文件")
-async def export_selected_assets(
+def export_selected_assets(
     asset_ids: list[str] | None = Body(None, description="资产ID列表"),
     export_format: str = Query("excel", description="导出格式"),
     search: str | None = Query(None, description="搜索关键词"),
@@ -120,7 +120,7 @@ async def export_selected_assets(
     )
 
     # 返回文件流（避免重复读取buffer）
-    async def file_generator() -> AsyncGenerator[bytes, None]:
+    def file_generator() -> Generator[bytes, None, None]:
         data = buffer.getvalue()
         yield data
         buffer.close()
@@ -133,7 +133,7 @@ async def export_selected_assets(
 
 
 @router.post("/export/async", summary="异步导出Excel文件")
-async def export_excel_async(
+def export_excel_async(
     background_tasks: BackgroundTasks,
     request: ExcelExportRequest = Body(...),
     db: Session = Depends(get_db),
@@ -291,7 +291,7 @@ async def _process_excel_export_async(
 
 
 @router.get("/download/{task_id}", summary="下载导出文件")
-async def download_export_file(
+def download_export_file(
     task_id: str, db: Session = Depends(get_db)
 ) -> StreamingResponse:
     """

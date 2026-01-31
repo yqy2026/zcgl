@@ -26,8 +26,6 @@ from src.services.core.user_management_service import UserManagementService
 # ===================== Fixtures =====================
 
 
-
-
 @pytest.fixture
 def mock_password_service():
     """Mock password service"""

@@ -8,7 +8,7 @@ Critical for authentication security.
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from jose.exceptions import JWTError
+from jwt import PyJWTError as JWTError
 
 from src.security.jwt_security import (
     jwt_security,

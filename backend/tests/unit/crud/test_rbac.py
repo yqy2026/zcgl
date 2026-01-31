@@ -86,7 +86,9 @@ class TestCRUDRole:
         mock_db.execute.side_effect = [mock_execute, mock_count]
 
         with patch.object(crud.query_builder, "build_query") as mock_build:
-            with patch.object(crud.query_builder, "build_count_query") as mock_count_build:
+            with patch.object(
+                crud.query_builder, "build_count_query"
+            ) as mock_count_build:
                 mock_build.return_value = MagicMock()
                 mock_count_build.return_value = MagicMock()
 

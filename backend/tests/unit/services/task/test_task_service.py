@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.enums.task import TaskStatus
 from src.models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 from src.schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
@@ -147,7 +148,7 @@ class TestUpdateTaskStatus:
     def test_update_status_task_not_found(self, task_service, mock_db):
         """测试任务不存在"""
         with patch("src.crud.task.task_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="任务.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="任务不存在"):
                 task_service.update_task_status(
                     mock_db, task_id="nonexistent", status=TaskStatus.RUNNING
                 )
@@ -201,7 +202,7 @@ class TestUpdateTask:
         obj_in = TaskUpdate(title="新标题")
 
         with patch("src.crud.task.task_crud.get", return_value=mock_task):
-            with pytest.raises(ValueError, match="已完成的任务无法更新"):
+            with pytest.raises(OperationNotAllowedError, match="已完成的任务无法更新"):
                 task_service.update_task(mock_db, task_id="task_123", obj_in=obj_in)
 
     def test_update_task_with_status_change(self, task_service, mock_db, mock_task):
@@ -223,7 +224,7 @@ class TestUpdateTask:
         obj_in = TaskUpdate(title="新标题")
 
         with patch("src.crud.task.task_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="任务.*不存在"):
+            with pytest.raises(ResourceNotFoundError, match="任务不存在"):
                 task_service.update_task(mock_db, task_id="nonexistent", obj_in=obj_in)
 
 
@@ -263,7 +264,7 @@ class TestCancelTask:
     def test_cancel_task_not_found(self, task_service, mock_db):
         """测试任务不存在"""
         with patch("src.crud.task.task_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="任务不存在"):
+            with pytest.raises(ResourceNotFoundError, match="任务不存在"):
                 task_service.cancel_task(mock_db, task_id="nonexistent")
 
     def test_cancel_task_already_completed(self, task_service, mock_db, mock_task):
@@ -271,7 +272,7 @@ class TestCancelTask:
         mock_task.status = TaskStatus.COMPLETED
 
         with patch("src.crud.task.task_crud.get", return_value=mock_task):
-            with pytest.raises(ValueError, match="任务无法取消"):
+            with pytest.raises(OperationNotAllowedError, match="任务无法取消"):
                 task_service.cancel_task(mock_db, task_id="task_123")
 
 
@@ -293,7 +294,7 @@ class TestDeleteTask:
     def test_delete_task_not_found(self, task_service, mock_db):
         """测试任务不存在"""
         with patch("src.crud.task.task_crud.get", return_value=None):
-            with pytest.raises(ValueError, match="任务不存在"):
+            with pytest.raises(ResourceNotFoundError, match="任务不存在"):
                 task_service.delete_task(mock_db, task_id="nonexistent")
 
     def test_delete_task_sets_inactive(self, task_service, mock_db, mock_task):

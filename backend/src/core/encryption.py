@@ -27,6 +27,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from ..core.config import settings
 from ..core.environment import get_environment, is_production
+from ..core.exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class EncryptionKeyManager:
         示例: MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz:1
 
         生产环境行为：
-        - 若 REQUIRE_ENCRYPTION=true（默认）且无密钥，抛出 RuntimeError
+        - 若 REQUIRE_ENCRYPTION=true（默认）且无密钥，抛出 ConfigurationError
         - 若 REQUIRE_ENCRYPTION=false，仅记录警告
         """
         env_key = settings.DATA_ENCRYPTION_KEY
@@ -80,11 +81,12 @@ class EncryptionKeyManager:
 
         if not env_key:
             if require_encryption:
-                raise RuntimeError(
+                raise ConfigurationError(
                     "CRITICAL: DATA_ENCRYPTION_KEY is required but not set. "
                     "PII data cannot be stored securely without encryption. "
                     "Generate a key with: python -m backend.src.core.encryption "
-                    "Or set REQUIRE_ENCRYPTION=false to disable this check (NOT recommended for production)."
+                    "Or set REQUIRE_ENCRYPTION=false to disable this check (NOT recommended for production).",
+                    config_key="DATA_ENCRYPTION_KEY",
                 )
             logger.warning(
                 "DATA_ENCRYPTION_KEY not set - PII encryption disabled. "
@@ -459,7 +461,9 @@ def get_encryption_status() -> dict[str, Any]:
     key_manager = EncryptionKeyManager()
     status: dict[str, Any] = {
         "enabled": key_manager.is_available(),
-        "key_version": key_manager.get_version() if key_manager.is_available() else None,
+        "key_version": key_manager.get_version()
+        if key_manager.is_available()
+        else None,
         "algorithms": ["AES-256-GCM", "AES-256-CBC"],
         "environment": key_manager._environment,
         "warning": None,

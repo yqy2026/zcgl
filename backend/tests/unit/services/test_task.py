@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError
 from src.enums.task import TaskStatus, TaskType
 from src.models.task import AsyncTask
 from src.schemas.task import TaskCreate
@@ -9,8 +10,6 @@ from src.services.task.service import TaskService
 
 TEST_TASK_ID = "task_123"
 TEST_USER_ID = "user_123"
-
-
 
 
 @pytest.fixture
@@ -82,7 +81,7 @@ class TestTaskService:
         )
 
         with patch("src.crud.task.task_crud.get", return_value=task):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(OperationNotAllowedError) as excinfo:
                 service.cancel_task(mock_db, task_id=TEST_TASK_ID)
 
             assert "无法取消" in str(excinfo.value)

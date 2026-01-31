@@ -30,7 +30,7 @@ router = APIRouter()
 @router.get(
     "/", response_model=list[SystemDictionaryResponse], summary="获取系统字典列表"
 )
-async def get_system_dictionaries(
+def get_system_dictionaries(
     dict_type: str | None = Query(None, description="字典类型筛选"),
     is_active: bool | None = Query(None, description="是否启用筛选"),
     db: Session = Depends(get_db),
@@ -64,7 +64,7 @@ async def get_system_dictionaries(
     response_model=SystemDictionaryResponse,
     summary="获取系统字典详情",
 )
-async def get_system_dictionary(
+def get_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
 ) -> SystemDictionaryResponse:
     """
@@ -98,7 +98,7 @@ async def get_system_dictionary(
     summary="创建系统字典",
     status_code=201,
 )
-async def create_system_dictionary(
+def create_system_dictionary(
     dictionary_in: SystemDictionaryCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -122,7 +122,7 @@ async def create_system_dictionary(
 @router.put(
     "/{dictionary_id}", response_model=SystemDictionaryResponse, summary="更新系统字典"
 )
-async def update_system_dictionary(
+def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
@@ -146,7 +146,7 @@ async def update_system_dictionary(
 
 
 @router.delete("/{dictionary_id}", summary="删除系统字典")
-async def delete_system_dictionary(
+def delete_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -170,7 +170,7 @@ async def delete_system_dictionary(
     response_model=list[SystemDictionaryResponse],
     summary="批量更新系统字典",
 )
-async def batch_update_system_dictionaries(
+def batch_update_system_dictionaries(
     updates: list[dict[str, Any]],
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -217,7 +217,7 @@ async def batch_update_system_dictionaries(
 
 
 @router.get("/types/list[Any]", summary="获取字典类型列表")
-async def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[str]]:
+def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[str]]:
     """
     获取所有字典类型列表
     """

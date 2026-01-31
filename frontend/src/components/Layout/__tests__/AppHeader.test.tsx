@@ -1,11 +1,11 @@
 /**
  * AppHeader 组件测试
  * 测试应用头部组件
- * 增强版本 - 添加更全面的测试用例
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 interface HeaderMockProps {
   children?: React.ReactNode;
@@ -32,17 +32,22 @@ interface AvatarMockProps {
   style?: React.CSSProperties;
 }
 
-interface DropdownMockProps {
-  children?: React.ReactNode;
-  menu?: unknown;
-  placement?: string;
-  trigger?: string[];
+interface MenuItemMock {
+  key?: string;
+  label?: React.ReactNode;
+  type?: string;
 }
 
-interface BadgeMockProps {
+interface DropdownMenuMockProps {
+  items?: MenuItemMock[];
+  onClick?: (info: { key: string }) => void;
+}
+
+interface DropdownMockProps {
   children?: React.ReactNode;
-  count?: number;
-  size?: string;
+  menu?: DropdownMenuMockProps;
+  placement?: string;
+  trigger?: string[];
 }
 
 interface TypographyTextMockProps {
@@ -58,18 +63,41 @@ interface TooltipMockProps {
 }
 
 interface ModalConfirmMockProps {
-  onOk?: () => void;
+  onOk?: () => void | Promise<void>;
   title?: React.ReactNode;
   content?: React.ReactNode;
+  okText?: React.ReactNode;
+  cancelText?: React.ReactNode;
+  okType?: string;
 }
+
+const navigateMock = vi.fn();
+const confirmSpy = vi.fn();
+const messageInfoSpy = vi.fn();
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
+}));
+
+// Mock NotificationCenter
+vi.mock('../../Notification', () => ({
+  NotificationCenter: () => <div data-testid="notification-center" />,
+}));
+
+// Mock MessageManager
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    info: (...args: unknown[]) => messageInfoSpy(...args),
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(),
+  },
 }));
 
 // Mock AuthService
-vi.mock('../../services/authService', () => ({
+vi.mock('../../../services/authService', () => ({
   AuthService: {
     getLocalUser: () => ({
       id: '1',
@@ -80,6 +108,26 @@ vi.mock('../../services/authService', () => ({
     logout: vi.fn().mockResolvedValue(undefined),
   },
 }));
+
+const renderMenuItems = (menu?: DropdownMenuMockProps) => {
+  if (!menu?.items) return null;
+  return menu.items.map((item, index) => {
+    if (!item) return null;
+    if (item.type === 'divider') {
+      return <div key={`divider-${index}`} data-testid="menu-divider" />;
+    }
+    const key = String(item.key ?? index);
+    return (
+      <button
+        key={key}
+        data-testid={`menu-item-${key}`}
+        onClick={() => menu.onClick?.({ key })}
+      >
+        {item.label}
+      </button>
+    );
+  });
+};
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
@@ -107,16 +155,23 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Dropdown: ({ children, menu: _menu, placement, trigger: _trigger }: DropdownMockProps) => (
+  Dropdown: ({ children, menu, placement }: DropdownMockProps) => (
     <div data-testid="dropdown" data-placement={placement}>
+      <div data-testid="dropdown-trigger">{children}</div>
+      <div data-testid="dropdown-menu">{renderMenuItems(menu)}</div>
+    </div>
+  ),
+  Tooltip: ({ children, title }: TooltipMockProps) => (
+    <div data-testid="tooltip" data-title={title}>
       {children}
     </div>
   ),
-  Badge: ({ children, count, size }: BadgeMockProps) => (
-    <div data-testid="badge" data-count={count} data-size={size}>
-      {children}
-    </div>
-  ),
+  Modal: {
+    confirm: (config: ModalConfirmMockProps) => {
+      confirmSpy(config);
+      return config;
+    },
+  },
   Typography: {
     Text: ({ children, strong, type, style }: TypographyTextMockProps) => (
       <span data-testid="text" data-strong={strong} data-type={type} style={style}>
@@ -124,35 +179,18 @@ vi.mock('antd', () => ({
       </span>
     ),
   },
-  Tooltip: ({ children, title }: TooltipMockProps) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
-  Modal: {
-    confirm: ({ onOk, title, content }: ModalConfirmMockProps) => {
-      return { onOk, title, content };
-    },
-  },
-  message: {
-    info: vi.fn(),
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
-  },
 }));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
   MenuFoldOutlined: () => <div data-testid="icon-menu-fold" />,
   MenuUnfoldOutlined: () => <div data-testid="icon-menu-unfold" />,
-  BellOutlined: () => <div data-testid="icon-bell" />,
+  LogoutOutlined: () => <div data-testid="icon-logout" />,
   UserOutlined: () => <div data-testid="icon-user" />,
   SettingOutlined: () => <div data-testid="icon-setting" />,
-  LogoutOutlined: () => <div data-testid="icon-logout" />,
   QuestionCircleOutlined: () => <div data-testid="icon-question" />,
-  GlobalOutlined: () => <div data-testid="icon-global" />,
   ExclamationCircleOutlined: () => <div data-testid="icon-exclamation" />,
+  GlobalOutlined: () => <div data-testid="icon-global" />,
 }));
 
 describe('AppHeader - 组件导入测试', () => {
@@ -163,406 +201,69 @@ describe('AppHeader - 组件导入测试', () => {
   });
 });
 
-describe('AppHeader - 基础属性测试', () => {
+describe('AppHeader - 渲染与交互测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockClear();
+    confirmSpy.mockClear();
+    messageInfoSpy.mockClear();
   });
 
-  it('应该支持collapsed属性', async () => {
+  it('应该显示标题、用户名与通知中心', async () => {
+    const AppHeader = (await import('../AppHeader')).default;
+    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
+
+    expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
+    expect(screen.getByText('测试用户')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-center')).toBeInTheDocument();
+  });
+
+  it('折叠按钮应显示正确图标并触发回调', async () => {
     const AppHeader = (await import('../AppHeader')).default;
     const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
+    const { rerender } = render(
+      <AppHeader collapsed={false} onToggleCollapsed={handleToggle} />
+    );
+
+    expect(screen.getByTestId('icon-menu-fold')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('button'));
+    expect(handleToggle).toHaveBeenCalledTimes(1);
+
+    rerender(<AppHeader collapsed={true} onToggleCollapsed={handleToggle} />);
+    expect(screen.queryByTestId('icon-menu-fold')).not.toBeInTheDocument();
+    expect(screen.getByTestId('icon-menu-unfold')).toBeInTheDocument();
   });
 
-  it('应该支持onToggleCollapsed回调', async () => {
+  it('用户菜单点击应触发导航与提示', async () => {
     const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
+    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
-describe('AppHeader - 折叠按钮测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    fireEvent.click(screen.getByTestId('menu-item-profile'));
+    expect(navigateMock).toHaveBeenCalledWith('/profile');
+
+    fireEvent.click(screen.getByTestId('menu-item-settings'));
+    expect(messageInfoSpy).toHaveBeenCalledWith('系统设置功能开发中');
+
+    fireEvent.click(screen.getByTestId('menu-item-help'));
+    expect(messageInfoSpy).toHaveBeenCalledWith('帮助中心功能开发中');
   });
 
-  it('collapsed为false时应该显示MenuFoldOutlined图标', async () => {
+  it('退出登录应触发确认并执行登出流程', async () => {
     const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
+    const { AuthService } = await import('../../../services/authService');
 
-  it('collapsed为true时应该显示MenuUnfoldOutlined图标', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: true,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
+    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
+    fireEvent.click(screen.getByTestId('menu-item-logout'));
 
-describe('AppHeader - 标题显示测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    const config = confirmSpy.mock.calls[0][0] as ModalConfirmMockProps;
+    expect(config.title).toBe('确认退出登录');
+    expect(config.okText).toBe('确认退出');
+    expect(config.cancelText).toBe('取消');
+    expect(config.okType).toBe('danger');
 
-  it('应该显示系统标题', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('标题应该是蓝色的', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 工具按钮测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示语言切换按钮', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示帮助按钮', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示通知按钮', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('通知按钮应该显示Badge', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 用户菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示用户头像', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该显示用户名称', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该有用户下拉菜单', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 用户菜单项测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该包含个人资料菜单项', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含系统设置菜单项', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含帮助中心菜单项', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含退出登录菜单项', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('退出登录菜单项应该是危险类型', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 通知菜单测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该有通知下拉菜单', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含审核通知', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含导入完成通知', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含系统维护通知', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该包含查看全部通知链接', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 退出登录测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该显示退出确认对话框', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('确认对话框应该有警告图标', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 样式属性测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('Header应该有固定高度', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('Header应该有白色背景', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('Header应该有底部边框', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 边界情况测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该处理undefined collapsed', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: undefined,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理undefined onToggleCollapsed', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: undefined,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('应该处理undefined onToggleCollapsed', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: undefined,
-    });
-    expect(element).toBeTruthy();
-  });
-});
-
-describe('AppHeader - 布局测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('应该是flex布局', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('左侧应该包含折叠按钮和标题', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
-  });
-
-  it('右侧应该包含工具按钮和用户信息', async () => {
-    const AppHeader = (await import('../AppHeader')).default;
-    const handleToggle = vi.fn();
-    const element = React.createElement(AppHeader, {
-      collapsed: false,
-      onToggleCollapsed: handleToggle,
-    });
-    expect(element).toBeTruthy();
+    await config.onOk?.();
+    expect(AuthService.logout).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/login');
   });
 });

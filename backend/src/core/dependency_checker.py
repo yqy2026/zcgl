@@ -7,6 +7,7 @@ import logging
 from collections.abc import Callable
 
 from .environment import is_production
+from .exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class DependencyChecker:
             bool: 所有关键依赖是否都可用
 
         Raises:
-            RuntimeError: 生产环境关键依赖缺失时
+            ConfigurationError: 生产环境关键依赖缺失时
         """
         logger.info("开始依赖检查...")
 
@@ -79,7 +80,10 @@ class DependencyChecker:
         # 生产环境关键依赖必须全部存在
         if is_production() and not all_ok:
             logger.error("生产环境关键依赖检查失败，拒绝启动")
-            raise RuntimeError("生产环境关键依赖缺失")
+            raise ConfigurationError(
+                "生产环境关键依赖缺失",
+                config_key="CRITICAL_DEPENDENCIES",
+            )
 
         logger.info(f"\n依赖检查完成: {'✓ 通过' if all_ok else '⚠️ 有警告'}")
         return all_ok
