@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends
 from ....core.exception_handler import internal_error
 from ....core.performance import PerformanceMonitor
 from ....schemas.pdf_import import SystemCapabilities, SystemInfoResponse
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 from ..dependencies import get_performance_monitor
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def get_system_info() -> SystemInfoResponse:
                 pdfplumber_available=True,
                 pymupdf_available=True,
                 spacy_available=True,
-                ocr_available=True,
+                vision_available=True,
                 supported_formats=[".pdf", ".jpg", ".jpeg", ".png"],
                 max_file_size_mb=50,
                 estimated_processing_time="10-30秒",
@@ -72,14 +72,14 @@ def get_system_info() -> SystemInfoResponse:
         raise internal_error(f"获取系统信息失败: {str(e)}")
 
 
-@router.get("/test-system")
+@router.get("/test-system", dependencies=[Depends(require_localhost)])
 @debug_only
 async def test_system() -> dict[str, Any]:
     """测试系统功能"""
     return {"system_status": "normal", "message": "PDF处理系统正常"}
 
 
-@router.get("/test-detailed")
+@router.get("/test-detailed", dependencies=[Depends(require_localhost)])
 @debug_only
 async def test_system_detailed() -> dict[str, Any]:
     """测试系统功能（详细版本）"""

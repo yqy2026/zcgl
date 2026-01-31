@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from ...core.exception_handler import (
     BaseBusinessError,
     BusinessValidationError,
+    FileProcessingError,
     InternalServerError,
 )
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
@@ -34,7 +35,7 @@ from .llm_contract_extractor import get_llm_contract_extractor
 logger = logging.getLogger(__name__)
 
 # 从环境变量读取并发限制
-MAX_CONCURRENT_PDF_TASKS = int(os.getenv("OCR_MAX_CONCURRENT", "3"))
+MAX_CONCURRENT_PDF_TASKS = int(os.getenv("PDF_MAX_CONCURRENT", "3"))
 
 
 class PDFImportService:
@@ -293,7 +294,13 @@ class PDFImportService:
             )
 
             if not smart_result.get("success"):
-                raise Exception(f"Smart extraction failed: {smart_result.get('error')}")
+                error_detail = smart_result.get("error") or "unknown"
+                raise FileProcessingError(
+                    message="Smart extraction failed",
+                    file_name=Path(file_path).name,
+                    file_type="pdf",
+                    details={"error": error_detail},
+                )
 
             # Step 2: 正则验证
             logger.info("Step 2: Running Regex validation...")

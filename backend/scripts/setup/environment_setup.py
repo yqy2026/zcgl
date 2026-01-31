@@ -16,12 +16,6 @@ class EnvironmentSetup:
 
     def __init__(self):
         self.required_packages = {
-            "OCR依赖": {
-                "pytesseract": "0.3.13",
-                "pdf2image": "1.17.0",
-                "Pillow": "11.3.0",
-                "opencv-python": "4.12.0",
-            },
             "NLP依赖": {
                 "spacy": "3.8.0",
                 "jieba": "0.42.1",
@@ -33,34 +27,7 @@ class EnvironmentSetup:
             "异步处理依赖": {"aiofiles": "23.0.0"},
         }
 
-        self.system_tools = {
-            "Tesseract OCR": {
-                "executable": "tesseract",
-                "install_url": "https://github.com/UB-Mannheim/tesseract/wiki",
-                "path_suggestions": [
-                    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-                    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-                    r"D:\Tesseract-OCR\tesseract.exe",
-                ],
-            },
-            "Poppler": {
-                "executable": "pdftoppm",
-                "install_url": "http://blog.alivate.com.au/poppler-windows/",
-                "path_suggestions": [
-                    r"C:\Program Files\poppler\poppler-25.07.0\Library\bin\pdftoppm.exe",
-                    r"C:\Program Files (x86)\poppler\poppler-25.07.0\Library\bin\pdftoppm.exe",
-                    r"D:\poppler\poppler-25.07.0\Library\bin\pdftoppm.exe",
-                ],
-            },
-            "FFmpeg": {
-                "executable": "ffmpeg",
-                "install_url": "https://ffmpeg.org/download.html",
-                "path_suggestions": [
-                    r"C:\ffmpeg\bin\ffmpeg.exe",
-                    r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-                ],
-            },
-        }
+        self.system_tools = {}
 
     def check_package(self, package_name: str) -> tuple[bool, str]:
         """检查Python包是否已安装"""
@@ -224,10 +191,6 @@ class EnvironmentSetup:
 === PDF导入功能环境配置说明 ===
 
 1. Python依赖包安装：
-   pip install pytesseract>=0.3.13
-   pip install pdf2image>=1.17.0
-   pip install Pillow>=11.3.0
-   pip install opencv-python>=4.12.0
    pip install spacy>=3.8.0
    pip install jieba>=0.42.1
    pip install rapidfuzz>=3.6.0
@@ -237,27 +200,7 @@ class EnvironmentSetup:
    pip install pdfplumber>=0.11.0
    pip install aiofiles>=23.0.0
 
-2. 系统工具安装：
-
-   Tesseract OCR:
-   - 下载地址: https://github.com/UB-Mannheim/tesseract/wiki
-   - 建议安装路径: C:\\Program Files\\Tesseract-OCR
-   - 确保将安装目录添加到系统PATH环境变量
-
-   Poppler:
-   - 下载地址: http://blog.alivate.com.au/poppler-windows/
-   - 建议安装路径: C:\\Program Files\\poppler
-   - 确保将bin目录添加到系统PATH环境变量
-
-   FFmpeg (可选):
-   - 下载地址: https://ffmpeg.org/download.html
-   - 用于多媒体文件处理
-
-3. 中文语言包安装：
-   - 下载中文语言包 chi_sim
-   - 放置到Tesseract安装目录的tessdata文件夹
-
-4. 验证安装：
+2. 验证安装：
    运行 python scripts/environment_setup.py check
 """
         return instructions

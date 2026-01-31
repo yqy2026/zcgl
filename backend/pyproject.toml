@@ -55,18 +55,9 @@ docs = [
     "pymdown-extensions>=10.16.1",
 ]
 
-# 本地 LLM 推理（ChatGLM3）- 极大内存占用
-llm-local = [
-    "transformers>=4.43.3",
-    "huggingface_hub>=0.23.0",
-    "accelerate>=0.34.0",
-    "safetensors>=0.4.4",
-    "sentencepiece>=0.1.99",
-]
-
 # 完整功能（所有可选依赖）
 all = [
-    "land-property-management[pdf-basic,nlp,docs,llm-local]",
+    "land-property-management[pdf-basic,nlp,docs]",
 ]
 dev = [
     "httpx>=0.28.1",

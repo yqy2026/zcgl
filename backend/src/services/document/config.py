@@ -128,17 +128,17 @@ class OCRConfig(BaseModel):
         从环境变量加载配置
 
         Environment variables:
-            OCR_MAX_PAGES: 最大页数（默认: 20）
-            OCR_MAX_SIZE_MB: 最大文件大小（MB）（默认: 50）
-            OCR_MAX_CONCURRENT: 最大并发数（默认: 3）
+            PDF_MAX_PAGES: 最大页数（默认: 20）
+            PDF_MAX_SIZE_MB: 最大文件大小（MB）（默认: 50）
+            PDF_MAX_CONCURRENT: 最大并发数（默认: 3）
 
         Returns:
             OCRConfig: 配置实例
         """
         return cls(
-            max_pdf_pages=int(os.getenv("OCR_MAX_PAGES", "20")),
-            max_pdf_size_mb=int(os.getenv("OCR_MAX_SIZE_MB", "50")),
-            max_concurrent_tasks=int(os.getenv("OCR_MAX_CONCURRENT", "3")),
+            max_pdf_pages=int(os.getenv("PDF_MAX_PAGES", "20")),
+            max_pdf_size_mb=int(os.getenv("PDF_MAX_SIZE_MB", "50")),
+            max_concurrent_tasks=int(os.getenv("PDF_MAX_CONCURRENT", "3")),
         )
 
 
@@ -441,9 +441,9 @@ def export_config_env() -> list[str]:
         "# PDF/LLM Vision Configuration",
         "",
         "# File Limits",
-        f"export OCR_MAX_PAGES={config.ocr.max_pdf_pages}",
-        f"export OCR_MAX_SIZE_MB={config.ocr.max_pdf_size_mb}",
-        f"export OCR_MAX_CONCURRENT={config.ocr.max_concurrent_tasks}",
+        f"export PDF_MAX_PAGES={config.ocr.max_pdf_pages}",
+        f"export PDF_MAX_SIZE_MB={config.ocr.max_pdf_size_mb}",
+        f"export PDF_MAX_CONCURRENT={config.ocr.max_concurrent_tasks}",
         "",
         "# Extraction",
         f"export EXTRACTION_CONFIDENCE_THRESHOLD={config.extraction.confidence_threshold}",
