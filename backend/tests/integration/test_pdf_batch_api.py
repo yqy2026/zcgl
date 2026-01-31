@@ -62,7 +62,7 @@ def sample_pdf_files():
 class TestBatchUploadEndpoint:
     """批量上传端点测试"""
 
-    async def test_batch_upload_success(self, test_client_no_auth, sample_pdf_files):
+    async def test_batch_upload_success(self, test_client, sample_pdf_files):
         """测试批量上传成功"""
         # Mock PDFImportService - 直接在服务模块级别 mock
         from unittest.mock import patch
@@ -81,7 +81,7 @@ class TestBatchUploadEndpoint:
             mock_service.cancel_processing = AsyncMock(return_value={"success": True})
             mock_service_cls.return_value = mock_service
 
-            response = await test_client_no_auth.post(
+            response = await test_client.post(
                 "/api/v1/pdf-import/batch/upload",
                 files=sample_pdf_files,
                 data={
@@ -99,7 +99,7 @@ class TestBatchUploadEndpoint:
         assert data["success"] is True
         assert "batch_id" in data["data"]
 
-    async def test_batch_upload_exceeds_max_size(self, test_client_no_auth):
+    async def test_batch_upload_exceeds_max_size(self, test_client):
         """测试文件数量超过限制"""
         files = []
         for i in range(15):  # 超过 MAX_BATCH_SIZE=10
@@ -108,18 +108,18 @@ class TestBatchUploadEndpoint:
                 ("files", (f"file_{i}.pdf", io.BytesIO(content), "application/pdf"))
             )
 
-        response = await test_client_no_auth.post(
+        response = await test_client.post(
             "/api/v1/pdf-import/batch/upload", files=files, data={"organization_id": 1}
         )
 
         assert response.status_code == 400
         assert "文件数量超过限制" in response.json()["error"]["message"]
 
-    async def test_batch_upload_no_valid_files(self, test_client_no_auth):
+    async def test_batch_upload_no_valid_files(self, test_client):
         """测试没有有效文件"""
         files = [("files", ("test.txt", io.BytesIO(b"text content"), "text/plain"))]
 
-        response = await test_client_no_auth.post(
+        response = await test_client.post(
             "/api/v1/pdf-import/batch/upload", files=files, data={"organization_id": 1}
         )
 
@@ -127,7 +127,7 @@ class TestBatchUploadEndpoint:
         assert "没有有效的 PDF 文件" in response.json()["error"]["message"]
 
     async def test_batch_upload_service_busy(
-        self, test_client_no_auth, sample_pdf_files, batch_tracker
+        self, test_client, sample_pdf_files, batch_tracker
     ):
         """测试系统繁忙"""
         batch_tracker.create_batch("batch-active-1", total=3, user_id=1)
@@ -135,7 +135,7 @@ class TestBatchUploadEndpoint:
         batch_tracker.create_batch("batch-active-2", total=3, user_id=1)
         batch_tracker.set_status("batch-active-2", "pending")
 
-        response = await test_client_no_auth.post(
+        response = await test_client.post(
             "/api/v1/pdf-import/batch/upload",
             files=sample_pdf_files,
             data={"organization_id": 1},
@@ -170,7 +170,7 @@ class TestBatchStatusEndpoint:
         }
 
     async def test_get_batch_status_success(
-        self, test_client_no_auth, mock_batch_status, batch_tracker
+        self, test_client, mock_batch_status, batch_tracker
     ):
         """测试获取批处理状态成功"""
         batch_tracker.create_batch("batch-abc123", total=3, user_id=1)
@@ -196,7 +196,7 @@ class TestBatchStatusEndpoint:
         )
 
         try:
-            response = await test_client_no_auth.get(
+            response = await test_client.get(
                 "/api/v1/pdf-import/batch/status/batch-abc123"
             )
         finally:
@@ -206,9 +206,9 @@ class TestBatchStatusEndpoint:
         data = response.json()
         assert data["success"] is True
 
-    async def test_get_batch_status_not_found(self, test_client_no_auth, batch_tracker):
+    async def test_get_batch_status_not_found(self, test_client, batch_tracker):
         """测试批处理不存在"""
-        response = await test_client_no_auth.get(
+        response = await test_client.get(
             "/api/v1/pdf-import/batch/status/batch-nonexistent"
         )
 
@@ -248,23 +248,21 @@ class TestBatchListEndpoint:
             },
         ]
 
-    async def test_list_batches_all(
-        self, test_client_no_auth, mock_batches, batch_tracker
-    ):
+    async def test_list_batches_all(self, test_client, mock_batches, batch_tracker):
         """测试列出所有批处理"""
         batch_tracker.create_batch("batch-001", total=2, user_id=1)
         batch_tracker.set_status("batch-001", "completed")
         batch_tracker.create_batch("batch-002", total=1, user_id=1)
         batch_tracker.set_status("batch-002", "processing")
 
-        response = await test_client_no_auth.get("/api/v1/pdf-import/batch/list")
+        response = await test_client.get("/api/v1/pdf-import/batch/list")
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
 
     async def test_list_batches_with_status_filter(
-        self, test_client_no_auth, mock_batches, batch_tracker
+        self, test_client, mock_batches, batch_tracker
     ):
         """测试按状态过滤"""
         batch_tracker.create_batch("batch-001", total=2, user_id=1)
@@ -272,7 +270,7 @@ class TestBatchListEndpoint:
         batch_tracker.create_batch("batch-002", total=1, user_id=1)
         batch_tracker.set_status("batch-002", "processing")
 
-        response = await test_client_no_auth.get(
+        response = await test_client.get(
             "/api/v1/pdf-import/batch/list?status_filter=completed"
         )
 
@@ -281,7 +279,7 @@ class TestBatchListEndpoint:
         assert data["success"] is True
 
     async def test_list_batches_with_limit(
-        self, test_client_no_auth, mock_batches, batch_tracker
+        self, test_client, mock_batches, batch_tracker
     ):
         """测试限制返回数量"""
         batch_tracker.create_batch("batch-001", total=2, user_id=1)
@@ -289,9 +287,7 @@ class TestBatchListEndpoint:
         batch_tracker.create_batch("batch-002", total=1, user_id=1)
         batch_tracker.set_status("batch-002", "processing")
 
-        response = await test_client_no_auth.get(
-            "/api/v1/pdf-import/batch/list?limit=1"
-        )
+        response = await test_client.get("/api/v1/pdf-import/batch/list?limit=1")
 
         assert response.status_code == 200
         data = response.json()
@@ -318,7 +314,7 @@ class TestBatchCancelEndpoint:
         }
 
     async def test_cancel_batch_success(
-        self, test_client_no_auth, mock_processing_batch, batch_tracker
+        self, test_client, mock_processing_batch, batch_tracker
     ):
         """测试取消批处理成功"""
         batch_tracker.create_batch("batch-processing", total=2, user_id=1)
@@ -340,7 +336,7 @@ class TestBatchCancelEndpoint:
         )
 
         try:
-            response = await test_client_no_auth.post(
+            response = await test_client.post(
                 "/api/v1/pdf-import/batch/cancel/batch-processing"
             )
         finally:
@@ -350,14 +346,12 @@ class TestBatchCancelEndpoint:
         data = response.json()
         assert data["success"] is True
 
-    async def test_cancel_batch_already_completed(
-        self, test_client_no_auth, batch_tracker
-    ):
+    async def test_cancel_batch_already_completed(self, test_client, batch_tracker):
         """测试取消已完成的批处理"""
         batch_tracker.create_batch("batch-completed", total=2, user_id=1)
         batch_tracker.set_status("batch-completed", "completed")
 
-        response = await test_client_no_auth.post(
+        response = await test_client.post(
             "/api/v1/pdf-import/batch/cancel/batch-completed"
         )
 
@@ -373,7 +367,7 @@ class TestBatchCancelEndpoint:
 class TestBatchCleanupEndpoint:
     """清理端点测试"""
 
-    async def test_cleanup_old_batches(self, test_client_no_auth, batch_tracker):
+    async def test_cleanup_old_batches(self, test_client, batch_tracker):
         """测试清理旧批处理"""
         batch_tracker.create_batch("batch-old-1", total=2, user_id=1)
         batch_tracker.set_status("batch-old-1", "completed")
@@ -382,7 +376,7 @@ class TestBatchCleanupEndpoint:
         batch_tracker.create_batch("batch-recent", total=2, user_id=1)
         batch_tracker.set_status("batch-recent", "completed")
 
-        response = await test_client_no_auth.delete(
+        response = await test_client.delete(
             "/api/v1/pdf-import/batch/cleanup?older_than_hours=24"
         )
 
@@ -399,25 +393,23 @@ class TestBatchCleanupEndpoint:
 class TestBatchHealthEndpoint:
     """健康检查端点测试"""
 
-    async def test_health_check(self, test_client_no_auth, batch_tracker):
+    async def test_health_check(self, test_client, batch_tracker):
         """测试健康检查"""
-        response = await test_client_no_auth.get("/api/v1/pdf-import/batch/health")
+        response = await test_client.get("/api/v1/pdf-import/batch/health")
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["data"]["status"] == "healthy"
 
-    async def test_health_check_with_active_batches(
-        self, test_client_no_auth, batch_tracker
-    ):
+    async def test_health_check_with_active_batches(self, test_client, batch_tracker):
         """测试有活动批处理时的健康检查"""
         batch_tracker.create_batch("batch-1", total=2, user_id=1)
         batch_tracker.set_status("batch-1", "processing")
         batch_tracker.create_batch("batch-2", total=2, user_id=1)
         batch_tracker.set_status("batch-2", "pending")
 
-        response = await test_client_no_auth.get("/api/v1/pdf-import/batch/health")
+        response = await test_client.get("/api/v1/pdf-import/batch/health")
 
         assert response.status_code == 200
         data = response.json()
@@ -441,9 +433,7 @@ class TestBatchAPIIntegrationScenarios:
         assert batch_id.startswith("batch-")
         assert len(session_ids) == 3
 
-    async def test_concurrent_batch_limit_enforcement(
-        self, test_client_no_auth, batch_tracker
-    ):
+    async def test_concurrent_batch_limit_enforcement(self, test_client, batch_tracker):
         """测试并发批处理限制"""
         batch_tracker.create_batch("batch-1", total=2, user_id=1)
         batch_tracker.set_status("batch-1", "processing")
@@ -465,7 +455,7 @@ class TestBatchAPIIntegrationScenarios:
                 ("files", ("test.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))
             ]
 
-            response = await test_client_no_auth.post(
+            response = await test_client.post(
                 "/api/v1/pdf-import/batch/upload",
                 files=files,
                 data={"organization_id": 1},

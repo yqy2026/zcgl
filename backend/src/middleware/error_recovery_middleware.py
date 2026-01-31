@@ -4,6 +4,8 @@
 在API层面集成错误恢复机制，提供透明的错误处理和恢复
 """
 
+import functools
+import inspect
 import logging
 import time
 import traceback
@@ -412,6 +414,9 @@ def api_error_recovery[**P, R](
                     return fallback_response
                 raise e
 
+        # Preserve the original signature for FastAPI
+        wrapper = functools.wraps(func)(wrapper)
+        wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
         return wrapper
 
     return decorator

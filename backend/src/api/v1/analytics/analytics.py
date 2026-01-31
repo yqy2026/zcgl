@@ -22,7 +22,7 @@ from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 from ....services.analytics.analytics_service import AnalyticsService
 
 logger = logging.getLogger(__name__)
@@ -149,7 +149,11 @@ def clear_cache(
         return error_response
 
 
-@router.get("/debug/cache", summary="调试缓存状态")
+@router.get(
+    "/debug/cache",
+    summary="调试缓存状态",
+    dependencies=[Depends(require_localhost)],
+)
 @debug_only
 async def debug_cache_status(
     request: Request,

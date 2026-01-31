@@ -6,7 +6,7 @@
 import React from 'react';
 import { Form } from 'antd';
 
-import { RentContractCreate, ContractStatus } from '../../types/rentContract';
+import { RentContractCreate, ContractStatus } from '@/types/rentContract';
 
 // Import section components
 import {

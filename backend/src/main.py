@@ -5,7 +5,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,6 +38,9 @@ from .database import (
     init_db,
 )
 from .security.logging_security import setup_logging_security
+
+if TYPE_CHECKING:
+    from .utils.cache_manager import CacheManager as AsyncCacheManager
 
 # 立即设置 UTF-8 编码
 setup_utf8_encoding()
@@ -145,6 +148,17 @@ async def lifespan(app: FastAPI) -> Any:
     # 安全配置检查 (已在配置加载时自动完成)
     logger.info("安全配置检查已完成")
 
+    # 初始化异步缓存（Redis）
+    async_cache_manager: AsyncCacheManager | None = None
+    try:
+        from .utils.cache_manager import cache_manager as utils_cache_manager
+
+        async_cache_manager = utils_cache_manager
+        if async_cache_manager is not None:
+            await async_cache_manager.initialize()
+    except Exception as e:
+        logger.warning(f"缓存初始化失败，将继续使用内存缓存: {e}")
+
     # JWT安全专项检查 - 重新启用安全验证
     logger.info("执行JWT安全配置检查...")
     try:
@@ -214,6 +228,13 @@ async def lifespan(app: FastAPI) -> Any:
             logger.warning(f"枚举数据初始化异常: {e}")
 
     yield
+
+    # 关闭异步缓存连接
+    if async_cache_manager is not None:
+        try:
+            await async_cache_manager.close()
+        except Exception as e:
+            logger.warning(f"缓存关闭失败: {e}")
 
 
 # 创建FastAPI应用实例
@@ -338,20 +359,6 @@ try:
     setup_logging_security()
 except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
-
-# ===== 调试路由（仅开发环境）=====
-from .security.route_guards import is_debug_mode
-
-if is_debug_mode():
-    try:
-        from .api.v1.debug import router as debug_router
-
-        app.include_router(debug_router, prefix="/api/v1")
-        logger.info("调试端点已加载 (DEBUG=true)")
-    except ImportError as e:
-        logger.warning(f"调试模块加载失败: {e}")
-else:
-    logger.info("调试端点未加载 (生产模式)")
 
 # 初始化数据库（跳过测试模式）
 if not is_testing():

@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
+from src.core.exception_handler import ConfigurationError
 from src.services.core.llm_service import (
     BaseOpenAILLM,
     LLMResponse,
@@ -455,7 +456,7 @@ class TestLLMServiceFactory:
 
     def test_create_service_without_registration(self):
         """Test creating unregistered service raises ValueError."""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             LLMServiceFactory.create(LLMProvider.GLM)
 
         assert "Unknown LLM provider" in str(exc_info.value)
@@ -559,7 +560,7 @@ class TestLLMServiceFactory:
         """Test create_from_env with unsupported provider."""
         monkeypatch.setenv("LLM_PROVIDER", "invalid-provider")
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             LLMServiceFactory.create_from_env()
 
         assert "Unsupported LLM provider" in str(exc_info.value)

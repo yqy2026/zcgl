@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import type { SystemDictionary } from './types';
 
 /**

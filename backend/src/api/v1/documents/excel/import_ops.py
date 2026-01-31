@@ -8,11 +8,11 @@ import tempfile
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Query, UploadFile
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.message_constants import ErrorIDs
+from src.constants.file_size_constants import DEFAULT_MAX_EXCEL_FILE_SIZE
 from src.core.exception_handler import BusinessValidationError
 from src.crud.task import task_crud
 from src.database import get_db
@@ -52,7 +52,7 @@ async def import_excel(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
         ],
-        max_size=100 * 1024 * 1024,  # 100MB for import
+        max_size=DEFAULT_MAX_EXCEL_FILE_SIZE,
     )
 
     # 验证文件类型（额外检查）
@@ -83,8 +83,7 @@ async def import_excel(
         import_service = ExcelImportService(db)
 
         # 执行导入
-        result = await run_in_threadpool(
-            import_service.import_assets_from_excel,
+        result = await import_service.import_assets_from_excel(
             file_path=tmp_file_path,
             sheet_name=sheet_name,
             should_skip_errors=should_skip_errors,
@@ -126,7 +125,7 @@ async def import_excel_async(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
         ],
-        max_size=100 * 1024 * 1024,  # 100MB for import
+        max_size=DEFAULT_MAX_EXCEL_FILE_SIZE,
     )
 
     # 验证文件类型（额外检查）
@@ -215,8 +214,7 @@ async def _process_excel_import_async(
         import_service = ExcelImportService(db_session)
 
         # 执行导入
-        result = await run_in_threadpool(
-            import_service.import_assets_from_excel,
+        result = await import_service.import_assets_from_excel(
             file_path=file_path,
             sheet_name=STANDARD_SHEET_NAME,
             should_validate_data=request.should_validate_data,

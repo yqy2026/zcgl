@@ -5,9 +5,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { dictionaryService } from '../services/dictionary';
-import type { DictionaryOption, DictionaryServiceResult } from '../services/dictionary';
-import { createLogger } from '../utils/logger';
+import { dictionaryService } from '@/services/dictionary';
+import type { DictionaryOption, DictionaryServiceResult } from '@/services/dictionary';
+import { createLogger } from '@/utils/logger';
 
 const dictLogger = createLogger('useDictionary');
 

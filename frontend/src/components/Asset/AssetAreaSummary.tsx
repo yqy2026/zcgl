@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Row, Col, Statistic } from 'antd';
 import type { AnalyticsData } from '@/services/analyticsService';
 import { formatArea, formatPercentage } from '@/utils/format';
@@ -12,20 +12,23 @@ interface AssetAreaSummaryProps {
 const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, loading = false }) => {
   // 使用分析数据（基于搜索条件的所有资产），不提供fallback到当前页数据
   // 因为我们需要显示的是所有筛选条件下数据的汇总，而不是当前页的汇总
-  const hasAnalyticsData =
-    analyticsData?.area_summary && analyticsData.area_summary.total_assets >= 0;
+  const areaSummary = analyticsData?.area_summary;
+  const summary = useMemo(() => {
+    const hasAnalyticsData = areaSummary != null && areaSummary.total_assets >= 0;
 
-  const summary =
-    hasAnalyticsData === true && analyticsData?.area_summary !== undefined
-      ? {
-          totalLandArea: analyticsData.area_summary.total_area ?? 0,
-          totalActualArea: analyticsData.area_summary.total_area ?? 0,
-          totalRentableArea: analyticsData.area_summary.total_rentable_area,
-          totalRentedArea: analyticsData.area_summary.total_rented_area,
-          totalUnrentedArea: analyticsData.area_summary.total_unrented_area,
-          averageOccupancyRate: analyticsData.area_summary.occupancy_rate,
-        }
-      : null;
+    if (!hasAnalyticsData) {
+      return null;
+    }
+
+    return {
+      totalLandArea: areaSummary.total_area ?? 0,
+      totalActualArea: areaSummary.total_area ?? 0,
+      totalRentableArea: areaSummary.total_rentable_area,
+      totalRentedArea: areaSummary.total_rented_area,
+      totalUnrentedArea: areaSummary.total_unrented_area,
+      averageOccupancyRate: areaSummary.occupancy_rate,
+    };
+  }, [areaSummary]);
 
   return (
     <Card title="面积统计汇总" size="small" loading={loading} className="asset-area-summary-card">
@@ -92,4 +95,4 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
   );
 };
 
-export default AssetAreaSummary;
+export default React.memo(AssetAreaSummary);

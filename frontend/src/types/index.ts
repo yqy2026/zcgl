@@ -322,7 +322,7 @@ export {
 
   // 验证器工具集
   ResponseValidator,
-} from '../utils/responseValidator';
+} from '@/utils/responseValidator';
 
 // ==================== 全局类型增强 ====================
 

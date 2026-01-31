@@ -1,5 +1,5 @@
 """
-Comprehensive Unit Tests for Asset Attachments API Routes (src/api/v1/asset_attachments.py)
+Comprehensive Unit Tests for Asset Attachments API Routes (src/api/v1/assets/asset_attachments.py)
 
 This test module covers all endpoints in the asset_attachments router to achieve 70%+ coverage:
 
@@ -124,9 +124,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_single_attachment_success(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_single_attachment_success(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -137,7 +136,7 @@ class TestUploadAssetAttachments:
         mock_pdf_file,
     ):
         """Test uploading single attachment successfully"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         # Setup mocks
         mock_asset_crud_obj.get.return_value = mock_asset
@@ -152,7 +151,7 @@ class TestUploadAssetAttachments:
         m_open = mock_open()
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file],
                 db=mock_db,
@@ -166,9 +165,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_multiple_attachments_success(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_multiple_attachments_success(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -178,7 +176,7 @@ class TestUploadAssetAttachments:
         mock_asset,
     ):
         """Test uploading multiple attachments successfully"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         # Create multiple files
         file1 = MagicMock(spec=UploadFile)
@@ -211,7 +209,7 @@ class TestUploadAssetAttachments:
         m_open = mock_open()
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=[file1, file2],
                 db=mock_db,
@@ -224,9 +222,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_asset_not_found(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_asset_not_found(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -236,8 +233,7 @@ class TestUploadAssetAttachments:
         mock_pdf_file,
     ):
         """Test uploading attachment to non-existent asset"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
-
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
@@ -249,7 +245,7 @@ class TestUploadAssetAttachments:
         }
 
         with pytest.raises(ResourceNotFoundError):
-            await upload_asset_attachments(
+            upload_asset_attachments(
                 asset_id="nonexistent-asset",
                 files=[mock_pdf_file],
                 db=mock_db,
@@ -258,9 +254,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_file_too_large(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_file_too_large(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -271,7 +266,7 @@ class TestUploadAssetAttachments:
         mock_large_pdf_file,
     ):
         """Test uploading attachment with file exceeding size limit"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -281,7 +276,7 @@ class TestUploadAssetAttachments:
             "errors": ["文件大小超过限制"],
         }
 
-        result = await upload_asset_attachments(
+        result = upload_asset_attachments(
             asset_id="asset-123",
             files=[mock_large_pdf_file],
             db=mock_db,
@@ -294,9 +289,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_invalid_file_type(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_invalid_file_type(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -307,7 +301,7 @@ class TestUploadAssetAttachments:
         mock_non_pdf_file,
     ):
         """Test uploading attachment with invalid file type"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -317,7 +311,7 @@ class TestUploadAssetAttachments:
             "errors": ["不支持的文件类型"],
         }
 
-        result = await upload_asset_attachments(
+        result = upload_asset_attachments(
             asset_id="asset-123",
             files=[mock_non_pdf_file],
             db=mock_db,
@@ -330,9 +324,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_none_filename(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_none_filename(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -343,12 +336,12 @@ class TestUploadAssetAttachments:
         mock_none_filename_file,
     ):
         """Test uploading attachment with None filename"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
 
-        result = await upload_asset_attachments(
+        result = upload_asset_attachments(
             asset_id="asset-123",
             files=[mock_none_filename_file],
             db=mock_db,
@@ -362,9 +355,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_mixed_success_and_failure(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_mixed_success_and_failure(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -376,7 +368,7 @@ class TestUploadAssetAttachments:
         mock_non_pdf_file,
     ):
         """Test uploading multiple files with mixed success and failure"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -404,7 +396,7 @@ class TestUploadAssetAttachments:
         m_open = mock_open()
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file, mock_non_pdf_file],
                 db=mock_db,
@@ -417,9 +409,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_file_write_exception(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_file_write_exception(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -430,7 +421,7 @@ class TestUploadAssetAttachments:
         mock_pdf_file,
     ):
         """Test uploading attachment when file write fails"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -445,7 +436,7 @@ class TestUploadAssetAttachments:
         m_open.side_effect = OSError("Disk full")
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file],
                 db=mock_db,
@@ -458,9 +449,8 @@ class TestUploadAssetAttachments:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_exception_handling(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_exception_handling(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -471,12 +461,12 @@ class TestUploadAssetAttachments:
         mock_pdf_file,
     ):
         """Test upload endpoint exception handling"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.side_effect = Exception("Database error")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await upload_asset_attachments(
+            upload_asset_attachments(
                 asset_id="asset-123",
                 files=[mock_pdf_file],
                 db=mock_db,
@@ -495,13 +485,12 @@ class TestUploadAssetAttachments:
 class TestGetAssetAttachments:
     """Tests for GET /{asset_id}/attachments endpoint"""
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.listdir")
     @patch("os.path.join")
     @patch("os.stat")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_success(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_success(
         self,
         mock_asset_crud_obj,
         mock_stat,
@@ -513,7 +502,7 @@ class TestGetAssetAttachments:
         mock_asset,
     ):
         """Test getting attachments list successfully"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         # Setup mocks
         mock_asset_crud_obj.get.return_value = mock_asset
@@ -526,7 +515,7 @@ class TestGetAssetAttachments:
         mock_file_stat.st_mtime = 1234567890.0
         mock_stat.return_value = mock_file_stat
 
-        result = await get_asset_attachments(
+        result = get_asset_attachments(
             asset_id="asset-123",
             db=mock_db,
             current_user=mock_regular_user,
@@ -539,38 +528,35 @@ class TestGetAssetAttachments:
         assert result[0]["url"] == "/api/v1/assets/asset-123/attachments/document1.pdf"
         assert result[0]["upload_time"] == 1234567890.0
 
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_asset_not_found(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_asset_not_found(
         self, mock_asset_crud_obj, mock_db, mock_regular_user
     ):
         """Test getting attachments for non-existent asset"""
-        from src.api.v1.asset_attachments import get_asset_attachments
-
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
 
         with pytest.raises(ResourceNotFoundError):
-            await get_asset_attachments(
+            get_asset_attachments(
                 asset_id="nonexistent-asset",
                 db=mock_db,
                 current_user=mock_regular_user,
             )
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_directory_not_exists(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_directory_not_exists(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test getting attachments when directory doesn't exist"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = False
 
-        result = await get_asset_attachments(
+        result = get_asset_attachments(
             asset_id="asset-123",
             db=mock_db,
             current_user=mock_regular_user,
@@ -578,11 +564,10 @@ class TestGetAssetAttachments:
 
         assert result == []
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.listdir")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_empty_directory(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_empty_directory(
         self,
         mock_asset_crud_obj,
         mock_listdir,
@@ -592,13 +577,13 @@ class TestGetAssetAttachments:
         mock_asset,
     ):
         """Test getting attachments from empty directory"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
         mock_listdir.return_value = []
 
-        result = await get_asset_attachments(
+        result = get_asset_attachments(
             asset_id="asset-123",
             db=mock_db,
             current_user=mock_regular_user,
@@ -606,13 +591,12 @@ class TestGetAssetAttachments:
 
         assert result == []
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.listdir")
     @patch("os.path.join")
     @patch("os.stat")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_filters_non_pdf_files(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_filters_non_pdf_files(
         self,
         mock_asset_crud_obj,
         mock_stat,
@@ -624,7 +608,7 @@ class TestGetAssetAttachments:
         mock_asset,
     ):
         """Test that only PDF files are returned"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
@@ -641,7 +625,7 @@ class TestGetAssetAttachments:
         mock_file_stat.st_mtime = 1234567890.0
         mock_stat.return_value = mock_file_stat
 
-        result = await get_asset_attachments(
+        result = get_asset_attachments(
             asset_id="asset-123",
             db=mock_db,
             current_user=mock_regular_user,
@@ -650,31 +634,24 @@ class TestGetAssetAttachments:
         # Should only return PDF files (case insensitive)
         assert len(result) == 2
 
-    @patch("os.path.exists")
-    @patch("os.listdir")
-    @patch("os.path.join")
-    @patch("os.stat")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_exception_handling(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_exception_handling(
         self,
         mock_asset_crud_obj,
-        mock_stat,
-        mock_join,
-        mock_listdir,
-        mock_exists,
+        mock_path_exists,
         mock_db,
         mock_regular_user,
         mock_asset,
     ):
         """Test get attachments exception handling"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
-        mock_exists.side_effect = Exception("Filesystem error")
+        mock_path_exists.side_effect = Exception("Filesystem error")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await get_asset_attachments(
+            get_asset_attachments(
                 asset_id="asset-123",
                 db=mock_db,
                 current_user=mock_regular_user,
@@ -692,24 +669,25 @@ class TestGetAssetAttachments:
 class TestDownloadAssetAttachment:
     """Tests for GET /{asset_id}/attachments/{filename} endpoint"""
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_success(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_success(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test downloading attachment successfully"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
         # Mock FileResponse
-        with patch("src.api.v1.asset_attachments.FileResponse") as mock_file_response:
+        with patch(
+            "src.api.v1.assets.asset_attachments.FileResponse"
+        ) as mock_file_response:
             mock_response = MagicMock()
             mock_file_response.return_value = mock_response
 
-            result = await download_asset_attachment(
+            result = download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.pdf",
                 db=mock_db,
@@ -717,40 +695,42 @@ class TestDownloadAssetAttachment:
             )
 
             assert result == mock_response
-            mock_file_response.assert_called_once_with(
-                "uploads/attachments/asset-123/document.pdf",
-                filename="document.pdf",
-                media_type="application/pdf",
+            call_args = mock_file_response.call_args
+            assert call_args is not None
+            path_arg = call_args.args[0]
+            assert (
+                str(path_arg)
+                .replace("\\", "/")
+                .endswith("uploads/attachments/asset-123/document.pdf")
             )
+            assert call_args.kwargs["filename"] == "document.pdf"
+            assert call_args.kwargs["media_type"] == "application/pdf"
 
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_asset_not_found(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_asset_not_found(
         self, mock_asset_crud_obj, mock_db, mock_regular_user
     ):
         """Test downloading attachment for non-existent asset"""
-        from src.api.v1.asset_attachments import download_asset_attachment
-
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
 
         with pytest.raises(ResourceNotFoundError):
-            await download_asset_attachment(
+            download_asset_attachment(
                 asset_id="nonexistent-asset",
                 filename="document.pdf",
                 db=mock_db,
                 current_user=mock_regular_user,
             )
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_file_not_found(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_file_not_found(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test downloading non-existent file"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = False
@@ -758,7 +738,7 @@ class TestDownloadAssetAttachment:
         from src.core.exception_handler import ResourceNotFoundError
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            await download_asset_attachment(
+            download_asset_attachment(
                 asset_id="asset-123",
                 filename="nonexistent.pdf",
                 db=mock_db,
@@ -768,20 +748,19 @@ class TestDownloadAssetAttachment:
         assert exc_info.value.status_code == 404
         assert "attachment不存在" in exc_info.value.message
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_invalid_file_type(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_invalid_file_type(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test downloading non-PDF file"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await download_asset_attachment(
+            download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.txt",
                 db=mock_db,
@@ -791,23 +770,24 @@ class TestDownloadAssetAttachment:
         assert exc_info.value.status_code == 400
         assert "仅支持PDF文件" in exc_info.value.message
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_case_insensitive_extension(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_case_insensitive_extension(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test downloading PDF with uppercase extension"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
-        with patch("src.api.v1.asset_attachments.FileResponse") as mock_file_response:
+        with patch(
+            "src.api.v1.assets.asset_attachments.FileResponse"
+        ) as mock_file_response:
             mock_response = MagicMock()
             mock_file_response.return_value = mock_response
 
-            result = await download_asset_attachment(
+            result = download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.PDF",
                 db=mock_db,
@@ -816,20 +796,19 @@ class TestDownloadAssetAttachment:
 
             assert result == mock_response
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_exception_handling(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_exception_handling(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test download attachment exception handling"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.side_effect = Exception("Filesystem error")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await download_asset_attachment(
+            download_asset_attachment(
                 asset_id="asset-123",
                 filename="document.pdf",
                 db=mock_db,
@@ -848,11 +827,10 @@ class TestDownloadAssetAttachment:
 class TestDeleteAssetAttachment:
     """Tests for DELETE /{asset_id}/attachments/{attachment_id} endpoint"""
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.remove")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_delete_attachment_success(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_delete_attachment_success(
         self,
         mock_asset_crud_obj,
         mock_remove,
@@ -862,12 +840,12 @@ class TestDeleteAssetAttachment:
         mock_asset,
     ):
         """Test deleting attachment successfully"""
-        from src.api.v1.asset_attachments import delete_asset_attachment
+        from src.api.v1.assets.asset_attachments import delete_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
-        result = await delete_asset_attachment(
+        result = delete_asset_attachment(
             asset_id="asset-123",
             attachment_id="document.pdf",
             db=mock_db,
@@ -875,38 +853,39 @@ class TestDeleteAssetAttachment:
         )
 
         assert result["message"] == "附件删除成功"
-        mock_remove.assert_called_once_with(
-            "uploads/attachments/asset-123/document.pdf"
+        remove_call = mock_remove.call_args
+        assert remove_call is not None
+        assert (
+            str(remove_call.args[0])
+            .replace("\\", "/")
+            .endswith("uploads/attachments/asset-123/document.pdf")
         )
 
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_delete_attachment_asset_not_found(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_delete_attachment_asset_not_found(
         self, mock_asset_crud_obj, mock_db, mock_admin_user
     ):
         """Test deleting attachment for non-existent asset"""
-        from src.api.v1.asset_attachments import delete_asset_attachment
-
+        from src.api.v1.assets.asset_attachments import delete_asset_attachment
         from src.core.exception_handler import ResourceNotFoundError
 
         mock_asset_crud_obj.get.return_value = None
 
         with pytest.raises(ResourceNotFoundError):
-            await delete_asset_attachment(
+            delete_asset_attachment(
                 asset_id="nonexistent-asset",
                 attachment_id="document.pdf",
                 db=mock_db,
                 current_user=mock_admin_user,
             )
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_delete_attachment_file_not_found(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_delete_attachment_file_not_found(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_admin_user, mock_asset
     ):
         """Test deleting non-existent file"""
-        from src.api.v1.asset_attachments import delete_asset_attachment
+        from src.api.v1.assets.asset_attachments import delete_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = False
@@ -914,7 +893,7 @@ class TestDeleteAssetAttachment:
         from src.core.exception_handler import ResourceNotFoundError
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            await delete_asset_attachment(
+            delete_asset_attachment(
                 asset_id="asset-123",
                 attachment_id="nonexistent.pdf",
                 db=mock_db,
@@ -924,11 +903,10 @@ class TestDeleteAssetAttachment:
         assert exc_info.value.status_code == 404
         assert "attachment不存在" in exc_info.value.message
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.remove")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_delete_attachment_success_with_special_filename(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_delete_attachment_success_with_special_filename(
         self,
         mock_asset_crud_obj,
         mock_remove,
@@ -938,12 +916,12 @@ class TestDeleteAssetAttachment:
         mock_asset,
     ):
         """Test deleting attachment with special characters in filename"""
-        from src.api.v1.asset_attachments import delete_asset_attachment
+        from src.api.v1.assets.asset_attachments import delete_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
-        result = await delete_asset_attachment(
+        result = delete_asset_attachment(
             asset_id="asset-123",
             attachment_id="report_2024-01-15_final.pdf",
             db=mock_db,
@@ -951,15 +929,18 @@ class TestDeleteAssetAttachment:
         )
 
         assert result["message"] == "附件删除成功"
-        mock_remove.assert_called_once_with(
-            "uploads/attachments/asset-123/report_2024-01-15_final.pdf"
+        remove_call = mock_remove.call_args
+        assert remove_call is not None
+        assert (
+            str(remove_call.args[0])
+            .replace("\\", "/")
+            .endswith("uploads/attachments/asset-123/report_2024-01-15_final.pdf")
         )
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.remove")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_delete_attachment_exception_handling(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_delete_attachment_exception_handling(
         self,
         mock_asset_crud_obj,
         mock_remove,
@@ -969,14 +950,14 @@ class TestDeleteAssetAttachment:
         mock_asset,
     ):
         """Test delete attachment exception handling"""
-        from src.api.v1.asset_attachments import delete_asset_attachment
+        from src.api.v1.assets.asset_attachments import delete_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
         mock_remove.side_effect = Exception("Permission denied")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await delete_asset_attachment(
+            delete_asset_attachment(
                 asset_id="asset-123",
                 attachment_id="document.pdf",
                 db=mock_db,
@@ -995,13 +976,12 @@ class TestDeleteAssetAttachment:
 class TestAssetAttachmentsEdgeCases:
     """Tests for edge cases and integration scenarios"""
 
-    @patch("os.path.exists")
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
     @patch("os.listdir")
     @patch("os.path.join")
     @patch("os.stat")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_get_attachments_with_unicode_filenames(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_get_attachments_with_unicode_filenames(
         self,
         mock_asset_crud_obj,
         mock_stat,
@@ -1013,7 +993,7 @@ class TestAssetAttachmentsEdgeCases:
         mock_asset,
     ):
         """Test getting attachments with Unicode filenames"""
-        from src.api.v1.asset_attachments import get_asset_attachments
+        from src.api.v1.assets.asset_attachments import get_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
@@ -1025,7 +1005,7 @@ class TestAssetAttachmentsEdgeCases:
         mock_file_stat.st_mtime = 1234567890.0
         mock_stat.return_value = mock_file_stat
 
-        result = await get_asset_attachments(
+        result = get_asset_attachments(
             asset_id="asset-123",
             db=mock_db,
             current_user=mock_regular_user,
@@ -1036,9 +1016,8 @@ class TestAssetAttachmentsEdgeCases:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_with_unicode_filename(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_with_unicode_filename(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -1048,7 +1027,7 @@ class TestAssetAttachmentsEdgeCases:
         mock_asset,
     ):
         """Test uploading attachment with Unicode filename"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -1068,7 +1047,7 @@ class TestAssetAttachmentsEdgeCases:
         m_open = mock_open()
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=[file],
                 db=mock_db,
@@ -1077,23 +1056,24 @@ class TestAssetAttachmentsEdgeCases:
 
         assert len(result["success"]) == 1
 
-    @patch("os.path.exists")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_download_attachment_with_unicode_filename(
+    @patch("src.api.v1.assets.asset_attachments.Path.exists")
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_download_attachment_with_unicode_filename(
         self, mock_asset_crud_obj, mock_exists, mock_db, mock_regular_user, mock_asset
     ):
         """Test downloading attachment with Unicode filename"""
-        from src.api.v1.asset_attachments import download_asset_attachment
+        from src.api.v1.assets.asset_attachments import download_asset_attachment
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_exists.return_value = True
 
-        with patch("src.api.v1.asset_attachments.FileResponse") as mock_file_response:
+        with patch(
+            "src.api.v1.assets.asset_attachments.FileResponse"
+        ) as mock_file_response:
             mock_response = MagicMock()
             mock_file_response.return_value = mock_response
 
-            result = await download_asset_attachment(
+            result = download_asset_attachment(
                 asset_id="asset-123",
                 filename="文档.pdf",
                 db=mock_db,
@@ -1104,9 +1084,8 @@ class TestAssetAttachmentsEdgeCases:
 
     @patch("src.utils.file_security.validate_upload_file")
     @patch("src.utils.file_security.create_safe_upload_directory")
-    @patch("src.api.v1.asset_attachments.asset_crud")
-    @pytest.mark.asyncio
-    async def test_upload_attachment_validates_all_files_before_failing(
+    @patch("src.api.v1.assets.asset_attachments.asset_crud")
+    def test_upload_attachment_validates_all_files_before_failing(
         self,
         mock_asset_crud_obj,
         mock_create_dir,
@@ -1116,7 +1095,7 @@ class TestAssetAttachmentsEdgeCases:
         mock_asset,
     ):
         """Test that all files are validated even if some fail"""
-        from src.api.v1.asset_attachments import upload_asset_attachments
+        from src.api.v1.assets.asset_attachments import upload_asset_attachments
 
         mock_asset_crud_obj.get.return_value = mock_asset
         mock_create_dir.return_value = Path("uploads/attachments/asset-123")
@@ -1153,7 +1132,7 @@ class TestAssetAttachmentsEdgeCases:
         m_open = mock_open()
 
         with patch("builtins.open", m_open):
-            result = await upload_asset_attachments(
+            result = upload_asset_attachments(
                 asset_id="asset-123",
                 files=files,
                 db=mock_db,

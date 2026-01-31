@@ -34,7 +34,7 @@ import {
   type UpdateEnumFieldValueRequest,
 } from './manager';
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
 
 const serviceLogger = createLogger('dictionaryService');

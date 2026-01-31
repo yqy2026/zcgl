@@ -40,9 +40,9 @@ const ProtectedRoutes: React.FC = () => {
     <AppLayout>
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          {protectedRoutes.map((route, index) => (
+          {protectedRoutes.map(route => (
             <Route
-              key={index}
+              key={route.path}
               path={route.path}
               element={
                 <PageTransition>

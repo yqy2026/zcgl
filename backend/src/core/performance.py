@@ -9,13 +9,14 @@ import logging
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from functools import wraps
 
 from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload
 
 from ..constants.performance_constants import PerformanceThresholds
+from .cache_manager import cache_manager as core_cache_manager
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -285,88 +286,8 @@ class QueryOptimizer:
             return stats
 
 
-class CacheManager:
-    """缓存管理器"""
-
-    def __init__(self) -> None:
-        self.cache: dict[str, dict[str, Any]] = {}
-        self.cache_enabled = settings.REDIS_ENABLED
-        self.default_ttl = settings.CACHE_TTL
-        self.max_size = 1000  # 固定值，如需可配置可新增 CACHE_MAX_SIZE
-
-    def _is_expired(self, cache_item: dict[str, Any] | None) -> bool:
-        """检查缓存是否过期"""
-        if not cache_item:
-            return True
-        return bool(datetime.now(UTC) > cache_item["expires_at"])
-
-    def _cleanup_expired(self) -> None:
-        """清理过期缓存"""
-        expired_keys = [
-            key for key, item in self.cache.items() if self._is_expired(item)
-        ]
-        for key in expired_keys:
-            del self.cache[key]
-
-        # 如果缓存太大，删除最旧的一半
-        if len(self.cache) > self.max_size:
-            sorted_items = sorted(self.cache.items(), key=lambda x: x[1]["created_at"])
-            delete_count = len(sorted_items) // 2
-            for key, _ in sorted_items[:delete_count]:
-                del self.cache[key]
-
-    def get(self, key: str) -> Any | None:
-        """获取缓存值"""
-        if not self.cache_enabled:
-            return None
-
-        self._cleanup_expired()
-
-        cache_item = self.cache.get(key)
-        if cache_item and not self._is_expired(cache_item):
-            return cache_item["value"]
-
-        return None
-
-    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
-        """设置缓存值"""
-        if not self.cache_enabled:
-            return
-
-        self._cleanup_expired()
-
-        ttl = ttl or self.default_ttl
-
-        self.cache[key] = {
-            "value": value,
-            "created_at": datetime.now(UTC),
-            "expires_at": datetime.now(UTC) + timedelta(seconds=ttl),
-            "ttl": ttl,
-        }
-
-    def delete(self, key: str) -> None:
-        """删除缓存值"""
-        if key in self.cache:
-            del self.cache[key]
-
-    def clear(self) -> None:
-        """清空缓存"""
-        self.cache.clear()
-
-    def get_stats(self) -> dict[str, Any]:
-        """获取缓存统计"""
-        return {
-            "enabled": self.cache_enabled,
-            "total_items": len(self.cache),
-            "max_size": self.max_size,
-            "memory_usage": sum(
-                len(str(item["value"])) for item in self.cache.values()
-            ),
-        }
-
-
-# 全局缓存管理器
-cache_manager = CacheManager()
+# 统一缓存管理器
+cache_manager = core_cache_manager
 
 
 def cached(

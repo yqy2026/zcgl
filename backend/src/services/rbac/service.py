@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from ...core.exception_handler import (
     DuplicateResourceError,
+    InternalServerError,
     OperationNotAllowedError,
     ResourceConflictError,
     ResourceNotFoundError,
@@ -103,8 +104,8 @@ class RBACService:
         try:
             role_crud.remove(db, id=role_id)
             return True
-        except Exception:
-            return False
+        except Exception as exc:
+            raise InternalServerError("删除角色失败", original_error=exc) from exc
 
     def update_role_permissions(
         self, db: Session, *, role_id: str, permission_ids: list[str], updated_by: str

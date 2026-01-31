@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from ....core.response_handler import success_response
+from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 
 router = APIRouter(tags=["PDF智能导入"])
 
@@ -20,7 +21,7 @@ def get_pdf_import_info() -> JSONResponse:
     return success_response(  # pragma: no cover
         data={  # pragma: no cover
             "supported_formats": [".pdf"],  # pragma: no cover
-            "max_file_size": 50 * 1024 * 1024,  # 50MB  # pragma: no cover
+            "max_file_size": DEFAULT_MAX_FILE_SIZE,  # pragma: no cover
             "vision_providers": ["glm", "qwen", "deepseek", "hunyuan"],  # pragma: no cover
             "processing_status": "available",  # pragma: no cover
         },  # pragma: no cover

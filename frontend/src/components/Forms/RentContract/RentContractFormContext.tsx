@@ -3,17 +3,17 @@ import type { FormInstance } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { MessageManager } from '@/utils/messageManager';
-import { Asset } from '../../../types/asset';
-import { Ownership } from '../../../types/ownership';
+import { Asset } from '@/types/asset';
+import { Ownership } from '@/types/ownership';
 import {
   RentContractCreate,
   RentTermCreate,
   ContractType,
   PaymentCycle,
-} from '../../../types/rentContract';
-import { assetService } from '../../../services/assetService';
-import { ownershipService } from '../../../services/ownershipService';
-import { createLogger } from '../../../utils/logger';
+} from '@/types/rentContract';
+import { assetService } from '@/services/assetService';
+import { ownershipService } from '@/services/ownershipService';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('RentContractFormContext');
 

@@ -39,7 +39,7 @@ import {
   type SessionProgress,
   type CompleteResult,
   type FileInfo,
-} from '../../services/pdfImportService';
+} from '@/services/pdfImportService';
 import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;

@@ -237,7 +237,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 * 100,
             }
         except Exception:  # nosec - B110: Intentional graceful degradation for optional system metrics
-            pass
+            logger.warning("Failed to collect optional system metrics", exc_info=True)
 
         return stats
 

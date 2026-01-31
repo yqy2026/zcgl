@@ -23,10 +23,10 @@ import dayjs from 'dayjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageManager } from '@/utils/messageManager';
 
-import { RentContract } from '../../types/rentContract';
-import { rentContractService } from '../../services/rentContractService';
-import { TERMINATION_REASONS } from '../../constants/reasons';
-import { createLogger } from '../../utils/logger';
+import { RentContract } from '@/types/rentContract';
+import { rentContractService } from '@/services/rentContractService';
+import { TERMINATION_REASONS } from '@/constants/reasons';
+import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('ContractTerminateModal');
 

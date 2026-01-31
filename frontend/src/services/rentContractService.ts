@@ -26,10 +26,10 @@ import {
   RentLedgerQueryParams,
   DepositLedger,
   ServiceFeeLedger,
-} from '../types/rentContract';
+} from '@/types/rentContract';
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../utils/responseExtractor';
-import { createLogger } from '../utils/logger';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
 import { API_ENDPOINTS } from '@/constants/api';
 
 const logger = createLogger('RentContractService');

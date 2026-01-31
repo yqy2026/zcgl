@@ -14,6 +14,10 @@ import httpx
 from pydantic import BaseModel
 
 from ...core.exception_handler import ConfigurationError
+from ...constants.timeout_constants import (
+    DEFAULT_LLM_COMPAT_TIMEOUT_SECONDS,
+    DEFAULT_LLM_TIMEOUT_SECONDS,
+)
 from ..document.config import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -274,7 +278,7 @@ class LLMServiceFactory:
                 "https://open.bigmodel.cn/api/paas/v4",
             ),
             model=os.getenv("ZHIPU_MODEL", "glm-4v"),
-            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.GLM,
         )
 
@@ -288,7 +292,7 @@ class LLMServiceFactory:
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",
             ),
             model=os.getenv("DASHSCOPE_MODEL", "qwen-vl-max"),
-            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.QWEN,
         )
 
@@ -302,7 +306,7 @@ class LLMServiceFactory:
                 "https://api.deepseek.com",
             ),
             model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.DEEPSEEK,
         )
 
@@ -319,7 +323,7 @@ class LLMServiceFactory:
                 "HUNYUAN_MODEL",
                 os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision"),
             ),
-            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.HUNYUAN,
         )
 
@@ -343,7 +347,7 @@ class LLMService(BaseOpenAILLM):
         api_key = os.getenv("LLM_API_KEY", "dummy-key")
         base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
         model = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
-        timeout = int(os.getenv("LLM_TIMEOUT", "60"))
+        timeout = int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_COMPAT_TIMEOUT_SECONDS)))
 
         # 根据提供商设置默认配置
         if provider == LLMProvider.GLM:
@@ -353,7 +357,7 @@ class LLMService(BaseOpenAILLM):
             )
             model = os.getenv("ZHIPU_MODEL", "glm-4v")
             api_key = os.getenv("ZHIPU_API_KEY", api_key)
-            timeout = int(os.getenv("LLM_TIMEOUT", "30"))
+            timeout = int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS)))
         elif provider == LLMProvider.QWEN:
             base_url = _env_first(
                 ["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"],

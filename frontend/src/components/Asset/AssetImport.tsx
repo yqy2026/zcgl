@@ -30,7 +30,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
 import { apiClient } from '@/api/client';
-import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '../../config/excelConfig';
+import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '@/config/excelConfig';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 

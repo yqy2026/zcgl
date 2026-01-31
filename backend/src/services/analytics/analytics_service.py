@@ -155,7 +155,7 @@ class AnalyticsService:
         """清除分析缓存"""
         # CacheManager 使用 clear() 方法，支持 pattern 参数
         try:
-            cleared = self.cache.clear(pattern="analytics:*")
+            cleared = self.cache.clear(pattern="*")
             return {
                 "status": "success",
                 "cleared_keys": 1 if cleared else 0,
@@ -173,7 +173,7 @@ class AnalyticsService:
     def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         return {
-            "cache_type": "analytics_cache",
+            "cache_type": "analytics_cache_shared_backend",
             "stats": self.cache.get_stats() if hasattr(self.cache, "get_stats") else {},
             "timestamp": datetime.now().isoformat(),
         }

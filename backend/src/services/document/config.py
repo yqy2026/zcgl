@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
 from ...core.exception_handler import ConfigurationError
+from ...constants.timeout_constants import DEFAULT_LLM_TIMEOUT_SECONDS
 
 # ============================================================================
 # LLM 提供商枚举 - 统一命名
@@ -269,7 +270,9 @@ class ExtractionConfig(BaseModel):
             ).lower()
             == "true",
             llm_provider=llm_provider,
-            llm_timeout=int(os.getenv("EXTRACTION_LLM_TIMEOUT", "30")),
+            llm_timeout=int(
+                os.getenv("EXTRACTION_LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))
+            ),
             llm_max_tokens=int(os.getenv("EXTRACTION_LLM_MAX_TOKENS", "1500")),
             ocr_enabled=os.getenv("EXTRACTION_OCR_ENABLED", "true").lower() == "true",
             ocr_fallback=os.getenv("EXTRACTION_OCR_FALLBACK", "true").lower() == "true",

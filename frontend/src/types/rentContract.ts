@@ -97,7 +97,6 @@ export interface RentContract {
   version: number;
   created_at: string;
   updated_at: string;
-  tenant_id?: string;
   rent_terms: RentTerm[];
   // V2: 关联资产列表
   assets?: RentContractAsset[];

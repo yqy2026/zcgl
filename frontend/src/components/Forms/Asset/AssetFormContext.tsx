@@ -2,10 +2,10 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { FormInstance } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import dayjs from 'dayjs';
-import type { RentContract } from '../../../types/rentContract';
-import { rentContractService } from '../../../services/rentContractService';
+import type { RentContract } from '@/types/rentContract';
+import { rentContractService } from '@/services/rentContractService';
 import { MessageManager } from '@/utils/messageManager';
-import { createLogger } from '../../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('AssetFormContext');
 
@@ -86,7 +86,6 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
         form.setFieldsValue({
           tenant_name: selectedContract.tenant_name,
           tenant_contact: selectedContract.tenant_contact,
-          tenant_type: selectedContract.tenant_id != null ? 'enterprise' : 'individual',
           lease_contract_number: selectedContract.contract_number,
           contract_start_date: selectedContract.start_date
             ? dayjs(selectedContract.start_date)

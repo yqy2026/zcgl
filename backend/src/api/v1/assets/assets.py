@@ -39,7 +39,6 @@ from starlette.status import HTTP_204_NO_CONTENT
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.history import history_crud
 from ....database import get_async_db, get_db
 from ....middleware.auth import (
     audit_action,
@@ -117,26 +116,17 @@ async def get_assets(
     - **sort_order**: 排序方向（asc/desc）
     - **include_relations**: 是否加载关联数据（默认不加载）
     """
-    # 构建筛选条件
-    filters = {}
-    if ownership_status:
-        filters["ownership_status"] = ownership_status
-    if property_nature:
-        filters["property_nature"] = property_nature
-    if usage_status:
-        filters["usage_status"] = usage_status
-    if ownership_entity:
-        filters["ownership_entity"] = ownership_entity
-    if management_entity:
-        filters["management_entity"] = management_entity
-    if business_category:
-        filters["business_category"] = business_category
-    if min_area is not None:
-        filters["min_area"] = str(min_area)
-    if max_area is not None:
-        filters["max_area"] = str(max_area)
-    if is_litigated:
-        filters["is_litigated"] = is_litigated
+    filters = AssetService.build_filters(
+        ownership_status=ownership_status,
+        property_nature=property_nature,
+        usage_status=usage_status,
+        ownership_entity=ownership_entity,
+        management_entity=management_entity,
+        business_category=business_category,
+        min_area=min_area,
+        max_area=max_area,
+        is_litigated=is_litigated,
+    )
 
     asset_service = AsyncAssetService(db)
     assets, total = await asset_service.get_assets(
@@ -337,14 +327,6 @@ def get_asset_history(
 
     - **asset_id**: 资产ID
     """
-    # 检查资产是否存在
-    # 这里的检查可以交给 service，History 获取也可以封装进 Service
-    # 但鉴于 get_asset_history 单独存在，这里暂时简单调用 existing crud
-    # 更好的做法是 AssetService.get_asset_history(asset_id)
-
     asset_service = AssetService(db)
-    asset_service.get_asset(asset_id)  # Validate existence
-
-    # 获取历史记录
-    history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
+    history_records = asset_service.get_asset_history(asset_id)
     return {"asset_id": asset_id, "history": history_records}

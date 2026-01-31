@@ -17,12 +17,12 @@ import { MessageManager } from '@/utils/messageManager';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { RentContractForm } from '../../components/Forms';
-import type { RentTermData } from '../../components/Forms/RentContract';
-import type { RentContractCreate, RentTerm } from '../../types/rentContract';
-import { rentContractService } from '../../services/rentContractService';
-import RenewalSummarySection from '../../components/Forms/RentContract/RenewalSummarySection';
-import { createLogger } from '../../utils/logger';
+import { RentContractForm } from '@/components/Forms';
+import type { RentTermData } from '@/components/Forms/RentContract';
+import type { RentContractCreate, RentTerm } from '@/types/rentContract';
+import { rentContractService } from '@/services/rentContractService';
+import RenewalSummarySection from '@/components/Forms/RentContract/RenewalSummarySection';
+import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('ContractRenewPage');

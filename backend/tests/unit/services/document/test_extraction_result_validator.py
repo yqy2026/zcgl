@@ -88,20 +88,17 @@ class TestExtractionResultValidator:
         assert result.extracted_fields == {}
 
     def test_success_true_with_empty_fields_in_success_status(self):
-        """测试 success=True 且 status=SUCCESS 但字段为空（当前允许但不理想）"""
+        """测试 success=True 且 status=SUCCESS 但字段为空（应抛出验证错误）"""
 
-        # 根据当前实现，这是允许的（验证器中有 pass）
-        result = ExtractionResult(
-            success=True,
-            status=ExtractionStatus.SUCCESS,
-            error=None,
-            extracted_fields={},  # 空字段
-        )
+        with pytest.raises(ValidationError) as exc_info:
+            ExtractionResult(
+                success=True,
+                status=ExtractionStatus.SUCCESS,
+                error=None,
+                extracted_fields={},  # 空字段
+            )
 
-        # 当前实现允许这种情况
-        assert result.success is True
-        assert result.status == ExtractionStatus.SUCCESS
-        assert result.extracted_fields == {}
+        assert "success=True 时 extracted_fields 不能为空" in str(exc_info.value)
 
     def test_valid_success_case(self):
         """测试有效的成功案例"""

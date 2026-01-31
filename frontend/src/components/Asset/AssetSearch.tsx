@@ -1,44 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Form,
-  Input,
-  Select,
-  DatePicker,
-  InputNumber,
-  Button,
-  Space,
-  Row,
-  Col,
-  Modal,
-  List,
-  Typography,
-  Popconfirm,
-  Tag,
-} from 'antd';
-import type { Dayjs } from 'dayjs';
-import { MessageManager } from '@/utils/messageManager';
-import {
-  SearchOutlined,
-  ReloadOutlined,
-  DownOutlined,
-  UpOutlined,
-  SaveOutlined,
-  HistoryOutlined,
-} from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Form, Space, Row, Tag } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useQueries } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 
 import type { AssetSearchParams } from '@/types/asset';
 import { assetService } from '@/services/assetService';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { createLogger } from '@/utils/logger';
+import { MessageManager } from '@/utils/messageManager';
+import { AdvancedSearchFields } from '@/components/Asset/AssetSearch/AdvancedSearchFields';
+import { BasicSearchFields } from '@/components/Asset/AssetSearch/BasicSearchFields';
+import { SaveSearchModal } from '@/components/Asset/AssetSearch/SaveSearchModal';
+import { SearchActionButtons } from '@/components/Asset/AssetSearch/SearchActionButtons';
+import { SearchHistoryModal } from '@/components/Asset/AssetSearch/SearchHistoryModal';
 
 const componentLogger = createLogger('AssetSearch');
-
-const { Option } = Select;
-const { RangePicker } = DatePicker;
-const { Text } = Typography;
 
 interface AssetSearchFormValues {
   search?: string;
@@ -129,6 +106,9 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   const ownershipEntities = searchQueries[0].data ?? [];
   const businessCategories = searchQueries[1].data ?? [];
 
+  const ownershipLoading = searchQueries[0].isLoading;
+  const businessLoading = searchQueries[1].isLoading;
+
   // 检查是否所有查询都已加载完成
   const isLoadingQueries = searchQueries.some(query => query.isLoading);
 
@@ -142,8 +122,20 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     }
   }, [initialValues, form]);
 
+  const handleToggleExpanded = useCallback(() => {
+    setExpanded(prev => !prev);
+  }, []);
+
+  const handleAreaMinChange = useCallback((value: number | null) => {
+    setAreaRange(prev => [value ?? 0, prev[1]]);
+  }, []);
+
+  const handleAreaMaxChange = useCallback((value: number | null) => {
+    setAreaRange(prev => [prev[0], value ?? 100000]);
+  }, []);
+
   // 处理搜索
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     const values = form.getFieldsValue() as AssetSearchFormValues;
 
     // 处理日期范围
@@ -169,17 +161,39 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     }, {} as AssetSearchParams);
 
     onSearch(searchParams);
-  };
+  }, [form, onSearch]);
 
   // 处理重置
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     form.resetFields();
     setAreaRange([0, 100000]);
     onReset();
-  };
+  }, [form, onReset]);
+
+  const handleOpenSaveModal = useCallback(() => {
+    setSaveModalVisible(true);
+  }, []);
+
+  const handleCloseSaveModal = useCallback(() => {
+    setSaveModalVisible(false);
+  }, []);
+
+  const handleOpenHistoryModal = useCallback(() => {
+    setHistoryModalVisible(true);
+  }, []);
+
+  const handleCloseHistoryModal = useCallback(() => {
+    setHistoryModalVisible(false);
+    setEditingHistoryId(null);
+    setEditingName('');
+  }, []);
+
+  const handleSaveNameChange = useCallback((value: string) => {
+    setSaveName(value);
+  }, []);
 
   // 处理保存搜索条件
-  const handleSaveSearch = () => {
+  const handleSaveSearch = useCallback(() => {
     const values = form.getFieldsValue() as AssetSearchFormValues;
 
     // 检查是否有搜索条件
@@ -207,39 +221,49 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     setSaveName('');
     setSaveModalVisible(false);
     MessageManager.success('搜索条件已保存');
-  };
+  }, [addSearchHistory, form, saveName]);
 
   // 处理应用历史搜索条件
-  const handleApplyHistory = (historyId: string) => {
-    const history = searchHistory.find(h => h.id === historyId);
-    if (history !== undefined && history !== null) {
-      form.setFieldsValue(history.conditions);
-      handleSearch();
-      setHistoryModalVisible(false);
-    }
-  };
+  const handleApplyHistory = useCallback(
+    (historyId: string) => {
+      const history = searchHistory.find(h => h.id === historyId);
+      if (history !== undefined && history !== null) {
+        form.setFieldsValue(history.conditions);
+        handleSearch();
+        setHistoryModalVisible(false);
+      }
+    },
+    [form, handleSearch, searchHistory]
+  );
 
   // 处理删除历史记录
-  const handleDeleteHistory = (historyId: string) => {
-    removeSearchHistory(historyId);
-    MessageManager.success('历史记录已删除');
-  };
+  const handleDeleteHistory = useCallback(
+    (historyId: string) => {
+      removeSearchHistory(historyId);
+      MessageManager.success('历史记录已删除');
+    },
+    [removeSearchHistory]
+  );
 
   // 处理编辑历史记录名称
-  const handleEditHistory = (historyId: string, currentName: string) => {
+  const handleEditHistory = useCallback((historyId: string, currentName: string) => {
     setEditingHistoryId(historyId);
     setEditingName(currentName);
-  };
+  }, []);
+
+  const handleEditNameChange = useCallback((value: string) => {
+    setEditingName(value);
+  }, []);
 
   // 保存编辑的名称
-  const handleSaveEdit = () => {
+  const handleSaveEdit = useCallback(() => {
     if (editingHistoryId !== null && editingName.trim() !== '') {
       updateSearchHistoryName(editingHistoryId, editingName.trim());
       setEditingHistoryId(null);
       setEditingName('');
       MessageManager.success('名称已更新');
     }
-  };
+  }, [editingHistoryId, editingName, updateSearchHistoryName]);
 
   return (
     <Card
@@ -251,342 +275,60 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
         </Space>
       }
       extra={
-        <Space>
-          {showSaveButton && (
-            <Button
-              type="default"
-              icon={<SaveOutlined />}
-              onClick={() => setSaveModalVisible(true)}
-              disabled={isComponentLoading}
-            >
-              保存条件
-            </Button>
-          )}
-          {showHistoryButton && (
-            <Button
-              type="default"
-              icon={<HistoryOutlined />}
-              onClick={() => setHistoryModalVisible(true)}
-            >
-              搜索历史
-            </Button>
-          )}
-          <Button
-            type="primary"
-            icon={<SearchOutlined />}
-            onClick={handleSearch}
-            loading={isComponentLoading}
-          >
-            搜索
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset} disabled={isComponentLoading}>
-            重置
-          </Button>
-          <Button
-            type="text"
-            icon={expanded ? <UpOutlined /> : <DownOutlined />}
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? '收起' : '展开'}
-          </Button>
-        </Space>
+        <SearchActionButtons
+          expanded={expanded}
+          loading={isComponentLoading}
+          showSaveButton={showSaveButton}
+          showHistoryButton={showHistoryButton}
+          onSearch={handleSearch}
+          onReset={handleReset}
+          onToggleExpanded={handleToggleExpanded}
+          onSave={handleOpenSaveModal}
+          onShowHistory={handleOpenHistoryModal}
+        />
       }
     >
       <Form form={form} layout="vertical" disabled={isComponentLoading}>
         <Row gutter={16}>
-          {/* 基础搜索字段 */}
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item name="search" label="关键词搜索">
-              <Input
-                placeholder="输入物业名称、地址等关键词"
-                prefix={<SearchOutlined />}
-                allowClear
-              />
-            </Form.Item>
-          </Col>
-
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item name="ownership_status" label="确权状态">
-              <Select placeholder="选择确权状态" allowClear showSearch optionFilterProp="children">
-                <Option value="已确权">已确权</Option>
-                <Option value="未确权">未确权</Option>
-                <Option value="部分确权">部分确权</Option>
-                <Option value="无法确认业权">无法确认业权</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item name="property_nature" label="物业性质">
-              <Select placeholder="选择物业性质" allowClear showSearch optionFilterProp="children">
-                <Option value="经营性">经营性</Option>
-                <Option value="非经营性">非经营性</Option>
-                <Option value="经营-外部">经营-外部</Option>
-                <Option value="经营-内部">经营-内部</Option>
-                <Option value="经营-租赁">经营-租赁</Option>
-                <Option value="非经营类-公配">非经营类-公配</Option>
-                <Option value="非经营类-其他">非经营类-其他</Option>
-                <Option value="经营类">经营类</Option>
-                <Option value="非经营类">非经营类</Option>
-                <Option value="经营-配套">经营-配套</Option>
-                <Option value="非经营-配套">非经营-配套</Option>
-                <Option value="经营-配套镇">经营-配套镇</Option>
-                <Option value="非经营-配套镇">非经营-配套镇</Option>
-                <Option value="经营-处置类">经营-处置类</Option>
-                <Option value="非经营-处置类">非经营-处置类</Option>
-                <Option value="非经营-公配房">非经营-公配房</Option>
-                <Option value="非经营类-配套">非经营类-配套</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item name="usage_status" label="使用状态">
-              <Select placeholder="选择使用状态" allowClear showSearch optionFilterProp="children">
-                <Option value="出租">出租</Option>
-                <Option value="空置">空置</Option>
-                <Option value="自用">自用</Option>
-                <Option value="公房">公房</Option>
-                <Option value="其他">其他</Option>
-                <Option value="转租">转租</Option>
-                <Option value="公配">公配</Option>
-                <Option value="空置规划">空置规划</Option>
-                <Option value="空置预留">空置预留</Option>
-                <Option value="配套">配套</Option>
-                <Option value="空置配套">空置配套</Option>
-                <Option value="空置配">空置配</Option>
-                <Option value="待处置">待处置</Option>
-                <Option value="待移交">待移交</Option>
-                <Option value="闲置">闲置</Option>
-              </Select>
-            </Form.Item>
-          </Col>
+          <BasicSearchFields />
         </Row>
 
-        {/* 高级搜索条件 */}
         {expanded && (
-          <>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Form.Item name="ownership_entity" label="权属方">
-                  <Select
-                    placeholder="选择权属方"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    loading={searchQueries[0].isLoading}
-                  >
-                    {ownershipEntities.map(entity => (
-                      <Option key={entity} value={entity}>
-                        {entity}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Form.Item name="business_category" label="业态类别">
-                  <Select
-                    placeholder="选择业态类别"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    loading={searchQueries[1].isLoading}
-                  >
-                    {businessCategories.map(category => (
-                      <Option key={category} value={category}>
-                        {category}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Form.Item name="is_litigated" label="是否涉诉">
-                  <Select placeholder="选择是否涉诉" allowClear>
-                    <Option value="是">是</Option>
-                    <Option value="否">否</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8}>
-                <Form.Item label="面积范围">
-                  <Space.Compact>
-                    <InputNumber
-                      id="asset-area-min"
-                      name="asset-area-min"
-                      style={{ width: '45%' }}
-                      placeholder="最小面积"
-                      value={areaRange[0]}
-                      onChange={value => setAreaRange([value ?? 0, areaRange[1]])}
-                    />
-                    <Input
-                      id="asset-area-range-separator"
-                      name="asset-area-range-separator"
-                      style={{ width: '10%', borderLeft: 0, borderRight: 0, pointerEvents: 'none' }}
-                      placeholder="~"
-                      disabled
-                    />
-                    <InputNumber
-                      id="asset-area-max"
-                      name="asset-area-max"
-                      style={{ width: '45%' }}
-                      placeholder="最大面积"
-                      value={areaRange[1]}
-                      onChange={value => setAreaRange([areaRange[0], value ?? 100000])}
-                    />
-                  </Space.Compact>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12} md={8}>
-                <Form.Item name="dateRange" label="创建日期">
-                  <RangePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12} md={8}>
-                <Form.Item label="排序方式">
-                  <Space.Compact>
-                    <Form.Item name="sort_field" noStyle>
-                      <Select style={{ width: '60%' }} defaultValue="created_at">
-                        <Option value="created_at">创建时间</Option>
-                        <Option value="property_name">物业名称</Option>
-                        <Option value="total_area">建筑面积</Option>
-                        <Option value="rentable_area">可租面积</Option>
-                      </Select>
-                    </Form.Item>
-                    <Form.Item name="sort_order" noStyle>
-                      <Select style={{ width: '40%' }} defaultValue="desc">
-                        <Option value="asc">升序</Option>
-                        <Option value="desc">降序</Option>
-                      </Select>
-                    </Form.Item>
-                  </Space.Compact>
-                </Form.Item>
-              </Col>
-            </Row>
-          </>
+          <AdvancedSearchFields
+            ownershipEntities={ownershipEntities}
+            businessCategories={businessCategories}
+            ownershipEntityLoading={ownershipLoading}
+            businessCategoryLoading={businessLoading}
+            areaRange={areaRange}
+            onAreaMinChange={handleAreaMinChange}
+            onAreaMaxChange={handleAreaMaxChange}
+          />
         )}
       </Form>
 
-      {/* 保存搜索条件弹窗 */}
-      <Modal
-        title="保存搜索条件"
+      <SaveSearchModal
         open={saveModalVisible}
-        onOk={handleSaveSearch}
-        onCancel={() => setSaveModalVisible(false)}
-        destroyOnHidden
-      >
-        <Input
-          placeholder="输入保存名称"
-          value={saveName}
-          onChange={e => setSaveName(e.target.value)}
-          onPressEnter={handleSaveSearch}
-        />
-      </Modal>
+        value={saveName}
+        onChange={handleSaveNameChange}
+        onSave={handleSaveSearch}
+        onCancel={handleCloseSaveModal}
+      />
 
-      {/* 搜索历史弹窗 */}
-      <Modal
-        title="搜索历史"
+      <SearchHistoryModal
         open={historyModalVisible}
-        onCancel={() => {
-          setHistoryModalVisible(false);
-          setEditingHistoryId(null);
-          setEditingName('');
-        }}
-        footer={null}
-        width={600}
-        destroyOnHidden
-      >
-        <List
-          dataSource={searchHistory}
-          locale={{
-            emptyText: '暂无搜索历史',
-          }}
-          renderItem={item => (
-            <List.Item
-              key={item.id}
-              actions={[
-                <Button
-                  key="apply"
-                  type="link"
-                  size="small"
-                  onClick={() => handleApplyHistory(item.id)}
-                >
-                  应用
-                </Button>,
-                <Button
-                  key="edit"
-                  type="link"
-                  size="small"
-                  onClick={() => handleEditHistory(item.id, item.name)}
-                >
-                  编辑
-                </Button>,
-                <Popconfirm
-                  key="delete"
-                  title="确定要删除这条历史记录吗？"
-                  onConfirm={() => handleDeleteHistory(item.id)}
-                  okText="确定"
-                  cancelText="取消"
-                >
-                  <Button type="link" size="small" danger>
-                    删除
-                  </Button>
-                </Popconfirm>,
-              ]}
-            >
-              <List.Item.Meta
-                title={
-                  editingHistoryId === item.id ? (
-                    <Input
-                      size="small"
-                      value={editingName}
-                      onChange={e => setEditingName(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onPressEnter={handleSaveEdit}
-                      style={{ width: 200 }}
-                    />
-                  ) : (
-                    <Text>{item.name}</Text>
-                  )
-                }
-                description={
-                  <Space orientation="vertical" size="small">
-                    <Text type="secondary">
-                      保存时间: {dayjs(item.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-                    </Text>
-                    <Text type="secondary">条件数: {Object.keys(item.conditions).length}</Text>
-                  </Space>
-                }
-              />
-            </List.Item>
-          )}
-        />
-
-        {searchHistory.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <Popconfirm
-              title="确定要清空所有搜索历史吗？"
-              onConfirm={clearSearchHistory}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button danger size="small">
-                清空历史
-              </Button>
-            </Popconfirm>
-          </div>
-        )}
-      </Modal>
+        historyItems={searchHistory}
+        editingHistoryId={editingHistoryId}
+        editingName={editingName}
+        onApply={handleApplyHistory}
+        onEdit={handleEditHistory}
+        onDelete={handleDeleteHistory}
+        onSaveEdit={handleSaveEdit}
+        onEditNameChange={handleEditNameChange}
+        onClear={clearSearchHistory}
+        onCancel={handleCloseHistoryModal}
+      />
     </Card>
   );
 };
 
-export default AssetSearch;
+export default React.memo(AssetSearch);

@@ -42,8 +42,8 @@ import {
   OrganizationStatistics,
   OrganizationHistory,
   OrganizationTree,
-} from '../../types/organization';
-import { organizationService } from '../../services/organizationService';
+} from '@/types/organization';
+import { organizationService } from '@/services/organizationService';
 // 组织表单数据类型
 interface OrganizationFormData {
   name: string;

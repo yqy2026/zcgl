@@ -14,7 +14,7 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....crud.task import excel_task_config_crud, task_crud
 from ....database import get_db
 from ....enums.task import TaskStatus
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import get_current_active_user, require_permission
 from ....models.auth import User
 from ....schemas.task import (
     ExcelTaskConfigCreate,
@@ -290,7 +290,7 @@ def get_recent_tasks(
 def create_excel_config(
     config_in: ExcelTaskConfigCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> ExcelTaskConfigResponse:
     """
     创建Excel任务配置
@@ -313,6 +313,7 @@ def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> list[ExcelTaskConfigResponse]:
     """
     获取Excel任务配置列表
@@ -335,6 +336,7 @@ def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> ExcelTaskConfigResponse:
     """
     获取默认的Excel任务配置
@@ -358,7 +360,9 @@ def get_default_excel_config(
     summary="获取Excel配置详情",
 )
 def get_excel_config(
-    config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
+    config_id: str = Path(..., description="配置ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> ExcelTaskConfigResponse:
     """
     获取单个Excel配置的详细信息
@@ -381,6 +385,7 @@ def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
     config_in: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> ExcelTaskConfigResponse:
     """
     更新Excel任务配置
@@ -405,7 +410,9 @@ def update_excel_config(
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
 def delete_excel_config(
-    config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
+    config_id: str = Path(..., description="配置ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> dict[str, str]:
     """
     删除Excel配置（软删除）

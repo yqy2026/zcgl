@@ -1,8 +1,8 @@
 import React from 'react';
 import { Form, Input, Row, Col, Card } from 'antd';
-import { DictionarySelect } from '../../Dictionary';
-import OwnershipSelect from '../../Ownership/OwnershipSelect';
-import ProjectSelect from '../../Project/ProjectSelect';
+import { DictionarySelect } from '@/components/Dictionary';
+import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
+import ProjectSelect from '@/components/Project/ProjectSelect';
 
 /**
  * AssetForm - Basic Info Section

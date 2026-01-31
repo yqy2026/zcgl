@@ -975,9 +975,8 @@ class TestExcelOperations:
 class TestAttachmentManagement:
     """Tests for attachment management endpoints"""
 
-    @pytest.mark.asyncio
     @patch("src.api.v1.rent_contract.attachments.rent_contract")
-    async def test_get_contract_attachments_success(
+    def test_get_contract_attachments_success(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test successful attachment list retrieval"""
@@ -1006,7 +1005,7 @@ class TestAttachmentManagement:
 
         mock_order.all.return_value = [mock_attachment]
 
-        result = await get_contract_attachments(
+        result = get_contract_attachments(
             contract_id="contract-123",
             current_user=mock_current_user,
             db=mock_db,
@@ -1015,9 +1014,8 @@ class TestAttachmentManagement:
         assert len(result) == 1
         assert result[0]["file_name"] == "test.pdf"
 
-    @pytest.mark.asyncio
     @patch("src.api.v1.rent_contract.attachments.rent_contract")
-    async def test_get_contract_attachments_contract_not_found(
+    def test_get_contract_attachments_contract_not_found(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test getting attachments for non-existent contract"""
@@ -1026,7 +1024,7 @@ class TestAttachmentManagement:
         mock_rent_contract.get.return_value = None
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            await get_contract_attachments(
+            get_contract_attachments(
                 contract_id="nonexistent",
                 current_user=mock_current_user,
                 db=mock_db,
@@ -1034,10 +1032,7 @@ class TestAttachmentManagement:
 
         assert exc_info.value.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_download_contract_attachment_not_found(
-        self, mock_db, mock_current_user
-    ):
+    def test_download_contract_attachment_not_found(self, mock_db, mock_current_user):
         """Test downloading non-existent attachment"""
         from src.api.v1.rent_contract.attachments import download_contract_attachment
 
@@ -1048,7 +1043,7 @@ class TestAttachmentManagement:
         mock_filter.first.return_value = None
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            await download_contract_attachment(
+            download_contract_attachment(
                 contract_id="contract-123",
                 attachment_id="nonexistent",
                 current_user=mock_current_user,
@@ -1057,10 +1052,7 @@ class TestAttachmentManagement:
 
         assert exc_info.value.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_delete_contract_attachment_not_found(
-        self, mock_db, mock_current_user
-    ):
+    def test_delete_contract_attachment_not_found(self, mock_db, mock_current_user):
         """Test deleting non-existent attachment"""
         from src.api.v1.rent_contract.attachments import delete_contract_attachment
 
@@ -1071,7 +1063,7 @@ class TestAttachmentManagement:
         mock_filter.first.return_value = None
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            await delete_contract_attachment(
+            delete_contract_attachment(
                 contract_id="contract-123",
                 attachment_id="nonexistent",
                 current_user=mock_current_user,

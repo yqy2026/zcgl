@@ -27,6 +27,8 @@ SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
+JWT_AUDIENCE = settings.JWT_AUDIENCE
+JWT_ISSUER = settings.JWT_ISSUER
 
 
 class AuthenticationService:
@@ -43,9 +45,15 @@ class AuthenticationService:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
 
-    def _is_token_revoked(self, jti: JtiType) -> bool:
+    def _is_token_revoked(
+        self, jti: JtiType | None, user_id: str | None = None
+    ) -> bool:
         """检查令牌是否已被撤销"""
-        return self.token_blacklist.is_blacklisted(jti)
+        if not settings.TOKEN_BLACKLIST_ENABLED:
+            return False
+        if jti is None and user_id is None:
+            return False
+        return self.token_blacklist.is_blacklisted(jti=jti, user_id=user_id)
 
     def authenticate_user(self, username: str, password: str) -> User | None:
         """用户认证"""
@@ -134,8 +142,8 @@ class AuthenticationService:
             "exp": int(
                 (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
             ),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": JWT_AUDIENCE,
+            "iss": JWT_ISSUER,
         }
         access_token: TokenType = jwt.encode(
             access_token_data, SECRET_KEY, algorithm=ALGORITHM
@@ -151,8 +159,8 @@ class AuthenticationService:
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()),
             "nbf": int(now.timestamp()),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": JWT_AUDIENCE,
+            "iss": JWT_ISSUER,
         }
         refresh_token: TokenType = jwt.encode(
             refresh_token_data, SECRET_KEY, algorithm=ALGORITHM
@@ -178,8 +186,8 @@ class AuthenticationService:
                 refresh_token,
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
-                audience="land-property-system",
-                issuer="land-property-auth",
+                audience=JWT_AUDIENCE,
+                issuer=JWT_ISSUER,
             )
             user_id: Any = payload.get("sub")
             token_type: Any = payload.get("type")
@@ -189,7 +197,7 @@ class AuthenticationService:
             if user_id is None or token_type != "refresh":  # nosec B105  # Token type string, not a password
                 return None
 
-            if jti and self._is_token_revoked(jti):
+            if self._is_token_revoked(jti, user_id=str(user_id) if user_id else None):
                 return None
 
         except JWTError as e:

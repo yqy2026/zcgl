@@ -12,7 +12,7 @@ import {
   TEST_COVERAGE_API,
   MONITORING_API,
   ERROR_REPORTING_API,
-} from '../constants/api';
+} from '@/constants/api';
 
 // 简单的内部日志工具
 const testLogger = {

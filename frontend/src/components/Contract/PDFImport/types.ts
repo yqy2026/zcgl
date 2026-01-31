@@ -3,7 +3,7 @@
  */
 
 import type { UploadFile } from 'antd';
-import type { SessionProgress, SystemInfoResponse } from '../../../services/pdfImportService';
+import type { SessionProgress, SystemInfoResponse } from '@/services/pdfImportService';
 
 export interface PdfImportUploaderProps {
   onUploadSuccess: (sessionId: string, fileInfo: UploadFile) => void;

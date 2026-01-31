@@ -6,9 +6,9 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { DICTIONARY_CONFIGS } from './config';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const dictLogger = createLogger('Dictionary');
 

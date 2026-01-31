@@ -9,7 +9,7 @@
 
 安全设计：
 - 密钥通过环境变量 DATA_ENCRYPTION_KEY 提供
-- 密钥格式: {base64_key}:{version}
+- 密钥格式: {base64_key}:{version}（支持多版本: key1:1,key2:2）
 - 密文格式:
   - 确定性: enc:v{version}:base64(ciphertext)
   - 标准: enc:v{version}:base64(nonce):base64(ciphertext)
@@ -56,7 +56,7 @@ class EncryptionKeyManager:
 
     def __init__(self) -> None:
         """初始化密钥管理器，从环境加载密钥"""
-        self.key: bytes | None = None
+        self._keys: dict[int, bytes] = {}
         self.version: int = 1
         self._environment: str = get_environment().value
         self._load_key_from_env()
@@ -66,6 +66,7 @@ class EncryptionKeyManager:
         从环境变量加载并解析密钥
 
         密钥格式: {base64_key}:{version}
+        多版本格式: key1:1,key2:2
         示例: MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz:1
 
         生产环境行为：
@@ -96,48 +97,70 @@ class EncryptionKeyManager:
             return
 
         try:
-            # 解析格式: base64_key:version
-            if ":" in env_key:
-                key_b64, version_str = env_key.rsplit(":", 1)
-                try:
-                    self.version = int(version_str)
-                except ValueError:
-                    logger.warning(
-                        f"Invalid key version: {version_str}, using version 1"
-                    )
-                    self.version = 1
-                    key_b64 = env_key  # 整个字符串作为 key
-            else:
-                key_b64 = env_key
-                self.version = 1
-
-            # Base64 解码
-            self.key = base64.b64decode(key_b64)
-
-            # 验证密钥长度（AES-256 需要 32 字节）
-            if len(self.key) < 32:
-                logger.error(
-                    f"DATA_ENCRYPTION_KEY too short: {len(self.key)} bytes "
-                    f"(minimum 32 bytes required). Encryption disabled."
-                )
-                self.key = None
+            # 支持多密钥格式：key1:1,key2:2
+            key_parts = [part.strip() for part in env_key.split(",") if part.strip()]
+            if not key_parts:
                 return
 
-            logger.info(f"Encryption key loaded (version {self.version})")
+            for part in key_parts:
+                key_b64 = part
+                version = 1
+                if ":" in part:
+                    key_b64, version_str = part.rsplit(":", 1)
+                    try:
+                        version = int(version_str)
+                    except ValueError:
+                        logger.warning(
+                            f"Invalid key version: {version_str}, using version 1"
+                        )
+                        key_b64 = part
+                        version = 1
+
+                try:
+                    key_bytes = base64.b64decode(key_b64)
+                except Exception as e:
+                    logger.error(f"Failed to decode encryption key: {e}")
+                    continue
+
+                if len(key_bytes) < 32:
+                    logger.error(
+                        f"DATA_ENCRYPTION_KEY too short: {len(key_bytes)} bytes "
+                        f"(minimum 32 bytes required). Skipping version {version}."
+                    )
+                    continue
+
+                self._keys[version] = key_bytes
+
+            if not self._keys:
+                logger.error(
+                    "No valid DATA_ENCRYPTION_KEY entries loaded. Encryption disabled."
+                )
+                return
+
+            self.version = max(self._keys.keys())
+            logger.info(
+                "Encryption keys loaded (versions: %s), current=%s",
+                sorted(self._keys.keys()),
+                self.version,
+            )
 
         except Exception as e:
             logger.error(
                 f"Failed to load DATA_ENCRYPTION_KEY: {e}. Encryption disabled."
             )
-            self.key = None
+            self._keys = {}
 
     def is_available(self) -> bool:
         """检查加密密钥是否可用"""
-        return self.key is not None
+        return bool(self._keys)
 
-    def get_key(self) -> bytes | None:
+    def get_key(self, version: int | None = None) -> bytes | None:
         """获取加密密钥（返回 None 表示密钥不可用）"""
-        return self.key
+        if not self._keys:
+            return None
+        if version is None:
+            return self._keys.get(self.version)
+        return self._keys.get(version)
 
     def get_version(self) -> int:
         """获取当前密钥版本"""
@@ -194,6 +217,16 @@ class FieldEncryptor:
         digest.update(str(version).encode("utf-8"))
         # 使用前16字节作为IV
         return digest.finalize()[:16]
+
+    @staticmethod
+    def _parse_version(version_str: str) -> int | None:
+        """解析密文中的版本号"""
+        if version_str.startswith("v"):
+            version_str = version_str[1:]
+        try:
+            return int(version_str)
+        except ValueError:
+            return None
 
     # --------------------------------------------------------------------
     # 确定性加密 (用于可搜索字段)
@@ -283,17 +316,22 @@ class FieldEncryptor:
 
             _, version_str, ciphertext_b64 = parts
 
-            # 验证版本（可选：未来支持多版本密钥）
-            # try:
-            #     version = int(version_str[1:])  # 去掉 'v'
-            # except ValueError:
-            #     return ciphertext
+            version = self._parse_version(version_str)
+            key = self.key_manager.get_key(version)
+            if key is None:
+                logger.warning(
+                    f"Cannot decrypt: encryption key for version {version_str} not available"
+                )
+                return ciphertext
 
             # Base64 解码
             ciphertext_bytes = base64.b64decode(ciphertext_b64)
 
             # 派生相同的IV
-            iv = self._derive_deterministic_iv(key, self.key_manager.get_version())
+            iv = self._derive_deterministic_iv(
+                key,
+                version if version is not None else self.key_manager.get_version(),
+            )
 
             # 解密（AES-CBC）
             cipher = Cipher(algorithms.AES(key[:32]), modes.CBC(iv))
@@ -401,6 +439,14 @@ class FieldEncryptor:
                 return ciphertext  # 格式错误，返回原值
 
             _, version_str, nonce_b64, ciphertext_b64 = parts
+
+            version = self._parse_version(version_str)
+            key = self.key_manager.get_key(version)
+            if key is None:
+                logger.warning(
+                    f"Cannot decrypt: encryption key for version {version_str} not available"
+                )
+                return ciphertext
 
             # Base64 解码
             nonce = base64.b64decode(nonce_b64)

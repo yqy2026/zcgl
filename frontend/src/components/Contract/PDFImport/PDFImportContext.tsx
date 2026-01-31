@@ -12,9 +12,9 @@ import {
 } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 
-import { pdfImportService } from '../../../services/pdfImportService';
-import type { SessionProgress, SystemInfoResponse } from '../../../services/pdfImportService';
-import { createLogger } from '../../../utils/logger';
+import { pdfImportService } from '@/services/pdfImportService';
+import type { SessionProgress, SystemInfoResponse } from '@/services/pdfImportService';
+import { createLogger } from '@/utils/logger';
 import type { PDFImportContextType, ProcessingStep, ProcessingOptions, UploadStats } from './types';
 import { DEFAULT_PROCESSING_OPTIONS } from './types';
 

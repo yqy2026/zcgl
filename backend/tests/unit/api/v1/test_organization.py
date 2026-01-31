@@ -262,8 +262,8 @@ class TestCreateOrganization:
             db=MagicMock(), org_data=org_data, user=MagicMock()
         )
 
-        assert result["name"] == "New Organization"
-        assert result["code"] == "NEW001"
+        assert result["name"] == sample_organization["name"]
+        assert result["code"] == sample_organization["code"]
         mock_organization_service.create_organization.assert_called_once()
 
     @pytest.mark.asyncio

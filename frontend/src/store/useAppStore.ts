@@ -22,7 +22,6 @@ interface AppState {
 
   // 通知状态
   notifications: Notification[];
-  notificationTimers: Map<string, ReturnType<typeof setTimeout>>;
 
   // Actions
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -53,7 +52,23 @@ const initialState = {
     showAdvancedSearch: false,
   },
   notifications: [],
-  notificationTimers: new Map<string, ReturnType<typeof setTimeout>>(),
+};
+
+const notificationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+const clearNotificationTimer = (id: string): void => {
+  const timer = notificationTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    notificationTimers.delete(id);
+  }
+};
+
+const clearAllNotificationTimers = (): void => {
+  notificationTimers.forEach(timer => {
+    clearTimeout(timer);
+  });
+  notificationTimers.clear();
 };
 
 export const useAppStore = create<AppState>()(
@@ -82,45 +97,34 @@ export const useAppStore = create<AppState>()(
           };
 
           set(state => {
-            const timers = new Map(state.notificationTimers);
             if (notification.duration !== 0) {
               const timerId = setTimeout(() => {
                 get().removeNotification(id);
               }, notification.duration ?? 4500);
-              timers.set(id, timerId);
+              notificationTimers.set(id, timerId);
             }
 
             return {
               notifications: [...state.notifications, newNotification],
-              notificationTimers: timers,
             };
           });
         },
 
         removeNotification: id =>
           set(state => {
-            const timers = new Map(state.notificationTimers);
-            const timer = timers.get(id);
-            if (timer) {
-              clearTimeout(timer);
-              timers.delete(id);
-            }
+            clearNotificationTimer(id);
 
             return {
               notifications: state.notifications.filter(n => n.id !== id),
-              notificationTimers: timers,
             };
           }),
 
         clearNotifications: () =>
-          set(state => {
-            state.notificationTimers.forEach(timer => {
-              clearTimeout(timer);
-            });
+          set(() => {
+            clearAllNotificationTimers();
 
             return {
               notifications: [],
-              notificationTimers: new Map<string, ReturnType<typeof setTimeout>>(),
             };
           }),
       }),

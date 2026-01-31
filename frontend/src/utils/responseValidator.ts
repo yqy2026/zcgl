@@ -12,7 +12,7 @@ import type {
   StandardApiResponse,
   PaginatedApiResponse,
   ErrorResponse,
-} from '../types/apiResponse';
+} from '@/types/apiResponse';
 
 // ==================== Zod Schemas ====================
 

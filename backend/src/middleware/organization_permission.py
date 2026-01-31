@@ -232,7 +232,7 @@ class OrganizationPermissionChecker:
         self.required_permission = required_permission
         self.organization_id_param = organization_id_param
 
-    def __call__(
+    async def __call__(
         self,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
@@ -247,9 +247,40 @@ class OrganizationPermissionChecker:
 
         # If there's an organization ID parameter, check organization permission
         if self.organization_id_param:
-            # Extract organization_id from request
-            # Due to middleware design limitations, we do basic check here
-            pass
+            organization_id = await self._extract_organization_id(request)
+            if organization_id is None:
+                raise bad_request("组织ID不能为空")
+
+            org_service = OrganizationPermissionService(db)
+            if not org_service.check_organization_access(
+                current_user.id, organization_id
+            ):
+                # Log permission denied event
+                security_logger = SecurityEventLogger(db)
+
+                client_ip = request.client.host if request.client else "unknown"
+                try:
+                    ipaddress.ip_address(client_ip)
+                except ValueError:
+                    client_ip = "unknown"
+
+                security_logger.log_permission_denied(
+                    user_id=str(current_user.id),
+                    resource=f"organization:{organization_id}",
+                    action=self.required_permission,
+                    ip=client_ip,
+                )
+
+                if security_logger.should_alert(ip=client_ip):
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Security alert threshold exceeded for IP: {client_ip}, "
+                        f"user: {current_user.id}, resource: organization:{organization_id}"
+                    )
+
+                raise forbidden("无权访问该组织的数据")
 
         # Check if user has any organization access permissions
         org_service = OrganizationPermissionService(db)
@@ -287,6 +318,31 @@ class OrganizationPermissionChecker:
             raise forbidden("无任何组织访问权限")
 
         return current_user
+
+    async def _extract_organization_id(self, request: Request) -> str | None:
+        """从请求中提取组织ID"""
+        param = self.organization_id_param
+        if not param:
+            return None
+
+        if param in request.path_params:
+            return str(request.path_params.get(param))
+
+        if param in request.query_params:
+            return str(request.query_params.get(param))
+
+        content_type = request.headers.get("content-type", "")
+        if content_type.startswith("application/json"):
+            try:
+                payload = await request.json()
+                if isinstance(payload, dict):
+                    value = payload.get(param)
+                    if value is not None:
+                        return str(value)
+            except Exception:
+                return None
+
+        return None
 
 
 def require_organization_permission(

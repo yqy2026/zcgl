@@ -12,6 +12,7 @@ import jwt
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
+from .....core.config import settings
 from .....core.exception_handler import (
     BaseBusinessError,
     bad_request,
@@ -209,25 +210,33 @@ def logout(
     cookie_manager.clear_auth_cookie(response)
     cookie_manager.clear_refresh_cookie(response)
 
-    # 提取并黑名单当前JWT令牌
+    # 提取并黑名单当前JWT令牌（优先Header，回退Cookie）
+    token = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+    else:
+        cookie_header = request.headers.get("cookie", "")
+        token = cookie_manager.get_token_from_cookie(
+            cookie_header, cookie_name=cookie_manager.cookie_name
+        )
+
+    if token:
         try:
             # 解码JWT获取jti和exp
             payload = jwt.decode(
                 token,
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
-                audience="land-property-system",
-                issuer="land-property-auth",
+                audience=settings.JWT_AUDIENCE,
+                issuer=settings.JWT_ISSUER,
                 options={"verify_exp": False},  # 允许解码已过期的令牌
             )
             jti = payload.get("jti")
             exp = payload.get("exp")
 
             if jti and exp:
-                from ....security.token_blacklist import blacklist_manager
+                from .....security.token_blacklist import blacklist_manager
 
                 blacklist_manager.add_token(jti, exp)
         except Exception as e:

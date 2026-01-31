@@ -3,8 +3,8 @@ import { Form, Button, DatePicker, Upload, List, Tag, Row, Col, Card, Typography
 import { MessageManager } from '@/utils/messageManager';
 import { UploadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
-import GroupedSelectSingle from '../../Common/GroupedSelect';
-import { BusinessModelOptions } from '../../../utils/enumHelpers';
+import GroupedSelectSingle from '@/components/Common/GroupedSelect';
+import { BusinessModelOptions } from '@/utils/enumHelpers';
 import { useAssetFormContext } from './AssetFormContext';
 import { COLORS } from '@/styles/colorMap';
 

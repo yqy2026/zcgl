@@ -9,6 +9,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from ..constants.file_size_constants import (
+    DEFAULT_MAX_EXCEL_FILE_SIZE,
+    DEFAULT_MAX_FILE_SIZE,
+)
 from ..core.exception_handler import BusinessValidationError
 
 # 危险的文件名字符
@@ -288,7 +292,7 @@ def create_safe_upload_directory(base_path: str, subfolder: str = "") -> Path:
 
 
 def sanitize_file_content(
-    filename: str, content: bytes, max_size: int = 100 * 1024 * 1024
+    filename: str, content: bytes, max_size: int = DEFAULT_MAX_EXCEL_FILE_SIZE
 ) -> bytes:
     """
     清理文件内容（移除潜在的恶意代码）
@@ -354,7 +358,7 @@ def validate_upload_file(
     content_type: str | None,
     file_size: int,
     allowed_extensions: list[str] | None = None,
-    max_size: int = 50 * 1024 * 1024,
+    max_size: int = DEFAULT_MAX_FILE_SIZE,
 ) -> dict[str, Any]:
     """
     全面验证上传的文件

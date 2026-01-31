@@ -37,7 +37,7 @@ import type {
   OwnershipListResponse,
   OwnershipStatisticsResponse,
 } from '@/types/ownership';
-import { OwnershipForm } from '../Forms';
+import { OwnershipForm } from '@/components/Forms';
 import OwnershipDetail from './OwnershipDetail';
 
 const { Search } = Input;

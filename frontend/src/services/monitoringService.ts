@@ -8,8 +8,8 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../utils/responseExtractor';
-import { createLogger } from '../utils/logger';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('MonitoringService');
 

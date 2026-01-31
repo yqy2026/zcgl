@@ -9,8 +9,17 @@ Refactored service layer organized by business domain:
 - core/         Core services
 """
 
+# Optional service imports; log failures for visibility during startup.
+import logging
+
 # Import core services with error handling for gradual migration
 __all__: list[str] = []
+logger = logging.getLogger(__name__)
+
+
+def _log_import_error(service_name: str) -> None:
+    logger.warning(f"Service import failed: {service_name}", exc_info=True)
+
 
 # Permission services
 try:
@@ -18,7 +27,7 @@ try:
 
     __all__.append("RBACService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("permission.rbac_service.RBACService")
 
 try:
     from .permission.permission_cache_service import (
@@ -27,7 +36,9 @@ try:
 
     __all__.append("get_permission_cache_service")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error(
+        "permission.permission_cache_service.get_permission_cache_service"
+    )
 
 # Core services
 try:
@@ -35,14 +46,14 @@ try:
 
     __all__.append("AuthService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("core.auth_service.AuthService")
 
 try:
     from .core.security_service import SecurityService as SecurityService
 
     __all__.append("SecurityService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("core.security_service.SecurityService")
 
 # Core services - Audit Service
 try:
@@ -50,7 +61,7 @@ try:
 
     __all__.append("AuditService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("core.audit_service.AuditService")
 
 try:
     from .core.error_recovery_service import (
@@ -59,6 +70,7 @@ try:
 
     __all__.append("ErrorRecoveryEngine")
 except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("core.error_recovery_service.ErrorRecoveryEngine")
 
     class _ErrorRecoveryEngine:
         def __init__(self, *args: object, **kwargs: object) -> None:
@@ -73,7 +85,7 @@ try:
 
     __all__.append("AssetCalculator")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("asset.asset_calculator.AssetCalculator")
 
 try:
     from .asset.asset_calculator import (
@@ -82,7 +94,7 @@ try:
 
     __all__.append("OccupancyRateCalculator")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("asset.asset_calculator.OccupancyRateCalculator")
 
 # Document services
 try:
@@ -90,14 +102,14 @@ try:
 
     __all__.append("PDFImportService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("document.pdf_import_service.PDFImportService")
 
 try:
     from .document.excel_export import ExcelExportService as ExcelExportService
 
     __all__.append("ExcelExportService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("document.excel_export.ExcelExportService")
 
 # Data analysis services
 try:
@@ -105,11 +117,11 @@ try:
 
     __all__.append("StatisticsService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("analytics.statistics.StatisticsService")
 
 try:
     from .analytics.data_filter import DataFilterService as DataFilterService
 
     __all__.append("DataFilterService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("analytics.data_filter.DataFilterService")

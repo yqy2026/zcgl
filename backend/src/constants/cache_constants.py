@@ -1,0 +1,4 @@
+"""Shared cache TTL constants."""
+
+CACHE_TTL_SHORT_SECONDS = 600
+CACHE_TTL_MEDIUM_SECONDS = 1800

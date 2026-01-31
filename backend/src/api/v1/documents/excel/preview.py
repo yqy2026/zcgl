@@ -12,6 +12,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from src.core.exception_handler import BusinessValidationError
+from src.constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from src.database import get_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
@@ -104,7 +105,7 @@ async def preview_excel_advanced(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
         ],
-        max_size=50 * 1024 * 1024,  # 50MB
+        max_size=DEFAULT_MAX_FILE_SIZE,
     )
 
     # 创建验证结果
@@ -158,7 +159,7 @@ async def preview_excel(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
         ],
-        max_size=50 * 1024 * 1024,  # 50MB
+        max_size=DEFAULT_MAX_FILE_SIZE,
     )
 
     # 验证文件类型（额外检查）

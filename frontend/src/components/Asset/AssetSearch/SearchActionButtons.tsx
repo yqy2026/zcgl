@@ -21,7 +21,7 @@ interface SearchActionButtonsProps {
   onShowHistory: () => void;
 }
 
-export const SearchActionButtons: React.FC<SearchActionButtonsProps> = ({
+export const SearchActionButtons = React.memo(function SearchActionButtons({
   expanded,
   loading = false,
   showSaveButton = true,
@@ -31,7 +31,7 @@ export const SearchActionButtons: React.FC<SearchActionButtonsProps> = ({
   onToggleExpanded,
   onSave,
   onShowHistory,
-}) => {
+}: SearchActionButtonsProps) {
   return (
     <Space>
       {showSaveButton && (
@@ -73,4 +73,4 @@ export const SearchActionButtons: React.FC<SearchActionButtonsProps> = ({
       </Button>
     </Space>
   );
-};
+});

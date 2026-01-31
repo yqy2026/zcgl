@@ -3,7 +3,7 @@
  * 资产服务相关的接口定义
  */
 
-import type { AreaStatistics } from '../../types/asset';
+import type { AreaStatistics } from '@/types/asset';
 
 // Re-export types from asset.ts for convenience
 export type {
@@ -17,9 +17,9 @@ export type {
   AssetCustomField,
   CustomFieldValue,
   AreaStatistics,
-} from '../../types/asset';
+} from '@/types/asset';
 
-export type { StandardApiResponse, PaginatedApiResponse } from '../../types/apiResponse';
+export type { StandardApiResponse, PaginatedApiResponse } from '@/types/apiResponse';
 
 // ==================== 字段相关接口 ====================
 

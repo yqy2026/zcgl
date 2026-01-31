@@ -9,7 +9,7 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   PROPERTY_CERTIFICATE_ROUTES,
-} from '../constants/routes';
+} from '@/constants/routes';
 
 /**
  * 受保护的路由配置

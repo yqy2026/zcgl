@@ -9,10 +9,10 @@ interface BasicSearchFieldsProps {
   businessCategoryOptions?: Array<{ value: string; label: string }>;
 }
 
-export const BasicSearchFields: React.FC<BasicSearchFieldsProps> = ({
+export const BasicSearchFields = React.memo(function BasicSearchFields({
   ownershipEntityOptions: _ownershipEntityOptions = [],
   businessCategoryOptions: _businessCategoryOptions = [],
-}) => {
+}: BasicSearchFieldsProps) {
   return (
     <>
       <Col xs={24} sm={12} md={8} lg={6}>
@@ -83,4 +83,4 @@ export const BasicSearchFields: React.FC<BasicSearchFieldsProps> = ({
       </Col>
     </>
   );
-};
+});

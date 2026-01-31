@@ -7,7 +7,10 @@ import functools
 import os
 from collections.abc import Awaitable, Callable
 
+from fastapi import Request
+
 from ..core.exception_handler import not_found
+from ..middleware.security_middleware import get_client_ip
 
 
 def is_debug_mode() -> bool:
@@ -53,8 +56,16 @@ def require_debug_mode[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     return wrapper
 
 
+def require_localhost(request: Request) -> None:
+    """限制仅本地访问（用于调试端点）"""
+    client_ip = get_client_ip(request)
+    if client_ip not in {"127.0.0.1", "::1"}:
+        raise not_found("Not Found")
+
+
 __all__ = [
     "is_debug_mode",
     "debug_only",
     "require_debug_mode",
+    "require_localhost",
 ]

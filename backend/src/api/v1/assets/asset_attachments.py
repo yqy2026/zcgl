@@ -20,6 +20,7 @@ from ....utils import file_security
 
 router = APIRouter()
 
+
 def _resolve_attachment_path(asset_id: str, filename: str) -> Path:
     """Resolve a safe attachment path under the asset directory."""
     base_dir = Path("uploads") / "attachments" / asset_id

@@ -6,7 +6,6 @@
 
 from fastapi import APIRouter
 
-from ..analytics import statistics
 from . import attachments, contracts, excel_ops, ledger, lifecycle, terms
 
 # 创建主路由器
@@ -17,7 +16,6 @@ router.include_router(contracts.router)
 router.include_router(lifecycle.router)
 router.include_router(terms.router)
 router.include_router(ledger.router)
-router.include_router(statistics.router)
 router.include_router(excel_ops.router)
 router.include_router(attachments.router)
 

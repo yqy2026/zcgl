@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Typography, Button, Space, Row, Col, Alert } from 'antd';
 import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
@@ -10,15 +10,15 @@ import type {
   TableCurrentDataSource,
   TablePaginationConfig,
 } from 'antd/es/table/interface';
-import { assetService } from '../../services/assetService';
-import { analyticsService } from '../../services/analyticsService';
-import { useAssets } from '../../hooks/useAssets';
-import AssetList from '../../components/Asset/AssetList';
-import AssetSearch from '../../components/Asset/AssetSearch';
-import AssetAreaSummary from '../../components/Asset/AssetAreaSummary';
-import type { Asset, AssetSearchParams } from '../../types/asset';
-import { createLogger } from '../../utils/logger';
-import { PageContainer, ContentSection, LoadingContainer } from '../../components/Common/StateContainer';
+import { assetService } from '@/services/assetService';
+import { analyticsService } from '@/services/analyticsService';
+import { useAssets } from '@/hooks/useAssets';
+import AssetList from '@/components/Asset/AssetList';
+import AssetSearch from '@/components/Asset/AssetSearch';
+import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
+import type { Asset, AssetSearchParams } from '@/types/asset';
+import { createLogger } from '@/utils/logger';
+import { PageContainer, ContentSection, LoadingContainer } from '@/components/Common/StateContainer';
 
 const pageLogger = createLogger('AssetList');
 
@@ -42,23 +42,23 @@ const AssetListPage: React.FC = () => {
   });
 
   // 处理搜索
-  const handleSearch = (params: AssetSearchParams) => {
+  const handleSearch = useCallback((params: AssetSearchParams) => {
     setSearchParams({
       ...params,
       page: 1,
     });
-  };
+  }, []);
 
   // 重置搜索
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setSearchParams({
       page: 1,
       page_size: 20,
     });
-  };
+  }, []);
 
   // 处理表格变化
-  const handleTableChange = (
+  const handleTableChange = useCallback((
     pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<Asset> | SorterResult<Asset>[],
@@ -80,15 +80,15 @@ const AssetListPage: React.FC = () => {
       sort_by: sortField,
       sort_order: sortOrder,
     }));
-  };
+  }, []);
 
   // 处理编辑
-  const handleEdit = (asset: { id: string }) => {
+  const handleEdit = useCallback((asset: { id: string }) => {
     navigate(`/assets/${asset.id}/edit`);
-  };
+  }, [navigate]);
 
   // 处理删除
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       await assetService.deleteAsset(id);
       MessageManager.success('删除成功');
@@ -98,22 +98,22 @@ const AssetListPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : '删除失败';
       MessageManager.error(errorMessage);
     }
-  };
+  }, []);
 
   // 处理查看
-  const handleView = (asset: { id: string }) => {
+  const handleView = useCallback((asset: { id: string }) => {
     navigate(`/assets/${asset.id}`);
-  };
+  }, [navigate]);
 
   // 处理查看历史
-  const handleViewHistory = (asset: { id: string }) => {
+  const handleViewHistory = useCallback((asset: { id: string }) => {
     navigate(`/assets/${asset.id}/history`);
-  };
+  }, [navigate]);
 
   // 处理选择变化
-  const handleSelectChange = (selectedRowKeys: React.Key[]) => {
+  const handleSelectChange = useCallback((selectedRowKeys: React.Key[]) => {
     setSelectedRowKeys(selectedRowKeys);
-  };
+  }, []);
 
   // 处理导出所有资产
   const handleExportAll = async () => {

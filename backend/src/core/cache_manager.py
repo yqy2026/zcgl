@@ -9,9 +9,17 @@ import fnmatch
 import json
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
+
+try:
+    import redis
+
+    REDIS_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    REDIS_AVAILABLE = False  # pragma: no cover
+    redis = None  # type: ignore[assignment]  # pragma: no cover
 
 from ..constants.performance_constants import CacheTTL
 from .config import settings
@@ -140,6 +148,119 @@ class MemoryCache(CacheBackend):
         return None
 
 
+class RedisCache(CacheBackend):
+    """Redis缓存实现"""
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        db: int,
+        password: str | None = None,
+        socket_timeout: int = 2,
+        socket_connect_timeout: int = 2,
+    ) -> None:
+        if not REDIS_AVAILABLE:
+            raise RuntimeError("Redis library not available")
+
+        assert redis is not None
+        self.client = redis.Redis(
+            host=host,
+            port=port,
+            db=db,
+            password=password,
+            decode_responses=True,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=socket_connect_timeout,
+        )
+        # 验证连接
+        self.client.ping()
+
+    def get(self, key: str) -> Any | None:
+        """获取缓存值"""
+        try:
+            return self.client.get(key)
+        except Exception as e:
+            logger.error(f"Redis缓存获取失败: {e}")
+            return None
+
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """设置缓存值"""
+        try:
+            if (
+                not isinstance(value, (str, bytes, int, float, bool))
+                and value is not None
+            ):
+                value = json.dumps(value, ensure_ascii=False, default=str)
+            if ttl:
+                self.client.setex(key, ttl, value)
+            else:
+                self.client.set(key, value)
+            return True
+        except Exception as e:
+            logger.error(f"Redis缓存设置失败: {e}")
+            return False
+
+    def delete(self, key: str) -> bool:
+        """删除缓存值"""
+        try:
+            return bool(self.client.delete(key))
+        except Exception as e:
+            logger.error(f"Redis缓存删除失败: {e}")
+            return False
+
+    def exists(self, key: str) -> bool:
+        """检查缓存是否存在"""
+        try:
+            return bool(self.client.exists(key))
+        except Exception as e:
+            logger.error(f"Redis缓存存在性检查失败: {e}")
+            return False
+
+    def clear(self, pattern: str | None = None) -> bool:
+        """清空缓存"""
+        try:
+            if not pattern:
+                self.client.flushdb()
+                return True
+            keys = list(self.client.scan_iter(match=pattern))
+            if keys:
+                self.client.delete(*keys)
+            return True
+        except Exception as e:
+            logger.error(f"Redis缓存清空失败: {e}")
+            return False
+
+    def get_ttl(self, key: str) -> int | None:
+        """获取缓存剩余时间"""
+        try:
+            ttl = self.client.ttl(key)
+            if isinstance(ttl, Awaitable):
+                return None
+            if ttl is None:
+                return None
+            if ttl < 0:
+                return None
+            return int(ttl)
+        except Exception as e:
+            logger.error(f"Redis缓存TTL获取失败: {e}")
+            return None
+
+
+def _create_default_backend() -> CacheBackend:
+    if settings.REDIS_ENABLED and settings.REDIS_HOST:
+        try:
+            return RedisCache(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD,
+            )
+        except Exception as e:
+            logger.warning(f"Redis缓存初始化失败，已降级为内存缓存: {e}")
+    return MemoryCache()
+
+
 class CacheManager:
     """统一缓存管理器"""
 
@@ -150,14 +271,16 @@ class CacheManager:
         Args:
             backend: 缓存后端实现
         """
-        self.backend = backend or MemoryCache()
+        self.backend = backend or _create_default_backend()
         self.default_ttl = (
             settings.CACHE_TTL
             if hasattr(settings, "CACHE_TTL")
             else CacheTTL.SHORT_SECONDS
         )
         self.key_prefix = (
-            settings.CACHE_KEY_PREFIX
+            settings.CACHE_PREFIX
+            if hasattr(settings, "CACHE_PREFIX")
+            else settings.CACHE_KEY_PREFIX
             if hasattr(settings, "CACHE_KEY_PREFIX")
             else "zcgl"
         )
@@ -582,11 +705,11 @@ def _hash_function_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
 # 全局缓存管理器实例
 cache_manager = CacheManager()
 
-# 专用缓存实例
-analytics_cache = CacheManager(backend=MemoryCache(max_size=500))
+# 专用缓存实例（复用同一后端）
+analytics_cache = CacheManager(backend=cache_manager.backend)
 # 覆盖默认配置
 analytics_cache.default_ttl = 600  # 10分钟缓存
-analytics_cache.key_prefix = "analytics"
+analytics_cache.key_prefix = f"{cache_manager.key_prefix}:analytics"
 
 
 # 便捷函数

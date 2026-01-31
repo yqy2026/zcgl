@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -65,6 +65,8 @@ class RoleDetailResponse(BaseModel):
     updated_at: datetime
     created_by: str | None = None
     updated_by: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RolePermissionUpdateRequest(BaseModel):

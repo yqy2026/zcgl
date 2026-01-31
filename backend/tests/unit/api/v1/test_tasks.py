@@ -23,12 +23,13 @@ Endpoints Tested:
 17. GET /api/v1/tasks/cleanup - Cleanup old tasks
 """
 
+import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
+from src.core.exception_handler import BaseBusinessError
 from src.enums.task import TaskStatus, TaskType
 from src.schemas.task import (
     ExcelTaskConfigCreate,
@@ -116,13 +117,10 @@ def mock_current_user():
 class TestCreateTask:
     """Tests for POST /api/v1/tasks/ endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_create_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_create_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test creating task successfully"""
-        from src.api.v1.tasks import create_task
+        from src.api.v1.system.tasks import create_task
 
         task_data = TaskCreate(
             task_type=TaskType.EXCEL_IMPORT,
@@ -139,7 +137,7 @@ class TestCreateTask:
 
         mock_task_service.create_task.return_value = mock_task
 
-        result = await create_task(
+        result = create_task(
             task_in=task_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -147,13 +145,10 @@ class TestCreateTask:
         assert result.title == "Import Assets"
         mock_task_service.create_task.assert_called_once()
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_create_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_create_task_exception(self, mock_task_service, mock_db, mock_current_user):
         """Test creating task with exception"""
-        from src.api.v1.tasks import create_task
+        from src.api.v1.system.tasks import create_task
 
         task_data = TaskCreate(
             task_type=TaskType.EXCEL_IMPORT,
@@ -162,13 +157,11 @@ class TestCreateTask:
 
         mock_task_service.create_task.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_task(
-                task_in=task_data, db=mock_db, current_user=mock_current_user
-            )
+        with pytest.raises(BaseBusinessError) as exc_info:
+            create_task(task_in=task_data, db=mock_db, current_user=mock_current_user)
 
         assert exc_info.value.status_code == 500
-        assert "创建任务失败" in exc_info.value.detail
+        assert "创建任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -179,13 +172,10 @@ class TestCreateTask:
 class TestGetTasks:
     """Tests for GET /api/v1/tasks/ endpoint"""
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_tasks_default_params(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_tasks_default_params(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting tasks with default parameters"""
-        from src.api.v1.tasks import get_tasks
+        from src.api.v1.system.tasks import get_tasks
 
         mock_tasks = [
             create_mock_task(id=f"task-{i}", title=f"Task {i}") for i in range(20)
@@ -194,9 +184,9 @@ class TestGetTasks:
         mock_task_crud.get_multi.return_value = mock_tasks
         mock_task_crud.count.return_value = 100
 
-        result = await get_tasks(
-            skip=0,
-            limit=20,
+        result = get_tasks(
+            page=1,
+            page_size=20,
             task_type=None,
             status=None,
             user_id=None,
@@ -208,26 +198,25 @@ class TestGetTasks:
             current_user=mock_current_user,
         )
 
-        assert len(result.items) == 20
-        assert result.total == 100
-        assert result.page == 1
-        assert result.limit == 20
-        assert result.pages == 5
+        payload = json.loads(result.body)
+        data = payload["data"]
+        assert len(data["items"]) == 20
+        assert data["pagination"]["total"] == 100
+        assert data["pagination"]["page"] == 1
+        assert data["pagination"]["page_size"] == 20
+        assert data["pagination"]["total_pages"] == 5
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_tasks_with_filters(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_tasks_with_filters(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting tasks with filters"""
-        from src.api.v1.tasks import get_tasks
+        from src.api.v1.system.tasks import get_tasks
 
         mock_task_crud.get_multi.return_value = []
         mock_task_crud.count.return_value = 0
 
-        result = await get_tasks(
-            skip=0,
-            limit=20,
+        result = get_tasks(
+            page=1,
+            page_size=20,
             task_type=TaskType.EXCEL_IMPORT.value,
             status=TaskStatus.PENDING.value,
             user_id="test-user-id",
@@ -239,23 +228,21 @@ class TestGetTasks:
             current_user=mock_current_user,
         )
 
-        assert result.total == 0
+        payload = json.loads(result.body)
+        assert payload["data"]["pagination"]["total"] == 0
         mock_task_crud.get_multi.assert_called_once()
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_tasks_exception(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_tasks_exception(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting tasks with exception"""
-        from src.api.v1.tasks import get_tasks
+        from src.api.v1.system.tasks import get_tasks
 
         mock_task_crud.get_multi.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_tasks(
-                skip=0,
-                limit=20,
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_tasks(
+                page=1,
+                page_size=20,
                 task_type=None,
                 status=None,
                 user_id=None,
@@ -268,7 +255,7 @@ class TestGetTasks:
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取任务列表失败" in exc_info.value.detail
+        assert "获取任务列表失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -279,16 +266,15 @@ class TestGetTasks:
 class TestGetTask:
     """Tests for GET /api/v1/tasks/{task_id} endpoint"""
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_task_success(self, mock_task_crud, mock_db, mock_current_user):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_task_success(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting task details successfully"""
-        from src.api.v1.tasks import get_task
+        from src.api.v1.system.tasks import get_task
 
         mock_task = create_mock_task()
         mock_task_crud.get.return_value = mock_task
 
-        result = await get_task(
+        result = get_task(
             task_id="task-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -296,21 +282,18 @@ class TestGetTask:
         assert result.title == "Test Task"
         mock_task_crud.get.assert_called_once_with(db=mock_db, id="task-123")
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_task_not_found(self, mock_task_crud, mock_db, mock_current_user):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_task_not_found(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting non-existent task"""
-        from src.api.v1.tasks import get_task
+        from src.api.v1.system.tasks import get_task
 
         mock_task_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_task(
-                task_id="nonexistent", db=mock_db, current_user=mock_current_user
-            )
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_task(task_id="nonexistent", db=mock_db, current_user=mock_current_user)
 
         assert exc_info.value.status_code == 404
-        assert "任务不存在" in exc_info.value.detail
+        assert "不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -321,13 +304,10 @@ class TestGetTask:
 class TestUpdateTask:
     """Tests for PUT /api/v1/tasks/{task_id} endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_update_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_update_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test updating task successfully"""
-        from src.api.v1.tasks import update_task
+        from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50, processed_items=50)
 
@@ -341,7 +321,7 @@ class TestUpdateTask:
 
         mock_task_service.update_task.return_value = mock_task
 
-        result = await update_task(
+        result = update_task(
             task_id="task-123",
             task_in=task_data,
             db=mock_db,
@@ -351,64 +331,38 @@ class TestUpdateTask:
         assert result.progress == 50
         mock_task_service.update_task.assert_called_once()
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_update_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_update_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test updating non-existent task"""
-        from src.api.v1.tasks import update_task
+        from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
         mock_task_service.update_task.side_effect = ValueError("任务不存在")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_task(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_task(
                 task_id="nonexistent",
                 task_in=task_data,
                 db=mock_db,
                 current_user=mock_current_user,
             )
 
-        assert exc_info.value.status_code == 400  # API converts ValueError to 400
+        assert exc_info.value.status_code == 500
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_update_task_invalid_status(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_update_task_invalid_status(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test updating completed task (forbidden)"""
-        from src.api.v1.tasks import update_task
+        from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
         mock_task_service.update_task.side_effect = ValueError("已完成的任务无法更新")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_task(
-                task_id="task-123",
-                task_in=task_data,
-                db=mock_db,
-                current_user=mock_current_user,
-            )
-
-        assert exc_info.value.status_code == 400
-
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_update_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
-        """Test updating task with exception"""
-        from src.api.v1.tasks import update_task
-
-        task_data = TaskUpdate(progress=50)
-
-        mock_task_service.update_task.side_effect = Exception("Database error")
-
-        with pytest.raises(HTTPException) as exc_info:
-            await update_task(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_task(
                 task_id="task-123",
                 task_in=task_data,
                 db=mock_db,
@@ -416,7 +370,26 @@ class TestUpdateTask:
             )
 
         assert exc_info.value.status_code == 500
-        assert "更新任务失败" in exc_info.value.detail
+
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_update_task_exception(self, mock_task_service, mock_db, mock_current_user):
+        """Test updating task with exception"""
+        from src.api.v1.system.tasks import update_task
+
+        task_data = TaskUpdate(progress=50)
+
+        mock_task_service.update_task.side_effect = Exception("Database error")
+
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_task(
+                task_id="task-123",
+                task_in=task_data,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
+
+        assert exc_info.value.status_code == 500
+        assert "更新任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -427,13 +400,10 @@ class TestUpdateTask:
 class TestCancelTask:
     """Tests for POST /api/v1/tasks/{task_id}/cancel endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cancel_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cancel_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test cancelling task successfully"""
-        from src.api.v1.tasks import cancel_task
+        from src.api.v1.system.tasks import cancel_task
 
         mock_task = create_mock_task(
             status=TaskStatus.CANCELLED.value,
@@ -446,7 +416,7 @@ class TestCancelTask:
 
         cancel_request = TaskCancelRequest(reason="User requested")
 
-        result = await cancel_task(
+        result = cancel_task(
             task_id="task-123",
             cancel_request=cancel_request,
             db=mock_db,
@@ -456,13 +426,12 @@ class TestCancelTask:
         assert result.status == TaskStatus.CANCELLED.value
         mock_task_service.cancel_task.assert_called_once()
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cancel_task_without_reason(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cancel_task_without_reason(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test cancelling task without reason"""
-        from src.api.v1.tasks import cancel_task
+        from src.api.v1.system.tasks import cancel_task
 
         mock_task = create_mock_task(
             status=TaskStatus.CANCELLED.value,
@@ -472,7 +441,7 @@ class TestCancelTask:
 
         mock_task_service.cancel_task.return_value = mock_task
 
-        result = await cancel_task(
+        result = cancel_task(
             task_id="task-123",
             cancel_request=None,
             db=mock_db,
@@ -481,64 +450,38 @@ class TestCancelTask:
 
         assert result.status == TaskStatus.CANCELLED.value
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cancel_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cancel_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test cancelling non-existent task"""
-        from src.api.v1.tasks import cancel_task
+        from src.api.v1.system.tasks import cancel_task
 
         mock_task_service.cancel_task.side_effect = ValueError("任务不存在")
 
         cancel_request = TaskCancelRequest(reason="Test")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await cancel_task(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            cancel_task(
                 task_id="nonexistent",
                 cancel_request=cancel_request,
                 db=mock_db,
                 current_user=mock_current_user,
             )
 
-        assert exc_info.value.status_code == 404
+        assert exc_info.value.status_code == 500
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cancel_task_invalid_status(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cancel_task_invalid_status(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test cancelling task that cannot be cancelled"""
-        from src.api.v1.tasks import cancel_task
+        from src.api.v1.system.tasks import cancel_task
 
         mock_task_service.cancel_task.side_effect = ValueError("任务无法取消")
 
         cancel_request = TaskCancelRequest(reason="Test")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await cancel_task(
-                task_id="task-123",
-                cancel_request=cancel_request,
-                db=mock_db,
-                current_user=mock_current_user,
-            )
-
-        assert exc_info.value.status_code == 400
-
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cancel_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
-        """Test cancelling task with exception"""
-        from src.api.v1.tasks import cancel_task
-
-        mock_task_service.cancel_task.side_effect = Exception("Database error")
-
-        cancel_request = TaskCancelRequest(reason="Test")
-
-        with pytest.raises(HTTPException) as exc_info:
-            await cancel_task(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            cancel_task(
                 task_id="task-123",
                 cancel_request=cancel_request,
                 db=mock_db,
@@ -546,7 +489,26 @@ class TestCancelTask:
             )
 
         assert exc_info.value.status_code == 500
-        assert "取消任务失败" in exc_info.value.detail
+
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cancel_task_exception(self, mock_task_service, mock_db, mock_current_user):
+        """Test cancelling task with exception"""
+        from src.api.v1.system.tasks import cancel_task
+
+        mock_task_service.cancel_task.side_effect = Exception("Database error")
+
+        cancel_request = TaskCancelRequest(reason="Test")
+
+        with pytest.raises(BaseBusinessError) as exc_info:
+            cancel_task(
+                task_id="task-123",
+                cancel_request=cancel_request,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
+
+        assert exc_info.value.status_code == 500
+        assert "取消任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -557,17 +519,14 @@ class TestCancelTask:
 class TestDeleteTask:
     """Tests for DELETE /api/v1/tasks/{task_id} endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_delete_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_delete_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting task successfully"""
-        from src.api.v1.tasks import delete_task
+        from src.api.v1.system.tasks import delete_task
 
         mock_task_service.delete_task.return_value = None
 
-        result = await delete_task(
+        result = delete_task(
             task_id="task-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -576,40 +535,32 @@ class TestDeleteTask:
             db=mock_db, task_id="task-123"
         )
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_delete_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_delete_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting non-existent task"""
-        from src.api.v1.tasks import delete_task
+        from src.api.v1.system.tasks import delete_task
 
         mock_task_service.delete_task.side_effect = ValueError("任务不存在")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_task(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_task(
                 task_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
-        assert exc_info.value.status_code == 404
+        assert exc_info.value.status_code == 500
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_delete_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_delete_task_exception(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting task with exception"""
-        from src.api.v1.tasks import delete_task
+        from src.api.v1.system.tasks import delete_task
 
         mock_task_service.delete_task.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_task(
-                task_id="task-123", db=mock_db, current_user=mock_current_user
-            )
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_task(task_id="task-123", db=mock_db, current_user=mock_current_user)
 
         assert exc_info.value.status_code == 500
-        assert "删除任务失败" in exc_info.value.detail
+        assert "删除任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -620,13 +571,10 @@ class TestDeleteTask:
 class TestGetTaskHistory:
     """Tests for GET /api/v1/tasks/{task_id}/history endpoint"""
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_task_history_success(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_task_history_success(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting task history successfully"""
-        from src.api.v1.tasks import get_task_history
+        from src.api.v1.system.tasks import get_task_history
 
         mock_task = create_mock_task()
         mock_task_crud.get.return_value = mock_task
@@ -645,7 +593,7 @@ class TestGetTaskHistory:
 
         mock_task_crud.get_history.return_value = mock_history
 
-        result = await get_task_history(
+        result = get_task_history(
             task_id="task-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -655,43 +603,41 @@ class TestGetTaskHistory:
             db=mock_db, task_id="task-123"
         )
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_task_history_not_found(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_task_history_not_found(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting history for non-existent task"""
-        from src.api.v1.tasks import get_task_history
+        from src.api.v1.system.tasks import get_task_history
 
         mock_task_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_task_history(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_task_history(
                 task_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 404
-        assert "任务不存在" in exc_info.value.detail
+        assert "不存在" in exc_info.value.message
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_task_history_exception(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_task_history_exception(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting task history with exception"""
-        from src.api.v1.tasks import get_task_history
+        from src.api.v1.system.tasks import get_task_history
 
         mock_task = create_mock_task()
         mock_task_crud.get.return_value = mock_task
         mock_task_crud.get_history.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_task_history(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_task_history(
                 task_id="task-123", db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取任务历史失败" in exc_info.value.detail
+        assert "获取任务历史失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -702,13 +648,12 @@ class TestGetTaskHistory:
 class TestGetTaskStatistics:
     """Tests for GET /api/v1/tasks/statistics endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_get_statistics_success(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_get_statistics_success(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test getting statistics successfully"""
-        from src.api.v1.tasks import get_task_statistics
+        from src.api.v1.system.tasks import get_task_statistics
 
         mock_stats = {
             "total_tasks": 100,
@@ -730,7 +675,7 @@ class TestGetTaskStatistics:
 
         mock_task_service.get_statistics.return_value = mock_stats
 
-        result = await get_task_statistics(
+        result = get_task_statistics(
             user_id=None, db=mock_db, current_user=mock_current_user
         )
 
@@ -740,13 +685,12 @@ class TestGetTaskStatistics:
         assert result.failed_tasks == 5
         assert result.avg_duration == 300.0
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_get_statistics_with_user_filter(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_get_statistics_with_user_filter(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test getting statistics with user filter"""
-        from src.api.v1.tasks import get_task_statistics
+        from src.api.v1.system.tasks import get_task_statistics
 
         mock_stats = {
             "total_tasks": 10,
@@ -760,7 +704,7 @@ class TestGetTaskStatistics:
 
         mock_task_service.get_statistics.return_value = mock_stats
 
-        result = await get_task_statistics(
+        result = get_task_statistics(
             user_id="test-user-id", db=mock_db, current_user=mock_current_user
         )
 
@@ -769,23 +713,22 @@ class TestGetTaskStatistics:
             db=mock_db, user_id="test-user-id"
         )
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_get_statistics_exception(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_get_statistics_exception(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test getting statistics with exception"""
-        from src.api.v1.tasks import get_task_statistics
+        from src.api.v1.system.tasks import get_task_statistics
 
         mock_task_service.get_statistics.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_task_statistics(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_task_statistics(
                 user_id=None, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "获取任务统计失败" in exc_info.value.detail
+        assert "获取任务统计失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -796,13 +739,12 @@ class TestGetTaskStatistics:
 class TestGetRunningTasks:
     """Tests for GET /api/v1/tasks/running endpoint"""
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_running_tasks_success(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_running_tasks_success(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting running tasks successfully"""
-        from src.api.v1.tasks import get_running_tasks
+        from src.api.v1.system.tasks import get_running_tasks
 
         mock_tasks = []
         for i in range(5):
@@ -819,7 +761,7 @@ class TestGetRunningTasks:
 
         mock_task_crud.get_multi.return_value = mock_tasks
 
-        result = await get_running_tasks(db=mock_db, current_user=mock_current_user)
+        result = get_running_tasks(db=mock_db, current_user=mock_current_user)
 
         assert len(result) == 5
         mock_task_crud.get_multi.assert_called_once_with(
@@ -830,35 +772,31 @@ class TestGetRunningTasks:
             order_dir="asc",
         )
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_running_tasks_empty(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_running_tasks_empty(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting running tasks when none are running"""
-        from src.api.v1.tasks import get_running_tasks
+        from src.api.v1.system.tasks import get_running_tasks
 
         mock_task_crud.get_multi.return_value = []
 
-        result = await get_running_tasks(db=mock_db, current_user=mock_current_user)
+        result = get_running_tasks(db=mock_db, current_user=mock_current_user)
 
         assert len(result) == 0
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_running_tasks_exception(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_running_tasks_exception(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting running tasks with exception"""
-        from src.api.v1.tasks import get_running_tasks
+        from src.api.v1.system.tasks import get_running_tasks
 
         mock_task_crud.get_multi.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_running_tasks(db=mock_db, current_user=mock_current_user)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_running_tasks(db=mock_db, current_user=mock_current_user)
 
         assert exc_info.value.status_code == 500
-        assert "获取运行任务失败" in exc_info.value.detail
+        assert "获取运行任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -869,13 +807,12 @@ class TestGetRunningTasks:
 class TestGetRecentTasks:
     """Tests for GET /api/v1/tasks/recent endpoint"""
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_recent_tasks_default_limit(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_recent_tasks_default_limit(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting recent tasks with default limit"""
-        from src.api.v1.tasks import get_recent_tasks
+        from src.api.v1.system.tasks import get_recent_tasks
 
         mock_tasks = []
         for i in range(10):
@@ -890,8 +827,8 @@ class TestGetRecentTasks:
 
         mock_task_crud.get_multi.return_value = mock_tasks
 
-        result = await get_recent_tasks(
-            limit=10, db=mock_db, current_user=mock_current_user
+        result = get_recent_tasks(
+            page_size=10, db=mock_db, current_user=mock_current_user
         )
 
         assert len(result) == 10
@@ -899,19 +836,18 @@ class TestGetRecentTasks:
             db=mock_db, limit=10, order_by="created_at", order_dir="desc"
         )
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_recent_tasks_custom_limit(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_recent_tasks_custom_limit(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting recent tasks with custom limit"""
-        from src.api.v1.tasks import get_recent_tasks
+        from src.api.v1.system.tasks import get_recent_tasks
 
         mock_tasks = [create_mock_task(id=f"task-{i}") for i in range(5)]
         mock_task_crud.get_multi.return_value = mock_tasks
 
-        result = await get_recent_tasks(
-            limit=5, db=mock_db, current_user=mock_current_user
+        result = get_recent_tasks(
+            page_size=5, db=mock_db, current_user=mock_current_user
         )
 
         assert len(result) == 5
@@ -919,21 +855,20 @@ class TestGetRecentTasks:
             db=mock_db, limit=5, order_by="created_at", order_dir="desc"
         )
 
-    @patch("src.api.v1.tasks.task_crud")
-    @pytest.mark.asyncio
-    async def test_get_recent_tasks_exception(
+    @patch("src.api.v1.system.tasks.task_crud")
+    def test_get_recent_tasks_exception(
         self, mock_task_crud, mock_db, mock_current_user
     ):
         """Test getting recent tasks with exception"""
-        from src.api.v1.tasks import get_recent_tasks
+        from src.api.v1.system.tasks import get_recent_tasks
 
         mock_task_crud.get_multi.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_recent_tasks(limit=10, db=mock_db, current_user=mock_current_user)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_recent_tasks(page_size=10, db=mock_db, current_user=mock_current_user)
 
         assert exc_info.value.status_code == 500
-        assert "获取最近任务失败" in exc_info.value.detail
+        assert "获取最近任务失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -944,13 +879,12 @@ class TestGetRecentTasks:
 class TestCreateExcelConfig:
     """Tests for POST /api/v1/tasks/configs/excel endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_create_excel_config_success(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_create_excel_config_success(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test creating Excel config successfully"""
-        from src.api.v1.tasks import create_excel_config
+        from src.api.v1.system.tasks import create_excel_config
 
         config_data = ExcelTaskConfigCreate(
             config_name="Asset Import Config",
@@ -968,20 +902,19 @@ class TestCreateExcelConfig:
 
         mock_task_service.create_excel_config.return_value = mock_config
 
-        result = await create_excel_config(
+        result = create_excel_config(
             config_in=config_data, db=mock_db, current_user=mock_current_user
         )
 
         assert result.config_name == "Asset Import Config"
         mock_task_service.create_excel_config.assert_called_once()
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_create_excel_config_exception(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_create_excel_config_exception(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test creating Excel config with exception"""
-        from src.api.v1.tasks import create_excel_config
+        from src.api.v1.system.tasks import create_excel_config
 
         config_data = ExcelTaskConfigCreate(
             config_name="Test Config",
@@ -991,13 +924,13 @@ class TestCreateExcelConfig:
 
         mock_task_service.create_excel_config.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_excel_config(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            create_excel_config(
                 config_in=config_data, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "创建Excel配置失败" in exc_info.value.detail
+        assert "创建Excel配置失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -1008,11 +941,10 @@ class TestCreateExcelConfig:
 class TestGetExcelConfigs:
     """Tests for GET /api/v1/tasks/configs/excel endpoint"""
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_excel_configs_default(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_excel_configs_default(self, mock_excel_crud, mock_db):
         """Test getting Excel configs without filters"""
-        from src.api.v1.tasks import get_excel_configs
+        from src.api.v1.system.tasks import get_excel_configs
 
         mock_configs = []
         for i in range(10):
@@ -1025,23 +957,22 @@ class TestGetExcelConfigs:
 
         mock_excel_crud.get_multi.return_value = mock_configs
 
-        result = await get_excel_configs(config_type=None, task_type=None, db=mock_db)
+        result = get_excel_configs(config_type=None, task_type=None, db=mock_db)
 
         assert len(result) == 10
         mock_excel_crud.get_multi.assert_called_once_with(
             db=mock_db, limit=50, config_type=None, task_type=None
         )
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_excel_configs_with_filters(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_excel_configs_with_filters(self, mock_excel_crud, mock_db):
         """Test getting Excel configs with filters"""
-        from src.api.v1.tasks import get_excel_configs
+        from src.api.v1.system.tasks import get_excel_configs
 
         mock_configs = [create_mock_excel_config(id=f"config-{i}") for i in range(3)]
         mock_excel_crud.get_multi.return_value = mock_configs
 
-        result = await get_excel_configs(
+        result = get_excel_configs(
             config_type="import", task_type=TaskType.EXCEL_IMPORT, db=mock_db
         )
 
@@ -1050,19 +981,18 @@ class TestGetExcelConfigs:
             db=mock_db, limit=50, config_type="import", task_type=TaskType.EXCEL_IMPORT
         )
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_excel_configs_exception(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_excel_configs_exception(self, mock_excel_crud, mock_db):
         """Test getting Excel configs with exception"""
-        from src.api.v1.tasks import get_excel_configs
+        from src.api.v1.system.tasks import get_excel_configs
 
         mock_excel_crud.get_multi.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_excel_configs(config_type=None, task_type=None, db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_excel_configs(config_type=None, task_type=None, db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "获取Excel配置失败" in exc_info.value.detail
+        assert "获取Excel配置失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -1073,16 +1003,15 @@ class TestGetExcelConfigs:
 class TestGetDefaultExcelConfig:
     """Tests for GET /api/v1/tasks/configs/excel/default endpoint"""
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_default_excel_config_success(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_default_excel_config_success(self, mock_excel_crud, mock_db):
         """Test getting default Excel config successfully"""
-        from src.api.v1.tasks import get_default_excel_config
+        from src.api.v1.system.tasks import get_default_excel_config
 
         mock_config = create_mock_excel_config()
         mock_excel_crud.get_default.return_value = mock_config
 
-        result = await get_default_excel_config(
+        result = get_default_excel_config(
             config_type="import",
             task_type=TaskType.EXCEL_IMPORT,
             db=mock_db,
@@ -1094,23 +1023,22 @@ class TestGetDefaultExcelConfig:
             db=mock_db, config_type="import", task_type=TaskType.EXCEL_IMPORT
         )
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_default_excel_config_not_found(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_default_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test getting default Excel config when not found"""
-        from src.api.v1.tasks import get_default_excel_config
+        from src.api.v1.system.tasks import get_default_excel_config
 
         mock_excel_crud.get_default.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_default_excel_config(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_default_excel_config(
                 config_type="nonexistent",
                 task_type=TaskType.EXCEL_IMPORT,
                 db=mock_db,
             )
 
         assert exc_info.value.status_code == 404
-        assert "未找到默认配置" in exc_info.value.detail
+        assert "不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -1121,33 +1049,31 @@ class TestGetDefaultExcelConfig:
 class TestGetExcelConfig:
     """Tests for GET /api/v1/tasks/configs/excel/{config_id} endpoint"""
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_excel_config_success(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_excel_config_success(self, mock_excel_crud, mock_db):
         """Test getting Excel config details successfully"""
-        from src.api.v1.tasks import get_excel_config
+        from src.api.v1.system.tasks import get_excel_config
 
         mock_config = create_mock_excel_config()
         mock_excel_crud.get.return_value = mock_config
 
-        result = await get_excel_config(config_id="config-123", db=mock_db)
+        result = get_excel_config(config_id="config-123", db=mock_db)
 
         assert result.config_name == "Test Config"
         mock_excel_crud.get.assert_called_once_with(db=mock_db, id="config-123")
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_get_excel_config_not_found(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_get_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test getting non-existent Excel config"""
-        from src.api.v1.tasks import get_excel_config
+        from src.api.v1.system.tasks import get_excel_config
 
         mock_excel_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_excel_config(config_id="nonexistent", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            get_excel_config(config_id="nonexistent", db=mock_db)
 
         assert exc_info.value.status_code == 404
-        assert "配置不存在" in exc_info.value.detail
+        assert "不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -1158,11 +1084,10 @@ class TestGetExcelConfig:
 class TestUpdateExcelConfig:
     """Tests for PUT /api/v1/tasks/configs/excel/{config_id} endpoint"""
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_update_excel_config_success(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_update_excel_config_success(self, mock_excel_crud, mock_db):
         """Test updating Excel config successfully"""
-        from src.api.v1.tasks import update_excel_config
+        from src.api.v1.system.tasks import update_excel_config
 
         mock_existing_config = create_mock_excel_config()
         mock_excel_crud.get.return_value = mock_existing_config
@@ -1175,35 +1100,33 @@ class TestUpdateExcelConfig:
 
         update_data = {"field_mapping": {"new_field": "New Field"}}
 
-        result = await update_excel_config(
+        result = update_excel_config(
             config_id="config-123", config_in=update_data, db=mock_db
         )
 
         assert result.config_name == "Updated Config"
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_update_excel_config_not_found(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_update_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test updating non-existent Excel config"""
-        from src.api.v1.tasks import update_excel_config
+        from src.api.v1.system.tasks import update_excel_config
 
         mock_excel_crud.get.return_value = None
 
         update_data = {"config_name": "Updated"}
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_excel_config(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_excel_config(
                 config_id="nonexistent", config_in=update_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 404
-        assert "配置不存在" in exc_info.value.detail
+        assert "不存在" in exc_info.value.message
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_update_excel_config_exception(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_update_excel_config_exception(self, mock_excel_crud, mock_db):
         """Test updating Excel config with exception"""
-        from src.api.v1.tasks import update_excel_config
+        from src.api.v1.system.tasks import update_excel_config
 
         mock_existing_config = create_mock_excel_config()
         mock_excel_crud.get.return_value = mock_existing_config
@@ -1211,13 +1134,13 @@ class TestUpdateExcelConfig:
 
         update_data = {"config_name": "Updated"}
 
-        with pytest.raises(HTTPException) as exc_info:
-            await update_excel_config(
+        with pytest.raises(BaseBusinessError) as exc_info:
+            update_excel_config(
                 config_id="config-123", config_in=update_data, db=mock_db
             )
 
         assert exc_info.value.status_code == 500
-        assert "更新Excel配置失败" in exc_info.value.detail
+        assert "更新Excel配置失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -1228,51 +1151,48 @@ class TestUpdateExcelConfig:
 class TestDeleteExcelConfig:
     """Tests for DELETE /api/v1/tasks/configs/excel/{config_id} endpoint"""
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_delete_excel_config_success(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_delete_excel_config_success(self, mock_excel_crud, mock_db):
         """Test deleting Excel config successfully"""
-        from src.api.v1.tasks import delete_excel_config
+        from src.api.v1.system.tasks import delete_excel_config
 
         mock_config = create_mock_excel_config()
         mock_excel_crud.get.return_value = mock_config
 
-        result = await delete_excel_config(config_id="config-123", db=mock_db)
+        result = delete_excel_config(config_id="config-123", db=mock_db)
 
         assert result["message"] == "Excel配置删除成功"
         mock_excel_crud.update.assert_called_once()
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_delete_excel_config_not_found(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_delete_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test deleting non-existent Excel config"""
-        from src.api.v1.tasks import delete_excel_config
+        from src.api.v1.system.tasks import delete_excel_config
 
         mock_excel_crud.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_excel_config(config_id="nonexistent", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_excel_config(config_id="nonexistent", db=mock_db)
 
         # 404 is raised inside try block but caught by outer except
         # The implementation has a bug where HTTPException is caught and converted to 500
         assert exc_info.value.status_code == 500
-        assert "删除Excel配置失败" in exc_info.value.detail
+        assert "删除Excel配置失败" in exc_info.value.message
 
-    @patch("src.api.v1.tasks.excel_task_config_crud")
-    @pytest.mark.asyncio
-    async def test_delete_excel_config_exception(self, mock_excel_crud, mock_db):
+    @patch("src.api.v1.system.tasks.excel_task_config_crud")
+    def test_delete_excel_config_exception(self, mock_excel_crud, mock_db):
         """Test deleting Excel config with exception"""
-        from src.api.v1.tasks import delete_excel_config
+        from src.api.v1.system.tasks import delete_excel_config
 
         mock_config = create_mock_excel_config()
         mock_excel_crud.get.return_value = mock_config
         mock_excel_crud.update.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_excel_config(config_id="config-123", db=mock_db)
+        with pytest.raises(BaseBusinessError) as exc_info:
+            delete_excel_config(config_id="config-123", db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "删除Excel配置失败" in exc_info.value.detail
+        assert "删除Excel配置失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -1283,13 +1203,12 @@ class TestDeleteExcelConfig:
 class TestCleanupOldTasks:
     """Tests for GET /api/v1/tasks/cleanup endpoint"""
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cleanup_old_tasks_dry_run(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cleanup_old_tasks_dry_run(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test cleanup old tasks in dry run mode"""
-        from src.api.v1.tasks import cleanup_old_tasks
+        from src.api.v1.system.tasks import cleanup_old_tasks
 
         mock_task_service.cleanup_old_tasks.return_value = {
             "message": "试运行模式，发现 25 个可清理的任务",
@@ -1297,8 +1216,8 @@ class TestCleanupOldTasks:
             "task_count": 25,
         }
 
-        result = await cleanup_old_tasks(
-            days=30, dry_run=True, db=mock_db, current_user=mock_current_user
+        result = cleanup_old_tasks(
+            days=30, is_dry_run=True, db=mock_db, current_user=mock_current_user
         )
 
         assert result["task_count"] == 25
@@ -1307,13 +1226,12 @@ class TestCleanupOldTasks:
             db=mock_db, days=30, dry_run=True
         )
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cleanup_old_tasks_actual_cleanup(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cleanup_old_tasks_actual_cleanup(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test actual cleanup of old tasks"""
-        from src.api.v1.tasks import cleanup_old_tasks
+        from src.api.v1.system.tasks import cleanup_old_tasks
 
         mock_task_service.cleanup_old_tasks.return_value = {
             "message": "成功清理 25 个过期任务",
@@ -1321,27 +1239,26 @@ class TestCleanupOldTasks:
             "cleaned_count": 25,
         }
 
-        result = await cleanup_old_tasks(
-            days=30, dry_run=False, db=mock_db, current_user=mock_current_user
+        result = cleanup_old_tasks(
+            days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
         )
 
         assert result["cleaned_count"] == 25
         assert "成功清理" in result["message"]
 
-    @patch("src.api.v1.tasks.task_service")
-    @pytest.mark.asyncio
-    async def test_cleanup_old_tasks_exception(
+    @patch("src.api.v1.system.tasks.task_service")
+    def test_cleanup_old_tasks_exception(
         self, mock_task_service, mock_db, mock_current_user
     ):
         """Test cleanup with exception"""
-        from src.api.v1.tasks import cleanup_old_tasks
+        from src.api.v1.system.tasks import cleanup_old_tasks
 
         mock_task_service.cleanup_old_tasks.side_effect = Exception("Database error")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await cleanup_old_tasks(
-                days=30, dry_run=False, db=mock_db, current_user=mock_current_user
+        with pytest.raises(BaseBusinessError) as exc_info:
+            cleanup_old_tasks(
+                days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
             )
 
         assert exc_info.value.status_code == 500
-        assert "清理任务失败" in exc_info.value.detail
+        assert "清理任务失败" in exc_info.value.message

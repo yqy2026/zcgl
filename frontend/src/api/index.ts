@@ -8,7 +8,7 @@ export { apiClient, ApiClient, createApiClient } from './client';
 
 // Export API configuration
 export { API_CONFIG, ERROR_CODES, HTTP_STATUS } from './config';
-export { API_ENDPOINTS } from '../constants/api';
+export { API_ENDPOINTS } from '@/constants/api';
 
 // Export types
 export type {
@@ -18,4 +18,4 @@ export type {
   ApiClientError,
   RetryConfig,
   CacheConfig,
-} from '../types/apiResponse';
+} from '@/types/apiResponse';

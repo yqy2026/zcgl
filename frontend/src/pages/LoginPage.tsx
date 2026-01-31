@@ -8,8 +8,8 @@ import {
   LoginOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import type { LoginFormData } from '../types/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import type { LoginFormData } from '@/types/auth';
 import styles from './LoginPage.module.css';
 
 const { Title, Text } = Typography;

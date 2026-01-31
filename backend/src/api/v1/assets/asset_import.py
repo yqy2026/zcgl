@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import internal_error
 from ....crud.asset import asset_crud
-from ....crud.history import history_crud
 from ....database import get_db
 from ....middleware.auth import require_permission
 from ....models.asset import Asset
@@ -53,6 +52,13 @@ async def import_assets(
         total_count = len(request.data)
         errors: list[BatchProcessingError] = []
         imported_assets: list[str] = []
+
+        operator = (
+            getattr(current_user, "username", None)
+            or getattr(current_user, "id", None)
+            or "system"
+        )
+        operator_value = str(operator) if operator is not None else None
 
         for index, asset_data in enumerate(request.data):
             try:
@@ -101,7 +107,9 @@ async def import_assets(
                 if request.import_mode == "create":
                     # 创建新资产
                     asset_create = AssetCreate(**asset_data)
-                    new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    new_asset = asset_crud.create_with_history(
+                        db=db, obj_in=asset_create, operator=operator_value
+                    )
                     assert new_asset is not None  # nosec B101  # Type narrowing for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
@@ -115,8 +123,11 @@ async def import_assets(
                             if k not in ["id", "created_at"]
                         }
                     )
-                    updated_asset = asset_crud.update(
-                        db=db, db_obj=existing_asset, obj_in=asset_update
+                    updated_asset = asset_crud.update_with_history(
+                        db=db,
+                        db_obj=existing_asset,
+                        obj_in=asset_update,
+                        operator=operator_value,
                     )
                     imported_assets.append(str(updated_asset.id))
                     success_count += 1
@@ -124,8 +135,11 @@ async def import_assets(
                 elif request.import_mode == "update" and existing_asset:
                     # 强制更新现有资产
                     asset_update = AssetUpdate(**asset_data)
-                    updated_asset = asset_crud.update(
-                        db=db, db_obj=existing_asset, obj_in=asset_update
+                    updated_asset = asset_crud.update_with_history(
+                        db=db,
+                        db_obj=existing_asset,
+                        obj_in=asset_update,
+                        operator=operator_value,
                     )
                     imported_assets.append(str(updated_asset.id))
                     success_count += 1
@@ -133,24 +147,12 @@ async def import_assets(
                 else:
                     # 创建新资产（默认情况）
                     asset_create = AssetCreate(**asset_data)
-                    new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    new_asset = asset_crud.create_with_history(
+                        db=db, obj_in=asset_create, operator=operator_value
+                    )
                     assert new_asset is not None  # nosec B101  # Type narrowing for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
-
-                # 记录历史
-                operator = (
-                    getattr(current_user, "username", None)
-                    or getattr(current_user, "id", None)
-                    or "system"
-                )
-                history_crud.create(
-                    db=db,
-                    asset_id=imported_assets[-1] if imported_assets else "unknown",
-                    operation_type="批量导入",
-                    description="通过批量导入创建/更新资产",
-                    operator=str(operator) if operator is not None else None,
-                )
 
             except Exception as e:
                 errors.append(

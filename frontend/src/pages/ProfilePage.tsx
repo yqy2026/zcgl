@@ -16,8 +16,8 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
 import { COLORS } from '@/styles/colorMap';
-import { useAuth } from '../hooks/useAuth';
-import { AuthService } from '../services/authService';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthService } from '@/services/authService';
 
 const { Title, Text } = Typography;
 

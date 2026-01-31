@@ -15,7 +15,7 @@ import {
   ResponseDetectionConfig,
   ApiClientError,
   ApiErrorType,
-} from '../types/apiResponse';
+} from '@/types/apiResponse';
 import { validateApiResponse } from './responseValidator';
 
 // ==================== 类型定义 ====================

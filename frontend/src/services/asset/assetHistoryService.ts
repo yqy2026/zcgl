@@ -4,8 +4,8 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
-import { ASSET_API } from '../../constants/api';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
+import { ASSET_API } from '@/constants/api';
 import type {
   AssetHistory,
   PaginatedApiResponse,

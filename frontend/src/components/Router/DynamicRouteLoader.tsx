@@ -3,10 +3,18 @@
  * 支持运行时动态注册路由、模块化路由和权限路由
  */
 
-import React, { createContext, useContext, useState, ReactNode, Suspense } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  ReactNode,
+  Suspense,
+} from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { PermissionGuard } from '../System/PermissionGuard';
-import { createLogger } from '../../utils/logger';
+import { PermissionGuard } from '@/components/System/PermissionGuard';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('DynamicRouteLoader');
 
@@ -345,59 +353,94 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
   const [loader] = useState(() => new DynamicRouteLoader(config));
   const [_loadingRoutes, _setLoadingRoutes] = useState<Set<string>>(new Set());
 
-  const registerRoute = (route: DynamicRoute) => {
-    loader.registerRoute(route);
-    onRouteLoad?.(route);
-  };
+  const registerRoute = useCallback(
+    (route: DynamicRoute) => {
+      loader.registerRoute(route);
+      onRouteLoad?.(route);
+    },
+    [loader, onRouteLoad]
+  );
 
-  const unregisterRoute = (routeId: string) => {
-    loader.unregisterRoute(routeId);
-  };
+  const unregisterRoute = useCallback(
+    (routeId: string) => {
+      loader.unregisterRoute(routeId);
+    },
+    [loader]
+  );
 
-  const updateRoute = (routeId: string, updates: Partial<DynamicRoute>) => {
-    loader.updateRoute(routeId, updates);
-  };
+  const updateRoute = useCallback(
+    (routeId: string, updates: Partial<DynamicRoute>) => {
+      loader.updateRoute(routeId, updates);
+    },
+    [loader]
+  );
 
-  const loadRouteModule = async (modulePath: string) => {
-    _setLoadingRoutes((prev: Set<string>) => new Set(prev).add(modulePath));
+  const loadRouteModule = useCallback(
+    async (modulePath: string) => {
+      _setLoadingRoutes((prev: Set<string>) => new Set(prev).add(modulePath));
 
-    try {
-      const routes = await loader.loadRouteModule(modulePath);
-      return routes;
-    } catch (error) {
-      onRouteError?.(error as Error, modulePath);
-      throw error;
-    } finally {
-      _setLoadingRoutes((prev: Set<string>) => {
-        const newSet = new Set(prev);
-        newSet.delete(modulePath);
-        return newSet;
-      });
-    }
-  };
+      try {
+        const routes = await loader.loadRouteModule(modulePath);
+        return routes;
+      } catch (error) {
+        onRouteError?.(error as Error, modulePath);
+        throw error;
+      } finally {
+        _setLoadingRoutes((prev: Set<string>) => {
+          const newSet = new Set(prev);
+          newSet.delete(modulePath);
+          return newSet;
+        });
+      }
+    },
+    [loader, onRouteError]
+  );
 
-  const isRouteLoaded = (routeId: string) => {
-    return loader.isRouteLoaded(routeId);
-  };
+  const isRouteLoaded = useCallback(
+    (routeId: string) => {
+      return loader.isRouteLoaded(routeId);
+    },
+    [loader]
+  );
 
-  const getRouteMetrics = () => {
+  const getRouteMetrics = useCallback(() => {
     return loader.getRouteMetrics();
-  };
+  }, [loader]);
 
-  const getRoutesByPermission = (resource: string, action: string) => {
-    return loader.getRoutesByPermission(resource, action);
-  };
+  const getRoutesByPermission = useCallback(
+    (resource: string, action: string) => {
+      return loader.getRoutesByPermission(resource, action);
+    },
+    [loader]
+  );
 
-  const contextValue: RouteLoaderContextType = {
-    routes: new Map(loader.getRoutes().map(route => [route.id, route])),
-    registerRoute,
-    unregisterRoute,
-    updateRoute,
-    loadRouteModule,
-    isRouteLoaded,
-    getRouteMetrics,
-    getRoutesByPermission,
-  };
+  const routesSnapshot = useMemo(
+    () => new Map(loader.getRoutes().map(route => [route.id, route])),
+    [loader, _loadingRoutes]
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      routes: routesSnapshot,
+      registerRoute,
+      unregisterRoute,
+      updateRoute,
+      loadRouteModule,
+      isRouteLoaded,
+      getRouteMetrics,
+      getRoutesByPermission,
+    }),
+    [
+      getRouteMetrics,
+      getRoutesByPermission,
+      isRouteLoaded,
+      loadRouteModule,
+      registerRoute,
+      routesSnapshot,
+      unregisterRoute,
+      updateRoute,
+    ]
+  );
 
   return (
     <DynamicRouteContext.Provider value={contextValue}>{children}</DynamicRouteContext.Provider>
@@ -419,42 +462,49 @@ export const DynamicRouteRenderer: React.FC = () => {
   const { routes } = useDynamicRoute();
   const [error, setError] = useState<string | null>(null);
 
+  const routeList = useMemo(() => Array.from(routes.values()), [routes]);
+
   // 将路由转换为React Router格式
-  const renderRoutes = (routeList: DynamicRoute[], parentPath = ''): ReactNode[] => {
-    return routeList.map(route => {
-      const fullPath = parentPath + route.path;
+  const renderRoutes = useCallback(
+    (routeList: DynamicRoute[], parentPath = ''): ReactNode[] => {
+      return routeList.map(route => {
+        const fullPath = parentPath + route.path;
 
-      const element = (
-        <Suspense fallback={<div>Loading {route.meta?.title ?? route.id}...</div>}>
-          <ErrorBoundary
-            onError={error => {
-              componentLogger.error(`Route ${route.id} error:`, error);
-              setError(`Failed to load ${route.meta?.title ?? route.id}`);
-            }}
-            fallback={<div>Error loading {route.meta?.title ?? route.id}</div>}
-          >
-            {route.permissions != null && route.permissions.length > 0 ? (
-              <PermissionGuard permissions={route.permissions}>
+        const element = (
+          <Suspense fallback={<div>Loading {route.meta?.title ?? route.id}...</div>}>
+            <ErrorBoundary
+              onError={error => {
+                componentLogger.error(`Route ${route.id} error:`, error);
+                setError(`Failed to load ${route.meta?.title ?? route.id}`);
+              }}
+              fallback={<div>Error loading {route.meta?.title ?? route.id}</div>}
+            >
+              {route.permissions != null && route.permissions.length > 0 ? (
+                <PermissionGuard permissions={route.permissions}>
+                  <route.component />
+                </PermissionGuard>
+              ) : (
                 <route.component />
-              </PermissionGuard>
-            ) : (
-              <route.component />
-            )}
-          </ErrorBoundary>
-        </Suspense>
-      );
-
-      if (route.children && route.children.length > 0) {
-        return (
-          <Route key={route.id} path={route.path} element={element}>
-            {renderRoutes(route.children, fullPath)}
-          </Route>
+              )}
+            </ErrorBoundary>
+          </Suspense>
         );
-      }
 
-      return <Route key={route.id} path={route.path} element={element} />;
-    });
-  };
+        if (route.children && route.children.length > 0) {
+          return (
+            <Route key={route.id} path={route.path} element={element}>
+              {renderRoutes(route.children, fullPath)}
+            </Route>
+          );
+        }
+
+        return <Route key={route.id} path={route.path} element={element} />;
+      });
+    },
+    []
+  );
+
+  const renderedRoutes = useMemo(() => renderRoutes(routeList), [renderRoutes, routeList]);
 
   if (error != null) {
     return (
@@ -478,13 +528,71 @@ export const DynamicRouteRenderer: React.FC = () => {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* 动态路由 */}
-      {renderRoutes(Array.from(routes.values()))}
+      {renderedRoutes}
 
       {/* 404页面 */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };
+
+// 权限路由加载器
+export const usePermissionBasedRoutes = () => {
+  const { getRoutesByPermission, routes } = useDynamicRoute();
+
+  const loadRoutesByPermissions = useCallback(
+    async (permissions: Array<{ resource: string; action: string }>) => {
+      const permissionRoutes: DynamicRoute[] = [];
+
+      for (const permission of permissions) {
+        const routes = getRoutesByPermission(permission.resource, permission.action);
+        permissionRoutes.push(...routes);
+      }
+
+      return permissionRoutes;
+    },
+    [getRoutesByPermission]
+  );
+
+  const availableRoutes = useMemo(() => Array.from(routes.values()), [routes]);
+
+  return {
+    loadRoutesByPermissions,
+    availableRoutes,
+  };
+};
+
+// 路由模块加载器
+export const RouteModuleLoader = () => {
+  const { loadRouteModule } = useDynamicRoute();
+  const [loading, setLoading] = useState(false);
+  const [loadedModules, setLoadedModules] = useState<string[]>([]);
+
+  const loadModule = useCallback(
+    async (modulePath: string) => {
+      setLoading(true);
+      try {
+        const routes = await loadRouteModule(modulePath);
+        setLoadedModules(prev => [...prev, modulePath]);
+        return routes;
+      } catch (error) {
+        componentLogger.error('Failed to load route module:', error as Error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadRouteModule]
+  );
+
+  return {
+    loadModule,
+    loading,
+    loadedModules,
+  };
+};
+
+export default DynamicRouteLoader;
 
 // 错误边界组件
 interface ErrorBoundaryProps {
@@ -538,55 +646,3 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return this.props.children;
   }
 }
-
-// 权限路由加载器
-export const usePermissionBasedRoutes = () => {
-  const { getRoutesByPermission, routes } = useDynamicRoute();
-
-  const loadRoutesByPermissions = async (
-    permissions: Array<{ resource: string; action: string }>
-  ) => {
-    const permissionRoutes: DynamicRoute[] = [];
-
-    for (const permission of permissions) {
-      const routes = getRoutesByPermission(permission.resource, permission.action);
-      permissionRoutes.push(...routes);
-    }
-
-    return permissionRoutes;
-  };
-
-  return {
-    loadRoutesByPermissions,
-    availableRoutes: Array.from(routes.values()),
-  };
-};
-
-// 路由模块加载器
-export const RouteModuleLoader = () => {
-  const { loadRouteModule } = useDynamicRoute();
-  const [loading, setLoading] = useState(false);
-  const [loadedModules, setLoadedModules] = useState<string[]>([]);
-
-  const loadModule = async (modulePath: string) => {
-    setLoading(true);
-    try {
-      const routes = await loadRouteModule(modulePath);
-      setLoadedModules(prev => [...prev, modulePath]);
-      return routes;
-    } catch (error) {
-      componentLogger.error('Failed to load route module:', error as Error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    loadModule,
-    loading,
-    loadedModules,
-  };
-};
-
-export default DynamicRouteLoader;

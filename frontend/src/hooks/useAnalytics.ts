@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { analyticsService } from '../services/analyticsService';
-import type { AssetSearchParams } from '../types/asset';
-import type { AnalyticsResponse } from '../types/analytics';
+import { analyticsService } from '@/services/analyticsService';
+import type { AssetSearchParams } from '@/types/asset';
+import type { AnalyticsResponse } from '@/types/analytics';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
   return useQuery<AnalyticsResponse>({

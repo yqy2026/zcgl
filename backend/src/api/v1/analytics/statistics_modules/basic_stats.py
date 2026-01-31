@@ -28,6 +28,7 @@ from src.schemas.statistics import (
     DashboardDataResponse,
 )
 from src.utils.cache_manager import cache_statistics, get_cache_manager
+from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
@@ -149,7 +150,7 @@ async def get_statistics_summary(
     )
 
 
-@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]
+@cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存  # type: ignore[misc]
 @router.get(
     "/dashboard", response_model=DashboardDataResponse, summary="获取仪表板数据"
 )

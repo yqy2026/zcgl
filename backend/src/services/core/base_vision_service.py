@@ -227,7 +227,7 @@ def handle_http_status_error(error: httpx.HTTPStatusError) -> VisionAPIError:
         if isinstance(response_json, dict):
             details = {"response": response_json}
     except Exception:  # nosec B110  # Intentional: continue without details if JSON parsing fails
-        pass
+        logger.debug("Failed to parse error response JSON", exc_info=True)
 
     return VisionAPIError(
         message=message, status_code=status, retryable=retryable, details=details

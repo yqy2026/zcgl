@@ -19,7 +19,7 @@ import {
   Drawer,
   Descriptions,
 } from 'antd';
-import SystemBreadcrumb from '../../components/System/SystemBreadcrumb';
+import SystemBreadcrumb from '@/components/System/SystemBreadcrumb';
 import {
   userService,
   roleService,
@@ -28,10 +28,10 @@ import {
   type UpdateUserData,
   type OrganizationOption,
   type RoleOption,
-} from '../../services/systemService';
-import { organizationService } from '../../services/organizationService';
+} from '@/services/systemService';
+import { organizationService } from '@/services/organizationService';
 import { MessageManager } from '@/utils/messageManager';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const pageLogger = createLogger('UserManagement');
 import {

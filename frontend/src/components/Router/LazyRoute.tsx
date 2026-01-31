@@ -1,9 +1,9 @@
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
-import { SkeletonLoader } from '../Loading';
+import { SkeletonLoader } from '@/components/Loading';
 import { RouteConfig } from '@/constants/routes';
 import { SystemErrorBoundary } from '@/components/ErrorHandling';
-import { PermissionGuard } from '../System/PermissionGuard';
+import { PermissionGuard } from '@/components/System/PermissionGuard';
 
 interface LazyRouteProps extends Omit<RouteConfig, 'children'> {
   component: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>;

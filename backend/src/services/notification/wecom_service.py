@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 
 from ...core.config import settings
+from ...constants.timeout_constants import WECOM_REQUEST_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,9 @@ class WecomService:
             # 发送请求
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    str(self.webhook_url), json=data, timeout=10.0
+                    str(self.webhook_url),
+                    json=data,
+                    timeout=WECOM_REQUEST_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
 
@@ -95,7 +98,9 @@ class WecomService:
             # 发送请求
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    str(self.webhook_url), json=data, timeout=10.0
+                    str(self.webhook_url),
+                    json=data,
+                    timeout=WECOM_REQUEST_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
 

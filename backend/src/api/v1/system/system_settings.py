@@ -33,7 +33,7 @@ from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.roles import RoleNormalizer
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 
 # 创建系统设置路由器
 router = APIRouter()
@@ -327,7 +327,11 @@ def create_audit_log_with_fallback(
         ) from audit_error
 
 
-@router.post("/security/alerts/test", summary="测试安全警报系统")
+@router.post(
+    "/security/alerts/test",
+    summary="测试安全警报系统",
+    dependencies=[Depends(require_localhost)],
+)
 @debug_only
 async def test_security_alert(
     db: Annotated[Session, Depends(get_db)],

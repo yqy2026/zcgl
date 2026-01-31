@@ -41,6 +41,7 @@ class QueryBuilder[ModelType]:
         filters: dict[str, Any] | None = None,
         search_query: str | None = None,
         search_fields: list[str] | None = None,
+        search_conditions: list[Any] | None = None,
     ) -> Select[Any]:
         """
         Builds a query to count records matching criteria.
@@ -52,7 +53,9 @@ class QueryBuilder[ModelType]:
         if filters:
             query = self._apply_filters(query, filters)
 
-        if search_query and search_fields:
+        if search_conditions:
+            query = query.where(or_(*search_conditions))
+        elif search_query and search_fields:
             query = self._apply_search(query, search_query, search_fields)
 
         return query
@@ -62,6 +65,7 @@ class QueryBuilder[ModelType]:
         filters: dict[str, Any] | None = None,
         search_query: str | None = None,
         search_fields: list[str] | None = None,
+        search_conditions: list[Any] | None = None,
         sort_by: str | None = None,
         sort_desc: bool = True,
         skip: int = 0,
@@ -105,7 +109,9 @@ class QueryBuilder[ModelType]:
             query = self._apply_filters(query, filters)
 
         # 2. Apply Search (with validation)
-        if search_query and search_fields:
+        if search_conditions:
+            query = query.where(or_(*search_conditions))
+        elif search_query and search_fields:
             query = self._apply_search(query, search_query, search_fields)
 
         # 3. Apply Sorting (with validation)

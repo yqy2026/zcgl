@@ -9,9 +9,9 @@ import {
   BarChartOutlined,
   PieChartOutlined,
 } from '@ant-design/icons';
-import { useAnalytics } from '../../hooks/useAnalytics';
-import DataTrendCard from '../../components/Dashboard/DataTrendCard';
-import QuickInsights from '../../components/Dashboard/QuickInsights';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import DataTrendCard from '@/components/Dashboard/DataTrendCard';
+import QuickInsights from '@/components/Dashboard/QuickInsights';
 import styles from './DashboardPage.module.css';
 
 const { Title, Text } = Typography;

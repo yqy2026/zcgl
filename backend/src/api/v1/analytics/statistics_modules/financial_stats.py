@@ -19,6 +19,7 @@ from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.statistics import FinancialSummaryResponse
 from src.utils.cache_manager import cache_statistics
+from src.constants.cache_constants import CACHE_TTL_MEDIUM_SECONDS
 from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@cache_statistics(expire=1800)  # 30分钟缓存  # type: ignore[misc]
+@cache_statistics(expire=CACHE_TTL_MEDIUM_SECONDS)  # 30分钟缓存  # type: ignore[misc]
 @router.get("/financial-summary", response_model=FinancialSummaryResponse)
 def get_financial_summary(
     should_include_deleted: bool = False,

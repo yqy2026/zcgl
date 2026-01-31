@@ -49,6 +49,15 @@ def mock_db_without_bind():
 
 
 @pytest.fixture
+def mock_db():
+    """Create mock database session with PostgreSQL URL"""
+    db = MagicMock()
+    db.bind = MagicMock()
+    db.bind.url = "postgresql+psycopg://user:pass@localhost/test_database"
+    return db
+
+
+@pytest.fixture
 def mock_db_with_non_postgres():
     """Create mock database session with non-PostgreSQL URL"""
     db = MagicMock()
@@ -85,8 +94,7 @@ class TestCreateBackup:
     """Tests for POST /backup/create endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_success(self, mock_service_class, mock_db):
+    def test_create_backup_success(self, mock_service_class, mock_db):
         """Test successful backup creation"""
         from src.api.v1.system.backup import create_backup
 
@@ -100,7 +108,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name="test_backup", db=mock_db)
+        result = create_backup(backup_name="test_backup", db=mock_db)
 
         assert result["success"] is True
         assert result["message"] == "数据备份创建成功"
@@ -109,8 +117,7 @@ class TestCreateBackup:
         mock_service.create_backup.assert_called_once()
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_without_name(self, mock_service_class, mock_db):
+    def test_create_backup_without_name(self, mock_service_class, mock_db):
         """Test backup creation without providing name (uses timestamp)"""
         from src.api.v1.system.backup import create_backup
 
@@ -124,7 +131,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name=None, db=mock_db)
+        result = create_backup(backup_name=None, db=mock_db)
 
         assert result["success"] is True
         mock_service.create_backup.assert_called_once_with(
@@ -133,8 +140,7 @@ class TestCreateBackup:
         )
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_db_url_extraction(self, mock_service_class, mock_db):
+    def test_create_backup_db_url_extraction(self, mock_service_class, mock_db):
         """Test that database URL is correctly extracted from db.bind.url"""
         from src.api.v1.system.backup import create_backup
 
@@ -148,7 +154,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name="db_backup", db=mock_db)
+        result = create_backup(backup_name="db_backup", db=mock_db)
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="db_backup",
@@ -157,8 +163,7 @@ class TestCreateBackup:
         assert result["success"] is True
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_db_without_bind(
+    def test_create_backup_db_without_bind(
         self, mock_service_class, mock_db_without_bind, monkeypatch
     ):
         """Test backup creation when db.bind is None"""
@@ -176,7 +181,7 @@ class TestCreateBackup:
 
         fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
-        result = await backup_module.create_backup(
+        result = backup_module.create_backup(
             backup_name="backup_no_bind", db=mock_db_without_bind
         )
 
@@ -187,8 +192,7 @@ class TestCreateBackup:
         assert result["success"] is True
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_non_postgres_db(
+    def test_create_backup_non_postgres_db(
         self, mock_service_class, mock_db_with_non_postgres
     ):
         """Test backup creation with non-PostgreSQL database"""
@@ -204,9 +208,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(
-            backup_name="pg_backup", db=mock_db_with_non_postgres
-        )
+        result = create_backup(backup_name="pg_backup", db=mock_db_with_non_postgres)
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="pg_backup",
@@ -215,8 +217,7 @@ class TestCreateBackup:
         assert result["success"] is True
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_create_backup_service_error(self, mock_service_class, mock_db):
+    def test_create_backup_service_error(self, mock_service_class, mock_db):
         """Test backup creation when service raises an exception"""
         from src.api.v1.system.backup import create_backup
 
@@ -225,7 +226,7 @@ class TestCreateBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await create_backup(backup_name="error_backup", db=mock_db)
+            create_backup(backup_name="error_backup", db=mock_db)
 
         assert exc_info.value.status_code == 500
         assert "创建数据备份失败" in exc_info.value.message
@@ -241,8 +242,7 @@ class TestListBackups:
     """Tests for GET /backup/list endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_list_backups_success(self, mock_service_class):
+    def test_list_backups_success(self, mock_service_class):
         """Test successful backup list retrieval"""
         from src.api.v1.system.backup import list_backups
 
@@ -267,7 +267,7 @@ class TestListBackups:
         ]
         mock_service_class.return_value = mock_service
 
-        result = await list_backups()
+        result = list_backups()
 
         assert result["success"] is True
         assert result["message"] == "找到 2 个备份文件"
@@ -275,8 +275,7 @@ class TestListBackups:
         mock_service.list_backups.assert_called_once()
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_list_backups_empty(self, mock_service_class):
+    def test_list_backups_empty(self, mock_service_class):
         """Test listing backups when none exist"""
         from src.api.v1.system.backup import list_backups
 
@@ -284,15 +283,14 @@ class TestListBackups:
         mock_service.list_backups.return_value = []
         mock_service_class.return_value = mock_service
 
-        result = await list_backups()
+        result = list_backups()
 
         assert result["success"] is True
         assert result["message"] == "找到 0 个备份文件"
         assert result["data"] == []
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_list_backups_service_error(self, mock_service_class):
+    def test_list_backups_service_error(self, mock_service_class):
         """Test list backups when service raises an exception"""
         from src.api.v1.system.backup import list_backups
 
@@ -301,7 +299,7 @@ class TestListBackups:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await list_backups()
+            list_backups()
 
         assert exc_info.value.status_code == 500
         assert "获取备份列表失败" in exc_info.value.message
@@ -316,8 +314,7 @@ class TestDownloadBackup:
     """Tests for GET /backup/download/{backup_name} endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_download_backup_success(self, mock_service_class, temp_backup_dir):
+    def test_download_backup_success(self, mock_service_class, temp_backup_dir):
         """Test successful backup download"""
         from src.api.v1.system.backup import download_backup
 
@@ -337,15 +334,14 @@ class TestDownloadBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await download_backup(backup_name="test_backup")
+        result = download_backup(backup_name="test_backup")
 
         assert isinstance(result, FileResponse)
         assert result.media_type == "application/octet-stream"
         mock_service.get_backup.assert_called_once_with("test_backup")
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_download_backup_not_found(self, mock_service_class):
+    def test_download_backup_not_found(self, mock_service_class):
         """Test downloading non-existent backup"""
         from src.api.v1.system.backup import download_backup
 
@@ -354,15 +350,14 @@ class TestDownloadBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await download_backup(backup_name="nonexistent")
+            download_backup(backup_name="nonexistent")
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
         assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_download_backup_service_error(self, mock_service_class):
+    def test_download_backup_service_error(self, mock_service_class):
         """Test download when service raises an exception"""
         from src.api.v1.system.backup import download_backup
 
@@ -371,7 +366,7 @@ class TestDownloadBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await download_backup(backup_name="error_backup")
+            download_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
         assert "下载备份文件失败" in exc_info.value.message
@@ -386,8 +381,7 @@ class TestRestoreBackup:
     """Tests for POST /backup/restore/{backup_name} endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_backup_success(self, mock_service_class, mock_db):
+    def test_restore_backup_success(self, mock_service_class, mock_db):
         """Test successful backup restoration"""
         from src.api.v1.system.backup import restore_backup
 
@@ -399,9 +393,7 @@ class TestRestoreBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await restore_backup(
-            backup_name="test_backup", confirm=True, db=mock_db
-        )
+        result = restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
 
         assert result["success"] is True
         assert result["message"] == "数据恢复成功"
@@ -413,20 +405,18 @@ class TestRestoreBackup:
         )
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_backup_not_confirmed(self, mock_service_class, mock_db):
+    def test_restore_backup_not_confirmed(self, mock_service_class, mock_db):
         """Test restore without confirmation parameter"""
         from src.api.v1.system.backup import restore_backup
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
+            restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
 
         assert exc_info.value.status_code == 400
         assert "请确认恢复操作" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_backup_file_not_found(self, mock_service_class, mock_db):
+    def test_restore_backup_file_not_found(self, mock_service_class, mock_db):
         """Test restoring from non-existent backup file"""
         from src.api.v1.system.backup import restore_backup
 
@@ -437,15 +427,14 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
+            restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
         assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_backup_service_error(self, mock_service_class, mock_db):
+    def test_restore_backup_service_error(self, mock_service_class, mock_db):
         """Test restore when service raises an exception"""
         from src.api.v1.system.backup import restore_backup
 
@@ -456,14 +445,13 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
+            restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 500
         assert "恢复数据备份失败" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_backup_db_without_bind(
+    def test_restore_backup_db_without_bind(
         self, mock_service_class, mock_db_without_bind, monkeypatch
     ):
         """Test restore when db.bind is None"""
@@ -478,7 +466,7 @@ class TestRestoreBackup:
 
         fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
-        result = await backup_module.restore_backup(
+        result = backup_module.restore_backup(
             backup_name="backup_no_bind", confirm=True, db=mock_db_without_bind
         )
 
@@ -499,8 +487,7 @@ class TestDeleteBackup:
     """Tests for DELETE /backup/delete/{backup_name} endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_delete_backup_success(self, mock_service_class):
+    def test_delete_backup_success(self, mock_service_class):
         """Test successful backup deletion"""
         from src.api.v1.system.backup import delete_backup
 
@@ -511,7 +498,7 @@ class TestDeleteBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await delete_backup(backup_name="test_backup")
+        result = delete_backup(backup_name="test_backup")
 
         assert result["success"] is True
         assert result["message"] == "备份文件 test_backup 已成功删除"
@@ -519,8 +506,7 @@ class TestDeleteBackup:
         mock_service.delete_backup.assert_called_once_with("test_backup")
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_delete_backup_file_not_found(self, mock_service_class):
+    def test_delete_backup_file_not_found(self, mock_service_class):
         """Test deleting non-existent backup file"""
         from src.api.v1.system.backup import delete_backup
 
@@ -531,15 +517,14 @@ class TestDeleteBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await delete_backup(backup_name="nonexistent")
+            delete_backup(backup_name="nonexistent")
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
         assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_delete_backup_service_error(self, mock_service_class):
+    def test_delete_backup_service_error(self, mock_service_class):
         """Test delete when service raises an exception"""
         from src.api.v1.system.backup import delete_backup
 
@@ -548,7 +533,7 @@ class TestDeleteBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await delete_backup(backup_name="error_backup")
+            delete_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
         assert "删除备份文件失败" in exc_info.value.message
@@ -563,8 +548,7 @@ class TestGetBackupStats:
     """Tests for GET /backup/stats endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_get_backup_stats_success(self, mock_service_class):
+    def test_get_backup_stats_success(self, mock_service_class):
         """Test successful backup statistics retrieval"""
         from src.api.v1.system.backup import get_backup_stats
 
@@ -578,7 +562,7 @@ class TestGetBackupStats:
         }
         mock_service_class.return_value = mock_service
 
-        result = await get_backup_stats()
+        result = get_backup_stats()
 
         assert result["success"] is True
         assert "data" in result
@@ -587,8 +571,7 @@ class TestGetBackupStats:
         mock_service.get_backup_stats.assert_called_once()
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_get_backup_stats_empty(self, mock_service_class):
+    def test_get_backup_stats_empty(self, mock_service_class):
         """Test getting stats when no backups exist"""
         from src.api.v1.system.backup import get_backup_stats
 
@@ -602,14 +585,13 @@ class TestGetBackupStats:
         }
         mock_service_class.return_value = mock_service
 
-        result = await get_backup_stats()
+        result = get_backup_stats()
 
         assert result["success"] is True
         assert result["data"]["total_count"] == 0
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_get_backup_stats_service_error(self, mock_service_class):
+    def test_get_backup_stats_service_error(self, mock_service_class):
         """Test stats when service raises an exception"""
         from src.api.v1.system.backup import get_backup_stats
 
@@ -618,7 +600,7 @@ class TestGetBackupStats:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await get_backup_stats()
+            get_backup_stats()
 
         assert exc_info.value.status_code == 500
         assert "获取备份统计失败" in exc_info.value.message
@@ -633,8 +615,7 @@ class TestValidateBackup:
     """Tests for POST /backup/validate/{backup_name} endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_validate_backup_success(self, mock_service_class):
+    def test_validate_backup_success(self, mock_service_class):
         """Test successful backup validation"""
         from src.api.v1.system.backup import validate_backup
 
@@ -647,7 +628,7 @@ class TestValidateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await validate_backup(backup_name="test_backup")
+        result = validate_backup(backup_name="test_backup")
 
         assert result["success"] is True
         assert result["data"]["valid"] is True
@@ -655,8 +636,7 @@ class TestValidateBackup:
         mock_service.validate_backup.assert_called_once_with("test_backup")
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_validate_backup_invalid(self, mock_service_class):
+    def test_validate_backup_invalid(self, mock_service_class):
         """Test validation of invalid backup"""
         from src.api.v1.system.backup import validate_backup
 
@@ -667,15 +647,14 @@ class TestValidateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = await validate_backup(backup_name="invalid_backup")
+        result = validate_backup(backup_name="invalid_backup")
 
         assert result["success"] is False
         assert result["data"]["valid"] is False
         assert "error" in result["data"]
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_validate_backup_service_error(self, mock_service_class):
+    def test_validate_backup_service_error(self, mock_service_class):
         """Test validation when service raises an exception"""
         from src.api.v1.system.backup import validate_backup
 
@@ -684,7 +663,7 @@ class TestValidateBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await validate_backup(backup_name="error_backup")
+            validate_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
         assert "验证备份文件失败" in exc_info.value.message
@@ -699,8 +678,7 @@ class TestCleanupOldBackups:
     """Tests for POST /backup/cleanup endpoint"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_cleanup_old_backups_success(self, mock_service_class):
+    def test_cleanup_old_backups_success(self, mock_service_class):
         """Test successful cleanup of old backups"""
         from src.api.v1.system.backup import cleanup_old_backups
 
@@ -713,7 +691,7 @@ class TestCleanupOldBackups:
         }
         mock_service_class.return_value = mock_service
 
-        result = await cleanup_old_backups(keep_count=10)
+        result = cleanup_old_backups(keep_count=10)
 
         assert result["success"] is True
         assert result["message"] == "已清理 5 个旧备份"
@@ -722,8 +700,7 @@ class TestCleanupOldBackups:
         mock_service.cleanup_old_backups.assert_called_once_with(keep_count=10)
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_cleanup_no_backups_to_remove(self, mock_service_class):
+    def test_cleanup_no_backups_to_remove(self, mock_service_class):
         """Test cleanup when no backups need to be removed"""
         from src.api.v1.system.backup import cleanup_old_backups
 
@@ -735,14 +712,13 @@ class TestCleanupOldBackups:
         }
         mock_service_class.return_value = mock_service
 
-        result = await cleanup_old_backups(keep_count=10)
+        result = cleanup_old_backups(keep_count=10)
 
         assert result["success"] is True
         assert result["data"]["cleaned"] == 0
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_cleanup_with_default_keep_count(self, mock_service_class):
+    def test_cleanup_with_default_keep_count(self, mock_service_class):
         """Test cleanup with default keep_count parameter"""
         from src.api.v1.system.backup import cleanup_old_backups
 
@@ -755,14 +731,13 @@ class TestCleanupOldBackups:
         }
         mock_service_class.return_value = mock_service
 
-        result = await cleanup_old_backups(keep_count=10)
+        result = cleanup_old_backups(keep_count=10)
 
         assert result["success"] is True
         mock_service.cleanup_old_backups.assert_called_once()
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_cleanup_service_error(self, mock_service_class):
+    def test_cleanup_service_error(self, mock_service_class):
         """Test cleanup when service raises an exception"""
         from src.api.v1.system.backup import cleanup_old_backups
 
@@ -771,7 +746,7 @@ class TestCleanupOldBackups:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await cleanup_old_backups(keep_count=10)
+            cleanup_old_backups(keep_count=10)
 
         assert exc_info.value.status_code == 500
         assert "清理旧备份失败" in exc_info.value.message
@@ -786,8 +761,7 @@ class TestBackupEdgeCases:
     """Tests for edge cases and integration scenarios"""
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_backup_with_unicode_name(self, mock_service_class, mock_db):
+    def test_backup_with_unicode_name(self, mock_service_class, mock_db):
         """Test backup creation with unicode characters in name"""
         from src.api.v1.system.backup import create_backup
 
@@ -801,14 +775,13 @@ class TestBackupEdgeCases:
         }
         mock_service_class.return_value = mock_service
 
-        result = await create_backup(backup_name="备份_测试", db=mock_db)
+        result = create_backup(backup_name="备份_测试", db=mock_db)
 
         assert result["success"] is True
         assert result["data"]["backup_name"] == "备份_测试"
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_restore_without_auto_backup(self, mock_service_class, mock_db):
+    def test_restore_without_auto_backup(self, mock_service_class, mock_db):
         """Test restore without creating automatic backup of current state"""
         from src.api.v1.system.backup import restore_backup
 
@@ -819,9 +792,7 @@ class TestBackupEdgeCases:
         }
         mock_service_class.return_value = mock_service
 
-        result = await restore_backup(
-            backup_name="test_backup", confirm=True, db=mock_db
-        )
+        result = restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
 
         # Verify create_current_backup defaults to True
         call_args = mock_service.restore_backup.call_args
@@ -829,8 +800,7 @@ class TestBackupEdgeCases:
         assert result["success"] is True
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_multiple_operations_consistency(self, mock_service_class, mock_db):
+    def test_multiple_operations_consistency(self, mock_service_class, mock_db):
         """Test consistency across multiple backup operations"""
         from src.api.v1.system.backup import (
             create_backup,
@@ -875,10 +845,10 @@ class TestBackupEdgeCases:
         mock_service_class.return_value = mock_service
 
         # Execute operations
-        create_result = await create_backup(backup_name="consistency_test", db=mock_db)
-        list_result = await list_backups()
-        stats_result = await get_backup_stats()
-        validate_result = await validate_backup(backup_name="consistency_test")
+        create_result = create_backup(backup_name="consistency_test", db=mock_db)
+        list_result = list_backups()
+        stats_result = get_backup_stats()
+        validate_result = validate_backup(backup_name="consistency_test")
 
         # Verify consistency
         assert create_result["success"] is True
@@ -889,8 +859,7 @@ class TestBackupEdgeCases:
         assert list_result["data"][0]["backup_name"] == "consistency_test"
 
     @patch("src.api.v1.system.backup.BackupService")
-    @pytest.mark.asyncio
-    async def test_concurrent_backup_operations(self, mock_service_class):
+    def test_concurrent_backup_operations(self, mock_service_class):
         """Test handling of concurrent backup operations"""
         from src.api.v1.system.backup import get_backup_stats, list_backups
 
@@ -917,8 +886,8 @@ class TestBackupEdgeCases:
         }
         mock_service_class.return_value = mock_service
 
-        list_result = await list_backups()
-        stats_result = await get_backup_stats()
+        list_result = list_backups()
+        stats_result = get_backup_stats()
 
         assert len(list_result["data"]) == 10
         assert stats_result["data"]["total_count"] == 10

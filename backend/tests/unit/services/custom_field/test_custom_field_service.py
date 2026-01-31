@@ -8,6 +8,11 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import (
+    BusinessValidationError,
+    DuplicateResourceError,
+    ResourceNotFoundError,
+)
 from src.models.asset import AssetCustomField
 from src.schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
 from src.services.custom_field.service import CustomFieldService
@@ -79,7 +84,7 @@ class TestCreateCustomField:
                 id="existing_id", field_name="existing_field"
             ),
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DuplicateResourceError) as excinfo:
                 service.create_custom_field(mock_db, obj_in=obj_in)
 
             assert "已存在" in str(excinfo.value)
@@ -119,7 +124,7 @@ class TestUpdateCustomField:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=None,
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(ResourceNotFoundError) as excinfo:
                 service.update_custom_field(mock_db, id="nonexistent_id", obj_in=obj_in)
 
             assert "不存在" in str(excinfo.value)
@@ -138,7 +143,7 @@ class TestUpdateCustomField:
                 "src.services.custom_field.service.custom_field_crud.get_by_field_name",
                 return_value=existing_field,
             ):
-                with pytest.raises(ValueError) as excinfo:
+                with pytest.raises(DuplicateResourceError) as excinfo:
                     service.update_custom_field(
                         mock_db, id=TEST_FIELD_ID, obj_in=obj_in
                     )
@@ -196,7 +201,7 @@ class TestDeleteCustomField:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=None,
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(ResourceNotFoundError) as excinfo:
                 service.delete_custom_field(mock_db, id="nonexistent_id")
 
             assert "不存在" in str(excinfo.value)
@@ -634,7 +639,7 @@ class TestUpdateAssetFieldValues:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=sample_field,
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(BusinessValidationError) as excinfo:
                 service.update_asset_field_values(
                     mock_db, asset_id=TEST_ASSET_ID, values=values
                 )
@@ -756,7 +761,7 @@ class TestToggleActiveStatus:
             "src.services.custom_field.service.custom_field_crud.get",
             return_value=None,
         ):
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(ResourceNotFoundError) as excinfo:
                 service.toggle_active_status(mock_db, id="nonexistent_id")
 
             assert "不存在" in str(excinfo.value)

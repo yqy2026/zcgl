@@ -207,8 +207,6 @@ export const EXCEL_API = {
 export const PDF_API = {
   // PDF处理
   UPLOAD: '/pdf-import/upload',
-  // Best practice: only keep canonical endpoint(s) that exist on backend
-  PREVIEW: '/pdf-import/preview',
 
   // 系统信息
   INFO: '/pdf-import/info',
@@ -216,8 +214,7 @@ export const PDF_API = {
   SESSION_PROGRESS: (sessionId: string) => `/pdf-import/progress/${sessionId}`,
 
   // 批量处理
-  BATCH_UPLOAD: '/pdf-import/batch',
-  BATCH_PROCESS: '/pdf-import/batch/process',
+  BATCH_UPLOAD: '/pdf-import/batch/upload',
 
   // 处理状态
   STATUS: (taskId: string) => `/pdf-import/status/${taskId}`,

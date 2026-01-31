@@ -6,7 +6,7 @@ export { default as AssetSearch } from './AssetSearch';
 export { default as AssetSearchResult } from './AssetSearchResult';
 export { default as AssetBatchActions } from './AssetBatchActions';
 // Form components moved to Forms/ directory - re-export for backward compatibility
-export { AssetForm, AssetFormHelp } from '../Forms';
+export { AssetForm, AssetFormHelp } from '@/components/Forms';
 // export { default as AssetFormDemo } from './AssetFormDemo' // Module does not exist
 export { default as AssetDetailInfo } from './AssetDetailInfo';
 export type { default as AssetHistory } from './AssetHistory';

@@ -21,7 +21,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { COLORS } from '@/styles/colorMap';
 import { UploadOutlined, DeleteOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
-import { DictionarySelect } from '../../Dictionary';
+import { DictionarySelect } from '@/components/Dictionary';
 import { useAssetFormContext } from './AssetFormContext';
 
 const { Option } = Select;

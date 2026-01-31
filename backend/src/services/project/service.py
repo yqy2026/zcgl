@@ -103,8 +103,7 @@ class ProjectService:
         # Use remove instead of delete
         project = project_crud.get(db, project_id)
         if project:
-            db.delete(project)
-            db.commit()
+            project_crud.remove(db, id=project_id)
 
     def generate_project_code(self, db: Session, name: str | None = None) -> str:
         """生成项目编码"""

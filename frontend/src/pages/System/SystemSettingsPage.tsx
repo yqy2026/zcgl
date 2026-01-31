@@ -7,9 +7,9 @@ import {
   CloudDownloadOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons';
-import { systemService } from '../../services/systemService';
-import type { SystemInfo, SystemSettings } from '../../services/systemService';
-import { createLogger } from '../../utils/logger';
+import { systemService } from '@/services/systemService';
+import type { SystemInfo, SystemSettings } from '@/services/systemService';
+import { createLogger } from '@/utils/logger';
 
 const pageLogger = createLogger('SystemSettings');
 

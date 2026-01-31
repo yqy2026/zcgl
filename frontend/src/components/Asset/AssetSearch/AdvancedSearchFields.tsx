@@ -1,6 +1,5 @@
-import React from 'react';
-import { Col, Form, InputNumber, DatePicker, Row, Select, Space } from 'antd';
-import type { Dayjs } from 'dayjs';
+import React, { useMemo } from 'react';
+import { Col, Form, Input, InputNumber, DatePicker, Row, Select, Space } from 'antd';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -10,14 +9,40 @@ interface AdvancedSearchFieldsProps {
   businessCategories: string[];
   ownershipEntityLoading?: boolean;
   businessCategoryLoading?: boolean;
+  areaRange: [number, number];
+  onAreaMinChange: (value: number | null) => void;
+  onAreaMaxChange: (value: number | null) => void;
 }
 
-export const AdvancedSearchFields: React.FC<AdvancedSearchFieldsProps> = ({
+export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
   ownershipEntities,
   businessCategories,
   ownershipEntityLoading = false,
   businessCategoryLoading = false,
-}) => {
+  areaRange,
+  onAreaMinChange,
+  onAreaMaxChange,
+}: AdvancedSearchFieldsProps) {
+  const ownershipOptions = useMemo(
+    () =>
+      ownershipEntities.map(entity => (
+        <Option key={entity} value={entity}>
+          {entity}
+        </Option>
+      )),
+    [ownershipEntities]
+  );
+
+  const businessOptions = useMemo(
+    () =>
+      businessCategories.map(category => (
+        <Option key={category} value={category}>
+          {category}
+        </Option>
+      )),
+    [businessCategories]
+  );
+
   return (
     <>
       <Row gutter={16}>
@@ -30,11 +55,7 @@ export const AdvancedSearchFields: React.FC<AdvancedSearchFieldsProps> = ({
               optionFilterProp="children"
               loading={ownershipEntityLoading}
             >
-              {ownershipEntities.map(entity => (
-                <Option key={entity} value={entity}>
-                  {entity}
-                </Option>
-              ))}
+              {ownershipOptions}
             </Select>
           </Form.Item>
         </Col>
@@ -48,59 +69,79 @@ export const AdvancedSearchFields: React.FC<AdvancedSearchFieldsProps> = ({
               optionFilterProp="children"
               loading={businessCategoryLoading}
             >
-              {businessCategories.map(category => (
-                <Option key={category} value={category}>
-                  {category}
-                </Option>
-              ))}
+              {businessOptions}
             </Select>
           </Form.Item>
         </Col>
 
         <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item label="建筑面积范围(㎡)">
-            <Space.Compact style={{ width: '100%' }}>
-              <Form.Item name="area_min" noStyle>
-                <InputNumber
-                  placeholder="最小"
-                  min={0}
-                  max={100000}
-                  style={{ width: '50%' }}
-                />
-              </Form.Item>
-              <Form.Item name="area_max" noStyle>
-                <InputNumber
-                  placeholder="最大"
-                  min={0}
-                  max={100000}
-                  style={{ width: '50%' }}
-                />
-              </Form.Item>
+          <Form.Item name="is_litigated" label="是否涉诉">
+            <Select placeholder="选择是否涉诉" allowClear>
+              <Option value="是">是</Option>
+              <Option value="否">否</Option>
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item label="面积范围">
+            <Space.Compact>
+              <InputNumber
+                id="asset-area-min"
+                name="asset-area-min"
+                style={{ width: '45%' }}
+                placeholder="最小面积"
+                value={areaRange[0]}
+                onChange={onAreaMinChange}
+              />
+              <Input
+                id="asset-area-range-separator"
+                name="asset-area-range-separator"
+                style={{ width: '10%', borderLeft: 0, borderRight: 0, pointerEvents: 'none' }}
+                placeholder="~"
+                disabled
+              />
+              <InputNumber
+                id="asset-area-max"
+                name="asset-area-max"
+                style={{ width: '45%' }}
+                placeholder="最大面积"
+                value={areaRange[1]}
+                onChange={onAreaMaxChange}
+              />
             </Space.Compact>
           </Form.Item>
         </Col>
 
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item
-            name="created_date_range"
-            label="创建时间"
-            getValueFromEvent={(values: [Dayjs, Dayjs]) => {
-              if (values && values.length === 2) {
-                return {
-                  created_start: values[0].format('YYYY-MM-DD'),
-                  created_end: values[1].format('YYYY-MM-DD'),
-                };
-              }
-              return undefined;
-            }}
-          >
-            <RangePicker
-              style={{ width: '100%' }}
-              placeholder={['开始日期', '结束日期']}
-            />
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="dateRange" label="创建日期">
+            <RangePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item label="排序方式">
+            <Space.Compact>
+              <Form.Item name="sort_field" noStyle>
+                <Select style={{ width: '60%' }} defaultValue="created_at">
+                  <Option value="created_at">创建时间</Option>
+                  <Option value="property_name">物业名称</Option>
+                  <Option value="total_area">建筑面积</Option>
+                  <Option value="rentable_area">可租面积</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="sort_order" noStyle>
+                <Select style={{ width: '40%' }} defaultValue="desc">
+                  <Option value="asc">升序</Option>
+                  <Option value="desc">降序</Option>
+                </Select>
+              </Form.Item>
+            </Space.Compact>
           </Form.Item>
         </Col>
       </Row>
     </>
   );
-};
+});

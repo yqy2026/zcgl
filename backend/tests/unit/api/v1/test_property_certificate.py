@@ -17,9 +17,14 @@ from fastapi import status
 
 
 @pytest.fixture
-def admin_user_headers(client, admin_user):
+def admin_user_headers(client, admin_user, monkeypatch):
     """管理员用户认证头"""
-    # client fixture already bypasses authentication
+    from src.middleware.auth import RBACPermissionChecker
+
+    def allow_admin(self, current_user=None, db=None):  # noqa: ANN001 - test stub
+        return admin_user
+
+    monkeypatch.setattr(RBACPermissionChecker, "__call__", allow_admin)
     return {"Authorization": "Bearer mocked_token"}
 
 
@@ -308,4 +313,4 @@ class TestPropertyCertificateEdgeCases:
 
         if response.status_code == status.HTTP_200_OK:
             data = response.json()
-            assert "items" in data or "results" in data
+            assert isinstance(data, list) or "items" in data or "results" in data

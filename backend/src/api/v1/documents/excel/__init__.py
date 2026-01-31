@@ -4,9 +4,9 @@ Excel模块 - 路由聚合
 将所有Excel相关的子路由合并到一个主路由器
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from src.security.route_guards import debug_only
+from src.security.route_guards import debug_only, require_localhost
 
 from . import config, export_ops, import_ops, preview, status, template
 
@@ -23,7 +23,7 @@ router.include_router(status.router)
 
 
 # 测试端点
-@router.get("/test", summary="测试端点")
+@router.get("/test", summary="测试端点", dependencies=[Depends(require_localhost)])
 @debug_only
 async def test_endpoint() -> dict[str, str]:
     """测试端点"""

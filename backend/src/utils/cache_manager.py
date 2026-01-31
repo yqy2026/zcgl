@@ -1,42 +1,77 @@
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, overload
-
-"""
-缓存管理模块
-提供Redis缓存功能，用于优化API性能
-"""
-
+import fnmatch
 import json
-import logging
-from datetime import datetime, timedelta
+from collections.abc import Awaitable, Callable
+from datetime import datetime
 from decimal import Decimal
+from typing import Any, ParamSpec, TypeVar, cast, overload
 
-try:
-    import redis.asyncio as redis
+"""
+缓存管理模块（统一后端）
+为统计模块提供异步接口，但统一复用 core.cache_manager 的单一后端。
+"""
 
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-    redis = None  # type: ignore
+from ..core.cache_manager import (
+    MemoryCache,
+    RedisCache,
+)
+from ..core.cache_manager import (
+    cache_manager as core_cache_manager,
+)
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
-if TYPE_CHECKING:
-    from redis.asyncio import Redis
 
+class CacheManager:
+    """异步接口的缓存管理器（委托到核心缓存）"""
 
-# 设置默认配置，避免依赖外部配置文件
-class Settings:
-    REDIS_HOST = "localhost"
-    REDIS_PORT = 6379
-    REDIS_DB = 0
-    REDIS_PASSWORD = None
+    def __init__(self) -> None:
+        self.backend = core_cache_manager.backend
 
+    async def initialize(self) -> None:
+        # 核心缓存为同步实现，初始化在 core 中完成
+        return None
 
-settings = Settings()
+    async def close(self) -> None:
+        return None
 
-logger = logging.getLogger(__name__)
+    async def get(self, prefix: str, key: str) -> Any | None:
+        return core_cache_manager.get(key, namespace=prefix)
+
+    async def set(self, prefix: str, key: str, value: Any, expire: int = 3600) -> bool:
+        return core_cache_manager.set(key, value, ttl=expire, namespace=prefix)
+
+    async def delete(self, prefix: str, key: str) -> bool:
+        return core_cache_manager.delete(key, namespace=prefix)
+
+    async def clear_pattern(self, pattern: str) -> int:
+        full_pattern = f"{core_cache_manager.key_prefix}:{pattern}"
+        backend = core_cache_manager.backend
+        deleted_count = 0
+
+        try:
+            if isinstance(backend, MemoryCache):
+                deleted_keys = [
+                    key for key in backend._cache if fnmatch.fnmatch(key, full_pattern)
+                ]
+                for key in deleted_keys:
+                    del backend._cache[key]
+                deleted_count = len(deleted_keys)
+            elif isinstance(backend, RedisCache):
+                keys = list(backend.client.scan_iter(match=full_pattern))
+                if keys:
+                    backend.client.delete(*keys)
+                deleted_count = len(keys)
+            else:
+                core_cache_manager.clear(pattern=pattern)
+        except Exception:
+            core_cache_manager.clear(pattern=pattern)
+            deleted_count = 0
+
+        return deleted_count
+
+    def get_stats(self) -> dict[str, Any]:
+        return core_cache_manager.get_stats()
 
 
 class CacheJSONEncoder(json.JSONEncoder):
@@ -66,169 +101,8 @@ def cache_json_loads(data: bytes) -> Any:
 
     try:
         return json.loads(data.decode("utf-8"), object_hook=object_hook)
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
-        logger.warning(f"JSON反序列化失败: {e}")
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
         return None
-
-
-class CacheManager:
-    """缓存管理器 - 支持Redis和内存缓存后备"""
-
-    def __init__(self) -> None:
-        self.redis_client: Redis | None = None
-        self.memory_cache: dict[str, Any] = {}
-        self.memory_cache_expiry: dict[str, datetime] = {}
-        self.use_memory_fallback = True
-
-    async def initialize(self) -> None:
-        """初始化Redis连接"""
-        if not REDIS_AVAILABLE:
-            logger.warning("Redis库未安装，使用内存缓存")
-            return
-
-        try:
-            self.redis_client = redis.Redis(
-                host=settings.REDIS_HOST or "localhost",
-                port=settings.REDIS_PORT or 6379,
-                db=settings.REDIS_DB or 0,
-                password=settings.REDIS_PASSWORD,
-                decode_responses=False,
-                socket_timeout=5,
-                socket_connect_timeout=5,
-            )
-            # 测试连接
-            if self.redis_client is not None:
-                self.redis_client.ping()  # Synchronous call
-            logger.info("Redis缓存连接成功")
-        except Exception as e:
-            logger.warning(f"Redis连接失败: {e}")
-            self.redis_client = None
-            if self.use_memory_fallback:
-                logger.info("启用内存缓存作为后备方案")
-            else:
-                logger.warning("缓存功能已禁用")
-
-    def _clean_expired_memory_cache(self) -> None:
-        """清理过期的内存缓存"""
-        current_time = datetime.now()
-        expired_keys = [
-            key
-            for key, expiry_time in self.memory_cache_expiry.items()
-            if expiry_time <= current_time
-        ]
-        for key in expired_keys:
-            self.memory_cache.pop(key, None)
-            self.memory_cache_expiry.pop(key, None)
-
-    async def close(self) -> None:
-        """关闭Redis连接"""
-        if self.redis_client:
-            await self.redis_client.close()
-
-    def _get_key(self, prefix: str, key: str) -> str:
-        """生成缓存键"""
-        return f"{prefix}:{key}"
-
-    async def get(self, prefix: str, key: str) -> Any | None:
-        """获取缓存数据"""
-        cache_key = self._get_key(prefix, key)
-
-        # 首先尝试Redis缓存
-        if self.redis_client:
-            try:
-                data = await self.redis_client.get(cache_key)
-                if data:
-                    result = cache_json_loads(data)
-                    if result is not None:
-                        return result
-            except Exception as e:
-                logger.warning(f"Redis缓存获取失败: {e}")
-
-        # Redis不可用或失败时，使用内存缓存
-        if self.use_memory_fallback:
-            self._clean_expired_memory_cache()
-            if cache_key in self.memory_cache:
-                logger.debug(f"从内存缓存获取: {cache_key}")
-                return self.memory_cache[cache_key]
-
-        return None
-
-    async def set(self, prefix: str, key: str, value: Any, expire: int = 3600) -> bool:
-        """设置缓存数据"""
-        cache_key = self._get_key(prefix, key)
-        data = cache_json_dumps(value)
-        success = False
-
-        # 首先尝试Redis缓存
-        if self.redis_client:
-            try:
-                await self.redis_client.setex(cache_key, expire, data)
-                success = True
-                logger.debug(f"Redis缓存设置成功: {cache_key}")
-            except Exception as e:
-                logger.warning(f"Redis缓存设置失败: {e}")
-
-        # 如果Redis失败，使用内存缓存
-        if not success and self.use_memory_fallback:
-            try:
-                self.memory_cache[cache_key] = value
-                expiry_time = datetime.now() + timedelta(seconds=expire)
-                self.memory_cache_expiry[cache_key] = expiry_time
-                logger.debug(f"内存缓存设置成功: {cache_key}")
-                success = True
-            except Exception as e:
-                logger.error(f"内存缓存设置失败: {e}")
-
-        return success
-
-    async def delete(self, prefix: str, key: str) -> bool:
-        """删除缓存数据"""
-        cache_key = self._get_key(prefix, key)
-        success = False
-
-        # 尝试从Redis删除
-        if self.redis_client:
-            try:
-                await self.redis_client.delete(cache_key)
-                success = True
-            except Exception as e:
-                logger.warning(f"Redis缓存删除失败: {e}")
-
-        # 从内存缓存删除
-        if self.use_memory_fallback:
-            self.memory_cache.pop(cache_key, None)
-            self.memory_cache_expiry.pop(cache_key, None)
-            success = True
-
-        return success
-
-    async def clear_pattern(self, pattern: str) -> int:
-        """根据模式清除缓存"""
-        deleted_count = 0
-
-        # 尝试从Redis清除
-        if self.redis_client:
-            try:
-                keys = await self.redis_client.keys(pattern)
-                if keys:
-                    deleted_count = await self.redis_client.delete(*keys)
-            except Exception as e:
-                logger.warning(f"Redis缓存清除失败: {e}")
-
-        # 从内存缓存清除匹配的键
-        if self.use_memory_fallback:
-            try:
-                keys_to_delete = [
-                    key for key in self.memory_cache if pattern.replace("*", "") in key
-                ]
-                for key in keys_to_delete:
-                    self.memory_cache.pop(key, None)
-                    self.memory_cache_expiry.pop(key, None)
-                    deleted_count += 1
-            except Exception as e:
-                logger.error(f"内存缓存清除失败: {e}")
-
-        return deleted_count
 
 
 # 全局缓存管理器实例
@@ -279,46 +153,37 @@ class CacheDecorator:
     def __call__(self, func: Callable[P, R]) -> Callable[P, R]: ...
 
     def __call__(self, func: Callable[P, Any]) -> Callable[P, Any]:
-        # 检测函数是否为异步函数
         import asyncio
 
         is_async_func = asyncio.iscoroutinefunction(func)
 
         if is_async_func:
-            # 异步函数的处理逻辑
-            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
-                # 构建缓存键
-                cache_key = self.key_builder(func.__name__, **kwargs)
 
-                # 尝试从缓存获取
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
+                cache_key = self.key_builder(func.__name__, **kwargs)
                 cached_result = await cache_manager.get(self.prefix, cache_key)
                 if cached_result is not None:
                     return cached_result
 
-                # 执行异步函数
                 result = await func(*args, **kwargs)
-
-                # 设置缓存
                 await cache_manager.set(self.prefix, cache_key, result, self.expire)
-
                 return result
 
             return cast(Callable[P, Any], async_wrapper)
-        else:
-            # 同步函数的处理逻辑
-            def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
-                # 构建缓存键
-                self.key_builder(func.__name__, **kwargs)
 
-                # 对于同步函数，使用同步方式的缓存（内存缓存）
-                # 因为在同步上下文中无法使用async方法
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
+            cache_key = self.key_builder(func.__name__, **kwargs)
+            cached_result = core_cache_manager.get(cache_key, namespace=self.prefix)
+            if cached_result is not None:
+                return cached_result
 
-                # 使用线程局部存储或简单返回结果（不在缓存中）
-                # 由于cache_manager是异步的，同步函数暂时跳过缓存
-                # 直接执行函数
-                return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            core_cache_manager.set(
+                cache_key, result, ttl=self.expire, namespace=self.prefix
+            )
+            return result
 
-            return cast(Callable[P, Any], sync_wrapper)
+        return cast(Callable[P, Any], sync_wrapper)
 
 
 # 常用缓存装饰器

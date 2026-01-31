@@ -31,6 +31,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
@@ -155,9 +156,7 @@ class TestGetEnumFieldTypes:
     """Tests for GET /api/v1/enum-fields/types endpoint"""
 
     @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
-    def test_get_enum_field_types_success(
-        self, mock_get_crud, mock_db, mock_enum_type
-    ):
+    def test_get_enum_field_types_success(self, mock_get_crud, mock_db, mock_enum_type):
         """Test getting enum field types successfully"""
         from src.api.v1.system.enum_field import get_enum_field_types
 
@@ -292,9 +291,7 @@ class TestGetEnumFieldType:
     """Tests for GET /api/v1/enum-fields/types/{type_id} endpoint"""
 
     @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
-    def test_get_enum_field_type_success(
-        self, mock_get_crud, mock_db, mock_enum_type
-    ):
+    def test_get_enum_field_type_success(self, mock_get_crud, mock_db, mock_enum_type):
         """Test getting enum field type successfully"""
         from src.api.v1.system.enum_field import get_enum_field_type
 
@@ -338,7 +335,6 @@ class TestCreateEnumFieldType:
     ):
         """Test creating enum field type successfully"""
         from src.api.v1.system.enum_field import create_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeCreate
 
         enum_type_data = EnumFieldTypeCreate(
@@ -364,7 +360,6 @@ class TestCreateEnumFieldType:
     def test_create_enum_field_type_duplicate_code(self, mock_get_crud, mock_db):
         """Test creating enum field type with duplicate code"""
         from src.api.v1.system.enum_field import create_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeCreate
 
         enum_type_data = EnumFieldTypeCreate(
@@ -385,12 +380,9 @@ class TestCreateEnumFieldType:
         assert "编码 existing_enum 已存在" in exc_info.value.message
 
     @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
-    def test_create_enum_field_type_validation_error(
-        self, mock_get_crud, mock_db
-    ):
+    def test_create_enum_field_type_validation_error(self, mock_get_crud, mock_db):
         """Test creating enum field type with validation error"""
         from src.api.v1.system.enum_field import create_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeCreate
 
         enum_type_data = EnumFieldTypeCreate(
@@ -426,7 +418,6 @@ class TestUpdateEnumFieldType:
     ):
         """Test updating enum field type successfully"""
         from src.api.v1.system.enum_field import update_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
         update_data = EnumFieldTypeUpdate(
@@ -452,7 +443,6 @@ class TestUpdateEnumFieldType:
     def test_update_enum_field_type_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field type"""
         from src.api.v1.system.enum_field import update_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
         update_data = EnumFieldTypeUpdate(name="Updated Name")
@@ -475,7 +465,6 @@ class TestUpdateEnumFieldType:
     ):
         """Test updating enum field type with duplicate code"""
         from src.api.v1.system.enum_field import update_enum_field_type
-
         from src.schemas.enum_field import EnumFieldTypeUpdate
 
         update_data = EnumFieldTypeUpdate(code="existing_code")
@@ -682,7 +671,6 @@ class TestCreateEnumFieldValue:
     ):
         """Test creating enum field value successfully"""
         from src.api.v1.system.enum_field import create_enum_field_value
-
         from src.schemas.enum_field import EnumFieldValueCreate
 
         value_data = EnumFieldValueCreate(
@@ -716,7 +704,6 @@ class TestCreateEnumFieldValue:
     ):
         """Test creating enum field value with non-existent type"""
         from src.api.v1.system.enum_field import create_enum_field_value
-
         from src.schemas.enum_field import EnumFieldValueCreate
 
         value_data = EnumFieldValueCreate(
@@ -750,7 +737,6 @@ class TestUpdateEnumFieldValue:
     ):
         """Test updating enum field value successfully"""
         from src.api.v1.system.enum_field import update_enum_field_value
-
         from src.schemas.enum_field import EnumFieldValueUpdate
 
         update_data = EnumFieldValueUpdate(
@@ -773,7 +759,6 @@ class TestUpdateEnumFieldValue:
     def test_update_enum_field_value_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field value"""
         from src.api.v1.system.enum_field import update_enum_field_value
-
         from src.schemas.enum_field import EnumFieldValueUpdate
 
         update_data = EnumFieldValueUpdate(label="Updated Label")
@@ -855,7 +840,6 @@ class TestBatchCreateEnumFieldValues:
     ):
         """Test batch creating enum field values successfully"""
         from src.api.v1.system.enum_field import batch_create_enum_field_values
-
         from src.schemas.enum_field import EnumFieldBatchCreate
 
         batch_data = EnumFieldBatchCreate(
@@ -889,7 +873,6 @@ class TestBatchCreateEnumFieldValues:
     ):
         """Test batch creating enum field values with non-existent type"""
         from src.api.v1.system.enum_field import batch_create_enum_field_values
-
         from src.schemas.enum_field import EnumFieldBatchCreate
 
         batch_data = EnumFieldBatchCreate(
@@ -965,7 +948,6 @@ class TestCreateEnumFieldUsage:
     ):
         """Test creating enum field usage record successfully"""
         from src.api.v1.system.enum_field import create_enum_field_usage
-
         from src.schemas.enum_field import EnumFieldUsageCreate
 
         usage_data = EnumFieldUsageCreate(
@@ -1002,7 +984,6 @@ class TestUpdateEnumFieldUsage:
     ):
         """Test updating enum field usage record successfully"""
         from src.api.v1.system.enum_field import update_enum_field_usage
-
         from src.schemas.enum_field import EnumFieldUsageUpdate
 
         update_data = EnumFieldUsageUpdate(
@@ -1024,7 +1005,6 @@ class TestUpdateEnumFieldUsage:
     def test_update_enum_field_usage_not_found(self, mock_get_crud, mock_db):
         """Test updating non-existent enum field usage record"""
         from src.api.v1.system.enum_field import update_enum_field_usage
-
         from src.schemas.enum_field import EnumFieldUsageUpdate
 
         update_data = EnumFieldUsageUpdate(field_label="Updated Label")
@@ -1087,9 +1067,7 @@ class TestDeleteEnumFieldUsage:
 class TestGetEnumFieldTypeHistory:
     """Tests for GET /api/v1/enum-fields/types/{type_id}/history endpoint"""
 
-    def test_get_enum_field_type_history_success(
-        self, mock_db, mock_enum_history
-    ):
+    def test_get_enum_field_type_history_success(self, mock_db, mock_enum_history):
         """Test getting enum field type history successfully"""
         from src.api.v1.system.enum_field import get_enum_field_type_history
 
@@ -1129,9 +1107,7 @@ class TestGetEnumFieldTypeHistory:
 class TestGetEnumFieldValueHistory:
     """Tests for GET /api/v1/enum-fields/values/{value_id}/history endpoint"""
 
-    def test_get_enum_field_value_history_success(
-        self, mock_db, mock_enum_history
-    ):
+    def test_get_enum_field_value_history_success(self, mock_db, mock_enum_history):
         """Test getting enum field value history successfully"""
         from src.api.v1.system.enum_field import get_enum_field_value_history
 

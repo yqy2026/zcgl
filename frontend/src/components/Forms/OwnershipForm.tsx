@@ -40,19 +40,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
       // Loading project options
       const response = await projectService.getProjectOptions(true);
       // Got project options response
-
-      // 确保响应数据是数组
-      const projects = Array.isArray(response)
-        ? response
-        : typeof response === 'object' &&
-            response != null &&
-            'data' in (response as Record<string, unknown>)
-          ? Array.isArray((response as Record<string, unknown>).data)
-            ? ((response as Record<string, unknown>).data as ProjectDropdownOption[])
-            : []
-          : [];
-
-      setProjectOptions(projects as ProjectDropdownOption[]);
+      const projects = Array.isArray(response) ? response : [];
+      setProjectOptions(projects);
     } catch {
       MessageManager.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误

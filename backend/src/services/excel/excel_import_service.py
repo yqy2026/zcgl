@@ -64,7 +64,7 @@ class ExcelImportService:
         self.db = db
         self.validator = AssetBatchValidator()
 
-    def import_assets_from_excel(
+    async def import_assets_from_excel(
         self,
         file_path: str,
         sheet_name: str = STANDARD_SHEET_NAME,
@@ -74,21 +74,29 @@ class ExcelImportService:
         should_skip_errors: bool = False,
         batch_size: int = 100,
     ) -> dict[str, Any]:
-        """
-        从Excel文件导入资产数据
+        from fastapi.concurrency import run_in_threadpool
 
-        Args:
-            file_path: Excel文件路径
-            sheet_name: 工作表名称
-            should_validate_data: 是否验证数据
-            should_create_assets: 是否创建资产
-            should_update_existing: 是否更新已存在的资产
-            should_skip_errors: 是否跳过错误行（启用时使用批量提交策略）
-            batch_size: 批处理大小（每N行提交一次）
+        return await run_in_threadpool(
+            self._import_assets_from_excel_sync,
+            file_path=file_path,
+            sheet_name=sheet_name,
+            should_validate_data=should_validate_data,
+            should_create_assets=should_create_assets,
+            should_update_existing=should_update_existing,
+            should_skip_errors=should_skip_errors,
+            batch_size=batch_size,
+        )
 
-        Returns:
-            导入结果字典
-        """
+    def _import_assets_from_excel_sync(
+        self,
+        file_path: str,
+        sheet_name: str = STANDARD_SHEET_NAME,
+        should_validate_data: bool = True,
+        should_create_assets: bool = True,
+        should_update_existing: bool = False,
+        should_skip_errors: bool = False,
+        batch_size: int = 100,
+    ) -> dict[str, Any]:
         try:
             # 读取Excel文件
             df = pd.read_excel(file_path, sheet_name=sheet_name)

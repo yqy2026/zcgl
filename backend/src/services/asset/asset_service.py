@@ -13,7 +13,8 @@ from ...core.exception_handler import (
     validation_error,
 )
 from ...crud.asset import asset_crud
-from ...models.asset import Asset
+from ...crud.history import history_crud
+from ...models.asset import Asset, AssetHistory
 from ...models.auth import User
 from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
@@ -26,6 +27,40 @@ from ...services.enum_validation_service import (
 class AssetService:
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    @staticmethod
+    def build_filters(
+        *,
+        ownership_status: str | None = None,
+        property_nature: str | None = None,
+        usage_status: str | None = None,
+        ownership_entity: str | None = None,
+        management_entity: str | None = None,
+        business_category: str | None = None,
+        min_area: float | None = None,
+        max_area: float | None = None,
+        is_litigated: str | None = None,
+    ) -> dict[str, Any] | None:
+        filters: dict[str, Any] = {}
+        if ownership_status is not None and ownership_status != "":
+            filters["ownership_status"] = ownership_status
+        if property_nature is not None and property_nature != "":
+            filters["property_nature"] = property_nature
+        if usage_status is not None and usage_status != "":
+            filters["usage_status"] = usage_status
+        if ownership_entity is not None and ownership_entity != "":
+            filters["ownership_entity"] = ownership_entity
+        if management_entity is not None and management_entity != "":
+            filters["management_entity"] = management_entity
+        if business_category is not None and business_category != "":
+            filters["business_category"] = business_category
+        if min_area is not None:
+            filters["min_area"] = min_area
+        if max_area is not None:
+            filters["max_area"] = max_area
+        if is_litigated is not None and is_litigated != "":
+            filters["is_litigated"] = is_litigated
+        return filters or None
 
     @contextmanager
     def _transaction(self) -> Generator[None, None, None]:
@@ -66,6 +101,10 @@ class AssetService:
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
+
+    def get_asset_history(self, asset_id: str) -> list[AssetHistory]:
+        self.get_asset(asset_id)
+        return history_crud.get_by_asset_id(db=self.db, asset_id=asset_id)
 
     def get_distinct_field_values(self, field_name: str) -> list[str]:
         values = asset_crud.get_distinct_field_values(self.db, field_name)
@@ -225,7 +264,20 @@ class AssetService:
     def delete_asset(self, asset_id: str, current_user: User | None = None) -> None:
         try:
             with self._transaction():
-                self.get_asset(asset_id, use_cache=False)
+                asset = self.get_asset(asset_id, use_cache=False)
+                operator = (
+                    getattr(current_user, "username", None)
+                    or getattr(current_user, "id", None)
+                    or "system"
+                )
+                history_crud.create(
+                    db=self.db,
+                    asset_id=asset.id,
+                    operation_type="DELETE",
+                    description=f"删除资产: {asset.property_name}",
+                    operator=str(operator) if operator is not None else None,
+                    commit=False,
+                )
                 asset_crud.remove(db=self.db, id=asset_id, commit=False)
         except StaleDataError as exc:
             raise conflict(
@@ -451,7 +503,18 @@ class AsyncAssetService:
         # 1. 存在性检查
         try:
             async with self._transaction():
-                await self.get_asset(asset_id, use_cache=False)
+                asset = await self.get_asset(asset_id, use_cache=False)
+                operator = (
+                    getattr(current_user, "username", None)
+                    or getattr(current_user, "id", None)
+                    or "system"
+                )
+                history = AssetHistory()
+                history.asset_id = asset.id
+                history.operation_type = "DELETE"
+                history.description = f"删除资产: {asset.property_name}"
+                history.operator = str(operator) if operator is not None else None
+                self.db.add(history)
                 await asset_crud.remove_async(db=self.db, id=asset_id, commit=False)
         except StaleDataError as exc:
             raise conflict(

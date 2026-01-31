@@ -31,13 +31,13 @@ from ....schemas.enum_field import (
     EnumFieldValueResponse,
     EnumFieldValueUpdate,
 )
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 
 router = APIRouter(prefix="/enum-fields", tags=["枚举字段管理"])
 
 
 # Debug endpoint for testing
-@router.get("/debug")
+@router.get("/debug", dependencies=[Depends(require_localhost)])
 @debug_only
 async def debug_endpoint() -> dict[str, str]:
     """Debug endpoint to test basic API functionality"""

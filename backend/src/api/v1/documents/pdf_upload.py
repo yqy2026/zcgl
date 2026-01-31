@@ -26,7 +26,8 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import bad_request, internal_error
+from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
+from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -69,7 +70,7 @@ async def upload_pdf_file(
         raise bad_request("只支持PDF文件上传")
 
     # 验证并保存文件大小（流式处理，避免内存耗尽）
-    max_size = 50 * 1024 * 1024
+    max_size = DEFAULT_MAX_FILE_SIZE
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
 
@@ -97,6 +98,8 @@ async def upload_pdf_file(
 
     except Exception as e:
         temp_file_path.unlink(missing_ok=True)
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"文件处理失败: {str(e)}")
 
     session_id = f"session-{uuid.uuid4().hex[:12]}"
@@ -163,7 +166,7 @@ async def upload_and_extract_pdf_v1_compatible(
     if file.content_type != "application/pdf":
         raise bad_request("只支持PDF文件上传")
 
-    max_size = 50 * 1024 * 1024
+    max_size = DEFAULT_MAX_FILE_SIZE
     file_content = await file.read()
     if len(file_content) > max_size:
         raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")

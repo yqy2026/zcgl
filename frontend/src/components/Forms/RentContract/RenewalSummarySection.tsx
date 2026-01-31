@@ -13,7 +13,7 @@ import {
   DollarOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
-import { RentContract, ContractStatus, ContractStatusLabels, ContractStatusColors } from '../../../types/rentContract';
+import { RentContract, ContractStatus, ContractStatusLabels, ContractStatusColors } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 
 const { Text } = Typography;

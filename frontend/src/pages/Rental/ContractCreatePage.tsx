@@ -20,11 +20,11 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate, RentContractUpdate } from '../../types/rentContract';
-import { rentContractService } from '../../services/rentContractService';
-import { useFormat } from '../../utils/format';
-import { createLogger } from '../../utils/logger';
+import { RentContractForm } from '@/components/Forms';
+import { RentContractCreate, RentContractUpdate } from '@/types/rentContract';
+import { rentContractService } from '@/services/rentContractService';
+import { useFormat } from '@/utils/format';
+import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('ContractCreateEdit');

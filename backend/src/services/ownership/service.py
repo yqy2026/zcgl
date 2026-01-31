@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc
+from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import (
@@ -122,8 +122,12 @@ class OwnershipService:
 
     def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取权属方统计信息"""
-        total_count = db.query(Ownership).count()
-        active_count = db.query(Ownership).filter(Ownership.is_active).count()
+        total_count, active_count = db.query(
+            func.count(Ownership.id),
+            func.sum(case((Ownership.is_active.is_(True), 1), else_=0)),
+        ).one()
+        total_count = int(total_count or 0)
+        active_count = int(active_count or 0)
         inactive_count = total_count - active_count
 
         recent_created = (

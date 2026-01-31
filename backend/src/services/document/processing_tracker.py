@@ -23,6 +23,10 @@ except ImportError:
     redis = None
 
 from ...enums.status import TaskExecutionStatus
+from ...constants.timeout_constants import (
+    REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS,
+    REDIS_SOCKET_TIMEOUT_SECONDS,
+)
 from ...models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
@@ -491,8 +495,8 @@ class BatchStatusTracker:
                     db=redis_db,
                     password=redis_password,
                     decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5,
+                    socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS,
+                    socket_timeout=REDIS_SOCKET_TIMEOUT_SECONDS,
                 )
                 # 测试连接
                 self._redis_client.ping()

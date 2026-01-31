@@ -21,7 +21,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { dictionaryService } from '../../services/dictionary';
+import { dictionaryService } from '@/services/dictionary';
 import type {
   EnumFieldType,
   EnumFieldValue,
@@ -29,8 +29,8 @@ import type {
   UpdateEnumFieldTypeRequest,
   CreateEnumFieldValueRequest,
   UpdateEnumFieldValueRequest,
-} from '../../services/dictionary';
-import EnumValuePreview from '../../components/Dictionary/EnumValuePreview';
+} from '@/services/dictionary';
+import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { COLORS } from '@/styles/colorMap';
 
 const { TabPane } = Tabs;

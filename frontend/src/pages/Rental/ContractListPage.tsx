@@ -6,12 +6,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography } from 'antd';
 import { COLORS } from '@/styles/colorMap';
-import RentContractExcelImport from '../../components/Rental/RentContractExcelImport';
-import { useContractList } from '../../hooks/useContractList';
-import ContractStatsCards from '../../components/Rental/ContractList/ContractStatsCards';
-import ContractFilterBar from '../../components/Rental/ContractList/ContractFilterBar';
-import ContractTable from '../../components/Rental/ContractList/ContractTable';
-import { RentContract } from '../../types/rentContract';
+import RentContractExcelImport from '@/components/Rental/RentContractExcelImport';
+import { useContractList } from '@/hooks/useContractList';
+import ContractStatsCards from '@/components/Rental/ContractList/ContractStatsCards';
+import ContractFilterBar from '@/components/Rental/ContractList/ContractFilterBar';
+import ContractTable from '@/components/Rental/ContractList/ContractTable';
+import { RentContract } from '@/types/rentContract';
 
 const { Title } = Typography;
 

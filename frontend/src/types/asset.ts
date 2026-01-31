@@ -76,9 +76,6 @@ export interface Asset {
   // 时间戳
   created_at: string;
   updated_at: string;
-
-  // 多租户支持
-  tenant_id?: string;
 }
 
 // 枚举定义

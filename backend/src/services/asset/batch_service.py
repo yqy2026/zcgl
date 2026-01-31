@@ -286,6 +286,14 @@ class AssetBatchService:
                         result.failed_count += 1
                         continue
 
+                    history_crud.create(
+                        db=self.db,
+                        asset_id=asset_id,
+                        operation_type="DELETE",
+                        description=f"批量删除资产: {asset.property_name}",
+                        operator=operator,
+                        commit=False,
+                    )
                     asset_crud.remove(db=self.db, id=asset_id, commit=False)
                     result.success_count += 1
 

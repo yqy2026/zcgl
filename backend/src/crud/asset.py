@@ -378,15 +378,34 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         # 定义搜索字段（区分PII和非PII）
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address", "ownership_entity"]
-        all_search_fields = non_pii_search_fields + pii_search_fields
+        search_conditions: list[Any] | None = None
+        if search:
+            search_conditions = []
+            # 非PII字段支持模糊搜索
+            for field in non_pii_search_fields:
+                if self.query_builder.whitelist.can_search(field) and hasattr(
+                    Asset, field
+                ):
+                    search_conditions.append(getattr(Asset, field).ilike(f"%{search}%"))
 
-        # 如果搜索PII字段且加密已启用，需要加密搜索词
-        search_query = search
-        if search and self.sensitive_data_handler.encryption_enabled:
-            # 对PII字段的搜索，使用加密后的搜索词
-            # 注意：这里使用原始搜索词，QueryBuilder会处理匹配逻辑
-            # 如果需要精确匹配加密字段，可以在filters中指定
-            pass
+            # PII字段：加密启用时仅支持精确匹配
+            for field in pii_search_fields:
+                if self.query_builder.whitelist.can_search(field) and hasattr(
+                    Asset, field
+                ):
+                    if self.sensitive_data_handler.encryption_enabled:
+                        encrypted = self.sensitive_data_handler.encrypt_field(
+                            field, search
+                        )
+                        if encrypted is not None:
+                            search_conditions.append(getattr(Asset, field) == encrypted)
+                    else:
+                        search_conditions.append(
+                            getattr(Asset, field).ilike(f"%{search}%")
+                        )
+
+            if not search_conditions:
+                search_conditions = None
 
         # 使用 CRUDBase (QueryBuilder) 获取数据
         # 注意：QueryBuilder 默认处理 skip/limit
@@ -398,8 +417,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         assets: list[Asset] = self.get_with_filters(
             db,
             filters=qb_filters,
-            search=search_query,
-            search_fields=all_search_fields,
+            search=None,
+            search_fields=None,
+            search_conditions=search_conditions,
             skip=skip,
             limit=limit,
             order_by=sort_field,
@@ -410,8 +430,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         # 获取总数 (用于分页)
         cnt_query = self.query_builder.build_count_query(
             filters=qb_filters,
-            search_query=search_query,
-            search_fields=all_search_fields,
+            search_conditions=search_conditions,
         )
         total = db.execute(cnt_query).scalar() or 0
 
@@ -446,11 +465,32 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address", "ownership_entity"]
-        all_search_fields = non_pii_search_fields + pii_search_fields
+        search_conditions: list[Any] | None = None
+        if search:
+            search_conditions = []
+            for field in non_pii_search_fields:
+                if self.query_builder.whitelist.can_search(field) and hasattr(
+                    Asset, field
+                ):
+                    search_conditions.append(getattr(Asset, field).ilike(f"%{search}%"))
 
-        search_query = search
-        if search and self.sensitive_data_handler.encryption_enabled:
-            pass
+            for field in pii_search_fields:
+                if self.query_builder.whitelist.can_search(field) and hasattr(
+                    Asset, field
+                ):
+                    if self.sensitive_data_handler.encryption_enabled:
+                        encrypted = self.sensitive_data_handler.encrypt_field(
+                            field, search
+                        )
+                        if encrypted is not None:
+                            search_conditions.append(getattr(Asset, field) == encrypted)
+                    else:
+                        search_conditions.append(
+                            getattr(Asset, field).ilike(f"%{search}%")
+                        )
+
+            if not search_conditions:
+                search_conditions = None
 
         base_query = (
             self._asset_base_query_with_relations()
@@ -459,8 +499,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         )
         query: Select[Any] = self.query_builder.build_query(
             filters=qb_filters,
-            search_query=search_query,
-            search_fields=all_search_fields,
+            search_conditions=search_conditions,
             sort_by=sort_field,
             sort_desc=(sort_order.lower() == "desc"),
             skip=skip,
@@ -472,8 +511,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         cnt_query = self.query_builder.build_count_query(
             filters=qb_filters,
-            search_query=search_query,
-            search_fields=all_search_fields,
+            search_conditions=search_conditions,
         )
         total_result = await db.execute(cnt_query)
         total = total_result.scalar() or 0

@@ -11,8 +11,17 @@
 - 数据安全服务
 """
 
+# Optional service imports; log failures for visibility during startup.
+import logging
+
 # Core Services
 __all__: list[str] = []
+logger = logging.getLogger(__name__)
+
+
+def _log_import_error(service_name: str) -> None:
+    logger.warning(f"Service import failed: {service_name}", exc_info=True)
+
 
 try:
     from .auth_service import AuthService as AuthService
@@ -25,7 +34,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
         __all__.append("AuthService")
     except Exception:  # nosec - B110: Intentional graceful degradation
-        pass
+        _log_import_error("core.auth_service.AuthService (legacy fallback)")
 
 # Import AuditService
 try:
@@ -34,7 +43,7 @@ try:
     AuditService = audit_service.AuditService
     __all__.append("AuditService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
+    _log_import_error("core.audit_service.AuditService")
 
 try:
     from .security_service import SecurityService as SecurityService
@@ -47,6 +56,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
             pass
 
     __all__.append("SecurityService")
+    _log_import_error("core.security_service.SecurityService (stubbed)")
 
 try:
     from .error_recovery_service import ErrorRecoveryEngine as ErrorRecoveryEngine
@@ -62,10 +72,9 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         __all__.append("ErrorRecoveryEngine")
     except Exception:  # nosec - B110: Intentional graceful degradation
         # Provide a minimal stub to ensure import success
-        _ErrorRecoveryEngineStub = ErrorRecoveryEngine
-
         class ErrorRecoveryEngine:  # type: ignore[no-redef]
             def __init__(self, *args: object, **kwargs: object) -> None:
                 pass
 
         __all__.append("ErrorRecoveryEngine")
+        _log_import_error("core.error_recovery_service.ErrorRecoveryEngine (stubbed)")

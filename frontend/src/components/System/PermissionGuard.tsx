@@ -1,6 +1,6 @@
 import React from 'react';
 import { Result, Button } from 'antd';
-import usePermission, { PERMISSIONS } from '../../hooks/usePermission';
+import usePermission, { PERMISSIONS } from '@/hooks/usePermission';
 
 interface PermissionGuardProps {
   permissions: Array<{ resource: string; action: string }>;

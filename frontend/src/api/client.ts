@@ -10,11 +10,11 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosError,
 } from 'axios';
-import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
-import { ApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
-import { createLogger } from '../utils/logger';
+import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
+import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
+import { createLogger } from '@/utils/logger';
 import { API_BASE_URL } from './config';
-import { AuthStorage } from '../utils/AuthStorage';
+import { AuthStorage } from '@/utils/AuthStorage';
 
 const apiLogger = createLogger('API');
 
@@ -324,11 +324,27 @@ export class ApiClient {
         const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>;
         const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined;
 
+        const requestUrl = originalRequest?.url ?? '';
+        const isRefreshRequest =
+          requestUrl.includes('/auth/refresh') || requestUrl.includes('auth/refresh');
+
+        // 刷新接口本身返回401时，直接登出，避免递归刷新
+        if (axiosError.response?.status === 401 && isRefreshRequest) {
+          if (typeof window !== 'undefined') {
+            AuthStorage.clearAuthData();
+            const currentPath =
+              window.location.pathname + window.location.search + window.location.hash;
+            window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+          }
+          return Promise.reject(error);
+        }
+
         // 处理401错误 - 自动刷新token via cookie
         if (
           axiosError.response?.status === 401 &&
           originalRequest != null &&
-          originalRequest._retry !== true
+          originalRequest._retry !== true &&
+          !isRefreshRequest
         ) {
           apiLogger.warn('Token expired, attempting refresh', {
             url: originalRequest.url,

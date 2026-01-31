@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, InputNumber } from 'antd';
-import { ContractStatus, ContractStatusLabels } from '../../../types/rentContract';
+import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 
 const { Option } = Select;
 

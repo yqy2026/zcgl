@@ -107,6 +107,29 @@ interface DashboardData {
   };
 }
 
+const STATUS_COLORS = {
+  healthy: '#52c41a',
+  degraded: '#faad14',
+  unhealthy: '#ff4d4f',
+  normal: '#52c41a',
+  warning: '#faad14',
+  critical: '#ff4d4f',
+} as const;
+
+const ALERT_LEVEL_COLORS = {
+  info: '#1890ff',
+  warning: '#faad14',
+  critical: '#ff4d4f',
+} as const;
+
+const getStatusColor = (status: string) => {
+  return STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? '#d9d9d9';
+};
+
+const getAlertLevelColor = (level: string) => {
+  return ALERT_LEVEL_COLORS[level as keyof typeof ALERT_LEVEL_COLORS] ?? '#d9d9d9';
+};
+
 const SystemMonitoringDashboard: React.FC = () => {
   const [refreshInterval, _setRefreshInterval] = useState(30000); // 30秒刷新
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -133,6 +156,10 @@ const SystemMonitoringDashboard: React.FC = () => {
     refetch();
   }, [refetch]);
 
+  const handleToggleAutoRefresh = useCallback(() => {
+    setAutoRefresh(prev => !prev);
+  }, []);
+
   // 解决告警
   const resolveAlertMutation = useMutation({
     mutationFn: (alertId: string) => monitoringService.resolveAlert(alertId),
@@ -140,29 +167,6 @@ const SystemMonitoringDashboard: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['monitoring-dashboard'] });
     },
   });
-
-  // 获取状态颜色
-  const getStatusColor = (status: string) => {
-    const colors = {
-      healthy: '#52c41a',
-      degraded: '#faad14',
-      unhealthy: '#ff4d4f',
-      normal: '#52c41a',
-      warning: '#faad14',
-      critical: '#ff4d4f',
-    };
-    return colors[status as keyof typeof colors] || '#d9d9d9';
-  };
-
-  // 获取告警级别颜色
-  const getAlertLevelColor = (level: string) => {
-    const colors = {
-      info: '#1890ff',
-      warning: '#faad14',
-      critical: '#ff4d4f',
-    };
-    return colors[level as keyof typeof colors] || '#d9d9d9';
-  };
 
   // 获取趋势图标
   const _getTrendIcon = (trend: number) => {
@@ -188,27 +192,30 @@ const SystemMonitoringDashboard: React.FC = () => {
     }));
   }, [dashboardData]);
 
-  const cpuChartConfig = {
-    data: cpuChartData,
-    xField: 'time',
-    yField: 'value',
-    smooth: true,
-    color: '#1890ff',
-    annotations: [
-      {
-        type: 'line',
-        start: ['min', 80],
-        end: ['max', 80],
-        style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+  const cpuChartConfig = useMemo(
+    () => ({
+      data: cpuChartData,
+      xField: 'time',
+      yField: 'value',
+      smooth: true,
+      color: '#1890ff',
+      annotations: [
+        {
+          type: 'line',
+          start: ['min', 80],
+          end: ['max', 80],
+          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+        },
+      ],
+      tooltip: {
+        formatter: (datum: ChartDataPoint) => ({
+          name: 'CPU使用率',
+          value: `${datum.value}%`,
+        }),
       },
-    ],
-    tooltip: {
-      formatter: (datum: ChartDataPoint) => ({
-        name: 'CPU使用率',
-        value: `${datum.value}%`,
-      }),
-    },
-  };
+    }),
+    [cpuChartData]
+  );
 
   // 内存使用率图表配置
   const memoryChartData = useMemo(() => {
@@ -219,27 +226,30 @@ const SystemMonitoringDashboard: React.FC = () => {
     }));
   }, [dashboardData]);
 
-  const memoryChartConfig = {
-    data: memoryChartData,
-    xField: 'time',
-    yField: 'value',
-    smooth: true,
-    color: '#52c41a',
-    annotations: [
-      {
-        type: 'line',
-        start: ['min', 85],
-        end: ['max', 85],
-        style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+  const memoryChartConfig = useMemo(
+    () => ({
+      data: memoryChartData,
+      xField: 'time',
+      yField: 'value',
+      smooth: true,
+      color: '#52c41a',
+      annotations: [
+        {
+          type: 'line',
+          start: ['min', 85],
+          end: ['max', 85],
+          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+        },
+      ],
+      tooltip: {
+        formatter: (datum: ChartDataPoint) => ({
+          name: '内存使用率',
+          value: `${datum.value}%`,
+        }),
       },
-    ],
-    tooltip: {
-      formatter: (datum: ChartDataPoint) => ({
-        name: '内存使用率',
-        value: `${datum.value}%`,
-      }),
-    },
-  };
+    }),
+    [memoryChartData]
+  );
 
   // 响应时间图表配置
   const responseTimeChartData = useMemo(() => {
@@ -250,27 +260,30 @@ const SystemMonitoringDashboard: React.FC = () => {
     }));
   }, [dashboardData]);
 
-  const responseTimeChartConfig = {
-    data: responseTimeChartData,
-    xField: 'time',
-    yField: 'value',
-    smooth: true,
-    color: '#faad14',
-    annotations: [
-      {
-        type: 'line',
-        start: ['min', 1000],
-        end: ['max', 1000],
-        style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+  const responseTimeChartConfig = useMemo(
+    () => ({
+      data: responseTimeChartData,
+      xField: 'time',
+      yField: 'value',
+      smooth: true,
+      color: '#faad14',
+      annotations: [
+        {
+          type: 'line',
+          start: ['min', 1000],
+          end: ['max', 1000],
+          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+        },
+      ],
+      tooltip: {
+        formatter: (datum: ChartDataPoint) => ({
+          name: '响应时间',
+          value: `${datum.value}ms`,
+        }),
       },
-    ],
-    tooltip: {
-      formatter: (datum: ChartDataPoint) => ({
-        name: '响应时间',
-        value: `${datum.value}ms`,
-      }),
-    },
-  };
+    }),
+    [responseTimeChartData]
+  );
 
   // 健康评分仪表盘配置
   const healthGaugeConfig = useMemo(
@@ -289,6 +302,42 @@ const SystemMonitoringDashboard: React.FC = () => {
       },
     }),
     [dashboardData]
+  );
+
+  const alertItems = useMemo(
+    () => dashboardData?.active_alerts?.slice(0, 5) ?? [],
+    [dashboardData?.active_alerts]
+  );
+
+  const renderAlertItem = useCallback(
+    (alert: PerformanceAlert) => (
+      <List.Item
+        actions={[
+          !alert.resolved && (
+            <Button
+              size="small"
+              type="text"
+              onClick={() => resolveAlertMutation.mutate(alert.id)}
+              loading={resolveAlertMutation.isPending}
+            >
+              解决
+            </Button>
+          ),
+        ].filter(Boolean)}
+      >
+        <List.Item.Meta
+          avatar={<Badge dot={!alert.resolved} color={getAlertLevelColor(alert.level)} />}
+          title={
+            <Space>
+              <Tag color={getAlertLevelColor(alert.level)}>{alert.level.toUpperCase()}</Tag>
+              <span>{alert.metric_name}</span>
+            </Space>
+          }
+          description={alert.message}
+        />
+      </List.Item>
+    ),
+    [resolveAlertMutation]
   );
 
   if (error !== undefined && error !== null) {
@@ -328,7 +377,7 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Button
                 type={autoRefresh ? 'primary' : 'default'}
                 size="small"
-                onClick={() => setAutoRefresh(!autoRefresh)}
+                onClick={handleToggleAutoRefresh}
               >
                 自动刷新: {autoRefresh ? '开启' : '关闭'}
               </Button>
@@ -461,36 +510,8 @@ const SystemMonitoringDashboard: React.FC = () => {
           >
             <List
               size="small"
-              dataSource={dashboardData?.active_alerts?.slice(0, 5) ?? []}
-              renderItem={(alert: PerformanceAlert) => (
-                <List.Item
-                  actions={[
-                    !alert.resolved && (
-                      <Button
-                        size="small"
-                        type="text"
-                        onClick={() => resolveAlertMutation.mutate(alert.id)}
-                        loading={resolveAlertMutation.isPending}
-                      >
-                        解决
-                      </Button>
-                    ),
-                  ].filter(Boolean)}
-                >
-                  <List.Item.Meta
-                    avatar={<Badge dot={!alert.resolved} color={getAlertLevelColor(alert.level)} />}
-                    title={
-                      <Space>
-                        <Tag color={getAlertLevelColor(alert.level)}>
-                          {alert.level.toUpperCase()}
-                        </Tag>
-                        <span>{alert.metric_name}</span>
-                      </Space>
-                    }
-                    description={alert.message}
-                  />
-                </List.Item>
-              )}
+              dataSource={alertItems}
+              renderItem={renderAlertItem}
               locale={{ emptyText: '暂无告警' }}
             />
           </Card>
@@ -601,4 +622,4 @@ const SystemMonitoringDashboard: React.FC = () => {
   );
 };
 
-export default SystemMonitoringDashboard;
+export default React.memo(SystemMonitoringDashboard);

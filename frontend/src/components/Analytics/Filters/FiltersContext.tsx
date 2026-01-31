@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { debounce } from 'lodash';
-import type { AssetSearchParams } from '../../../types/asset';
-import type { FilterPreset } from '../../../types/analytics';
-import { UsageStatus, PropertyNature, OwnershipStatus } from '../../../types/asset';
-import { useSearchHistory } from '../../../hooks/useSearchHistory';
+import debounce from 'lodash/debounce';
+import type { AssetSearchParams } from '@/types/asset';
+import type { FilterPreset } from '@/types/analytics';
+import { UsageStatus, PropertyNature, OwnershipStatus } from '@/types/asset';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { MessageManager } from '@/utils/messageManager';
 
 // Filter presets configuration

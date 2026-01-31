@@ -4,9 +4,9 @@ import { MessageManager } from '@/utils/messageManager';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { assetService } from '../../services/assetService';
-import { AssetForm } from '../../components/Forms';
-import type { AssetCreateRequest, AssetUpdateRequest } from '../../types/asset';
+import { assetService } from '@/services/assetService';
+import { AssetForm } from '@/components/Forms';
+import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
 
 // 错误类型接口
 interface ApiError {

@@ -1,8 +1,8 @@
 import { apiClient } from '@/api/client';
 import { STATISTICS_API } from '@/constants/api';
-import type { AssetSearchParams } from '../types/asset';
-import type { AnalyticsData, AnalyticsResponse } from '../types/analytics';
-import { createLogger } from '../utils/logger';
+import type { AssetSearchParams } from '@/types/asset';
+import type { AnalyticsData, AnalyticsResponse } from '@/types/analytics';
+import { createLogger } from '@/utils/logger';
 
 const serviceLogger = createLogger('analyticsService');
 

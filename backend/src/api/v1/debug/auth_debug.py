@@ -16,11 +16,11 @@ from sqlalchemy.orm import Session
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....schemas.auth import UserResponse
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 from ....services import AuthService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["Auth Debug"])
+router = APIRouter(tags=["Auth Debug"], dependencies=[Depends(require_localhost)])
 
 
 @router.get("/test-features", summary="测试功能端点")

@@ -166,7 +166,14 @@ def client(monkeypatch, db_session):
     """Create a test client for unit tests with authentication bypassed"""
     from src.database import get_db
     from src.main import app
-    from src.middleware.auth import get_current_active_user, require_permission
+    from src.middleware import auth as auth_module
+    from src.middleware.auth import (
+        get_current_active_user,
+        get_current_user,
+        get_current_user_from_cookie,
+        require_admin,
+        require_permission,
+    )
 
     # Mock authenticated user
     mock_user = MagicMock()
@@ -186,16 +193,34 @@ def client(monkeypatch, db_session):
 
         return dependency
 
+    monkeypatch.setattr(auth_module, "get_current_active_user", mock_get_current_user)
+    monkeypatch.setattr(auth_module, "get_current_user", mock_get_current_user)
     monkeypatch.setattr(
-        "src.middleware.auth.get_current_active_user", mock_get_current_user
+        auth_module, "get_current_user_from_cookie", mock_get_current_user
     )
-    monkeypatch.setattr(
-        "src.middleware.auth.require_permission", mock_require_permission
-    )
+    monkeypatch.setattr(auth_module, "require_permission", mock_require_permission)
 
     # Override dependencies in FastAPI app
     app.dependency_overrides[get_current_active_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
     app.dependency_overrides[require_permission] = mock_require_permission
+    app.dependency_overrides[require_admin] = mock_get_current_user
+
+    # Override RBAC permission checkers created at route import time
+    def mock_rbac_checker():  # noqa: ANN001 - test stub
+        return mock_user
+
+    def apply_rbac_overrides(dependant):
+        for sub in getattr(dependant, "dependencies", []):
+            if type(sub.call).__name__ == "RBACPermissionChecker":
+                app.dependency_overrides[sub.call] = mock_rbac_checker
+            apply_rbac_overrides(sub)
+
+    for route in app.router.routes:
+        dependant = getattr(route, "dependant", None)
+        if dependant:
+            apply_rbac_overrides(dependant)
 
     # Use real database session
     def override_get_db():
@@ -246,3 +271,37 @@ def unauthenticated_client():
 
     # Return client without auth headers
     return TestClient(app)
+
+
+@pytest.fixture
+def client_normal_user(db_session, normal_user):
+    """Create a test client with a normal user and real admin checks enabled."""
+    from fastapi.testclient import TestClient
+
+    from src.database import get_db
+    from src.main import app
+    from src.middleware.auth import (
+        get_current_active_user,
+        get_current_user,
+        get_current_user_from_cookie,
+    )
+
+    def mock_get_current_user():
+        return normal_user
+
+    app.dependency_overrides[get_current_active_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
+
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()

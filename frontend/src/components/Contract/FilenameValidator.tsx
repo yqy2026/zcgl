@@ -6,7 +6,7 @@ import {
   CheckCircleOutlined,
   EditOutlined,
 } from '@ant-design/icons';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('FilenameValidator');
 const { Text } = Typography;

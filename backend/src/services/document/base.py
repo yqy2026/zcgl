@@ -120,8 +120,11 @@ class ExtractionResult(BaseModel):
                     {"error": self.error},
                 )
             if not self.extracted_fields and self.status != ExtractionStatus.SKIPPED:
-                # 允许空字段在跳过状态下，但成功时应该有数据
-                pass  # 可以改为强制要求：raise PydanticCustomError("missing_extracted_fields", "success=True 时 extracted_fields 不能为空", {})
+                raise PydanticCustomError(
+                    "missing_extracted_fields",
+                    "success=True 时 extracted_fields 不能为空",
+                    {},
+                )
         else:
             if self.error is None:
                 raise PydanticCustomError(

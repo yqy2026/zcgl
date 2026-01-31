@@ -4,7 +4,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Table,
   Card,
   Button,
   Space,
@@ -22,6 +21,8 @@ import {
   Alert,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
 import {
   SearchOutlined,
   EditOutlined,
@@ -37,17 +38,16 @@ import dayjs from 'dayjs';
 import {
   RentLedger,
   RentLedgerQueryParams,
-  RentLedgerPageState,
   RentLedgerUpdate,
   RentStatisticsOverview,
-} from '../../types/rentContract';
-import { Asset } from '../../types/asset';
-import { Ownership } from '../../types/ownership';
-import { rentContractService } from '../../services/rentContractService';
-import { assetService } from '../../services/assetService';
-import { ownershipService } from '../../services/ownershipService';
-import { useFormat } from '../../utils/format';
-import { createLogger } from '../../utils/logger';
+} from '@/types/rentContract';
+import { Asset } from '@/types/asset';
+import { Ownership } from '@/types/ownership';
+import { rentContractService } from '@/services/rentContractService';
+import { assetService } from '@/services/assetService';
+import { ownershipService } from '@/services/ownershipService';
+import { useFormat } from '@/utils/format';
+import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('RentLedger');
@@ -63,19 +63,16 @@ interface BatchUpdateValues {
   notes?: string;
 }
 
+type RentLedgerFilters = Omit<
+  RentLedgerQueryParams,
+  'page' | 'pageSize' | 'page_size'
+>;
+
 const RentLedgerPage: React.FC = () => {
   const [form] = Form.useForm();
 
-  const [state, setState] = useState<RentLedgerPageState>({
-    loading: false,
-    ledgers: [],
-    pagination: {
-      current: 1,
-      pageSize: 10,
-      total: 0,
-    },
-    filters: {},
-    selectedLedgers: [],
+  const [uiState, setUiState] = useState({
+    selectedLedgers: [] as RentLedger[],
     showBatchModal: false,
     showGenerateModal: false,
   });
@@ -86,48 +83,36 @@ const RentLedgerPage: React.FC = () => {
 
   const format = useFormat();
 
-  // 加载台账列表
-  const loadLedgers = useCallback(
-    async (params?: RentLedgerQueryParams) => {
-      setState(prev => ({ ...prev, loading: true }));
-      try {
-        const response = await rentContractService.getRentLedgers({
-          page: state.pagination.current,
-          pageSize: state.pagination.pageSize,
-          ...state.filters,
-          ...params,
-        });
-
-        // 安全检查：确保response和response.items存在
-        if (response == null) {
-          pageLogger.error('API响应为空');
-          MessageManager.error('加载台账列表失败：响应为空');
-          setState(prev => ({ ...prev, loading: false }));
-          return;
-        }
-
-        // 确保items是一个数组
-        const ledgers = Array.isArray(response.items) ? response.items : [];
-
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          ledgers: ledgers,
-          pagination: {
-            ...prev.pagination,
-            total: response.total || 0,
-            pages: response.pages || 0,
-          },
-        }));
-      } catch (error) {
-        pageLogger.error('加载台账列表失败:', error as Error);
-        const errorMessage = error instanceof Error ? error.message : '未知错误';
-        MessageManager.error(`加载台账列表失败: ${errorMessage}`);
-        setState(prev => ({ ...prev, loading: false, ledgers: [] }));
+  const fetchLedgers = useCallback(
+    async (params: { page: number; pageSize: number } & RentLedgerFilters) => {
+      const response = await rentContractService.getRentLedgers(params);
+      if (response == null) {
+        throw new Error('API响应为空');
       }
+      return response;
     },
-    [state.pagination.current, state.pagination.pageSize, state.filters]
+    []
   );
+
+  const {
+    data: ledgers,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    resetFilters,
+    updatePagination,
+  } = useListData<RentLedger, RentLedgerFilters>({
+    fetcher: fetchLedgers,
+    initialFilters: {},
+    initialPageSize: 10,
+    onError: error => {
+      pageLogger.error('加载台账列表失败:', error as Error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      MessageManager.error(`加载台账列表失败: ${errorMessage}`);
+    },
+  });
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
@@ -161,45 +146,24 @@ const RentLedgerPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void loadLedgers();
+    void loadList();
     void loadStatistics();
     void loadReferenceData();
-  }, [loadLedgers, loadStatistics, loadReferenceData]);
+  }, [loadList, loadStatistics, loadReferenceData]);
 
   // 处理分页变化
   const handleTableChange = (pagination: { current?: number; pageSize?: number }): void => {
-    setState(prev => ({
-      ...prev,
-      pagination: {
-        ...prev.pagination,
-        current: pagination.current ?? 1,
-        pageSize: pagination.pageSize ?? 10,
-      },
-    }));
-    void loadLedgers({
-      page: pagination.current ?? 1,
-      pageSize: pagination.pageSize ?? 10,
-    });
+    updatePagination(pagination);
   };
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
-    setState(prev => ({
-      ...prev,
-      filters: values,
-      pagination: { ...prev.pagination, current: 1 },
-    }));
-    void loadLedgers({ ...values, page: 1 });
+    applyFilters(values as RentLedgerFilters);
   };
 
   // 重置搜索
   const handleReset = () => {
-    setState(prev => ({
-      ...prev,
-      filters: {},
-      pagination: { ...prev.pagination, current: 1 },
-    }));
-    void loadLedgers({ page: 1 });
+    resetFilters();
   };
 
   // 更新台账支付状态
@@ -207,7 +171,7 @@ const RentLedgerPage: React.FC = () => {
     try {
       await rentContractService.updateRentLedger(id, data);
       MessageManager.success('更新成功');
-      void loadLedgers();
+      void loadList();
       void loadStatistics();
     } catch {
       MessageManager.error('更新失败');
@@ -216,22 +180,22 @@ const RentLedgerPage: React.FC = () => {
 
   // 批量更新支付状态
   const handleBatchUpdate = async (values: BatchUpdateValues) => {
-    if (state.selectedLedgers.length === 0) {
+    if (uiState.selectedLedgers.length === 0) {
       MessageManager.warning('请先选择要更新的台账记录');
       return;
     }
 
     try {
       await rentContractService.batchUpdateRentLedger({
-        ledger_ids: state.selectedLedgers.map(ledger => ledger.id),
+        ledger_ids: uiState.selectedLedgers.map(ledger => ledger.id),
         payment_status: values.payment_status,
         payment_date: values.payment_date?.format('YYYY-MM-DD'),
         payment_method: values.payment_method ?? '',
         notes: values.notes ?? '',
       });
       MessageManager.success('批量更新成功');
-      setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
-      void loadLedgers();
+      setUiState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
+      void loadList();
       void loadStatistics();
     } catch {
       MessageManager.error('批量更新失败');
@@ -242,7 +206,7 @@ const RentLedgerPage: React.FC = () => {
   const handleExport = async () => {
     try {
       const blob = await rentContractService.exportLedgersToExcel(
-        state.filters as Record<string, unknown>
+        filters as Record<string, unknown>
       );
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -260,9 +224,9 @@ const RentLedgerPage: React.FC = () => {
 
   // 选择行变化
   const rowSelection: object = {
-    selectedRowKeys: state.selectedLedgers.map(ledger => ledger.id),
+    selectedRowKeys: uiState.selectedLedgers.map(ledger => ledger.id),
     onChange: (_selectedRowKeys: React.Key[], selectedRows: RentLedger[]) => {
-      setState(prev => ({ ...prev, selectedLedgers: selectedRows }));
+      setUiState(prev => ({ ...prev, selectedLedgers: selectedRows }));
     },
   };
 
@@ -403,7 +367,7 @@ const RentLedgerPage: React.FC = () => {
                   payment_method: record.payment_method,
                   notes: record.notes,
                 });
-                setState(prev => ({ ...prev, selectedLedgers: [record] }));
+                setUiState(prev => ({ ...prev, selectedLedgers: [record] }));
               }}
             />
           </Tooltip>
@@ -541,9 +505,9 @@ const RentLedgerPage: React.FC = () => {
       </Card>
 
       {/* 操作区域 */}
-      {state.selectedLedgers.length > 0 && (
+      {uiState.selectedLedgers.length > 0 && (
         <Alert
-          message={`已选择 ${state.selectedLedgers.length} 条记录`}
+          message={`已选择 ${uiState.selectedLedgers.length} 条记录`}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -552,13 +516,13 @@ const RentLedgerPage: React.FC = () => {
               <Button
                 type="primary"
                 size="small"
-                onClick={() => setState(prev => ({ ...prev, showBatchModal: true }))}
+                onClick={() => setUiState(prev => ({ ...prev, showBatchModal: true }))}
               >
                 批量更新
               </Button>
               <Button
                 size="small"
-                onClick={() => setState(prev => ({ ...prev, selectedLedgers: [] }))}
+                onClick={() => setUiState(prev => ({ ...prev, selectedLedgers: [] }))}
               >
                 取消选择
               </Button>
@@ -569,21 +533,14 @@ const RentLedgerPage: React.FC = () => {
 
       {/* 台账列表 */}
       <Card>
-        <Table
+        <TableWithPagination
           columns={columns}
-          dataSource={state.ledgers}
+          dataSource={ledgers}
           rowKey="id"
           rowSelection={rowSelection}
-          loading={state.loading}
-          pagination={{
-            current: state.pagination.current,
-            pageSize: state.pagination.pageSize,
-            total: state.pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-          }}
-          onChange={handleTableChange}
+          loading={loading}
+          paginationState={pagination}
+          onPageChange={handleTableChange}
           scroll={{ x: 1400 }}
         />
       </Card>
@@ -591,8 +548,8 @@ const RentLedgerPage: React.FC = () => {
       {/* 批量更新弹窗 */}
       <Modal
         title="批量更新支付状态"
-        open={state.showBatchModal}
-        onCancel={() => setState(prev => ({ ...prev, showBatchModal: false }))}
+        open={uiState.showBatchModal}
+        onCancel={() => setUiState(prev => ({ ...prev, showBatchModal: false }))}
         footer={null}
         width={500}
       >
@@ -629,7 +586,9 @@ const RentLedgerPage: React.FC = () => {
 
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={() => setState(prev => ({ ...prev, showBatchModal: false }))}>
+              <Button
+                onClick={() => setUiState(prev => ({ ...prev, showBatchModal: false }))}
+              >
                 取消
               </Button>
               <Button type="primary" htmlType="submit">

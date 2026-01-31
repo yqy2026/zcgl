@@ -43,6 +43,9 @@ def create_basic_permissions(db):
         # 统计分析权限
         ("statistics", "read", "查看统计", "查看统计信息"),
         ("statistics", "export", "导出统计", "导出统计数据"),
+        # Excel配置权限
+        ("excel_config", "read", "查看Excel配置", "查看Excel导入导出配置"),
+        ("excel_config", "write", "管理Excel配置", "创建/更新/删除Excel配置"),
         # 系统管理权限
         ("system", "manage", "系统管理", "系统管理权限"),
         ("system", "audit", "审计查看", "查看审计日志"),

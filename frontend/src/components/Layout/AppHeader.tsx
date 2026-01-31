@@ -13,8 +13,8 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../../services/authService';
-import { NotificationCenter } from '../Notification';
+import { AuthService } from '@/services/authService';
+import { NotificationCenter } from '@/components/Notification';
 
 import styles from './Layout.module.css';
 

@@ -26,6 +26,7 @@ from src.schemas.statistics import (
 )
 from src.services.analytics import OccupancyService
 from src.utils.cache_manager import cache_statistics
+from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def get_overall_occupancy_rate(
     )
 
 
-@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]
+@cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存  # type: ignore[misc]
 @router.get(
     "/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse
 )

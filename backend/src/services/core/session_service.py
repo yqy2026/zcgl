@@ -10,7 +10,7 @@ from ...models.auth import UserSession
 from ...security.token_blacklist import blacklist_manager
 
 SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = "HS256"
+ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,12 @@ class SessionService:
             .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .update({"is_active": False})
         )
+
+        # 用户级撤销：确保访问令牌也失效
+        try:
+            blacklist_manager.revoke_all_user_tokens(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to revoke user tokens for {user_id}: {e}")
 
         self.db.commit()
         return count

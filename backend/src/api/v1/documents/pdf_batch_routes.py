@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ....core.config import settings
+from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from ....core.exception_handler import (
     BusinessValidationError,
     bad_request,
@@ -191,7 +192,7 @@ async def batch_upload_pdfs(
         file_size = len(content)
         await file.seek(0)  # 重置文件指针
 
-        max_size = 50 * 1024 * 1024  # 50MB
+        max_size = DEFAULT_MAX_FILE_SIZE
         if file_size > max_size:
             logger.warning(
                 f"文件 {file.filename} 大小 {file_size / 1024 / 1024:.1f}MB 超过限制"

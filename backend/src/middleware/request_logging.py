@@ -17,6 +17,7 @@ from jwt import PyJWTError as JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from ..core.config import settings
 from ..crud.operation_log import OperationLogCRUD
 from ..database import SessionLocal, _init_globals
 from ..middleware.auth import ALGORITHM, SECRET_KEY
@@ -233,8 +234,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 token,
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
-                audience="land-property-system",
-                issuer="land-property-auth",
+                audience=settings.JWT_AUDIENCE,
+                issuer=settings.JWT_ISSUER,
             )
         except JWTError:
             return None, None

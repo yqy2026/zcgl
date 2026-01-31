@@ -1,5 +1,7 @@
 from typing import Any
 
+from ..constants.timeout_constants import TASK_QUEUE_POLL_TIMEOUT_SECONDS
+
 """
 异步任务队列系统 - 支持后台任务处理
 功能: 任务队列、任务调度、进度追踪、失败重试
@@ -192,7 +194,9 @@ class TaskQueue:
                 priority: int
                 created_at: datetime
                 task: Task
-                priority, created_at, task = self.queue.get(timeout=1)
+                priority, created_at, task = self.queue.get(
+                    timeout=TASK_QUEUE_POLL_TIMEOUT_SECONDS
+                )
 
                 # 处理任务
                 self.process_task(task)

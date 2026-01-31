@@ -1,6 +1,6 @@
 // API缓存管理器
 
-import { CACHE } from '../api/config';
+import { CACHE } from '@/api/config';
 
 export interface CacheItem<T = unknown> {
   data: T;
@@ -19,13 +19,9 @@ export class ApiCacheManager {
   private static instance: ApiCacheManager | null = null;
   private cache = new Map<string, CacheItem>();
   private tagMap = new Map<string, Set<string>>();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-  private constructor() {
-    // 定期清理过期缓存
-    setInterval(() => {
-      this.cleanup();
-    }, 60000); // 每分钟清理一次
-  }
+  private constructor() {}
 
   static getInstance(): ApiCacheManager {
     if (!ApiCacheManager.instance) {
@@ -42,6 +38,7 @@ export class ApiCacheManager {
 
   // 设置缓存
   set<T>(url: string, data: T, options: CacheOptions = {}, params?: unknown): void {
+    this.ensureCleanupTimer();
     const key = this.generateKey(url, params);
     const ttl = options.ttl ?? CACHE.DEFAULT_TTL;
 
@@ -67,6 +64,7 @@ export class ApiCacheManager {
 
   // 获取缓存
   get<T>(url: string, params?: unknown): T | null {
+    this.ensureCleanupTimer();
     const key = this.generateKey(url, params);
     const cacheItem = this.cache.get(key);
 
@@ -85,6 +83,7 @@ export class ApiCacheManager {
 
   // 检查缓存是否存在且未过期
   has(url: string, params?: unknown): boolean {
+    this.ensureCleanupTimer();
     const key = this.generateKey(url, params);
     const cacheItem = this.cache.get(key);
 
@@ -102,12 +101,14 @@ export class ApiCacheManager {
 
   // 删除缓存
   delete(url: string, params?: unknown): boolean {
+    this.ensureCleanupTimer();
     const key = this.generateKey(url, params);
     return this.cache.delete(key);
   }
 
   // 根据标签删除缓存
   deleteByTag(tag: string): void {
+    this.ensureCleanupTimer();
     const keys = this.tagMap.get(tag);
     if (keys) {
       keys.forEach(key => {
@@ -119,6 +120,7 @@ export class ApiCacheManager {
 
   // 根据模式删除缓存
   deleteByPattern(pattern: RegExp): void {
+    this.ensureCleanupTimer();
     const keysToDelete: string[] = [];
 
     this.cache.forEach((_, key) => {
@@ -134,6 +136,7 @@ export class ApiCacheManager {
 
   // 清空所有缓存
   clear(): void {
+    this.ensureCleanupTimer();
     this.cache.clear();
     this.tagMap.clear();
   }
@@ -170,6 +173,22 @@ export class ApiCacheManager {
     });
   }
 
+  private ensureCleanupTimer(): void {
+    if (this.cleanupTimer) {
+      return;
+    }
+    this.cleanupTimer = setInterval(() => {
+      this.cleanup();
+    }, 60000);
+  }
+
+  dispose(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
+
   // 获取缓存统计信息
   getStats(): {
     totalItems: number;
@@ -199,6 +218,12 @@ export class ApiCacheManager {
 
 // 导出单例实例
 export const cacheManager = ApiCacheManager.getInstance();
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    cacheManager.dispose();
+  });
+}
 
 // 缓存装饰器
 export function cached(options: CacheOptions = {}) {

@@ -1,10 +1,10 @@
 import { AUTH_API } from '@/constants/api';
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../utils/responseExtractor';
-import type { AuthResponse, StandardApiResponse } from '../types/apiResponse';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
+import type { AuthResponse, StandardApiResponse } from '@/types/apiResponse';
 
-import type { LoginCredentials, User, UserActivity } from '../types/auth';
-import { createLogger } from '../utils/logger';
+import type { LoginCredentials, User, UserActivity } from '@/types/auth';
+import { createLogger } from '@/utils/logger';
 import { AuthStorage } from '@/utils/AuthStorage';
 
 const logger = createLogger('AuthService');

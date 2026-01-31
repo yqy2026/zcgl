@@ -20,16 +20,16 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { SearchOutlined } from '@ant-design/icons';
 import { COLORS } from '@/styles/colorMap';
-import { dictionaryService } from '../../services/dictionary';
-import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary';
+import { dictionaryService } from '@/services/dictionary';
+import type { EnumFieldType, EnumFieldValue } from '@/services/dictionary';
 import type { SystemDictionary } from '@/types/dictionary';
-import EnumValuePreview from '../../components/Dictionary/EnumValuePreview';
+import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import {
   handleApiError as _handleError,
   withErrorHandling as _withErrorHandling_unused,
   createErrorHandler as _createErrorHandler,
-} from '../../services';
-import { createLogger } from '../../utils/logger';
+} from '@/services';
+import { createLogger } from '@/utils/logger';
 
 const pageLogger = createLogger('DictionaryPage');
 

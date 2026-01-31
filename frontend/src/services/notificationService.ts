@@ -3,13 +3,13 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../utils/responseExtractor';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 import {
   Notification as _Notification,
   NotificationQueryParams,
   NotificationListResponse,
-} from '../types/notification';
+} from '@/types/notification';
 
 class NotificationService {
   /**

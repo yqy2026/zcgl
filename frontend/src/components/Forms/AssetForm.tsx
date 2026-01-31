@@ -3,9 +3,9 @@ import { Form, Button, Space, Card, Row, Col, Progress, Typography } from 'antd'
 import { MessageManager } from '@/utils/messageManager';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { Asset, AssetCreateRequest } from '../../types/asset';
+import type { Asset, AssetCreateRequest } from '@/types/asset';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { useDictionaries } from '../../hooks/useDictionary';
+import { useDictionaries } from '@/hooks/useDictionary';
 import { COLORS } from '@/styles/colorMap';
 
 // Section components

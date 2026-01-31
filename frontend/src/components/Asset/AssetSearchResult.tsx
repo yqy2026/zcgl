@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { List, Typography, Tag, Space, Button, Tooltip } from 'antd';
 import {
   EyeOutlined,
@@ -31,13 +31,17 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
   onEdit,
 }) => {
   // 提取搜索关键词
-  const searchTerms = extractSearchTerms(searchParams.search ?? '');
+  const searchTermInput = searchParams.search ?? '';
+  const searchTerms = useMemo(() => extractSearchTerms(searchTermInput), [searchTermInput]);
 
   // 高亮文本的辅助函数
-  const highlightSearchText = (text: string) => {
-    if (searchTerms.length === 0) return text;
-    return highlightText(text, searchParams.search ?? '');
-  };
+  const highlightSearchText = useCallback(
+    (text: string) => {
+      if (searchTerms.length === 0) return text;
+      return highlightText(text, searchTermInput);
+    },
+    [searchTermInput, searchTerms]
+  );
 
   return (
     <List
@@ -180,4 +184,4 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
   );
 };
 
-export default AssetSearchResult;
+export default React.memo(AssetSearchResult);

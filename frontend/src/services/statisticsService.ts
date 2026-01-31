@@ -6,8 +6,8 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '../utils/responseExtractor';
-import { createLogger } from '../utils/logger';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
 import type { DashboardData, ChartDataItem } from '@/types/api';
 import type { Filters } from '@/types/common';
 

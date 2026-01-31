@@ -523,6 +523,57 @@ class TestLogout:
         mock_auth_service.revoke_all_user_sessions.assert_called_once()
         # Token blacklist code is executed (lines 182-188) - covered by this test
 
+    @patch("src.security.token_blacklist.blacklist_manager")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
+    def test_logout_blacklists_cookie_token(
+        self,
+        mock_auth_service_class,
+        mock_audit_crud_class,
+        mock_blacklist_manager,
+        mock_request,
+        mock_db,
+        mock_admin_user,
+    ):
+        """Test logout blacklists token from auth cookie when no Authorization header."""
+        from src.api.v1.auth.auth_modules.authentication import logout
+        from src.core.config import settings
+        from src.security.cookie_manager import cookie_manager
+
+        token_data = {
+            "sub": "admin-id",
+            "exp": 1737000000,
+            "jti": "test-cookie-jti",
+            "iat": 1736996400,
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
+        }
+        valid_token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
+
+        mock_request.headers = {
+            "cookie": f"{cookie_manager.cookie_name}={valid_token}",
+            "user-agent": "test-agent",
+        }
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.revoke_all_user_sessions.return_value = 1
+        mock_auth_service_class.return_value = mock_auth_service
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        result = logout(
+            request=mock_request,
+            response=Response(),
+            current_user=mock_admin_user,
+            db=mock_db,
+        )
+
+        assert result["message"] == "登出成功"
+        mock_blacklist_manager.add_token.assert_called_once_with(
+            "test-cookie-jti", 1737000000
+        )
+
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
     def test_logout_with_invalid_token(

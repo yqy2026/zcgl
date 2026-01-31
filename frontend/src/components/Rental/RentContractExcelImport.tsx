@@ -35,12 +35,12 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import {
   rentContractExcelService,
   ExcelImportResult,
-} from '../../services/rentContractExcelService';
+} from '@/services/rentContractExcelService';
 
 const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 const componentLogger = createLogger('RentContractExcelImport');
 
 interface RentContractExcelImportProps {

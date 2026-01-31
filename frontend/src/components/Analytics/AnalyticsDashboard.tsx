@@ -7,9 +7,9 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from '@ant-design/icons';
-import { useAnalytics } from '../../hooks/useAnalytics';
-import type { AssetSearchParams } from '../../types/asset';
-import type { AnalyticsResponse } from '../../types/analytics';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import type { AssetSearchParams } from '@/types/asset';
+import type { AnalyticsResponse } from '@/types/analytics';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import { createApiUrl } from '@/api/config';
@@ -55,7 +55,7 @@ import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
 import { ChartCard } from './AnalyticsCard';
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from './Charts';
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
-import PerformanceMonitor from '../PerformanceMonitor';
+import PerformanceMonitor from '@/components/PerformanceMonitor';
 
 const { Title } = Typography;
 

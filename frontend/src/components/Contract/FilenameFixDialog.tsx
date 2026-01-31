@@ -15,7 +15,7 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { InfoCircleOutlined, ReloadOutlined, CopyOutlined } from '@ant-design/icons';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('FilenameFixDialog');
 const { Title, Text, Paragraph } = Typography;

@@ -11,8 +11,8 @@ import {
   ExclamationCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { createLogger } from '../../utils/logger';
-import { apiHealthCheck } from '../../services/apiHealthCheck';
+import { createLogger } from '@/utils/logger';
+import { apiHealthCheck } from '@/services/apiHealthCheck';
 
 const componentLogger = createLogger('ApiMonitor');
 

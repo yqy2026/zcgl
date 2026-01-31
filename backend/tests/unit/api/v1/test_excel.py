@@ -39,9 +39,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
-from src.core.exception_handler import BaseBusinessError
 from fastapi import UploadFile
 from fastapi.responses import StreamingResponse
+
+from src.core.exception_handler import BaseBusinessError
 
 pytestmark = pytest.mark.api
 
@@ -69,9 +70,9 @@ def mock_excel_file():
         {
             "物业名称": ["Test Property 1", "Test Property 2"],
             "地址": ["Address 1", "Address 2"],
-            "确权状�?: ["已确�?, "未确�?],
-            "物业性质": ["经营�?, "非经营�?],
-            "使用状�?: ["出租", "空置"],
+            "确权状态": ["已确权", "未确权"],
+            "物业性质": ["经营性", "非经营性"],
+            "使用状态": ["出租", "空置"],
         }
     )
     df.to_excel(content, index=False)
@@ -352,7 +353,9 @@ class TestGetDefaultExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_get_default_config_success(self, mock_crud, mock_db):
+    async def test_get_default_config_success(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test successful default configuration retrieval"""
         from src.api.v1.documents.excel.config import get_default_excel_config
 
@@ -365,6 +368,7 @@ class TestGetDefaultExcelConfig:
             config_type="import",
             task_type="excel_import",
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result.id == "default-config-id"
@@ -376,7 +380,9 @@ class TestGetDefaultExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_get_default_config_not_found(self, mock_crud, mock_db):
+    async def test_get_default_config_not_found(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test default configuration not found"""
         from src.api.v1.documents.excel.config import get_default_excel_config
 
@@ -387,10 +393,11 @@ class TestGetDefaultExcelConfig:
                 config_type="import",
                 task_type="excel_import",
                 db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
-        assert "未找到默认配�? in exc_info.value.message
+        assert "excel_config" in exc_info.value.message
 
 
 # ============================================================================
@@ -403,7 +410,7 @@ class TestGetExcelConfigDetails:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_get_config_success(self, mock_crud, mock_db):
+    async def test_get_config_success(self, mock_crud, mock_db, mock_current_user):
         """Test successful configuration retrieval"""
         from src.api.v1.documents.excel.config import get_excel_config
 
@@ -412,24 +419,28 @@ class TestGetExcelConfigDetails:
         mock_config.config_name = "test_config"
         mock_crud.get.return_value = mock_config
 
-        result = get_excel_config(config_id="config-123", db=mock_db)
+        result = get_excel_config(
+            config_id="config-123", db=mock_db, current_user=mock_current_user
+        )
 
         assert result.id == "config-123"
         mock_crud.get.assert_called_once_with(db=mock_db, id="config-123")
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_get_config_not_found(self, mock_crud, mock_db):
+    async def test_get_config_not_found(self, mock_crud, mock_db, mock_current_user):
         """Test configuration not found"""
         from src.api.v1.documents.excel.config import get_excel_config
 
         mock_crud.get.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_excel_config(config_id="nonexistent", db=mock_db)
+            get_excel_config(
+                config_id="nonexistent", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
-        assert "配置不存�? in exc_info.value.message
+        assert "excel_config" in exc_info.value.message
 
 
 # ============================================================================
@@ -442,7 +453,7 @@ class TestUpdateExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_update_config_success(self, mock_crud, mock_db):
+    async def test_update_config_success(self, mock_crud, mock_db, mock_current_user):
         """Test successful configuration update"""
         from src.api.v1.documents.excel.config import update_excel_config
 
@@ -460,6 +471,7 @@ class TestUpdateExcelConfig:
             config_id="config-123",
             config_in=config_in,
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["message"] == "配置更新成功"
@@ -468,7 +480,9 @@ class TestUpdateExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_update_config_not_found(self, mock_crud, mock_db):
+    async def test_update_config_not_found(
+        self, mock_crud, mock_db, mock_current_user
+    ):
         """Test updating non-existent configuration"""
         from src.api.v1.documents.excel.config import update_excel_config
 
@@ -479,10 +493,11 @@ class TestUpdateExcelConfig:
                 config_id="nonexistent",
                 config_in={"config_name": "updated"},
                 db=mock_db,
+                current_user=mock_current_user,
             )
 
         assert exc_info.value.status_code == 404
-        assert "配置不存�? in exc_info.value.message
+        assert "excel_config" in exc_info.value.message
 
 
 # ============================================================================
@@ -495,13 +510,15 @@ class TestDeleteExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_delete_config_success(self, mock_crud, mock_db):
+    async def test_delete_config_success(self, mock_crud, mock_db, mock_current_user):
         """Test successful configuration deletion"""
         from src.api.v1.documents.excel.config import delete_excel_config
 
         mock_crud.remove.return_value = MagicMock()
 
-        result = delete_excel_config(config_id="config-123", db=mock_db)
+        result = delete_excel_config(
+            config_id="config-123", db=mock_db, current_user=mock_current_user
+        )
 
         assert result["message"] == "配置删除成功"
         mock_crud.remove.assert_called_once_with(db=mock_db, id="config-123")
@@ -664,7 +681,7 @@ class TestPreviewExcel:
                 current_user=mock_current_user,
             )
 
-        assert "文件格式不支�? in str(exc_info.value)
+        assert "文件格式不支持" in str(exc_info.value)
 
     @patch("src.api.v1.documents.excel.preview.security_middleware")
     @pytest.mark.asyncio
@@ -717,7 +734,7 @@ class TestImportExcelSync:
         )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = MagicMock(
+        mock_service.import_assets_from_excel = AsyncMock(
             return_value={
                 "total": 10,
                 "success": 8,
@@ -762,7 +779,7 @@ class TestImportExcelSync:
         )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = MagicMock(
+        mock_service.import_assets_from_excel = AsyncMock(
             return_value={
                 "total": 10,
                 "success": 10,
@@ -834,7 +851,7 @@ class TestImportExcelSync:
         )
 
         mock_service = MagicMock()
-        mock_service.import_assets_from_excel = MagicMock(
+        mock_service.import_assets_from_excel = AsyncMock(
             return_value={
                 "total": 10,
                 "success": 5,
@@ -902,7 +919,7 @@ class TestImportExcelAsync:
             current_user=mock_current_user,
         )
 
-        assert result["message"] == "导入任务已创�?
+        assert result["message"] == "导入任务已创建"
         assert result["task_id"] == "task-123"
         assert "status" in result
 
@@ -1035,8 +1052,8 @@ class TestExportExcel:
 
         result = export_excel(
             search="test",
-            ownership_status="已确�?,
-            property_nature="经营�?,
+            ownership_status="已确权",
+            property_nature="经营性",
             usage_status="出租",
             db=mock_db,
             current_user=mock_current_user,
@@ -1101,7 +1118,7 @@ class TestExportExcelAsync:
             current_user=mock_current_user,
         )
 
-        assert result["message"] == "导出任务已创�?
+        assert result["message"] == "导出任务已创建"
         assert result["task_id"] == "export-task-123"
         assert "status" in result
 
@@ -1120,7 +1137,7 @@ class TestExportExcelAsync:
         mock_task_crud.create.return_value = mock_task
 
         request = ExcelExportRequest(
-            filters={"ownership_status": "已确�?},
+            filters={"ownership_status": "已确权"},
             fields=["物业名称", "地址"],
             export_format="xlsx",
         )
@@ -1545,8 +1562,8 @@ class TestExportSelectedAssets:
             asset_ids=None,
             export_format="excel",
             search="test",
-            ownership_status="已确�?,
-            property_nature="经营�?,
+            ownership_status="已确权",
+            property_nature="经营性",
             usage_status="出租",
             db=mock_db,
             current_user=mock_current_user,
@@ -1612,7 +1629,7 @@ class TestProcessExcelImportAsync:
             mock_task_crud.get.return_value = mock_task
 
             mock_service = MagicMock()
-            mock_service.import_assets_from_excel = MagicMock(
+            mock_service.import_assets_from_excel = AsyncMock(
                 return_value={
                     "total": 10,
                     "success": 10,
@@ -1660,7 +1677,7 @@ class TestProcessExcelImportAsync:
             mock_task_crud.get.return_value = mock_task
 
             mock_service = MagicMock()
-            mock_service.import_assets_from_excel = MagicMock(
+            mock_service.import_assets_from_excel = AsyncMock(
                 side_effect=Exception("Import failed")
             )
             mock_import_service_class.return_value = mock_service
@@ -1755,9 +1772,3 @@ class TestProcessExcelExportAsync:
         # Verify task was updated to failed
         calls = mock_task_crud.update.call_args_list
         assert any(call for call in calls if "FAILED" in str(call))
-
-
-
-
-
-

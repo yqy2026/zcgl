@@ -3,6 +3,8 @@
 """
 
 import logging
+from collections import deque
+from time import time
 from typing import Any
 
 import jwt
@@ -14,11 +16,19 @@ from sqlalchemy.orm import Session
 
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
+from ..core.environment import is_production
 from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..database import get_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
+from ..security.logging_security import security_monitor
+from ..constants.security_constants import (
+    TOKEN_BLACKLIST_DEGRADE_THRESHOLD,
+    TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
+    TOKEN_BLACKLIST_ERROR_THRESHOLD,
+    TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
+)
 from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
 
@@ -29,29 +39,129 @@ logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
-def _is_token_blacklisted(jti: str) -> bool:
+_token_blacklist_degrade_events: deque[float] = deque(maxlen=100)
+_token_blacklist_error_events: deque[float] = deque(maxlen=100)
+_last_degrade_alert_ts = 0.0
+_last_error_alert_ts = 0.0
+
+
+def _trim_recent_events(events: deque[float], window_seconds: int, now: float) -> int:
+    while events and now - events[0] > window_seconds:
+        events.popleft()
+    return len(events)
+
+
+def _record_token_blacklist_degraded(
+    reason: str, jti: str | None, user_id: str | None
+) -> None:
+    global _last_degrade_alert_ts
+    now = time()
+    _token_blacklist_degrade_events.append(now)
+    recent = _trim_recent_events(
+        _token_blacklist_degrade_events, TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS, now
+    )
+
+    security_monitor.record_metric("token_blacklist.degraded", 1)
+    security_monitor.record_event(
+        "token_blacklist_degraded",
+        reason=reason,
+        jti=jti,
+        user_id=user_id,
+        recent_count=recent,
+        window_seconds=TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
+    )
+    if is_production():
+        security_monitor.record_audit(
+            "token_blacklist_degraded",
+            reason=reason,
+            jti=jti,
+            user_id=user_id,
+        )
+
+    if (
+        recent >= TOKEN_BLACKLIST_DEGRADE_THRESHOLD
+        and now - _last_degrade_alert_ts >= TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS
+    ):
+        _last_degrade_alert_ts = now
+        logger.warning(
+            "Token blacklist degraded frequently in the last window."
+        )
+        security_monitor.record_event(
+            "token_blacklist_degraded_frequent",
+            count=recent,
+            window_seconds=TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
+        )
+
+
+def _record_token_blacklist_error(
+    error: Exception, jti: str | None, user_id: str | None
+) -> None:
+    global _last_error_alert_ts
+    now = time()
+    _token_blacklist_error_events.append(now)
+    recent = _trim_recent_events(
+        _token_blacklist_error_events, TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS, now
+    )
+
+    security_monitor.record_metric("token_blacklist.error", 1)
+    security_monitor.record_event(
+        "token_blacklist_error",
+        error=str(error),
+        jti=jti,
+        user_id=user_id,
+        recent_count=recent,
+        window_seconds=TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
+    )
+
+    if (
+        recent >= TOKEN_BLACKLIST_ERROR_THRESHOLD
+        and now - _last_error_alert_ts >= TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS
+    ):
+        _last_error_alert_ts = now
+        logger.warning("Token blacklist errors are frequent in the last window.")
+        security_monitor.record_event(
+            "token_blacklist_error_frequent",
+            count=recent,
+            window_seconds=TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
+        )
+
+
+def _is_token_blacklisted(
+    jti: str | None, user_id: str | None = None, session_id: str | None = None
+) -> bool:
     """
     检查token是否在黑名单中
     未来可以扩展为Redis缓存或数据库表
     """
-    if not _token_blacklist_circuit.allow_request():
-        logger.warning("Token blacklist check degraded, allowing token")
+    if not settings.TOKEN_BLACKLIST_ENABLED:
         return False
+
+    if jti is None and user_id is None and session_id is None:
+        return False
+
+    if not _token_blacklist_circuit.allow_request():
+        logger.error(
+            "Token blacklist check degraded. Enforcing fail-closed in production."
+        )
+        _record_token_blacklist_degraded("circuit_open", jti, user_id)
+        return is_production()
 
     try:
         from ..security.token_blacklist import blacklist_manager
 
-        result = blacklist_manager.is_blacklisted(jti)
+        result = blacklist_manager.is_blacklisted(jti=jti, user_id=user_id)
         _token_blacklist_circuit.record_success()
         return result
     except ImportError:
         logger.debug(f"Token blacklist not implemented, allowing token {jti}")
+        _record_token_blacklist_degraded("not_implemented", jti, user_id)
         _token_blacklist_circuit.record_success()
         return False
     except Exception as e:
         _token_blacklist_circuit.record_failure()
         logger.warning(f"Error checking token blacklist: {e}")
-        return False
+        _record_token_blacklist_error(e, jti, user_id)
+        return is_production()
 
 
 _token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
@@ -60,6 +170,8 @@ _token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
+JWT_AUDIENCE = settings.JWT_AUDIENCE
+JWT_ISSUER = settings.JWT_ISSUER
 
 
 def _validate_jwt_token(token: str) -> TokenData:
@@ -82,8 +194,8 @@ def _validate_jwt_token(token: str) -> TokenData:
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM],
-            audience="land-property-system",
-            issuer="land-property-auth",
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER,
         )
 
         user_id: str | None = payload.get("sub")
@@ -111,7 +223,7 @@ def _validate_jwt_token(token: str) -> TokenData:
             raise credentials_exception
 
         # 验证token是否在黑名单中（如果实现了token黑名单）
-        if jti and _is_token_blacklisted(jti):
+        if _is_token_blacklisted(jti=jti, user_id=user_id, session_id=None):
             logger.warning(f"JWT token {jti} is blacklisted")
             raise unauthorized("Token已失效")
 
@@ -290,23 +402,13 @@ def get_optional_current_user(
         return None
 
     try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
-            audience="land-property-system",
-            issuer="land-property-auth",
-        )
-        user_id: str | None = payload.get("sub")
+        token_data = _validate_jwt_token(token)
+    except Exception:
+        return None
 
-        if user_id is None:
-            return None
-
-        user = db.query(User).filter(User.id == user_id).first()
-        if user and user.is_active and not user.is_locked_now():
-            return user
-    except JWTError:
-        pass
+    user = db.query(User).filter(User.id == token_data.sub).first()
+    if user and user.is_active and not user.is_locked_now():
+        return user
 
     return None
 

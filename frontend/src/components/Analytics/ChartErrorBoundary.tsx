@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, Button } from 'antd';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('ChartErrorBoundary');
 

@@ -121,17 +121,31 @@ class MemoryRouteCache implements RouteCache {
 
 // 全局缓存实例
 const routeCacheInstance = new MemoryRouteCache();
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-// 定期清理过期缓存
-setInterval(() => {
-  routeCacheInstance.cleanup();
-}, 60000); // 每分钟清理一次
+const startCleanupTimer = (): void => {
+  if (cleanupTimer) {
+    return;
+  }
+  cleanupTimer = setInterval(() => {
+    routeCacheInstance.cleanup();
+  }, 60000);
+};
+
+export const stopRouteCacheCleanup = (): void => {
+  if (!cleanupTimer) {
+    return;
+  }
+  clearInterval(cleanupTimer);
+  cleanupTimer = null;
+};
 
 /**
  * 使用路由缓存的Hook
  * @returns 路由缓存实例
  */
 export const useRouteCache = (): RouteCache => {
+  startCleanupTimer();
   return routeCacheInstance;
 };
 
@@ -170,6 +184,12 @@ export const useRouteCacheState = () => {
     delete: cache.delete.bind(cache),
   };
 };
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    stopRouteCacheCleanup();
+  });
+}
 
 /**
  * 路由性能监控工具

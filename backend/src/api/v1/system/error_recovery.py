@@ -13,14 +13,15 @@ from pydantic import BaseModel, Field
 
 from ....core.exception_handler import (
     BaseBusinessError,
+    InternalServerError,
     bad_request,
     internal_error,
     not_found,
 )
-from ....middleware.auth import PermissionChecker
+from ....middleware.auth import require_permission
 from ....middleware.error_recovery_middleware import api_error_recovery
 from ....models.auth import User
-from ....security.route_guards import debug_only
+from ....security.route_guards import debug_only, require_localhost
 from ....services.error_recovery_service import (
     ErrorCategory,
     ErrorSeverity,
@@ -116,7 +117,7 @@ class RecoveryConfigResponse(BaseModel):
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_statistics(
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "view")),
     category: str | None = Query(None, description="按错误类别筛选"),
     start_time: datetime | None = Query(None, description="开始时间"),
     end_time: datetime | None = Query(None, description="结束时间"),
@@ -147,7 +148,7 @@ async def get_recovery_statistics(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_strategies(
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "view")),
 ) -> list[RecoveryConfigResponse]:
     """获取错误恢复策略配置"""
 
@@ -185,7 +186,7 @@ async def get_recovery_strategies(
 async def update_recovery_strategy(
     category: str,
     strategy_update: RecoveryStrategyUpdate,
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
 ) -> dict[str, Any]:
     """更新错误恢复策略"""
 
@@ -247,7 +248,7 @@ async def update_recovery_strategy(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_circuit_breaker_status(
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "view")),
 ) -> list[CircuitBreakerStatus]:
     """获取熔断器状态"""
 
@@ -284,7 +285,7 @@ async def get_circuit_breaker_status(
 @api_error_recovery(ErrorCategory.DATABASE)
 async def reset_circuit_breaker(
     category: str,
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
 ) -> dict[str, Any]:
     """重置熔断器"""
 
@@ -324,7 +325,7 @@ async def reset_circuit_breaker(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_history(
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "view")),
     category: str | None = Query(None, description="按错误类别筛选"),
     success: bool | None = Query(None, description="按是否成功筛选"),
     page: int = Query(1, ge=1, description="页码"),
@@ -363,13 +364,14 @@ async def get_recovery_history(
     "/test",
     summary="测试错误恢复",
     description="手动触发错误恢复测试，验证恢复策略的有效性",
+    dependencies=[Depends(require_localhost)],
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 @debug_only
 async def test_error_recovery(
     category: str = Body(..., description="错误类别"),
     simulate_error: bool = Body(True, description="是否模拟错误"),
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:test"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "test")),
 ) -> dict[str, Any]:
     """测试错误恢复"""
 
@@ -387,7 +389,7 @@ async def test_error_recovery(
         # 执行测试
         async def test_function() -> dict[str, str]:
             if simulate_error:
-                raise Exception(f"模拟 {category} 错误")
+                raise InternalServerError(message=f"模拟 {category} 错误")
             return {"test": "success"}
 
         from ....services.error_recovery_service import ErrorContext
@@ -432,7 +434,7 @@ async def test_error_recovery(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def clear_recovery_history(
-    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
+    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
     before_time: datetime | None = Query(None, description="清理此时间之前的记录"),
 ) -> dict[str, Any]:
     """清理错误恢复历史"""

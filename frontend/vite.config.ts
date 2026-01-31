@@ -58,6 +58,10 @@ export default defineConfig(({ command, mode }) => {
       },
     },
 
+    optimizeDeps: {
+      include: ['lodash/debounce'],
+    },
+
     server: {
       port: 5173,
       host: true,

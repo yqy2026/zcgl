@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AuthService } from '../services/authService';
-import type { User, LoginCredentials } from '../types/auth';
-import type { StandardApiResponse, AuthResponse as ApiAuthResponse } from '../types/apiResponse';
-import { createLogger } from '../utils/logger';
+import { AuthService } from '@/services/authService';
+import type { User, LoginCredentials } from '@/types/auth';
+import type { StandardApiResponse, AuthResponse as ApiAuthResponse } from '@/types/apiResponse';
+import { createLogger } from '@/utils/logger';
 import { MessageManager } from '@/utils/messageManager';
 
 const authLogger = createLogger('Auth');

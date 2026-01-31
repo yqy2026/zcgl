@@ -255,23 +255,12 @@ def get_all_assets(
     - **include_relations**: 是否加载关联数据（默认不加载）
     """
     try:
-        # 构建查询过滤器
-        filters = {}
-        if ownership_status:
-            filters["ownership_status"] = ownership_status
-        if usage_status:
-            filters["usage_status"] = usage_status
-        if property_nature:
-            filters["property_nature"] = property_nature
-        if business_category:
-            filters["business_category"] = business_category
-
-        # 排序
-        if sort_by and sort_order:
-            if sort_order.lower() == "desc":
-                pass
-            else:
-                pass
+        filters = AssetService.build_filters(
+            ownership_status=ownership_status,
+            property_nature=property_nature,
+            usage_status=usage_status,
+            business_category=business_category,
+        )
 
         # 获取所有资产（不分页）
         asset_service = AssetService(db)
@@ -279,7 +268,7 @@ def get_all_assets(
             skip=0,
             limit=max_export,
             search=search,
-            filters=filters if filters else None,
+            filters=filters,
             sort_field=sort_by or "created_at",
             sort_order=sort_order or "desc",
             include_relations=include_relations,

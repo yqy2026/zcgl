@@ -12,7 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { createLogger } from '@/utils/logger';
 import { assetService } from '@/services/assetService';
-import type { AssetSearchParams } from '../../types/asset';
+import type { AssetSearchParams } from '@/types/asset';
 
 // Import section components
 import {

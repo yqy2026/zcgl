@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
+from src.core.exception_handler import ConfigurationError
 from src.services.document.config import LLMProvider
 from src.services.document.extractors.base import ContractExtractorInterface
 from src.services.document.extractors.factory import (
@@ -46,6 +47,7 @@ class TestExtractorFactory:
         with patch(
             "src.services.document.extractors.factory.settings"
         ) as mock_settings:
+            mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "glm"
 
             extractor = ExtractorFactory.get_extractor()
@@ -74,7 +76,7 @@ class TestExtractorFactory:
 
     def test_get_extractor_invalid_provider(self):
         """测试无效提供商抛出异常"""
-        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        with pytest.raises(ConfigurationError, match="Unsupported LLM provider"):
             ExtractorFactory.get_extractor("invalid-provider")
 
     def test_get_extractor_none_uses_config(self):
@@ -82,6 +84,7 @@ class TestExtractorFactory:
         with patch(
             "src.services.document.extractors.factory.settings"
         ) as mock_settings:
+            mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "qwen"
 
             extractor = ExtractorFactory.get_extractor()
@@ -113,6 +116,7 @@ class TestConvenienceFunctions:
         with patch(
             "src.services.document.extractors.factory.settings"
         ) as mock_settings:
+            mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "glm"
 
             extractor = get_llm_extractor()
@@ -171,6 +175,7 @@ class TestProviderNormalization:
         with patch(
             "src.services.document.extractors.factory.settings"
         ) as mock_settings:
+            mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "GLM"
 
             extractor = ExtractorFactory.get_extractor()
@@ -219,7 +224,7 @@ class TestErrorHandling:
 
     def test_invalid_provider_raises_error(self):
         """测试无效提供商抛出有意义的错误"""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             ExtractorFactory.get_extractor("nonexistent-provider")
 
         error_message = str(exc_info.value)
@@ -228,7 +233,7 @@ class TestErrorHandling:
 
     def test_error_message_lists_supported_providers(self):
         """测试错误消息包含支持的提供商列表"""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             ExtractorFactory.get_extractor("invalid")
 
         error_message = str(exc_info.value)

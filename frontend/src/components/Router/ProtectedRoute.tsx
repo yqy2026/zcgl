@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { SystemErrorBoundary } from '@/components/ErrorHandling';
-import { PermissionGuard } from '../System/PermissionGuard';
+import { PermissionGuard } from '@/components/System/PermissionGuard';
 import { RouteConfig } from '@/constants/routes';
 
 interface ProtectedRouteProps extends Omit<RouteConfig, 'children'> {

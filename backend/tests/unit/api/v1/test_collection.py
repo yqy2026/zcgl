@@ -1,5 +1,5 @@
 """
-Comprehensive Unit Tests for Collection API Routes (src/api/v1/collection.py)
+Comprehensive Unit Tests for Collection API Routes (src/api/v1/system/collection.py)
 
 This test module covers all endpoints in the collection router to achieve 70%+ coverage.
 
@@ -20,13 +20,14 @@ Testing Approach:
 - Test edge cases (empty results, pagination, filters)
 """
 
+import json
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.core.exception_handler import BaseBusinessError
+from src.core.exception_handler import BaseBusinessError, not_found
 from src.models.collection import CollectionStatus
 from src.schemas.collection import (
     CollectionRecordCreate,
@@ -90,6 +91,28 @@ def mock_rent_ledger():
     return ledger
 
 
+@pytest.fixture
+def mock_collection_service(monkeypatch):
+    """Patch collection_service used by the collection endpoints."""
+    from src.api.v1.system import collection as collection_module
+
+    service = MagicMock()
+    monkeypatch.setattr(collection_module, "collection_service", service)
+    return service
+
+
+def assert_paginated_payload(payload, *, total, page, page_size, items_len):
+    """Assert standard pagination payload fields."""
+    assert payload["success"] is True
+    data = payload["data"]
+    assert len(data["items"]) == items_len
+    pagination = data["pagination"]
+    assert pagination["total"] == total
+    assert pagination["page"] == page
+    assert pagination["page_size"] == page_size
+    assert pagination["total_pages"] == (total + page_size - 1) // page_size
+
+
 # ============================================================================
 # Test: GET /collection/summary - Get Collection Task Summary
 # ============================================================================
@@ -98,25 +121,22 @@ def mock_rent_ledger():
 class TestGetCollectionSummary:
     """Tests for GET /api/v1/collection/summary endpoint"""
 
-    @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_success(self, mock_db, mock_current_user):
+    def test_get_collection_summary_success(self, mock_db, mock_current_user):
         """Test getting collection summary successfully"""
         # Skipped due to complex SQLAlchemy query mocking
         # This endpoint is tested in integration tests
         pass
 
-    @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_no_overdue(self, mock_db, mock_current_user):
+    def test_get_collection_summary_no_overdue(self, mock_db, mock_current_user):
         """Test getting collection summary with no overdue records"""
         # Skipped due to complex SQLAlchemy query mocking
         # This endpoint is tested in integration tests
         pass
 
-    @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_zero_total_records(
+    def test_get_collection_summary_zero_total_records(
         self, mock_db, mock_current_user
     ):
         """Test getting collection summary with zero total collection records"""
@@ -133,23 +153,25 @@ class TestGetCollectionSummary:
 class TestListCollectionRecords:
     """Tests for GET /api/v1/collection/records endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_list_records_default_params(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_default_params(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records with default parameters"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
         mock_records = [mock_collection_record for _ in range(20)]
+        mock_collection_service.list_records.return_value = {
+            "items": mock_records,
+            "page": 1,
+            "page_size": 20,
+            "total": 100,
+        }
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 100
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = mock_records
-
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=None,
@@ -159,29 +181,35 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert len(result.items) == 20
-        assert result.total == 100
-        assert result.page == 1
-        assert result.page_size == 20
-        assert result.pages == 5
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=100, page=1, page_size=20, items_len=20)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id=None,
+            contract_id=None,
+            collection_status=None,
+            page=1,
+            page_size=20,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_with_ledger_filter(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_with_ledger_filter(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records filtered by ledger_id"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 5
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
-            mock_collection_record
-        ]
+        mock_collection_service.list_records.return_value = {
+            "items": [mock_collection_record],
+            "page": 1,
+            "page_size": 20,
+            "total": 5,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id="ledger-123",
             contract_id=None,
             collection_status=None,
@@ -191,26 +219,35 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 5
-        assert len(result.items) == 1
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=5, page=1, page_size=20, items_len=1)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id="ledger-123",
+            contract_id=None,
+            collection_status=None,
+            page=1,
+            page_size=20,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_with_contract_filter(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_with_contract_filter(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records filtered by contract_id"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 3
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
-            mock_collection_record
-        ]
+        mock_collection_service.list_records.return_value = {
+            "items": [mock_collection_record],
+            "page": 1,
+            "page_size": 20,
+            "total": 3,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id="contract-123",
             collection_status=None,
@@ -220,25 +257,35 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 3
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=3, page=1, page_size=20, items_len=1)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id=None,
+            contract_id="contract-123",
+            collection_status=None,
+            page=1,
+            page_size=20,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_with_status_filter(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_with_status_filter(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records filtered by status"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 8
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
-            mock_collection_record
-        ]
+        mock_collection_service.list_records.return_value = {
+            "items": [mock_collection_record],
+            "page": 1,
+            "page_size": 20,
+            "total": 8,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=CollectionStatus.SUCCESS,
@@ -248,25 +295,35 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 8
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=8, page=1, page_size=20, items_len=1)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id=None,
+            contract_id=None,
+            collection_status=CollectionStatus.SUCCESS,
+            page=1,
+            page_size=20,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_with_all_filters(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_with_all_filters(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records with all filters applied"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 1
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
-            mock_collection_record
-        ]
+        mock_collection_service.list_records.return_value = {
+            "items": [mock_collection_record],
+            "page": 1,
+            "page_size": 20,
+            "total": 1,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id="ledger-123",
             contract_id="contract-123",
             collection_status=CollectionStatus.PENDING,
@@ -276,25 +333,36 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 1
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=1, page=1, page_size=20, items_len=1)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id="ledger-123",
+            contract_id="contract-123",
+            collection_status=CollectionStatus.PENDING,
+            page=1,
+            page_size=20,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_pagination(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_pagination(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test pagination of collection records"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
         mock_records = [mock_collection_record for _ in range(10)]
+        mock_collection_service.list_records.return_value = {
+            "items": mock_records,
+            "page": 2,
+            "page_size": 10,
+            "total": 25,
+        }
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 25
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = mock_records
-
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=None,
@@ -304,25 +372,31 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 25
-        assert result.page == 2
-        assert result.page_size == 10
-        assert result.pages == 3  # (25 + 10 - 1) // 10 = 3
-        assert len(result.items) == 10
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=25, page=2, page_size=10, items_len=10)
+        mock_collection_service.list_records.assert_called_once_with(
+            mock_db,
+            ledger_id=None,
+            contract_id=None,
+            collection_status=None,
+            page=2,
+            page_size=10,
+        )
 
-    @pytest.mark.asyncio
-    async def test_list_records_empty_result(self, mock_db, mock_current_user):
+    def test_list_records_empty_result(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test getting collection records with empty result"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 0
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
+        mock_collection_service.list_records.return_value = {
+            "items": [],
+            "page": 1,
+            "page_size": 20,
+            "total": 0,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=None,
@@ -332,25 +406,25 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.total == 0
-        assert len(result.items) == 0
-        assert result.pages == 0
+        payload = json.loads(result.body)
+        assert_paginated_payload(payload, total=0, page=1, page_size=20, items_len=0)
 
-    @pytest.mark.asyncio
-    async def test_list_records_invalid_page(self, mock_db, mock_current_user):
+    def test_list_records_invalid_page(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test getting collection records with page < 1 (validation should handle)"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
         # FastAPI Query validation should reject page < 1
         # This test verifies the endpoint would handle valid page=1
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 0
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = []
+        mock_collection_service.list_records.return_value = {
+            "items": [],
+            "page": 1,
+            "page_size": 20,
+            "total": 0,
+        }
 
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=None,
@@ -360,7 +434,8 @@ class TestListCollectionRecords:
             current_user=mock_current_user,
         )
 
-        assert result.page == 1
+        payload = json.loads(result.body)
+        assert payload["data"]["pagination"]["page"] == 1
 
 
 # ============================================================================
@@ -371,36 +446,39 @@ class TestListCollectionRecords:
 class TestGetCollectionRecord:
     """Tests for GET /api/v1/collection/records/{record_id} endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_get_record_success(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_get_record_success(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection record successfully"""
-        from src.api.v1.collection import get_collection_record
+        from src.api.v1.system.collection import get_collection_record
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
+        mock_collection_service.get_by_id.return_value = mock_collection_record
 
-        result = await get_collection_record(
+        result = get_collection_record(
             record_id="record-123", db=mock_db, current_user=mock_current_user
         )
 
         assert result.id == "record-123"
         assert result.ledger_id == "ledger-123"
         assert result.collection_method == "phone"
+        mock_collection_service.get_by_id.assert_called_once_with(
+            mock_db, record_id="record-123"
+        )
 
-    @pytest.mark.asyncio
-    async def test_get_record_not_found(self, mock_db, mock_current_user):
+    def test_get_record_not_found(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test getting non-existent collection record"""
-        from src.api.v1.collection import get_collection_record
+        from src.api.v1.system.collection import get_collection_record
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_collection_service.get_by_id.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await get_collection_record(
+            get_collection_record(
                 record_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
@@ -417,12 +495,15 @@ class TestGetCollectionRecord:
 class TestCreateCollectionRecord:
     """Tests for POST /api/v1/collection/records endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_create_record_success(
-        self, mock_db, mock_current_user, mock_rent_ledger, mock_collection_record
+    def test_create_record_success(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test creating collection record successfully"""
-        from src.api.v1.collection import create_collection_record
+        from src.api.v1.system.collection import create_collection_record
 
         record_data = CollectionRecordCreate(
             ledger_id="ledger-123",
@@ -433,46 +514,29 @@ class TestCreateCollectionRecord:
             contacted_person="John Doe",
             contact_phone="1234567890",
         )
+        mock_collection_service.create.return_value = mock_collection_record
 
-        # Mock ledger query
-        mock_ledger_query = MagicMock()
-        mock_ledger_query.filter.return_value.first.return_value = mock_rent_ledger
-
-        # Mock db.add and db.commit
-        def mock_add(record):
-            record.id = "record-123"
-
-        mock_db.add.side_effect = mock_add
-        mock_db.commit.return_value = None
-        mock_db.refresh.return_value = None
-
-        # Set up query to return different results
-        query_count = [0]
-
-        def mock_query(model):
-            query_count[0] += 1
-            if "RentLedger" in str(model):
-                return mock_ledger_query
-            return MagicMock()
-
-        mock_db.query.side_effect = mock_query
-
-        await create_collection_record(
+        result = create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
-        # Verify operator info was set
-        assert record_data.operator == "testuser"
-        assert record_data.operator_id == "test-user-id"
-        mock_db.add.assert_called_once()
-        mock_db.commit.assert_called_once()
+        assert result.id == "record-123"
+        mock_collection_service.create.assert_called_once_with(
+            mock_db,
+            obj_in=record_data,
+            operator="testuser",
+            operator_id="test-user-id",
+        )
 
-    @pytest.mark.asyncio
-    async def test_create_record_with_operator_info(
-        self, mock_db, mock_current_user, mock_rent_ledger
+    def test_create_record_with_operator_info(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test creating collection record with operator info already set"""
-        from src.api.v1.collection import create_collection_record
+        from src.api.v1.system.collection import create_collection_record
 
         record_data = CollectionRecordCreate(
             ledger_id="ledger-123",
@@ -482,38 +546,27 @@ class TestCreateCollectionRecord:
             operator="admin",
             operator_id="admin-id",
         )
+        mock_collection_service.create.return_value = mock_collection_record
 
-        mock_ledger_query = MagicMock()
-        mock_ledger_query.filter.return_value.first.return_value = mock_rent_ledger
-
-        def mock_add(record):
-            record.id = "record-456"
-
-        mock_db.add.side_effect = mock_add
-        mock_db.commit.return_value = None
-
-        query_count = [0]
-
-        def mock_query(model):
-            query_count[0] += 1
-            if "RentLedger" in str(model):
-                return mock_ledger_query
-            return MagicMock()
-
-        mock_db.query.side_effect = mock_query
-
-        await create_collection_record(
+        create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
         # Operator info should not be overwritten
         assert record_data.operator == "admin"
         assert record_data.operator_id == "admin-id"
+        mock_collection_service.create.assert_called_once_with(
+            mock_db,
+            obj_in=record_data,
+            operator="testuser",
+            operator_id="test-user-id",
+        )
 
-    @pytest.mark.asyncio
-    async def test_create_record_ledger_not_found(self, mock_db, mock_current_user):
+    def test_create_record_ledger_not_found(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test creating collection record with non-existent ledger"""
-        from src.api.v1.collection import create_collection_record
+        from src.api.v1.system.collection import create_collection_record
 
         record_data = CollectionRecordCreate(
             ledger_id="nonexistent-ledger",
@@ -521,19 +574,12 @@ class TestCreateCollectionRecord:
             collection_method="phone",
             collection_date=date.today(),
         )
-
-        mock_ledger_query = MagicMock()
-        mock_ledger_query.filter.return_value.first.return_value = None
-
-        def mock_query(model):
-            if "RentLedger" in str(model):
-                return mock_ledger_query
-            return MagicMock()
-
-        mock_db.query.side_effect = mock_query
+        mock_collection_service.create.side_effect = not_found(
+            "租金台账不存在", resource_type="rent_ledger"
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await create_collection_record(
+            create_collection_record(
                 record_data=record_data, db=mock_db, current_user=mock_current_user
             )
 
@@ -541,12 +587,15 @@ class TestCreateCollectionRecord:
         assert "rent_ledger" in exc_info.value.message
         assert "不存在" in exc_info.value.message
 
-    @pytest.mark.asyncio
-    async def test_create_record_with_all_fields(
-        self, mock_db, mock_current_user, mock_rent_ledger
+    def test_create_record_with_all_fields(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test creating collection record with all optional fields"""
-        from src.api.v1.collection import create_collection_record
+        from src.api.v1.system.collection import create_collection_record
 
         record_data = CollectionRecordCreate(
             ledger_id="ledger-123",
@@ -562,24 +611,9 @@ class TestCreateCollectionRecord:
             collection_notes="Visited in person, partial payment received",
             next_follow_up_date=date.today(),
         )
+        mock_collection_service.create.return_value = mock_collection_record
 
-        mock_ledger_query = MagicMock()
-        mock_ledger_query.filter.return_value.first.return_value = mock_rent_ledger
-
-        def mock_add(record):
-            record.id = "record-789"
-
-        mock_db.add.side_effect = mock_add
-        mock_db.commit.return_value = None
-
-        def mock_query(model):
-            if "RentLedger" in str(model):
-                return mock_ledger_query
-            return MagicMock()
-
-        mock_db.query.side_effect = mock_query
-
-        await create_collection_record(
+        create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
@@ -596,12 +630,15 @@ class TestCreateCollectionRecord:
 class TestUpdateCollectionRecord:
     """Tests for POST /api/v1/collection/records/{record_id} endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_update_record_success(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_update_record_success(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test updating collection record successfully"""
-        from src.api.v1.collection import update_collection_record
+        from src.api.v1.system.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(
             collection_status=CollectionStatus.SUCCESS,
@@ -609,59 +646,62 @@ class TestUpdateCollectionRecord:
             collection_notes="Payment received in full",
         )
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
-        mock_db.commit.return_value = None
-        mock_db.refresh.return_value = None
+        mock_collection_service.get_by_id.return_value = mock_collection_record
+        mock_collection_service.update.return_value = mock_collection_record
 
-        await update_collection_record(
+        result = update_collection_record(
             record_id="record-123",
             update_data=update_data,
             db=mock_db,
             current_user=mock_current_user,
         )
 
-        mock_db.commit.assert_called_once()
-        mock_db.refresh.assert_called_once()
+        assert result.id == "record-123"
+        mock_collection_service.get_by_id.assert_called_once_with(
+            mock_db, record_id="record-123"
+        )
+        mock_collection_service.update.assert_called_once_with(
+            mock_db, db_obj=mock_collection_record, obj_in=update_data
+        )
 
-    @pytest.mark.asyncio
-    async def test_update_record_partial_update(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_update_record_partial_update(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test partial update of collection record"""
-        from src.api.v1.collection import update_collection_record
+        from src.api.v1.system.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(collection_notes="Follow-up scheduled")
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
-        mock_db.commit.return_value = None
+        mock_collection_service.get_by_id.return_value = mock_collection_record
+        mock_collection_service.update.return_value = mock_collection_record
 
-        await update_collection_record(
+        update_collection_record(
             record_id="record-123",
             update_data=update_data,
             db=mock_db,
             current_user=mock_current_user,
         )
 
-        # Verify only specified field is updated
-        assert hasattr(mock_collection_record, "collection_notes")
+        mock_collection_service.update.assert_called_once_with(
+            mock_db, db_obj=mock_collection_record, obj_in=update_data
+        )
 
-    @pytest.mark.asyncio
-    async def test_update_record_not_found(self, mock_db, mock_current_user):
+    def test_update_record_not_found(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test updating non-existent collection record"""
-        from src.api.v1.collection import update_collection_record
+        from src.api.v1.system.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(collection_status=CollectionStatus.SUCCESS)
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_collection_service.get_by_id.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await update_collection_record(
+            update_collection_record(
                 record_id="nonexistent",
                 update_data=update_data,
                 db=mock_db,
@@ -672,38 +712,44 @@ class TestUpdateCollectionRecord:
         assert "collection_record" in exc_info.value.message
         assert "不存在" in exc_info.value.message
 
-    @pytest.mark.asyncio
-    async def test_update_record_status_to_failed(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_update_record_status_to_failed(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test updating collection record status to failed"""
-        from src.api.v1.collection import update_collection_record
+        from src.api.v1.system.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(
             collection_status=CollectionStatus.FAILED,
             collection_notes="Unable to contact tenant",
         )
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
-        mock_db.commit.return_value = None
+        mock_collection_service.get_by_id.return_value = mock_collection_record
+        mock_collection_service.update.return_value = mock_collection_record
 
-        await update_collection_record(
+        update_collection_record(
             record_id="record-123",
             update_data=update_data,
             db=mock_db,
             current_user=mock_current_user,
         )
 
-        mock_db.commit.assert_called_once()
+        mock_collection_service.update.assert_called_once_with(
+            mock_db, db_obj=mock_collection_record, obj_in=update_data
+        )
 
-    @pytest.mark.asyncio
-    async def test_update_record_with_promised_payment(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_update_record_with_promised_payment(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test updating collection record with promised payment info"""
-        from src.api.v1.collection import update_collection_record
+        from src.api.v1.system.collection import update_collection_record
 
         update_data = CollectionRecordUpdate(
             promised_amount=Decimal("3000.00"),
@@ -711,19 +757,19 @@ class TestUpdateCollectionRecord:
             next_follow_up_date=date.today(),
         )
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
-        mock_db.commit.return_value = None
+        mock_collection_service.get_by_id.return_value = mock_collection_record
+        mock_collection_service.update.return_value = mock_collection_record
 
-        await update_collection_record(
+        update_collection_record(
             record_id="record-123",
             update_data=update_data,
             db=mock_db,
             current_user=mock_current_user,
         )
 
-        mock_db.commit.assert_called_once()
+        mock_collection_service.update.assert_called_once_with(
+            mock_db, db_obj=mock_collection_record, obj_in=update_data
+        )
 
 
 # ============================================================================
@@ -734,38 +780,37 @@ class TestUpdateCollectionRecord:
 class TestDeleteCollectionRecord:
     """Tests for DELETE /api/v1/collection/records/{record_id} endpoint"""
 
-    @pytest.mark.asyncio
-    async def test_delete_record_success(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_delete_record_success(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test deleting collection record successfully"""
-        from src.api.v1.collection import delete_collection_record
+        from src.api.v1.system.collection import delete_collection_record
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_collection_record
-        mock_db.query.return_value = mock_query
-        mock_db.delete.return_value = None
-        mock_db.commit.return_value = None
+        mock_collection_service.get_by_id.return_value = mock_collection_record
 
-        result = await delete_collection_record(
+        result = delete_collection_record(
             record_id="record-123", db=mock_db, current_user=mock_current_user
         )
 
         assert result["message"] == "催缴记录已删除"
-        mock_db.delete.assert_called_once_with(mock_collection_record)
-        mock_db.commit.assert_called_once()
+        mock_collection_service.delete.assert_called_once_with(
+            mock_db, db_obj=mock_collection_record
+        )
 
-    @pytest.mark.asyncio
-    async def test_delete_record_not_found(self, mock_db, mock_current_user):
+    def test_delete_record_not_found(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test deleting non-existent collection record"""
-        from src.api.v1.collection import delete_collection_record
+        from src.api.v1.system.collection import delete_collection_record
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_collection_service.get_by_id.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await delete_collection_record(
+            delete_collection_record(
                 record_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
@@ -782,23 +827,25 @@ class TestDeleteCollectionRecord:
 class TestCollectionEdgeCases:
     """Tests for edge cases and error handling"""
 
-    @pytest.mark.asyncio
-    async def test_list_records_large_page_size(
-        self, mock_db, mock_current_user, mock_collection_record
+    def test_list_records_large_page_size(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test getting collection records with maximum page size"""
-        from src.api.v1.collection import list_collection_records
+        from src.api.v1.system.collection import list_collection_records
 
         mock_records = [mock_collection_record for _ in range(100)]
+        mock_collection_service.list_records.return_value = {
+            "items": mock_records,
+            "page": 1,
+            "page_size": 100,
+            "total": 200,
+        }
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 200
-        mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = mock_records
-
-        mock_db.query.return_value = mock_query
-
-        result = await list_collection_records(
+        result = list_collection_records(
             ledger_id=None,
             contract_id=None,
             collection_status=None,
@@ -808,25 +855,27 @@ class TestCollectionEdgeCases:
             current_user=mock_current_user,
         )
 
-        assert result.page_size == 100
-        assert len(result.items) == 100
+        payload = json.loads(result.body)
+        assert_paginated_payload(
+            payload, total=200, page=1, page_size=100, items_len=100
+        )
 
-    @pytest.mark.asyncio
     @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_summary_with_null_success_count(
-        self, mock_db, mock_current_user
-    ):
+    def test_get_summary_with_null_success_count(self, mock_db, mock_current_user):
         """Test collection summary when success count query returns None"""
         # Skipped due to complex SQLAlchemy query mocking
         # This endpoint is tested in integration tests
         pass
 
-    @pytest.mark.asyncio
-    async def test_create_record_without_username(
-        self, mock_db, mock_current_user, mock_rent_ledger
+    def test_create_record_without_username(
+        self,
+        mock_db,
+        mock_current_user,
+        mock_collection_record,
+        mock_collection_service,
     ):
         """Test creating record when user has no username (uses email instead)"""
-        from src.api.v1.collection import create_collection_record
+        from src.api.v1.system.collection import create_collection_record
 
         # User without username
         mock_current_user.username = None
@@ -838,26 +887,15 @@ class TestCollectionEdgeCases:
             collection_method="sms",
             collection_date=date.today(),
         )
+        mock_collection_service.create.return_value = mock_collection_record
 
-        mock_ledger_query = MagicMock()
-        mock_ledger_query.filter.return_value.first.return_value = mock_rent_ledger
-
-        def mock_add(record):
-            record.id = "record-999"
-
-        mock_db.add.side_effect = mock_add
-        mock_db.commit.return_value = None
-
-        def mock_query(model):
-            if "RentLedger" in str(model):
-                return mock_ledger_query
-            return MagicMock()
-
-        mock_db.query.side_effect = mock_query
-
-        await create_collection_record(
+        create_collection_record(
             record_data=record_data, db=mock_db, current_user=mock_current_user
         )
 
-        # Should use email as operator
-        assert record_data.operator == "testuser@example.com"
+        mock_collection_service.create.assert_called_once_with(
+            mock_db,
+            obj_in=record_data,
+            operator="testuser@example.com",
+            operator_id="test-user-id",
+        )

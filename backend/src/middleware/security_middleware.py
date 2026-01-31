@@ -15,6 +15,10 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.types import ASGIApp
 
 from ..constants.api_constants import HTTPMethods
+from ..constants.file_size_constants import (
+    DEFAULT_MAX_EXCEL_FILE_SIZE,
+    DEFAULT_MAX_FILE_SIZE,
+)
 from ..constants.message_constants import ErrorMessages
 from ..core.circuit_breaker import CircuitBreaker
 from ..core.exception_handler import (
@@ -520,8 +524,8 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
     """文件上传安全中间件"""
 
     def __init__(
-        self, app: ASGIApp, max_file_size: int = 50 * 1024 * 1024
-    ) -> None:  # 50MB
+        self, app: ASGIApp, max_file_size: int = DEFAULT_MAX_FILE_SIZE
+    ) -> None:
         super().__init__(app)
         self.max_file_size = max_file_size
 
@@ -571,14 +575,73 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 
         # 检查文件数量限制
         path = request.url.path
-        if path and path.startswith("/api/v1/excel"):
-            # Excel导入限制：单次最多上传10个文件
-            pass
-        elif path and path.startswith("/api/v1/pdf_import"):
-            # PDF导入限制：单次最多上传5个文件
-            pass
-            # 注意：这里不能直接读取request.body，因为流已经被消耗
-            # 实际的文件验证需要在具体的API端点中进行
+        if path and (
+            path.startswith("/api/v1/excel")
+            or path.startswith("/api/v1/pdf_import")
+            or path.startswith("/api/v1/pdf-import")
+        ):
+            max_files = 10 if path.startswith("/api/v1/excel") else 5
+            content_type = request.headers.get("content-type", "")
+            boundary = self._extract_multipart_boundary(content_type)
+            if boundary is None:
+                logger.warning("Missing multipart boundary for upload path: %s", path)
+                return
+
+            # Read and cache body so downstream can still access it
+            body = await request.body()
+            if not content_length:
+                content_length = len(body)
+            if content_length > self.max_file_size:
+                raise BusinessValidationError(
+                    f"请求过大: {content_length / (1024 * 1024):.2f}MB",
+                    details={"max_size": self.max_file_size / (1024 * 1024)},
+                )
+
+            file_count = self._count_multipart_files(body, boundary, max_files)
+            if file_count > max_files:
+                raise BusinessValidationError(
+                    f"上传文件数量超过限制，最多允许 {max_files} 个文件",
+                    details={"max_files": max_files},
+                )
+            return
+        # 注意：此处不解析其它路径的 multipart 以避免重复读取请求体
+
+    @staticmethod
+    def _extract_multipart_boundary(content_type: str) -> str | None:
+        """解析 multipart boundary"""
+        if not content_type:
+            return None
+        for part in content_type.split(";"):
+            item = part.strip()
+            if item.startswith("boundary="):
+                boundary = item.split("=", 1)[1].strip()
+                if boundary.startswith('"') and boundary.endswith('"'):
+                    boundary = boundary[1:-1]
+                return boundary or None
+        return None
+
+    @staticmethod
+    def _count_multipart_files(body: bytes, boundary: str, max_files: int) -> int:
+        """统计 multipart 中的文件数量"""
+        delimiter = f"--{boundary}".encode("ascii", errors="ignore")
+        parts = body.split(delimiter)
+        count = 0
+        for part in parts:
+            if not part:
+                continue
+            if part.startswith(b"--"):
+                continue
+            if part.startswith(b"\r\n"):
+                part = part[2:]
+            header_end = part.find(b"\r\n\r\n")
+            if header_end == -1:
+                continue
+            headers = part[:header_end].decode("latin-1", errors="ignore").lower()
+            if "content-disposition" in headers and "filename=" in headers:
+                count += 1
+                if count > max_files:
+                    return count
+        return count
 
 
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
@@ -645,7 +708,7 @@ def create_security_middleware(app: Any, config: dict[str, Any] | None = None) -
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         FileUploadSecurityMiddleware,
-        max_file_size=config.get("max_file_size", 50 * 1024 * 1024),
+        max_file_size=config.get("max_file_size", DEFAULT_MAX_FILE_SIZE),
     )
     app.add_middleware(
         RequestValidationMiddleware, rate_limit_config=config.get("rate_limit", {})
@@ -659,7 +722,7 @@ def setup_security_middleware(app: Any) -> None:
         "allowed_origins": ["http://localhost:5173", "http://localhost:3000"],
         "allowed_methods": HTTPMethods.get_common_methods()
         + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
-        "max_file_size": 100 * 1024 * 1024,  # 100MB
+        "max_file_size": DEFAULT_MAX_EXCEL_FILE_SIZE,
         "rate_limit": {
             "pdf_import": {"max_requests": 5, "time_window": 60},
             "excel": {"max_requests": 10, "time_window": 60},

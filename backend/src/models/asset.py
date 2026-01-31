@@ -575,7 +575,9 @@ class Ownership(Base):
 
     # 基本信息
     name: Mapped[str] = mapped_column(String(200), nullable=False, comment="权属方全称")
-    code: Mapped[str] = mapped_column(String(100), nullable=False, comment="权属方编码")
+    code: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True, comment="权属方编码"
+    )
     short_name: Mapped[str | None] = mapped_column(String(100), comment="权属方简称")
     # 以下字段已删除: contact_person, contact_phone, contact_email, registration_number, legal_representative, business_scope, established_date, registered_capital
     address: Mapped[str | None] = mapped_column(String(500), comment="地址")

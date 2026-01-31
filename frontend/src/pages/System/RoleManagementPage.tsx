@@ -22,8 +22,8 @@ import {
   Typography,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import { roleService, type Role } from '../../services/systemService';
-import SystemBreadcrumb from '../../components/System/SystemBreadcrumb';
+import { roleService, type Role } from '@/services/systemService';
+import SystemBreadcrumb from '@/components/System/SystemBreadcrumb';
 import {
   PlusOutlined,
   EditOutlined,

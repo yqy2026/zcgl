@@ -5,12 +5,13 @@
 This is a minimal stub to make error_recovery.py importable
 """
 
+import functools
+import inspect
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, TypeVar
 
-P = ParamSpec("P")
 R = TypeVar("R")
 
 
@@ -175,13 +176,16 @@ class ErrorRecoveryEngine:
 
 def with_error_recovery(
     error_category: ErrorCategory,
-) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+) -> Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]:
     """错误恢复装饰器"""
 
-    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
+        @functools.wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> R:
             return await func(*args, **kwargs)
 
+        # Preserve the original signature for FastAPI
+        wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
         return wrapper
 
     return decorator

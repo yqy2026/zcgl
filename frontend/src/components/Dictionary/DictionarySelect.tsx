@@ -6,9 +6,9 @@
 import React from 'react';
 import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
-import { useDictionary } from '../../hooks/useDictionary';
-import { dictionaryService } from '../../services/dictionary';
-import type { DictionaryOption } from '../../services/dictionary';
+import { useDictionary } from '@/hooks/useDictionary';
+import { dictionaryService } from '@/services/dictionary';
+import type { DictionaryOption } from '@/services/dictionary';
 
 interface DictionarySelectProps
   extends Omit<SelectProps<string, DictionaryOption>, 'options' | 'optionRender'> {

@@ -31,7 +31,7 @@ import {
   type ConfirmImportResponse,
   type AssetMatch,
   type OwnershipMatch,
-} from '../../services/pdfImportService';
+} from '@/services/pdfImportService';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 

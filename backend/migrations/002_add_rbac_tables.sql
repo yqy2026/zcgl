@@ -526,6 +526,34 @@ INSERT OR IGNORE INTO permissions (
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     'system'
+),
+
+-- Excel配置权限
+(
+    'perm-excel-config-read',
+    'excel_config:read',
+    '查看Excel配置',
+    '查看Excel导入导出配置的权限',
+    'excel_config',
+    'read',
+    1,
+    0,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    'system'
+),
+(
+    'perm-excel-config-write',
+    'excel_config:write',
+    '管理Excel配置',
+    '创建/更新/删除Excel导入导出配置的权限',
+    'excel_config',
+    'write',
+    1,
+    1,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    'system'
 );
 
 -- 为超级管理员角色分配所有权限
@@ -535,7 +563,7 @@ SELECT 'role-super-admin', id, 'system' FROM permissions;
 -- 为资产管理员角色分配资产相关权限
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id, created_by)
 SELECT 'role-asset-admin', id, 'system' FROM permissions
-WHERE resource = 'asset' OR resource = 'statistics';
+WHERE resource = 'asset' OR resource = 'statistics' OR resource = 'excel_config';
 
 -- 为资产查看员角色分配只读权限
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id, created_by)

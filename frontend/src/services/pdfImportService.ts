@@ -9,8 +9,8 @@ import type {
   ProcessingOptions,
   PdfImportFileUploadResponse,
   PdfImportSessionProgress,
-} from '../types/pdfImport';
-import { createLogger } from '../utils/logger';
+} from '@/types/pdfImport';
+import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('PDFImportService');
 
@@ -206,7 +206,7 @@ export interface ConfirmImportResponse {
 // SystemCapabilities and SystemInfoResponse defined above
 
 // API基础配置 - 使用相对路径通过代理转发
-import { PDF_API } from '../constants/api';
+import { PDF_API } from '@/constants/api';
 
 // 使用API常量，如果端点不存在则提供备用方案
 const API_BASE_URL = PDF_API.INFO.replace('/info', ''); // 获取基础路径

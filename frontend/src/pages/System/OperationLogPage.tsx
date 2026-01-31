@@ -41,7 +41,7 @@ import { COLORS } from '@/styles/colorMap';
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
-import { logService, type OperationLog, type LogStatistics } from '../../services/systemService';
+import { logService, type OperationLog, type LogStatistics } from '@/services/systemService';
 
 const OperationLogPage: React.FC = () => {
   const [logs, setLogs] = useState<OperationLog[]>([]);
