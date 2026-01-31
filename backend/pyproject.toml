@@ -173,9 +173,6 @@ module = [
     "fitz.*",
     "pymupdf.*",
     "pdfplumber.*",
-    "jieba.*",
-    "rapidfuzz.*",
-    "Levenshtein.*",
     "tenacity.*",
 ]
 ignore_missing_imports = true

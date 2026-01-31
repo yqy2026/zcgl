@@ -122,8 +122,6 @@ CRITICAL_DEPENDENCIES = [
 
 # 可选依赖列表
 OPTIONAL_DEPENDENCIES = [
-    "services.providers.ocr_provider",
-    "services.adapters.paddle_ocr_engine_adapter",
     "middleware.v1_compatibility",
     "middleware.request_logging",
     "middleware.error_recovery_middleware",

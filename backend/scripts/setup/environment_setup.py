@@ -25,21 +25,8 @@ class EnvironmentSetup:
     def check_package(self, package_name: str) -> tuple[bool, str]:
         """检查Python包是否已安装"""
         try:
-            if package_name == "opencv-python":
-                import cv2
-
-                version = cv2.__version__
-            elif package_name == "Pillow":
-                from PIL import Image
-
-                version = Image.__version__
-            elif package_name == "python-Levenshtein":
-                import Levenshtein
-
-                version = Levenshtein.__version__
-            else:
-                module = importlib.import_module(package_name)
-                version = getattr(module, "__version__", "unknown")
+            module = importlib.import_module(package_name)
+            version = getattr(module, "__version__", "unknown")
             return True, version
         except ImportError:
             return False, "Not installed"
