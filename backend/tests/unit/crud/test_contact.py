@@ -19,21 +19,20 @@ def crud():
 @pytest.fixture
 def mock_contact():
     """模拟联系人对象"""
-    contact = MagicMock(spec=Contact)
-    contact.id = "contact_123"
-    contact.entity_type = "asset"
-    contact.entity_id = "asset_123"
-    contact.name = "张三"
-    contact.phone = "13800138000"
-    contact.office_phone = "010-12345678"
-    contact.is_primary = True
-    contact.is_active = True
-    contact.__dict__ = {
-        "id": "contact_123",
-        "name": "张三",
-        "phone": "13800138000",
-        "office_phone": "010-12345678",
-    }
+    # Create a simple object instead of MagicMock to avoid _mock_methods issues
+    from types import SimpleNamespace
+
+    contact = SimpleNamespace(
+        id="contact_123",
+        entity_type="asset",
+        entity_id="asset_123",
+        name="张三",
+        phone="13800138000",
+        office_phone="010-12345678",
+        is_primary=True,
+        is_active=True,
+        contact_type=ContactType.PRIMARY,
+    )
     return contact
 
 
@@ -302,7 +301,7 @@ class TestGetMultiByType:
                 mock_db,
                 "asset",
                 ["asset_123"],
-                contact_type=ContactType.TENANT,
+                contact_type=ContactType.PRIMARY,  # Use valid ContactType
             )
 
         assert len(results) == 1
