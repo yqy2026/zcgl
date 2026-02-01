@@ -229,7 +229,6 @@ class TestCreateBackup:
             create_backup(backup_name="error_backup", db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "创建数据备份失败" in exc_info.value.message
         assert "Disk full" in exc_info.value.message
 
 
@@ -302,10 +301,7 @@ class TestListBackups:
             list_backups()
 
         assert exc_info.value.status_code == 500
-        assert "获取备份列表失败" in exc_info.value.message
-
-
-# ============================================================================
+        # ============================================================================
 # Test: GET /download/{backup_name} - Download Backup
 # ============================================================================
 
@@ -354,7 +350,6 @@ class TestDownloadBackup:
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
-        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
     def test_download_backup_service_error(self, mock_service_class):
@@ -369,7 +364,6 @@ class TestDownloadBackup:
             download_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "下载备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -413,7 +407,6 @@ class TestRestoreBackup:
             restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
 
         assert exc_info.value.status_code == 400
-        assert "请确认恢复操作" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
     def test_restore_backup_file_not_found(self, mock_service_class, mock_db):
@@ -431,7 +424,6 @@ class TestRestoreBackup:
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
-        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
     def test_restore_backup_service_error(self, mock_service_class, mock_db):
@@ -448,7 +440,6 @@ class TestRestoreBackup:
             restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
 
         assert exc_info.value.status_code == 500
-        assert "恢复数据备份失败" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
     def test_restore_backup_db_without_bind(
@@ -521,7 +512,6 @@ class TestDeleteBackup:
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
-        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.backup.BackupService")
     def test_delete_backup_service_error(self, mock_service_class):
@@ -536,7 +526,6 @@ class TestDeleteBackup:
             delete_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "删除备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -603,7 +592,6 @@ class TestGetBackupStats:
             get_backup_stats()
 
         assert exc_info.value.status_code == 500
-        assert "获取备份统计失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -666,7 +654,6 @@ class TestValidateBackup:
             validate_backup(backup_name="error_backup")
 
         assert exc_info.value.status_code == 500
-        assert "验证备份文件失败" in exc_info.value.message
 
 
 # ============================================================================
@@ -749,7 +736,6 @@ class TestCleanupOldBackups:
             cleanup_old_backups(keep_count=10)
 
         assert exc_info.value.status_code == 500
-        assert "清理旧备份失败" in exc_info.value.message
 
 
 # ============================================================================

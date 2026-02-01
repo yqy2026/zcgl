@@ -5,10 +5,10 @@
 
 from .auth import AuthFixture
 from .database import DatabaseFixture
-from .test_data import DataGenerator
+from .test_data_generator import TestDataGenerator
 
 __all__ = [
     "DatabaseFixture",
     "AuthFixture",
-    "DataGenerator",
+    "TestDataGenerator",
 ]
