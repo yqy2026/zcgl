@@ -140,3 +140,31 @@ async def health_check(
             "error": str(e),
             "timestamp": datetime.now().isoformat(),
         }
+
+
+@router.get("/sessions")
+def get_pdf_import_sessions() -> dict[str, Any]:
+    """
+    获取PDF导入会话列表
+
+    返回：
+    - 包含会话列表的字典
+    """
+    return {
+        "success": True,
+        "message": "PDF导入会话列表获取成功",
+        "data": {
+            "items": [],
+            "pagination": {
+                "page": 1,
+                "page_size": 10,
+                "total": 0,
+                "total_pages": 0,
+                "has_next": False,
+                "has_prev": False,
+            },
+            "unread_count": 0,
+            "count": 0,
+        },
+        "timestamp": datetime.now().isoformat(),
+    }

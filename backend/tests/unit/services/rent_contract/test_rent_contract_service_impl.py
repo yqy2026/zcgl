@@ -730,12 +730,12 @@ class TestGenerateMonthlyLedger:
         mock_db.query.return_value = mock_query
 
         with patch(
-            "src.services.rent_contract.service.rent_contract"
+            "src.services.rent_contract.ledger_service.rent_contract"
         ) as mock_rent_contract_crud:
             mock_rent_contract_crud.get.return_value = mock_contract
 
             with patch(
-                "src.services.rent_contract.service.rent_term"
+                "src.services.rent_contract.ledger_service.rent_term"
             ) as mock_rent_term_crud:
                 mock_rent_term_crud.get_by_contract.return_value = []
 

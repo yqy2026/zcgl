@@ -28,7 +28,8 @@ from src.services.document.pdf_analyzer import (
 def mock_pdf_doc():
     """Mock PyMuPDF document object"""
     doc = MagicMock()
-    doc.__len__ = Mock(return_value=3)  # 3 pages
+    doc.__len__.return_value = 3  # 3 pages
+    doc.__enter__.return_value = doc  # For context manager usage
     return doc
 
 
@@ -102,7 +103,7 @@ class TestAnalyzePDF:
         """Digital PDF with lots of text should recommend text extraction"""
         # Setup: All pages are digital (lots of text, no images)
         # Mock __getitem__ for page access
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
+        mock_pdf_doc.__getitem__.return_value = mock_digital_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -122,7 +123,7 @@ class TestAnalyzePDF:
     ):
         """Scanned PDF with images and no text should recommend vision extraction"""
         # Setup: All pages are scanned (no text, has images)
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
+        mock_pdf_doc.__getitem__.return_value = mock_scanned_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -142,7 +143,7 @@ class TestAnalyzePDF:
     ):
         """Mixed PDF (some text + images) should recommend vision for safety"""
         # Setup: All pages have both text and images
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_mixed_page)
+        mock_pdf_doc.__getitem__.return_value = mock_mixed_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -179,8 +180,8 @@ class TestAnalyzePDF:
     ):
         """Should only analyze first 5 pages even for longer PDFs"""
         # Create a 10-page PDF
-        mock_pdf_doc.__len__ = Mock(return_value=10)
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
+        mock_pdf_doc.__len__.return_value = 10
+        mock_pdf_doc.__getitem__.return_value = mock_digital_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -199,7 +200,7 @@ class TestAnalyzePDF:
         nearly_empty_page.get_text = Mock(return_value="abc")  # < 100 chars
         nearly_empty_page.get_images = Mock(return_value=[])  # No images
 
-        mock_pdf_doc.__getitem__ = Mock(return_value=nearly_empty_page)
+        mock_pdf_doc.__getitem__.return_value = nearly_empty_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -223,7 +224,8 @@ class TestIsScannedPDF:
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
         """Should return True for scanned PDF"""
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
+        # Configure the doc to return scanned pages for any index
+        mock_pdf_doc.__getitem__.return_value = mock_scanned_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -236,7 +238,7 @@ class TestIsScannedPDF:
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
         """Should return False for digital PDF"""
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
+        mock_pdf_doc.__getitem__.return_value = mock_digital_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -269,7 +271,7 @@ class TestGetExtractionRecommendation:
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
         """Should recommend 'vision' for scanned PDF"""
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
+        mock_pdf_doc.__getitem__.return_value = mock_scanned_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -282,7 +284,7 @@ class TestGetExtractionRecommendation:
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
         """Should recommend 'text' for digital PDF"""
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_digital_page)
+        mock_pdf_doc.__getitem__.return_value = mock_digital_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc
@@ -295,7 +297,7 @@ class TestGetExtractionRecommendation:
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
         """Should default to 'vision' when analysis fails"""
-        mock_pdf_doc.__getitem__ = Mock(return_value=mock_scanned_page)
+        mock_pdf_doc.__getitem__.return_value = mock_scanned_page
 
         with patch(
             "src.services.document.pdf_analyzer.fitz.open", return_value=mock_pdf_doc

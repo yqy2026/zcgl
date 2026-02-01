@@ -141,10 +141,11 @@ class TestGetNotifications:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "items" in data
-        assert "total" in data
-        assert "unread_count" in data
-        assert "count" in data
+        assert "data" in data
+        assert "items" in data["data"]
+        assert "unread_count" in data["data"]
+        assert "count" in data["data"]
+        assert "pagination" in data["data"]
 
     def test_get_notifications_with_pagination(
         self, client, admin_user_headers, multiple_notifications
@@ -159,7 +160,7 @@ class TestGetNotifications:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data["items"]) <= 2
+        assert len(data["data"]["items"]) <= 2
 
     def test_get_notifications_filter_by_unread(
         self, client, admin_user_headers, multiple_notifications
@@ -175,7 +176,7 @@ class TestGetNotifications:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 验证所有结果都是未读的
-        for item in data["items"]:
+        for item in data["data"]["items"]:
             assert item["is_read"] is False
 
     def test_get_notifications_filter_by_read(
@@ -192,7 +193,7 @@ class TestGetNotifications:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 验证所有结果都是已读的
-        for item in data["items"]:
+        for item in data["data"]["items"]:
             assert item["is_read"] is True
 
     def test_get_notifications_filter_by_type(
@@ -209,7 +210,7 @@ class TestGetNotifications:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 验证所有结果都是alert类型
-        for item in data["items"]:
+        for item in data["data"]["items"]:
             assert item["type"] == "alert"
 
     def test_get_notifications_unauthorized(self, unauthenticated_client):
@@ -462,9 +463,9 @@ class TestNotificationsEdgeCases:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data["items"]) == 0
-        assert data["total"] == 0
-        assert data["unread_count"] == 0
+        assert len(data["data"]["items"]) == 0
+        assert data["data"]["count"] == 0
+        assert data["data"]["unread_count"] == 0
 
     def test_large_page_size(self, client, admin_user_headers):
         """测试大分页大小"""
@@ -524,8 +525,8 @@ class TestNotificationsEdgeCases:
         data = response.json()
 
         # 验证排序（最新在前）
-        if len(data["items"]) > 1:
-            for i in range(len(data["items"]) - 1):
+        if len(data["data"]["items"]) > 1:
+            for i in range(len(data["data"]["items"]) - 1):
                 assert (
-                    data["items"][i]["created_at"] >= data["items"][i + 1]["created_at"]
+                    data["data"]["items"][i]["created_at"] >= data["data"]["items"][i + 1]["created_at"]
                 )

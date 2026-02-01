@@ -6,13 +6,13 @@ PDF导入专用路由模块
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from ....core.response_handler import success_response
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
+from ....core.response_handler import success_response
 
 router = APIRouter(tags=["PDF智能导入"])
 
 
-@router.get("/pdf-import/info")
+@router.get("/info")
 def get_pdf_import_info() -> JSONResponse:
     """
     获取PDF导入系统信息
@@ -29,7 +29,7 @@ def get_pdf_import_info() -> JSONResponse:
     )  # pragma: no cover
 
 
-@router.get("/pdf-import/sessions")
+@router.get("/sessions")
 def get_pdf_import_sessions() -> JSONResponse:
     """
     获取PDF导入会话列表
@@ -40,7 +40,7 @@ def get_pdf_import_sessions() -> JSONResponse:
     )  # pragma: no cover
 
 
-@router.post("/pdf-import/upload")
+@router.post("/upload")
 def upload_pdf_for_import() -> JSONResponse:
     """
     上传PDF进行智能导入

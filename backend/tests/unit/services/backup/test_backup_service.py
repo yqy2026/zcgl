@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import ConfigurationError
 from src.services.backup.backup_service import BackupService
 
 
@@ -47,12 +48,12 @@ class TestCreateBackup:
 
     def test_create_backup_requires_database_url(self, service):
         """测试创建备份需要数据库URL"""
-        with pytest.raises(ValueError, match="需要提供"):
+        with pytest.raises(ConfigurationError, match="需要提供"):
             service.create_backup()
 
     def test_create_backup_requires_postgresql(self, service):
         """测试仅支持 PostgreSQL 备份"""
-        with pytest.raises(ValueError, match="仅支持 PostgreSQL"):
+        with pytest.raises(ConfigurationError, match="仅支持 PostgreSQL"):
             service.create_backup(database_url="mysql://localhost/test")
 
     @patch("subprocess.run")
