@@ -89,9 +89,8 @@ class TestProjectService:
 
             service.delete_project(mock_db, project_id=TEST_PROJECT_ID)
 
-            # Verify db.delete was called with the project object
-            mock_db.delete.assert_called_once_with(mock_project)
-            mock_db.commit.assert_called_once()
+            # Verify project_crud.remove was called with correct id
+            mock_crud.remove.assert_called_once_with(mock_db, id=TEST_PROJECT_ID)
 
     def test_generate_project_code_fallback(self, service, mock_db):
         # Test the fallback logic when pinyin/name fails or no name

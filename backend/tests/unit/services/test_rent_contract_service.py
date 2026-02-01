@@ -108,11 +108,11 @@ class TestRentContractService:
                 assert call[0][0].monthly_rent == Decimal("2000")
         assert term_added
 
-    @patch("src.services.rent_contract.service.rent_contract")
-    @patch("src.services.rent_contract.service.rent_term")
-    @patch("src.services.rent_contract.service.rent_ledger")
+    @patch("src.services.rent_contract.ledger_service.rent_ledger")
+    @patch("src.services.rent_contract.ledger_service.rent_term")
+    @patch("src.services.rent_contract.ledger_service.rent_contract")
     def test_generate_monthly_ledger(
-        self, mock_ledger_crud, mock_term_crud, mock_contract_crud, service, mock_db
+        self, mock_contract_crud, mock_term_crud, mock_ledger_crud, service, mock_db
     ):
         # Prepare mocks
         contract = RentContract(
