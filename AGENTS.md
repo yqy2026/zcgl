@@ -1,140 +1,491 @@
 # AGENTS.md
-本文件为 Codex（coding agent）提供项目上下文与执行约束，确保修改一致、可验证。
-更多细节参见 `docs/` 目录（此处只给最关键、可执行的信息）。
 
-**Last Updated**: 2026-01-31
+本文件为 AI Coding Agents 提供项目上下文与执行约束，确保修改一致、可验证。
+
+**Last Updated**: 2026-02-01
 
 ---
 
 ## 项目概述
 
-**土地物业资产管理系统**（Land Property Asset Management System）
+**土地物业资产管理系统**（Land Property Asset Management System）- 一个用于管理土地和物业资产的综合管理平台。
 
-| 层 | 技术栈 |
-|---|---|
-| 前端 | React 19.2 + TypeScript 5.9 + Vite 6 + Ant Design 6 + pnpm + Vitest |
+### 核心功能
+- 🏢 资产管理（58字段资产信息管理）
+- 📋 租赁合同管理（PDF智能识别+数据提取）
+- 👥 用户权限管理（RBAC权限控制）
+- 📊 数据分析报表（可视化图表+统计分析）
+- 🏗️ 组织架构管理（层级结构管理）
+- 📄 产权证管理（Property Certificate管理）
+- 📑 PDF文档智能提取（LLM Vision API）
+
+### 技术栈
+
+| 层级 | 技术栈 |
+|------|--------|
+| 前端 | React 19.2 + TypeScript 5.9 + Vite 6 + Ant Design 6 + pnpm |
 | 后端 | FastAPI 0.104+ + Uvicorn 0.38+ + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + Alembic |
-| 数据库 | PostgreSQL 16+（开发/测试/生产统一；SQLite 已移除） |
+| 数据库 | PostgreSQL 16+（开发/测试/生产统一；SQLite已移除）|
 | 缓存 | Redis 7 |
+| 文档AI | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
 
 ---
 
 ## 快速命令
 
 ```bash
-# 一键（Makefile）
-make dev              # 前端+后端
-make dev-frontend     # 前端 :5173
-make dev-backend      # 后端 :8002
-make lint             # 前后端 lint
-make test             # 前后端测试
-make secrets          # 生成 SECRET_KEY / DATA_ENCRYPTION_KEY
-make migrate          # alembic upgrade head
+# 一键启动开发环境（前后端）
+make dev
 
-# 手动（常用）
-cd frontend && pnpm dev
-cd backend && python run_dev.py
+# 单独启动
+make dev-backend      # 后端 :8002
+make dev-frontend     # 前端 :5173
+
+# 代码质量检查
+make lint             # 前后端 lint
+make type-check       # TypeScript 类型检查
 
 # 测试
-cd frontend && pnpm test
-cd backend && pytest -m unit     # 可选: integration, api, e2e, slow...
+make test             # 前后端测试
+make test-backend     # 仅后端单元测试 (pytest -m unit)
+make test-frontend    # 仅前端测试 (vitest)
 
-# 代码质量
+# 其他常用命令
+make secrets          # 生成 SECRET_KEY / DATA_ENCRYPTION_KEY
+make migrate          # alembic upgrade head
+make build-frontend   # 构建前端生产包
+make check            # 完整检查（lint + test + build + import）
+
+# 手动开发
+# 前端
+cd frontend && pnpm dev
 cd frontend && pnpm lint && pnpm type-check
+
+# 后端
+cd backend && python run_dev.py
 cd backend && ruff check . && ruff format . && mypy src
-
-# 数据库迁移
-cd backend && alembic upgrade head
+cd backend && pytest -m unit
 ```
 
 ---
 
-## 代码结构与职责
+## 项目结构
 
+### 根目录布局
 ```
-React UI → ApiClient → FastAPI (/api/v1/*) → Service → CRUD → SQLAlchemy
+.
+├── backend/           # FastAPI 后端
+├── frontend/          # React 前端
+├── docs/              # 项目文档
+├── scripts/           # 辅助脚本
+├── database/          # 数据库相关文件
+├── docker-compose.yml # Docker 编排配置
+├── Dockerfile         # 主 Dockerfile
+└── Makefile           # 常用命令
 ```
 
-**必须遵循的规则**:
-- 业务逻辑必须放在 `backend/src/services/`，不要放在 `backend/src/api/v1/`。
-- CRUD 为纯数据访问层；不要绕过 CRUD 直接写库（包含加密/审计/缓存逻辑）。
-- 新增 API 需用 `route_registry.register_router()` 注册，并按 `/api/v1/*` 版本化。
-- 前端 API 客户端使用 `@/api/client` / `@/api/config`；服务层使用 `@/services/*`；表单组件使用 `@/components/Forms`。
+### 后端结构 (`backend/`)
+```
+src/
+├── api/v1/            # API 路由层（FastAPI Routers）
+├── services/          # 业务逻辑层（核心业务规则）
+├── crud/              # 数据访问层（CRUD 操作）
+├── models/            # SQLAlchemy ORM 模型
+├── schemas/           # Pydantic 数据验证模型
+├── core/              # 核心配置、安全、工具
+├── security/          # 认证、授权、加密
+├── middleware/        # FastAPI 中间件
+├── utils/             # 工具函数
+├── database.py        # 数据库连接管理
+├── main.py            # 应用入口
+└── exceptions.py      # 自定义异常
 
-**目录速查**:
-- API: `backend/src/api/v1/`
-- Service: `backend/src/services/`
-- CRUD: `backend/src/crud/`
-- Models: `backend/src/models/`
-- Schemas: `backend/src/schemas/`
-- 前端 API: `frontend/src/api/`
-- 前端服务: `frontend/src/services/`
-- 前端组件: `frontend/src/components/`
-- 页面路由: `frontend/src/pages/`
+tests/
+├── unit/              # 单元测试（快速、隔离）
+├── integration/       # 集成测试（模块协作）
+├── e2e/               # 端到端测试（完整工作流）
+├── security/          # 安全测试
+├── load/              # 性能/负载测试
+└── conftest.py        # pytest 配置和 fixtures
+```
+
+### 前端结构 (`frontend/src/`)
+```
+src/
+├── api/               # API 客户端配置
+├── components/        # 可复用组件
+│   ├── Forms/         # 统一表单组件
+│   ├── Asset/         # 资产相关组件
+│   ├── Rental/        # 租赁相关组件
+│   ├── Charts/        # 图表组件
+│   └── Layout/        # 布局组件
+├── pages/             # 页面组件（路由对应）
+├── services/          # API 服务封装
+├── hooks/             # 自定义 React Hooks
+├── store/             # Zustand 状态管理
+├── types/             # TypeScript 类型定义
+├── utils/             # 工具函数
+├── routes/            # 路由配置
+└── styles/            # 全局样式
+```
 
 ---
 
-## 后端开发要点（高频约束）
+## 架构原则
 
-1) **Pydantic v2**: 使用 `model_validate()` / `model_dump()`；响应模型启用 `from_attributes`（建议 `model_config = ConfigDict(from_attributes=True)`）。  
-2) **SQLAlchemy 2.0**: 优先 ORM + QueryBuilder；列表接口注意 N+1，集合关系优先 `selectinload`；避免在 schema validator 中触发懒加载。  
-3) **PII 加密**: Asset/Organization/RentContract/Contact/PropertyCertificate 等 CRUD 使用 `SensitiveDataHandler`；不要绕过 CRUD；`DATA_ENCRYPTION_KEY` 缺失会降级为明文。  
-4) **计算字段**: `unrented_area` / `occupancy_rate` 等由 `AssetCalculator` 计算，API/Service 层处理；不要从 API 写入；`version` 由 ORM 维护。  
-5) **异常与审计**: 重要写操作优先 `*_with_history`，保持历史记录与审计字段一致。  
+### 后端分层架构
+```
+请求 → api/v1/ → services/ → crud/ → models/ → PostgreSQL
+              ↑              ↑
+         业务逻辑       数据访问
+```
+
+**核心规则**：
+1. 业务逻辑 **必须** 放在 `services/`，不要放在 API 端点中
+2. CRUD 为纯数据访问层；不要绕过 CRUD 直接操作数据库
+3. 新增 API 需使用 `route_registry.register_router()` 注册
+4. API 路径统一按 `/api/v1/*` 版本化
+
+### 前端状态管理策略
+
+| 状态类型 | 使用工具 | 适用场景 |
+|---------|---------|---------|
+| 全局 UI | Zustand | 主题、侧边栏、用户信息、通知 |
+| 服务器数据 | React Query | API 数据获取、缓存、同步 |
+| 表单状态 | React Hook Form | 表单验证、提交 |
+| 局部 UI | useState | 模态框开关、loading 状态 |
 
 ---
 
-## 前端开发要点（高频约束）
+## 后端开发要点
 
-- React Query 用于服务端数据；Zustand 管理全局 UI；表单用 React Hook Form。
-- TypeScript **严格布尔表达式**：避免 `if (value)`；使用 `??`、`!= null`、`?.`、`.trim()` 等显式判断。
-- Ant Design 组件优先，保持既有 UI 语言一致。
+### 1. Pydantic v2
+- 使用 `model_validate()` / `model_dump()`
+- 响应模型启用 `from_attributes`
+- 推荐配置：`model_config = ConfigDict(from_attributes=True)`
+
+### 2. SQLAlchemy 2.0
+- 优先使用 ORM + QueryBuilder
+- 列表接口注意 N+1 问题，集合关系优先 `selectinload`
+- 避免在 schema validator 中触发懒加载
+
+### 3. PII 数据加密
+Asset/Organization/RentContract/Contact/PropertyCertificate 等 CRUD 使用 `SensitiveDataHandler` 进行敏感字段加密：
+
+| 字段类型 | 加密方式 | 说明 |
+|---------|---------|------|
+| 身份证号 | AES-256-CBC (确定性) | 支持搜索 |
+| 手机号 | AES-256-CBC (确定性) | 支持搜索 |
+
+- 不要绕过 CRUD 直接写库
+- `DATA_ENCRYPTION_KEY` 缺失会降级为明文存储
+- 生成密钥：`python -m src.core.encryption`
+
+### 4. 计算字段
+- `unrented_area`、`occupancy_rate` 等由 `AssetCalculator` 计算
+- API/Service 层处理，不要从 API 直接写入
+- `version` 字段由 ORM 自动维护（乐观锁）
+
+### 5. 新增功能流程
+```python
+# 1. Schema (schemas/my_feature.py)
+class MyFeatureCreate(BaseModel):
+    name: str
+
+# 2. Model (models/my_feature.py)
+class MyFeature(Base):
+    __tablename__ = "my_features"
+    id = Column(Integer, primary_key=True)
+
+# 3. CRUD (crud/my_feature.py)
+class CRUDMyFeature(CRUDBase[...]): pass
+my_feature_crud = CRUDMyFeature(MyFeature)
+
+# 4. Service (services/my_feature/my_feature_service.py)
+class MyFeatureService:
+    def create(self, data: dict): ...
+
+# 5. API (api/v1/my_feature.py)
+router = APIRouter(prefix="/my-feature", tags=["My Feature"])
+@router.get("/")
+async def get_all(service: MyFeatureService = Depends(get_service)): ...
+
+# 6. 注册路由
+route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], version="v1")
+```
+
+---
+
+## 前端开发要点
+
+### 1. 严格布尔表达式（重要！）
+本项目启用 `@typescript-eslint/strict-boolean-expressions` 规则，必须使用显式空值检查：
+
+| 场景 | ❌ 错误 | ✅ 正确 |
+|------|--------|--------|
+| 默认值 | `\|\|` | `??` |
+| 空值检查 | `if (value)` | `if (value != null)` |
+| 字符串检查 | `if (str)` | `if (str?.trim() !== '')` |
+| 布尔比较 | `if (bool)` | `if (bool === true)` |
+| 数组长度 | `arr.length` | `arr?.length ?? 0` |
+
+### 2. 导入路径规范
+```typescript
+// ✅ 正确 - 使用 @/ 别名
+import { apiClient } from '@/api/client';
+import { AssetForm } from '@/components/Forms';
+
+// ❌ 已废弃 - 相对路径深层导入
+import { apiClient } from '../../../api/client';
+```
+
+### 3. API 调用模式
+```typescript
+// ✅ 正确 - 使用 React Query 管理服务器数据
+const { data: assets, isLoading } = useQuery({
+  queryKey: ['assets'],
+  queryFn: () => apiClient.get('/assets'),
+  staleTime: 5 * 60 * 1000,
+});
+
+// ❌ 错误 - 不要用 useState + useEffect 管理服务器数据
+```
+
+---
+
+## 测试策略
+
+### 后端测试 (pytest)
+
+**测试标记**（用于分类运行）：
+- `unit` - 单元测试（快速、隔离）
+- `integration` - 集成测试（模块协作）
+- `e2e` - 端到端测试（完整工作流）
+- `api` - API 端点测试
+- `database` - 数据库测试
+- `security` - 安全测试
+- `performance` - 性能测试
+- `slow` - 慢测试（>10s）
+
+**常用命令**：
+```bash
+cd backend
+pytest -m unit                    # 仅单元测试
+pytest -m "not slow"              # 排除慢测试
+pytest -m integration             # 集成测试
+pytest --cov=src --cov-report=html # 覆盖率报告
+```
+
+**测试目录**：
+- `tests/unit/` - 模型、服务、CRUD、工具函数测试
+- `tests/integration/` - API、数据库集成测试
+- `tests/e2e/` - 完整业务流程测试
+- `tests/security/` - 安全相关测试
+
+### 前端测试 (Vitest)
+
+**测试位置**：
+- 组件测试：`src/components/**/__tests__/*.test.tsx`
+- Hook 测试：`src/hooks/__tests__/*.test.ts`
+- 服务测试：`src/services/__tests__/*.test.ts`
+- 工具测试：`src/utils/__tests__/*.test.ts`
+
+**常用命令**：
+```bash
+cd frontend
+pnpm test              # 运行测试
+pnpm test:ui           # UI 模式
+pnpm test:coverage     # 覆盖率报告
+```
+
+### 覆盖率目标
+- 后端：≥70%（目标 85%）
+- 前端：≥50%（目标 75%）
 
 ---
 
 ## 环境与配置
 
-- **后端必须**配置 `backend/.env`：`DATABASE_URL`（PostgreSQL）、`SECRET_KEY`（32+）、建议设置 `DATA_ENCRYPTION_KEY`。
-- `ENVIRONMENT` / `DEPENDENCY_POLICY` 见 `backend/src/core/environment.py`；完整配置见 `backend/src/core/config.py`。
-- PDF/LLM 文档提取需配置对应 Provider API Key（见 `backend/.env.example`）。
-- 迁移失败时：先 `alembic stamp head` 再 `alembic upgrade head`。
-- 前端 `.env` 参考 `frontend/.env.example`（`VITE_API_BASE_URL` 默认指向 `/api/v1`）。
+### 必需环境变量
 
----
+**后端** (`backend/.env`):
+```bash
+# 数据库（PostgreSQL 必需）
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl
+TEST_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl_test
 
-## 变更要求（Codex 执行准则）
+# 安全密钥（生产环境必须修改！）
+SECRET_KEY="your-secret-key-here"
+DATA_ENCRYPTION_KEY="your-encryption-key-here"
 
-- 变更尽量小、可回滚；不要触碰与任务无关的文件。
-- 重要逻辑变更需同步更新文档（参见 `README.md` 文档贡献指南）。
-- 如修改模型/字段/接口，优先补充或更新测试。
-- 任何不确定结论用【待确认】标注，并给出验证路径。
+# 环境类型
+ENVIRONMENT=development  # production, development, testing, staging
 
----
-
-## 常见新增流程
-
-**新增 API 端点**
-```python
-from src.core.router_registry import route_registry
-
-router = APIRouter(prefix="/my-feature", tags=["My Feature"])
-
-@router.get("/items")
-async def get_items(): ...
-
-route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], version="v1")
+# LLM/Vision API（PDF智能提取）
+LLM_PROVIDER="hunyuan"  # qwen | glm | deepseek | hunyuan
+DASHSCOPE_API_KEY="your-api-key"
 ```
 
-**Service 层示例**
-```python
-class AssetService:
-    def process(self, data): ...
+**前端** (`frontend/.env`):
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8002/api/v1
+VITE_API_TIMEOUT=30000
+```
+
+### 生成密钥
+```bash
+make secrets
+# 或
+python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32)); print('DATA_ENCRYPTION_KEY=\"%s\"' % secrets.token_urlsafe(32))"
 ```
 
 ---
 
-## 参考文档
+## 代码质量工具
 
-- `docs/`（系统架构、开发规范、接口说明、部署指南等）
-- `docs/guides/frontend.md` / `docs/guides/backend.md`
-- `frontend/CLAUDE.md` / `backend/CLAUDE.md`
+### 后端
+- **Ruff**: 代码检查与格式化（替代 flake8/black）
+- **MyPy**: 静态类型检查（渐进式严格策略）
+- **Bandit**: 安全漏洞扫描
+- **pytest**: 测试框架
+
+### 前端
+- **ESLint**: TypeScript/React 代码检查
+- **Prettier**: 代码格式化
+- **Vitest**: 测试框架
+- **stylelint**: CSS/SCSS 检查
+
+### Pre-commit Hooks
+项目配置了 pre-commit 钩子，在提交前自动运行：
+- Ruff 检查与格式化
+- MyPy 类型检查
+- Bandit 安全扫描
+- 基础文件检查（YAML/JSON格式、行尾空格等）
+
+安装：
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+---
+
+## Git 工作流
+
+采用 **Git Flow** 分支策略：
+
+```
+main (生产)
+  ↑
+  ├── merge (release)
+  ↑
+develop (开发)
+  ↑
+  ├── merge (feature)
+  ↑
+feature/* (功能分支)
+hotfix/* (紧急修复)
+release/* (发布准备)
+```
+
+### 提交规范 (Conventional Commits)
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | `feat(auth): 添加 OAuth2 登录` |
+| `fix` | Bug 修复 | `fix(api): 修复查询参数解析错误` |
+| `docs` | 文档更新 | `docs: 更新 API 文档` |
+| `refactor` | 重构 | `refactor(database): 优化查询性能` |
+| `test` | 测试相关 | `test: 添加单元测试` |
+| `chore` | 构建/工具 | `chore: 更新依赖版本` |
+
+---
+
+## 部署
+
+### Docker Compose（推荐）
+```bash
+docker-compose up -d
+```
+
+包含服务：
+- `frontend` - React 应用 (port 3000)
+- `backend` - FastAPI 服务 (port 8002)
+- `postgres` - PostgreSQL 数据库 (port 5432)
+- `redis` - Redis 缓存 (port 6379)
+- `nginx` - 反向代理 (port 80/443)
+
+### 生产部署要点
+1. 修改所有默认密钥（SECRET_KEY, DATA_ENCRYPTION_KEY）
+2. 配置 PostgreSQL 强密码
+3. 启用 HTTPS（配置 SSL 证书）
+4. 配置防火墙规则
+5. 设置日志收集和监控
+
+---
+
+## 安全注意事项
+
+### 敏感数据加密
+- 身份证号、手机号等 PII 字段自动加密存储
+- 加密密钥必须安全保管，勿提交到版本控制
+- 生产环境使用 AWS KMS / HashiCorp Vault 等密钥管理服务
+
+### 认证与授权
+- JWT Token 认证
+- RBAC 权限控制
+- CSRF 保护
+- IP 黑名单和自动封禁
+
+### 安全扫描
+- Bandit：Python 安全漏洞扫描
+- 依赖安全检查：`safety check`
+
+---
+
+## 常见问题
+
+| 问题 | 解决方案 |
+|------|---------|
+| 后端 Import 错误 | `cd backend && pip install -e .` |
+| 数据库连接失败 | 检查 PostgreSQL 服务和连接配置 |
+| Alembic 迁移失败 | `alembic stamp head && alembic upgrade head` |
+| 前端端口被占用 | 修改 `vite.config.ts` |
+| 加密未生效 | 检查 `DATA_ENCRYPTION_KEY` 是否设置 |
+| 搜索加密字段失败 | 确保使用确定性加密 |
+| TypeScript 严格布尔错误 | 使用 `??` 和显式空值检查 |
+
+---
+
+## 文档参考
+
+- [环境配置指南](docs/guides/environment-setup.md)
+- [数据库指南](docs/guides/database.md)
+- [前端开发指南](docs/guides/frontend.md)
+- [后端开发指南](docs/guides/backend.md)
+- [API 总览](docs/integrations/api-overview.md)
+- [测试标准](docs/TESTING_STANDARDS.md)
+- [命名规范](docs/guides/NAMING_CONVENTIONS.md)
+
+---
+
+## 变更记录
+
+| 日期 | 版本 | 变更内容 |
+|------|------|---------|
+| 2026-02-01 | v2.0 | 全面重构 AGENTS.md，更新技术栈至 React 19 + FastAPI 0.104+ |
+| 2026-01-15 | v1.4 | React 19 + Ant Design 6 + pnpm 迁移 |
+| 2026-01-08 | v1.3 | 更新后端 API 端点统计 |
+| 2025-12-23 | v1.2 | 新增前端/后端开发指南 |
+| 2025-12-22 | v1.0 | 初始版本 |
+
+---
+
+**注意**：本文档应与代码同步更新。任何架构变更、新工具引入或流程调整都应同步更新此文档。

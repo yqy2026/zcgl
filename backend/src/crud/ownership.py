@@ -77,26 +77,16 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         if search_params.is_active is not None:
             filters["is_active"] = search_params.is_active
 
-        stmt = self.query_builder.build_query(
+        items, total = self.get_multi_with_count(
+            db,
             filters=filters,
-            search_query=search_params.keyword,
+            search=search_params.keyword,
             search_fields=["name", "short_name", "code"],
-            sort_by="created_at",
-            sort_desc=True,
+            order_by="created_at",
+            order_desc=True,
             skip=skip,
             limit=limit,
         )
-
-        # Count
-        count_stmt = self.query_builder.build_count_query(
-            filters=filters,
-            search_query=search_params.keyword,
-            search_fields=["name", "short_name", "code"],
-        )
-        total = db.scalar(count_stmt) or 0
-
-        result = db.execute(stmt)
-        items = list(result.scalars().all())
 
         pages = (total + limit - 1) // limit
 

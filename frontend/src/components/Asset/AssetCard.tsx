@@ -54,6 +54,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<EyeOutlined />}
+            aria-label="查看详情"
             onClick={e => {
               e.stopPropagation();
               onView(asset);
@@ -64,6 +65,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<EditOutlined />}
+            aria-label="编辑"
             onClick={e => {
               e.stopPropagation();
               onEdit(asset);
@@ -74,6 +76,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<HistoryOutlined />}
+            aria-label="查看历史"
             onClick={e => {
               e.stopPropagation();
               // 这里可以打开历史记录
@@ -85,6 +88,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
             type="text"
             danger
             icon={<DeleteOutlined />}
+            aria-label="删除"
             onClick={e => {
               e.stopPropagation();
               onDelete(asset.id);

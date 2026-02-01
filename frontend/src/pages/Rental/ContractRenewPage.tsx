@@ -66,9 +66,8 @@ function adjustRentTermsDate(originalTerms: RentTerm[], newStartDate: dayjs.Dayj
 const ContractRenewPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const _queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-  const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
 
   // 获取原合同数据
@@ -129,6 +128,9 @@ const ContractRenewPage: React.FC = () => {
         navigate(`/rental/contracts/${newContract.id}`);
       }, 3000);
 
+      void queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
+      void queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
+
       pageLogger.info('合同续签成功', {
         originalContractId: id,
         newContractId: newContract.id,
@@ -140,14 +142,11 @@ const ContractRenewPage: React.FC = () => {
     },
   });
 
+  const isSubmitting = renewMutation.isPending;
+
   // 处理表单提交
   const handleSubmit = async (contractData: RentContractCreate) => {
-    setLoading(true);
-    try {
-      await renewMutation.mutateAsync(contractData);
-    } finally {
-      setLoading(false);
-    }
+    await renewMutation.mutateAsync(contractData);
   };
 
   // 取消操作
@@ -322,13 +321,13 @@ const ContractRenewPage: React.FC = () => {
       <RenewalSummarySection contract={originalContract} />
 
       {/* 续签表单 */}
-      <Card title="新合同信息" loading={loading}>
+      <Card title="新合同信息" loading={isSubmitting}>
         <RentContractForm
           mode="create"
           initialData={initialFormData}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={loading}
+          isLoading={isSubmitting}
         />
       </Card>
     </div>

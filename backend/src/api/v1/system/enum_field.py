@@ -10,12 +10,12 @@ from sqlalchemy.orm import Session
 from ....constants.message_constants import EMPTY_STRING
 from ....core.exception_handler import bad_request, conflict, not_found
 from ....crud.enum_field import (
+    get_enum_field_history_crud,
     get_enum_field_type_crud,
     get_enum_field_usage_crud,
     get_enum_field_value_crud,
 )
 from ....database import get_db
-from ....models.enum_field import EnumFieldHistory, EnumFieldUsage, EnumFieldValue
 from ....schemas.enum_field import (
     EnumFieldBatchCreate,
     EnumFieldHistoryResponse,
@@ -101,26 +101,17 @@ def get_enum_field_statistics(
 ) -> EnumFieldStatistics:
     """获取枚举字段统计信息"""
     type_crud = get_enum_field_type_crud(db)
+    value_crud = get_enum_field_value_crud(db)
+    usage_crud = get_enum_field_usage_crud(db)
 
     type_stats = type_crud.get_statistics()
 
     # 获取枚举值统计
-    total_values = (
-        db.query(EnumFieldValue).filter(EnumFieldValue.is_deleted.is_(False)).count()
-    )
-    active_values = (
-        db.query(EnumFieldValue)
-        .filter(
-            EnumFieldValue.is_deleted.is_(False),
-            EnumFieldValue.is_active.is_(True),
-        )
-        .count()
-    )
+    total_values = value_crud.count_all()
+    active_values = value_crud.count_active()
 
     # 获取使用统计
-    usage_count = (
-        db.query(EnumFieldUsage).filter(EnumFieldUsage.is_active.is_(True)).count()
-    )
+    usage_count = usage_crud.count_active()
 
     return EnumFieldStatistics(
         total_types=type_stats["total_types"],
@@ -461,13 +452,9 @@ def get_enum_field_type_history(
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段类型变更历史"""
     skip = (page - 1) * page_size
-    history_records = (
-        db.query(EnumFieldHistory)
-        .filter(EnumFieldHistory.enum_type_id == type_id)
-        .order_by(EnumFieldHistory.created_at.desc())
-        .offset(skip)
-        .limit(page_size)
-        .all()
+    history_crud = get_enum_field_history_crud(db)
+    history_records = history_crud.get_multi(
+        enum_type_id=type_id, skip=skip, limit=page_size
     )
 
     return [
@@ -484,13 +471,9 @@ def get_enum_field_value_history(
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段值变更历史"""
     skip = (page - 1) * page_size
-    history_records = (
-        db.query(EnumFieldHistory)
-        .filter(EnumFieldHistory.enum_value_id == value_id)
-        .order_by(EnumFieldHistory.created_at.desc())
-        .offset(skip)
-        .limit(page_size)
-        .all()
+    history_crud = get_enum_field_history_crud(db)
+    history_records = history_crud.get_multi(
+        enum_value_id=value_id, skip=skip, limit=page_size
     )
 
     return [

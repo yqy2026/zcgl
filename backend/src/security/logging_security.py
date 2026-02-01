@@ -13,7 +13,7 @@ from typing import Any
 
 from ..core.config import settings
 from .logging_audit import AuditTrailLogger, SecurityAuditor
-from .logging_filters import SensitiveDataFilter, SecurityLogFormatter
+from .logging_filters import SecurityLogFormatter, SensitiveDataFilter
 from .logging_metrics import SecurityMetrics, SecurityMonitor
 from .logging_request import RequestLogger
 from .logging_structured import StructuredSecurityLogger

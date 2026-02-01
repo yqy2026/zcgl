@@ -136,21 +136,28 @@ describe('MobileMenu', () => {
   it('renders menu trigger button and closed drawer by default', () => {
     render(<MobileMenu />);
 
-    expect(screen.getByTestId('button')).toBeInTheDocument();
+    const triggerButton = screen.getByTestId('icon-menu').closest('button');
+    expect(triggerButton).not.toBeNull();
     expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
   });
 
   it('opens drawer when trigger button clicked', () => {
     render(<MobileMenu />);
 
-    fireEvent.click(screen.getByTestId('button'));
+    const triggerButton = screen.getByTestId('icon-menu').closest('button');
+    if (triggerButton) {
+      fireEvent.click(triggerButton);
+    }
     expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
   });
 
   it('closes drawer when close button clicked', () => {
     render(<MobileMenu />);
 
-    fireEvent.click(screen.getByTestId('button'));
+    const triggerButton = screen.getByTestId('icon-menu').closest('button');
+    if (triggerButton) {
+      fireEvent.click(triggerButton);
+    }
     expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
 
     fireEvent.click(screen.getByTestId('drawer-close'));
@@ -160,7 +167,10 @@ describe('MobileMenu', () => {
   it('navigates and closes drawer when menu item clicked', () => {
     render(<MobileMenu />);
 
-    fireEvent.click(screen.getByTestId('button'));
+    const triggerButton = screen.getByTestId('icon-menu').closest('button');
+    if (triggerButton) {
+      fireEvent.click(triggerButton);
+    }
 
     const menuItems = screen.getAllByTestId('menu-item');
     fireEvent.click(menuItems[1]);

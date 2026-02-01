@@ -310,9 +310,9 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
 
           <Card title="性能建议" size="small" style={{ marginTop: 16 }}>
             {getPerformanceAdvice().length > 0 ? (
-              getPerformanceAdvice().map((advice, index) => (
+              getPerformanceAdvice().map(advice => (
                 <Alert
-                  key={index}
+                  key={advice}
                   message={advice}
                   type="warning"
                   showIcon

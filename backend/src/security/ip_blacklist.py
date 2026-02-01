@@ -9,17 +9,28 @@ from threading import Lock
 from time import time
 from typing import Any
 
+from ..core.config import settings
 from .logging_security import security_auditor
+
 
 class IPBlacklistManager:
     """IP黑名单管理器"""
 
-    def __init__(self) -> None:
-        self.config: dict[str, Any] = {}  # TODO: 未来可添加IP黑名单配置
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        base_config: dict[str, Any] = {
+            "blacklist": list(settings.IP_BLACKLIST),
+            "auto_block_enabled": settings.IP_AUTO_BLOCK_ENABLED,
+            "auto_block_threshold": settings.IP_AUTO_BLOCK_THRESHOLD,
+            "auto_block_duration": settings.IP_AUTO_BLOCK_DURATION,
+        }
+        if config:
+            base_config.update(config)
+
+        self.config = base_config
         self.blacklist: set[str] = set(self.config.get("blacklist", []))
-        self.auto_block_enabled = self.config.get("auto_block_enabled", True)
-        self.auto_block_threshold = self.config.get("auto_block_threshold", 10)
-        self.auto_block_duration = self.config.get("auto_block_duration", 3600)
+        self.auto_block_enabled = bool(self.config.get("auto_block_enabled", True))
+        self.auto_block_threshold = int(self.config.get("auto_block_threshold", 10))
+        self.auto_block_duration = int(self.config.get("auto_block_duration", 3600))
         self.blocked_ips: dict[str, float] = {}
         self.suspicious_ips: dict[str, int] = defaultdict(int)
         self.lock = Lock()

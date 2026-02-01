@@ -93,6 +93,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
               onChange={e => handleSearch(e.target.value)}
               style={{ width: '100%' }}
               allowClear
+              aria-label="搜索选项"
             />
           </div>
         )}

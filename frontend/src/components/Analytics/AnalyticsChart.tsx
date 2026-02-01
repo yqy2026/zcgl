@@ -95,7 +95,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       : false,
   };
 
-  if (loading !== undefined && loading !== null) {
+  if (loading === true) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -216,7 +216,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
   };
 
-  if (loading !== undefined && loading !== null) {
+  if (loading === true) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -342,7 +342,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     },
   };
 
-  if (loading !== undefined && loading !== null) {
+  if (loading === true) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -312,14 +312,8 @@ class TestGetStatistics:
 
     def test_get_statistics_basic(self, ownership_service, mock_db):
         """测试基本统计"""
-        # Create separate mocks for each query chain
-        mock_query_total = MagicMock()
-        mock_query_total.count.return_value = 10
-
-        mock_query_active = MagicMock()
-        mock_filter_active = MagicMock()
-        mock_filter_active.count.return_value = 7
-        mock_query_active.filter.return_value = mock_filter_active
+        mock_query_stats = MagicMock()
+        mock_query_stats.one.return_value = (10, 7)
 
         mock_query_recent = MagicMock()
         mock_order = MagicMock()
@@ -330,14 +324,11 @@ class TestGetStatistics:
 
         query_call_count = [0]
 
-        def query_side_effect(model):
+        def query_side_effect(*args, **kwargs):
             query_call_count[0] += 1
-            if query_call_count[0] == 1:  # total_count
-                return mock_query_total
-            elif query_call_count[0] == 2:  # active_count
-                return mock_query_active
-            else:  # recent_created
-                return mock_query_recent
+            if query_call_count[0] == 1:
+                return mock_query_stats
+            return mock_query_recent
 
         mock_db.query.side_effect = query_side_effect
 
@@ -351,14 +342,8 @@ class TestGetStatistics:
 
     def test_get_statistics_empty(self, ownership_service, mock_db):
         """测试空数据统计"""
-        # Create separate mocks for each query chain
-        mock_query_total = MagicMock()
-        mock_query_total.count.return_value = 0
-
-        mock_query_active = MagicMock()
-        mock_filter_active = MagicMock()
-        mock_filter_active.count.return_value = 0
-        mock_query_active.filter.return_value = mock_filter_active
+        mock_query_stats = MagicMock()
+        mock_query_stats.one.return_value = (0, 0)
 
         mock_query_recent = MagicMock()
         mock_order = MagicMock()
@@ -369,14 +354,11 @@ class TestGetStatistics:
 
         query_call_count = [0]
 
-        def query_side_effect(model):
+        def query_side_effect(*args, **kwargs):
             query_call_count[0] += 1
-            if query_call_count[0] == 1:  # total_count
-                return mock_query_total
-            elif query_call_count[0] == 2:  # active_count
-                return mock_query_active
-            else:  # recent_created
-                return mock_query_recent
+            if query_call_count[0] == 1:
+                return mock_query_stats
+            return mock_query_recent
 
         mock_db.query.side_effect = query_side_effect
 
@@ -391,16 +373,9 @@ class TestGetStatistics:
         mock_ownership1 = MagicMock(spec=Ownership)
         mock_ownership1.id = "recent_1"
 
-        # Create separate mocks for each query chain
-        mock_query_total = MagicMock()
-        mock_query_total.count.return_value = 5
+        mock_query_stats = MagicMock()
+        mock_query_stats.one.return_value = (5, 3)
 
-        mock_query_active = MagicMock()
-        mock_filter_active = MagicMock()
-        mock_filter_active.count.return_value = 3
-        mock_query_active.filter.return_value = mock_filter_active
-
-        # For recent_created: query().order_by().limit().all()
         mock_query_recent = MagicMock()
         mock_order = MagicMock()
         mock_limit = MagicMock()
@@ -410,14 +385,11 @@ class TestGetStatistics:
 
         query_call_count = [0]
 
-        def query_side_effect(model):
+        def query_side_effect(*args, **kwargs):
             query_call_count[0] += 1
-            if query_call_count[0] == 1:  # total_count
-                return mock_query_total
-            elif query_call_count[0] == 2:  # active_count
-                return mock_query_active
-            else:  # recent_created
-                return mock_query_recent
+            if query_call_count[0] == 1:
+                return mock_query_stats
+            return mock_query_recent
 
         mock_db.query.side_effect = query_side_effect
 

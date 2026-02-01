@@ -70,24 +70,16 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         if organization_id:
             filters["organization_id"] = organization_id
 
-        stmt = self.query_builder.build_query(
+        return self.get_multi_with_count(
+            db,
             filters=filters,
-            search_query=search,
+            search=search,
             search_fields=["name", "display_name", "description"],
-            sort_by="level",
-            sort_desc=False,
+            order_by="level",
+            order_desc=False,
             skip=skip,
             limit=limit,
         )
-        count_stmt = self.query_builder.build_count_query(
-            filters=filters,
-            search_query=search,
-            search_fields=["name", "display_name", "description"],
-        )
-
-        result = db.execute(stmt)
-        total = int(db.execute(count_stmt).scalar() or 0)
-        return list(result.scalars().all()), total
 
     # Override count to use QueryBuilder implicitly or keep custom if complex logic needed
     # But for standard counts, CRUDBase.count works if filters aligned.
@@ -101,6 +93,33 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             db.query(Role.category, func.count(Role.id)).group_by(Role.category).all()
         )
         return {category: count for category, count in result if category}
+
+    def count_by_flags(self, db: Session) -> dict[str, int]:
+        """按激活/系统/自定义统计角色数量"""
+        from sqlalchemy import case, func
+
+        result = (
+            db.query(
+                func.count(Role.id).label("total"),
+                func.sum(
+                    case((Role.is_active.is_(True), 1), else_=0)
+                ).label("active"),
+                func.sum(
+                    case((Role.is_system_role.is_(True), 1), else_=0)
+                ).label("system"),
+                func.sum(
+                    case((Role.is_system_role.is_(False), 1), else_=0)
+                ).label("custom"),
+            )
+            .one()
+        )
+
+        return {
+            "total": int(result.total or 0),
+            "active": int(result.active or 0),
+            "system": int(result.system or 0),
+            "custom": int(result.custom or 0),
+        }
 
 
 class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):

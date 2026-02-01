@@ -5,13 +5,13 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import RoleManagementPage from '../RoleManagementPage';
-import { roleService } from '../../services/systemService';
+import { roleService } from '@/services/systemService';
 import { MessageManager } from '@/utils/messageManager';
 
 // Mock dependencies
-vi.mock('../../services/systemService', () => ({
+vi.mock('@/services/systemService', () => ({
   roleService: {
     getRoles: vi.fn(),
     getPermissions: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
-vi.mock('../../components/System/SystemBreadcrumb', () => ({
+vi.mock('@/components/System/SystemBreadcrumb', () => ({
   default: vi.fn(() => null),
 }));
 
@@ -279,6 +279,18 @@ const createMockStatistics = () => ({
   avg_permissions: 12,
 });
 
+const flushPromises = () =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, 0);
+  });
+
+const renderRoleManagementPage = async () => {
+  await act(async () => {
+    render(<RoleManagementPage />);
+    await flushPromises();
+  });
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(roleService.getRoles).mockResolvedValue({ items: [], total: 0 });
@@ -305,20 +317,20 @@ describe('RoleManagementPage - 组件导入测试', () => {
 });
 
 describe('RoleManagementPage - 组件结构测试', () => {
-  it('应该可以渲染页面', () => {
-    render(<RoleManagementPage />);
+  it('应该可以渲染页面', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByText('新建角色')).toBeInTheDocument();
   });
 
-  it('组件不需要任何必需属性', () => {
-    render(<RoleManagementPage />);
+  it('组件不需要任何必需属性', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByTestId('role-search')).toBeInTheDocument();
   });
 });
 
 describe('RoleManagementPage - 数据加载测试', () => {
   it('应该加载角色列表', async () => {
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(roleService.getRoles).toHaveBeenCalled();
@@ -340,7 +352,7 @@ describe('RoleManagementPage - 数据加载测试', () => {
       },
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(roleService.getPermissions).toHaveBeenCalled();
@@ -354,7 +366,7 @@ describe('RoleManagementPage - 数据加载测试', () => {
       system_roles: 3,
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(roleService.getRoleStatistics).toHaveBeenCalled();
@@ -364,7 +376,7 @@ describe('RoleManagementPage - 数据加载测试', () => {
 
 describe('RoleManagementPage - 角色操作测试', () => {
   it('应该支持创建角色', async () => {
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     fireEvent.click(screen.getByText('新建角色'));
     expect(screen.getByTestId('modal')).toBeInTheDocument();
@@ -376,7 +388,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
       total: 1,
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -396,7 +408,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
       total: 1,
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -418,7 +430,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
       total: 1,
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -455,7 +467,7 @@ describe('RoleManagementPage - 权限管理测试', () => {
       },
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -488,7 +500,7 @@ describe('RoleManagementPage - 权限管理测试', () => {
       },
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -520,7 +532,7 @@ describe('RoleManagementPage - 权限管理测试', () => {
       },
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -535,13 +547,13 @@ describe('RoleManagementPage - 权限管理测试', () => {
 });
 
 describe('RoleManagementPage - 搜索和筛选测试', () => {
-  it('应该支持搜索角色', () => {
-    render(<RoleManagementPage />);
+  it('应该支持搜索角色', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByTestId('role-search')).toBeInTheDocument();
   });
 
-  it('应该支持按状态筛选', () => {
-    render(<RoleManagementPage />);
+  it('应该支持按状态筛选', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByTestId('select')).toBeInTheDocument();
   });
 });
@@ -603,13 +615,13 @@ describe('RoleManagementPage - 统计卡片测试', () => {
 });
 
 describe('RoleManagementPage - 分页测试', () => {
-  it('应该支持分页', () => {
-    render(<RoleManagementPage />);
+  it('应该支持分页', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByTestId('table')).toBeInTheDocument();
   });
 
-  it('应该支持改变每页数量', () => {
-    render(<RoleManagementPage />);
+  it('应该支持改变每页数量', async () => {
+    await renderRoleManagementPage();
     expect(screen.getByTestId('table')).toBeInTheDocument();
   });
 });
@@ -618,7 +630,7 @@ describe('RoleManagementPage - 错误处理测试', () => {
   it('加载角色失败应该显示错误消息', async () => {
     vi.mocked(roleService.getRoles).mockRejectedValue(new Error('Load failed'));
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(MessageManager.error).toHaveBeenCalledWith('加载角色列表失败');
@@ -628,7 +640,7 @@ describe('RoleManagementPage - 错误处理测试', () => {
   it('创建角色失败应该显示错误消息', async () => {
     vi.mocked(roleService.createRole).mockRejectedValue(new Error('Create failed'));
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     fireEvent.click(screen.getByText('新建角色'));
     await waitFor(() => expect(screen.getByTestId('form')).toBeInTheDocument());
@@ -646,7 +658,7 @@ describe('RoleManagementPage - 错误处理测试', () => {
       total: 1,
     });
 
-    render(<RoleManagementPage />);
+    await renderRoleManagementPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);

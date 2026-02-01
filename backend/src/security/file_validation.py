@@ -34,6 +34,14 @@ from ..core.exception_handler import BusinessValidationError
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "MAGIC_AVAILABLE",
+    "magic",
+    "FileValidationConfig",
+    "FileValidator",
+    "validate_upload_file",
+]
+
 class FileValidationConfig:
     """文件验证配置"""
 

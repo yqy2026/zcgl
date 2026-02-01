@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useQuery } from '@tanstack/react-query';
 
 // Mock services
 vi.mock('@/services/projectService', () => ({
@@ -63,6 +64,7 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Card.displayName = 'MockCard';
 
   const Descriptions = ({
     children,
@@ -81,8 +83,9 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Descriptions.displayName = 'MockDescriptions';
 
-  Descriptions.Item = ({
+  const DescriptionsItem = ({
     children,
     label,
   }: {
@@ -94,143 +97,196 @@ vi.mock('antd', () => {
       <span>{children}</span>
     </div>
   );
+  DescriptionsItem.displayName = 'MockDescriptionsItem';
+  Descriptions.Item = DescriptionsItem;
+
+  const Button = ({
+    children,
+    onClick,
+    icon,
+    type,
+    danger,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    type?: string;
+    danger?: boolean;
+  }) => (
+    <button
+      data-testid={`btn-${type || 'default'}`}
+      data-danger={danger}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+  Button.displayName = 'MockButton';
+
+  const Tag = ({
+    children,
+    color,
+  }: {
+    children: React.ReactNode;
+    color?: string;
+  }) => (
+    <span data-testid="tag" data-color={color}>
+      {children}
+    </span>
+  );
+  Tag.displayName = 'MockTag';
+
+  const Statistic = ({
+    title,
+    value,
+    suffix,
+  }: {
+    title: string;
+    value: number;
+    suffix?: string;
+  }) => (
+    <div data-testid={`statistic-${title}`}>
+      <span>{title}</span>
+      <span>
+        {value}
+        {suffix}
+      </span>
+    </div>
+  );
+  Statistic.displayName = 'MockStatistic';
+
+  const Row = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="row">{children}</div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="col">{children}</div>
+  );
+  Col.displayName = 'MockCol';
+
+  const Space = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+
+  const Divider = () => <hr data-testid="divider" />;
+  Divider.displayName = 'MockDivider';
+
+  const Spin = ({
+    children,
+    spinning,
+  }: {
+    children?: React.ReactNode;
+    spinning?: boolean;
+  }) => (
+    <div data-testid="spin" data-spinning={spinning}>
+      {spinning ? '加载中...' : children}
+    </div>
+  );
+  Spin.displayName = 'MockSpin';
+
+  const Alert = ({
+    message,
+    type,
+  }: {
+    message: string;
+    type?: string;
+  }) => (
+    <div data-testid="alert" data-type={type}>
+      {message}
+    </div>
+  );
+  Alert.displayName = 'MockAlert';
+
+  const Empty = ({ description }: { description?: string }) => (
+    <div data-testid="empty">{description}</div>
+  );
+  Empty.displayName = 'MockEmpty';
+
+  const Progress = ({
+    percent,
+    status,
+  }: {
+    percent: number;
+    status?: string;
+  }) => (
+    <div data-testid="progress" data-percent={percent} data-status={status}>
+      {percent}%
+    </div>
+  );
+  Progress.displayName = 'MockProgress';
+
+  const Tabs = ({
+    children,
+    items,
+  }: {
+    children?: React.ReactNode;
+    items?: Array<{ key: string; label: string; children: React.ReactNode }>;
+  }) => (
+    <div data-testid="tabs">
+      {items?.map(item => (
+        <div key={item.key} data-testid={`tab-${item.key}`}>
+          {item.label}
+        </div>
+      ))}
+      {children}
+    </div>
+  );
+  Tabs.displayName = 'MockTabs';
+
+  const Table = ({
+    dataSource,
+  }: {
+    dataSource?: Array<{ id: string }>;
+  }) => (
+    <div data-testid="table">
+      {dataSource?.map(item => (
+        <div key={item.id}>{item.id}</div>
+      ))}
+    </div>
+  );
+  Table.displayName = 'MockTable';
 
   return {
     Card,
     Descriptions,
-    Button: ({
-      children,
-      onClick,
-      icon,
-      type,
-      danger,
-    }: {
-      children?: React.ReactNode;
-      onClick?: () => void;
-      icon?: React.ReactNode;
-      type?: string;
-      danger?: boolean;
-    }) => (
-      <button
-        data-testid={`btn-${type || 'default'}`}
-        data-danger={danger}
-        onClick={onClick}
-      >
-        {icon}
-        {children}
-      </button>
-    ),
-    Tag: ({
-      children,
-      color,
-    }: {
-      children: React.ReactNode;
-      color?: string;
-    }) => (
-      <span data-testid="tag" data-color={color}>
-        {children}
-      </span>
-    ),
-    Statistic: ({
-      title,
-      value,
-      suffix,
-    }: {
-      title: string;
-      value: number;
-      suffix?: string;
-    }) => (
-      <div data-testid={`statistic-${title}`}>
-        <span>{title}</span>
-        <span>
-          {value}
-          {suffix}
-        </span>
-      </div>
-    ),
-    Row: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="row">{children}</div>
-    ),
-    Col: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="col">{children}</div>
-    ),
-    Space: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="space">{children}</div>
-    ),
-    Divider: () => <hr data-testid="divider" />,
-    Spin: ({
-      children,
-      spinning,
-    }: {
-      children?: React.ReactNode;
-      spinning?: boolean;
-    }) => (
-      <div data-testid="spin" data-spinning={spinning}>
-        {spinning ? '加载中...' : children}
-      </div>
-    ),
-    Alert: ({
-      message,
-      type,
-    }: {
-      message: string;
-      type?: string;
-    }) => (
-      <div data-testid="alert" data-type={type}>
-        {message}
-      </div>
-    ),
-    Empty: ({ description }: { description?: string }) => (
-      <div data-testid="empty">{description}</div>
-    ),
-    Progress: ({
-      percent,
-      status,
-    }: {
-      percent: number;
-      status?: string;
-    }) => (
-      <div data-testid="progress" data-percent={percent} data-status={status}>
-        {percent}%
-      </div>
-    ),
-    Tabs: ({
-      children,
-      items,
-    }: {
-      children?: React.ReactNode;
-      items?: Array<{ key: string; label: string; children: React.ReactNode }>;
-    }) => (
-      <div data-testid="tabs">
-        {items?.map(item => (
-          <div key={item.key} data-testid={`tab-${item.key}`}>
-            {item.label}
-          </div>
-        ))}
-        {children}
-      </div>
-    ),
-    Table: ({
-      dataSource,
-    }: {
-      dataSource?: Array<{ id: string }>;
-    }) => (
-      <div data-testid="table">
-        {dataSource?.map(item => (
-          <div key={item.id}>{item.id}</div>
-        ))}
-      </div>
-    ),
+    Button,
+    Tag,
+    Statistic,
+    Row,
+    Col,
+    Space,
+    Divider,
+    Spin,
+    Alert,
+    Empty,
+    Progress,
+    Tabs,
+    Table,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  EditOutlined: () => <span data-testid="icon-edit">EditIcon</span>,
-  DeleteOutlined: () => <span data-testid="icon-delete">DeleteIcon</span>,
-  InfoCircleOutlined: () => <span data-testid="icon-info">InfoIcon</span>,
-  FolderOutlined: () => <span data-testid="icon-folder">FolderIcon</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const EditOutlined = () => <span data-testid="icon-edit">EditIcon</span>;
+  const DeleteOutlined = () => <span data-testid="icon-delete">DeleteIcon</span>;
+  const InfoCircleOutlined = () => <span data-testid="icon-info">InfoIcon</span>;
+  const FolderOutlined = () => <span data-testid="icon-folder">FolderIcon</span>;
+
+  EditOutlined.displayName = 'EditOutlined';
+  DeleteOutlined.displayName = 'DeleteOutlined';
+  InfoCircleOutlined.displayName = 'InfoCircleOutlined';
+  FolderOutlined.displayName = 'FolderOutlined';
+
+  return {
+    EditOutlined,
+    DeleteOutlined,
+    InfoCircleOutlined,
+    FolderOutlined,
+  };
+});
 
 import ProjectDetail from '../ProjectDetail';
 
@@ -337,7 +393,6 @@ describe('ProjectDetail', () => {
 
   describe('加载状态', () => {
     it('加载时应该显示Spin', () => {
-      const { useQuery } = require('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValueOnce({
         data: undefined,
         isLoading: true,
@@ -354,7 +409,6 @@ describe('ProjectDetail', () => {
 
   describe('错误处理', () => {
     it('错误时应该显示Alert', () => {
-      const { useQuery } = require('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValueOnce({
         data: undefined,
         isLoading: false,

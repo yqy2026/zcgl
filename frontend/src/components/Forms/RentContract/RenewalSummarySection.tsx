@@ -131,7 +131,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
           <Descriptions.Item label="租金条款" span={2}>
             <Space direction="vertical" size={0}>
               {contract.rent_terms.map((term, index) => (
-                <Text key={index}>
+                <Text key={`${term.start_date}-${term.end_date}-${term.total_monthly_amount}`}>
                   条款{index + 1}: {term.start_date} ~ {term.end_date}, 月租 ¥
                   {(typeof term.total_monthly_amount === 'number'
                     ? term.total_monthly_amount

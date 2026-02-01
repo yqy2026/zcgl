@@ -13,10 +13,65 @@ import axios, {
 import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
 import { createLogger } from '@/utils/logger';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
 const apiLogger = createLogger('API');
+
+const getCookieValue = (name: string): string | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const cookieString = document.cookie;
+  if (cookieString === '') {
+    return null;
+  }
+
+  const cookies = cookieString.split(';');
+  for (const cookie of cookies) {
+    const trimmed = cookie.trim();
+    if (trimmed === '') {
+      continue;
+    }
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex < 0) {
+      continue;
+    }
+    const key = decodeURIComponent(trimmed.slice(0, separatorIndex));
+    if (key === name) {
+      return decodeURIComponent(trimmed.slice(separatorIndex + 1));
+    }
+  }
+
+  return null;
+};
+
+const setHeaderIfMissing = (
+  headers: InternalAxiosRequestConfig['headers'],
+  name: string,
+  value: string
+): void => {
+  if (headers == null) {
+    return;
+  }
+
+  const hasFn = (headers as { has?: (headerName: string) => boolean }).has;
+  if (typeof hasFn === 'function' && hasFn.call(headers, name)) {
+    return;
+  }
+
+  const setFn = (headers as { set?: (headerName: string, val: string) => void }).set;
+  if (typeof setFn === 'function') {
+    setFn.call(headers, name, value);
+    return;
+  }
+
+  const record = headers as Record<string, string>;
+  if (record[name] == null) {
+    record[name] = value;
+  }
+};
 
 // ==================== URL验证 ====================
 
@@ -124,6 +179,10 @@ class MemoryCache {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+  }
+
+  dispose(): void {
+    this.clear();
   }
 
   delete(key: string): void {
@@ -272,6 +331,16 @@ export class ApiClient {
         // 添加请求ID
         if (config.headers != null) {
           config.headers.set('X-Request-ID', this.generateRequestId());
+        }
+
+        const method = config.method?.toUpperCase() ?? 'GET';
+        const isSafeMethod =
+          method === 'GET' || method === 'HEAD' || method === 'OPTIONS' || method === 'TRACE';
+        if (!isSafeMethod) {
+          const csrfToken = getCookieValue(CSRF_CONFIG.COOKIE_NAME);
+          if (csrfToken !== null && csrfToken !== '') {
+            setHeaderIfMissing(config.headers, CSRF_CONFIG.HEADER_NAME, csrfToken);
+          }
         }
 
         // 执行自定义请求拦截器
@@ -677,7 +746,23 @@ export class ApiClient {
       }
     });
 
-    return await Promise.all(promises);
+    const results = await Promise.allSettled(promises);
+    return results.map(result => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      }
+
+      const enhancedError = ApiErrorHandler.handleError(result.reason);
+      if (this.config.enableLogging === true) {
+        apiLogger.error('Batch request failed', enhancedError);
+      }
+
+      return {
+        success: false,
+        error: enhancedError.message,
+        rawResponse: {} as AxiosResponse,
+      };
+    });
   }
 
   // ==================== 工具方法 ====================
@@ -730,6 +815,13 @@ export class ApiClient {
    */
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * 释放资源（清理缓存与定时器）
+   */
+  dispose(): void {
+    this.cache.dispose();
   }
 
   /**

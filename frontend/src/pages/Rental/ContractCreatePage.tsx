@@ -40,7 +40,6 @@ const ContractCreatePage: React.FC = () => {
   // 判断当前模式：有id则为编辑模式
   const isEdit = id != null;
 
-  const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
   const [_createdContractId, _setCreatedContractId] = useState<string | null>(null);
 
@@ -77,8 +76,8 @@ const ContractCreatePage: React.FC = () => {
       MessageManager.success('合同更新成功！');
 
       // 使相关查询缓存失效
-      queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
-      queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
+      void queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
+      void queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
 
       // 跳转到详情页
       setTimeout(() => {
@@ -91,20 +90,18 @@ const ContractCreatePage: React.FC = () => {
     },
   });
 
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
   // 处理表单提交
   const handleSubmit = async (contractData: RentContractCreate) => {
-    setLoading(true);
-    try {
-      if (isEdit) {
-        // 编辑模式：调用更新API
-        await updateMutation.mutateAsync(contractData as RentContractUpdate);
-      } else {
-        // 创建模式：调用创建API
-        await createMutation.mutateAsync(contractData);
-      }
-    } finally {
-      setLoading(false);
+    if (isEdit) {
+      // 编辑模式：调用更新API
+      await updateMutation.mutateAsync(contractData as RentContractUpdate);
+      return;
     }
+
+    // 创建模式：调用创建API
+    await createMutation.mutateAsync(contractData);
   };
 
   // 取消操作
@@ -266,13 +263,13 @@ const ContractCreatePage: React.FC = () => {
       )}
 
       {/* 合同表单 */}
-      <Card title="合同信息" loading={loading}>
+      <Card title="合同信息" loading={isSubmitting}>
         <RentContractForm
           mode={isEdit ? 'edit' : 'create'}
           initialData={contract ?? undefined}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={loading}
+          isLoading={isSubmitting}
         />
       </Card>
 
@@ -287,7 +284,7 @@ const ContractCreatePage: React.FC = () => {
               type="primary"
               size="large"
               icon={<SaveOutlined />}
-              loading={loading}
+              loading={isSubmitting}
               onClick={() => {
                 // 触发表单提交
                 const form = document.querySelector('form');

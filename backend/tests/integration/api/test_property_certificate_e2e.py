@@ -15,6 +15,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from src.models.asset import Asset
+from src.services.property_certificate.service import PropertyCertificateService
+
 
 def get_auth_headers(client: TestClient, admin_user) -> dict:
     response = client.post(
@@ -92,6 +95,77 @@ def test_upload_extract_confirm_flow(
 
     finally:
         # Cleanup temp file
+        Path(temp_path).unlink(missing_ok=True)
+
+
+@pytest.mark.integration
+def test_upload_returns_asset_matches(
+    db_session: Session, client: TestClient, test_data, monkeypatch
+):
+    """上传产权证时应返回匹配资产"""
+    admin_user = test_data["admin"]
+    headers = get_auth_headers(client, admin_user)
+
+    asset_data = {
+        "ownership_entity": "测试权属方-匹配",
+        "property_name": "测试物业-匹配",
+        "address": "测试地址-匹配",
+        "ownership_status": "已确权",
+        "property_nature": "经营性",
+        "usage_status": "出租",
+    }
+
+    asset = Asset(
+        ownership_entity=asset_data["ownership_entity"],
+        property_name=asset_data["property_name"],
+        address=asset_data["address"],
+        ownership_status=asset_data["ownership_status"],
+        property_nature=asset_data["property_nature"],
+        usage_status=asset_data["usage_status"],
+    )
+    db_session.add(asset)
+    db_session.commit()
+    db_session.refresh(asset)
+
+    async def fake_extract(self, file_path: str, filename: str):
+        return {
+            "success": True,
+            "data": {
+                "property_address": asset_data["address"],
+                "owner_name": asset_data["ownership_entity"],
+            },
+            "confidence": 0.92,
+            "raw_response": {},
+            "extraction_method": "mock",
+            "filename": filename,
+        }
+
+    monkeypatch.setattr(PropertyCertificateService, "extract_from_file", fake_extract)
+
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
+        f.write(b"fake pdf content for matching test")
+        temp_path = f.name
+
+    try:
+        with open(temp_path, "rb") as f:
+            response = client.post(
+                "/api/v1/property-certificates/upload",
+                files={"file": ("match_cert.pdf", f, "application/pdf")},
+                headers=headers,
+            )
+
+        assert response.status_code == 200
+        result = response.json()
+
+        assert result.get("asset_matches") is not None
+        assert len(result["asset_matches"]) >= 1
+
+        match = result["asset_matches"][0]
+        assert match["asset_id"] == asset.id
+        assert "地址匹配" in match["match_reasons"]
+        assert "权属方匹配" in match["match_reasons"]
+        assert match["confidence"] >= 0.85
+    finally:
         Path(temp_path).unlink(missing_ok=True)
 
 

@@ -12,14 +12,18 @@ from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
+from types import ModuleType
+
+redis: ModuleType | None
 
 try:
-    import redis
+    import redis as redis_module
 
     REDIS_AVAILABLE = True
+    redis = redis_module
 except ImportError:  # pragma: no cover
     REDIS_AVAILABLE = False  # pragma: no cover
-    redis = None  # type: ignore[assignment]  # pragma: no cover
+    redis = None  # pragma: no cover
 
 from ..constants.performance_constants import CacheTTL
 from .config import settings
@@ -67,6 +71,9 @@ class MemoryCache(CacheBackend):
     def __init__(self, max_size: int = 1000):
         self.max_size = max_size
         self._cache: dict[str, dict[str, Any]] = {}
+        self._hits = 0
+        self._misses = 0
+        self._stats_started_at = datetime.now(UTC)
 
     def _cleanup_expired(self) -> None:
         now = datetime.now(UTC)
@@ -79,14 +86,18 @@ class MemoryCache(CacheBackend):
     def get(self, key: str) -> Any | None:
         """获取缓存值"""
         self._cleanup_expired()
+        now = datetime.now(UTC)
         if key in self._cache:
             item = self._cache[key]
-            if item["expires_at"] > datetime.now(UTC):
-                item["last_accessed_at"] = datetime.now(UTC)
+            if item["expires_at"] > now:
+                self._hits += 1
+                item["last_accessed_at"] = now
                 self._cache[key] = item
                 return item["value"]
-            else:
-                del self._cache[key]
+
+            del self._cache[key]
+
+        self._misses += 1
         return None
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -524,6 +535,13 @@ class CacheManager:
                         str(item["value"]).encode("utf-8")
                     )  # value大小估算
 
+                total_requests = self.backend._hits + self.backend._misses
+                hit_rate = (
+                    round(self.backend._hits / total_requests, 4)
+                    if total_requests > 0
+                    else None
+                )
+
                 return {
                     "backend_type": "MemoryCache",
                     "total_items": total_items,
@@ -537,7 +555,10 @@ class CacheManager:
                     "memory_usage_mb": round(total_memory / (1024 * 1024), 2),
                     "default_ttl": self.default_ttl,
                     "key_prefix": self.key_prefix,
-                    "hit_rate": None,  # MemoryCache没有跟踪命中率
+                    "cache_hits": self.backend._hits,
+                    "cache_misses": self.backend._misses,
+                    "hit_rate": hit_rate,
+                    "stats_started_at": self.backend._stats_started_at.isoformat(),
                     "created_at": datetime.now(UTC).isoformat(),
                 }
             else:  # pragma: no cover

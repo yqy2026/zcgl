@@ -17,11 +17,10 @@ from ...constants.business_constants import DataStatusValues
 from ...constants.rent_contract_constants import PaymentStatus
 from ...core.enums import ContractStatus
 from ...database import get_db
-from ...models.auth import User
-
 logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
 from ...models.rent_contract import RentContract, RentLedger
+from .notification_service import notification_service
 from .wecom_service import wecom_service
 
 
@@ -181,23 +180,18 @@ class NotificationSchedulerService:
                 content = f"合同 {contract.contract_number}（{contract.tenant_name}）将在{days_remaining}天后到期"
 
             # 查找所有活跃用户
-            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
+            active_users = notification_service.list_active_users(self.db)
 
             # 为每个用户创建通知
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing_notification = (
-                    self.db.query(Notification)
-                    .filter(
-                        and_(
-                            Notification.recipient_id == user.id,
-                            Notification.related_entity_id == contract.id,
-                            Notification.related_entity_type == "contract",
-                            Notification.type == notification_type,
-                            Notification.is_read.is_(False),
-                        )
-                    )
-                    .first()
+                existing_notification = notification_service.find_existing_notification(
+                    self.db,
+                    recipient_id=str(user.id),
+                    related_entity_type="contract",
+                    related_entity_id=str(contract.id),
+                    notification_type=notification_type,
+                    require_unread=True,
                 )
 
                 if not existing_notification:
@@ -272,22 +266,17 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
+            active_users = notification_service.list_active_users(self.db)
 
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing = (
-                    self.db.query(Notification)
-                    .filter(
-                        and_(
-                            Notification.recipient_id == user.id,
-                            Notification.related_entity_type == "rent_ledger",
-                            Notification.related_entity_id == ledger.id,
-                            Notification.type == NotificationType.PAYMENT_OVERDUE,
-                            Notification.created_at >= today,  # 今天已创建过
-                        )
-                    )
-                    .first()
+                existing = notification_service.find_existing_notification(
+                    self.db,
+                    recipient_id=str(user.id),
+                    related_entity_type="rent_ledger",
+                    related_entity_id=str(ledger.id),
+                    notification_type=NotificationType.PAYMENT_OVERDUE,
+                    created_since=today,
                 )
 
                 if not existing:
@@ -364,22 +353,17 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
+            active_users = notification_service.list_active_users(self.db)
 
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing = (
-                    self.db.query(Notification)
-                    .filter(
-                        and_(
-                            Notification.recipient_id == user.id,
-                            Notification.related_entity_type == "rent_ledger",
-                            Notification.related_entity_id == ledger.id,
-                            Notification.type == NotificationType.PAYMENT_DUE,
-                            Notification.created_at >= today,
-                        )
-                    )
-                    .first()
+                existing = notification_service.find_existing_notification(
+                    self.db,
+                    recipient_id=str(user.id),
+                    related_entity_type="rent_ledger",
+                    related_entity_id=str(ledger.id),
+                    notification_type=NotificationType.PAYMENT_DUE,
+                    created_since=today,
                 )
 
                 if not existing:

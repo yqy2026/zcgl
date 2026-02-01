@@ -187,15 +187,17 @@ class TestValidateImagePath:
     def test_nonexistent_file(self, tmp_path):
         """测试不存在的文件"""
         from src.services.core.base_vision_service import validate_image_path
+        from src.core.exception_handler import ResourceNotFoundError
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ResourceNotFoundError):
             validate_image_path(str(tmp_path / "nonexistent.png"))
 
     def test_directory_path(self, tmp_path):
         """测试目录路径"""
         from src.services.core.base_vision_service import validate_image_path
+        from src.core.exception_handler import BusinessValidationError
 
-        with pytest.raises(ValueError):
+        with pytest.raises(BusinessValidationError):
             validate_image_path(str(tmp_path))
 
     def test_valid_image_path(self, tmp_path):
@@ -216,8 +218,9 @@ class TestValidateImagePaths:
     def test_empty_list(self):
         """测试空列表"""
         from src.services.core.base_vision_service import validate_image_paths
+        from src.core.exception_handler import BusinessValidationError
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(BusinessValidationError) as exc_info:
             validate_image_paths([])
         assert "cannot be empty" in str(exc_info.value)
 
@@ -237,9 +240,10 @@ class TestValidateImagePaths:
     def test_mixed_valid_invalid(self, tmp_path):
         """测试混合有效和无效路径"""
         from src.services.core.base_vision_service import validate_image_paths
+        from src.core.exception_handler import ResourceNotFoundError
 
         valid_image = tmp_path / "valid.png"
         valid_image.write_bytes(b"fake image")
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ResourceNotFoundError):
             validate_image_paths([str(valid_image), str(tmp_path / "invalid.png")])

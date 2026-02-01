@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....crud.rent_contract import rent_contract
+from ....crud.rent_contract_attachment import rent_contract_attachment_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -71,17 +72,12 @@ def get_contract_attachments(
     """
     获取指定合同的所有附件
     """
-    from ....models.rent_contract import RentContractAttachment
-
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
-    attachments = (
-        db.query(RentContractAttachment)
-        .filter(RentContractAttachment.contract_id == contract_id)
-        .order_by(RentContractAttachment.created_at.desc())
-        .all()
+    attachments = rent_contract_attachment_crud.get_by_contract(
+        db, contract_id=contract_id
     )
 
     return [
@@ -111,15 +107,8 @@ def download_contract_attachment(
     """
     下载指定的合同附件
     """
-    from ....models.rent_contract import RentContractAttachment
-
-    attachment = (
-        db.query(RentContractAttachment)
-        .filter(
-            RentContractAttachment.id == attachment_id,
-            RentContractAttachment.contract_id == contract_id,
-        )
-        .first()
+    attachment = rent_contract_attachment_crud.get(
+        db, attachment_id=attachment_id, contract_id=contract_id
     )
 
     if not attachment:
@@ -152,15 +141,8 @@ def delete_contract_attachment(
     """
     删除指定的合同附件
     """
-    from ....models.rent_contract import RentContractAttachment
-
-    attachment = (
-        db.query(RentContractAttachment)
-        .filter(
-            RentContractAttachment.id == attachment_id,
-            RentContractAttachment.contract_id == contract_id,
-        )
-        .first()
+    attachment = rent_contract_attachment_crud.get(
+        db, attachment_id=attachment_id, contract_id=contract_id
     )
 
     if not attachment:

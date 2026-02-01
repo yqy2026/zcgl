@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 
+
 class RequestSecurity:
     """请求安全工具类"""
 

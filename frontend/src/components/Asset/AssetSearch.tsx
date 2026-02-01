@@ -271,7 +271,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
         <Space>
           <SearchOutlined />
           <span>资产搜索</span>
-          {isComponentLoading && <Tag color="processing">加载中...</Tag>}
+          {isComponentLoading && <Tag color="processing">加载中…</Tag>}
         </Space>
       }
       extra={

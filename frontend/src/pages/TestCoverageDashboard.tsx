@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Row,
   Col,
   Statistic,
   Progress,
-  Table,
   Button,
   DatePicker,
   Space,
@@ -31,6 +30,8 @@ import { COLORS } from '@/styles/colorMap';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 // 类型定义
 interface CoverageMetrics {
@@ -188,7 +189,7 @@ const TestCoverageDashboard: React.FC = () => {
   });
 
   // 获取模块覆盖率
-  const { data: moduleCoverage, isLoading: moduleLoading } = useQuery({
+  const { data: moduleCoverageSource, isLoading: moduleLoading } = useQuery({
     queryKey: ['module-coverage'],
     queryFn: () => fetchModuleCoverage(),
   });
@@ -303,6 +304,27 @@ const TestCoverageDashboard: React.FC = () => {
     },
   ];
 
+  const moduleCoverageItems = useMemo(
+    () => moduleCoverageSource ?? [],
+    [moduleCoverageSource]
+  );
+
+  const {
+    data: moduleCoverageRows,
+    loading: moduleTableLoading,
+    pagination: modulePagination,
+    loadList: loadModuleList,
+    updatePagination: updateModulePagination,
+  } = useArrayListData<CoverageMetrics, Record<string, never>>({
+    items: moduleCoverageItems,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadModuleList({ page: 1 });
+  }, [loadModuleList, moduleCoverageItems]);
+
   // 覆盖率趋势图表配置
   const trendConfig = {
     data:
@@ -332,7 +354,7 @@ const TestCoverageDashboard: React.FC = () => {
   // 模块覆盖率柱状图配置
   const moduleCoverageConfig = {
     data:
-      moduleCoverage?.slice(0, 10).map(item => ({
+      moduleCoverageSource?.slice(0, 10).map((item: CoverageMetrics) => ({
         module:
           item.module_name.length > 15
             ? item.module_name.substring(0, 15) + '...'
@@ -407,8 +429,8 @@ const TestCoverageDashboard: React.FC = () => {
             !qualityGate.passed &&
             qualityGate.failed_checks.length > 0 && (
               <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
-                {qualityGate.failed_checks.map((check, index) => (
-                  <li key={index}>{check}</li>
+                {qualityGate.failed_checks.map(check => (
+                  <li key={check}>{check}</li>
                 ))}
               </ul>
             )
@@ -552,16 +574,15 @@ const TestCoverageDashboard: React.FC = () => {
             label: '模块详情',
             children: (
               <Card>
-                <Table
+                <TableWithPagination
                   columns={moduleColumns}
-                  dataSource={moduleCoverage}
+                  dataSource={moduleCoverageRows}
                   rowKey="module_name"
-                  loading={moduleLoading}
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: total => `共 ${total} 个模块`,
+                  loading={moduleLoading || moduleTableLoading}
+                  paginationState={modulePagination}
+                  onPageChange={updateModulePagination}
+                  paginationProps={{
+                    showTotal: (total: number) => `共 ${total} 个模块`,
                   }}
                   scroll={{ x: 800 }}
                 />

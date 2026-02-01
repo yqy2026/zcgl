@@ -207,6 +207,8 @@ vi.mock('@ant-design/icons', () => ({
   DownloadOutlined: () => 'DownloadOutlined',
   FileExcelOutlined: () => 'FileExcelOutlined',
   CheckCircleOutlined: () => 'CheckCircleOutlined',
+  CheckCircleFilled: () => 'CheckCircleFilled',
+  FileTextFilled: () => 'FileTextFilled',
   ExclamationCircleOutlined: () => 'ExclamationCircleOutlined',
   SettingOutlined: () => 'SettingOutlined',
 }));

@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from ....core.config import settings
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
+from ....core.config import settings
 from ....core.exception_handler import (
     BusinessValidationError,
     bad_request,
@@ -23,6 +23,7 @@ from ....core.exception_handler import (
     service_unavailable,
 )
 from ....core.response_handler import success_response
+from ....crud.pdf_import_session import PDFImportSessionCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -40,6 +41,7 @@ MAX_CONCURRENT_BATCHES = int(os.getenv("PDF_MAX_CONCURRENT_BATCHES", "2"))
 # 批处理状态追踪器（支持 Redis 持久化）
 _batch_tracker: BatchStatusTracker | None = None
 _batch_lock: asyncio.Lock = asyncio.Lock()
+_monitor_tasks: dict[str, asyncio.Task[None]] = {}
 
 
 def _get_batch_tracker() -> BatchStatusTracker:
@@ -97,6 +99,22 @@ def _update_batch_status(batch_id: str, status: str, **updates: Any) -> None:
     tracker.update_progress(batch_id, status=status)
     # 更新其他字段通过 tracker.set_status 实现
     # 附加字段存储在 metadata 中
+
+
+def _track_monitor_task(batch_id: str, task: asyncio.Task[None]) -> None:
+    """记录监控任务，便于后续查询/取消"""
+    _monitor_tasks[batch_id] = task
+
+
+def _untrack_monitor_task(batch_id: str) -> None:
+    """移除监控任务记录"""
+    _monitor_tasks.pop(batch_id, None)
+
+
+def _on_monitor_task_done(task: asyncio.Task[None], batch_id: str) -> None:
+    """处理监控任务结束（清理记录并处理异常）"""
+    _untrack_monitor_task(batch_id)
+    _handle_task_exception(task, batch_id)
 
 
 def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
@@ -282,7 +300,8 @@ async def batch_upload_pdfs(
 
     # 启动后台监控任务（带异常处理）
     monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
-    monitor_task.add_done_callback(lambda t: _handle_task_exception(t, batch_id))
+    _track_monitor_task(batch_id, monitor_task)
+    monitor_task.add_done_callback(lambda t: _on_monitor_task_done(t, batch_id))
 
     response: JSONResponse = success_response(
         data={
@@ -339,13 +358,12 @@ def get_batch_status(
         raise not_found("批处理任务不存在", resource_id=batch_id)
 
     # 获取各会话状态
+    session_crud = PDFImportSessionCRUD()
     session_statuses: list[dict[str, Any]] = []
-    for session_id in batch.get("session_ids", []):
-        session = (
-            db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
-        )
+    session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
+    session_map = session_crud.get_session_map(db, session_ids)
+    for session_id in session_ids:
+        session = session_map.get(session_id)
         if session:
             session_statuses.append(
                 {
@@ -467,14 +485,13 @@ async def cancel_batch(
 
     # 取消所有处理中的会话
     service = PDFImportService()
+    session_crud = PDFImportSessionCRUD()
     cancelled_count = 0
 
-    for session_id in batch.get("session_ids", []):
-        session = (
-            db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
-        )
+    session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
+    session_map = session_crud.get_session_map(db, session_ids)
+    for session_id in session_ids:
+        session = session_map.get(session_id)
         if session and session.is_processing:
             await service.cancel_processing(
                 db=db,
@@ -485,6 +502,10 @@ async def cancel_batch(
 
     # 更新批处理状态
     _update_batch_status(batch_id, BatchStatus.CANCELLED)
+
+    monitor_task = _monitor_tasks.get(batch_id)
+    if monitor_task and not monitor_task.done():
+        monitor_task.cancel()
 
     response: JSONResponse = success_response(
         data={"cancelled_count": cancelled_count},

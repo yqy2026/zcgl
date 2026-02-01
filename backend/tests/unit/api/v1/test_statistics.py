@@ -35,7 +35,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.exception_handler import InvalidRequestError, ServiceUnavailableError
+from src.core.exception_handler import InvalidRequestError
 
 pytestmark = pytest.mark.api
 
@@ -543,18 +543,25 @@ class TestGetFinancialSummary:
         yield
         core_cache_manager.clear(namespace="statistics")
 
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.to_float")
+    @patch("src.api.v1.analytics.statistics_modules.financial_stats.FinancialService")
     def test_get_financial_summary_empty(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self, mock_financial_service_class, mock_db, mock_current_user
     ):
         """Test financial summary with no assets"""
         from src.api.v1.analytics.statistics_modules.financial_stats import (
             get_financial_summary,
         )
 
-        mock_asset_crud.get_multi_with_search.return_value = ([], 0)
-        mock_to_float.return_value = 0.0
+        mock_service = MagicMock()
+        mock_service.calculate_summary.return_value = {
+            "total_assets": 0,
+            "total_annual_income": 0.0,
+            "total_annual_expense": 0.0,
+            "net_annual_income": 0.0,
+            "income_per_sqm": 0.0,
+            "expense_per_sqm": 0.0,
+        }
+        mock_financial_service_class.return_value = mock_service
 
         result = get_financial_summary(
             should_include_deleted=False, db=mock_db, current_user=mock_current_user
@@ -565,30 +572,25 @@ class TestGetFinancialSummary:
         assert result.total_annual_expense == 0.0
         assert result.net_annual_income == 0.0
 
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.to_float")
+    @patch("src.api.v1.analytics.statistics_modules.financial_stats.FinancialService")
     def test_get_financial_summary_with_assets(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self, mock_financial_service_class, mock_db, mock_current_user
     ):
         """Test financial summary with assets"""
         from src.api.v1.analytics.statistics_modules.financial_stats import (
             get_financial_summary,
         )
 
-        # Create mock assets
-        mock_assets = []
-        for i in range(3):
-            asset = MagicMock()
-            asset.rentable_area = 100.0 + i * 50
-            asset.annual_income = 10000.0 + i * 5000
-            asset.annual_expense = 5000.0 + i * 2000
-            asset.net_income = 5000.0 + i * 3000
-            asset.monthly_rent = 1000.0 + i * 400
-            asset.deposit = 2000.0 + i * 800
-            mock_assets.append(asset)
-
-        mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 3)
-        mock_to_float.side_effect = lambda x: x  # Return value as-is
+        mock_service = MagicMock()
+        mock_service.calculate_summary.return_value = {
+            "total_assets": 3,
+            "total_annual_income": 45000.0,
+            "total_annual_expense": 21000.0,
+            "net_annual_income": 24000.0,
+            "income_per_sqm": 100.0,
+            "expense_per_sqm": 50.0,
+        }
+        mock_financial_service_class.return_value = mock_service
 
         result = get_financial_summary(
             should_include_deleted=False, db=mock_db, current_user=mock_current_user
@@ -601,30 +603,25 @@ class TestGetFinancialSummary:
         assert result.income_per_sqm > 0
         assert result.expense_per_sqm > 0
 
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.financial_stats.to_float")
+    @patch("src.api.v1.analytics.statistics_modules.financial_stats.FinancialService")
     def test_get_financial_summary_per_sqm_calculation(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self, mock_financial_service_class, mock_db, mock_current_user
     ):
         """Test per-square-meter calculations"""
         from src.api.v1.analytics.statistics_modules.financial_stats import (
             get_financial_summary,
         )
 
-        # Create assets with specific values
-        mock_assets = []
-        for i in range(2):
-            asset = MagicMock()
-            asset.rentable_area = 500.0
-            asset.annual_income = 60000.0
-            asset.annual_expense = 30000.0
-            asset.net_income = 30000.0
-            asset.monthly_rent = 5000.0
-            asset.deposit = 10000.0
-            mock_assets.append(asset)
-
-        mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 2)
-        mock_to_float.side_effect = lambda x: x
+        mock_service = MagicMock()
+        mock_service.calculate_summary.return_value = {
+            "total_assets": 2,
+            "total_annual_income": 120000.0,
+            "total_annual_expense": 60000.0,
+            "net_annual_income": 60000.0,
+            "income_per_sqm": 120.0,
+            "expense_per_sqm": 60.0,
+        }
+        mock_financial_service_class.return_value = mock_service
 
         result = get_financial_summary(
             should_include_deleted=False, db=mock_db, current_user=mock_current_user
@@ -733,61 +730,166 @@ class TestGetCacheInfo:
 class TestGetDashboardData:
     """Tests for GET /api/v1/statistics/dashboard endpoint"""
 
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.to_float")
+    @pytest.fixture(autouse=True)
+    def _clear_statistics_cache(self):
+        from src.core.cache_manager import cache_manager as core_cache_manager
+
+        core_cache_manager.clear(namespace="statistics")
+        yield
+        core_cache_manager.clear(namespace="statistics")
+
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.FinancialService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.OccupancyService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.AreaService")
+    @patch(
+        "src.api.v1.analytics.statistics_modules.basic_stats.get_basic_statistics",
+        new_callable=AsyncMock,
+    )
     @pytest.mark.asyncio
     async def test_get_dashboard_data_empty(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self,
+        mock_get_basic_statistics,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_financial_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test dashboard data with no assets"""
         from src.api.v1.analytics.statistics_modules.basic_stats import (
             get_dashboard_data,
         )
+        from src.schemas.statistics import BasicStatisticsResponse
 
-        mock_asset_crud.get_multi.return_value = []
-        mock_asset_crud.get_multi_with_search.return_value = ([], 0)
-        mock_to_float.return_value = 0.0
+        mock_get_basic_statistics.return_value = BasicStatisticsResponse(
+            total_assets=0,
+            ownership_status={"confirmed": 0, "unconfirmed": 0, "partial": 0},
+            property_nature={"commercial": 0, "non_commercial": 0},
+            usage_status={"rented": 0, "self_used": 0, "vacant": 0},
+            generated_at=datetime.now(),
+            filters_applied={},
+        )
 
-        # Currently the endpoint raises 503 because it's not fully implemented
-        with pytest.raises(ServiceUnavailableError) as exc_info:
-            await get_dashboard_data(db=mock_db, current_user=mock_current_user)
+        mock_area_service = MagicMock()
+        mock_area_service.calculate_summary_with_aggregation.return_value = {
+            "total_land_area": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+            "total_unrented_area": 0.0,
+            "overall_occupancy_rate": 0.0,
+        }
+        mock_area_service_class.return_value = mock_area_service
 
-        assert exc_info.value.status_code == 503
-        assert "尚未实现" in exc_info.value.message
+        mock_occupancy_service = MagicMock()
+        mock_occupancy_service.calculate_with_aggregation.return_value = {
+            "overall_rate": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+        }
+        mock_occupancy_service.calculate_category_with_aggregation.return_value = {}
+        mock_occupancy_service_class.return_value = mock_occupancy_service
 
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.to_float")
+        mock_financial_service = MagicMock()
+        mock_financial_service.calculate_summary.return_value = {
+            "total_assets": 0,
+            "total_annual_income": 0.0,
+            "total_annual_expense": 0.0,
+            "net_annual_income": 0.0,
+            "income_per_sqm": 0.0,
+            "expense_per_sqm": 0.0,
+        }
+        mock_financial_service_class.return_value = mock_financial_service
+
+        result = await get_dashboard_data(db=mock_db, current_user=mock_current_user)
+
+        assert result.basic_stats.total_assets == 0
+        assert result.area_summary.total_area == 0.0
+        assert result.financial_summary.total_assets == 0
+        assert result.occupancy_stats.overall_occupancy_rate == 0.0
+        assert result.category_occupancy == []
+
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.FinancialService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.OccupancyService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.AreaService")
+    @patch(
+        "src.api.v1.analytics.statistics_modules.basic_stats.get_basic_statistics",
+        new_callable=AsyncMock,
+    )
     @pytest.mark.asyncio
     async def test_get_dashboard_data_with_assets(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self,
+        mock_get_basic_statistics,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_financial_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test dashboard data with assets"""
         from src.api.v1.analytics.statistics_modules.basic_stats import (
             get_dashboard_data,
         )
+        from src.schemas.statistics import BasicStatisticsResponse
 
-        # Create mock assets
-        mock_assets = []
-        for i in range(5):
-            asset = MagicMock()
-            asset.land_area = 100.0 + i * 10
-            asset.annual_income = 10000.0 + i * 1000
-            asset.annual_expense = 5000.0 + i * 500
-            asset.rentable_area = 80.0 + i * 8
-            asset.rented_area = 60.0 + i * 6
-            mock_assets.append(asset)
+        mock_get_basic_statistics.return_value = BasicStatisticsResponse(
+            total_assets=5,
+            ownership_status={"confirmed": 3, "unconfirmed": 1, "partial": 1},
+            property_nature={"commercial": 4, "non_commercial": 1},
+            usage_status={"rented": 3, "self_used": 1, "vacant": 1},
+            generated_at=datetime.now(),
+            filters_applied={},
+        )
 
-        mock_asset_crud.get_multi.return_value = mock_assets[:1]
-        mock_asset_crud.get_multi_with_search.return_value = (mock_assets, 5)
+        mock_area_service = MagicMock()
+        mock_area_service.calculate_summary_with_aggregation.return_value = {
+            "total_land_area": 600.0,
+            "total_rentable_area": 400.0,
+            "total_rented_area": 300.0,
+            "total_unrented_area": 100.0,
+            "overall_occupancy_rate": 75.0,
+        }
+        mock_area_service_class.return_value = mock_area_service
 
-        mock_to_float.side_effect = lambda x: x
+        mock_occupancy_service = MagicMock()
+        mock_occupancy_service.calculate_with_aggregation.return_value = {
+            "overall_rate": 75.0,
+            "total_rentable_area": 400.0,
+            "total_rented_area": 300.0,
+        }
+        mock_occupancy_service.calculate_category_with_aggregation.return_value = {
+            "办公": {
+                "overall_rate": 80.0,
+                "total_rentable_area": 200.0,
+                "total_rented_area": 160.0,
+                "asset_count": 2,
+            },
+            "零售": {
+                "overall_rate": 60.0,
+                "total_rentable_area": 200.0,
+                "total_rented_area": 120.0,
+                "asset_count": 3,
+            },
+        }
+        mock_occupancy_service_class.return_value = mock_occupancy_service
 
-        # Currently the endpoint raises 503 because it's not fully implemented
-        with pytest.raises(ServiceUnavailableError) as exc_info:
-            await get_dashboard_data(db=mock_db, current_user=mock_current_user)
+        mock_financial_service = MagicMock()
+        mock_financial_service.calculate_summary.return_value = {
+            "total_assets": 5,
+            "total_annual_income": 500000.0,
+            "total_annual_expense": 200000.0,
+            "net_annual_income": 300000.0,
+            "income_per_sqm": 1250.0,
+            "expense_per_sqm": 500.0,
+        }
+        mock_financial_service_class.return_value = mock_financial_service
 
-        assert exc_info.value.status_code == 503
-        assert "尚未实现" in exc_info.value.message
+        result = await get_dashboard_data(db=mock_db, current_user=mock_current_user)
+
+        assert result.basic_stats.total_assets == 5
+        assert result.area_summary.occupancy_rate == 75.0
+        assert result.financial_summary.net_annual_income == 300000.0
+        assert result.occupancy_stats.total_rented_area == 300.0
+        assert len(result.category_occupancy) == 2
 
 
 # ============================================================================
@@ -1411,6 +1513,14 @@ class TestGetComprehensiveStatistics:
 class TestStatisticsEdgeCases:
     """Tests for edge cases and error handling"""
 
+    @pytest.fixture(autouse=True)
+    def _clear_statistics_cache(self):
+        from src.core.cache_manager import cache_manager as core_cache_manager
+
+        core_cache_manager.clear(namespace="statistics")
+        yield
+        core_cache_manager.clear(namespace="statistics")
+
     @patch("src.utils.numeric.to_float")
     def test_to_float_with_none_values(self, mock_to_float):
         """Test to_float handles None values"""
@@ -1422,32 +1532,69 @@ class TestStatisticsEdgeCases:
         # to_float should handle None gracefully
         assert result is None or result == 0.0
 
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.asset_crud")
-    @patch("src.api.v1.analytics.statistics_modules.basic_stats.to_float")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.FinancialService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.OccupancyService")
+    @patch("src.api.v1.analytics.statistics_modules.basic_stats.AreaService")
+    @patch(
+        "src.api.v1.analytics.statistics_modules.basic_stats.get_basic_statistics",
+        new_callable=AsyncMock,
+    )
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Dashboard endpoint not fully implemented")
     async def test_zero_division_protection(
-        self, mock_to_float, mock_asset_crud, mock_db, mock_current_user
+        self,
+        mock_get_basic_statistics,
+        mock_area_service_class,
+        mock_occupancy_service_class,
+        mock_financial_service_class,
+        mock_db,
+        mock_current_user,
     ):
         """Test division by zero protection in calculations"""
         from src.api.v1.analytics.statistics_modules.basic_stats import (
             get_dashboard_data,
         )
+        from src.schemas.statistics import BasicStatisticsResponse
 
-        # Create asset with zero area
-        mock_asset = MagicMock()
-        mock_asset.land_area = 0.0
-        mock_asset.annual_income = 0.0
-        mock_asset.annual_expense = 0.0
-        mock_asset.rentable_area = 0.0
-        mock_asset.rented_area = 0.0
+        mock_get_basic_statistics.return_value = BasicStatisticsResponse(
+            total_assets=1,
+            ownership_status={"confirmed": 0, "unconfirmed": 0, "partial": 0},
+            property_nature={"commercial": 0, "non_commercial": 0},
+            usage_status={"rented": 0, "self_used": 0, "vacant": 0},
+            generated_at=datetime.now(),
+            filters_applied={},
+        )
 
-        mock_asset_crud.get_multi.return_value = [mock_asset]
-        mock_asset_crud.get_multi_with_search.return_value = ([], 0)
-        mock_to_float.side_effect = lambda x: x
+        mock_area_service = MagicMock()
+        mock_area_service.calculate_summary_with_aggregation.return_value = {
+            "total_land_area": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+            "total_unrented_area": 0.0,
+            "overall_occupancy_rate": 0.0,
+        }
+        mock_area_service_class.return_value = mock_area_service
+
+        mock_occupancy_service = MagicMock()
+        mock_occupancy_service.calculate_with_aggregation.return_value = {
+            "overall_rate": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+        }
+        mock_occupancy_service.calculate_category_with_aggregation.return_value = {}
+        mock_occupancy_service_class.return_value = mock_occupancy_service
+
+        mock_financial_service = MagicMock()
+        mock_financial_service.calculate_summary.return_value = {
+            "total_assets": 1,
+            "total_annual_income": 0.0,
+            "total_annual_expense": 0.0,
+            "net_annual_income": 0.0,
+            "income_per_sqm": 0.0,
+            "expense_per_sqm": 0.0,
+        }
+        mock_financial_service_class.return_value = mock_financial_service
 
         result = await get_dashboard_data(db=mock_db, current_user=mock_current_user)
 
-        # Should not raise division by zero error
         assert result.financial_summary.income_per_sqm == 0.0
         assert result.financial_summary.expense_per_sqm == 0.0

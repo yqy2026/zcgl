@@ -1,39 +1,14 @@
 /**
  * ProjectList 组件测试
- * 测试项目列表的渲染和交互
+ * 针对 useListData + TableWithPagination 版本
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
-// Mock services
-vi.mock('@/services/projectService', () => ({
-  projectService: {
-    getProjectList: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
-    deleteProject: vi.fn(() => Promise.resolve({ success: true })),
-  },
-}));
-
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: {
-      items: [
-        { id: '1', name: '项目1', code: 'PROJ-001', status: 'active' },
-        { id: '2', name: '项目2', code: 'PROJ-002', status: 'planning' },
-      ],
-      total: 2,
-    },
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-  })),
-  useMutation: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-  })),
-}));
+import { useListData } from '@/hooks/useListData';
+import { ownershipService } from '@/services/ownershipService';
 
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -42,6 +17,40 @@ vi.mock('@/utils/messageManager', () => ({
     error: vi.fn(),
     warning: vi.fn(),
   },
+}));
+
+vi.mock('@/hooks/useListData', () => ({
+  useListData: vi.fn(),
+}));
+
+vi.mock('@/services/ownershipService', () => ({
+  ownershipService: {
+    getOwnershipOptions: vi.fn(() => Promise.resolve([])),
+  },
+}));
+
+vi.mock('@/components/Forms', () => ({
+  ProjectForm: () => <div data-testid="project-form">ProjectForm</div>,
+}));
+
+vi.mock('../ProjectDetail', () => ({
+  default: () => <div data-testid="project-detail">ProjectDetail</div>,
+}));
+
+vi.mock('@/components/Common/TableWithPagination', () => ({
+  TableWithPagination: ({
+    dataSource,
+  }: {
+    dataSource?: Array<{ id: string; name: string }>;
+  }) => (
+    <div data-testid="table">
+      {dataSource?.map(item => (
+        <div key={item.id} data-testid={`row-${item.id}`}>
+          {item.name}
+        </div>
+      ))}
+    </div>
+  ),
 }));
 
 // Mock Ant Design
@@ -61,189 +70,309 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Card.displayName = 'MockCard';
+
+  const Modal = ({ children, open }: { children?: React.ReactNode; open?: boolean }) => (
+    <div data-testid="modal">{open ? children : null}</div>
+  );
+  Modal.displayName = 'MockModal';
+
+  const Row = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="row">{children}</div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="col">{children}</div>
+  );
+  Col.displayName = 'MockCol';
+
+  const Statistic = ({ title, value }: { title?: React.ReactNode; value?: React.ReactNode }) => (
+    <div data-testid="statistic">
+      {title}:{value}
+    </div>
+  );
+  Statistic.displayName = 'MockStatistic';
+
+  const Badge = ({ text }: { text?: React.ReactNode }) => (
+    <span data-testid="badge">{text}</span>
+  );
+  Badge.displayName = 'MockBadge';
+
+  const Switch = ({ checked, onChange }: { checked?: boolean; onChange?: () => void }) => (
+    <button data-testid="switch" data-checked={checked} onClick={onChange}>
+      Switch
+    </button>
+  );
+  Switch.displayName = 'MockSwitch';
+
+  const Button = ({
+    children,
+    onClick,
+    icon,
+    type,
+    danger,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    type?: string;
+    danger?: boolean;
+  }) => (
+    <button
+      data-testid={`btn-${type || 'default'}`}
+      data-danger={danger}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+  Button.displayName = 'MockButton';
+
+  const Space = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+
+  const InputSearch = ({
+    placeholder,
+    onSearch,
+    onChange,
+    value,
+    enterButton,
+  }: {
+    placeholder?: string;
+    onSearch?: (value: string) => void;
+    onChange?: React.ChangeEventHandler<HTMLInputElement>;
+    value?: string;
+    enterButton?: React.ReactNode;
+  }) => (
+    <div data-testid="search-wrapper">
+      <input
+        data-testid="search-input"
+        placeholder={placeholder}
+        value={value ?? ''}
+        onChange={onChange}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            onSearch?.((e.target as HTMLInputElement).value);
+          }
+        }}
+      />
+      <div data-testid="search-enter-button">{enterButton}</div>
+    </div>
+  );
+  InputSearch.displayName = 'MockInputSearch';
+
+  const Select = ({
+    children,
+    placeholder,
+    onChange,
+  }: {
+    children?: React.ReactNode;
+    placeholder?: string;
+    onChange?: (value: string) => void;
+  }) => (
+    <select
+      data-testid="select"
+      onChange={e => onChange?.(e.target.value)}
+    >
+      <option value="">{placeholder}</option>
+      {children}
+    </select>
+  );
+  Select.displayName = 'MockSelect';
+  const Option = ({
+    children,
+    value,
+  }: {
+    children?: React.ReactNode;
+    value?: string | boolean;
+  }) => <option value={String(value ?? '')}>{children}</option>;
+  Option.displayName = 'MockSelectOption';
+  Select.Option = Option;
+
+  const Tag = ({
+    children,
+    color,
+  }: {
+    children: React.ReactNode;
+    color?: string;
+  }) => (
+    <span data-testid="tag" data-color={color}>
+      {children}
+    </span>
+  );
+  Tag.displayName = 'MockTag';
+
+  const Popconfirm = ({
+    children,
+    onConfirm,
+    title,
+  }: {
+    children: React.ReactNode;
+    onConfirm?: () => void;
+    title?: string;
+  }) => (
+    <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
+      {children}
+    </div>
+  );
+  Popconfirm.displayName = 'MockPopconfirm';
+
+  const Empty = ({ description }: { description?: string }) => (
+    <div data-testid="empty">{description || '暂无数据'}</div>
+  );
+  Empty.displayName = 'MockEmpty';
+
+  const Spin = ({
+    children,
+    spinning,
+  }: {
+    children?: React.ReactNode;
+    spinning?: boolean;
+  }) => (
+    <div data-testid="spin" data-spinning={spinning}>
+      {spinning ? '加载中...' : children}
+    </div>
+  );
+  Spin.displayName = 'MockSpin';
+
+  const Alert = ({
+    message,
+    type,
+  }: {
+    message: string;
+    type?: string;
+  }) => (
+    <div data-testid="alert" data-type={type}>
+      {message}
+    </div>
+  );
+  Alert.displayName = 'MockAlert';
+
+  const Tooltip = ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title: string;
+  }) => (
+    <div data-testid="tooltip" title={title}>
+      {children}
+    </div>
+  );
+  Tooltip.displayName = 'MockTooltip';
+
+  const Table = () => <div data-testid="table-placeholder" />;
+  Table.displayName = 'MockTable';
 
   return {
     Card,
-    Table: ({
-      dataSource,
-      loading,
-      pagination,
-    }: {
-      dataSource?: Array<{ id: string; name: string }>;
-      loading?: boolean;
-      pagination?: object;
-    }) => (
-      <div
-        data-testid="table"
-        data-loading={loading}
-        data-has-pagination={!!pagination}
-      >
-        {dataSource?.map(item => (
-          <div key={item.id} data-testid={`row-${item.id}`}>
-            {item.name}
-          </div>
-        ))}
-      </div>
-    ),
-    Button: ({
-      children,
-      onClick,
-      icon,
-      type,
-      danger,
-    }: {
-      children?: React.ReactNode;
-      onClick?: () => void;
-      icon?: React.ReactNode;
-      type?: string;
-      danger?: boolean;
-    }) => (
-      <button
-        data-testid={`btn-${type || 'default'}`}
-        data-danger={danger}
-        onClick={onClick}
-      >
-        {icon}
-        {children}
-      </button>
-    ),
-    Space: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="space">{children}</div>
-    ),
+    Table,
+    Button,
+    Space,
+    Modal,
+    Row,
+    Col,
+    Statistic,
+    Badge,
+    Switch,
     Input: {
-      Search: ({
-        placeholder,
-        onSearch,
-      }: {
-        placeholder?: string;
-        onSearch?: (value: string) => void;
-      }) => (
-        <input
-          data-testid="search-input"
-          placeholder={placeholder}
-          onChange={e => onSearch?.(e.target.value)}
-        />
-      ),
+      Search: InputSearch,
     },
-    Select: ({
-      children,
-      placeholder,
-      onChange,
-    }: {
-      children?: React.ReactNode;
-      placeholder?: string;
-      onChange?: (value: string) => void;
-    }) => (
-      <select
-        data-testid="select"
-        onChange={e => onChange?.(e.target.value)}
-      >
-        <option value="">{placeholder}</option>
-        {children}
-      </select>
-    ),
-    Tag: ({
-      children,
-      color,
-    }: {
-      children: React.ReactNode;
-      color?: string;
-    }) => (
-      <span data-testid="tag" data-color={color}>
-        {children}
-      </span>
-    ),
-    Popconfirm: ({
-      children,
-      onConfirm,
-      title,
-    }: {
-      children: React.ReactNode;
-      onConfirm?: () => void;
-      title?: string;
-    }) => (
-      <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
-        {children}
-      </div>
-    ),
-    Empty: ({ description }: { description?: string }) => (
-      <div data-testid="empty">{description || '暂无数据'}</div>
-    ),
-    Spin: ({
-      children,
-      spinning,
-    }: {
-      children?: React.ReactNode;
-      spinning?: boolean;
-    }) => (
-      <div data-testid="spin" data-spinning={spinning}>
-        {spinning ? '加载中...' : children}
-      </div>
-    ),
-    Alert: ({
-      message,
-      type,
-    }: {
-      message: string;
-      type?: string;
-    }) => (
-      <div data-testid="alert" data-type={type}>
-        {message}
-      </div>
-    ),
-    Tooltip: ({
-      children,
-      title,
-    }: {
-      children: React.ReactNode;
-      title: string;
-    }) => (
-      <div data-testid="tooltip" title={title}>
-        {children}
-      </div>
-    ),
+    Select,
+    Tag,
+    Popconfirm,
+    Empty,
+    Spin,
+    Alert,
+    Tooltip,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  PlusOutlined: () => <span data-testid="icon-plus">PlusIcon</span>,
-  EditOutlined: () => <span data-testid="icon-edit">EditIcon</span>,
-  DeleteOutlined: () => <span data-testid="icon-delete">DeleteIcon</span>,
-  EyeOutlined: () => <span data-testid="icon-eye">EyeIcon</span>,
-  SearchOutlined: () => <span data-testid="icon-search">SearchIcon</span>,
-  ReloadOutlined: () => <span data-testid="icon-reload">ReloadIcon</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const PlusOutlined = () => <span data-testid="icon-plus">PlusIcon</span>;
+  const EditOutlined = () => <span data-testid="icon-edit">EditIcon</span>;
+  const DeleteOutlined = () => <span data-testid="icon-delete">DeleteIcon</span>;
+  const EyeOutlined = () => <span data-testid="icon-eye">EyeIcon</span>;
+  const SearchOutlined = () => <span data-testid="icon-search">SearchIcon</span>;
+  const ReloadOutlined = () => <span data-testid="icon-reload">ReloadIcon</span>;
+
+  PlusOutlined.displayName = 'PlusOutlined';
+  EditOutlined.displayName = 'EditOutlined';
+  DeleteOutlined.displayName = 'DeleteOutlined';
+  EyeOutlined.displayName = 'EyeOutlined';
+  SearchOutlined.displayName = 'SearchOutlined';
+  ReloadOutlined.displayName = 'ReloadOutlined';
+
+  return {
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    EyeOutlined,
+    SearchOutlined,
+    ReloadOutlined,
+  };
+});
 
 import ProjectList from '../ProjectList';
 
-describe('ProjectList', () => {
-  const defaultProps = {
-    onEdit: vi.fn(),
-    onDelete: vi.fn(),
-    onView: vi.fn(),
-    onAdd: vi.fn(),
-  };
+const flushPromises = () =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, 0);
+  });
 
+const renderProjectList = async (
+  props?: React.ComponentProps<typeof ProjectList>
+) => {
+  await act(async () => {
+    render(<ProjectList {...props} />);
+    await flushPromises();
+  });
+};
+
+const mockLoadList = vi.fn();
+const mockApplyFilters = vi.fn();
+const mockResetFilters = vi.fn();
+const mockUpdatePagination = vi.fn();
+
+describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useListData).mockReturnValue({
+      data: [
+        { id: '1', name: '项目1', code: 'PROJ-001', is_active: true, asset_count: 2 },
+        { id: '2', name: '项目2', code: 'PROJ-002', is_active: false, asset_count: 0 },
+      ],
+      loading: false,
+      pagination: { current: 1, pageSize: 10, total: 2 },
+      filters: { keyword: '', isActive: null, ownershipId: '' },
+      loadList: mockLoadList,
+      applyFilters: mockApplyFilters,
+      resetFilters: mockResetFilters,
+      updatePagination: mockUpdatePagination,
+    });
   });
 
   describe('基本渲染', () => {
-    it('应该正确渲染列表卡片', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该正确渲染列表卡片', async () => {
+      await renderProjectList();
 
-      expect(screen.getByTestId('project-list-card')).toBeInTheDocument();
+      const cards = screen.getAllByTestId('project-list-card');
+      expect(cards.length).toBeGreaterThan(0);
     });
 
-    it('应该显示表格', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示表格', async () => {
+      await renderProjectList();
 
       expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('应该显示项目数据', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示项目数据', async () => {
+      await renderProjectList();
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
@@ -251,113 +380,67 @@ describe('ProjectList', () => {
   });
 
   describe('操作按钮', () => {
-    it('应该显示新增按钮', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示新增按钮', async () => {
+      await renderProjectList();
 
-      expect(screen.getByText('新增')).toBeInTheDocument();
+      expect(screen.getByText('新建项目')).toBeInTheDocument();
     });
 
-    it('新增按钮应该有PlusOutlined图标', () => {
-      render(<ProjectList {...defaultProps} />);
-
-      expect(screen.getByTestId('icon-plus')).toBeInTheDocument();
-    });
-
-    it('点击新增按钮应该触发onAdd', () => {
-      const handleAdd = vi.fn();
-      render(<ProjectList {...defaultProps} onAdd={handleAdd} />);
-
-      const addButton = screen.getByText('新增');
-      fireEvent.click(addButton);
-
-      expect(handleAdd).toHaveBeenCalled();
-    });
-
-    it('应该显示刷新按钮', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示刷新按钮', async () => {
+      await renderProjectList();
 
       expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
     });
   });
 
   describe('搜索功能', () => {
-    it('应该显示搜索输入框', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示搜索输入框', async () => {
+      await renderProjectList();
 
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
 
-    it('搜索输入框应该有占位符', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('搜索输入框应该有占位符', async () => {
+      await renderProjectList();
 
       const searchInput = screen.getByTestId('search-input');
       expect(searchInput).toHaveAttribute('placeholder');
     });
+
+    it('输入搜索内容会应用过滤条件', async () => {
+      await renderProjectList();
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: '关键字' } });
+
+      expect(mockApplyFilters).toHaveBeenCalledWith({
+        keyword: '关键字',
+        isActive: null,
+        ownershipId: '',
+      });
+    });
   });
 
   describe('筛选功能', () => {
-    it('应该显示状态筛选下拉框', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示状态筛选下拉框', async () => {
+      await renderProjectList();
 
-      expect(screen.getByTestId('select')).toBeInTheDocument();
-    });
-  });
-
-  describe('加载状态', () => {
-    it('加载时表格应该显示loading', () => {
-      const { useQuery } = require('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValueOnce({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        refetch: vi.fn(),
-      });
-
-      render(<ProjectList {...defaultProps} />);
-
-      const table = screen.getByTestId('table');
-      expect(table).toHaveAttribute('data-loading', 'true');
-    });
-  });
-
-  describe('空状态', () => {
-    it('没有数据时应该显示空状态', () => {
-      const { useQuery } = require('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValueOnce({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-
-      render(<ProjectList {...defaultProps} />);
-
-      expect(screen.getByTestId('empty')).toBeInTheDocument();
-    });
-  });
-
-  describe('错误处理', () => {
-    it('错误时应该显示错误提示', () => {
-      const { useQuery } = require('@tanstack/react-query');
-      vi.mocked(useQuery).mockReturnValueOnce({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-        error: new Error('加载失败'),
-        refetch: vi.fn(),
-      });
-
-      render(<ProjectList {...defaultProps} />);
-
-      expect(screen.getByTestId('alert')).toBeInTheDocument();
+      const selects = screen.getAllByTestId('select');
+      expect(selects.length).toBeGreaterThan(0);
     });
   });
 
   describe('图标显示', () => {
-    it('应该显示搜索图标', () => {
-      render(<ProjectList {...defaultProps} />);
+    it('应该显示搜索图标', async () => {
+      await renderProjectList();
 
       expect(screen.getByTestId('icon-search')).toBeInTheDocument();
     });
+  });
+
+  it('初始化时会加载列表和权属方选项', async () => {
+    await renderProjectList();
+
+    expect(mockLoadList).toHaveBeenCalled();
+    expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
   });
 });

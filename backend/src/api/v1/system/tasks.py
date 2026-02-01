@@ -104,7 +104,14 @@ def get_tasks(
         )
 
         # 计算总数
-        total = task_crud.count(db=db, task_type=task_type, status=status)
+        total = task_crud.count(
+            db=db,
+            task_type=task_type,
+            status=status,
+            user_id=user_id,
+            created_after=created_after_dt,
+            created_before=created_before_dt,
+        )
 
         # Convert AsyncTask models to TaskResponse schemas
         task_responses = [TaskResponse.model_validate(task) for task in tasks]

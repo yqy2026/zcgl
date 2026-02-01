@@ -188,6 +188,53 @@ def test_protected_endpoint_authenticates_via_cookie(client, test_data):
     assert data["username"] == admin_user.username
 
 
+def test_csrf_blocks_cookie_post_without_header(client, test_data):
+    """CSRF protection should block cookie-authenticated state changes without header."""
+    admin_user = test_data["admin"]
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
+    )
+    assert login_response.status_code == 200
+
+    auth_cookie = login_response.cookies.get("auth_token")
+    csrf_cookie = login_response.cookies.get("csrf_token")
+    assert auth_cookie is not None
+    assert csrf_cookie is not None
+
+    response = client.post(
+        "/api/v1/auth/logout",
+        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
+    )
+
+    assert response.status_code == 403
+
+
+def test_csrf_allows_cookie_post_with_header(client, test_data):
+    """CSRF protection should allow cookie-authenticated state changes with header."""
+    admin_user = test_data["admin"]
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
+    )
+    assert login_response.status_code == 200
+
+    auth_cookie = login_response.cookies.get("auth_token")
+    csrf_cookie = login_response.cookies.get("csrf_token")
+    assert auth_cookie is not None
+    assert csrf_cookie is not None
+
+    response = client.post(
+        "/api/v1/auth/logout",
+        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
+        headers={"X-CSRF-Token": csrf_cookie},
+    )
+
+    assert response.status_code == 200
+
+
 def test_cookie_auth_fallback_to_authorization_header(client, test_data):
     """Test that cookie auth falls back to Authorization header if cookie is missing"""
     admin_user = test_data["admin"]

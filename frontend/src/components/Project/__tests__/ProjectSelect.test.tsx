@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useQuery } from '@tanstack/react-query';
 
 // Mock @tanstack/react-query
 vi.mock('@tanstack/react-query', () => ({
@@ -35,8 +36,8 @@ vi.mock('@/services/projectService', () => ({
 }));
 
 // Mock Ant Design
-vi.mock('antd', () => ({
-  TreeSelect: ({
+vi.mock('antd', () => {
+  const TreeSelect = ({
     value,
     onChange,
     placeholder,
@@ -88,20 +89,22 @@ vi.mock('antd', () => ({
         ))}
       </select>
     </div>
-  ),
-  Spin: ({
-    spinning,
-  }: {
-    spinning?: boolean;
-  }) => (
+  );
+  TreeSelect.displayName = 'MockTreeSelect';
+
+  const Spin = ({ spinning }: { spinning?: boolean }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {spinning ? '加载中...' : null}
     </div>
-  ),
-  Empty: ({ description }: { description?: string }) => (
+  );
+  Spin.displayName = 'MockSpin';
+
+  const Empty = ({ description }: { description?: string }) => (
     <div data-testid="empty">{description || '暂无数据'}</div>
-  ),
-  Tag: ({
+  );
+  Empty.displayName = 'MockEmpty';
+
+  const Tag = ({
     children,
     closable,
     onClose,
@@ -113,16 +116,36 @@ vi.mock('antd', () => ({
     <span data-testid="tag" data-closable={closable} onClick={onClose}>
       {children}
     </span>
-  ),
-}));
+  );
+  Tag.displayName = 'MockTag';
+
+  return {
+    TreeSelect,
+    Spin,
+    Empty,
+    Tag,
+  };
+});
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  SearchOutlined: () => <span data-testid="icon-search">SearchIcon</span>,
-  FolderOutlined: () => <span data-testid="icon-folder">FolderIcon</span>,
-  CloseOutlined: () => <span data-testid="icon-close">CloseIcon</span>,
-  LoadingOutlined: () => <span data-testid="icon-loading">LoadingIcon</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const SearchOutlined = () => <span data-testid="icon-search">SearchIcon</span>;
+  const FolderOutlined = () => <span data-testid="icon-folder">FolderIcon</span>;
+  const CloseOutlined = () => <span data-testid="icon-close">CloseIcon</span>;
+  const LoadingOutlined = () => <span data-testid="icon-loading">LoadingIcon</span>;
+
+  SearchOutlined.displayName = 'SearchOutlined';
+  FolderOutlined.displayName = 'FolderOutlined';
+  CloseOutlined.displayName = 'CloseOutlined';
+  LoadingOutlined.displayName = 'LoadingOutlined';
+
+  return {
+    SearchOutlined,
+    FolderOutlined,
+    CloseOutlined,
+    LoadingOutlined,
+  };
+});
 
 import ProjectSelect from '../ProjectSelect';
 
@@ -236,7 +259,6 @@ describe('ProjectSelect', () => {
 
   describe('加载状态', () => {
     it('加载时应该显示loading', () => {
-      const { useQuery } = require('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValueOnce({
         data: undefined,
         isLoading: true,
@@ -253,7 +275,6 @@ describe('ProjectSelect', () => {
 
   describe('空状态', () => {
     it('没有数据时应该显示空状态', () => {
-      const { useQuery } = require('@tanstack/react-query');
       vi.mocked(useQuery).mockReturnValueOnce({
         data: [],
         isLoading: false,

@@ -95,7 +95,7 @@ const DashboardPage: React.FC = () => {
       {/* 页面头部 */}
       <div className={styles.dashboardHeader}>
         <div className={styles.headerContent}>
-          <Title level={2} className={styles.dashboardTitle}>
+          <Title level={1} className={styles.dashboardTitle}>
             资产管理看板
           </Title>
           <Text className={styles.dashboardSubtitle}>

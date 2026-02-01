@@ -14,7 +14,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import BusinessValidationError
+from ...crud.asset import asset_crud
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
+from ...models.asset import Asset
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
     PropertyCertificateCreate,
@@ -220,3 +222,167 @@ class PropertyCertificateService:
 
         logger.warning(f"无法解析日期: {date_str}")
         return None
+
+    def match_assets(
+        self, extracted_data: dict[str, Any], limit: int = 5
+    ) -> list[dict[str, Any]]:
+        """
+        根据提取结果匹配资产
+
+        Args:
+            extracted_data: 提取字段数据
+            limit: 返回匹配数量上限
+
+        Returns:
+            list[dict[str, Any]]: 匹配结果列表
+        """
+        address_raw = extracted_data.get("property_address")
+        owner_raw = extracted_data.get("owner_name")
+
+        address = self._normalize_match_value(address_raw)
+        owner_name = self._normalize_match_value(owner_raw)
+
+        if not address and not owner_name:
+            return []
+
+        candidates: dict[str, dict[str, Any]] = {}
+        candidate_limit = max(limit * 4, 10)
+
+        if address:
+            for asset in self._fetch_assets_by_field(
+                "address", address_raw, limit=candidate_limit
+            ):
+                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
+                entry["fields"].add("address")
+
+        if owner_name:
+            for asset in self._fetch_assets_by_field(
+                "ownership_entity", owner_raw, limit=candidate_limit
+            ):
+                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
+                entry["fields"].add("ownership_entity")
+
+        matches: list[dict[str, Any]] = []
+        for entry in candidates.values():
+            asset = entry["asset"]
+            fields = entry["fields"]
+
+            address_quality = None
+            owner_quality = None
+            match_reasons: list[str] = []
+
+            if "address" in fields and address:
+                address_quality = (
+                    self._match_quality(address, getattr(asset, "address", None))
+                    or "exact"
+                )
+                match_reasons.append("地址匹配")
+
+            if "ownership_entity" in fields and owner_name:
+                owner_quality = (
+                    self._match_quality(
+                        owner_name, getattr(asset, "ownership_entity", None)
+                    )
+                    or "exact"
+                )
+                match_reasons.append("权属方匹配")
+
+            confidence = self._calculate_match_confidence(
+                address_quality, owner_quality
+            )
+            if confidence <= 0:
+                continue
+
+            matches.append(
+                {
+                    "asset_id": asset.id,
+                    "name": getattr(asset, "property_name", "") or "",
+                    "address": getattr(asset, "address", "") or "",
+                    "confidence": confidence,
+                    "match_reasons": match_reasons,
+                }
+            )
+
+        matches.sort(key=lambda item: item["confidence"], reverse=True)
+        return matches[:limit]
+
+    def _fetch_assets_by_field(
+        self, field_name: str, raw_value: Any, limit: int = 20
+    ) -> list[Asset]:
+        """
+        根据字段值获取资产列表（处理加密字段）
+        """
+        candidates = self._build_value_candidates(raw_value)
+        if not candidates:
+            return []
+
+        handler = asset_crud.sensitive_data_handler
+        model_field = getattr(Asset, field_name)
+
+        if handler.encryption_enabled and field_name in handler.SEARCHABLE_FIELDS:
+            encrypted_candidates = []
+            for candidate in candidates:
+                encrypted = handler.encrypt_field(field_name, candidate)
+                if encrypted is not None:
+                    encrypted_candidates.append(encrypted)
+            if not encrypted_candidates:
+                return []
+            query = self.db.query(Asset).filter(
+                model_field.in_(list(dict.fromkeys(encrypted_candidates)))
+            )
+        else:
+            query_value = candidates[0]
+            query = self.db.query(Asset).filter(model_field.ilike(f"%{query_value}%"))
+
+        assets = query.limit(limit).all()
+        for asset in assets:
+            asset_crud._decrypt_asset_object(asset)
+        return assets
+
+    def _build_value_candidates(self, raw_value: Any) -> list[str]:
+        normalized = self._normalize_match_value(raw_value)
+        if not normalized:
+            return []
+        candidates = {normalized}
+        raw_text = str(raw_value).strip() if raw_value is not None else ""
+        if raw_text and raw_text != normalized:
+            candidates.add(raw_text)
+        return list(candidates)
+
+    def _normalize_match_value(self, value: Any) -> str:
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if not text:
+            return ""
+        return " ".join(text.split())
+
+    def _match_quality(self, needle: str, haystack: str | None) -> str | None:
+        if not needle or not haystack:
+            return None
+        norm_needle = self._normalize_match_value(needle).lower()
+        norm_haystack = self._normalize_match_value(haystack).lower()
+        if not norm_needle or not norm_haystack:
+            return None
+        if norm_needle == norm_haystack:
+            return "exact"
+        if norm_needle in norm_haystack or norm_haystack in norm_needle:
+            return "partial"
+        return None
+
+    def _calculate_match_confidence(
+        self, address_quality: str | None, owner_quality: str | None
+    ) -> float:
+        if address_quality and owner_quality:
+            base = 0.9
+        elif address_quality:
+            base = 0.75
+        elif owner_quality:
+            base = 0.65
+        else:
+            return 0.0
+
+        if address_quality == "partial" or owner_quality == "partial":
+            base -= 0.1
+
+        return max(min(base, 0.95), 0.5)

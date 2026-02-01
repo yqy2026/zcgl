@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from ..crud.asset import SensitiveDataHandler
@@ -93,6 +93,28 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
                 encrypted_data[field_name] = value
         return encrypted_data
 
+    def _build_filtered_query(
+        self,
+        db: Session,
+        *,
+        parent_id: str | None = None,
+        keyword: str | None = None,
+    ):
+        query = db.query(Organization).filter(Organization.is_deleted.is_(False))
+
+        if parent_id:
+            query = query.filter(Organization.parent_id == parent_id)
+
+        if keyword:
+            query = query.filter(
+                or_(
+                    Organization.name.ilike(f"%{keyword}%"),
+                    Organization.description.ilike(f"%{keyword}%"),
+                )
+            )
+
+        return query
+
     def get_multi_with_filters(
         self,
         db: Session,
@@ -103,22 +125,9 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         keyword: str | None = None,
     ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
-        query = db.query(Organization).filter(Organization.is_deleted.is_(False))
-        filters: dict[str, Any] = {}
-
-        if parent_id:
-            filters["parent_id"] = parent_id
-
-        # Apply filters and search directly on query, then paginate
-        if keyword:
-            from sqlalchemy import or_
-
-            query = query.filter(
-                or_(
-                    Organization.name.ilike(f"%{keyword}%"),
-                    Organization.description.ilike(f"%{keyword}%"),
-                )
-            )
+        query = self._build_filtered_query(
+            db, parent_id=parent_id, keyword=keyword
+        )
 
         # Apply sorting
         query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
@@ -131,6 +140,33 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         return result
+
+    def get_multi_with_count(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        parent_id: str | None = None,
+        keyword: str | None = None,
+    ) -> tuple[list[Organization], int]:
+        """获取组织列表与总数 - 解密敏感字段"""
+        query = self._build_filtered_query(
+            db, parent_id=parent_id, keyword=keyword
+        )
+
+        total = query.count()
+        items = (
+            query.order_by(Organization.level.asc(), Organization.sort_order.asc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        for item in items:
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+
+        return items, total
 
     def get_tree(self, db: Session, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构 - 解密敏感字段"""

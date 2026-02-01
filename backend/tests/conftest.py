@@ -184,3 +184,76 @@ def reset_encryption_key(monkeypatch):
     yield
     # Clean up after test
     monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+
+
+# =============================================================================
+# Mock Factory Fixtures
+# =============================================================================
+
+@pytest.fixture
+def mock_factory():
+    """
+    Mock 工厂 fixture
+    提供统一的 Mock 对象创建方法
+    """
+    from tests.factories.mock_factory import MockFactory
+    return MockFactory
+
+
+@pytest.fixture
+def mock_db(mock_factory):
+    """
+    Mock 数据库会话 fixture
+    返回一个配置好的 Mock 数据库对象
+    """
+    return mock_factory.create_mock_db()
+
+
+@pytest.fixture
+def mock_user(mock_factory):
+    """
+    Mock 用户对象 fixture
+    """
+    return mock_factory.create_mock_user()
+
+
+@pytest.fixture
+def mock_asset(mock_factory):
+    """
+    Mock 资产对象 fixture
+    """
+    return mock_factory.create_mock_asset()
+
+
+@pytest.fixture
+def mock_contract(mock_factory):
+    """
+    Mock 合同对象 fixture
+    """
+    return mock_factory.create_mock_contract()
+
+
+@pytest.fixture
+def mock_ownership(mock_factory):
+    """
+    Mock 权属对象 fixture
+    """
+    return mock_factory.create_mock_ownership()
+
+
+@pytest.fixture
+def mock_organization(mock_factory):
+    """
+    Mock 组织机构对象 fixture
+    """
+    return mock_factory.create_mock_organization()
+
+
+@pytest.fixture
+def test_data_generator():
+    """
+    测试数据生成器 fixture
+    使用 Faker 生成真实的测试数据
+    """
+    from tests.fixtures.test_data_generator import TestDataGenerator
+    return TestDataGenerator

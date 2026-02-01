@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Form,
   Space,
@@ -10,7 +10,6 @@ import {
   Tooltip,
   Col,
   Row,
-  Table,
   Modal,
   Popconfirm,
   Badge,
@@ -32,6 +31,8 @@ import type {
 } from '@/services/dictionary';
 import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { COLORS } from '@/styles/colorMap';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useArrayListData } from '@/hooks/useArrayListData';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;
@@ -58,15 +59,21 @@ interface EnumFieldStatistics {
   categories: string[];
 }
 
+interface EnumTypeFilters {
+  keyword: string;
+}
+
 // Local interfaces removed, using types from services/dictionary
 
 const EnumFieldPage: React.FC = () => {
-  const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
-  const [enumValues, setEnumValues] = useState<EnumFieldValue[]>([]);
   const [statistics, setStatistics] = useState<EnumFieldStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('types');
+  const [enumTypeOptions, setEnumTypeOptions] = useState<EnumFieldType[]>([]);
+  const [enumTypeSource, setEnumTypeSource] = useState<EnumFieldType[]>([]);
+  const [enumValueSource, setEnumValueSource] = useState<EnumFieldValue[]>([]);
+  const [isTypesLoading, setIsTypesLoading] = useState(false);
+  const [isValuesLoading, setIsValuesLoading] = useState(false);
 
   // 模态框状态
   const [typeModalVisible, setTypeModalVisible] = useState(false);
@@ -78,33 +85,61 @@ const EnumFieldPage: React.FC = () => {
   const [typeForm] = Form.useForm();
   const [valueForm] = Form.useForm();
 
-  // 加载数据
-  const loadEnumTypes = async () => {
-    setLoading(true);
-    try {
-      const data = await dictionaryService.getEnumFieldTypes();
-      setEnumTypes(data);
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      MessageManager.error(
-        apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleTypesError = useCallback((error: unknown) => {
+    const apiError = error as ApiError;
+    MessageManager.error(
+      apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败'
+    );
+  }, []);
 
-  const loadEnumValues = async (typeId: string) => {
-    try {
-      const data = await dictionaryService.getEnumFieldValues(typeId);
-      setEnumValues(data);
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      MessageManager.error(
-        apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败'
-      );
-    }
-  };
+  const handleValuesError = useCallback((error: unknown) => {
+    const apiError = error as ApiError;
+    MessageManager.error(
+      apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败'
+    );
+  }, []);
+
+  const {
+    data: enumValues,
+    loading: valuesTableLoading,
+    pagination: valuePagination,
+    loadList: loadEnumValues,
+    updatePagination: updateValuePagination,
+  } = useArrayListData<EnumFieldValue, Record<string, never>>({
+    items: enumValueSource,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  const {
+    data: enumTypes,
+    loading: typesTableLoading,
+    pagination: typePagination,
+    loadList: loadEnumTypes,
+    updatePagination: updateTypePagination,
+  } = useArrayListData<EnumFieldType, EnumTypeFilters>({
+    items: enumTypeSource,
+    initialFilters: {
+      keyword: '',
+    },
+    initialPageSize: 10,
+    filterFn: (items, nextFilters) => {
+      const trimmedKeyword = nextFilters.keyword.trim();
+      if (trimmedKeyword === '') {
+        return items;
+      }
+      return items.filter(type => {
+        const name = type.name ?? '';
+        const code = type.code ?? '';
+        const category = type.category ?? '';
+        return (
+          name.includes(trimmedKeyword) ||
+          code.includes(trimmedKeyword) ||
+          category.includes(trimmedKeyword)
+        );
+      });
+    },
+  });
 
   const loadStatistics = async () => {
     try {
@@ -123,16 +158,64 @@ const EnumFieldPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadEnumTypes();
-    loadStatistics();
-  }, []);
+  const loadEnumTypeSource = useCallback(async () => {
+    setIsTypesLoading(true);
+    try {
+      const data = await dictionaryService.getEnumFieldTypes();
+      setEnumTypeOptions(data);
+      setEnumTypeSource(data);
+    } catch (error) {
+      handleTypesError(error);
+    } finally {
+      setIsTypesLoading(false);
+    }
+  }, [handleTypesError]);
+
+  const loadEnumValueSource = useCallback(
+    async (typeId: string) => {
+      if (typeId === '') {
+        setEnumValueSource([]);
+        return;
+      }
+      setIsValuesLoading(true);
+      try {
+        const data = await dictionaryService.getEnumFieldValues(typeId);
+        setEnumValueSource(data);
+      } catch (error) {
+        handleValuesError(error);
+      } finally {
+        setIsValuesLoading(false);
+      }
+    },
+    [handleValuesError]
+  );
 
   useEffect(() => {
-    if (selectedTypeId != null) {
-      loadEnumValues(selectedTypeId);
-    }
-  }, [selectedTypeId]);
+    void loadEnumTypeSource();
+    void loadStatistics();
+  }, [loadEnumTypeSource]);
+
+  useEffect(() => {
+    void loadEnumValues({ page: 1 });
+  }, [enumValueSource, loadEnumValues]);
+
+  useEffect(() => {
+    void loadEnumTypes({ page: 1 });
+  }, [enumTypeSource, loadEnumTypes]);
+
+  useEffect(() => {
+    const typeId = selectedTypeId ?? '';
+    void loadEnumValueSource(typeId);
+  }, [selectedTypeId, loadEnumValueSource]);
+
+  const typesLoading = useMemo(
+    () => isTypesLoading || typesTableLoading,
+    [isTypesLoading, typesTableLoading]
+  );
+  const valuesLoading = useMemo(
+    () => isValuesLoading || valuesTableLoading,
+    [isValuesLoading, valuesTableLoading]
+  );
 
   // 监听模态框打开和编辑值的变化
   useEffect(() => {
@@ -359,8 +442,8 @@ const EnumFieldPage: React.FC = () => {
       const success = await dictionaryService.deleteEnumFieldType(id);
       if (success) {
         MessageManager.success('删除成功');
-        loadEnumTypes();
-        loadStatistics();
+        void loadEnumTypes();
+        void loadStatistics();
       } else {
         MessageManager.error('删除失败');
       }
@@ -392,7 +475,7 @@ const EnumFieldPage: React.FC = () => {
       if (result.success) {
         MessageManager.success('删除成功');
         if (selectedTypeId != null) {
-          loadEnumValues(selectedTypeId);
+          void loadEnumValues();
         }
       } else {
         MessageManager.error('删除失败');
@@ -423,8 +506,8 @@ const EnumFieldPage: React.FC = () => {
       if (success) {
         MessageManager.success(editingType ? '更新成功' : '创建成功');
         setTypeModalVisible(false);
-        loadEnumTypes();
-        loadStatistics();
+        void loadEnumTypes();
+        void loadStatistics();
       } else {
         MessageManager.error('操作失败');
       }
@@ -470,7 +553,7 @@ const EnumFieldPage: React.FC = () => {
         setValueModalVisible(false);
         setEditingValue(null);
         if (selectedTypeId != null) {
-          loadEnumValues(selectedTypeId);
+          void loadEnumValues();
         }
       } else {
         MessageManager.error('操作失败');
@@ -530,15 +613,15 @@ const EnumFieldPage: React.FC = () => {
                 新建枚举类型
               </Button>
             </div>
-            <Table
+            <TableWithPagination
               columns={typeColumns}
               dataSource={enumTypes}
               rowKey="id"
-              loading={loading}
-              pagination={{
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: total => `共 ${total} 条记录`,
+              loading={typesLoading}
+              paginationState={typePagination}
+              onPageChange={updateTypePagination}
+              paginationProps={{
+                showTotal: (total: number) => `共 ${total} 条记录`,
               }}
             />
           </TabPane>
@@ -553,7 +636,7 @@ const EnumFieldPage: React.FC = () => {
                   onChange={setSelectedTypeId}
                   allowClear
                 >
-                  {enumTypes.map(type => (
+                  {enumTypeOptions.map(type => (
                     <Option key={type.id} value={type.id}>
                       {type.name}
                     </Option>
@@ -569,15 +652,15 @@ const EnumFieldPage: React.FC = () => {
                 </Button>
               </Space>
             </div>
-            <Table
+            <TableWithPagination
               columns={valueColumns}
               dataSource={enumValues}
               rowKey="id"
-              loading={loading}
-              pagination={{
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: total => `共 ${total} 条记录`,
+              loading={valuesLoading}
+              paginationState={valuePagination}
+              onPageChange={updateValuePagination}
+              paginationProps={{
+                showTotal: (total: number) => `共 ${total} 条记录`,
               }}
             />
           </TabPane>

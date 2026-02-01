@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Typography, Button, Space, Row, Col, Alert } from 'antd';
 import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
@@ -12,7 +12,7 @@ import type {
 } from 'antd/es/table/interface';
 import { assetService } from '@/services/assetService';
 import { analyticsService } from '@/services/analyticsService';
-import { useAssets } from '@/hooks/useAssets';
+import { useListData } from '@/hooks/useListData';
 import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
@@ -24,63 +24,131 @@ const pageLogger = createLogger('AssetList');
 
 const { Title } = Typography;
 
+type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
+
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useState<AssetSearchParams>({
-    page: 1,
-    page_size: 20,
-  });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // 获取资产列表
-  const { data, isLoading, error } = useAssets(searchParams);
+  const fetchAssets = useCallback(
+    async ({ page, pageSize, ...filters }: { page: number; pageSize: number } & AssetListFilters) => {
+      const response = await assetService.getAssets({
+        ...filters,
+        page,
+        page_size: pageSize,
+      });
+      return {
+        items: response.items,
+        total: response.total,
+        pages: response.pages,
+      };
+    },
+    []
+  );
+
+  const {
+    data: assetRows,
+    loading: isLoading,
+    error,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    resetFilters: resetListFilters,
+  } = useListData<Asset, AssetListFilters>({
+    fetcher: fetchAssets,
+    initialFilters: {},
+    initialPageSize: 20,
+    onError: error => {
+      const message = error instanceof Error ? error.message : '加载资产数据失败';
+      pageLogger.error('资产列表加载失败:', error as Error);
+      MessageManager.error(message);
+    },
+  });
+
+  useEffect(() => {
+    void loadList();
+  }, [loadList]);
+
+  const analyticsFilters = useMemo(() => {
+    const { sort_by: _sort_by, sort_order: _sort_order, ...rest } = filters;
+    return rest;
+  }, [filters]);
 
   // 获取统计分析数据
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics', searchParams],
-    queryFn: () => analyticsService.getComprehensiveAnalytics(searchParams),
+    queryKey: ['analytics', analyticsFilters],
+    queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters),
   });
 
+  const listData = useMemo(
+    () => ({
+      items: assetRows,
+      total: pagination.total,
+      page: pagination.current,
+      page_size: pagination.pageSize,
+      pages:
+        pagination.pageSize > 0 ? Math.ceil(pagination.total / pagination.pageSize) : 0,
+    }),
+    [assetRows, pagination.current, pagination.pageSize, pagination.total]
+  );
+  const showInitialLoading = isLoading && assetRows.length === 0;
+
   // 处理搜索
-  const handleSearch = useCallback((params: AssetSearchParams) => {
-    setSearchParams({
-      ...params,
-      page: 1,
-    });
-  }, []);
+  const handleSearch = useCallback(
+    (params: AssetSearchParams) => {
+      const { page: _page, page_size: _pageSize, ...nextFilters } = params;
+      applyFilters(nextFilters);
+    },
+    [applyFilters]
+  );
 
   // 重置搜索
   const handleReset = useCallback(() => {
-    setSearchParams({
-      page: 1,
-      page_size: 20,
-    });
-  }, []);
+    resetListFilters();
+  }, [resetListFilters]);
 
   // 处理表格变化
-  const handleTableChange = useCallback((
-    pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    sorter: SorterResult<Asset> | SorterResult<Asset>[],
-    _extra: TableCurrentDataSource<Asset>
-  ) => {
-    const normalizedSorter = Array.isArray(sorter) ? sorter[0] : sorter;
-    const sortField =
-      typeof normalizedSorter?.field === 'string' ? normalizedSorter.field : undefined;
-    const sortOrder =
-      normalizedSorter?.order === 'ascend'
-        ? 'asc'
-        : normalizedSorter?.order === 'descend'
-          ? 'desc'
-          : undefined;
-    setSearchParams(prev => ({
-      ...prev,
-      page: pagination.current ?? 1,
-      page_size: pagination.pageSize ?? 20,
-      sort_by: sortField,
-      sort_order: sortOrder,
-    }));
-  }, []);
+  const handleTableChange = useCallback(
+    (
+      paginationConfig: TablePaginationConfig,
+      _filters: Record<string, FilterValue | null>,
+      sorter: SorterResult<Asset> | SorterResult<Asset>[],
+      _extra: TableCurrentDataSource<Asset>
+    ) => {
+      const normalizedSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+      const sortField =
+        typeof normalizedSorter?.field === 'string' ? normalizedSorter.field : undefined;
+      const sortOrder =
+        normalizedSorter?.order === 'ascend'
+          ? 'asc'
+          : normalizedSorter?.order === 'descend'
+            ? 'desc'
+            : undefined;
+
+      const nextFilters: AssetListFilters = { ...filters };
+
+      if (sortField != null) {
+        nextFilters.sort_by = sortField;
+      } else {
+        delete nextFilters.sort_by;
+      }
+
+      if (sortOrder != null) {
+        nextFilters.sort_order = sortOrder;
+      } else {
+        delete nextFilters.sort_order;
+      }
+
+      void loadList({
+        page: paginationConfig.current ?? pagination.current,
+        pageSize: paginationConfig.pageSize ?? pagination.pageSize,
+        filters: nextFilters,
+        replaceFilters: true,
+      });
+    },
+    [filters, loadList, pagination.current, pagination.pageSize]
+  );
 
   // 处理编辑
   const handleEdit = useCallback((asset: { id: string }) => {
@@ -93,12 +161,12 @@ const AssetListPage: React.FC = () => {
       await assetService.deleteAsset(id);
       MessageManager.success('删除成功');
       // 重新加载数据
-      window.location.reload();
+      void loadList();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '删除失败';
       MessageManager.error(errorMessage);
     }
-  }, []);
+  }, [loadList]);
 
   // 处理查看
   const handleView = useCallback((asset: { id: string }) => {
@@ -119,10 +187,7 @@ const AssetListPage: React.FC = () => {
   const handleExportAll = async () => {
     try {
       MessageManager.success('正在导出资产数据，请稍候...');
-      const blob = await assetService.exportAssets({
-        format: 'excel',
-        filters: searchParams,
-      });
+      const blob = await assetService.exportAssets(filters, { format: 'xlsx' });
 
       // 创建下载链接
       const url = window.URL.createObjectURL(blob);
@@ -176,7 +241,7 @@ const AssetListPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (showInitialLoading) {
     return <LoadingContainer text="加载资产数据中..." />;
   }
 
@@ -186,16 +251,14 @@ const AssetListPage: React.FC = () => {
         <Alert
           message="数据加载失败"
           description={
-            error instanceof Error
-              ? error.message.includes('Network Error')
-                ? '无法连接到服务器，请检查后端服务是否正常运行'
-                : `错误详情: ${error.message}`
-              : '未知错误'
+            error instanceof Error && error.message.includes('Network Error')
+              ? '无法连接到服务器，请检查后端服务是否正常运行'
+              : `错误详情: ${error instanceof Error ? error.message : '未知错误'}`
           }
           type="error"
           showIcon
           action={
-            <Button size="small" onClick={() => window.location.reload()}>
+            <Button size="small" onClick={() => void loadList()}>
               重新加载
             </Button>
           }
@@ -242,7 +305,7 @@ const AssetListPage: React.FC = () => {
       <AssetSearch
         onSearch={handleSearch}
         onReset={handleReset}
-        initialValues={searchParams}
+        initialValues={filters}
         loading={isLoading}
       />
 
@@ -251,7 +314,7 @@ const AssetListPage: React.FC = () => {
 
       {/* 资产列表组件 */}
       <AssetList
-        data={data}
+        data={listData}
         loading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}

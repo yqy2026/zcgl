@@ -185,7 +185,7 @@ def with_error_recovery(
             return await func(*args, **kwargs)
 
         # Preserve the original signature for FastAPI
-        wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
+        setattr(wrapper, "__signature__", inspect.signature(func))
         return wrapper
 
     return decorator

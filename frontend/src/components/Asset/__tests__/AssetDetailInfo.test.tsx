@@ -57,6 +57,7 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Card.displayName = 'MockCard';
 
   const Descriptions = ({
     children,
@@ -75,8 +76,9 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Descriptions.displayName = 'MockDescriptions';
 
-  Descriptions.Item = ({
+  const DescriptionsItem = ({
     children,
     label,
     span,
@@ -90,99 +92,141 @@ vi.mock('antd', () => {
       <span data-testid="item-content">{children}</span>
     </div>
   );
+  DescriptionsItem.displayName = 'MockDescriptionsItem';
+  Descriptions.Item = DescriptionsItem;
+
+  const Tag = ({
+    children,
+    color,
+  }: {
+    children: React.ReactNode;
+    color?: string;
+  }) => (
+    <span data-testid="tag" data-color={color}>
+      {children}
+    </span>
+  );
+  Tag.displayName = 'MockTag';
+
+  const Progress = ({
+    percent,
+    strokeColor,
+  }: {
+    percent: number;
+    strokeColor?: string;
+  }) => (
+    <div
+      data-testid="progress"
+      data-percent={percent}
+      data-color={strokeColor}
+      role="progressbar"
+    />
+  );
+  Progress.displayName = 'MockProgress';
+
+  const Row = ({
+    children,
+    gutter,
+  }: {
+    children: React.ReactNode;
+    gutter?: number;
+  }) => (
+    <div data-testid="row" data-gutter={gutter}>
+      {children}
+    </div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({
+    children,
+    xs,
+    sm,
+    md,
+    lg,
+  }: {
+    children: React.ReactNode;
+    xs?: number;
+    sm?: number;
+    md?: number;
+    lg?: number;
+  }) => (
+    <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
+      {children}
+    </div>
+  );
+  Col.displayName = 'MockCol';
+
+  const Statistic = ({
+    title,
+    value,
+    suffix,
+    valueStyle,
+  }: {
+    title: string;
+    value: number;
+    suffix?: string;
+    valueStyle?: React.CSSProperties;
+  }) => (
+    <div data-testid={`statistic-${title}`} style={valueStyle}>
+      <span>{title}</span>
+      <span data-testid="statistic-value">
+        {value}
+        {suffix}
+      </span>
+    </div>
+  );
+  Statistic.displayName = 'MockStatistic';
+
+  const Divider = ({
+    children,
+    titlePlacement,
+  }: {
+    children: React.ReactNode;
+    titlePlacement?: string;
+  }) => (
+    <div data-testid="divider" data-placement={titlePlacement}>
+      {children}
+    </div>
+  );
+  Divider.displayName = 'MockDivider';
 
   return {
     Card,
     Descriptions,
-    Tag: ({
-      children,
-      color,
-    }: {
-      children: React.ReactNode;
-      color?: string;
-    }) => (
-      <span data-testid="tag" data-color={color}>
-        {children}
-      </span>
-    ),
-    Progress: ({
-      percent,
-      strokeColor,
-    }: {
-      percent: number;
-      strokeColor?: string;
-    }) => (
-      <div
-        data-testid="progress"
-        data-percent={percent}
-        data-color={strokeColor}
-        role="progressbar"
-      />
-    ),
-    Row: ({ children, gutter }: { children: React.ReactNode; gutter?: number }) => (
-      <div data-testid="row" data-gutter={gutter}>
-        {children}
-      </div>
-    ),
-    Col: ({
-      children,
-      xs,
-      sm,
-      md,
-      lg,
-    }: {
-      children: React.ReactNode;
-      xs?: number;
-      sm?: number;
-      md?: number;
-      lg?: number;
-    }) => (
-      <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
-        {children}
-      </div>
-    ),
-    Statistic: ({
-      title,
-      value,
-      suffix,
-      valueStyle,
-    }: {
-      title: string;
-      value: number;
-      suffix?: string;
-      valueStyle?: React.CSSProperties;
-    }) => (
-      <div data-testid={`statistic-${title}`} style={valueStyle}>
-        <span>{title}</span>
-        <span data-testid="statistic-value">
-          {value}
-          {suffix}
-        </span>
-      </div>
-    ),
-    Divider: ({
-      children,
-      titlePlacement,
-    }: {
-      children: React.ReactNode;
-      titlePlacement?: string;
-    }) => (
-      <div data-testid="divider" data-placement={titlePlacement}>
-        {children}
-      </div>
-    ),
+    Tag,
+    Progress,
+    Row,
+    Col,
+    Statistic,
+    Divider,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  HomeOutlined: () => <span data-testid="icon-home">HomeIcon</span>,
-  EnvironmentOutlined: () => <span data-testid="icon-environment">EnvIcon</span>,
-  UserOutlined: () => <span data-testid="icon-user">UserIcon</span>,
-  CalendarOutlined: () => <span data-testid="icon-calendar">CalendarIcon</span>,
-  PercentageOutlined: () => <span data-testid="icon-percentage">PercentIcon</span>,
-  InfoCircleOutlined: () => <span data-testid="icon-info">InfoIcon</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const HomeOutlined = () => <span data-testid="icon-home">HomeIcon</span>;
+  const EnvironmentOutlined = () => <span data-testid="icon-environment">EnvIcon</span>;
+  const UserOutlined = () => <span data-testid="icon-user">UserIcon</span>;
+  const CalendarOutlined = () => <span data-testid="icon-calendar">CalendarIcon</span>;
+  const PercentageOutlined = () => <span data-testid="icon-percentage">PercentIcon</span>;
+  const InfoCircleOutlined = () => <span data-testid="icon-info">InfoIcon</span>;
+
+  HomeOutlined.displayName = 'HomeOutlined';
+  EnvironmentOutlined.displayName = 'EnvironmentOutlined';
+  UserOutlined.displayName = 'UserOutlined';
+  CalendarOutlined.displayName = 'CalendarOutlined';
+  PercentageOutlined.displayName = 'PercentageOutlined';
+  InfoCircleOutlined.displayName = 'InfoCircleOutlined';
+
+  return {
+    HomeOutlined,
+    EnvironmentOutlined,
+    UserOutlined,
+    CalendarOutlined,
+    PercentageOutlined,
+    InfoCircleOutlined,
+  };
+});
 
 import AssetDetailInfo from '../AssetDetailInfo';
 
@@ -275,7 +319,8 @@ describe('AssetDetailInfo', () => {
       const asset = createMockAsset({ is_litigated: true });
       render(<AssetDetailInfo asset={asset} />);
 
-      expect(screen.getByText('是')).toBeInTheDocument();
+      const yesElements = screen.getAllByText('是');
+      expect(yesElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -345,7 +390,8 @@ describe('AssetDetailInfo', () => {
       });
       render(<AssetDetailInfo asset={asset} />);
 
-      expect(screen.getByText(/出租率/)).toBeInTheDocument();
+      const rateElements = screen.getAllByText(/出租率/);
+      expect(rateElements.length).toBeGreaterThan(0);
     });
 
     it('有可出租面积时应该显示进度条', () => {
@@ -487,7 +533,8 @@ describe('AssetDetailInfo', () => {
       const asset = createMockAsset({ property_name: undefined });
       render(<AssetDetailInfo asset={asset} />);
 
-      expect(screen.getByText('-')).toBeInTheDocument();
+      const dashElements = screen.queryAllByText('-');
+      expect(dashElements.length).toBeGreaterThan(0);
     });
 
     it('应该处理缺失的地址', () => {

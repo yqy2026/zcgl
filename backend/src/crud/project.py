@@ -77,35 +77,39 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         if is_active is not None:
             query = query.filter(Project.is_active == is_active)
 
+        query = self._apply_project_filters(query, keyword=keyword)
+        return query.offset(skip).limit(limit).all()
+
+    def _apply_project_filters(
+        self,
+        query: Any,
+        *,
+        keyword: str | None = None,
+        project_status: str | None = None,
+    ) -> Any:
         if keyword:
+            like_keyword = f"%{keyword}%"
             query = query.filter(
                 or_(
-                    Project.name.ilike(f"%{keyword}%"),
-                    Project.code.ilike(f"%{keyword}%"),
+                    Project.name.ilike(like_keyword),
+                    Project.code.ilike(like_keyword),
                 )
             )
 
-        return query.offset(skip).limit(limit).all()
+        if project_status:
+            query = query.filter(Project.project_status == project_status)
+
+        return query
 
     def search(
         self, db: Session, search_params: ProjectSearchRequest
     ) -> tuple[list[Project], int]:
         """搜索项目"""
-        query = db.query(Project)
-
-        # 关键词搜索
-        if search_params.keyword:
-            keyword = f"%{search_params.keyword}%"
-            query = query.filter(
-                or_(
-                    Project.name.ilike(keyword),
-                    Project.code.ilike(keyword),
-                )
-            )
-
-        # 状态筛选 (Fixed mapping)
-        if search_params.project_status:
-            query = query.filter(Project.project_status == search_params.project_status)
+        query = self._apply_project_filters(
+            db.query(Project),
+            keyword=search_params.keyword,
+            project_status=search_params.project_status,
+        )
 
         # 负责人筛选
         # Schema ProjectSearchRequest has no project_manager field

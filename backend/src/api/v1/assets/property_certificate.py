@@ -119,13 +119,15 @@ async def upload_certificate(
         # Extract information from file
         result = await service.extract_from_file(str(temp_file_path), safe_filename)
 
+        asset_matches = service.match_assets(result.get("data", {}))
+
         # Transform result to response model
         response = PropertyCertificateUploadResponse(
             session_id=file_id,
             certificate_type="property_cert",
             extracted_data=result.get("data", {}),
             confidence_score=result.get("confidence", 0.0),
-            asset_matches=[],  # TODO: Implement asset matching
+            asset_matches=asset_matches,
             validation_errors=[],
             warnings=[],
         )

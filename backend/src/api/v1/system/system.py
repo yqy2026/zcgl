@@ -31,7 +31,7 @@ def health_check() -> JSONResponse:
             else {}
         )
 
-        health_data = {
+        health_data: dict[str, Any] = {
             "status": "healthy",
             "version": "2.0.0",
             "service": "土地物业资产管理系统",
@@ -41,26 +41,34 @@ def health_check() -> JSONResponse:
             },
         }
 
-        try:
-            database_data: dict[str, Any] = health_data["database"]  # type: ignore[assignment]
-            database_data.update(
-                {
-                    "connection_pool_utilization": pool_status.get("utilization", 0),
-                    "active_connections": metrics.get("active_connections", 0),
-                    "total_queries": metrics.get("total_queries", 0),
-                    "slow_queries": metrics.get("slow_queries", 0),
-                    "avg_response_time_ms": round(
-                        metrics.get("avg_response_time", 0), 2
-                    ),
-                    "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
-                }
-            )
-        except Exception as db_e:
+        database_data = health_data.get("database")
+        if isinstance(database_data, dict):
+            try:
+                database_data.update(
+                    {
+                        "connection_pool_utilization": pool_status.get(
+                            "utilization", 0
+                        ),
+                        "active_connections": metrics.get("active_connections", 0),
+                        "total_queries": metrics.get("total_queries", 0),
+                        "slow_queries": metrics.get("slow_queries", 0),
+                        "avg_response_time_ms": round(
+                            metrics.get("avg_response_time", 0), 2
+                        ),
+                        "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
+                    }
+                )
+            except Exception as db_e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to get detailed database metrics: {db_e}")
+                database_data["metrics_error"] = str(db_e)
+        else:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to get detailed database metrics: {db_e}")
-            database_data["metrics_error"] = str(db_e)
+            logger.warning("Database status payload is missing or invalid")
 
         return success_response(data=health_data, message="系统运行正常")
 

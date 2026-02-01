@@ -130,13 +130,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
     ) -> tuple[list[RentContract], int]:
         """获取合同列表（支持筛选）- V2支持通过资产ID筛选"""
 
-        # 使用 QueryBuilder
-        filters = {}
-        if ownership_id:
-            filters["ownership_id"] = ownership_id
-        if contract_status:
-            filters["contract_status"] = contract_status
-
         # 构建基础查询
         query = db.query(RentContract)
         if include_relations:
@@ -144,7 +137,54 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
                 Ownership, RentContract.ownership_id == Ownership.id, isouter=True
             )
 
-        # V2: 通过多对多关联表筛选资产
+        query = self._apply_contract_filters(
+            query,
+            contract_number=contract_number,
+            tenant_name=tenant_name,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            contract_status=contract_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        from sqlalchemy import desc
+
+        # Apply sorting and pagination
+        query = query.order_by(desc(RentContract.created_at))
+        items = query.offset(skip).limit(limit).all()
+
+        # For count, we need to rebuild the query without pagination
+        # Re-apply filters for count
+        count_query = db.query(RentContract)
+        count_query = self._apply_contract_filters(
+            count_query,
+            contract_number=contract_number,
+            tenant_name=tenant_name,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            contract_status=contract_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        total = count_query.count()
+
+        return items, total
+
+    def _apply_contract_filters(
+        self,
+        query,
+        *,
+        contract_number: str | None,
+        tenant_name: str | None,
+        asset_id: str | None,
+        ownership_id: str | None,
+        contract_status: str | None,
+        start_date: date | None,
+        end_date: date | None,
+    ):
+        """应用合同筛选条件（用于列表与统计）"""
         if asset_id:
             query = query.join(
                 rent_contract_assets,
@@ -159,49 +199,12 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             query = query.filter(RentContract.start_date >= start_date)
         if end_date:
             query = query.filter(RentContract.end_date <= end_date)
-
-        # Apply additional filters from QB
-        from sqlalchemy import desc
-
         if ownership_id:
             query = query.filter(RentContract.ownership_id == ownership_id)
         if contract_status:
             query = query.filter(RentContract.contract_status == contract_status)
 
-        # Apply sorting and pagination
-        query = query.order_by(desc(RentContract.created_at))
-        items = query.offset(skip).limit(limit).all()
-
-        # For count, we need to rebuild the query without pagination
-        # Re-apply filters for count
-        count_query = db.query(RentContract)
-        if asset_id:
-            count_query = count_query.join(
-                rent_contract_assets,
-                RentContract.id == rent_contract_assets.c.contract_id,
-            ).filter(rent_contract_assets.c.asset_id == asset_id)
-        if contract_number:
-            count_query = count_query.filter(
-                RentContract.contract_number.contains(contract_number)
-            )
-        if tenant_name:
-            count_query = count_query.filter(
-                RentContract.tenant_name.contains(tenant_name)
-            )
-        if start_date:
-            count_query = count_query.filter(RentContract.start_date >= start_date)
-        if end_date:
-            count_query = count_query.filter(RentContract.end_date <= end_date)
-        if ownership_id:
-            count_query = count_query.filter(RentContract.ownership_id == ownership_id)
-        if contract_status:
-            count_query = count_query.filter(
-                RentContract.contract_status == contract_status
-            )
-
-        total = count_query.count()
-
-        return items, total
+        return query
 
     def get_by_contract_number(
         self, db: Session, contract_number: str
@@ -246,37 +249,19 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
     ) -> tuple[list[RentLedger], int]:
         """获取台账列表（支持筛选）"""
 
-        filters = {}
-        if contract_id:
-            filters["contract_id"] = contract_id
-        if asset_id:
-            filters["asset_id"] = asset_id
-        if ownership_id:
-            filters["ownership_id"] = ownership_id
-        if year_month:
-            filters["year_month"] = year_month
-        if payment_status:
-            filters["payment_status"] = payment_status
-
         query = db.query(RentLedger)
-        if start_date:
-            query = query.filter(RentLedger.due_date >= start_date)
-        if end_date:
-            query = query.filter(RentLedger.due_date <= end_date)
+        query = self._apply_ledger_filters(
+            query,
+            contract_id=contract_id,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            year_month=year_month,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-        # Apply filters from QB
         from sqlalchemy import desc
-
-        if contract_id:
-            query = query.filter(RentLedger.contract_id == contract_id)
-        if asset_id:
-            query = query.filter(RentLedger.asset_id == asset_id)
-        if ownership_id:
-            query = query.filter(RentLedger.ownership_id == ownership_id)
-        if year_month:
-            query = query.filter(RentLedger.year_month == year_month)
-        if payment_status:
-            query = query.filter(RentLedger.payment_status == payment_status)
 
         # Apply sorting and pagination
         query = query.order_by(desc(RentLedger.year_month), desc(RentLedger.due_date))
@@ -287,27 +272,50 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         # But this is acceptable for now or we can enhance QB later.
 
         # Count
-        count_query = db.query(RentLedger)
-        if contract_id:
-            count_query = count_query.filter(RentLedger.contract_id == contract_id)
-        if asset_id:
-            count_query = count_query.filter(RentLedger.asset_id == asset_id)
-        if ownership_id:
-            count_query = count_query.filter(RentLedger.ownership_id == ownership_id)
-        if year_month:
-            count_query = count_query.filter(RentLedger.year_month == year_month)
-        if payment_status:
-            count_query = count_query.filter(
-                RentLedger.payment_status == payment_status
-            )
-        if start_date:
-            count_query = count_query.filter(RentLedger.due_date >= start_date)
-        if end_date:
-            count_query = count_query.filter(RentLedger.due_date <= end_date)
+        count_query = self._apply_ledger_filters(
+            db.query(RentLedger),
+            contract_id=contract_id,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            year_month=year_month,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         total = count_query.count()
 
         return items, total
+
+    def _apply_ledger_filters(
+        self,
+        query,
+        *,
+        contract_id: str | None,
+        asset_id: str | None,
+        ownership_id: str | None,
+        year_month: str | None,
+        payment_status: str | None,
+        start_date: date | None,
+        end_date: date | None,
+    ):
+        """应用台账筛选条件（用于列表与统计）"""
+        if contract_id:
+            query = query.filter(RentLedger.contract_id == contract_id)
+        if asset_id:
+            query = query.filter(RentLedger.asset_id == asset_id)
+        if ownership_id:
+            query = query.filter(RentLedger.ownership_id == ownership_id)
+        if year_month:
+            query = query.filter(RentLedger.year_month == year_month)
+        if payment_status:
+            query = query.filter(RentLedger.payment_status == payment_status)
+        if start_date:
+            query = query.filter(RentLedger.due_date >= start_date)
+        if end_date:
+            query = query.filter(RentLedger.due_date <= end_date)
+
+        return query
 
     def get_by_contract_and_month(
         self, db: Session, contract_id: str, year_month: str

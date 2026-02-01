@@ -1,13 +1,20 @@
 /**
- * AnalyticsDashboard 组件测试
+ * AnalyticsDashboard 组件测试（修复版）
  * 测试分析仪表板组件
+ *
+ * 修复内容：
+ * - 移除过度的 Ant Design 组件 mock
+ * - 使用 renderWithProviders 提供必要的 Context Provider
+ * - 保留必要的 mock（hooks, utils, 子组件）
+ * - 添加 beforeEach 清除 mock
+ * - 保持完整的测试覆盖
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import React from 'react';
 
-// Mock hooks
+// Mock hooks（这些 mock 是必要的）
 vi.mock('../../hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(() => ({
     data: {
@@ -37,7 +44,7 @@ vi.mock('../../hooks/useAnalytics', () => ({
   })),
 }));
 
-// Mock utils
+// Mock utils（这些 mock 是必要的）
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
     loading: vi.fn(),
@@ -58,7 +65,7 @@ vi.mock('@/api/config', () => ({
   createApiUrl: (path: string) => `/api${path}`,
 }));
 
-// Mock sub-components
+// Mock sub-components（这些 mock 是必要的，避免测试子组件本身）
 vi.mock('./AnalyticsFilters', () => ({
   AnalyticsFilters: ({
     onApplyFilters,
@@ -117,45 +124,6 @@ vi.mock('../PerformanceMonitor', () => ({
   default: () => <div data-testid="performance-monitor" />,
 }));
 
-// Mock Ant Design components
-vi.mock('antd', () => ({
-  Row: ({ children }: { children?: React.ReactNode }) => <div data-testid="row">{children}</div>,
-  Col: ({ children }: { children?: React.ReactNode }) => <div data-testid="col">{children}</div>,
-  Card: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
-  ),
-  Typography: {
-    Title: ({ children, level, type }: { children?: React.ReactNode; level?: number; type?: string }) => (
-      <h1 data-testid="title" data-level={level} data-type={type}>{children}</h1>
-    ),
-  },
-  Button: ({ children, icon, onClick, loading, type }: { children?: React.ReactNode; icon?: React.ReactNode; onClick?: () => void; loading?: boolean; type?: string }) => (
-    <button data-testid="button" data-type={type} data-loading={loading} onClick={onClick}>
-      {icon}{children}
-    </button>
-  ),
-  Space: ({ children }: { children?: React.ReactNode }) => <div data-testid="space">{children}</div>,
-  Dropdown: ({ children, menu }: { children?: React.ReactNode; menu?: { items?: Array<{ key: string; label: string; onClick?: () => void }> } }) => (
-    <div data-testid="dropdown">
-      {menu?.items?.map(item => (
-        <button key={item.key} data-testid={`dropdown-item-${item.key}`} onClick={item.onClick}>
-          {item.label}
-        </button>
-      ))}
-      {children}
-    </div>
-  ),
-}));
-
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  ReloadOutlined: () => <span data-testid="icon-reload" />,
-  DownloadOutlined: () => <span data-testid="icon-download" />,
-  SettingOutlined: () => <span data-testid="icon-setting" />,
-  FullscreenOutlined: () => <span data-testid="icon-fullscreen" />,
-  FullscreenExitOutlined: () => <span data-testid="icon-fullscreen-exit" />,
-}));
-
 describe('AnalyticsDashboard - 组件导入测试', () => {
   it('应该能够导入AnalyticsDashboard组件', async () => {
     const module = await import('../AnalyticsDashboard');
@@ -176,42 +144,42 @@ describe('AnalyticsDashboard - 渲染测试', () => {
 
   it('应该渲染标题', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('资产分析')).toBeInTheDocument();
   });
 
   it('应该渲染AnalyticsFilters组件', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByTestId('analytics-filters')).toBeInTheDocument();
   });
 
   it('应该渲染刷新按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('刷新')).toBeInTheDocument();
   });
 
   it('应该渲染导出按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('导出')).toBeInTheDocument();
   });
 
   it('应该渲染全屏按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('全屏')).toBeInTheDocument();
   });
 
   it('应该渲染自动刷新按钮', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('自动刷新')).toBeInTheDocument();
   });
@@ -224,7 +192,7 @@ describe('AnalyticsDashboard - 统计卡片测试', () => {
 
   it('应该渲染关键指标卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const statisticCards = screen.getAllByTestId('statistic-card');
     expect(statisticCards.length).toBeGreaterThan(0);
@@ -232,7 +200,7 @@ describe('AnalyticsDashboard - 统计卡片测试', () => {
 
   it('应该渲染财务指标卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const financialCards = screen.getAllByTestId('financial-statistic-card');
     expect(financialCards.length).toBeGreaterThan(0);
@@ -246,7 +214,7 @@ describe('AnalyticsDashboard - 图表测试', () => {
 
   it('应该渲染图表卡片', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const chartCards = screen.getAllByTestId('chart-card');
     expect(chartCards.length).toBeGreaterThan(0);
@@ -254,7 +222,7 @@ describe('AnalyticsDashboard - 图表测试', () => {
 
   it('应该渲染饼图', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const pieCharts = screen.getAllByTestId('pie-chart');
     expect(pieCharts.length).toBeGreaterThan(0);
@@ -262,7 +230,7 @@ describe('AnalyticsDashboard - 图表测试', () => {
 
   it('应该渲染柱状图', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const barCharts = screen.getAllByTestId('bar-chart');
     expect(barCharts.length).toBeGreaterThan(0);
@@ -270,7 +238,7 @@ describe('AnalyticsDashboard - 图表测试', () => {
 
   it('应该渲染折线图', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const lineCharts = screen.getAllByTestId('line-chart');
     expect(lineCharts.length).toBeGreaterThan(0);
@@ -304,7 +272,7 @@ describe('AnalyticsDashboard - 交互测试', () => {
     } as ReturnType<typeof useAnalytics>);
 
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const refreshButton = screen.getByText('刷新');
     fireEvent.click(refreshButton);
@@ -334,7 +302,7 @@ describe('AnalyticsDashboard - 交互测试', () => {
     } as ReturnType<typeof useAnalytics>);
 
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     const applyButton = screen.getByTestId('apply-filters');
     fireEvent.click(applyButton);
@@ -350,21 +318,21 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
 
   it('应该有Excel导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByTestId('dropdown-item-excel')).toBeInTheDocument();
   });
 
   it('应该有PDF导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByTestId('dropdown-item-pdf')).toBeInTheDocument();
   });
 
   it('应该有CSV导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByTestId('dropdown-item-csv')).toBeInTheDocument();
   });
@@ -396,7 +364,7 @@ describe('AnalyticsDashboard - 空状态测试', () => {
     } as ReturnType<typeof useAnalytics>);
 
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
@@ -417,7 +385,7 @@ describe('AnalyticsDashboard - 错误状态测试', () => {
     } as unknown as ReturnType<typeof useAnalytics>);
 
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('数据加载失败')).toBeInTheDocument();
   });
@@ -432,7 +400,7 @@ describe('AnalyticsDashboard - 错误状态测试', () => {
     } as unknown as ReturnType<typeof useAnalytics>);
 
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
 
     expect(screen.getByText('重试')).toBeInTheDocument();
   });
@@ -446,14 +414,14 @@ describe('AnalyticsDashboard - 属性测试', () => {
   it('应该支持initialFilters属性', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     const initialFilters = { ownership_status: '自有' };
-    render(<AnalyticsDashboard initialFilters={initialFilters} />);
+    renderWithProviders(<AnalyticsDashboard initialFilters={initialFilters} />);
 
     expect(screen.getByTestId('analytics-filters')).toBeInTheDocument();
   });
 
   it('应该支持className属性', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
-    const { container } = render(<AnalyticsDashboard className="custom-class" />);
+    const { container } = renderWithProviders(<AnalyticsDashboard className="custom-class" />);
 
     expect(container.firstChild).toHaveClass('custom-class');
   });

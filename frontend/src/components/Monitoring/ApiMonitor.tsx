@@ -3,8 +3,8 @@
  * 显示API健康状态和实时监控信息
  */
 
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Alert, Table, Tag, Progress, Button } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Card, Row, Col, Statistic, Alert, Tag, Progress, Button } from 'antd';
 import {
   CloudServerOutlined,
   CheckCircleOutlined,
@@ -13,6 +13,8 @@ import {
 } from '@ant-design/icons';
 import { createLogger } from '@/utils/logger';
 import { apiHealthCheck } from '@/services/apiHealthCheck';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 const componentLogger = createLogger('ApiMonitor');
 
@@ -25,8 +27,6 @@ interface ApiStatus {
 }
 
 const ApiMonitor: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [apiStatus, setApiStatus] = useState<ApiStatus[]>([]);
   const [summary, setSummary] = useState({
     total: 0,
     healthy: 0,
@@ -34,34 +34,58 @@ const ApiMonitor: React.FC = () => {
     unknown: 0,
     healthPercentage: 0,
   });
+  const [apiStatusSource, setApiStatusSource] = useState<ApiStatus[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadApiStatus = async () => {
-    setLoading(true);
+  const handleLoadError = useCallback((error: unknown) => {
+    componentLogger.error('Failed to load API status:', error as Error);
+  }, []);
+
+  const {
+    data: apiStatus,
+    loading: listLoading,
+    pagination,
+    loadList,
+    updatePagination,
+  } = useArrayListData<ApiStatus, Record<string, never>>({
+    items: apiStatusSource,
+    initialFilters: {},
+    initialPageSize: 10,
+    onError: handleLoadError,
+  });
+
+  const refreshStatus = useCallback(async () => {
+    setIsRefreshing(true);
     try {
       // Check all critical endpoints
       await apiHealthCheck.checkCriticalEndpoints();
 
       // Get results and convert to array
       const statusArray = Array.from(apiHealthCheck.getResults().values());
-
-      setApiStatus(statusArray);
+      setApiStatusSource(statusArray);
 
       // Calculate summary
       const healthSummary = apiHealthCheck.getHealthSummary();
       setSummary(healthSummary);
     } catch (error) {
-      componentLogger.error('Failed to load API status:', error as Error);
+      handleLoadError(error);
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [handleLoadError]);
 
   useEffect(() => {
-    loadApiStatus();
+    void refreshStatus();
     // 每30秒自动刷新一次
-    const interval = setInterval(loadApiStatus, 30000);
+    const interval = setInterval(() => {
+      void refreshStatus();
+    }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshStatus]);
+
+  useEffect(() => {
+    void loadList({ page: 1 });
+  }, [apiStatusSource, loadList]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -152,6 +176,11 @@ const ApiMonitor: React.FC = () => {
     return '#ff4d4f';
   };
 
+  const loading = useMemo(
+    () => isRefreshing || listLoading,
+    [isRefreshing, listLoading]
+  );
+
   return (
     <div style={{ padding: '24px' }}>
       <div
@@ -163,7 +192,12 @@ const ApiMonitor: React.FC = () => {
         }}
       >
         <h2>API健康监控</h2>
-        <Button type="primary" icon={<ReloadOutlined />} loading={loading} onClick={loadApiStatus}>
+        <Button
+          type="primary"
+          icon={<ReloadOutlined />}
+          loading={loading}
+          onClick={() => void refreshStatus()}
+        >
           刷新状态
         </Button>
       </div>
@@ -243,15 +277,14 @@ const ApiMonitor: React.FC = () => {
 
       {/* 详细状态表格 */}
       <Card title="端点详细状态" size="small">
-        <Table
+        <TableWithPagination
           columns={columns}
           dataSource={apiStatus}
           rowKey="endpoint"
           loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
+          paginationState={pagination}
+          onPageChange={updatePagination}
+          paginationProps={{
             showTotal: (total: number) => `共 ${total} 个端点`,
           }}
           size="small"

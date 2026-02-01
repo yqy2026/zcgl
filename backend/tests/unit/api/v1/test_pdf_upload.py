@@ -19,7 +19,7 @@ import io
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import pytest
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 from src.core.exception_handler import BaseBusinessError
 

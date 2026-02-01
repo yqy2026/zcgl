@@ -182,3 +182,35 @@ class TestMiddlewareIntegration:
         result = _is_token_blacklisted("any-token")
         # 应该不会抛出异常，返回 bool 值
         assert isinstance(result, bool)
+
+    def test_blacklist_fail_closed_when_circuit_open_in_production(self, monkeypatch):
+        """生产环境下黑名单熔断应 fail-closed"""
+        import src.middleware.auth as auth
+
+        monkeypatch.setattr(auth, "is_production", lambda: True)
+        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: False)
+
+        assert auth._is_token_blacklisted("fail-closed-token") is True
+
+    def test_blacklist_fail_open_when_circuit_open_in_non_production(self, monkeypatch):
+        """非生产环境下黑名单熔断应 fail-open"""
+        import src.middleware.auth as auth
+
+        monkeypatch.setattr(auth, "is_production", lambda: False)
+        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: False)
+
+        assert auth._is_token_blacklisted("fail-open-token") is False
+
+    def test_blacklist_exception_fail_closed_in_production(self, monkeypatch):
+        """生产环境下黑名单异常应 fail-closed"""
+        import src.middleware.auth as auth
+        import src.security.token_blacklist as token_blacklist
+
+        def raise_error(*_args, **_kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(auth, "is_production", lambda: True)
+        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: True)
+        monkeypatch.setattr(token_blacklist.blacklist_manager, "is_blacklisted", raise_error)
+
+        assert auth._is_token_blacklisted("exception-token") is True

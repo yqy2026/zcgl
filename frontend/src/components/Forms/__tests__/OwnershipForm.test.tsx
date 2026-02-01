@@ -92,11 +92,18 @@ vi.mock('antd', () => {
     Col: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     Divider: () => <hr />,
     Switch: () => <input type="checkbox" data-testid="switch" />,
-    Select: ({ children }: { children: React.ReactNode }) => <select>{children}</select>,
+    Select: Object.assign(
+      ({ children }: { children: React.ReactNode }) => <select>{children}</select>,
+      {
+        Option: ({ children, value }: { children: React.ReactNode; value?: string }) => (
+          <option value={value}>{children}</option>
+        ),
+      }
+    ),
   };
 });
 
-import { OwnershipForm } from '../OwnershipForm';
+import OwnershipForm from '../OwnershipForm';
 import { ownershipService } from '@/services/ownershipService';
 import { MessageManager } from '@/utils/messageManager';
 

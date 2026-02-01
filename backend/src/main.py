@@ -38,6 +38,7 @@ from .database import (
     init_db,
 )
 from .security.logging_security import setup_logging_security
+from .core.observability import init_sentry
 
 if TYPE_CHECKING:
     from .utils.cache_manager import CacheManager as AsyncCacheManager
@@ -47,6 +48,9 @@ setup_utf8_encoding()
 
 # 设置日志
 logger = logging.getLogger(__name__)
+
+# 初始化 Sentry (可选)
+init_sentry()
 
 # 记录启动环境
 env = get_environment()
@@ -268,6 +272,7 @@ app.add_middleware(
     allow_headers=[
         "Content-Type",
         "Authorization",
+        "X-CSRF-Token",
         "X-Requested-With",
         "X-Request-ID",
         "Accept",

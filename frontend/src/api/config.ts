@@ -69,6 +69,13 @@ export const API_CONFIG = {
   },
 } as const;
 
+// ==================== CSRF 配置 ====================
+
+export const CSRF_CONFIG = {
+  COOKIE_NAME: getEnvVar('VITE_CSRF_COOKIE_NAME', 'csrf_token'),
+  HEADER_NAME: getEnvVar('VITE_CSRF_HEADER_NAME', 'X-CSRF-Token'),
+} as const;
+
 // ==================== 错误代码映射 ====================
 
 export const ERROR_CODES = {
@@ -105,6 +112,7 @@ export const HEADERS = {
   REQUEST_ID: 'X-Request-ID',
   USER_AGENT: 'X-User-Agent',
   CLIENT_VERSION: 'X-Client-Version',
+  CSRF_TOKEN: 'X-CSRF-Token',
 } as const;
 
 // ==================== 环境配置 ====================

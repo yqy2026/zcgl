@@ -8,6 +8,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 interface SpinMockProps {
+  children?: React.ReactNode;
   tip?: React.ReactNode;
   size?: 'small' | 'default' | 'large' | number;
   delay?: number;
@@ -18,7 +19,7 @@ interface SpinMockProps {
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Spin: ({ tip, size, delay, spinning, className, style }: SpinMockProps) => (
+  Spin: ({ children, tip, size, delay, spinning, className, style }: SpinMockProps) => (
     <div
       data-testid="spin"
       data-tip={tip}
@@ -29,6 +30,7 @@ vi.mock('antd', () => ({
       style={style}
     >
       Loading...
+      {children}
     </div>
   ),
   message: {

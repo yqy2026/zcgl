@@ -10,7 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import AssetListPage from '../AssetListPage';
 
 // Mock services
-vi.mock('../../../services/assetService', () => ({
+vi.mock('@/services/assetService', () => ({
   assetService: {
     deleteAsset: vi.fn(),
     exportAssets: vi.fn(),
@@ -18,19 +18,19 @@ vi.mock('../../../services/assetService', () => ({
   },
 }));
 
-vi.mock('../../../services/analyticsService', () => ({
+vi.mock('@/services/analyticsService', () => ({
   analyticsService: {
     getComprehensiveAnalytics: vi.fn(),
   },
 }));
 
 // Mock hooks
-vi.mock('../../../hooks/useAssets', () => ({
-  useAssets: vi.fn(),
+vi.mock('@/hooks/useListData', () => ({
+  useListData: vi.fn(),
 }));
 
 // Mock components
-vi.mock('../../../components/Asset/AssetList', () => ({
+vi.mock('@/components/Asset/AssetList', () => ({
   default: ({ data: _data, onEdit, onDelete, onView }: { data: unknown; onEdit: (asset: { id: string }) => void; onDelete: (id: string) => void; onView: (asset: { id: string }) => void }) => (
     <div data-testid="asset-list">
       Asset List Component
@@ -41,7 +41,7 @@ vi.mock('../../../components/Asset/AssetList', () => ({
   ),
 }));
 
-vi.mock('../../../components/Asset/AssetSearch', () => ({
+vi.mock('@/components/Asset/AssetSearch', () => ({
   default: ({ onSearch, onReset }: { onSearch: (params: unknown) => void; onReset: () => void }) => (
     <div data-testid="asset-search">
       <button onClick={() => onSearch({ keyword: 'test' })}>Search</button>
@@ -50,17 +50,17 @@ vi.mock('../../../components/Asset/AssetSearch', () => ({
   ),
 }));
 
-vi.mock('../../../components/Asset/AssetAreaSummary', () => ({
+vi.mock('@/components/Asset/AssetAreaSummary', () => ({
   default: () => <div data-testid="asset-area-summary">Area Summary</div>,
 }));
 
-vi.mock('../../../components/Common/StateContainer', () => ({
+vi.mock('@/components/Common/StateContainer', () => ({
   PageContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="page-container">{children}</div>,
   ContentSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   LoadingContainer: ({ text }: { text: string }) => <div data-testid="loading">{text}</div>,
 }));
 
-vi.mock('../../../utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     error: vi.fn(),
@@ -76,9 +76,10 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
-import { useAssets } from '../../../hooks/useAssets';
-import { assetService } from '../../../services/assetService';
+import { assetService } from '@/services/assetService';
+import { analyticsService } from '@/services/analyticsService';
 import { MessageManager } from '@/utils/messageManager';
+import { useListData } from '@/hooks/useListData';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -110,24 +111,46 @@ const renderWithProviders = () => {
   );
 };
 
+let mockData: Array<{ id: string; property_name: string }> = [];
+let mockLoading = false;
+let mockError: Error | null = null;
+let mockPagination = { current: 1, pageSize: 20, total: 0 };
+let mockFilters: Record<string, unknown> = {};
+
+const mockLoadList = vi.fn();
+const mockApplyFilters = vi.fn();
+const mockResetFilters = vi.fn();
+const mockUpdatePagination = vi.fn();
+
 describe('AssetListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockData = [
+      { id: 'asset_1', property_name: '资产A' },
+      { id: 'asset_2', property_name: '资产B' },
+    ];
+    mockLoading = false;
+    mockError = null;
+    mockPagination = { current: 1, pageSize: 20, total: 2 };
+    mockFilters = {};
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue({
+      success: true,
+      data: {},
+    } as unknown as ReturnType<typeof analyticsService.getComprehensiveAnalytics>);
 
-    vi.mocked(useAssets).mockReturnValue({
-      data: {
-        items: [
-          { id: 'asset_1', property_name: '资产A' },
-          { id: 'asset_2', property_name: '资产B' },
-        ],
-        total: 2,
-        page: 1,
-        page_size: 20,
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useAssets>);
+    vi.mocked(useListData).mockImplementation(_options => {
+      return {
+        data: mockData,
+        loading: mockLoading,
+        error: mockError,
+        pagination: mockPagination,
+        filters: mockFilters,
+        loadList: mockLoadList,
+        applyFilters: mockApplyFilters,
+        resetFilters: mockResetFilters,
+        updatePagination: mockUpdatePagination,
+      } as unknown as ReturnType<typeof useListData>;
+    });
   });
 
   describe('渲染', () => {
@@ -166,12 +189,9 @@ describe('AssetListPage', () => {
 
   describe('加载状态', () => {
     it('加载中显示加载状态', () => {
-      vi.mocked(useAssets).mockReturnValue({
-        data: null,
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      } as unknown as ReturnType<typeof useAssets>);
+      mockLoading = true;
+      mockData = [];
+      mockPagination = { current: 1, pageSize: 20, total: 0 };
 
       renderWithProviders();
 
@@ -181,17 +201,17 @@ describe('AssetListPage', () => {
   });
 
   describe('错误处理', () => {
-    it('显示错误信息', () => {
-      vi.mocked(useAssets).mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: new Error('服务器错误'),
-        refetch: vi.fn(),
-      } as unknown as ReturnType<typeof useAssets>);
+    it('显示错误信息', async () => {
+      mockError = new Error('服务器错误');
+      mockData = [];
+      mockLoading = false;
+      mockPagination = { current: 1, pageSize: 20, total: 0 };
 
       renderWithProviders();
 
-      expect(screen.getByText('数据加载失败')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('数据加载失败')).toBeInTheDocument();
+      });
       expect(screen.getByText('重新加载')).toBeInTheDocument();
     });
   });
@@ -263,8 +283,7 @@ describe('AssetListPage', () => {
 
       fireEvent.click(screen.getByText('Search'));
 
-      // 搜索后 useAssets 应该被调用
-      expect(useAssets).toHaveBeenCalled();
+      expect(mockApplyFilters).toHaveBeenCalledWith({ keyword: 'test' });
     });
 
     it('点击重置清空搜索条件', () => {
@@ -272,7 +291,7 @@ describe('AssetListPage', () => {
 
       fireEvent.click(screen.getByText('Reset'));
 
-      expect(useAssets).toHaveBeenCalled();
+      expect(mockResetFilters).toHaveBeenCalled();
     });
   });
 
@@ -290,7 +309,7 @@ describe('AssetListPage', () => {
       fireEvent.click(screen.getByText('导出全部'));
 
       await waitFor(() => {
-        expect(assetService.exportAssets).toHaveBeenCalled();
+        expect(assetService.exportAssets).toHaveBeenCalledWith({}, { format: 'xlsx' });
         expect(MessageManager.success).toHaveBeenCalledWith('资产数据导出成功');
       });
     });

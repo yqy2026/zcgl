@@ -11,7 +11,8 @@ import os
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import sessionmaker
 
 # Lazy imports - only import when fixtures are actually used
@@ -101,7 +102,18 @@ def db_tables(engine):
 
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
-        command.upgrade(alembic_cfg, "head")
+        try:
+            command.upgrade(alembic_cfg, "head")
+        except ProgrammingError as exc:
+            # If tables already exist without a matching Alembic version, stamp head.
+            if "DuplicateTable" in str(exc) or "already exists" in str(exc):
+                inspector = inspect(engine)
+                if inspector.get_table_names():
+                    command.stamp(alembic_cfg, "head")
+                else:
+                    raise
+            else:
+                raise
 
     # ALWAYS create tables from Base.metadata
     # The initial migration is empty (placeholder), so we need to create base tables

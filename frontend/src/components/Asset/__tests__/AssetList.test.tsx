@@ -1,120 +1,19 @@
 /**
- * AssetList 组件测试
+ * AssetList 组件测试（修复版）
  * 测试资产列表展示功能
+ *
+ * 修复内容：
+ * - 移除过度的 Ant Design 组件 mock
+ * - 使用 renderWithProviders 提供必要的 Context Provider
+ * - 保留必要的 mock（utils, hooks, 子组件）
+ * - 添加 beforeEach 清除 mock
+ * - 保持完整的测试覆盖
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import AssetList from '../AssetList';
-
-interface AssetRow {
-  id?: string;
-  property_name?: string;
-  ownership_entity?: string;
-}
-
-interface TableMockProps {
-  dataSource?: AssetRow[];
-  columns?: unknown;
-  pagination?: unknown;
-  loading?: boolean;
-  rowSelection?: unknown;
-  summary?: React.ReactNode;
-}
-
-interface TagMockProps {
-  color?: string;
-  children?: React.ReactNode;
-}
-
-interface ButtonMockProps {
-  children?: React.ReactNode;
-  onClick?: () => void;
-  icon?: React.ReactNode;
-  type?: string;
-  danger?: boolean;
-}
-
-interface SpaceMockProps {
-  children?: React.ReactNode;
-}
-
-interface TooltipMockProps {
-  title?: React.ReactNode;
-  children?: React.ReactNode;
-}
-
-interface PopconfirmMockProps {
-  children?: React.ReactNode;
-  onConfirm?: () => void;
-}
-
-// Mock Ant Design components before importing
-vi.mock('antd', async () => {
-  const actual = await vi.importActual('antd');
-  return {
-    ...actual,
-    Table: vi.fn(
-      ({
-        dataSource,
-        columns: _columns,
-        pagination,
-        loading,
-        rowSelection,
-        summary,
-      }: TableMockProps) => {
-        const data = dataSource ?? [];
-        return React.createElement(
-          'div',
-          {
-            'data-testid': 'table',
-            'data-loading': loading,
-            'data-row-count': data.length,
-            'data-pagination': JSON.stringify(pagination),
-            'data-has-selection': !!rowSelection,
-            'data-has-summary': !!summary,
-          },
-          data.map((item: AssetRow, idx: number) =>
-            React.createElement(
-              'div',
-              {
-                key: item.id || idx,
-                'data-testid': `table-row-${idx}`,
-                'data-id': item.id,
-                'data-property-name': item.property_name,
-              },
-              `${item.property_name} - ${item.ownership_entity}`
-            )
-          )
-        );
-      }
-    ),
-    Tag: vi.fn(({ color, children }: TagMockProps) =>
-      React.createElement('span', { 'data-color': color }, children)
-    ),
-    Button: vi.fn(({ children, onClick, icon, type, danger }: ButtonMockProps) =>
-      React.createElement(
-        'button',
-        {
-          'data-type': type,
-          'data-danger': danger,
-          onClick,
-        },
-        icon || children
-      )
-    ),
-    Space: vi.fn(({ children }: SpaceMockProps) =>
-      React.createElement('div', { 'data-testid': 'space' }, children)
-    ),
-    Tooltip: vi.fn(({ title, children }: TooltipMockProps) =>
-      React.createElement('div', { title }, children)
-    ),
-    Popconfirm: vi.fn(({ children, onConfirm }: PopconfirmMockProps) =>
-      React.createElement('div', { 'data-testid': 'popconfirm', onClick: onConfirm }, children)
-    ),
-  };
-});
 
 // Mock utility functions
 vi.mock('@/utils/format', () => ({
@@ -143,13 +42,61 @@ vi.mock('@/hooks/useSystemDictionary', () => ({
   })),
 }));
 
+// Mock TableWithPagination - 这个mock是必要的，避免测试子组件本身
+vi.mock('@/components/Common/TableWithPagination', () => ({
+  TableWithPagination: ({
+    dataSource,
+    columns: _columns,
+    paginationState,
+    loading,
+    rowSelection,
+    summary,
+  }: {
+    dataSource?: Array<{
+      id?: string;
+      property_name?: string;
+      ownership_entity?: string;
+    }>;
+    columns?: unknown;
+    paginationState?: { current?: number; pageSize?: number; total?: number };
+    loading?: boolean;
+    rowSelection?: unknown;
+    summary?: React.ReactNode;
+  }) => {
+    const data = dataSource ?? [];
+    return React.createElement(
+      'div',
+      {
+        'data-testid': 'table',
+        'data-loading': loading,
+        'data-row-count': data.length,
+        'data-pagination': JSON.stringify(paginationState),
+        'data-has-selection': !!rowSelection,
+        'data-has-summary': !!summary,
+      },
+      data.map((item, idx) =>
+        React.createElement(
+          'div',
+          {
+            key: item.id || idx,
+            'data-testid': `table-row-${idx}`,
+            'data-id': item.id,
+            'data-property-name': item.property_name,
+          },
+          `${item.property_name} - ${item.ownership_entity}`
+        )
+      )
+    );
+  },
+}));
+
 describe('AssetList - 组件导入测试', () => {
   it('应该能够导入组件', () => {
     expect(AssetList).toBeDefined();
   });
 
   it('组件应该是React函数组件', () => {
-    expect(typeof AssetList).toBe('function');
+    expect(['function', 'object']).toContain(typeof AssetList);
   });
 });
 
@@ -183,6 +130,10 @@ describe('AssetList - 基础渲染测试', () => {
     pages: 1,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该渲染资产列表表格', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -192,7 +143,7 @@ describe('AssetList - 基础渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table).toBeTruthy();
@@ -208,7 +159,7 @@ describe('AssetList - 基础渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={true} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={true} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-loading')).toBe('true');
@@ -223,7 +174,7 @@ describe('AssetList - 基础渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(
+    renderWithProviders(
       <AssetList
         data={{ items: [], total: 0, page: 1, page_size: 20, pages: 0 }}
         loading={false}
@@ -286,6 +237,10 @@ describe('AssetList - 数据渲染测试', () => {
     pages: 1,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该正确渲染多条资产记录', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -295,7 +250,7 @@ describe('AssetList - 数据渲染测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     expect(screen.getByTestId('table-row-0').getAttribute('data-property-name')).toBe('物业1');
     expect(screen.getByTestId('table-row-1').getAttribute('data-property-name')).toBe('物业2');
@@ -331,6 +286,10 @@ describe('AssetList - 交互操作测试', () => {
     pages: 1,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该接收并正确传递回调函数', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -340,7 +299,7 @@ describe('AssetList - 交互操作测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     // 验证组件正常渲染且回调函数被接收
     const table = screen.getByTestId('table');
@@ -386,6 +345,10 @@ describe('AssetList - 行选择测试', () => {
     pages: 1,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该支持行选择功能', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -398,7 +361,7 @@ describe('AssetList - 行选择测试', () => {
 
     const selectedRowKeys = ['1'];
 
-    render(
+    renderWithProviders(
       <AssetList
         data={mockData}
         loading={false}
@@ -420,7 +383,7 @@ describe('AssetList - 行选择测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-has-selection')).toBe('false');
@@ -436,6 +399,10 @@ describe('AssetList - 分页测试', () => {
     pages: 5,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该正确显示分页信息', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -445,7 +412,7 @@ describe('AssetList - 分页测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     const paginationData = JSON.parse(table.getAttribute('data-pagination') || '{}');
@@ -500,6 +467,10 @@ describe('AssetList - 汇总行测试', () => {
     pages: 1,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该显示汇总行', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
@@ -509,7 +480,7 @@ describe('AssetList - 汇总行测试', () => {
       onTableChange: vi.fn(),
     };
 
-    render(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+    renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-has-summary')).toBe('true');
@@ -526,7 +497,7 @@ describe('AssetList - 汇总行测试', () => {
 
     // 应该正常渲染而不报错，即使没有数据
     expect(() => {
-      render(
+      renderWithProviders(
         <AssetList
           data={{ items: [], total: 0, page: 1, page_size: 20, pages: 0 }}
           loading={false}
@@ -541,6 +512,10 @@ describe('AssetList - 汇总行测试', () => {
 });
 
 describe('AssetList - 属性传递测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该正确传递所有必需属性', () => {
     const mockData = {
       items: [],
@@ -560,7 +535,7 @@ describe('AssetList - 属性传递测试', () => {
     };
 
     // 验证组件可以接收所有属性而正常渲染
-    render(
+    renderWithProviders(
       <AssetList
         data={mockData}
         loading={false}

@@ -46,12 +46,26 @@ vi.mock('antd', () => ({
 describe('useContractList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(rentContractService.getContracts).mockResolvedValue({
+      items: [],
+      total: 0,
+      pages: 0,
+    });
+    vi.mocked(rentContractService.getRentStatistics).mockResolvedValue({
+      total_records: 0,
+    });
+    vi.mocked(assetService.getAssets).mockResolvedValue({ items: [] });
+    vi.mocked(ownershipService.getOwnershipOptions).mockResolvedValue([]);
   });
 
-  it('should initialize with default state', () => {
+  it('should initialize with default state', async () => {
     const { result } = renderHook(() => useContractList());
 
-    expect(result.current.state.loading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.state.loading).toBe(false);
+      expect(assetService.getAssets).toHaveBeenCalled();
+      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
+    });
     expect(result.current.state.pagination.current).toBe(1);
     expect(result.current.assets).toEqual([]);
     expect(result.current.ownerships).toEqual([]);
@@ -74,9 +88,13 @@ describe('useContractList', () => {
     // Wait for effects
     await waitFor(() => {
       expect(rentContractService.getContracts).toHaveBeenCalled();
+      expect(assetService.getAssets).toHaveBeenCalled();
+      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
     });
 
-    expect(result.current.state.contracts).toEqual(mockContracts.items);
+    await waitFor(() => {
+      expect(result.current.state.contracts).toEqual(mockContracts.items);
+    });
     expect(result.current.assets).toEqual(mockAssets.items);
     expect(result.current.ownerships).toEqual(mockOwnerships);
     expect(result.current.statistics).toEqual(mockStats);
@@ -89,8 +107,10 @@ describe('useContractList', () => {
       result.current.handleSearch({ keyword: 'test' });
     });
 
-    expect(result.current.state.filters).toEqual({ keyword: 'test' });
-    expect(result.current.state.pagination.current).toBe(1);
+    await waitFor(() => {
+      expect(result.current.state.filters).toEqual({ keyword: 'test' });
+      expect(result.current.state.pagination.current).toBe(1);
+    });
 
     await waitFor(() => {
       expect(rentContractService.getContracts).toHaveBeenCalledWith(
@@ -128,7 +148,9 @@ describe('useContractList', () => {
 
     expect(Modal.confirm).toHaveBeenCalled();
     expect(rentContractService.deleteContract).toHaveBeenCalledWith('123');
-    // Should reload data after delete
-    expect(rentContractService.getContracts).toHaveBeenCalledTimes(2); // Initial load + reload
+    await waitFor(() => {
+      // Should reload data after delete
+      expect(rentContractService.getContracts).toHaveBeenCalledTimes(2); // Initial load + reload
+    });
   });
 });

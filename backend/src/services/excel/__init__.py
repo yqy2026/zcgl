@@ -35,3 +35,10 @@ try:
     __all__.append("ExcelTemplateService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("excel.excel_template_service.ExcelTemplateService")
+
+try:
+    from .excel_preview_service import ExcelPreviewService as ExcelPreviewService
+
+    __all__.append("ExcelPreviewService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("excel.excel_preview_service.ExcelPreviewService")

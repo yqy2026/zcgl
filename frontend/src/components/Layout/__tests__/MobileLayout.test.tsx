@@ -41,49 +41,60 @@ interface TypographyTextMockProps {
   style?: CSSProperties;
 }
 
-vi.mock('antd', () => ({
-  Layout: {
-    Header: ({ children, style }: LayoutSectionMockProps) => (
-      <div data-testid="header" style={style}>
+vi.mock('antd', () => {
+  const MockLayout = Object.assign(
+    ({ children, style }: LayoutSectionMockProps) => (
+      <div data-testid="layout" style={style}>
         {children}
       </div>
     ),
-    Content: ({ children, style }: LayoutSectionMockProps) => (
-      <div data-testid="content" style={style}>
+    {
+      Header: ({ children, style }: LayoutSectionMockProps) => (
+        <div data-testid="header" style={style}>
+          {children}
+        </div>
+      ),
+      Content: ({ children, style }: LayoutSectionMockProps) => (
+        <div data-testid="content" style={style}>
+          {children}
+        </div>
+      ),
+      Footer: ({ children, style }: LayoutSectionMockProps) => (
+        <div data-testid="footer" style={style}>
+          {children}
+        </div>
+      ),
+    }
+  );
+
+  return {
+    Layout: MockLayout,
+    Button: ({ children, icon, type, size, style }: ButtonMockProps) => (
+      <button data-testid="button" data-type={type} data-size={size} style={style}>
+        {icon}
+        {children}
+      </button>
+    ),
+    Space: ({ children, size }: SpaceMockProps) => (
+      <div data-testid="space" data-size={size}>
         {children}
       </div>
     ),
-    Footer: ({ children, style }: LayoutSectionMockProps) => (
-      <div data-testid="footer" style={style}>
+    Avatar: ({ children, size, icon, style }: AvatarMockProps) => (
+      <div data-testid="avatar" data-size={size} style={style}>
+        {icon}
         {children}
       </div>
     ),
-  },
-  Button: ({ children, icon, type, size, style }: ButtonMockProps) => (
-    <button data-testid="button" data-type={type} data-size={size} style={style}>
-      {icon}
-      {children}
-    </button>
-  ),
-  Space: ({ children, size }: SpaceMockProps) => (
-    <div data-testid="space" data-size={size}>
-      {children}
-    </div>
-  ),
-  Avatar: ({ children, size, icon, style }: AvatarMockProps) => (
-    <div data-testid="avatar" data-size={size} style={style}>
-      {icon}
-      {children}
-    </div>
-  ),
-  Typography: {
-    Text: ({ children, strong, type, style }: TypographyTextMockProps) => (
-      <span data-testid="text" data-strong={strong} data-type={type} style={style}>
-        {children}
-      </span>
-    ),
-  },
-}));
+    Typography: {
+      Text: ({ children, strong, type, style }: TypographyTextMockProps) => (
+        <span data-testid="text" data-strong={strong} data-type={type} style={style}>
+          {children}
+        </span>
+      ),
+    },
+  };
+});
 
 vi.mock('@ant-design/icons', () => ({
   UserOutlined: () => <div data-testid="icon-user" />,

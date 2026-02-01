@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Select,
@@ -41,24 +40,21 @@ import { COLORS } from '@/styles/colorMap';
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
 import { logService, type OperationLog, type LogStatistics } from '@/services/systemService';
 
 const OperationLogPage: React.FC = () => {
-  const [logs, setLogs] = useState<OperationLog[]>([]);
-  const [statistics, setStatistics] = useState<LogStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null);
-  const [_searchText, _setSearchText] = useState('');
-  const [_moduleFilter, _setModuleFilter] = useState<string>('');
-  const [_actionFilter, _setActionFilter] = useState<string>('');
-  const [_statusFilter, _setStatusFilter] = useState<string>('');
-  const [_dateRange, _setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 20,
-    total: 0,
-  });
+
+  interface LogFilters {
+    searchText: string;
+    module: string;
+    action: string;
+    status: string;
+    dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
+  }
 
   // 操作类型选项
   const actionOptions = [
@@ -151,38 +147,31 @@ const OperationLogPage: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    loadLogs();
-  }, []);
-
-  const loadLogs = async (options?: {
-    page?: number;
-    pageSize?: number;
-    searchText?: string;
-    module?: string;
-    action?: string;
-    status?: string;
-    dateRange?: [dayjs.Dayjs, dayjs.Dayjs] | null;
-  }) => {
-    setLoading(true);
-    try {
-      const page = options?.page ?? pagination.current;
-      const pageSize = options?.pageSize ?? pagination.pageSize;
-      const searchText = options?.searchText ?? _searchText;
-      const moduleFilter = options?.module ?? _moduleFilter;
-      const actionFilter = options?.action ?? _actionFilter;
-      const statusFilter = options?.status ?? _statusFilter;
-      const dateRange = options?.dateRange ?? _dateRange;
-
+  const fetchLogs = useCallback(
+    async ({
+      page,
+      pageSize,
+      searchText,
+      module,
+      action,
+      status,
+      dateRange,
+    }: {
+      page: number;
+      pageSize: number;
+    } & LogFilters) => {
+      const trimmedSearch = searchText.trim();
       const params = {
         page,
         page_size: pageSize,
-        module: moduleFilter || undefined,
-        action: actionFilter || undefined,
-        start_date: dateRange?.[0].format('YYYY-MM-DD'),
-        end_date: dateRange?.[1].format('YYYY-MM-DD'),
-        search: searchText || undefined,
-        response_status: statusFilter || undefined,
+        module: module === '' ? undefined : module,
+        action: action === '' ? undefined : action,
+        start_date:
+          dateRange != null && dateRange[0] != null ? dateRange[0].format('YYYY-MM-DD') : undefined,
+        end_date:
+          dateRange != null && dateRange[1] != null ? dateRange[1].format('YYYY-MM-DD') : undefined,
+        search: trimmedSearch === '' ? undefined : trimmedSearch,
+        response_status: status === '' ? undefined : status,
       };
 
       const result = await logService.getLogs(params);
@@ -197,44 +186,127 @@ const OperationLogPage: React.FC = () => {
         action_name: item.action_name ?? item.action,
       }));
 
-      setLogs(normalizedItems);
-      setPagination({
-        current: result?.page ?? page,
-        pageSize: result?.page_size ?? pageSize,
+      return {
+        items: normalizedItems,
         total: result?.total ?? normalizedItems.length,
-      });
+        pages: result?.pages,
+      };
+    },
+    []
+  );
 
-      const responseTimes = normalizedItems
-        .map(log => log.response_time)
-        .filter((time): time is number => typeof time === 'number');
-      const avgResponseTime =
-        responseTimes.length > 0
-          ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
-          : 0;
-
-      setStatistics({
-        total: result?.total ?? normalizedItems.length,
-        today: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'day')).length,
-        this_week: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'week'))
-          .length,
-        this_month: normalizedItems.filter(log => dayjs(log.created_at).isSame(dayjs(), 'month'))
-          .length,
-        by_action: {},
-        by_module: {},
-        error_count: normalizedItems.filter(log => (log.response_status ?? 0) >= 400).length,
-        avg_response_time: avgResponseTime,
-      });
-    } catch {
+  const {
+    data: logs,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<OperationLog, LogFilters>({
+    fetcher: fetchLogs,
+    initialFilters: {
+      searchText: '',
+      module: '',
+      action: '',
+      status: '',
+      dateRange: null,
+    },
+    initialPageSize: 20,
+    onError: () => {
       MessageManager.error('加载操作日志失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
-  const handleSearch = (value: string) => {
-    _setSearchText(value);
-    loadLogs({ page: 1, searchText: value });
-  };
+  useEffect(() => {
+    void loadList();
+  }, [loadList]);
+
+  const handleSearch = useCallback(
+    (value: string) => {
+      applyFilters({
+        searchText: value,
+        module: filters.module,
+        action: filters.action,
+        status: filters.status,
+        dateRange: filters.dateRange,
+      });
+    },
+    [applyFilters, filters.action, filters.dateRange, filters.module, filters.status]
+  );
+
+  const handleModuleChange = useCallback(
+    (value: string | undefined) => {
+      applyFilters({
+        searchText: filters.searchText,
+        module: value ?? '',
+        action: filters.action,
+        status: filters.status,
+        dateRange: filters.dateRange,
+      });
+    },
+    [applyFilters, filters.action, filters.dateRange, filters.searchText, filters.status]
+  );
+
+  const handleActionChange = useCallback(
+    (value: string | undefined) => {
+      applyFilters({
+        searchText: filters.searchText,
+        module: filters.module,
+        action: value ?? '',
+        status: filters.status,
+        dateRange: filters.dateRange,
+      });
+    },
+    [applyFilters, filters.dateRange, filters.module, filters.searchText, filters.status]
+  );
+
+  const handleStatusChange = useCallback(
+    (value: string | undefined) => {
+      applyFilters({
+        searchText: filters.searchText,
+        module: filters.module,
+        action: filters.action,
+        status: value ?? '',
+        dateRange: filters.dateRange,
+      });
+    },
+    [applyFilters, filters.action, filters.dateRange, filters.module, filters.searchText]
+  );
+
+  const handleDateRangeChange = useCallback(
+    (dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => {
+      applyFilters({
+        searchText: filters.searchText,
+        module: filters.module,
+        action: filters.action,
+        status: filters.status,
+        dateRange: dates,
+      });
+    },
+    [applyFilters, filters.action, filters.module, filters.searchText, filters.status]
+  );
+
+  const statistics = useMemo<LogStatistics>(() => {
+    const responseTimes = logs
+      .map(log => log.response_time)
+      .filter((time): time is number => typeof time === 'number');
+    const avgResponseTime =
+      responseTimes.length > 0
+        ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+        : 0;
+
+    return {
+      total: pagination.total,
+      today: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'day')).length,
+      this_week: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'week')).length,
+      this_month: logs.filter(log => dayjs(log.created_at).isSame(dayjs(), 'month')).length,
+      by_action: {},
+      by_module: {},
+      error_count: logs.filter(log => (log.response_status ?? 0) >= 400).length,
+      avg_response_time: avgResponseTime,
+    };
+  }, [logs, pagination.total]);
 
   const handleViewDetail = (log: OperationLog) => {
     setSelectedLog(log);
@@ -430,6 +502,8 @@ const OperationLogPage: React.FC = () => {
                 placeholder="搜索用户名、资源或操作"
                 allowClear
                 onSearch={handleSearch}
+                value={filters.searchText}
+                onChange={event => handleSearch(event.target.value)}
                 prefix={<SearchOutlined />}
               />
             </Col>
@@ -438,10 +512,8 @@ const OperationLogPage: React.FC = () => {
                 placeholder="模块筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={value => {
-                  _setModuleFilter(value ?? '');
-                  loadLogs({ page: 1, module: value ?? '' });
-                }}
+                value={filters.module === '' ? undefined : filters.module}
+                onChange={handleModuleChange}
               >
                 {moduleOptions.map(module => (
                   <Option key={module.value} value={module.value}>
@@ -455,10 +527,8 @@ const OperationLogPage: React.FC = () => {
                 placeholder="操作筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={value => {
-                  _setActionFilter(value ?? '');
-                  loadLogs({ page: 1, action: value ?? '' });
-                }}
+                value={filters.action === '' ? undefined : filters.action}
+                onChange={handleActionChange}
               >
                 {actionOptions.map(action => (
                   <Option key={action.value} value={action.value}>
@@ -472,10 +542,8 @@ const OperationLogPage: React.FC = () => {
                 placeholder="状态筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={value => {
-                  _setStatusFilter(value ?? '');
-                  loadLogs({ page: 1, status: value ?? '' });
-                }}
+                value={filters.status === '' ? undefined : filters.status}
+                onChange={handleStatusChange}
               >
                 {statusOptions.map(status => (
                   <Option key={status.value} value={status.value}>
@@ -487,48 +555,35 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
+                value={filters.dateRange}
                 onChange={dates => {
-                  if (dates && dates[0] && dates[1]) {
-                    _setDateRange([dates[0], dates[1]]);
-                    loadLogs({ page: 1, dateRange: [dates[0], dates[1]] });
+                  if (dates != null && dates[0] != null && dates[1] != null) {
+                    handleDateRangeChange([dates[0], dates[1]]);
                   } else {
-                    _setDateRange(null);
-                    loadLogs({ page: 1, dateRange: null });
+                    handleDateRangeChange(null);
                   }
                 }}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>
             <Col xs={24} sm={12} md={4}>
-              <Button icon={<ReloadOutlined />} onClick={() => loadLogs()} loading={loading}>
+              <Button icon={<ReloadOutlined />} onClick={() => void loadList()} loading={loading}>
                 刷新
               </Button>
             </Col>
           </Row>
         </div>
 
-        <Table
+        <TableWithPagination
           columns={columns}
           dataSource={logs}
           rowKey="id"
           loading={loading}
-          onChange={paginationState => {
-            const current = paginationState.current ?? 1;
-            const pageSize = paginationState.pageSize ?? 20;
-            setPagination(prev => ({
-              ...prev,
-              current,
-              pageSize,
-            }));
-            loadLogs({ page: current, pageSize });
-          }}
-          pagination={{
-            current: pagination.current,
-            total: pagination.total,
-            pageSize: pagination.pageSize,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+          paginationState={pagination}
+          onPageChange={updatePagination}
+          paginationProps={{
+            showTotal: (total: number, range: [number, number]) =>
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
           }}
           scroll={{ x: 1200 }}
         />

@@ -102,12 +102,19 @@ export interface ContactListResponse {
 class ContactService {
   private readonly basePath = '/contacts';
 
+  private requireData<T>(data: T | null | undefined, errorMessage: string): T {
+    if (data == null) {
+      throw new Error(errorMessage);
+    }
+    return data;
+  }
+
   /**
    * 创建联系人
    */
   async createContact(data: ContactCreate): Promise<Contact> {
     const response = await apiClient.post<Contact>(this.basePath, data);
-    return response.data!;
+    return this.requireData(response.data, '创建联系人失败');
   }
 
   /**
@@ -115,7 +122,7 @@ class ContactService {
    */
   async getContact(id: string): Promise<Contact> {
     const response = await apiClient.get<Contact>(`${this.basePath}/${id}`);
-    return response.data!;
+    return this.requireData(response.data, '获取联系人失败');
   }
 
   /**
@@ -131,7 +138,7 @@ class ContactService {
       `${this.basePath}/entity/${entityType}/${entityId}`,
       { params: { page, page_size: pageSize } }
     );
-    return response.data!;
+    return this.requireData(response.data, '获取联系人列表失败');
   }
 
   /**
@@ -154,7 +161,7 @@ class ContactService {
    */
   async updateContact(id: string, data: ContactUpdate): Promise<Contact> {
     const response = await apiClient.put<Contact>(`${this.basePath}/${id}`, data);
-    return response.data!;
+    return this.requireData(response.data, '更新联系人失败');
   }
 
   /**
@@ -162,7 +169,7 @@ class ContactService {
    */
   async deleteContact(id: string): Promise<Contact> {
     const response = await apiClient.delete<Contact>(`${this.basePath}/${id}`);
-    return response.data!;
+    return this.requireData(response.data, '删除联系人失败');
   }
 
   /**
@@ -177,7 +184,7 @@ class ContactService {
       `${this.basePath}/batch/${entityType}/${entityId}`,
       contacts
     );
-    return response.data!;
+    return this.requireData(response.data, '批量创建联系人失败');
   }
 }
 

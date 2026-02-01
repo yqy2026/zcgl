@@ -5,8 +5,40 @@
 
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { ConfigProvider } from 'antd';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { ConfigProvider, theme as antTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+
+// =============================================================================
+// QueryClient 工厂函数
+// =============================================================================
+
+/**
+ * 创建测试用的 QueryClient
+ *
+ * 配置说明：
+ * - retries: 0 - 测试环境不需要重试，加快测试速度
+ * - gcTime: 0 - 测试之间不缓存数据，确保测试隔离
+ */
+export function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+    logger: {
+      log: console.log,
+      warn: console.warn,
+      error: () => {}, // 忽略错误日志
+    },
+  });
+}
 
 // =============================================================================
 // 自定义渲染函数
@@ -14,16 +46,53 @@ import zhCN from 'antd/locale/zh_CN';
 
 /**
  * 包含所有必要Provider的自定义渲染函数
+ *
+ * Provider 顺序（从内到外）：
+ * 1. ConfigProvider - Ant Design 主题和国际化
+ * 2. QueryClientProvider - React Query 数据管理
+ * 3. BrowserRouter - React Router 路由
+ *
  * @param ui - 要渲染的React元素
  * @param options - 渲染选项
  * @returns 渲染结果
  */
-export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+export function renderWithProviders(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'> & {
+    queryClient?: QueryClient;
+    route?: string;
+  }
+) {
+  const { queryClient, route, ...renderOptions } = options ?? {};
+
   function AllProviders({ children }: { children: React.ReactNode }): JSX.Element {
-    return <ConfigProvider locale={zhCN}>{children}</ConfigProvider>;
+    const client = queryClient ?? createTestQueryClient();
+
+    // 设置路由（如果需要）
+    if (route) {
+      window.history.pushState({}, 'Test page', route);
+    }
+
+    return (
+      <QueryClientProvider client={client}>
+        <BrowserRouter>
+          <ConfigProvider
+            locale={zhCN}
+            theme={{
+              algorithm: antTheme.defaultAlgorithm,
+              token: {
+                colorPrimary: '#1890ff',
+              },
+            }}
+          >
+            {children}
+          </ConfigProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    );
   }
 
-  return render(ui, { wrapper: AllProviders, ...options });
+  return render(ui, { wrapper: AllProviders, ...renderOptions });
 }
 
 // 重新导出所有testing-library工具

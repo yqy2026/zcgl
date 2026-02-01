@@ -4,7 +4,7 @@
 测试安全头、请求验证、文件上传安全等中间件功能。
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from fastapi import Request, Response
@@ -23,6 +23,21 @@ def create_mock_request(url_path: str = "/api/test", method: str = "GET") -> Moc
     request.query_params = {}
     request.client = Mock(host="192.168.1.100")
     return request
+
+
+def build_multipart_body(boundary: str, file_count: int) -> bytes:
+    """构造 multipart/form-data 请求体"""
+    parts: list[str] = []
+    for index in range(file_count):
+        parts.append(
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file{index}"; '
+            f'filename="file{index}.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "hello\r\n"
+        )
+    parts.append(f"--{boundary}--\r\n")
+    return "".join(parts).encode("utf-8")
 
 
 class TestSecurityHeadersMiddleware:
@@ -203,6 +218,52 @@ class TestFileUploadSecurityMiddleware:
         # 应该允许（可能使用分块传输编码）
         await middleware.dispatch(request, call_next)
         assert call_next_called
+
+    @pytest.mark.asyncio
+    async def test_excel_upload_file_count_limit_enforced(self):
+        """测试Excel上传文件数量限制"""
+        from src.middleware.security_middleware import FileUploadSecurityMiddleware
+
+        boundary = "testboundary"
+        body = build_multipart_body(boundary, file_count=11)
+
+        middleware = FileUploadSecurityMiddleware(app=None)
+        request = create_mock_request(url_path="/api/v1/excel/upload")
+        request.headers = {
+            "content-type": f"multipart/form-data; boundary={boundary}",
+            "content-length": str(len(body)),
+        }
+        request.body = AsyncMock(return_value=body)
+
+        async def call_next(req):
+            return Response(content="test")
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 400
+        assert "上传文件数量超过限制" in response.body.decode("utf-8")
+
+    @pytest.mark.asyncio
+    async def test_pdf_import_file_count_limit_enforced(self):
+        """测试PDF导入文件数量限制"""
+        from src.middleware.security_middleware import FileUploadSecurityMiddleware
+
+        boundary = "testboundary"
+        body = build_multipart_body(boundary, file_count=6)
+
+        middleware = FileUploadSecurityMiddleware(app=None)
+        request = create_mock_request(url_path="/api/v1/pdf-import/upload")
+        request.headers = {
+            "content-type": f"multipart/form-data; boundary={boundary}",
+            "content-length": str(len(body)),
+        }
+        request.body = AsyncMock(return_value=body)
+
+        async def call_next(req):
+            return Response(content="test")
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 400
+        assert "上传文件数量超过限制" in response.body.decode("utf-8")
 
 
 class TestSecurityMiddlewareIntegration:

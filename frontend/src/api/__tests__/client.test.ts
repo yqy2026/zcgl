@@ -3,10 +3,22 @@
  * 测试API客户端的核心功能（简化版本，不依赖MSW）
  */
 
+import type { AxiosError, AxiosResponse } from 'axios';
 import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { Logger } from '@/utils/logger';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
+
+const { mockClearAuthData } = vi.hoisted(() => ({
+  mockClearAuthData: vi.fn(),
+}));
+
+vi.mock('@/utils/AuthStorage', () => ({
+  AuthStorage: {
+    clearAuthData: mockClearAuthData,
+  },
+}));
 
 // =============================================================================
 // Mock数据
@@ -264,6 +276,119 @@ describe('ApiClient', () => {
       expect(config.enableLogging).toBe(false);
     });
   });
+
+  describe('Token刷新处理', () => {
+    let originalLocation: Location;
+
+    const setTestLocation = (pathname: string, search: string, hash: string): void => {
+      Object.defineProperty(window, 'location', {
+        value: {
+          pathname,
+          search,
+          hash,
+          href: '',
+        },
+        configurable: true,
+        writable: true,
+      });
+    };
+
+    beforeEach(() => {
+      originalLocation = window.location;
+      mockClearAuthData.mockReset();
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    it('refresh接口返回401时应直接登出，避免递归刷新', async () => {
+      const axiosInstance = client.getAxiosInstance();
+      const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
+      if (responseInterceptor == null) {
+        throw new Error('Response interceptor is not registered');
+      }
+
+      const postSpy = vi.spyOn(axiosInstance, 'post');
+      setTestLocation('/current', '?q=1', '#hash');
+
+      const config: InternalAxiosRequestConfig & { _retry?: boolean } = {
+        url: '/auth/refresh',
+        method: 'post',
+        headers: new AxiosHeaders(),
+      };
+      const response = {
+        status: 401,
+        statusText: 'Unauthorized',
+        data: {},
+        headers: {},
+        config,
+      } as AxiosResponse;
+      const error = {
+        config,
+        response,
+        isAxiosError: true,
+        name: 'AxiosError',
+        message: 'Unauthorized',
+        toJSON: () => ({}),
+      } as AxiosError;
+
+      await expect(responseInterceptor(error)).rejects.toBe(error);
+
+      expect(postSpy).not.toHaveBeenCalled();
+      expect(mockClearAuthData).toHaveBeenCalledTimes(1);
+      expect(window.location.href).toBe(
+        `/login?redirect=${encodeURIComponent('/current?q=1#hash')}`
+      );
+    });
+
+    it('普通请求401且刷新失败时应登出并跳转', async () => {
+      const axiosInstance = client.getAxiosInstance();
+      const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
+      if (responseInterceptor == null) {
+        throw new Error('Response interceptor is not registered');
+      }
+
+      setTestLocation('/assets', '', '');
+
+      const refreshError = new Error('Refresh failed');
+      const postSpy = vi.spyOn(axiosInstance, 'post').mockRejectedValue(refreshError);
+
+      const config: InternalAxiosRequestConfig & { _retry?: boolean } = {
+        url: '/assets',
+        method: 'get',
+        headers: new AxiosHeaders(),
+      };
+      const response = {
+        status: 401,
+        statusText: 'Unauthorized',
+        data: {},
+        headers: {},
+        config,
+      } as AxiosResponse;
+      const error = {
+        config,
+        response,
+        isAxiosError: true,
+        name: 'AxiosError',
+        message: 'Unauthorized',
+        toJSON: () => ({}),
+      } as AxiosError;
+
+      await expect(responseInterceptor(error)).rejects.toBe(refreshError);
+
+      expect(postSpy).toHaveBeenCalledTimes(1);
+      expect(postSpy).toHaveBeenCalledWith('/auth/refresh');
+      expect(mockClearAuthData).toHaveBeenCalledTimes(1);
+      expect(window.location.href).toBe(
+        `/login?redirect=${encodeURIComponent('/assets')}`
+      );
+    });
+  });
 });
 
 // =============================================================================
@@ -273,6 +398,7 @@ describe('ApiClient', () => {
 describe('URL Validation', () => {
   const originalWarn = console.warn;
   let client: ApiClient;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
   const normalizedBaseUrl = API_BASE_URL.startsWith('http')
     ? new URL(API_BASE_URL).pathname
     : API_BASE_URL;
@@ -287,6 +413,7 @@ describe('URL Validation', () => {
 
   beforeEach(() => {
     console.warn = vi.fn();
+    warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     client = new ApiClient({
       baseURL: API_BASE_URL,
       enableLogging: false,
@@ -296,6 +423,7 @@ describe('URL Validation', () => {
 
   afterEach(() => {
     console.warn = originalWarn;
+    warnSpy.mockRestore();
   });
 
   it('should not warn for URLs starting with base path', () => {
@@ -320,32 +448,30 @@ describe('URL Validation', () => {
     expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('should warn for URLs without base path prefix', () => {
+  it('should normalize URLs without base path prefix', () => {
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
     if (!requestInterceptor) {
       throw new Error('Request interceptor is not registered');
     }
-    requestInterceptor(buildRequestConfig('/users'));
+    const config = buildRequestConfig('/users');
+    requestInterceptor(config);
 
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining(`[API Client] URL does not use ${basePath} prefix: /users`)
-    );
+    expect(config.url).toBe('users');
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('should warn for URLs without base path prefix (with nested path)', () => {
+  it('should normalize URLs without base path prefix (with nested path)', () => {
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
     if (!requestInterceptor) {
       throw new Error('Request interceptor is not registered');
     }
-    requestInterceptor(buildRequestConfig('/assets/list'));
+    const config = buildRequestConfig('/assets/list');
+    requestInterceptor(config);
 
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        `[API Client] URL does not use ${basePath} prefix: /assets/list`
-      )
-    );
+    expect(config.url).toBe('assets/list');
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('should not validate relative URLs (not starting with /)', () => {

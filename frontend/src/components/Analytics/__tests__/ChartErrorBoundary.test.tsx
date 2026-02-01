@@ -1,50 +1,19 @@
 /**
- * ChartErrorBoundary 组件测试
+ * ChartErrorBoundary 组件测试（修复版）
  * 测试图表错误边界组件
+ *
+ * 修复内容：
+ * - 移除过度的 Ant Design 组件 mock
+ * - 使用 renderWithProviders 提供必要的 Context Provider
+ * - 保持完整的测试覆盖
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import React from 'react';
 
-// Mock Ant Design components
-vi.mock('antd', () => ({
-  Alert: ({
-    message,
-    description,
-    type,
-    showIcon,
-    action,
-  }: {
-    message?: React.ReactNode;
-    description?: React.ReactNode;
-    type?: string;
-    showIcon?: boolean;
-    action?: React.ReactNode;
-  }) => (
-    <div data-testid="alert" data-type={type} data-show-icon={showIcon}>
-      <div data-testid="alert-message">{message}</div>
-      <div data-testid="alert-description">{description}</div>
-      <div data-testid="alert-action">{action}</div>
-    </div>
-  ),
-  Button: ({
-    children,
-    size,
-    onClick,
-  }: {
-    children?: React.ReactNode;
-    size?: string;
-    onClick?: () => void;
-  }) => (
-    <button data-testid="button" data-size={size} onClick={onClick}>
-      {children}
-    </button>
-  ),
-}));
-
-// Mock logger
-vi.mock('../../utils/logger', () => ({
+// Mock logger（这个 mock 是必要的）
+vi.mock('@/utils/logger', () => ({
   createLogger: () => ({
     error: vi.fn(),
     warn: vi.fn(),
@@ -66,9 +35,13 @@ describe('ChartErrorBoundary - 组件导入测试', () => {
 });
 
 describe('ChartErrorBoundary - 正常渲染测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该正常渲染children', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <div data-testid="child-content">正常内容</div>
       </ChartErrorBoundary>
@@ -80,7 +53,7 @@ describe('ChartErrorBoundary - 正常渲染测试', () => {
 
   it('应该渲染多个children', async () => {
     const ChartErrorBoundary = (await import('../ChartErrorBoundary')).default;
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <div data-testid="child-1">Child 1</div>
         <div data-testid="child-2">Child 2</div>
@@ -96,6 +69,7 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -110,14 +84,13 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
       throw new Error('测试错误');
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <ThrowError />
       </ChartErrorBoundary>
     );
 
-    expect(screen.getByTestId('alert')).toBeInTheDocument();
-    expect(screen.getByTestId('alert-message')).toHaveTextContent('图表加载失败');
+    expect(screen.getByText('图表加载失败')).toBeInTheDocument();
   });
 
   it('错误UI应该显示错误详情', async () => {
@@ -127,7 +100,7 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
       throw new Error('详细错误消息');
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <ThrowError />
       </ChartErrorBoundary>
@@ -143,14 +116,14 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
       throw new Error('测试错误');
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <ThrowError />
       </ChartErrorBoundary>
     );
 
-    expect(screen.getByTestId('button')).toBeInTheDocument();
-    expect(screen.getByText('重试')).toBeInTheDocument();
+    const retryButton = await screen.findByRole('button', { name: '重试' });
+    expect(retryButton).toBeInTheDocument();
   });
 
   it('应该调用onError回调', async () => {
@@ -161,7 +134,7 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
       throw new Error('测试错误');
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary onError={handleError}>
         <ThrowError />
       </ChartErrorBoundary>
@@ -179,6 +152,7 @@ describe('ChartErrorBoundary - 重试功能测试', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -197,22 +171,22 @@ describe('ChartErrorBoundary - 重试功能测试', () => {
       return <div data-testid="recovered">恢复正常</div>;
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary>
         <MaybeThrow />
       </ChartErrorBoundary>
     );
 
-    expect(screen.getByTestId('alert')).toBeInTheDocument();
+    expect(screen.getByText('图表加载失败')).toBeInTheDocument();
 
     // 修复错误条件
     shouldThrow = false;
 
     // 点击重试
-    fireEvent.click(screen.getByText('重试'));
+    const retryButton = await screen.findByRole('button', { name: '重试' });
+    fireEvent.click(retryButton);
 
-    // 注意：由于组件会重新渲染可能会再次抛出错误，这里主要测试按钮可点击
-    expect(screen.getByTestId('button')).toBeInTheDocument();
+    expect(await screen.findByTestId('recovered')).toBeInTheDocument();
   });
 });
 
@@ -220,6 +194,7 @@ describe('ChartErrorBoundary - fallback测试', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -234,7 +209,7 @@ describe('ChartErrorBoundary - fallback测试', () => {
       throw new Error('测试错误');
     };
 
-    render(
+    renderWithProviders(
       <ChartErrorBoundary fallback={<div data-testid="custom-fallback">自定义错误界面</div>}>
         <ThrowError />
       </ChartErrorBoundary>

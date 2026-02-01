@@ -10,7 +10,7 @@ from typing import Any
 from datetime import datetime, timedelta
 
 import bcrypt
-from sqlalchemy import and_, desc, func, or_
+from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from ..constants.validation_constants import AuthFields
@@ -20,6 +20,9 @@ from ..schemas.auth import UserCreate, UserUpdate
 
 class UserCRUD:
     """用户CRUD操作"""
+
+    def _count_query(self, db: Session):
+        return db.query(User)
 
     def get(self, db: Session, user_id: str) -> User | None:
         """根据ID获取用户"""
@@ -37,19 +40,54 @@ class UserCRUD:
         """获取用户列表"""
         return db.query(User).offset(skip).limit(limit).all()
 
+    def get_username_map(self, db: Session, user_ids: set[str]) -> dict[str, str]:
+        """批量获取用户ID到用户名映射"""
+        user_id_list = list(user_ids)
+        if not user_id_list:
+            return {}
+        rows = (
+            db.query(User.id, User.username)
+            .filter(User.id.in_(user_id_list))
+            .all()
+        )
+        return {str(user_id): username for user_id, username in rows}
+
     def get_multi_with_filters(
         self,
         db: Session,
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
-        role: UserRole | None = None,
+        role: UserRole | str | None = None,
         is_active: bool | None = None,
         organization_id: str | None = None,
     ) -> tuple[list[User], int]:
         """带筛选条件的用户列表"""
-        query = db.query(User)
+        query = self._apply_user_filters(
+            db.query(User),
+            search=search,
+            role=role,
+            is_active=is_active,
+            organization_id=organization_id,
+        )
 
+        # 总数
+        total = query.count()
+
+        # 分页
+        users = query.offset(skip).limit(limit).all()
+
+        return users, total
+
+    def _apply_user_filters(
+        self,
+        query: Any,
+        *,
+        search: str | None = None,
+        role: UserRole | str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> Any:
         # 搜索条件
         if search:
             search_filter = or_(
@@ -81,13 +119,7 @@ class UserCRUD:
                 )
             )
 
-        # 总数
-        total = query.count()
-
-        # 分页
-        users = query.offset(skip).limit(limit).all()
-
-        return users, total
+        return query
 
     def create(self, db: Session, obj_in: UserCreate) -> User:
         """
@@ -151,17 +183,27 @@ class UserCRUD:
 
     def count(self, db: Session) -> int:
         """用户总数"""
-        result = db.query(func.count(User.id)).scalar()
+        result = self._count_query(db).with_entities(func.count(User.id)).scalar()
         return int(result) if result is not None else 0
 
     def count_active(self, db: Session) -> int:
         """活跃用户总数"""
-        result = db.query(func.count(User.id)).filter(User.is_active).scalar()
+        result = (
+            self._count_query(db)
+            .filter(User.is_active.is_(True))
+            .with_entities(func.count(User.id))
+            .scalar()
+        )
         return int(result) if result is not None else 0
 
     def count_by_role(self, db: Session, role: UserRole) -> int:
         """按角色统计用户数"""
-        result = db.query(func.count(User.id)).filter(User.role == role).scalar()
+        result = (
+            self._count_query(db)
+            .filter(User.role == role)
+            .with_entities(func.count(User.id))
+            .scalar()
+        )
         return int(result) if result is not None else 0
 
     def get_recent_logins(self, db: Session, limit: int = 10) -> list[User]:
@@ -180,7 +222,7 @@ class UserCRUD:
         """根据角色ID获取用户列表"""
         # Note: This implementation assumes role_id is a UserRole enum value
         # If you need role-based filtering by Role model ID, this needs adjustment
-        query = db.query(User).filter(User.role == role_id)
+        query = self._apply_user_filters(db.query(User), role=role_id)
         total = query.count()
         users = query.offset(skip).limit(limit).all()
         return users, total
@@ -188,6 +230,9 @@ class UserCRUD:
 
 class UserSessionCRUD:
     """用户会话CRUD操作"""
+
+    def _session_query(self, db: Session):
+        return db.query(UserSession)
 
     def get(self, db: Session, session_id: str) -> UserSession | None:
         """根据ID获取会话"""
@@ -247,8 +292,8 @@ class UserSessionCRUD:
     def deactivate_by_user(self, db: Session, user_id: str) -> int:
         """停用用户的所有会话"""
         count = (
-            db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active)
+            self._session_query(db)
+            .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .update({AuthFields.IS_ACTIVE: False})
         )
         db.commit()
@@ -257,8 +302,11 @@ class UserSessionCRUD:
     def cleanup_expired_sessions(self, db: Session) -> int:
         """清理过期会话"""
         count = (
-            db.query(UserSession)
-            .filter(UserSession.expires_at < datetime.now(), UserSession.is_active)
+            self._session_query(db)
+            .filter(
+                UserSession.expires_at < datetime.now(),
+                UserSession.is_active.is_(True),
+            )
             .update({AuthFields.IS_ACTIVE: False})
         )
         db.commit()
@@ -267,7 +315,10 @@ class UserSessionCRUD:
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
         result = (
-            db.query(func.count(UserSession.id)).filter(UserSession.is_active).scalar()
+            self._session_query(db)
+            .filter(UserSession.is_active.is_(True))
+            .with_entities(func.count(UserSession.id))
+            .scalar()
         )
         return int(result) if result is not None else 0
 
@@ -275,9 +326,36 @@ class UserSessionCRUD:
 class AuditLogCRUD:
     """审计日志CRUD操作"""
 
+    def _audit_query(self, db: Session):
+        return db.query(AuditLog)
+
+    def _apply_audit_filters(
+        self,
+        query: Any,
+        *,
+        user_id: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> Any:
+        # 筛选条件
+        if user_id:
+            query = query.filter(AuditLog.user_id == user_id)
+        if action:
+            query = query.filter(AuditLog.action.ilike(f"%{action}%"))
+        if resource_type:
+            query = query.filter(AuditLog.resource_type == resource_type)
+        if start_date:
+            query = query.filter(AuditLog.created_at >= start_date)
+        if end_date:
+            query = query.filter(AuditLog.created_at <= end_date)
+
+        return query
+
     def get(self, db: Session, log_id: str) -> AuditLog | None:
         """根据ID获取审计日志"""
-        return db.query(AuditLog).filter(AuditLog.id == log_id).first()
+        return self._audit_query(db).filter(AuditLog.id == log_id).first()
 
     def get_multi(
         self,
@@ -291,19 +369,14 @@ class AuditLogCRUD:
         end_date: datetime | None = None,
     ) -> tuple[list[AuditLog], int]:
         """获取审计日志列表"""
-        query = db.query(AuditLog)
-
-        # 筛选条件
-        if user_id:
-            query = query.filter(AuditLog.user_id == user_id)
-        if action:
-            query = query.filter(AuditLog.action.ilike(f"%{action}%"))
-        if resource_type:
-            query = query.filter(AuditLog.resource_type == resource_type)
-        if start_date:
-            query = query.filter(AuditLog.created_at >= start_date)
-        if end_date:
-            query = query.filter(AuditLog.created_at <= end_date)
+        query = self._apply_audit_filters(
+            self._audit_query(db),
+            user_id=user_id,
+            action=action,
+            resource_type=resource_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         # 总数
         total = query.count()
@@ -369,7 +442,7 @@ class AuditLogCRUD:
 
     def count(self, db: Session) -> int:
         """审计日志总数"""
-        result = db.query(func.count(AuditLog.id)).scalar()
+        result = self._audit_query(db).with_entities(func.count(AuditLog.id)).scalar()
         return int(result) if result is not None else 0
 
     def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> list[str]:
@@ -393,25 +466,14 @@ class AuditLogCRUD:
 
         start_date = datetime.now() - timedelta(days=days)
 
-        # 总登录次数
-        total_logins = (
-            db.query(func.count(AuditLog.id))
-            .filter(
-                and_(AuditLog.action == "user_login", AuditLog.created_at >= start_date)
-            )
-            .scalar()
+        base_query = self._audit_query(db).filter(
+            AuditLog.action == "user_login",
+            AuditLog.created_at >= start_date,
         )
-
-        # 成功登录次数
+        total_logins = base_query.with_entities(func.count(AuditLog.id)).scalar()
         successful_logins = (
-            db.query(func.count(AuditLog.id))
-            .filter(
-                and_(
-                    AuditLog.action == "user_login",
-                    AuditLog.response_status == 200,
-                    AuditLog.created_at >= start_date,
-                )
-            )
+            base_query.filter(AuditLog.response_status == 200)
+            .with_entities(func.count(AuditLog.id))
             .scalar()
         )
 

@@ -8,6 +8,7 @@ import base64
 
 import pytest
 
+from src.core import encryption as encryption_module
 from src.core.encryption import (
     EncryptionKeyManager,
     FieldEncryptor,
@@ -72,6 +73,7 @@ class TestEncryptionKeyManager:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", test_key)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key)
 
         manager = EncryptionKeyManager()
 
@@ -99,6 +101,7 @@ class TestEncryptionKeyManager:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", key_b64)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", key_b64)
 
         manager = EncryptionKeyManager()
 
@@ -151,6 +154,7 @@ class TestEncryptionKeyManager:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", key_b64)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", key_b64)
 
         manager = EncryptionKeyManager()
 
@@ -174,6 +178,7 @@ class TestEncryptionKeyManager:
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
 
         manager = EncryptionKeyManager()
 
@@ -201,6 +206,7 @@ class TestEncryptionKeyManager:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", test_key)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key)
 
         manager = EncryptionKeyManager()
 
@@ -265,6 +271,7 @@ class TestFieldEncryptor:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", test_key)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key)
 
         manager = EncryptionKeyManager()
         return manager
@@ -291,6 +298,7 @@ class TestFieldEncryptor:
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
 
         manager = EncryptionKeyManager()
         return manager
@@ -351,6 +359,54 @@ class TestFieldEncryptor:
 
         assert decrypted == plaintext
 
+    def test_key_rotation_decrypts_old_version(self, monkeypatch):
+        """测试密钥轮换后仍可解密旧版本密文"""
+        # Clear cached modules first
+        import sys
+
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
+        key_v1_bytes = b"f" * 32
+        key_v2_bytes = b"g" * 32
+        key_v1_b64 = base64.b64encode(key_v1_bytes).decode("ascii")
+        key_v2_b64 = base64.b64encode(key_v2_bytes).decode("ascii")
+        key_v1 = f"{key_v1_b64}:1"
+        key_multi = f"{key_v1_b64}:1,{key_v2_b64}:2"
+
+        # First, encrypt with v1-only key
+        monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_v1)
+
+        from src.core import config
+
+        monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", key_v1)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", key_v1)
+
+        manager_v1 = EncryptionKeyManager()
+        encryptor_v1 = FieldEncryptor(manager_v1)
+        plaintext = "密钥轮换测试"
+        ciphertext_v1 = encryptor_v1.encrypt_deterministic(plaintext)
+
+        assert ciphertext_v1 is not None
+        assert ciphertext_v1.startswith("enc:v1:")
+
+        # Then, load both v1 and v2 keys and ensure old ciphertext decrypts
+        monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_multi)
+        monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", key_multi)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", key_multi)
+
+        manager_multi = EncryptionKeyManager()
+        encryptor_multi = FieldEncryptor(manager_multi)
+
+        assert manager_multi.get_version() == 2
+        assert encryptor_multi.decrypt_deterministic(ciphertext_v1) == plaintext
+
+        # New encryption should use the latest version
+        ciphertext_v2 = encryptor_multi.encrypt_deterministic(plaintext)
+        assert ciphertext_v2 is not None
+        assert ciphertext_v2.startswith("enc:v2:")
+
     def test_encrypt_none_returns_none(self, valid_key_manager):
         """测试加密None值返回None"""
         encryptor = FieldEncryptor(valid_key_manager)
@@ -385,15 +441,15 @@ class TestFieldEncryptor:
         # 解密失败应返回原值
         assert decrypted == invalid_ciphertext
 
-    def test_missing_key_encrypt_returns_none(self, missing_key_manager):
-        """测试密钥缺失时加密返回None"""
+    def test_missing_key_encrypt_returns_plaintext(self, missing_key_manager):
+        """测试密钥缺失时加密返回原值"""
         # Double-check that manager truly has no key
         assert missing_key_manager.is_available() is False
 
         encryptor = FieldEncryptor(missing_key_manager)
 
-        assert encryptor.encrypt_deterministic("test") is None
-        assert encryptor.encrypt_standard("test") is None
+        assert encryptor.encrypt_deterministic("test") == "test"
+        assert encryptor.encrypt_standard("test") == "test"
 
     def test_missing_key_decrypt_returns_original(self, missing_key_manager):
         """测试密钥缺失时解密返回原值"""
@@ -481,6 +537,7 @@ class TestSensitiveDataHandler:
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", test_key)
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key)
 
         # 创建配置了测试字段的处理器
         return SensitiveDataHandler(
@@ -512,6 +569,7 @@ class TestSensitiveDataHandler:
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
 
         return SensitiveDataHandler()
 

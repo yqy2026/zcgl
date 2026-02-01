@@ -197,7 +197,7 @@ class LlmSettings(BaseModel):
         return v_lower
 
     @model_validator(mode="after")
-    def validate_llm_configuration(self) -> "LlmSettings":
+    def validate_llm_configuration(self) -> LlmSettings:
         """验证 LLM 配置一致性"""
         provider = (self.EXTRACTION_LLM_PROVIDER or self.LLM_PROVIDER).lower()
         alias_map = {
@@ -246,7 +246,7 @@ class LlmSettings(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_wecom_configuration(self) -> "LlmSettings":
+    def validate_wecom_configuration(self) -> LlmSettings:
         """验证企业微信配置一致性"""
         if self.WECOM_ENABLED and not self.WECOM_WEBHOOK_URL:
             logger.warning("企业微信通知已启用但未配置 Webhook URL，通知功能将无法工作")

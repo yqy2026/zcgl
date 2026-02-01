@@ -1,13 +1,20 @@
 /**
- * AnalyticsChart 组件测试
+ * AnalyticsChart 组件测试（修复版）
  * 测试分析图表组件
+ *
+ * 修复内容：
+ * - 移除过度的 Ant Design 组件 mock
+ * - 使用 renderWithProviders 提供必要的 Context Provider
+ * - 保留必要的 mock（@ant-design/plots, color utilities）
+ * - 添加 beforeEach 清除 mock
+ * - 保持完整的测试覆盖
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import React from 'react';
 
-// Mock color utilities
+// Mock color utilities（这个 mock 是必要的）
 vi.mock('@/styles/colorMap', () => ({
   CHART_COLORS: ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1'],
   CHART_LABEL_COLORS: {
@@ -16,7 +23,7 @@ vi.mock('@/styles/colorMap', () => ({
   },
 }));
 
-// Mock @ant-design/plots
+// Mock @ant-design/plots（这个 mock 是必要的，因为图表库依赖复杂）
 vi.mock('@ant-design/plots', () => ({
   Pie: ({ height }: { height?: number }) => (
     <div data-testid="pie-chart" data-height={height}>
@@ -33,28 +40,6 @@ vi.mock('@ant-design/plots', () => ({
       Line Chart
     </div>
   ),
-}));
-
-// Mock Ant Design components
-vi.mock('antd', () => ({
-  Card: ({
-    children,
-    title,
-    className,
-  }: {
-    children?: React.ReactNode;
-    title?: React.ReactNode;
-    className?: string;
-  }) => (
-    <div data-testid="card" className={className}>
-      {title && <div data-testid="card-title">{title}</div>}
-      {children}
-    </div>
-  ),
-  Empty: ({ description }: { description?: React.ReactNode }) => (
-    <div data-testid="empty">{description}</div>
-  ),
-  Spin: ({ size }: { size?: string }) => <div data-testid="spin" data-size={size} />,
 }));
 
 describe('AnalyticsChart - 组件导出测试', () => {
@@ -80,31 +65,34 @@ describe('AnalyticsChart - 组件导出测试', () => {
 });
 
 describe('AnalyticsPieChart - 渲染测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('有数据时应该渲染饼图', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
     const data = [
       { type: '选项1', value: 100 },
       { type: '选项2', value: 200 },
     ];
-    render(<AnalyticsPieChart title="测试饼图" data={data} />);
+    renderWithProviders(<AnalyticsPieChart title="测试饼图" data={data} />);
 
-    expect(screen.getByTestId('card')).toBeInTheDocument();
-    expect(screen.getByTestId('card-title')).toHaveTextContent('测试饼图');
+    expect(screen.getByText('测试饼图')).toBeInTheDocument();
     expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
   });
 
   it('空数据时应该显示Empty', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
-    render(<AnalyticsPieChart title="空饼图" data={[]} />);
+    renderWithProviders(<AnalyticsPieChart title="空饼图" data={[]} />);
 
-    expect(screen.getByTestId('empty')).toBeInTheDocument();
-    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+    const emptyText = screen.getAllByText('暂无数据');
+    expect(emptyText.length).toBeGreaterThan(0);
   });
 
   it('应该支持自定义height', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
     const data = [{ type: '选项1', value: 100 }];
-    render(<AnalyticsPieChart title="测试" data={data} height={400} />);
+    renderWithProviders(<AnalyticsPieChart title="测试" data={data} height={400} />);
 
     expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '400');
   });
@@ -112,43 +100,51 @@ describe('AnalyticsPieChart - 渲染测试', () => {
   it('默认height应该是300', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
     const data = [{ type: '选项1', value: 100 }];
-    render(<AnalyticsPieChart title="测试" data={data} />);
+    renderWithProviders(<AnalyticsPieChart title="测试" data={data} />);
 
     expect(screen.getByTestId('pie-chart')).toHaveAttribute('data-height', '300');
   });
 });
 
 describe('AnalyticsBarChart - 渲染测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('有数据时应该渲染柱状图', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
     const data = [
       { name: '项目1', value: 100 },
       { name: '项目2', value: 200 },
     ];
-    render(<AnalyticsBarChart title="测试柱状图" data={data} xAxisKey="name" barKey="value" />);
+    renderWithProviders(<AnalyticsBarChart title="测试柱状图" data={data} xAxisKey="name" barKey="value" />);
 
-    expect(screen.getByTestId('card')).toBeInTheDocument();
-    expect(screen.getByTestId('card-title')).toHaveTextContent('测试柱状图');
+    expect(screen.getByText('测试柱状图')).toBeInTheDocument();
     expect(screen.getByTestId('column-chart')).toBeInTheDocument();
   });
 
   it('空数据时应该显示Empty', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    render(<AnalyticsBarChart title="空柱状图" data={[]} xAxisKey="name" barKey="value" />);
+    renderWithProviders(<AnalyticsBarChart title="空柱状图" data={[]} xAxisKey="name" barKey="value" />);
 
-    expect(screen.getByTestId('empty')).toBeInTheDocument();
+    const emptyText = screen.getAllByText('暂无数据');
+    expect(emptyText.length).toBeGreaterThan(0);
   });
 
   it('应该支持自定义height', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
     const data = [{ name: '项目1', value: 100 }];
-    render(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" height={400} />);
+    renderWithProviders(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" height={400} />);
 
     expect(screen.getByTestId('column-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
 describe('AnalyticsLineChart - 渲染测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('有数据时应该渲染折线图', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
     const data = [
@@ -156,32 +152,36 @@ describe('AnalyticsLineChart - 渲染测试', () => {
       { date: '2024-02', value: 200 },
     ];
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    render(<AnalyticsLineChart title="测试折线图" data={data} xAxisKey="date" lines={lines} />);
+    renderWithProviders(<AnalyticsLineChart title="测试折线图" data={data} xAxisKey="date" lines={lines} />);
 
-    expect(screen.getByTestId('card')).toBeInTheDocument();
-    expect(screen.getByTestId('card-title')).toHaveTextContent('测试折线图');
+    expect(screen.getByText('测试折线图')).toBeInTheDocument();
     expect(screen.getByTestId('line-chart')).toBeInTheDocument();
   });
 
   it('空数据时应该显示Empty', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    render(<AnalyticsLineChart title="空折线图" data={[]} xAxisKey="date" lines={lines} />);
+    renderWithProviders(<AnalyticsLineChart title="空折线图" data={[]} xAxisKey="date" lines={lines} />);
 
-    expect(screen.getByTestId('empty')).toBeInTheDocument();
+    const emptyText = screen.getAllByText('暂无数据');
+    expect(emptyText.length).toBeGreaterThan(0);
   });
 
   it('应该支持自定义height', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
     const data = [{ date: '2024-01', value: 100 }];
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    render(<AnalyticsLineChart title="测试" data={data} xAxisKey="date" lines={lines} height={400} />);
+    renderWithProviders(<AnalyticsLineChart title="测试" data={data} xAxisKey="date" lines={lines} height={400} />);
 
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-height', '400');
   });
 });
 
 describe('chartDataUtils - 数据转换工具测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('toPieData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
     const input = [
@@ -280,21 +280,25 @@ describe('chartDataUtils - 数据转换工具测试', () => {
 });
 
 describe('AnalyticsChart - 边界情况测试', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该处理value为0的选项', async () => {
     const { AnalyticsPieChart } = await import('../AnalyticsChart');
     const data = [{ type: '选项1', value: 0 }];
-    render(<AnalyticsPieChart title="测试" data={data} />);
+    renderWithProviders(<AnalyticsPieChart title="测试" data={data} />);
 
     // 应该正常渲染
-    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByText('测试')).toBeInTheDocument();
   });
 
   it('应该处理负数value', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
     const data = [{ name: '选项1', value: -100 }];
-    render(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" />);
+    renderWithProviders(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" />);
 
     // 应该正常渲染
-    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByText('测试')).toBeInTheDocument();
   });
 });

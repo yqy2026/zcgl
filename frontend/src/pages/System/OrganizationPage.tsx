@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Modal,
@@ -44,6 +43,9 @@ import {
   OrganizationTree,
 } from '@/types/organization';
 import { organizationService } from '@/services/organizationService';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
+import { useArrayListData } from '@/hooks/useArrayListData';
 // 组织表单数据类型
 interface OrganizationFormData {
   name: string;
@@ -59,11 +61,13 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 const { Search } = Input;
 
+interface OrganizationFilters {
+  keyword: string;
+}
+
 const OrganizationPage: React.FC = () => {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationTree, setOrganizationTree] = useState<DataNode[]>([]);
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
@@ -91,41 +95,72 @@ const OrganizationPage: React.FC = () => {
     { value: 'suspended', label: '暂停', color: 'orange' },
   ];
 
-  useEffect(() => {
-    loadOrganizations();
-    loadOrganizationTree();
-    loadStatistics();
+  const fetchOrganizationList = useCallback(
+    async ({
+      page,
+      pageSize,
+      keyword,
+    }: {
+      page: number;
+      pageSize: number;
+    } & OrganizationFilters) => {
+      const trimmedKeyword = keyword.trim();
+      const data =
+        trimmedKeyword !== ''
+          ? await organizationService.searchOrganizations(trimmedKeyword, {
+              page,
+              page_size: pageSize,
+            })
+          : await organizationService.getOrganizations({ page, page_size: pageSize });
+      return { items: data, total: data.length };
+    },
+    []
+  );
+
+  const handleLoadError = useCallback(() => {
+    MessageManager.error('加载组织列表失败');
   }, []);
 
-  const loadOrganizations = async () => {
-    setLoading(true);
-    try {
-      const data = await organizationService.getOrganizations();
-      setOrganizations(data);
-    } catch {
-      MessageManager.error('加载组织列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: organizations,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<Organization, OrganizationFilters>({
+    fetcher: fetchOrganizationList,
+    initialFilters: {
+      keyword: '',
+    },
+    initialPageSize: 10,
+    onError: handleLoadError,
+  });
 
-  const loadOrganizationTree = async () => {
+  const loadOrganizationTree = useCallback(async () => {
     try {
       const data = await organizationService.getOrganizationTree();
       setOrganizationTree(convertTreeToDataNodes(data));
     } catch {
       MessageManager.error('加载组织树失败');
     }
-  };
+  }, []);
 
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       const data = await organizationService.getStatistics();
       setStatistics(data);
     } catch {
       MessageManager.error('加载统计信息失败');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadList();
+    void loadOrganizationTree();
+    void loadStatistics();
+  }, [loadList, loadOrganizationTree, loadStatistics]);
 
   const _convertToTreeData = (organizations: Organization[]): DataNode[] => {
     return organizations.map(org => ({
@@ -176,22 +211,20 @@ const OrganizationPage: React.FC = () => {
     return statusConfig?.label ?? status;
   };
 
-  const handleSearch = async (keyword: string) => {
-    if (!keyword.trim()) {
-      loadOrganizations();
-      return;
-    }
+  const handleSearch = useCallback(
+    (keyword: string) => {
+      applyFilters({
+        keyword,
+      });
+    },
+    [applyFilters]
+  );
 
-    setLoading(true);
-    try {
-      const data = await organizationService.searchOrganizations(keyword);
-      setOrganizations(data);
-    } catch {
-      MessageManager.error('搜索失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleRefresh = useCallback(() => {
+    void loadList();
+    void loadOrganizationTree();
+    void loadStatistics();
+  }, [loadList, loadOrganizationTree, loadStatistics]);
 
   const handleCreate = () => {
     setEditingOrganization(null);
@@ -212,9 +245,7 @@ const OrganizationPage: React.FC = () => {
     try {
       await organizationService.deleteOrganization(id);
       MessageManager.success('删除成功');
-      loadOrganizations();
-      loadOrganizationTree();
-      loadStatistics();
+      void handleRefresh();
     } catch {
       MessageManager.error('删除失败');
     }
@@ -231,6 +262,21 @@ const OrganizationPage: React.FC = () => {
     }
   };
 
+  const {
+    data: historyPageItems,
+    pagination: historyPagination,
+    loadList: loadHistoryList,
+    updatePagination: updateHistoryPagination,
+  } = useArrayListData<OrganizationHistory, Record<string, never>>({
+    items: organizationHistory,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadHistoryList({ page: 1 });
+  }, [loadHistoryList, organizationHistory]);
+
   const handleSubmit = async (values: OrganizationFormData) => {
     try {
       if (editingOrganization) {
@@ -241,9 +287,7 @@ const OrganizationPage: React.FC = () => {
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
-      loadOrganizations();
-      loadOrganizationTree();
-      loadStatistics();
+      void handleRefresh();
     } catch {
       MessageManager.error(editingOrganization ? '更新失败' : '创建失败');
     }
@@ -431,8 +475,10 @@ const OrganizationPage: React.FC = () => {
                       allowClear
                       style={{ width: 300 }}
                       onSearch={handleSearch}
+                      value={filters.keyword}
+                      onChange={event => handleSearch(event.target.value)}
                     />
-                    <Button icon={<ReloadOutlined />} onClick={loadOrganizations}>
+                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
                       刷新
                     </Button>
                   </Space>
@@ -445,17 +491,15 @@ const OrganizationPage: React.FC = () => {
               </Row>
             </div>
 
-            <Table
+            <TableWithPagination
               columns={columns}
               dataSource={organizations}
               rowKey="id"
               loading={loading}
-              pagination={{
-                total: organizations.length,
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: total => `共 ${total} 条记录`,
+              paginationState={pagination}
+              onPageChange={updatePagination}
+              paginationProps={{
+                showTotal: (total: number) => `共 ${total} 条记录`,
               }}
             />
           </TabPane>
@@ -635,14 +679,15 @@ const OrganizationPage: React.FC = () => {
         footer={null}
         width={1000}
       >
-        <Table
+        <TableWithPagination
           columns={historyColumns}
-          dataSource={organizationHistory}
+          dataSource={historyPageItems}
           rowKey="id"
-          pagination={{
-            pageSize: 10,
+          paginationState={historyPagination}
+          onPageChange={updateHistoryPagination}
+          paginationProps={{
             showSizeChanger: true,
-            showTotal: total => `共 ${total} 条记录`,
+            showTotal: (total: number) => `共 ${total} 条记录`,
           }}
         />
       </Modal>

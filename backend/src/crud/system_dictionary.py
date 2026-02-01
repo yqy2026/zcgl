@@ -16,6 +16,19 @@ class CRUDSystemDictionary(
     def __init__(self) -> None:
         super().__init__(SystemDictionary)
 
+    def _build_filters(
+        self,
+        *,
+        dict_type: str | None = None,
+        is_active: bool | None = None,
+    ) -> dict[str, Any]:
+        qb_filters: dict[str, Any] = {}
+        if dict_type is not None:
+            qb_filters["dict_type"] = dict_type
+        if is_active is not None:
+            qb_filters["is_active"] = is_active
+        return qb_filters
+
     def get_by_type_and_code(
         self, db: Session, *, dict_type: str, dict_code: str
     ) -> SystemDictionary | None:
@@ -45,12 +58,10 @@ class CRUDSystemDictionary(
         # Or just stick to manual filtering for this specific case if simple enough.
         # But standardize means using QueryBuilder is better.
 
-        qb_filters: dict[str, Any] = {}
-        if filters:
-            if "dict_type" in filters:
-                qb_filters["dict_type"] = filters["dict_type"]
-            if "is_active" in filters:
-                qb_filters["is_active"] = filters["is_active"]
+        qb_filters = self._build_filters(
+            dict_type=filters.get("dict_type") if filters else None,
+            is_active=filters.get("is_active") if filters else None,
+        )
 
         query = self.query_builder.build_query(
             filters=qb_filters,
@@ -65,9 +76,7 @@ class CRUDSystemDictionary(
         self, db: Session, *, dict_type: str, is_active: bool = True
     ) -> list[SystemDictionary]:
         """根据类型获取字典列表"""
-        filters: dict[str, Any] = {"dict_type": dict_type}
-        if is_active is not None:
-            filters["is_active"] = is_active
+        filters = self._build_filters(dict_type=dict_type, is_active=is_active)
 
         query = self.query_builder.build_query(
             filters=filters,

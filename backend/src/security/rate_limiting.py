@@ -10,6 +10,8 @@ from time import time
 from typing import Any
 
 from .logging_security import security_auditor
+from ..core.config import settings
+
 
 class RateLimitConfig:
     """速率限制配置"""
@@ -130,8 +132,23 @@ class TokenBucketRateLimiter:
 class AdaptiveRateLimiter:
     """自适应速率限制器"""
 
-    def __init__(self) -> None:
-        self.config: dict[str, Any] = {}  # TODO: 未来可添加自适应限流配置
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        base_config: dict[str, Any] = {
+            "enabled": settings.ADAPTIVE_RATE_LIMIT_ENABLED,
+            "max_error_rate": settings.ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE,
+            "suspicious_max_error_rate": settings.ADAPTIVE_RATE_LIMIT_SUSPICIOUS_MAX_ERROR_RATE,
+            "reset_seconds": settings.ADAPTIVE_RATE_LIMIT_RESET_SECONDS,
+        }
+        if config:
+            base_config.update(config)
+
+        self.config = base_config
+        self.enabled = bool(self.config.get("enabled", True))
+        self.max_error_rate = float(self.config.get("max_error_rate", 0.3))
+        self.suspicious_max_error_rate = float(
+            self.config.get("suspicious_max_error_rate", 0.1)
+        )
+        self.reset_seconds = int(self.config.get("reset_seconds", 60))
         self.request_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"count": 0, "errors": 0, "last_reset": time()}
         )
@@ -139,12 +156,15 @@ class AdaptiveRateLimiter:
 
     def check_rate_limit(self, client_ip: str, is_suspicious: bool = False) -> bool:
         """基于错误率的自适应限流"""
+        if not self.enabled:
+            return True
+
         with self.lock:
             stats = self.request_stats[client_ip]
             current_time = time()
 
             # 每分钟重置统计
-            if current_time - stats["last_reset"] > 60:
+            if current_time - stats["last_reset"] > self.reset_seconds:
                 stats["count"] = 0
                 stats["errors"] = 0
                 stats["last_reset"] = current_time
@@ -156,9 +176,9 @@ class AdaptiveRateLimiter:
 
             # 如果错误率过高，限制请求
             if is_suspicious:
-                max_error_rate = self.config.get("suspicious_max_error_rate", 0.1)
+                max_error_rate = self.suspicious_max_error_rate
             else:
-                max_error_rate = self.config.get("max_error_rate", 0.3)
+                max_error_rate = self.max_error_rate
             if error_rate > max_error_rate:
                 return False
 
@@ -173,8 +193,21 @@ class AdaptiveRateLimiter:
 class RequestLimiter:
     """请求限制器"""
 
-    def __init__(self) -> None:
-        self.config: dict[str, Any] = {}  # TODO: 未来可添加请求限制配置
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        base_config: dict[str, Any] = {
+            "enabled": settings.REQUEST_LIMIT_ENABLED,
+            "max_requests_per_minute": settings.REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE,
+            "reset_seconds": settings.REQUEST_LIMIT_RESET_SECONDS,
+        }
+        if config:
+            base_config.update(config)
+
+        self.config = base_config
+        self.enabled = bool(self.config.get("enabled", True))
+        self.max_requests_per_minute = float(
+            self.config.get("max_requests_per_minute", 100)
+        )
+        self.reset_seconds = int(self.config.get("reset_seconds", 60))
         self.request_counts: dict[str, dict[str, float]] = defaultdict(
             lambda: {"count": 0.0, "last_reset": time()}
         )
@@ -182,26 +215,21 @@ class RequestLimiter:
 
     def check_request_limit(self, key: str) -> bool:
         """检查请求限制"""
+        if not self.enabled:
+            return True
+
         with self.lock:
             current_time = time()
             request_info = self.request_counts[key]
 
             # 每分钟重置
-            if current_time - request_info["last_reset"] > 60:
+            if current_time - request_info["last_reset"] > self.reset_seconds:
                 request_info["count"] = 0
                 request_info["last_reset"] = current_time
 
             request_info["count"] += 1
 
-            # 获取限制配置
-            max_requests_raw = self.config.get("max_requests_per_minute", 100)
-            max_requests = (
-                float(max_requests_raw)
-                if isinstance(max_requests_raw, (int, float))
-                else 100.0
-            )
-
-            return request_info["count"] <= max_requests
+            return request_info["count"] <= self.max_requests_per_minute
 
 token_bucket_limiter = TokenBucketRateLimiter()
 adaptive_limiter = AdaptiveRateLimiter()

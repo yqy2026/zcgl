@@ -18,7 +18,6 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....crud.asset import asset_crud
 from ....crud.history import history_crud
 from ....database import get_db
-from ....models.asset import AssetHistory
 from ....schemas.asset import AssetHistoryResponse
 
 # 创建历史路由器
@@ -44,21 +43,15 @@ def get_history_list(
     - **asset_id**: 按资产ID筛选
     """
     try:
-        query = db.query(AssetHistory)
-
         if asset_id:
             # 检查资产是否存在
             asset = asset_crud.get(db=db, id=asset_id)
             if not asset:
                 raise ResourceNotFoundError("Asset", asset_id)
-            query = query.filter(AssetHistory.asset_id == asset_id)
 
-        total = query.count()
-        history_records = (
-            query.order_by(AssetHistory.operation_time.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-            .all()
+        skip = (page - 1) * page_size
+        history_records, total = history_crud.get_multi_with_count(
+            db, skip=skip, limit=page_size, asset_id=asset_id
         )
 
         items = [

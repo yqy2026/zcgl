@@ -185,8 +185,8 @@ class TestSecurityAlertsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -223,8 +223,8 @@ class TestSecurityAlertsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -261,8 +261,8 @@ class TestSecurityAlertsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_user.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -302,8 +302,8 @@ class TestSecurityEventsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -336,8 +336,8 @@ class TestSecurityEventsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -382,8 +382,8 @@ class TestSecurityEventsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -433,8 +433,8 @@ class TestSecurityEventsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_user.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
@@ -488,8 +488,8 @@ class TestSecurityEventsEndpoint:
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 

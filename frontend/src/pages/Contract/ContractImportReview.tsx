@@ -589,8 +589,8 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           message="系统建议"
           description={
             <ul>
-              {result.recommendations.map((recommendation, index) => (
-                <li key={index}>{recommendation}</li>
+              {result.recommendations.map(recommendation => (
+                <li key={recommendation}>{recommendation}</li>
               ))}
             </ul>
           }
@@ -606,8 +606,8 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           message="验证错误"
           description={
             <ul>
-              {result.validation_result.errors.map((error, index) => (
-                <li key={index}>{error}</li>
+              {result.validation_result.errors.map(error => (
+                <li key={error}>{error}</li>
               ))}
             </ul>
           }
@@ -622,8 +622,8 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           message="验证警告"
           description={
             <ul>
-              {result.validation_result.warnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
+              {result.validation_result.warnings.map(warning => (
+                <li key={warning}>{warning}</li>
               ))}
             </ul>
           }

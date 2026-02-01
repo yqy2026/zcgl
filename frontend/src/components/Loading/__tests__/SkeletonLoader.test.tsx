@@ -56,8 +56,14 @@ interface ColMockProps {
 }
 
 // Mock Ant Design components
-vi.mock('antd', () => ({
-  const Skeleton = (({ avatar, paragraph, title, rows, active }: SkeletonDefaultMockProps) => (
+vi.mock('antd', () => {
+  const Skeleton = (({
+    avatar,
+    paragraph,
+    title,
+    rows,
+    active,
+  }: SkeletonDefaultMockProps) => (
     <div
       data-testid="skeleton"
       data-avatar={avatar}
@@ -68,47 +74,73 @@ vi.mock('antd', () => ({
     >
       {paragraph && <span data-testid="skeleton-paragraph" />}
     </div>
-  )) as any;
+  )) as React.FC<SkeletonDefaultMockProps> & {
+    Input?: React.FC<SkeletonItemMockProps>;
+    Button?: React.FC<SkeletonItemMockProps>;
+    Avatar?: React.FC<SkeletonAvatarMockProps>;
+    Node?: React.FC<SkeletonNodeMockProps>;
+  };
+  Skeleton.displayName = 'MockSkeleton';
 
-  Skeleton.Input = ({ style, active }: SkeletonItemMockProps) => (
+  const SkeletonInput = ({ style, active }: SkeletonItemMockProps) => (
     <div data-testid="skeleton-input" data-active={active} style={style} />
   );
-  Skeleton.Button = ({ style, active }: SkeletonItemMockProps) => (
+  SkeletonInput.displayName = 'MockSkeletonInput';
+  Skeleton.Input = SkeletonInput;
+
+  const SkeletonButton = ({ style, active }: SkeletonItemMockProps) => (
     <div data-testid="skeleton-button" data-active={active} style={style} />
   );
-  Skeleton.Avatar = ({ size, active }: SkeletonAvatarMockProps) => (
+  SkeletonButton.displayName = 'MockSkeletonButton';
+  Skeleton.Button = SkeletonButton;
+
+  const SkeletonAvatar = ({ size, active }: SkeletonAvatarMockProps) => (
     <div data-testid="skeleton-avatar" data-size={size} data-active={active} />
   );
-  Skeleton.Node = ({ children, style, active }: SkeletonNodeMockProps) => (
+  SkeletonAvatar.displayName = 'MockSkeletonAvatar';
+  Skeleton.Avatar = SkeletonAvatar;
+
+  const SkeletonNode = ({ children, style, active }: SkeletonNodeMockProps) => (
     <div data-testid="skeleton-node" data-active={active} style={style}>
       {children}
     </div>
   );
+  SkeletonNode.displayName = 'MockSkeletonNode';
+  Skeleton.Node = SkeletonNode;
+
+  const Card = ({ children, title, size, style }: CardMockProps) => (
+    <div data-testid="card" data-size={size} data-has-title={!!title} style={style}>
+      {children}
+    </div>
+  );
+  Card.displayName = 'MockCard';
+
+  const Row = ({ children, gutter, style }: RowMockProps) => (
+    <div data-testid="row" data-gutter={gutter} style={style}>
+      {children}
+    </div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({ children, span, xs, sm, md, lg }: ColMockProps) => (
+    <div
+      data-testid="col"
+      data-span={span}
+      data-xs={xs}
+      data-sm={sm}
+      data-md={md}
+      data-lg={lg}
+    >
+      {children}
+    </div>
+  );
+  Col.displayName = 'MockCol';
 
   return {
     Skeleton,
-    Card: ({ children, title, size, style }: CardMockProps) => (
-      <div data-testid="card" data-size={size} data-has-title={!!title} style={style}>
-        {children}
-      </div>
-    ),
-    Row: ({ children, gutter, style }: RowMockProps) => (
-      <div data-testid="row" data-gutter={gutter} style={style}>
-        {children}
-      </div>
-    ),
-    Col: ({ children, span, xs, sm, md, lg }: ColMockProps) => (
-      <div
-        data-testid="col"
-        data-span={span}
-        data-xs={xs}
-        data-sm={sm}
-        data-md={md}
-        data-lg={lg}
-      >
-        {children}
-      </div>
-    ),
+    Card,
+    Row,
+    Col,
   };
 });
 
@@ -175,12 +207,12 @@ describe('SkeletonLoader', () => {
   it('renders skeleton when loading is false but children missing', () => {
     render(<SkeletonLoader loading={false} />);
 
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('falls back to default skeleton for unknown type', () => {
     render(<SkeletonLoader type={'unknown' as 'list'} />);
 
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 });

@@ -48,6 +48,7 @@ const {
       </form>
     )
   );
+  (formMock as React.FC).displayName = 'MockForm';
 
   return {
     useDictionariesMock,
@@ -92,42 +93,58 @@ vi.mock('@/utils/messageManager', () => ({
 
 vi.mock('../Asset', async () => {
   const actual = await vi.importActual('../Asset');
+  const AssetBasicInfoSection = () => <div data-testid="basic-info-section" />;
+  const AssetAreaSection = () => <div data-testid="area-section" />;
+  const AssetStatusSection = () => <div data-testid="status-section" />;
+  const AssetReceptionSection = () => <div data-testid="reception-section" />;
+  const AssetDetailedSection = () => <div data-testid="detailed-section" />;
+
+  AssetBasicInfoSection.displayName = 'MockAssetBasicInfoSection';
+  AssetAreaSection.displayName = 'MockAssetAreaSection';
+  AssetStatusSection.displayName = 'MockAssetStatusSection';
+  AssetReceptionSection.displayName = 'MockAssetReceptionSection';
+  AssetDetailedSection.displayName = 'MockAssetDetailedSection';
+
   return {
     ...actual,
-    AssetBasicInfoSection: () => <div data-testid="basic-info-section" />,
-    AssetAreaSection: () => <div data-testid="area-section" />,
-    AssetStatusSection: () => <div data-testid="status-section" />,
-    AssetReceptionSection: () => <div data-testid="reception-section" />,
-    AssetDetailedSection: () => <div data-testid="detailed-section" />,
+    AssetBasicInfoSection,
+    AssetAreaSection,
+    AssetStatusSection,
+    AssetReceptionSection,
+    AssetDetailedSection,
   };
 });
 
 // Mock Ant Design components
 vi.mock('antd', () => {
-  formMock.Item = ({ children }: { children?: React.ReactNode }) => (
+  const FormItem = ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="form-item">{children}</div>
   );
+  FormItem.displayName = 'MockFormItem';
+  formMock.Item = FormItem;
   formMock.useForm = vi.fn(() => [formInstance]);
+
+  const CollapsePanel = ({
+    children,
+    header,
+  }: {
+    children?: React.ReactNode;
+    header?: React.ReactNode;
+  }) => (
+    <div data-testid="collapse-panel">
+      {header && <div data-testid="collapse-header">{header}</div>}
+      {children}
+    </div>
+  );
+  CollapsePanel.displayName = 'MockCollapsePanel';
 
   const Collapse = Object.assign(
     ({ children }: { children?: React.ReactNode }) => (
       <div data-testid="collapse">{children}</div>
     ),
-    {
-      Panel: ({
-        children,
-        header,
-      }: {
-        children?: React.ReactNode;
-        header?: React.ReactNode;
-      }) => (
-        <div data-testid="collapse-panel">
-          {header && <div data-testid="collapse-header">{header}</div>}
-          {children}
-        </div>
-      ),
-    }
+    { Panel: CollapsePanel }
   );
+  Collapse.displayName = 'MockCollapse';
 
   const Modal = ({
     children,
@@ -146,60 +163,140 @@ vi.mock('antd', () => {
       {footer}
     </div>
   );
+  Modal.displayName = 'MockModal';
+
+  const Card = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="card">{children}</div>
+  );
+  Card.displayName = 'MockCard';
+
+  const Input = () => <input data-testid="input" />;
+  Input.displayName = 'MockInput';
+
+  const InputNumber = () => <input data-testid="input-number" />;
+  InputNumber.displayName = 'MockInputNumber';
+
+  const Select = () => <select data-testid="select" />;
+  Select.displayName = 'MockSelect';
+
+  const DatePicker = () => <input data-testid="date-picker" />;
+  DatePicker.displayName = 'MockDatePicker';
+
+  const Upload = () => <div data-testid="upload" />;
+  Upload.displayName = 'MockUpload';
+
+  const Button = ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button data-testid="button" onClick={onClick}>
+      {children}
+    </button>
+  );
+  Button.displayName = 'MockButton';
+
+  const Row = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="row">{children}</div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="col">{children}</div>
+  );
+  Col.displayName = 'MockCol';
+
+  const Space = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+
+  const Progress = ({ percent }: { percent?: number }) => (
+    <div data-testid="progress" data-percent={percent} />
+  );
+  Progress.displayName = 'MockProgress';
+
+  const TypographyTitle = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="title">{children}</div>
+  );
+  TypographyTitle.displayName = 'MockTypographyTitle';
+
+  const TypographyText = ({ children }: { children?: React.ReactNode }) => (
+    <span data-testid="text">{children}</span>
+  );
+  TypographyText.displayName = 'MockTypographyText';
+
+  const TypographyParagraph = ({ children }: { children?: React.ReactNode }) => (
+    <p data-testid="paragraph">{children}</p>
+  );
+  TypographyParagraph.displayName = 'MockTypographyParagraph';
+
+  const List = () => <div data-testid="list" />;
+  List.displayName = 'MockList';
+
+  const Tag = () => <span data-testid="tag" />;
+  Tag.displayName = 'MockTag';
+
+  const Switch = () => <input data-testid="switch" />;
+  Switch.displayName = 'MockSwitch';
+
+  const Tooltip = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="tooltip">{children}</div>
+  );
+  Tooltip.displayName = 'MockTooltip';
+
+  const Divider = () => <div data-testid="divider" />;
+  Divider.displayName = 'MockDivider';
 
   return {
-    Card: ({ children }: { children?: React.ReactNode }) => <div data-testid="card">{children}</div>,
+    Card,
     Form: formMock,
-    Input: () => <input data-testid="input" />,
-    InputNumber: () => <input data-testid="input-number" />,
-    Select: () => <select data-testid="select" />,
-    DatePicker: () => <input data-testid="date-picker" />,
-    Upload: () => <div data-testid="upload" />,
-    Button: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
-      <button data-testid="button" onClick={onClick}>
-        {children}
-      </button>
-    ),
-    Row: ({ children }: { children?: React.ReactNode }) => <div data-testid="row">{children}</div>,
-    Col: ({ children }: { children?: React.ReactNode }) => <div data-testid="col">{children}</div>,
-    Space: ({ children }: { children?: React.ReactNode }) => (
-      <div data-testid="space">{children}</div>
-    ),
-    Progress: ({ percent }: { percent?: number }) => (
-      <div data-testid="progress" data-percent={percent} />
-    ),
+    Input,
+    InputNumber,
+    Select,
+    DatePicker,
+    Upload,
+    Button,
+    Row,
+    Col,
+    Space,
+    Progress,
     Typography: {
-      Title: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="title">{children}</div>
-      ),
-      Text: ({ children }: { children?: React.ReactNode }) => (
-        <span data-testid="text">{children}</span>
-      ),
-      Paragraph: ({ children }: { children?: React.ReactNode }) => (
-        <p data-testid="paragraph">{children}</p>
-      ),
+      Title: TypographyTitle,
+      Text: TypographyText,
+      Paragraph: TypographyParagraph,
     },
-    List: () => <div data-testid="list" />,
-    Tag: () => <span data-testid="tag" />,
-    Switch: () => <input data-testid="switch" />,
-    Tooltip: ({ children }: { children?: React.ReactNode }) => (
-      <div data-testid="tooltip">{children}</div>
-    ),
-    Divider: () => <div data-testid="divider" />,
+    List,
+    Tag,
+    Switch,
+    Tooltip,
+    Divider,
     Collapse,
     Modal,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  UploadOutlined: () => null,
-  SaveOutlined: () => null,
-  ReloadOutlined: () => null,
-  EyeOutlined: () => null,
-  DeleteOutlined: () => null,
-  InfoCircleOutlined: () => null,
-}));
+vi.mock('@ant-design/icons', () => {
+  const UploadOutlined = () => null;
+  const SaveOutlined = () => null;
+  const ReloadOutlined = () => null;
+  const EyeOutlined = () => null;
+  const DeleteOutlined = () => null;
+  const InfoCircleOutlined = () => null;
+
+  UploadOutlined.displayName = 'UploadOutlined';
+  SaveOutlined.displayName = 'SaveOutlined';
+  ReloadOutlined.displayName = 'ReloadOutlined';
+  EyeOutlined.displayName = 'EyeOutlined';
+  DeleteOutlined.displayName = 'DeleteOutlined';
+  InfoCircleOutlined.displayName = 'InfoCircleOutlined';
+
+  return {
+    UploadOutlined,
+    SaveOutlined,
+    ReloadOutlined,
+    EyeOutlined,
+    DeleteOutlined,
+    InfoCircleOutlined,
+  };
+});
 
 describe('AssetForm - 核心行为测试', () => {
   beforeEach(() => {

@@ -320,7 +320,7 @@ def test_permission_enforcement(
         role="user",
     )
 
-    # Login as admin
+    # Login as admin and verify admin access before user login overwrites cookies
     admin_login = client.post(
         "/api/v1/auth/login",
         json={"username": "perm_admin", "password": "AdminPerm123!"},
@@ -329,19 +329,19 @@ def test_permission_enforcement(
     admin_tokens_data = admin_response.get("tokens", admin_response)
     admin_headers = {"Authorization": f"Bearer {admin_tokens_data['access_token']}"}
 
-    # Login as regular user
+    # Test admin endpoint (e.g., list all users)
+    # Admin should be able to access
+    admin_list_response = client.get("/api/v1/auth/users", headers=admin_headers)
+    # Note: This might return 200 or pagination structure
+    assert admin_list_response.status_code in [200, 206]
+
+    # Login as regular user (cookie may override Authorization header)
     user_login = client.post(
         "/api/v1/auth/login", json={"username": "perm_user", "password": "UserPerm123!"}
     )
     user_response = user_login.json()
     user_tokens_data = user_response.get("tokens", user_response)
     user_headers = {"Authorization": f"Bearer {user_tokens_data['access_token']}"}
-
-    # Test admin endpoint (e.g., list all users)
-    # Admin should be able to access
-    admin_list_response = client.get("/api/v1/auth/users", headers=admin_headers)
-    # Note: This might return 200 or pagination structure
-    assert admin_list_response.status_code in [200, 206]
 
     # Regular user should not be able to list all users (or get filtered results)
     user_list_response = client.get("/api/v1/auth/users", headers=user_headers)

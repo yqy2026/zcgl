@@ -343,6 +343,38 @@ class TestCheckContractExpiry:
 
             assert result == 1
 
+    def test_duplicate_contract_notification_skipped(self, scheduler_service, mock_db):
+        """测试重复合同通知被拦截"""
+        contract = MagicMock(spec=RentContract)
+        contract.id = "contract_123"
+        contract.contract_number = "HT001"
+        contract.tenant_name = "租户A"
+        contract.end_date = date.today()
+
+        mock_query = MagicMock()
+        mock_filter = MagicMock()
+        mock_filter.return_value = mock_filter
+        mock_query.filter.return_value = mock_filter
+        mock_filter.all.return_value = [contract]
+        mock_db.query.return_value = mock_query
+
+        user = MagicMock(spec=User)
+        user.id = "user_123"
+
+        with patch(
+            "src.services.notification.scheduler.notification_service"
+        ) as mock_service:
+            mock_service.list_active_users.return_value = [user]
+            mock_service.find_existing_notification.return_value = MagicMock()
+
+            with patch.object(
+                scheduler_service, "_create_and_send_notification"
+            ) as mock_create:
+                result = scheduler_service.check_contract_expiry(days_ahead=30)
+
+                assert result == 1
+                mock_create.assert_not_called()
+
 
 # ============================================================================
 # Test check_payment_overdue
@@ -467,6 +499,43 @@ class TestCheckPaymentOverdue:
             result = scheduler_service.check_payment_overdue()
 
             assert isinstance(result, int)
+
+    def test_duplicate_overdue_notification_skipped(self, scheduler_service, mock_db):
+        """测试重复逾期通知被拦截"""
+        ledger = MagicMock(spec=RentLedger)
+        ledger.id = "ledger_123"
+        ledger.due_date = date.today() - timedelta(days=5)
+        ledger.data_status = "正常"
+        ledger.payment_status = PaymentStatus.UNPAID
+        ledger.year_month = "2024-01"
+        ledger.due_amount = 5000.0
+        ledger.contract = MagicMock()
+        ledger.contract.contract_number = "HT001"
+        ledger.contract.tenant_name = "租户A"
+
+        mock_query = MagicMock()
+        mock_filter = MagicMock()
+        mock_filter.return_value = mock_filter
+        mock_query.filter.return_value = mock_filter
+        mock_filter.all.return_value = [ledger]
+        mock_db.query.return_value = mock_query
+
+        user = MagicMock(spec=User)
+        user.id = "user_123"
+
+        with patch(
+            "src.services.notification.scheduler.notification_service"
+        ) as mock_service:
+            mock_service.list_active_users.return_value = [user]
+            mock_service.find_existing_notification.return_value = MagicMock()
+
+            with patch.object(
+                scheduler_service, "_create_and_send_notification"
+            ) as mock_create:
+                result = scheduler_service.check_payment_overdue()
+
+                assert result == 0
+                mock_create.assert_not_called()
 
 
 # ============================================================================
@@ -749,14 +818,14 @@ class TestSchedulerEdgeCases:
 # Test Summary
 # ============================================================================
 """
-总计：30个测试
+总计：32个测试
 
 测试分类：
 1. TestNotificationSchedulerServiceInit: 1个测试
 2. TestSendWecomNotification: 4个测试
 3. TestCreateAndSendNotification: 2个测试
-4. TestCheckContractExpiry: 5个测试
-5. TestCheckPaymentOverdue: 4个测试
+4. TestCheckContractExpiry: 6个测试
+5. TestCheckPaymentOverdue: 5个测试
 6. TestCheckPaymentDueSoon: 4个测试
 7. TestRunNotificationTasks: 2个测试
 8. TestSchedulerEdgeCases: 3个测试
@@ -769,6 +838,7 @@ class TestSchedulerEdgeCases:
 ✓ 付款逾期检查（1天/7天/30天）
 ✓ 付款到期提醒（今日/3天/7天）
 ✓ 多合同/多用户处理
+✓ 重复通知拦截
 ✓ datetime/date类型处理
 ✓ 边界情况（无用户、无合同）
 ✓ 异常处理

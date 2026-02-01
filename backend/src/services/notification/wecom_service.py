@@ -9,8 +9,8 @@ from typing import Any
 
 import httpx
 
-from ...core.config import settings
 from ...constants.timeout_constants import WECOM_REQUEST_TIMEOUT_SECONDS
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 

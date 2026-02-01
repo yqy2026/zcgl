@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Progress, Tag } from 'antd';
 import { BuildOutlined, HomeOutlined, ShopOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -31,146 +31,158 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
   });
 
   // 物业性质面积对比图表配置 - 为@ant-design/plots转换数据格式
-  const propertyNatureChartData =
-    data?.by_property_nature?.flatMap(item => [
-      { property_nature: item.property_nature, type: '土地面积', value: item.land_area },
-      { property_nature: item.property_nature, type: '房产面积', value: item.property_area },
-      { property_nature: item.property_nature, type: '可租面积', value: item.rentable_area },
-      { property_nature: item.property_nature, type: '已租面积', value: item.rented_area },
-    ]) ?? [];
+  const propertyNatureChartData = useMemo(
+    () =>
+      data?.by_property_nature?.flatMap(item => [
+        { property_nature: item.property_nature, type: '土地面积', value: item.land_area },
+        { property_nature: item.property_nature, type: '房产面积', value: item.property_area },
+        { property_nature: item.property_nature, type: '可租面积', value: item.rentable_area },
+        { property_nature: item.property_nature, type: '已租面积', value: item.rented_area },
+      ]) ?? [],
+    [data]
+  );
 
-  const propertyNatureChartConfig = {
-    data: propertyNatureChartData,
-    xField: 'property_nature' as const,
-    yField: 'value' as const,
-    seriesField: 'type' as const,
-    color: (({ type }: ChartDataPoint): string => {
-      const typeStr = type as string;
-      if (typeStr === '土地面积') return '#1890ff';
-      if (typeStr === '房产面积') return '#52c41a';
-      if (typeStr === '可租面积') return '#faad14';
-      if (typeStr === '已租面积') return '#722ed1';
-      return '#1890ff';
-    }) as ChartColorFunction,
-    columnStyle: {
-      fillOpacity: 0.6,
-      lineWidth: 1,
-    },
-    legend: {
-      position: 'top' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.type as string) ?? '',
-        value: `${(datum.value as number | undefined)?.toLocaleString()} ㎡`,
-      }),
-    },
-    yAxis: {
-      min: 0,
-      label: {
-        formatter: (value: number) => `${Number(value).toLocaleString()} ㎡`,
+  const propertyNatureChartConfig = useMemo(
+    () => ({
+      data: propertyNatureChartData,
+      xField: 'property_nature' as const,
+      yField: 'value' as const,
+      seriesField: 'type' as const,
+      color: (({ type }: ChartDataPoint): string => {
+        const typeStr = type as string;
+        if (typeStr === '土地面积') return '#1890ff';
+        if (typeStr === '房产面积') return '#52c41a';
+        if (typeStr === '可租面积') return '#faad14';
+        if (typeStr === '已租面积') return '#722ed1';
+        return '#1890ff';
+      }) as ChartColorFunction,
+      columnStyle: {
+        fillOpacity: 0.6,
+        lineWidth: 1,
       },
-    },
-    animation: {
-      appear: {
-        animation: 'scale-in-y' as const,
-        duration: 1000,
+      legend: {
+        position: 'top' as const,
       },
-    },
-  };
-
-  // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
-  const ownershipEntityData =
-    data?.by_ownership_entity?.slice(0, 10).map(
-      (item): DualAxesDataPoint => ({
-        entity:
-          item.ownership_entity.length > 8
-            ? item.ownership_entity.substring(0, 8) + '...'
-            : item.ownership_entity,
-        total_area: item.total_area,
-        occupancy_rate: item.occupancy_rate,
-        full_name: item.ownership_entity,
-      })
-    ) ?? [];
-
-  const ownershipEntityChartConfig = {
-    data: [ownershipEntityData, ownershipEntityData],
-    xField: 'entity' as const,
-    yField: ['total_area', 'occupancy_rate'] as const,
-    geometryOptions: [
-      {
-        geometry: 'column' as const,
-        color: '#1890ff',
-        columnStyle: {
-          fillOpacity: 0.6,
-        },
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.type as string) ?? '',
+          value: `${(datum.value as number | undefined)?.toLocaleString()} ㎡`,
+        }),
       },
-      {
-        geometry: 'line' as const,
-        color: '#f5222d',
-        lineStyle: {
-          lineWidth: 2,
-        },
-        point: {
-          size: 4,
-        },
-      },
-    ],
-    yAxis: {
-      total_area: {
+      yAxis: {
         min: 0,
         label: {
           formatter: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
-      occupancy_rate: {
-        min: 0,
-        max: 100,
-        label: {
-          formatter: (value: number) => `${value}%`,
+      animation: {
+        appear: {
+          animation: 'scale-in-y' as const,
+          duration: 1000,
         },
       },
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint, type: string): TooltipFormatterResult => {
-        if (type === 'total_area') {
+    }),
+    [propertyNatureChartData]
+  );
+
+  // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
+  const ownershipEntityData = useMemo(
+    () =>
+      data?.by_ownership_entity?.slice(0, 10).map(
+        (item): DualAxesDataPoint => ({
+          entity:
+            item.ownership_entity.length > 8
+              ? item.ownership_entity.substring(0, 8) + '...'
+              : item.ownership_entity,
+          total_area: item.total_area,
+          occupancy_rate: item.occupancy_rate,
+          full_name: item.ownership_entity,
+        })
+      ) ?? [],
+    [data]
+  );
+
+  const ownershipEntityChartConfig = useMemo(
+    () => ({
+      data: [ownershipEntityData, ownershipEntityData],
+      xField: 'entity' as const,
+      yField: ['total_area', 'occupancy_rate'] as const,
+      geometryOptions: [
+        {
+          geometry: 'column' as const,
+          color: '#1890ff',
+          columnStyle: {
+            fillOpacity: 0.6,
+          },
+        },
+        {
+          geometry: 'line' as const,
+          color: '#f5222d',
+          lineStyle: {
+            lineWidth: 2,
+          },
+          point: {
+            size: 4,
+          },
+        },
+      ],
+      yAxis: {
+        total_area: {
+          min: 0,
+          label: {
+            formatter: (value: number) => `${Number(value).toLocaleString()} ㎡`,
+          },
+        },
+        occupancy_rate: {
+          min: 0,
+          max: 100,
+          label: {
+            formatter: (value: number) => `${value}%`,
+          },
+        },
+      },
+      tooltip: {
+        formatter: (datum: ChartDataPoint, type: string): TooltipFormatterResult => {
+          if (type === 'total_area') {
+            return {
+              name: '总面积',
+              value: `${(datum.total_area as number | undefined)?.toLocaleString()} ㎡`,
+            };
+          }
           return {
-            name: '总面积',
-            value: `${(datum.total_area as number | undefined)?.toLocaleString()} ㎡`,
+            name: '出租率',
+            value: `${(datum.occupancy_rate as number | undefined)?.toFixed(2)}%`,
           };
-        }
-        return {
-          name: '出租率',
-          value: `${(datum.occupancy_rate as number | undefined)?.toFixed(2)}%`,
-        };
-      },
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as DualAxesDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+        },
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as DualAxesDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+              </div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+              <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
             </div>
-            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
-            <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    xAxis: {
-      label: {
-        autoRotate: true,
-        autoHide: true,
-        maxRotation: 45,
-        minRotation: 0,
+      xAxis: {
+        label: {
+          autoRotate: true,
+          autoHide: true,
+          maxRotation: 45,
+          minRotation: 0,
+        },
       },
-    },
-  };
+    }),
+    [ownershipEntityData]
+  );
 
   // 面积区间分布图表配置
-  const areaRangeChartConfig = {
-    data:
+  const areaRangeChartData = useMemo(
+    () =>
       data?.area_ranges?.map(
         (item): AreaRangeDataPoint => ({
           range: item.range,
@@ -179,58 +191,66 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
           percentage: item.percentage ?? 0,
         })
       ) ?? [],
-    xField: 'range' as const,
-    yField: 'count' as const,
-    color: '#52c41a',
-    columnStyle: {
-      fillOpacity: 0.6,
-      stroke: '#52c41a',
-      lineWidth: 1,
-    },
-    label: {
-      position: 'top' as const,
-      formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
-      style: {
-        fill: '#333',
-        fontSize: 12,
+    [data]
+  );
+
+  const areaRangeChartConfig = useMemo(
+    () => ({
+      data: areaRangeChartData,
+      xField: 'range' as const,
+      yField: 'count' as const,
+      color: '#52c41a',
+      columnStyle: {
+        fillOpacity: 0.6,
+        stroke: '#52c41a',
+        lineWidth: 1,
       },
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.range as string) ?? '',
-        value: `${datum.count as number} 个`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as AreaRangeDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.range}</div>
-            <div>资产数量: {datum.count} 个</div>
-            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
-            <div>占比: {datum.percentage?.toFixed(1)}%</div>
-          </div>
-        );
-      },
-    },
-    yAxis: {
-      min: 0,
-    },
-    xAxis: {
       label: {
-        autoRotate: true,
-        autoHide: true,
-        maxRotation: 45,
-        minRotation: 0,
+        position: 'top' as const,
+        formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
+        style: {
+          fill: '#333',
+          fontSize: 12,
+        },
       },
-    },
-    animation: {
-      appear: {
-        animation: 'scale-in-y' as const,
-        duration: 1000,
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.range as string) ?? '',
+          value: `${datum.count as number} 个`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as AreaRangeDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.range}</div>
+              <div>资产数量: {datum.count} 个</div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+              <div>占比: {datum.percentage?.toFixed(1)}%</div>
+            </div>
+          );
+        },
       },
-    },
-  };
+      yAxis: {
+        min: 0,
+      },
+      xAxis: {
+        label: {
+          autoRotate: true,
+          autoHide: true,
+          maxRotation: 45,
+          minRotation: 0,
+        },
+      },
+      animation: {
+        appear: {
+          animation: 'scale-in-y' as const,
+          duration: 1000,
+        },
+      },
+    }),
+    [areaRangeChartData]
+  );
 
   if (error !== undefined && error !== null) {
     return (
@@ -360,7 +380,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.by_usage_status?.map((item, index) => (
                 <div
-                  key={index}
+                  key={item.usage_status}
                   style={{
                     padding: '12px 0',
                     borderBottom:
@@ -413,7 +433,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.top_assets_by_area?.map((asset, index) => (
                 <div
-                  key={index}
+                  key={asset.property_name}
                   style={{
                     padding: '12px 0',
                     borderBottom:
@@ -472,4 +492,4 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
   );
 };
 
-export default AreaStatisticsChart;
+export default React.memo(AreaStatisticsChart);

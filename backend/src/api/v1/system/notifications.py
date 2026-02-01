@@ -4,7 +4,7 @@
 提供站内消息通知的查询、标记已读、删除等功能
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import JSONResponse
@@ -16,7 +16,7 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....models.notification import Notification
+from ....services.notification.notification_service import notification_service
 from ....services.notification.scheduler import run_notification_tasks
 
 router = APIRouter(tags=["Notifications"])
@@ -86,34 +86,17 @@ def get_notifications(
     - **is_read**: 筛选已读/未读通知
     - **type**: 按通知类型筛选
     """
-    # 构建查询
-    query = db.query(Notification).filter(Notification.recipient_id == current_user.id)
-
-    if is_read is not None:
-        query = query.filter(Notification.is_read == is_read)
-
-    if type is not None:
-        query = query.filter(Notification.type == type)
-
-    # 按创建时间倒序排序
-    query = query.order_by(Notification.created_at.desc())
-
-    # 获取总数
-    total = query.count()
-
-    # 获取未读数量
-    unread_count = (
-        db.query(Notification)
-        .filter(
-            Notification.recipient_id == current_user.id,
-            Notification.is_read.is_(False),
-        )
-        .count()
+    result = notification_service.list_notifications(
+        db,
+        user_id=str(current_user.id),
+        page=page,
+        page_size=page_size,
+        is_read=is_read,
+        type=type,
     )
-
-    # 分页
-    offset = (page - 1) * page_size
-    notifications = query.offset(offset).limit(page_size).all()
+    notifications = result["items"]
+    total = result["total"]
+    unread_count = result["unread_count"]
 
     return ResponseHandler.paginated(
         data=[NotificationResponse.model_validate(n) for n in notifications],
@@ -133,13 +116,8 @@ def get_unread_count(
     """
     获取当前用户的未读通知数量
     """
-    unread_count = (
-        db.query(Notification)
-        .filter(
-            Notification.recipient_id == current_user.id,
-            Notification.is_read.is_(False),
-        )
-        .count()
+    unread_count = notification_service.get_unread_count(
+        db, user_id=str(current_user.id)
     )
 
     return UnreadCountResponse(
@@ -157,22 +135,14 @@ def mark_notification_as_read(
     """
     标记通知为已读
     """
-    notification = (
-        db.query(Notification)
-        .filter(
-            Notification.id == notification_id,
-            Notification.recipient_id == current_user.id,
-        )
-        .first()
+    notification = notification_service.mark_as_read(
+        db, user_id=str(current_user.id), notification_id=notification_id
     )
 
     if not notification:
         raise not_found(
             "通知不存在", resource_type="notification", resource_id=notification_id
         )
-
-    notification.mark_as_read()
-    db.commit()
 
     return NotificationResponse.model_validate(notification)
 
@@ -185,12 +155,7 @@ def mark_all_as_read(
     """
     标记所有通知为已读
     """
-    # 更新所有未读通知
-    db.query(Notification).filter(
-        Notification.recipient_id == current_user.id, Notification.is_read.is_(False)
-    ).update({"is_read": True, "read_at": datetime.now(UTC)})
-
-    db.commit()
+    notification_service.mark_all_as_read(db, user_id=str(current_user.id))
 
     return {"message": "已标记所有通知为已读"}
 
@@ -204,22 +169,13 @@ def delete_notification(
     """
     删除通知
     """
-    notification = (
-        db.query(Notification)
-        .filter(
-            Notification.id == notification_id,
-            Notification.recipient_id == current_user.id,
-        )
-        .first()
+    deleted = notification_service.delete_notification(
+        db, user_id=str(current_user.id), notification_id=notification_id
     )
-
-    if not notification:
+    if not deleted:
         raise not_found(
             "通知不存在", resource_type="notification", resource_id=notification_id
         )
-
-    db.delete(notification)
-    db.commit()
 
     return {"message": "通知已删除"}
 

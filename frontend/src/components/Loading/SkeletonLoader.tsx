@@ -24,7 +24,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         return (
           <div>
             {Array.from({ length: rows }).map((_, index) => (
-              <Card key={index} style={{ marginBottom: 16 }}>
+              <Card key={`skeleton-list-${index}`} style={{ marginBottom: 16 }}>
                 <Skeleton avatar paragraph={{ rows: 2 }} active />
               </Card>
             ))}
@@ -35,7 +35,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         return (
           <Row gutter={16}>
             {Array.from({ length: rows }).map((_, index) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={index}>
+              <Col xs={24} sm={12} md={8} lg={6} key={`skeleton-card-${index}`}>
                 <Card style={{ marginBottom: 16 }}>
                   <Skeleton paragraph={{ rows: 3 }} active />
                 </Card>
@@ -51,7 +51,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <Skeleton.Input style={{ width: 200, height: 32 }} active />
             </div>
             {Array.from({ length: rows }).map((_, index) => (
-              <Row key={index} gutter={16} style={{ marginBottom: 24 }}>
+              <Row key={`skeleton-form-${index}`} gutter={16} style={{ marginBottom: 24 }}>
                 <Col span={6}>
                   <Skeleton.Input style={{ width: '100%', height: 32 }} active />
                 </Col>
@@ -96,7 +96,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             {/* 表头 */}
             <Row gutter={16} style={{ marginBottom: 16, padding: '12px 0', background: '#fafafa' }}>
               {Array.from({ length: 6 }).map((_, index) => (
-                <Col span={4} key={index}>
+                <Col span={4} key={`skeleton-header-${index}`}>
                   <Skeleton.Input style={{ width: '80%', height: 20 }} active />
                 </Col>
               ))}
@@ -104,9 +104,13 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
             {/* 表格行 */}
             {Array.from({ length: rows }).map((_, rowIndex) => (
-              <Row key={rowIndex} gutter={16} style={{ marginBottom: 12, padding: '8px 0' }}>
+              <Row
+                key={`skeleton-row-${rowIndex}`}
+                gutter={16}
+                style={{ marginBottom: 12, padding: '8px 0' }}
+              >
                 {Array.from({ length: 6 }).map((_, colIndex) => (
-                  <Col span={4} key={colIndex}>
+                  <Col span={4} key={`skeleton-cell-${rowIndex}-${colIndex}`}>
                     <Skeleton.Input
                       style={{
                         width: colIndex === 0 ? '60%' : '80%',
@@ -136,7 +140,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             {/* 统计卡片 */}
             <Row gutter={16} style={{ marginBottom: 24 }}>
               {Array.from({ length: 4 }).map((_, index) => (
-                <Col span={6} key={index}>
+                <Col span={6} key={`skeleton-stat-${index}`}>
                   <Card size="small">
                     <Skeleton paragraph={{ rows: 1 }} title={{ width: '60%' }} active />
                   </Card>
@@ -192,7 +196,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <Col span={16}>
                 <Card title={<Skeleton.Input style={{ width: 120, height: 20 }} active />}>
                   {Array.from({ length: rows }).map((_, index) => (
-                    <Row key={index} gutter={16} style={{ marginBottom: 16 }}>
+                    <Row key={`skeleton-detail-${index}`} gutter={16} style={{ marginBottom: 16 }}>
                       <Col span={8}>
                         <Skeleton.Input style={{ width: '100%', height: 16 }} active />
                       </Col>
@@ -207,7 +211,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <Col span={8}>
                 <Card title={<Skeleton.Input style={{ width: 100, height: 20 }} active />}>
                   {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} style={{ marginBottom: 16 }}>
+                    <div key={`skeleton-side-${index}`} style={{ marginBottom: 16 }}>
                       <Skeleton paragraph={{ rows: 1 }} title={{ width: '70%' }} active />
                     </div>
                   ))}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Tag } from 'antd';
 import { HomeOutlined, UserOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -71,187 +71,199 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   });
 
   // 物业性质分布图表配置
-  const propertyNatureChartConfig = {
-    data:
-      data?.by_property_nature?.map(
-        (item): DistributionDataPoint => ({
-          type: item.property_nature,
-          value: item.count ?? 0,
-          percentage: item.percentage,
-          total_area: item.total_area,
-        })
-      ) ?? [],
-    angleField: 'value' as const,
-    colorField: 'type' as const,
-    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
-    radius: 0.8,
-    innerRadius: 0.4,
-    label: {
-      type: 'outer' as const,
-      content: '{percentage}%',
-    },
-    legend: {
-      layout: 'horizontal' as const,
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.type as string) ?? '',
-        value: `${datum.value as number} 个`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as DistributionDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
-            <div>数量: {datum.value} 个</div>
-            <div>占比: {datum.percentage?.toFixed(1)}%</div>
-            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
-          </div>
-        );
+  const propertyNatureChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_property_nature?.map(
+          (item): DistributionDataPoint => ({
+            type: item.property_nature,
+            value: item.count ?? 0,
+            percentage: item.percentage,
+            total_area: item.total_area,
+          })
+        ) ?? [],
+      angleField: 'value' as const,
+      colorField: 'type' as const,
+      color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+      radius: 0.8,
+      innerRadius: 0.4,
+      label: {
+        type: 'outer' as const,
+        content: '{percentage}%',
       },
-    },
-  };
+      legend: {
+        layout: 'horizontal' as const,
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.type as string) ?? '',
+          value: `${datum.value as number} 个`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as DistributionDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
+              <div>数量: {datum.value} 个</div>
+              <div>占比: {datum.percentage?.toFixed(1)}%</div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+            </div>
+          );
+        },
+      },
+    }),
+    [data]
+  );
 
   // 确权状态分布图表配置
-  const ownershipStatusChartConfig = {
-    data:
-      data?.by_ownership_status?.map(
-        (item): DistributionDataPoint => ({
-          type: item.ownership_status,
-          value: item.count ?? 0,
-          percentage: item.percentage,
-        })
-      ) ?? [],
-    angleField: 'value' as const,
-    colorField: 'type' as const,
-    color: ['#52c41a', '#ff4d4f', '#faad14', '#1890ff'],
-    radius: 0.8,
-    innerRadius: 0.6,
-    label: {
-      type: 'inner' as const,
-      offset: '-50%',
-      content: '{percentage}%',
-      style: {
-        textAlign: 'center' as const,
-        fontSize: 14,
-        fill: '#fff',
+  const ownershipStatusChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_ownership_status?.map(
+          (item): DistributionDataPoint => ({
+            type: item.ownership_status,
+            value: item.count ?? 0,
+            percentage: item.percentage,
+          })
+        ) ?? [],
+      angleField: 'value' as const,
+      colorField: 'type' as const,
+      color: ['#52c41a', '#ff4d4f', '#faad14', '#1890ff'],
+      radius: 0.8,
+      innerRadius: 0.6,
+      label: {
+        type: 'inner' as const,
+        offset: '-50%',
+        content: '{percentage}%',
+        style: {
+          textAlign: 'center' as const,
+          fontSize: 14,
+          fill: '#fff',
+        },
       },
-    },
-    legend: {
-      layout: 'horizontal' as const,
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.type as string) ?? '',
-        value: `${datum.value as number} 个 (${(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%)`,
-      }),
-    },
-  };
+      legend: {
+        layout: 'horizontal' as const,
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.type as string) ?? '',
+          value: `${datum.value as number} 个 (${(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%)`,
+        }),
+      },
+    }),
+    [data]
+  );
 
   // 使用状态分布图表配置
-  const usageStatusChartConfig = {
-    data:
-      data?.by_usage_status?.map(
-        (item): DistributionDataPoint => ({
-          type: item.usage_status,
-          value: item.count ?? 0,
-          percentage: item.percentage,
-        })
-      ) ?? [],
-    angleField: 'value' as const,
-    colorField: 'type' as const,
-    color: ['#52c41a', '#ff4d4f', '#1890ff', '#722ed1', '#faad14'],
-    radius: 0.8,
-    innerRadius: 0.4,
-    label: {
-      type: 'outer' as const,
-      content: '{percentage}%',
-    },
-    legend: {
-      layout: 'horizontal' as const,
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.type as string) ?? '',
-        value: `${datum.value as number} 个 (${(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%)`,
-      }),
-    },
-  };
+  const usageStatusChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_usage_status?.map(
+          (item): DistributionDataPoint => ({
+            type: item.usage_status,
+            value: item.count ?? 0,
+            percentage: item.percentage,
+          })
+        ) ?? [],
+      angleField: 'value' as const,
+      colorField: 'type' as const,
+      color: ['#52c41a', '#ff4d4f', '#1890ff', '#722ed1', '#faad14'],
+      radius: 0.8,
+      innerRadius: 0.4,
+      label: {
+        type: 'outer' as const,
+        content: '{percentage}%',
+      },
+      legend: {
+        layout: 'horizontal' as const,
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.type as string) ?? '',
+          value: `${datum.value as number} 个 (${(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%)`,
+        }),
+      },
+    }),
+    [data]
+  );
 
   // 权属方分布柱状图配置
-  const ownershipEntityChartConfig = {
-    data:
-      data?.by_ownership_entity?.slice(0, 10).map(
-        (item): ColumnDataPoint => ({
-          entity:
-            item.ownership_entity.length > 8
-              ? item.ownership_entity.substring(0, 8) + '...'
-              : item.ownership_entity,
-          count: item.count ?? 0,
-          percentage: item.percentage,
-          total_area: item.total_area,
-          full_name: item.ownership_entity,
-          value: item.count ?? 0,
-        })
-      ) ?? [],
-    xField: 'entity' as const,
-    yField: 'count' as const,
-    color: '#1890ff',
-    columnStyle: {
-      fillOpacity: 0.6,
-      stroke: '#1890ff',
-      lineWidth: 1,
-    },
-    label: {
-      position: 'top' as const,
-      formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
-      style: {
-        fill: '#333',
-        fontSize: 12,
+  const ownershipEntityChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_ownership_entity?.slice(0, 10).map(
+          (item): ColumnDataPoint => ({
+            entity:
+              item.ownership_entity.length > 8
+                ? item.ownership_entity.substring(0, 8) + '...'
+                : item.ownership_entity,
+            count: item.count ?? 0,
+            percentage: item.percentage,
+            total_area: item.total_area,
+            full_name: item.ownership_entity,
+            value: item.count ?? 0,
+          })
+        ) ?? [],
+      xField: 'entity' as const,
+      yField: 'count' as const,
+      color: '#1890ff',
+      columnStyle: {
+        fillOpacity: 0.6,
+        stroke: '#1890ff',
+        lineWidth: 1,
       },
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.full_name as string | undefined) ?? (datum.entity as string) ?? '',
-        value: `${datum.count as number} 个`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as ColumnDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {(datum.full_name as string | undefined) ?? (datum.entity as string)}
-            </div>
-            <div>资产数量: {datum.count as number} 个</div>
-            <div>占比: {(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%</div>
-            <div>总面积: {(datum.total_area as number | undefined)?.toLocaleString()} ㎡</div>
-          </div>
-        );
-      },
-    },
-    yAxis: {
-      min: 0,
-    },
-    xAxis: {
       label: {
-        autoRotate: true,
-        autoHide: true,
-        maxRotation: 45,
-        minRotation: 0,
+        position: 'top' as const,
+        formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
+        style: {
+          fill: '#333',
+          fontSize: 12,
+        },
       },
-    },
-    animation: {
-      appear: {
-        animation: 'scale-in-y' as const,
-        duration: 1000,
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.full_name as string | undefined) ?? (datum.entity as string) ?? '',
+          value: `${datum.count as number} 个`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as ColumnDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+              </div>
+              <div>资产数量: {datum.count as number} 个</div>
+              <div>占比: {(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%</div>
+              <div>总面积: {(datum.total_area as number | undefined)?.toLocaleString()} ㎡</div>
+            </div>
+          );
+        },
       },
-    },
-  };
+      yAxis: {
+        min: 0,
+      },
+      xAxis: {
+        label: {
+          autoRotate: true,
+          autoHide: true,
+          maxRotation: 45,
+          minRotation: 0,
+        },
+      },
+      animation: {
+        appear: {
+          animation: 'scale-in-y' as const,
+          duration: 1000,
+        },
+      },
+    }),
+    [data]
+  );
 
   if (error !== undefined && error !== null) {
     return (
@@ -363,7 +375,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.by_property_nature?.map((item, index) => (
                 <div
-                  key={index}
+                  key={item.property_nature}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -399,7 +411,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.by_usage_status?.map((item, index) => (
                 <div
-                  key={index}
+                  key={item.usage_status}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -442,4 +454,4 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   );
 };
 
-export default AssetDistributionChart;
+export default React.memo(AssetDistributionChart);

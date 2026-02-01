@@ -1,4 +1,4 @@
-from typing import Any, NoReturn
+from typing import Any, Awaitable, Callable, NoReturn, TypeVar, cast
 
 """
 统一异常处理机制
@@ -656,15 +656,21 @@ def operation_not_allowed(
 def setup_exception_handlers(app: Any) -> None:
     """设置应用异常处理器"""
 
+    TExc = TypeVar("TExc", bound=BaseException)
+    Handler = Callable[[Request, TExc], Awaitable[JSONResponse]]
+
+    def register_handler(exc_type: type[TExc]) -> Callable[[Handler[TExc]], Handler[TExc]]:
+        return cast(Callable[[Handler[TExc]], Handler[TExc]], app.exception_handler(exc_type))
+
     # 业务异常处理器
-    @app.exception_handler(BaseBusinessError)  # type: ignore[misc]
+    @register_handler(BaseBusinessError)
     async def business_exception_handler(
         request: Request, exc: BaseBusinessError
     ) -> JSONResponse:
         return exception_handler.handle_business_exception(request, exc)
 
     # FastAPI验证异常处理器
-    @app.exception_handler(RequestValidationError)  # type: ignore[misc]
+    @register_handler(RequestValidationError)
     async def validation_exception_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
@@ -673,14 +679,14 @@ def setup_exception_handlers(app: Any) -> None:
         )  # pragma: no cover
 
     # HTTP异常处理器
-    @app.exception_handler(HTTPException)  # type: ignore[misc]
+    @register_handler(HTTPException)
     async def http_exception_handler(
         request: Request, exc: HTTPException
     ) -> JSONResponse:
         return exception_handler.handle_http_exception(request, exc)  # pragma: no cover
 
     # 通用异常处理器
-    @app.exception_handler(Exception)  # type: ignore[misc]
+    @register_handler(Exception)
     async def general_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:

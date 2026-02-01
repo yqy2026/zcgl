@@ -312,8 +312,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               asset.operation_agreement_attachments !== '' &&
               asset.operation_agreement_attachments !== null ? (
                 <div>
-                  {asset.operation_agreement_attachments.split(',').map((fileName, index) => (
-                    <div key={index} style={{ marginBottom: 4 }}>
+                  {asset.operation_agreement_attachments.split(',').map(fileName => (
+                    <div key={fileName} style={{ marginBottom: 4 }}>
                       <Tag color="blue">PDF</Tag>
                       <span style={{ marginLeft: 8 }}>{fileName.trim()}</span>
                     </div>

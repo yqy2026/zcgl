@@ -416,7 +416,7 @@ def api_error_recovery[**P, R](
 
         # Preserve the original signature for FastAPI
         wrapper = functools.wraps(func)(wrapper)
-        wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
+        setattr(wrapper, "__signature__", inspect.signature(func))
         return wrapper
 
     return decorator

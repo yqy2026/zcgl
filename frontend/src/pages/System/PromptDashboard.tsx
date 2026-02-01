@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Card,
   Row,
@@ -56,9 +57,6 @@ interface OptimizationSuggestion {
 }
 
 const PromptDashboard: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
-  const [statistics, setStatistics] = useState<PromptStatistics | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [performanceData, setPerformanceData] = useState<PerformanceMetrics[]>([]);
   const [fieldErrorRates, setFieldErrorRates] = useState<FieldErrorRate[]>([]);
@@ -68,29 +66,46 @@ const PromptDashboard: React.FC = () => {
     dayjs(),
   ]);
 
-  // 加载数据
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // 加载 Prompt 列表和统计
-      const [promptsRes, statsRes] = await Promise.all([
-        llmPromptService.getPrompts({ page_size: 100 }),
-        llmPromptService.getStatistics(),
-      ]);
-
-      setPrompts(promptsRes.items);
-      setStatistics(statsRes);
-
-      // 默认选择第一个活跃 Prompt
-      const activePrompt = promptsRes.items.find(p => p.status === 'ACTIVE');
-      if (activePrompt != null && selectedPromptId == null) {
-        setSelectedPromptId(activePrompt.id);
+  const promptsQuery = useQuery({
+    queryKey: ['llm-prompts', 'list', { page_size: 100 }],
+    queryFn: async () => {
+      try {
+        return await llmPromptService.getPrompts({ page_size: 100 });
+      } catch (error) {
+        logger.error('加载 Prompt 列表失败', error);
+        throw error;
       }
-    } catch (error) {
-      logger.error('加载数据失败', error);
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const statisticsQuery = useQuery({
+    queryKey: ['llm-prompts', 'statistics'],
+    queryFn: async () => {
+      try {
+        return await llmPromptService.getStatistics();
+      } catch (error) {
+        logger.error('加载统计数据失败', error);
+        throw error;
+      }
+    },
+  });
+
+  const prompts: PromptTemplate[] = promptsQuery.data?.items ?? [];
+  const statistics: PromptStatistics | null = statisticsQuery.data ?? null;
+  const isInitialLoading =
+    promptsQuery.isLoading === true || statisticsQuery.isLoading === true;
+  const isRefreshing =
+    promptsQuery.isFetching === true || statisticsQuery.isFetching === true;
+  const hasError =
+    promptsQuery.isError === true || statisticsQuery.isError === true;
+  const errorMessage =
+    (promptsQuery.error instanceof Error ? promptsQuery.error.message : null) ??
+    (statisticsQuery.error instanceof Error
+      ? statisticsQuery.error.message
+      : null);
+
+  const handleRefresh = () => {
+    void Promise.all([promptsQuery.refetch(), statisticsQuery.refetch()]);
   };
 
   // 加载选中 Prompt 的详细数据
@@ -201,8 +216,14 @@ const PromptDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (selectedPromptId == null && prompts.length > 0) {
+      const activePrompt = prompts.find(p => p.status === 'ACTIVE');
+      const nextPromptId = activePrompt?.id ?? prompts[0]?.id ?? null;
+      if (nextPromptId != null) {
+        setSelectedPromptId(nextPromptId);
+      }
+    }
+  }, [prompts, selectedPromptId]);
 
   useEffect(() => {
     if (selectedPromptId != null) {
@@ -294,9 +315,9 @@ const PromptDashboard: React.FC = () => {
 
     return (
       <Space direction="vertical" style={{ width: '100%' }}>
-        {suggestions.map((s, index) => (
+        {suggestions.map(s => (
           <Alert
-            key={index}
+            key={`${s.field_name}-${s.priority}`}
             message={
               <Space>
                 <span>
@@ -391,7 +412,7 @@ const PromptDashboard: React.FC = () => {
     );
   };
 
-  if (loading) {
+  if (isInitialLoading === true) {
     return (
       <div style={{ padding: 50, textAlign: 'center' }}>
         <Spin size="large" />
@@ -429,13 +450,23 @@ const PromptDashboard: React.FC = () => {
                   value: p.id,
                 }))}
               />
-              <Button icon={<ReloadOutlined />} onClick={loadData}>
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isRefreshing}>
                 刷新
               </Button>
             </Space>
           </Col>
         </Row>
       </Card>
+
+      {hasError === true && (
+        <Alert
+          style={{ marginBottom: 24 }}
+          type="error"
+          message="数据加载失败"
+          description={errorMessage ?? '请稍后重试'}
+          showIcon
+        />
+      )}
 
       {/* 统计概览 */}
       {statistics != null && (

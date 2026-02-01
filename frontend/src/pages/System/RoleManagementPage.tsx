@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Modal,
@@ -41,6 +40,8 @@ import type { TransferItem } from 'antd/es/transfer';
 import type { DataNode } from 'antd/es/tree';
 import dayjs from 'dayjs';
 import { COLORS } from '@/styles/colorMap';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -112,22 +113,20 @@ interface RoleStatistics {
   avg_permissions: number;
 }
 
+interface RoleFilters {
+  keyword: string;
+  status: string;
+}
+
 const RoleManagementPage: React.FC = () => {
-  const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [statistics, setStatistics] = useState<RoleStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [targetPermissions, setTargetPermissions] = useState<string[]>([]);
-  const [_searchText, _setSearchText] = useState('');
-  const [_statusFilter, _setStatusFilter] = useState<string>('');
   const [permissionTreeData, setPermissionTreeData] = useState<DataNode[]>([]);
-  const [rolePage, setRolePage] = useState(1);
-  const [rolePageSize, setRolePageSize] = useState(10);
-  const [roleTotal, setRoleTotal] = useState(0);
 
   const [form] = Form.useForm();
 
@@ -150,15 +149,22 @@ const RoleManagementPage: React.FC = () => {
     []
   );
 
-  const loadRoles = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const isActive =
-        _statusFilter === 'active' ? true : _statusFilter === 'inactive' ? false : undefined;
+  const fetchRoleList = React.useCallback(
+    async ({
+      page,
+      pageSize,
+      keyword,
+      status,
+    }: {
+      page: number;
+      pageSize: number;
+    } & RoleFilters) => {
+      const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
+      const trimmedKeyword = keyword.trim();
       const data = (await roleService.getRoles({
-        page: rolePage,
-        page_size: rolePageSize,
-        search: _searchText || undefined,
+        page,
+        page_size: pageSize,
+        search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
         is_active: isActive,
       })) as RoleListResponse;
       const items = Array.isArray(data) ? data : (data.items ?? []);
@@ -174,15 +180,33 @@ const RoleManagementPage: React.FC = () => {
         updated_at: r.updated_at,
         is_system: !!r.is_system_role,
       }));
-      setRoles(mapped);
       const total = Array.isArray(data) ? mapped.length : (data.total ?? mapped.length);
-      setRoleTotal(total);
-    } catch {
-      MessageManager.error('加载角色列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [_searchText, _statusFilter, rolePage, rolePageSize]);
+      return { items: mapped, total };
+    },
+    []
+  );
+
+  const handleLoadError = React.useCallback(() => {
+    MessageManager.error('加载角色列表失败');
+  }, []);
+
+  const {
+    data: roles,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<Role, RoleFilters>({
+    fetcher: fetchRoleList,
+    initialFilters: {
+      keyword: '',
+      status: '',
+    },
+    initialPageSize: 10,
+    onError: handleLoadError,
+  });
 
   const buildPermissionTree = React.useCallback(
     (permissionList: Permission[]): DataNode[] => {
@@ -297,23 +321,33 @@ const RoleManagementPage: React.FC = () => {
   }, [roles]);
 
   useEffect(() => {
-    void loadRoles();
+    void loadList();
     void loadPermissions();
-  }, [loadRoles, loadPermissions]);
+  }, [loadList, loadPermissions]);
 
   useEffect(() => {
     void loadStatistics();
   }, [loadStatistics]);
 
-  const handleSearch = (value: string) => {
-    _setSearchText(value);
-    setRolePage(1);
-  };
+  const handleSearch = React.useCallback(
+    (value: string) => {
+      applyFilters({
+        keyword: value,
+        status: filters.status,
+      });
+    },
+    [applyFilters, filters.status]
+  );
 
-  const handleStatusFilterChange = (value?: string) => {
-    _setStatusFilter(value ?? '');
-    setRolePage(1);
-  };
+  const handleStatusFilterChange = React.useCallback(
+    (value?: string) => {
+      applyFilters({
+        keyword: filters.keyword,
+        status: value ?? '',
+      });
+    },
+    [applyFilters, filters.keyword]
+  );
 
   const handleCreate = () => {
     setEditingRole(null);
@@ -337,7 +371,7 @@ const RoleManagementPage: React.FC = () => {
     try {
       await roleService.deleteRole(id);
       MessageManager.success('删除成功');
-      void loadRoles();
+      void loadList();
     } catch {
       MessageManager.error('删除失败');
     }
@@ -349,7 +383,7 @@ const RoleManagementPage: React.FC = () => {
         is_active: newStatus === 'active',
       });
       MessageManager.success('状态已更新');
-      void loadRoles();
+      void loadList();
     } catch {
       MessageManager.error('状态更新失败');
     }
@@ -386,7 +420,7 @@ const RoleManagementPage: React.FC = () => {
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
-      void loadRoles();
+      void loadList();
     } catch {
       MessageManager.error(editingRole ? '更新失败' : '创建失败');
     }
@@ -399,7 +433,7 @@ const RoleManagementPage: React.FC = () => {
       }
       MessageManager.success('权限配置已保存');
       setPermissionModalVisible(false);
-      void loadRoles();
+      void loadList();
     } catch {
       MessageManager.error('保存权限失败');
     }
@@ -587,7 +621,7 @@ const RoleManagementPage: React.FC = () => {
                       </Option>
                     ))}
                   </Select>
-                  <Button icon={<ReloadOutlined />} onClick={loadRoles}>
+                  <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
                     刷新
                   </Button>
                 </Space>
@@ -600,23 +634,16 @@ const RoleManagementPage: React.FC = () => {
             </Row>
           </div>
 
-          <Table
+          <TableWithPagination
             columns={columns}
             dataSource={roles}
             rowKey="id"
             loading={loading}
-            pagination={{
-              current: rolePage,
-              total: roleTotal,
-              pageSize: rolePageSize,
+            paginationState={pagination}
+            onPageChange={updatePagination}
+            paginationProps={{
               pageSizeOptions: ['10', '20', '50', '100'],
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: total => `共 ${total} 条记录`,
-              onChange: (page, pageSize) => {
-                setRolePage(page);
-                setRolePageSize(pageSize);
-              },
+              showTotal: (total: number) => `共 ${total} 条记录`,
             }}
           />
         </Card>

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # PyMuPDF import with graceful fallback
 try:
-    import fitz  # PyMuPDF  # type: ignore
+    import fitz  # PyMuPDF
 
     PYMUPDF_AVAILABLE = True
 except ImportError:
@@ -54,32 +54,30 @@ def analyze_pdf(pdf_path: str | Path) -> dict[str, Any]:
         raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
 
     try:
-        doc = fitz.open(str(pdf_path_obj))
-        page_count = len(doc)
+        with fitz.open(str(pdf_path_obj)) as doc:
+            page_count = len(doc)
 
-        total_text_chars = 0
-        total_images = 0
-        pages_with_text = 0
+            total_text_chars = 0
+            total_images = 0
+            pages_with_text = 0
 
-        # Analyze first few pages (max 5)
-        pages_to_check = min(page_count, 5)
+            # Analyze first few pages (max 5)
+            pages_to_check = min(page_count, 5)
 
-        for page_idx in range(pages_to_check):
-            page = doc[page_idx]
+            for page_idx in range(pages_to_check):
+                page = doc[page_idx]
 
-            # Extract text
-            text = page.get_text("text")
-            text_chars = len(text.strip())
-            total_text_chars += text_chars
+                # Extract text
+                text = page.get_text("text")
+                text_chars = len(text.strip())
+                total_text_chars += text_chars
 
-            if text_chars > 50:  # More than 50 chars = has meaningful text
-                pages_with_text += 1
+                if text_chars > 50:  # More than 50 chars = has meaningful text
+                    pages_with_text += 1
 
-            # Count images
-            images = page.get_images()
-            total_images += len(images)
-
-        doc.close()
+                # Count images
+                images = page.get_images()
+                total_images += len(images)
 
         # Decision logic:
         # - If more than 50% of pages have extractable text (>50 chars) → likely digital

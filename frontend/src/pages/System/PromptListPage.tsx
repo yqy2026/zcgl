@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Table,
   Card,
   Button,
   Space,
@@ -18,7 +17,6 @@ import {
   Statistic,
   Typography,
   message,
-  type TableProps,
 } from 'antd';
 import {
   PlusOutlined,
@@ -44,91 +42,106 @@ import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 import PromptEditor from '@/components/System/PromptEditor';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
 
 const logger = createLogger('PromptListPage');
 const { Title } = Typography;
 const { Option } = Select;
 
-interface PageState {
-  loading: boolean;
-  prompts: PromptTemplate[];
-  pagination: {
-    current: number;
-    pageSize: number;
-    total: number;
-  };
-  filters: PromptQueryParams;
-  statistics: PromptStatistics | null;
-  editorVisible: boolean;
-  editorMode: 'create' | 'edit';
-  selectedPrompt: PromptTemplate | null;
+interface PromptFilters {
+  doc_type?: DocType;
+  status?: PromptStatus;
+  provider?: LLMProvider;
 }
 
 const PromptListPage: React.FC = () => {
-  const [state, setState] = useState<PageState>({
-    loading: false,
-    prompts: [],
-    pagination: {
-      current: 1,
-      pageSize: 10,
-      total: 0,
+  const [statistics, setStatistics] = useState<PromptStatistics | null>(null);
+  const [editorVisible, setEditorVisible] = useState(false);
+  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
+  const [selectedPrompt, setSelectedPrompt] = useState<PromptTemplate | null>(null);
+
+  const fetchPromptList = useCallback(
+    async ({
+      page,
+      pageSize,
+      doc_type,
+      status,
+      provider,
+    }: {
+      page: number;
+      pageSize: number;
+    } & PromptFilters) => {
+      const params: PromptQueryParams = {
+        page,
+        pageSize,
+      };
+
+      if (doc_type != null) {
+        params.doc_type = doc_type;
+      }
+      if (status != null) {
+        params.status = status;
+      }
+      if (provider != null) {
+        params.provider = provider;
+      }
+
+      return await llmPromptService.getPrompts(params);
     },
-    filters: {},
-    statistics: null,
-    editorVisible: false,
-    editorMode: 'create',
-    selectedPrompt: null,
+    []
+  );
+
+  const handleLoadError = useCallback((error: unknown) => {
+    logger.error('加载 Prompt 列表失败', error);
+    message.error('加载 Prompt 列表失败');
+  }, []);
+
+  const {
+    data: prompts,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<PromptTemplate, PromptFilters>({
+    fetcher: fetchPromptList,
+    initialFilters: {
+      doc_type: undefined,
+      status: undefined,
+      provider: undefined,
+    },
+    initialPageSize: 10,
+    onError: handleLoadError,
   });
-
-  // 加载 Prompt 列表
-  const loadPrompts = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true }));
-    try {
-      const response = await llmPromptService.getPrompts({
-        page: state.pagination.current,
-        pageSize: state.pagination.pageSize,
-        ...state.filters,
-      });
-
-      const prompts = Array.isArray(response.items) ? response.items : [];
-
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        prompts: prompts,
-        pagination: {
-          ...prev.pagination,
-          total: response.total,
-        },
-      }));
-    } catch (error) {
-      logger.error('加载 Prompt 列表失败', error);
-      message.error('加载 Prompt 列表失败');
-      setState(prev => ({ ...prev, loading: false }));
-    }
-  }, [state.pagination.current, state.pagination.pageSize, state.filters]);
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
       const stats = await llmPromptService.getStatistics();
-      setState(prev => ({ ...prev, statistics: stats }));
+      setStatistics(stats);
     } catch (error) {
       logger.error('加载统计数据失败', error);
     }
   }, []);
 
   useEffect(() => {
-    loadPrompts();
-    loadStatistics();
-  }, [loadPrompts, loadStatistics]);
+    void loadList();
+    void loadStatistics();
+  }, [loadList, loadStatistics]);
+
+  const handleRefresh = useCallback(() => {
+    void loadList();
+    void loadStatistics();
+  }, [loadList, loadStatistics]);
 
   // 激活 Prompt
   const handleActivate = async (id: string, name: string) => {
     try {
       await llmPromptService.activatePrompt(id);
       message.success(`Prompt "${name}" 已激活`);
-      loadPrompts();
+      void loadList();
     } catch (error) {
       logger.error(`激活 Prompt 失败: ${id}`, error);
       message.error('激活失败');
@@ -186,42 +199,30 @@ const PromptListPage: React.FC = () => {
 
   // 打开新建编辑器
   const handleCreate = () => {
-    setState(prev => ({
-      ...prev,
-      editorVisible: true,
-      editorMode: 'create',
-      selectedPrompt: null,
-    }));
+    setEditorVisible(true);
+    setEditorMode('create');
+    setSelectedPrompt(null);
   };
 
   // 打开编辑编辑器
   const handleEdit = (prompt: PromptTemplate) => {
-    setState(prev => ({
-      ...prev,
-      editorVisible: true,
-      editorMode: 'edit',
-      selectedPrompt: prompt,
-    }));
+    setEditorVisible(true);
+    setEditorMode('edit');
+    setSelectedPrompt(prompt);
   };
 
   // 关闭编辑器
   const handleEditorCancel = () => {
-    setState(prev => ({
-      ...prev,
-      editorVisible: false,
-      selectedPrompt: null,
-    }));
+    setEditorVisible(false);
+    setSelectedPrompt(null);
   };
 
   // 编辑器成功回调
   const handleEditorSuccess = () => {
-    setState(prev => ({
-      ...prev,
-      editorVisible: false,
-      selectedPrompt: null,
-    }));
-    loadPrompts();
-    loadStatistics();
+    setEditorVisible(false);
+    setSelectedPrompt(null);
+    void loadList();
+    void loadStatistics();
   };
 
   // 表格列定义
@@ -376,43 +377,46 @@ const PromptListPage: React.FC = () => {
     },
   ];
 
-  // 处理表格变化
-  const handleTableChange: TableProps<PromptTemplate>['onChange'] = pagination => {
-    setState(prev => ({
-      ...prev,
-      pagination: {
-        ...prev.pagination,
-        current: pagination.current ?? 1,
-        pageSize: pagination.pageSize ?? 10,
-      },
-    }));
-  };
+  const handleDocTypeChange = useCallback(
+    (value?: DocType) => {
+      applyFilters({
+        ...filters,
+        doc_type: value,
+      });
+    },
+    [applyFilters, filters]
+  );
 
-  // 处理筛选变化
-  const handleFilterChange = (key: keyof PromptQueryParams, value: string | boolean | number | null | undefined) => {
-    setState(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        [key]: value,
-      },
-      pagination: {
-        ...prev.pagination,
-        current: 1,
-      },
-    }));
-  };
+  const handleProviderChange = useCallback(
+    (value?: LLMProvider) => {
+      applyFilters({
+        ...filters,
+        provider: value,
+      });
+    },
+    [applyFilters, filters]
+  );
+
+  const handleStatusChange = useCallback(
+    (value?: PromptStatus) => {
+      applyFilters({
+        ...filters,
+        status: value,
+      });
+    },
+    [applyFilters, filters]
+  );
 
   return (
     <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
       {/* 统计卡片 */}
-      {state.statistics != null && (
+      {statistics != null && (
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card>
               <Statistic
                 title="总 Prompt 数"
-                value={state.statistics.total_prompts}
+                value={statistics.total_prompts}
                 prefix={<FileTextOutlined />}
               />
             </Card>
@@ -422,7 +426,7 @@ const PromptListPage: React.FC = () => {
               <Statistic
                 title="活跃 Prompt"
                 value={
-                  state.statistics.status_distribution.find(
+                  statistics.status_distribution.find(
                     (s: { status: PromptStatus; count: number }) => s.status === PromptStatus.ACTIVE
                   )?.count ?? 0
                 }
@@ -435,11 +439,10 @@ const PromptListPage: React.FC = () => {
             <Card>
               <Statistic
                 title="平均准确率"
-                value={(state.statistics.overall_avg_accuracy * 100).toFixed(1)}
+                value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
                 valueStyle={{
-                  color:
-                    state.statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
+                  color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
                 }}
               />
             </Card>
@@ -448,13 +451,11 @@ const PromptListPage: React.FC = () => {
             <Card>
               <Statistic
                 title="平均置信度"
-                value={(state.statistics.overall_avg_confidence * 100).toFixed(1)}
+                value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
                 valueStyle={{
                   color:
-                    state.statistics.overall_avg_confidence >= 0.8
-                      ? COLORS.success
-                      : COLORS.warning,
+                    statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
                 }}
               />
             </Card>
@@ -469,7 +470,7 @@ const PromptListPage: React.FC = () => {
             <Title level={4} style={{ margin: 0 }}>
               LLM Prompt 管理
             </Title>
-            <Button icon={<ReloadOutlined />} onClick={loadPrompts}>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
               刷新
             </Button>
           </Space>
@@ -488,8 +489,8 @@ const PromptListPage: React.FC = () => {
             placeholder="文档类型"
             allowClear
             style={{ width: 150 }}
-            value={state.filters.doc_type}
-            onChange={value => handleFilterChange('doc_type', value)}
+            value={filters.doc_type}
+            onChange={handleDocTypeChange}
           >
             <Option value={DocType.CONTRACT}>租赁合同</Option>
             <Option value={DocType.PROPERTY_CERT}>产权证</Option>
@@ -499,8 +500,8 @@ const PromptListPage: React.FC = () => {
             placeholder="提供商"
             allowClear
             style={{ width: 150 }}
-            value={state.filters.provider}
-            onChange={value => handleFilterChange('provider', value)}
+            value={filters.provider}
+            onChange={handleProviderChange}
           >
             <Option value={LLMProvider.QWEN}>Qwen</Option>
             <Option value={LLMProvider.HUNYUAN}>混元</Option>
@@ -512,8 +513,8 @@ const PromptListPage: React.FC = () => {
             placeholder="状态"
             allowClear
             style={{ width: 120 }}
-            value={state.filters.status}
-            onChange={value => handleFilterChange('status', value)}
+            value={filters.status}
+            onChange={handleStatusChange}
           >
             <Option value={PromptStatus.ACTIVE}>活跃</Option>
             <Option value={PromptStatus.DRAFT}>草稿</Option>
@@ -522,22 +523,22 @@ const PromptListPage: React.FC = () => {
         </Space>
 
         {/* 表格 */}
-        <Table
+        <TableWithPagination
           columns={columns}
-          dataSource={state.prompts}
+          dataSource={prompts}
           rowKey="id"
-          loading={state.loading}
-          pagination={state.pagination}
-          onChange={handleTableChange}
+          loading={loading}
+          paginationState={pagination}
+          onPageChange={updatePagination}
           scroll={{ x: 1200 }}
         />
       </Card>
 
       {/* Prompt 编辑器 */}
       <PromptEditor
-        visible={state.editorVisible}
-        prompt={state.selectedPrompt}
-        mode={state.editorMode}
+        visible={editorVisible}
+        prompt={selectedPrompt}
+        mode={editorMode}
         onSuccess={handleEditorSuccess}
         onCancel={handleEditorCancel}
       />

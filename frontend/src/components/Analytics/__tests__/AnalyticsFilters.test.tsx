@@ -1,13 +1,20 @@
 /**
- * AnalyticsFilters 组件测试
+ * AnalyticsFilters 组件测试（修复版）
  * 测试分析筛选器组件
+ *
+ * 修复内容：
+ * - 移除过度的 Ant Design 组件 mock
+ * - 使用 renderWithProviders 提供必要的 Context Provider
+ * - 保留必要的 mock（hooks, services, Filters子组件）
+ * - 添加 beforeEach 清除 mock
+ * - 保持完整的测试覆盖
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import React from 'react';
 
-// Mock hooks
+// Mock hooks（这些 mock 是必要的）
 vi.mock('@/hooks/useSearchHistory', () => ({
   useSearchHistory: vi.fn(() => ({
     searchHistory: [],
@@ -17,18 +24,22 @@ vi.mock('@/hooks/useSearchHistory', () => ({
   })),
 }));
 
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: {
-      ownershipEntities: [],
-      businessCategories: [],
-    },
-    isLoading: false,
-    error: null,
-  })),
-}));
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQuery: vi.fn(() => ({
+      data: {
+        ownershipEntities: [],
+        businessCategories: [],
+      },
+      isLoading: false,
+      error: null,
+    })),
+  };
+});
 
-// Mock services
+// Mock services（这些 mock 是必要的）
 vi.mock('@/services/assetService', () => ({
   assetService: {
     getOwnershipEntities: vi.fn(() => Promise.resolve([])),
@@ -36,7 +47,7 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-// Mock logger
+// Mock logger（这个 mock 是必要的）
 vi.mock('@/utils/logger', () => ({
   createLogger: () => ({
     warn: vi.fn(),
@@ -45,7 +56,7 @@ vi.mock('@/utils/logger', () => ({
   }),
 }));
 
-// Mock Filters sub-components
+// Mock Filters sub-components（这些 mock 是必要的，避免测试子组件本身）
 vi.mock('../Filters', () => ({
   AnalyticsFiltersProvider: ({
     children,
@@ -115,80 +126,6 @@ vi.mock('../Filters', () => ({
   ],
 }));
 
-// Mock Ant Design components
-vi.mock('antd', () => ({
-  Card: ({
-    children,
-    title,
-    extra,
-    size,
-  }: {
-    children?: React.ReactNode;
-    title?: React.ReactNode;
-    extra?: React.ReactNode;
-    size?: string;
-  }) => (
-    <div data-testid="card" data-size={size}>
-      <div data-testid="card-title">{title}</div>
-      <div data-testid="card-extra">{extra}</div>
-      {children}
-    </div>
-  ),
-  Space: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="space">{children}</div>
-  ),
-  Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
-    <span data-testid="tag" data-color={color}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    icon,
-    onClick,
-    disabled,
-    loading,
-    type,
-    size,
-  }: {
-    children?: React.ReactNode;
-    icon?: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    loading?: boolean;
-    type?: string;
-    size?: string;
-  }) => (
-    <button
-      data-testid="button"
-      data-type={type}
-      data-loading={loading}
-      data-size={size}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {icon}
-      {children}
-    </button>
-  ),
-  Tooltip: ({ children, title }: { children?: React.ReactNode; title?: React.ReactNode }) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
-}));
-
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  FilterOutlined: () => <span data-testid="icon-filter" />,
-  ClearOutlined: () => <span data-testid="icon-clear" />,
-  SaveOutlined: () => <span data-testid="icon-save" />,
-  HistoryOutlined: () => <span data-testid="icon-history" />,
-  ReloadOutlined: () => <span data-testid="icon-reload" />,
-  DownOutlined: () => <span data-testid="icon-down" />,
-  UpOutlined: () => <span data-testid="icon-up" />,
-}));
-
 describe('AnalyticsFilters - 组件导入测试', () => {
   it('应该能够导入AnalyticsFilters组件', async () => {
     const module = await import('../AnalyticsFilters');
@@ -204,7 +141,7 @@ describe('AnalyticsFilters - 渲染测试', () => {
 
   it('应该渲染AnalyticsFiltersProvider', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
 
     expect(screen.getByTestId('filters-provider')).toBeInTheDocument();
   });
@@ -212,7 +149,7 @@ describe('AnalyticsFilters - 渲染测试', () => {
   it('应该传递filters给Provider', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const filters = { ownership_status: '自有' };
-    render(<AnalyticsFilters filters={filters} onFiltersChange={vi.fn()} />);
+    renderWithProviders(<AnalyticsFilters filters={filters} onFiltersChange={vi.fn()} />);
 
     const provider = screen.getByTestId('filters-provider');
     expect(provider).toHaveAttribute('data-filters', JSON.stringify(filters));
@@ -220,28 +157,28 @@ describe('AnalyticsFilters - 渲染测试', () => {
 
   it('应该传递loading给Provider', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} loading={true} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} loading={true} />);
 
     expect(screen.getByTestId('filters-provider')).toHaveAttribute('data-loading', 'true');
   });
 
   it('默认loading应该是false', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
 
     expect(screen.getByTestId('filters-provider')).toHaveAttribute('data-loading', 'false');
   });
 
   it('应该传递showAdvanced给Provider', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} showAdvanced={true} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} showAdvanced={true} />);
 
     expect(screen.getByTestId('filters-provider')).toHaveAttribute('data-show-advanced', 'true');
   });
 
   it('默认showAdvanced应该是false', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
 
     expect(screen.getByTestId('filters-provider')).toHaveAttribute('data-show-advanced', 'false');
   });
@@ -255,7 +192,7 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onFiltersChange', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleFiltersChange = vi.fn();
-    render(<AnalyticsFilters filters={{}} onFiltersChange={handleFiltersChange} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={handleFiltersChange} />);
 
     fireEvent.click(screen.getByTestId('change-filters-btn'));
     expect(handleFiltersChange).toHaveBeenCalledWith({ test: 'value' });
@@ -264,7 +201,7 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onApplyFilters', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleApply = vi.fn();
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onApplyFilters={handleApply} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onApplyFilters={handleApply} />);
 
     fireEvent.click(screen.getByTestId('apply-btn'));
     expect(handleApply).toHaveBeenCalled();
@@ -273,7 +210,7 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onResetFilters', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleReset = vi.fn();
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onResetFilters={handleReset} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onResetFilters={handleReset} />);
 
     fireEvent.click(screen.getByTestId('reset-btn'));
     expect(handleReset).toHaveBeenCalled();
@@ -282,7 +219,7 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onToggleAdvanced', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleToggle = vi.fn();
-    render(
+    renderWithProviders(
       <AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onToggleAdvanced={handleToggle} />
     );
 
@@ -298,14 +235,14 @@ describe('AnalyticsFilters - 边界情况测试', () => {
 
   it('应该处理空filters', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} />);
 
     expect(screen.getByTestId('filters-provider')).toBeInTheDocument();
   });
 
   it('应该处理realTimeUpdate属性', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    render(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} realTimeUpdate={false} />);
+    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} realTimeUpdate={false} />);
 
     expect(screen.getByTestId('filters-provider')).toBeInTheDocument();
   });

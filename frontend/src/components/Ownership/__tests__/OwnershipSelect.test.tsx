@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useOwnershipOptions } from '@/hooks/useOwnership';
 
 // Mock useOwnership hook
 vi.mock('@/hooks/useOwnership', () => ({
@@ -57,27 +58,31 @@ vi.mock('@/utils/messageManager', () => ({
 
 // Mock OwnershipList
 vi.mock('../OwnershipList', () => ({
-  default: ({
-    mode,
-    onSelectOwnership,
-  }: {
-    mode: string;
-    onSelectOwnership: (ownership: { id: string; name: string }) => void;
-  }) => (
-    <div data-testid="ownership-list" data-mode={mode}>
-      <button
-        data-testid="select-ownership-btn"
-        onClick={() => onSelectOwnership({ id: '1', name: '权属方1' })}
-      >
-        选择权属方1
-      </button>
-    </div>
-  ),
+  default: (() => {
+    const OwnershipList = ({
+      mode,
+      onSelectOwnership,
+    }: {
+      mode: string;
+      onSelectOwnership: (ownership: { id: string; name: string }) => void;
+    }) => (
+      <div data-testid="ownership-list" data-mode={mode}>
+        <button
+          data-testid="select-ownership-btn"
+          onClick={() => onSelectOwnership({ id: '1', name: '权属方1' })}
+        >
+          选择权属方1
+        </button>
+      </div>
+    );
+    OwnershipList.displayName = 'MockOwnershipList';
+    return OwnershipList;
+  })(),
 }));
 
 // Mock Ant Design
-vi.mock('antd', () => ({
-  Select: ({
+vi.mock('antd', () => {
+  const Select = ({
     children,
     value,
     onChange,
@@ -140,8 +145,20 @@ vi.mock('antd', () => ({
         </button>
       )}
     </div>
-  ),
-  Button: ({
+  );
+  const Option = ({
+    children,
+    value,
+  }: {
+    children?: React.ReactNode;
+    value?: string;
+  }) => <option value={value}>{children}</option>;
+  Option.displayName = 'MockSelectOption';
+
+  Select.displayName = 'MockSelect';
+  Select.Option = Option;
+
+  const Button = ({
     children,
     onClick,
     icon,
@@ -167,8 +184,10 @@ vi.mock('antd', () => ({
       {icon}
       {children}
     </button>
-  ),
-  Modal: ({
+  );
+  Button.displayName = 'MockButton';
+
+  const Modal = ({
     children,
     open,
     title,
@@ -190,20 +209,30 @@ vi.mock('antd', () => ({
         </>
       )}
     </div>
-  ),
-  Space: {
-    Compact: ({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }) => (
-      <div data-testid="space-compact" style={style}>
-        {children}
-      </div>
-    ),
-  },
-  Tooltip: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+  );
+  Modal.displayName = 'MockModal';
+
+  const SpaceCompact = ({
+    children,
+    style,
+  }: {
+    children?: React.ReactNode;
+    style?: React.CSSProperties;
+  }) => (
+    <div data-testid="space-compact" style={style}>
+      {children}
+    </div>
+  );
+  SpaceCompact.displayName = 'MockSpaceCompact';
+
+  const Tooltip = ({ children, title }: { children?: React.ReactNode; title?: string }) => (
     <div data-testid="tooltip" data-title={title}>
       {children}
     </div>
-  ),
-  Tag: ({
+  );
+  Tooltip.displayName = 'MockTooltip';
+
+  const Tag = ({
     children,
     color,
     closable,
@@ -217,16 +246,44 @@ vi.mock('antd', () => ({
     <span data-testid="tag" data-color={color} data-closable={closable} onClick={onClose}>
       {children}
     </span>
-  ),
-}));
+  );
+  Tag.displayName = 'MockTag';
+
+  const Space = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+  Space.Compact = SpaceCompact;
+
+  return {
+    Select,
+    Button,
+    Modal,
+    Space,
+    Tooltip,
+    Tag,
+  };
+});
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  PlusOutlined: () => <span data-testid="icon-plus">+</span>,
-  ReloadOutlined: () => <span data-testid="icon-reload">Reload</span>,
-  UnorderedListOutlined: () => <span data-testid="icon-list">List</span>,
-  SearchOutlined: () => <span data-testid="icon-search">Search</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const PlusOutlined = () => <span data-testid="icon-plus">+</span>;
+  const ReloadOutlined = () => <span data-testid="icon-reload">Reload</span>;
+  const UnorderedListOutlined = () => <span data-testid="icon-list">List</span>;
+  const SearchOutlined = () => <span data-testid="icon-search">Search</span>;
+
+  PlusOutlined.displayName = 'PlusOutlined';
+  ReloadOutlined.displayName = 'ReloadOutlined';
+  UnorderedListOutlined.displayName = 'UnorderedListOutlined';
+  SearchOutlined.displayName = 'SearchOutlined';
+
+  return {
+    PlusOutlined,
+    ReloadOutlined,
+    UnorderedListOutlined,
+    SearchOutlined,
+  };
+});
 
 import OwnershipSelect from '../OwnershipSelect';
 
@@ -398,7 +455,6 @@ describe('OwnershipSelect 组件测试', () => {
     });
 
     it('点击刷新按钮应该刷新数据', () => {
-      const { useOwnershipOptions } = require('@/hooks/useOwnership');
       const mockRefresh = vi.fn();
       vi.mocked(useOwnershipOptions).mockReturnValue({
         ownerships: [],
@@ -476,7 +532,6 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('loading 状态', () => {
     it('加载时应该显示 loading 状态', () => {
-      const { useOwnershipOptions } = require('@/hooks/useOwnership');
       vi.mocked(useOwnershipOptions).mockReturnValue({
         ownerships: [],
         loading: true,

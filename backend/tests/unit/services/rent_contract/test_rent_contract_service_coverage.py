@@ -69,7 +69,8 @@ class TestRentContractServiceCoverage:
             return_value=[],
         ):
             with patch(
-                "src.services.rent_contract.service.model_to_dict", return_value={}
+                "src.services.rent_contract.lifecycle_service.model_to_dict",
+                return_value={},
             ):
                 result = service.create_contract(mock_db, obj_in=contract_data)
 
@@ -126,7 +127,7 @@ class TestRentContractServiceCoverage:
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_asset]
 
         with patch(
-            "src.services.rent_contract.service.model_to_dict",
+            "src.services.rent_contract.lifecycle_service.model_to_dict",
             return_value={"id": "contract_1"},
         ):
             result = service.update_contract(

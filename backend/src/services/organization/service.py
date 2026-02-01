@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.organization import organization as organization_crud
+from ...crud.organization_history import OrganizationHistoryCRUD
 from ...models.organization import Organization, OrganizationHistory
 from ...schemas.organization import OrganizationCreate, OrganizationUpdate
 
@@ -202,13 +203,16 @@ class OrganizationService:
         self, db: Session, org_id: str, skip: int = 0, limit: int = 100
     ) -> list[OrganizationHistory]:
         """获取组织变更历史"""
-        return (
-            db.query(OrganizationHistory)
-            .filter(OrganizationHistory.organization_id == org_id)
-            .order_by(OrganizationHistory.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+        history_crud = OrganizationHistoryCRUD()
+        return history_crud.get_multi(db=db, org_id=org_id, skip=skip, limit=limit)
+
+    def get_history_with_count(
+        self, db: Session, org_id: str, skip: int = 0, limit: int = 100
+    ) -> tuple[list[OrganizationHistory], int]:
+        """获取组织变更历史与总数"""
+        history_crud = OrganizationHistoryCRUD()
+        return history_crud.get_multi_with_count(
+            db=db, org_id=org_id, skip=skip, limit=limit
         )
 
     def _would_create_cycle(self, db: Session, org_id: str, new_parent_id: str) -> bool:

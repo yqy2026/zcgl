@@ -69,13 +69,11 @@ export class ChartErrorBoundary extends Component<Props, State> {
             }
             type="error"
             showIcon
-            action={
-              <Button size="small" onClick={this.handleRetry}>
-                重试
-              </Button>
-            }
-            style={{ marginBottom: '16px' }}
+            style={{ marginBottom: '12px' }}
           />
+          <Button size="small" onClick={this.handleRetry}>
+            重试
+          </Button>
         </div>
       );
     }

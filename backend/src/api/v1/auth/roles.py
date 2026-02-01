@@ -22,7 +22,6 @@ from ....crud.rbac import permission_crud, role_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user, require_admin
 from ....models.auth import User
-from ....models.rbac import Role
 from ....schemas.rbac import (
     PermissionResponse,
     RoleCreate,
@@ -375,22 +374,16 @@ def get_role_statistics(
 ) -> dict[str, Any]:
     """获取角色相关的统计数据"""
     try:
-        total_roles = role_crud.count(db)
         by_category = role_crud.count_by_category(db)
+        counts = role_crud.count_by_flags(db)
 
         return {
             "success": True,
             "data": {
-                "total_roles": total_roles,
-                "active_roles": db.query(Role)
-                .filter(getattr(Role, "is_active").is_(True))
-                .count(),
-                "system_roles": db.query(Role)
-                .filter(getattr(Role, "is_system_role").is_(True))
-                .count(),
-                "custom_roles": db.query(Role)
-                .filter(getattr(Role, "is_system_role").is_(False))
-                .count(),
+                "total_roles": counts["total"],
+                "active_roles": counts["active"],
+                "system_roles": counts["system"],
+                "custom_roles": counts["custom"],
                 "by_category": by_category,
             },
         }

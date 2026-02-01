@@ -1516,3 +1516,80 @@ class TestParseDate:
         # Assert
         # Should handle or return None
         assert result is not None or result is None
+
+
+# ============================================================================
+# match_assets() tests (4 tests)
+# ============================================================================
+
+
+class TestMatchAssets:
+    """测试match_assets方法"""
+
+    def test_match_assets_returns_empty_when_no_data(self, property_certificate_service):
+        """TC-PCS-061: 无提取字段时返回空列表"""
+        result = property_certificate_service.match_assets({})
+        assert result == []
+
+    def test_match_assets_address_match(self, property_certificate_service):
+        """TC-PCS-062: 地址匹配返回候选资产"""
+        asset = MagicMock()
+        asset.id = "asset-001"
+        asset.property_name = "示例物业"
+        asset.address = "广东省广州市天河区XXX号"
+        asset.ownership_entity = "示例公司"
+
+        property_certificate_service._fetch_assets_by_field = MagicMock(
+            return_value=[asset]
+        )
+
+        result = property_certificate_service.match_assets(
+            {"property_address": "广东省广州市天河区XXX号"}
+        )
+
+        assert len(result) == 1
+        assert result[0]["asset_id"] == "asset-001"
+        assert "地址匹配" in result[0]["match_reasons"]
+        assert result[0]["confidence"] >= 0.7
+
+    def test_match_assets_owner_match(self, property_certificate_service):
+        """TC-PCS-063: 权属方匹配返回候选资产"""
+        asset = MagicMock()
+        asset.id = "asset-002"
+        asset.property_name = "示例物业"
+        asset.address = "广东省广州市天河区YYY号"
+        asset.ownership_entity = "广州示例公司"
+
+        property_certificate_service._fetch_assets_by_field = MagicMock(
+            return_value=[asset]
+        )
+
+        result = property_certificate_service.match_assets({"owner_name": "广州示例公司"})
+
+        assert len(result) == 1
+        assert result[0]["asset_id"] == "asset-002"
+        assert "权属方匹配" in result[0]["match_reasons"]
+        assert result[0]["confidence"] >= 0.5
+
+    def test_match_assets_combines_reasons(self, property_certificate_service):
+        """TC-PCS-064: 地址与权属方匹配合并原因"""
+        asset = MagicMock()
+        asset.id = "asset-003"
+        asset.property_name = "综合物业"
+        asset.address = "广东省广州市天河区ZZZ号"
+        asset.ownership_entity = "综合公司"
+
+        property_certificate_service._fetch_assets_by_field = MagicMock(
+            side_effect=[[asset], [asset]]
+        )
+
+        result = property_certificate_service.match_assets(
+            {
+                "property_address": "广东省广州市天河区ZZZ号",
+                "owner_name": "综合公司",
+            }
+        )
+
+        assert len(result) == 1
+        assert set(result[0]["match_reasons"]) == {"地址匹配", "权属方匹配"}
+        assert result[0]["confidence"] >= 0.85

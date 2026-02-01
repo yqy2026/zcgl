@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Button,
   Card,
@@ -8,7 +8,6 @@ import {
   Select,
   Space,
   Switch,
-  Table,
   Tag,
   Popconfirm,
   Row,
@@ -24,6 +23,8 @@ import { dictionaryService } from '@/services/dictionary';
 import type { EnumFieldType, EnumFieldValue } from '@/services/dictionary';
 import type { SystemDictionary } from '@/types/dictionary';
 import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useArrayListData } from '@/hooks/useArrayListData';
 import {
   handleApiError as _handleError,
   withErrorHandling as _withErrorHandling_unused,
@@ -48,21 +49,117 @@ interface EditState {
   visible: boolean;
 }
 
+interface OverviewFilters {
+  keyword: string;
+  category: string;
+}
+
 const DictionaryPage: React.FC = () => {
-  const [loading, setLoading] = useState(false);
+  const [overviewSourceLoading, setOverviewSourceLoading] = useState(false);
   const [_dictTypes, _setDictTypes] = useState<string[]>([]);
   const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
   const [activeType, setActiveType] = useState<string | undefined>(undefined);
-  const [data, setData] = useState<SystemDictionary[]>([]);
   const [edit, setEdit] = useState<EditState>({ visible: false });
   const [editingRecord, setEditingRecord] = useState<SystemDictionary | null>(null);
   const [form] = Form.useForm<SystemDictionary>();
 
   // 新增状态
-  const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [allEnumData, setAllEnumData] = useState<EnumFieldWithType[]>([]);
   const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false);
+  const [detailSource, setDetailSource] = useState<SystemDictionary[]>([]);
+  const [detailSourceLoading, setDetailSourceLoading] = useState(false);
+
+  const {
+    data: overviewData,
+    loading: overviewTableLoading,
+    pagination: overviewPagination,
+    filters: overviewFilters,
+    loadList: loadOverviewList,
+    applyFilters: applyOverviewFilters,
+    updatePagination: updateOverviewPagination,
+  } = useArrayListData<EnumFieldWithType, OverviewFilters>({
+    items: allEnumData,
+    initialFilters: {
+      keyword: '',
+      category: 'all',
+    },
+    initialPageSize: 10,
+    filterFn: (items, filters) => {
+      const trimmedKeyword = filters.keyword.trim().toLowerCase();
+      return items.filter(item => {
+        if (filters.category !== 'all' && item.type.category !== filters.category) {
+          return false;
+        }
+
+        if (trimmedKeyword === '') {
+          return true;
+        }
+
+        const typeName = item.type.name?.toLowerCase() ?? '';
+        const typeCode = item.type.code?.toLowerCase() ?? '';
+        const typeMatch = typeName.includes(trimmedKeyword) || typeCode.includes(trimmedKeyword);
+        const valueMatch = item.values.some(value => {
+          const label = value.label?.toLowerCase() ?? '';
+          const code = value.code?.toLowerCase() ?? '';
+          const val = value.value?.toLowerCase() ?? '';
+          return (
+            label.includes(trimmedKeyword) ||
+            val.includes(trimmedKeyword) ||
+            code.includes(trimmedKeyword)
+          );
+        });
+
+        return typeMatch || valueMatch;
+      });
+    },
+  });
+
+  const handleDetailError = useCallback((error: unknown) => {
+    pageLogger.error('获取枚举值失败:', error as Error);
+    const errorMessage = error instanceof Error ? error.message : '获取枚举值失败';
+    MessageManager.error(errorMessage);
+  }, []);
+
+  const {
+    data: detailRows,
+    loading: detailTableLoading,
+    pagination: detailPagination,
+    loadList: loadDetailList,
+    updatePagination: updateDetailPagination,
+  } = useArrayListData<SystemDictionary, Record<string, never>>({
+    items: detailSource,
+    initialFilters: {},
+    initialPageSize: 10,
+    onError: handleDetailError,
+  });
+
+  const loadDetailSource = useCallback(
+    async (typeCode?: string) => {
+      if (typeCode == null || typeCode === '') {
+        setDetailSource([]);
+        return;
+      }
+      setDetailSourceLoading(true);
+      try {
+        const list = await dictionaryService.getEnumFieldValuesByTypeCode(typeCode);
+        setDetailSource(list);
+      } catch (error) {
+        handleDetailError(error);
+      } finally {
+        setDetailSourceLoading(false);
+      }
+    },
+    [handleDetailError]
+  );
+
+  const overviewLoading = useMemo(
+    () => overviewSourceLoading || overviewTableLoading,
+    [overviewSourceLoading, overviewTableLoading]
+  );
+  const detailLoading = useMemo(
+    () => detailSourceLoading || detailTableLoading,
+    [detailSourceLoading, detailTableLoading]
+  );
 
   // 获取字典类型列表
   const fetchTypes = async () => {
@@ -80,7 +177,7 @@ const DictionaryPage: React.FC = () => {
 
   // 获取所有枚举数据
   const fetchAllEnumData = async () => {
-    setLoading(true);
+    setOverviewSourceLoading(true);
     try {
       const data = await dictionaryService.getEnumFieldData();
       // Got enum data
@@ -90,28 +187,7 @@ const DictionaryPage: React.FC = () => {
       const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败';
       MessageManager.error(errorMessage);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  // 获取指定类型的字典数据
-  const fetchList = async (type?: string) => {
-    if (type == null) {
-      setData([]);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 使用新的方法通过类型代码获取枚举值
-      const list = await dictionaryService.getEnumFieldValuesByTypeCode(type);
-      setData(list);
-    } catch (e: unknown) {
-      pageLogger.error('获取枚举值失败:', e as Error);
-      const errorMessage = e instanceof Error ? e.message : '获取枚举值失败';
-      MessageManager.error(errorMessage);
-    } finally {
-      setLoading(false);
+      setOverviewSourceLoading(false);
     }
   };
 
@@ -121,8 +197,16 @@ const DictionaryPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchList(activeType);
-  }, [activeType]);
+    void loadOverviewList({ page: 1 });
+  }, [allEnumData, loadOverviewList]);
+
+  useEffect(() => {
+    void loadDetailList({ page: 1 });
+  }, [detailSource, loadDetailList]);
+
+  useEffect(() => {
+    void loadDetailSource(activeType);
+  }, [activeType, loadDetailSource]);
 
   const handleCreate = async () => {
     if (activeType == null) {
@@ -140,9 +224,11 @@ const DictionaryPage: React.FC = () => {
     setEditingRecord(null);
     setEdit({ visible: true });
     form.resetFields();
+    const sortOrders = detailRows.map(item => item.sort_order ?? 0);
+    const maxSortOrder = sortOrders.length > 0 ? Math.max(...sortOrders) : 0;
     const initialValues: Partial<SystemDictionary> = {
       dict_type: activeType,
-      sort_order: data.length > 0 ? Math.max(...data.map(d => d.sort_order)) + 1 : 0,
+      sort_order: sortOrders.length > 0 ? maxSortOrder + 1 : 0,
       is_active: true,
     };
 
@@ -180,12 +266,8 @@ const DictionaryPage: React.FC = () => {
       const result = await dictionaryService.deleteEnumValue(record.id);
       if (result.success === true) {
         MessageManager.success('删除成功');
-        fetchList(activeType);
-        fetchAllEnumData();
-        // 如果详情模态框打开，刷新详情数据
-        if (detailModalVisible) {
-          fetchList(activeType);
-        }
+        void loadDetailSource(record.dict_type);
+        void fetchAllEnumData();
       } else {
         MessageManager.error('删除失败');
       }
@@ -247,12 +329,8 @@ const DictionaryPage: React.FC = () => {
 
       setEdit({ visible: false });
       setEditingRecord(null);
-      fetchList(activeType);
-      fetchAllEnumData();
-      // 如果详情模态框打开，刷新详情数据
-      if (detailModalVisible) {
-        fetchList(activeType);
-      }
+      void loadDetailSource(activeType);
+      void fetchAllEnumData();
     } catch (e: unknown) {
       // Handle form validation errors
       if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
@@ -268,12 +346,8 @@ const DictionaryPage: React.FC = () => {
       const result = await dictionaryService.toggleEnumValueActive(record.id, checked);
       if (result.success === true) {
         MessageManager.success('状态已更新');
-        fetchList(activeType);
-        fetchAllEnumData();
-        // 如果详情模态框打开，刷新详情数据
-        if (detailModalVisible) {
-          fetchList(activeType);
-        }
+        void loadDetailSource(record.dict_type);
+        void fetchAllEnumData();
       } else {
         MessageManager.error('更新失败');
       }
@@ -292,33 +366,6 @@ const DictionaryPage: React.FC = () => {
     return ['all', ...Array.from(new Set(cats))];
   }, [enumTypes]);
 
-  // 过滤和搜索逻辑
-  const filteredEnumData = useMemo(() => {
-    return allEnumData.filter(item => {
-      // 分类筛选
-      if (selectedCategory !== 'all' && item.type.category !== selectedCategory) {
-        return false;
-      }
-
-      // 搜索筛选
-      if (searchText) {
-        const searchLower = searchText.toLowerCase();
-        const typeMatch =
-          item.type.name.toLowerCase().includes(searchLower) ||
-          item.type.code.toLowerCase().includes(searchLower);
-        const valueMatch = item.values.some(
-          value =>
-            value.label.toLowerCase().includes(searchLower) ||
-            value.value.toLowerCase().includes(searchLower) ||
-            (value.code != null && value.code.toLowerCase().includes(searchLower))
-        );
-        return typeMatch || valueMatch;
-      }
-
-      return true;
-    });
-  }, [allEnumData, selectedCategory, searchText]);
-
   // 获取类型统计信息
   const _getTypeStats = (type: EnumFieldType) => {
     const values = allEnumData.find(item => item.type.id === type.id)?.values || [];
@@ -330,12 +377,23 @@ const DictionaryPage: React.FC = () => {
     };
   };
 
+  const handleActiveTypeChange = useCallback(
+    (value?: string) => {
+      setActiveType(value);
+      void loadDetailSource(value);
+    },
+    [loadDetailSource]
+  );
+
   // 查看详情处理
-  const handleViewDetail = async (typeCode: string) => {
-    setActiveType(typeCode);
-    await fetchList(typeCode);
-    setDetailModalVisible(true);
-  };
+  const handleViewDetail = useCallback(
+    (typeCode: string) => {
+      setActiveType(typeCode);
+      setDetailModalVisible(true);
+      void loadDetailSource(typeCode);
+    },
+    [loadDetailSource]
+  );
 
   // 概览视图列定义
   const overviewColumns: ColumnsType<EnumFieldWithType> = useMemo(
@@ -389,7 +447,7 @@ const DictionaryPage: React.FC = () => {
         ),
       },
     ],
-    [allEnumData]
+    [handleViewDetail]
   );
 
   const columns: ColumnsType<SystemDictionary> = useMemo(
@@ -480,15 +538,15 @@ const DictionaryPage: React.FC = () => {
         }
         extra={
           <Space>
-            <Button
-              onClick={() => {
-                fetchTypes();
-                fetchAllEnumData();
-                fetchList(activeType);
-              }}
-            >
-              刷新
-            </Button>
+              <Button
+                onClick={() => {
+                  fetchTypes();
+                  fetchAllEnumData();
+                  void loadDetailSource(activeType);
+                }}
+              >
+                刷新
+              </Button>
           </Space>
         }
       >
@@ -497,8 +555,10 @@ const DictionaryPage: React.FC = () => {
           <Col span={8}>
             <Search
               placeholder="搜索枚举类型或值"
-              value={searchText}
-              onChange={e => setSearchText(e.target.value)}
+              value={overviewFilters.keyword}
+              onChange={e =>
+                applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })
+              }
               prefix={<SearchOutlined />}
               allowClear
             />
@@ -506,8 +566,8 @@ const DictionaryPage: React.FC = () => {
           <Col span={6}>
             <Select
               placeholder="选择分类"
-              value={selectedCategory}
-              onChange={setSelectedCategory}
+              value={overviewFilters.category}
+              onChange={value => applyOverviewFilters({ ...overviewFilters, category: value })}
               style={{ width: '100%' }}
             >
               {categories.map(cat => (
@@ -521,7 +581,7 @@ const DictionaryPage: React.FC = () => {
             <Select
               placeholder="选择字典类型"
               value={activeType}
-              onChange={v => setActiveType(v)}
+              onChange={handleActiveTypeChange}
               style={{ width: '100%' }}
               allowClear
             >
@@ -535,21 +595,25 @@ const DictionaryPage: React.FC = () => {
           <Col span={4}>
             <div style={{ textAlign: 'right' }}>
               <span style={{ color: COLORS.textSecondary, fontSize: '14px' }}>
-                共 {filteredEnumData.length} 个类型
+                共 {overviewPagination.total} 个类型
               </span>
             </div>
           </Col>
         </Row>
 
         {/* 列表视图 */}
-        <Table
+        <TableWithPagination
           rowKey={record => record.type.id}
-          loading={loading}
+          loading={overviewLoading}
           columns={overviewColumns}
-          dataSource={filteredEnumData}
-          pagination={{
-            pageSize: 10,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+          dataSource={overviewData}
+          paginationState={overviewPagination}
+          onPageChange={updateOverviewPagination}
+          paginationProps={{
+            showSizeChanger: false,
+            showQuickJumper: false,
+            showTotal: (total: number, range: [number, number]) =>
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
           scroll={{ x: 1200 }}
           size="middle"
@@ -662,12 +726,17 @@ const DictionaryPage: React.FC = () => {
         width={1200}
         destroyOnHidden
       >
-        <Table
+        <TableWithPagination
           rowKey="id"
-          loading={loading}
+          loading={detailLoading}
           columns={columns}
-          dataSource={data}
-          pagination={{ pageSize: 10 }}
+          dataSource={detailRows}
+          paginationState={detailPagination}
+          onPageChange={updateDetailPagination}
+          paginationProps={{
+            showSizeChanger: false,
+            showQuickJumper: false,
+          }}
           scroll={{ x: 1200 }}
         />
       </Modal>

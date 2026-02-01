@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ContractDetailPage from '../ContractDetailPage';
+import { ContractStatus } from '@/types/rentContract';
 
 // Mock rentContractService
 vi.mock('@/services/rentContractService', () => ({
@@ -90,7 +91,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_123',
         contract_number: 'HT-2026-001',
         tenant_name: '测试租户公司',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -111,7 +112,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_active',
         contract_number: 'HT-2026-002',
         tenant_name: '活跃租户',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -129,7 +130,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_expired',
         contract_number: 'HT-2025-001',
         tenant_name: '过期租户',
-        contract_status: 'expired',
+        contract_status: ContractStatus.EXPIRED,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -177,7 +178,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_nav',
         contract_number: 'HT-NAV',
         tenant_name: '导航测试',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -200,7 +201,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_edit',
         contract_number: 'HT-EDIT',
         tenant_name: '编辑测试',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -223,7 +224,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_renew',
         contract_number: 'HT-RENEW',
         tenant_name: '续签测试',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
@@ -248,7 +249,7 @@ describe('ContractDetailPage', () => {
         id: 'contract_terminate',
         contract_number: 'HT-TERM',
         tenant_name: '终止测试',
-        contract_status: 'active',
+        contract_status: ContractStatus.ACTIVE,
       };
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);

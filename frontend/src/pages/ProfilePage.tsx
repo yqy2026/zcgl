@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import {
   Card,
   Row,
@@ -29,7 +30,6 @@ interface ProfileFormData {
 
 const ProfilePage: React.FC = () => {
   const { user, refreshUser } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [form] = Form.useForm();
@@ -37,47 +37,60 @@ const ProfilePage: React.FC = () => {
 
   // 初始化数据
   useEffect(() => {
-    if (user) {
+    if (user != null) {
       form.setFieldsValue({
+        username: user.username ?? '',
         full_name: user.full_name ?? '',
         email: user.email ?? '',
         phone: user.phone ?? '',
       });
     }
-  }, [user, form]);
+  }, [form, user]);
 
-  // 处理个人资料更新
-  const handleUpdateProfile = async (values: ProfileFormData) => {
-    if (!user) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await AuthService.updateProfile(values);
+  const updateProfileMutation = useMutation({
+    mutationFn: async (values: ProfileFormData) => {
+      return await AuthService.updateProfile(values);
+    },
+    onSuccess: async () => {
       MessageManager.success('个人资料更新成功');
       setEditModalVisible(false);
-      await refreshUser(); // 刷新用户信息
-    } catch (error: unknown) {
+      await refreshUser();
+    },
+    onError: (error: unknown) => {
       MessageManager.error((error as Error).message || '更新失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
-  // 处理密码修改
-  const handleChangePassword = async (values: { oldPassword: string; newPassword: string }) => {
-    setLoading(true);
-    try {
+  const changePasswordMutation = useMutation({
+    mutationFn: async (values: { oldPassword: string; newPassword: string }) => {
       await AuthService.changePassword(values.oldPassword, values.newPassword);
+    },
+    onSuccess: () => {
       MessageManager.success('密码修改成功');
       setPasswordModalVisible(false);
       passwordForm.resetFields();
-    } catch (error: unknown) {
+    },
+    onError: (error: unknown) => {
       MessageManager.error((error as Error).message || '密码修改失败');
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  // 处理个人资料更新
+  const handleUpdateProfile = (values: ProfileFormData) => {
+    if (user == null) {
+      MessageManager.error('用户信息缺失，请重新登录');
+      return;
     }
+    updateProfileMutation.mutate({
+      full_name: values.full_name,
+      email: values.email,
+      phone: values.phone,
+    });
+  };
+
+  // 处理密码修改
+  const handleChangePassword = (values: { oldPassword: string; newPassword: string }) => {
+    changePasswordMutation.mutate(values);
   };
 
   // 获取角色显示名称
@@ -99,7 +112,7 @@ const ProfilePage: React.FC = () => {
     return <Tag color={isActive ? 'green' : 'red'}>{isActive ? '活跃' : '停用'}</Tag>;
   };
 
-  if (!user) {
+  if (user == null) {
     return (
       <div style={{ padding: '24px' }}>
         <Skeleton loading={true} avatar active>
@@ -316,7 +329,7 @@ const ProfilePage: React.FC = () => {
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button onClick={() => setEditModalVisible(false)}>取消</Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button type="primary" htmlType="submit" loading={updateProfileMutation.isPending}>
                 保存更改
               </Button>
             </Space>
@@ -396,7 +409,7 @@ const ProfilePage: React.FC = () => {
               >
                 取消
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button type="primary" htmlType="submit" loading={changePasswordMutation.isPending}>
                 确认修改
               </Button>
             </Space>

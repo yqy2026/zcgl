@@ -12,8 +12,8 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
-from ...core.exception_handler import ConfigurationError
 from ...constants.timeout_constants import DEFAULT_LLM_TIMEOUT_SECONDS
+from ...core.exception_handler import ConfigurationError
 
 # ============================================================================
 # LLM 提供商枚举 - 统一命名

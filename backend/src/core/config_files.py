@@ -7,12 +7,12 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
-from ..constants.rent_contract_constants import CONTRACT_ATTACHMENT_SUBDIR
 from ..constants.file_size_constants import (
     DEFAULT_MAX_FILE_SIZE,
     MAX_FILE_SIZE_LIMIT,
     MIN_FILE_SIZE_BYTES,
 )
+from ..constants.rent_contract_constants import CONTRACT_ATTACHMENT_SUBDIR
 
 
 class FileUploadSettings(BaseModel):

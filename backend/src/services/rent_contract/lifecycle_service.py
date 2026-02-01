@@ -23,7 +23,6 @@ from ...models.rent_contract import (
 )
 from ...schemas.rent_contract import RentContractCreate, RentContractUpdate
 from ...utils.model_utils import model_to_dict
-
 from .helpers import RentContractHelperMixin
 
 

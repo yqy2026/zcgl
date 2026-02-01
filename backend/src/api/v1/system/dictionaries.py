@@ -16,7 +16,6 @@ from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -26,6 +25,7 @@ from ....schemas.dictionary import (
     SimpleDictionaryCreate,
 )
 from ....services.common_dictionary_service import common_dictionary_service
+from ..utils import handle_api_errors
 
 # 创建logger
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
 
 
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])
+@handle_api_errors
 def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
     is_active: bool = Query(True, description="是否只返回启用的选项"),
@@ -45,16 +46,14 @@ def get_dictionary_options(
 
     重构：业务逻辑已下沉至 Service 层
     """
-    try:
-        result: list[DictionaryOptionResponse] = (
-            common_dictionary_service.get_combined_options(db, dict_type, is_active)
-        )
-        return result
-    except Exception as e:  # pragma: no cover
-        raise internal_error(f"获取字典选项失败: {str(e)}")  # pragma: no cover
+    result: list[DictionaryOptionResponse] = (
+        common_dictionary_service.get_combined_options(db, dict_type, is_active)
+    )
+    return result
 
 
 @router.post("/{dict_type}/quick-create")
+@handle_api_errors
 def quick_create_dictionary(
     dict_type: str = Path(..., description="字典类型"),
     dictionary_data: SimpleDictionaryCreate = Body(...),
@@ -70,18 +69,17 @@ def quick_create_dictionary(
     - 操作人从当前用户获取，不再硬编码
     - 使用类型安全的 Schema
     """
-    try:
-        result = common_dictionary_service.quick_create_enum_dictionary(
-            db, dict_type, dictionary_data, operator=current_user.full_name or "系统"
-        )
-        return JSONResponse(status_code=200, content=result)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"创建简单字典失败: {str(e)}")
+    operator = getattr(current_user, "full_name", None)
+    if not isinstance(operator, str) or not operator:
+        operator = "系统"
+    result = common_dictionary_service.quick_create_enum_dictionary(
+        db, dict_type, dictionary_data, operator=operator
+    )
+    return JSONResponse(status_code=200, content=result)
 
 
 @router.get("/types", response_model=list[str])
+@handle_api_errors
 def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
     """
     获取所有字典类型列表
@@ -92,6 +90,7 @@ def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
 
 
 @router.get("/validation/stats", summary="获取枚举验证统计信息")
+@handle_api_errors
 def get_validation_statistics(
     enum_type: str | None = Query(None, description="枚举类型编码（可选）"),
     db: Session = Depends(get_db),
@@ -142,6 +141,7 @@ def get_validation_statistics(
 
 
 @router.post("/{dict_type}/values")
+@handle_api_errors
 def add_dictionary_value(
     dict_type: str = Path(..., description="字典类型"),
     value_data: DictionaryValueCreate = Body(...),
@@ -156,18 +156,17 @@ def add_dictionary_value(
     - 使用类型安全的 Schema
     - 操作人从当前用户获取
     """
-    try:
-        result = common_dictionary_service.add_dictionary_value(
-            db, dict_type, value_data, operator=current_user.full_name or "系统"
-        )
-        return JSONResponse(status_code=200, content=result)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"添加字典值失败: {str(e)}")
+    operator = getattr(current_user, "full_name", None)
+    if not isinstance(operator, str) or not operator:
+        operator = "系统"
+    result = common_dictionary_service.add_dictionary_value(
+        db, dict_type, value_data, operator=operator
+    )
+    return JSONResponse(status_code=200, content=result)
 
 
 @router.delete("/{dict_type}")
+@handle_api_errors
 def delete_dictionary_type(
     dict_type: str = Path(..., description="字典类型"),
     db: Session = Depends(get_db),
@@ -178,14 +177,10 @@ def delete_dictionary_type(
 
     重构：业务逻辑已下沉至 Service 层
     """
-    try:
-        result = common_dictionary_service.delete_dictionary_type(
-            db, dict_type, operator=current_user.full_name or "系统"
-        )
-        return JSONResponse(status_code=200, content=result)
-    except Exception as e:  # pragma: no cover
-        if isinstance(e, BaseBusinessError):  # pragma: no cover
-            raise  # pragma: no cover
-        raise internal_error(  # pragma: no cover
-            f"删除字典类型失败: {str(e)}"
-        )  # pragma: no cover
+    operator = getattr(current_user, "full_name", None)
+    if not isinstance(operator, str) or not operator:
+        operator = "系统"
+    result = common_dictionary_service.delete_dictionary_type(
+        db, dict_type, operator=operator
+    )
+    return JSONResponse(status_code=200, content=result)

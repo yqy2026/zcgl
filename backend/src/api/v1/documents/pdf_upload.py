@@ -26,8 +26,8 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
+from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User

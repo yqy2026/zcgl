@@ -36,8 +36,11 @@ from ...schemas.rbac import (
     PermissionCheckRequest,
     PermissionCheckResponse,
     PermissionCreate,
+    PermissionResponse,
     RoleCreate,
+    RoleResponse,
     RoleUpdate,
+    ResourcePermissionResponse,
     UserPermissionSummary,
     UserRoleAssignmentCreate,
 )
@@ -506,12 +509,22 @@ class RBACService:
             roles, resource_permissions
         )
 
+        roles_response = [RoleResponse.model_validate(role) for role in roles]
+        permissions_response = [
+            PermissionResponse.model_validate(permission)
+            for permission in role_permissions
+        ]
+        resource_permissions_response = [
+            ResourcePermissionResponse.model_validate(resource_permission)
+            for resource_permission in resource_permissions
+        ]
+
         return UserPermissionSummary(
             user_id=user_id,
             username=user.username,
-            roles=roles,  # type: ignore
-            permissions=list[Any](role_permissions),
-            resource_permissions=resource_permissions,  # type: ignore
+            roles=roles_response,
+            permissions=permissions_response,
+            resource_permissions=resource_permissions_response,
             effective_permissions=effective_permissions,
         )
 

@@ -31,12 +31,38 @@ class HistoryCRUD:
     ) -> list[AssetHistory]:
         """获取多个历史记录"""
         return (
-            db.query(AssetHistory)
+            self._apply_history_filters(db.query(AssetHistory))
             .order_by(desc(AssetHistory.operation_time))
             .offset(skip)
             .limit(limit)
             .all()
         )
+
+    def get_multi_with_count(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        asset_id: str | None = None,
+    ) -> tuple[list[AssetHistory], int]:
+        """获取历史记录列表与总数"""
+        query = self._apply_history_filters(db.query(AssetHistory), asset_id=asset_id)
+        total = query.count()
+        items = (
+            query.order_by(desc(AssetHistory.operation_time))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return items, total
+
+    def _apply_history_filters(
+        self, query: Any, *, asset_id: str | None = None
+    ) -> Any:
+        if asset_id:
+            query = query.filter(AssetHistory.asset_id == asset_id)
+        return query
 
     def create(
         self, db: Session, *, commit: bool = True, **kwargs: Any

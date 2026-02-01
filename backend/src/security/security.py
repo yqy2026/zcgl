@@ -11,9 +11,12 @@ from typing import Any
 from fastapi import Depends, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .field_validation import FieldValidator, MODEL_REGISTRY
-from .file_validation import FileValidationConfig, FileValidator, MAGIC_AVAILABLE, magic
+from .field_validation import MODEL_REGISTRY, FieldValidator
+from .file_validation import MAGIC_AVAILABLE, FileValidationConfig, FileValidator, magic
 from .ip_blacklist import IPBlacklistManager
+
+# Import for test compatibility
+from src.crud.field_whitelist import get_whitelist_for_model
 from .rate_limiting import (
     AdaptiveRateLimiter,
     RateLimitConfig,
@@ -50,6 +53,7 @@ __all__ = [
     "get_current_user",
     "validate_file_upload_dependency",
     "get_request_context",
+    "get_whitelist_for_model",
 ]
 
 

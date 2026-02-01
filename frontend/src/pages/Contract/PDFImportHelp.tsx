@@ -262,7 +262,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                 direction="vertical"
                 current={0}
                 items={usageSteps.map((step, index) => ({
-                  key: index,
+                  key: step.title,
                   title: step.title,
                   description: step.description,
                   icon: step.icon,
@@ -406,8 +406,8 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             />
 
             <Row gutter={16}>
-              {bestPractices.map((practice, index) => (
-                <Col span={12} key={index}>
+              {bestPractices.map(practice => (
+                <Col span={12} key={practice.title}>
                   <Card style={{ height: '100%', marginBottom: 16 }}>
                     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                       <div style={{ textAlign: 'center' }}>
@@ -420,8 +420,8 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                       <div>
                         <Text strong>建议要点：</Text>
                         <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-                          {practice.tips.map((tip, tipIndex) => (
-                            <li key={tipIndex} style={{ marginBottom: 4 }}>
+                          {practice.tips.map(tip => (
+                            <li key={tip} style={{ marginBottom: 4 }}>
                               <Text style={{ fontSize: 14 }}>{tip}</Text>
                             </li>
                           ))}
@@ -450,12 +450,12 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               <Col span={12}>
                 <Card title="字段分类统计" style={{ marginBottom: 16 }}>
                   <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                    {keyFields.map((category, index) => (
-                      <div key={index}>
+                    {keyFields.map(category => (
+                      <div key={category.category}>
                         <Text strong>{category.category}：</Text>
                         <div style={{ marginTop: 4 }}>
-                          {category.fields.map((field, fieldIndex) => (
-                            <Tag key={fieldIndex} color="blue" style={{ marginBottom: 4 }}>
+                          {category.fields.map(field => (
+                            <Tag key={field} color="blue" style={{ marginBottom: 4 }}>
                               {field}
                             </Tag>
                           ))}

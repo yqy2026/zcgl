@@ -21,7 +21,7 @@ export interface LoadListOptions<TFilters> {
   replaceFilters?: boolean;
 }
 
-export interface UseListDataOptions<T, TFilters extends Record<string, unknown>> {
+export interface UseListDataOptions<T, TFilters extends object> {
   fetcher: (params: { page: number; pageSize: number } & TFilters) => Promise<ListResponse<T>>;
   initialFilters: TFilters;
   initialPage?: number;
@@ -29,7 +29,7 @@ export interface UseListDataOptions<T, TFilters extends Record<string, unknown>>
   onError?: (error: unknown) => void;
 }
 
-export const useListData = <T, TFilters extends Record<string, unknown>>(
+export const useListData = <T, TFilters extends object>(
   options: UseListDataOptions<T, TFilters>
 ) => {
   const {
@@ -44,6 +44,7 @@ export const useListData = <T, TFilters extends Record<string, unknown>>(
   const { filters, setFilters, resetFilters } = useFilters<TFilters>(initialFilters);
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [pagination, setPagination] = useState<ListPagination>({
     current: initialPage,
     pageSize: initialPageSize,
@@ -64,6 +65,7 @@ export const useListData = <T, TFilters extends Record<string, unknown>>(
   const loadList = useCallback(
     async (loadOptions?: LoadListOptions<TFilters>) => {
       setLoading(true);
+      setError(null);
       try {
         const optionsValue = loadOptions ?? {};
         const currentPagination = paginationRef.current;
@@ -96,6 +98,7 @@ export const useListData = <T, TFilters extends Record<string, unknown>>(
         }
       } catch (error) {
         setData([]);
+        setError(error);
         if (onError != null) {
           onError(error);
         }
@@ -138,6 +141,7 @@ export const useListData = <T, TFilters extends Record<string, unknown>>(
   return {
     data,
     loading,
+    error,
     pagination,
     filters,
     loadList,

@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ApiMonitor from '../ApiMonitor';
 
 // Mock apiHealthCheck
@@ -26,12 +26,48 @@ vi.mock('../../../utils/logger', () => ({
   }),
 }));
 
+vi.mock('@/components/Common/TableWithPagination', () => ({
+  TableWithPagination: ({
+    columns,
+    dataSource,
+  }: {
+    columns?: Array<{
+      key?: string;
+      title?: React.ReactNode | ((props: Record<string, unknown>) => React.ReactNode);
+      dataIndex?: string;
+      render?: (value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode;
+    }>;
+    dataSource?: Array<Record<string, unknown>>;
+  }) => (
+    <div data-testid="table">
+      <div data-testid="table-header">
+        {columns?.map((column, colIndex) => {
+          const title =
+            typeof column.title === 'function' ? column.title({}) : column.title ?? '';
+          return <span key={column.key ?? `header-${colIndex}`}>{title}</span>;
+        })}
+      </div>
+      {dataSource?.map((record, rowIndex) => (
+        <div key={String(record.endpoint ?? rowIndex)} data-testid={`row-${rowIndex}`}>
+          {columns?.map((column, colIndex) => {
+            const value = column.dataIndex ? record[column.dataIndex] : undefined;
+            return (
+              <span key={column.key ?? `${colIndex}`}>
+                {column.render ? column.render(value, record, rowIndex) : String(value ?? '')}
+              </span>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
 import { apiHealthCheck } from '../../../services/apiHealthCheck';
 
 describe('ApiMonitor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
 
     // 默认 mock 返回值
     vi.mocked(apiHealthCheck.checkCriticalEndpoints).mockResolvedValue(undefined);
@@ -64,10 +100,6 @@ describe('ApiMonitor', () => {
       unknown: 0,
       healthPercentage: 100,
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe('渲染', () => {
@@ -161,7 +193,7 @@ describe('ApiMonitor', () => {
 
       await waitFor(() => {
         expect(screen.getByText('/api/v1/health')).toBeInTheDocument();
-        expect(screen.getByText('HEALTHY')).toBeInTheDocument();
+        expect(screen.getAllByText('HEALTHY')).toHaveLength(2);
       });
     });
 
@@ -228,7 +260,10 @@ describe('ApiMonitor', () => {
         expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
       });
 
-      const refreshButton = screen.getByText('刷新状态');
+      const refreshButton = screen.getByRole('button', { name: /刷新状态/ });
+      await waitFor(() => {
+        expect(refreshButton).not.toHaveClass('ant-btn-loading');
+      });
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -237,21 +272,24 @@ describe('ApiMonitor', () => {
     });
 
     it('自动每 30 秒刷新一次', async () => {
+      vi.useFakeTimers();
       render(<ApiMonitor />);
 
-      await waitFor(() => {
-        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
-      });
+      await vi.runAllTicks();
+      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
 
       // 前进 30 秒
       await vi.advanceTimersByTimeAsync(30000);
+      await vi.runAllTicks();
 
       expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(2);
 
       // 再前进 30 秒
       await vi.advanceTimersByTimeAsync(30000);
+      await vi.runAllTicks();
 
       expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(3);
+      vi.useRealTimers();
     });
   });
 
@@ -318,19 +356,21 @@ describe('ApiMonitor', () => {
 
   describe('清理', () => {
     it('卸载时清理定时器', async () => {
+      vi.useFakeTimers();
       const { unmount } = render(<ApiMonitor />);
 
-      await waitFor(() => {
-        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
-      });
+      await vi.runAllTicks();
+      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
 
       unmount();
 
       // 前进时间后不应该再调用
       await vi.advanceTimersByTimeAsync(60000);
+      await vi.runAllTicks();
 
       // 调用次数应该还是 1
       expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
     });
   });
 });

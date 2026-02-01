@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Typography, Statistic, Row, Col, Spin, Alert } from 'antd';
 import { PercentageOutlined, RiseOutlined, FallOutlined, MinusOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -64,199 +64,208 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
   });
 
   // 趋势图表配置
-  const trendChartConfig = {
-    data:
-      data?.monthly_trend?.map(
-        (item): TrendDataPoint => ({
-          month: item.month,
-          rate: item.rate,
-          total_area: item.total_area,
-          rented_area: item.rented_area,
-        })
-      ) ?? [],
-    xField: 'month' as const,
-    yField: 'rate' as const,
-    smooth: true,
-    color: '#1890ff',
-    areaStyle: {
-      fillOpacity: 0.1,
-    },
-    point: {
-      size: 4,
-      shape: 'circle' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: '出租率',
-        value: `${(datum.rate as number).toFixed(2)}%`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as TrendDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.month}</div>
-            <div>出租率: {datum.rate.toFixed(2)}%</div>
-            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
-            <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
-          </div>
-        );
+  const trendChartConfig = useMemo(
+    () => ({
+      data:
+        data?.monthly_trend?.map(
+          (item): TrendDataPoint => ({
+            month: item.month,
+            rate: item.rate,
+            total_area: item.total_area,
+            rented_area: item.rented_area,
+          })
+        ) ?? [],
+      xField: 'month' as const,
+      yField: 'rate' as const,
+      smooth: true,
+      color: '#1890ff',
+      areaStyle: {
+        fillOpacity: 0.1,
       },
-    },
-    yAxis: {
-      min: 0,
-      max: 100,
-      label: {
-        formatter: (value: number) => `${value}%`,
+      point: {
+        size: 4,
+        shape: 'circle' as const,
       },
-    },
-    animation: {
-      appear: {
-        animation: 'path-in' as const,
-        duration: 1000,
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: '出租率',
+          value: `${(datum.rate as number).toFixed(2)}%`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as TrendDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.month}</div>
+              <div>出租率: {datum.rate.toFixed(2)}%</div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+              <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
+            </div>
+          );
+        },
       },
-    },
-  };
+      yAxis: {
+        min: 0,
+        max: 100,
+        label: {
+          formatter: (value: number) => `${value}%`,
+        },
+      },
+      animation: {
+        appear: {
+          animation: 'path-in' as const,
+          duration: 1000,
+        },
+      },
+    }),
+    [data]
+  );
 
   // 物业性质分布图表配置
-  const propertyNatureChartConfig = {
-    data:
-      data?.by_property_nature?.map(
-        (item): DistributionDataPoint => ({
-          type: item.property_nature,
-          value: item.rate,
-          total_area: item.total_area,
-          rented_area: item.rented_area,
-        })
-      ) ?? [],
-    angleField: 'value' as const,
-    colorField: 'type' as const,
-    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
-    radius: 0.8,
-    innerRadius: 0.6,
-    label: {
-      type: 'inner' as const,
-      offset: '-50%',
-      content: '{value}%',
-      style: {
-        textAlign: 'center' as const,
-        fontSize: 14,
-        fill: '#fff',
-      },
-    },
-    legend: {
-      layout: 'vertical' as const,
-      position: 'right' as const,
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.type as string) ?? '',
-        value: `${(datum.value as number).toFixed(2)}%`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as DistributionDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
-            <div>出租率: {datum.value.toFixed(2)}%</div>
-            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
-            <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
-          </div>
-        );
-      },
-    },
-    statistic: {
-      title: {
-        offsetY: -8,
-        content: '总体出租率',
+  const propertyNatureChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_property_nature?.map(
+          (item): DistributionDataPoint => ({
+            type: item.property_nature,
+            value: item.rate,
+            total_area: item.total_area,
+            rented_area: item.rented_area,
+          })
+        ) ?? [],
+      angleField: 'value' as const,
+      colorField: 'type' as const,
+      color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+      radius: 0.8,
+      innerRadius: 0.6,
+      label: {
+        type: 'inner' as const,
+        offset: '-50%',
+        content: '{value}%',
         style: {
-          fontSize: '14px',
+          textAlign: 'center' as const,
+          fontSize: 14,
+          fill: '#fff',
         },
       },
-      content: {
-        offsetY: 4,
-        style: {
-          fontSize: '20px',
-          fontWeight: 'bold' as const,
-        },
-        content: `${data?.overall_rate?.toFixed(2) ?? 0}%`,
+      legend: {
+        layout: 'vertical' as const,
+        position: 'right' as const,
       },
-    },
-  };
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.type as string) ?? '',
+          value: `${(datum.value as number).toFixed(2)}%`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as DistributionDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
+              <div>出租率: {datum.value.toFixed(2)}%</div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+              <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
+            </div>
+          );
+        },
+      },
+      statistic: {
+        title: {
+          offsetY: -8,
+          content: '总体出租率',
+          style: {
+            fontSize: '14px',
+          },
+        },
+        content: {
+          offsetY: 4,
+          style: {
+            fontSize: '20px',
+            fontWeight: 'bold' as const,
+          },
+          content: `${data?.overall_rate?.toFixed(2) ?? 0}%`,
+        },
+      },
+    }),
+    [data]
+  );
 
   // 权属方出租率柱状图配置
-  const ownershipChartConfig = {
-    data:
-      data?.by_ownership_entity?.map(
-        (item): ColumnDataPoint => ({
-          ownership:
-            item.ownership_entity.length > 10
-              ? item.ownership_entity.substring(0, 10) + '...'
-              : item.ownership_entity,
-          rate: item.rate,
-          asset_count: item.asset_count,
-          full_name: item.ownership_entity,
-          value: item.rate,
-        })
-      ) ?? [],
-    xField: 'ownership' as const,
-    yField: 'rate' as const,
-    color: '#1890ff',
-    columnStyle: {
-      fillOpacity: 0.6,
-      stroke: '#1890ff',
-      lineWidth: 1,
-    },
-    label: {
-      position: 'top' as const,
-      formatter: (datum: ChartDataPoint): string => `${(datum.rate as number).toFixed(1)}%`,
-      style: {
-        fill: '#333',
-        fontSize: 12,
+  const ownershipChartConfig = useMemo(
+    () => ({
+      data:
+        data?.by_ownership_entity?.map(
+          (item): ColumnDataPoint => ({
+            ownership:
+              item.ownership_entity.length > 10
+                ? item.ownership_entity.substring(0, 10) + '...'
+                : item.ownership_entity,
+            rate: item.rate,
+            asset_count: item.asset_count,
+            full_name: item.ownership_entity,
+            value: item.rate,
+          })
+        ) ?? [],
+      xField: 'ownership' as const,
+      yField: 'rate' as const,
+      color: '#1890ff',
+      columnStyle: {
+        fillOpacity: 0.6,
+        stroke: '#1890ff',
+        lineWidth: 1,
       },
-    },
-    tooltip: {
-      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
-        name: (datum.full_name as string | undefined) ?? (datum.ownership as string) ?? '',
-        value: `${(datum.rate as number).toFixed(2)}%`,
-      }),
-      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-        const datum = data?.[0]?.data as ColumnDataPoint | undefined;
-        if (datum == null) return null;
-        return (
-          <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {(datum.full_name as string | undefined) ?? (datum.ownership as string)}
+      label: {
+        position: 'top' as const,
+        formatter: (datum: ChartDataPoint): string => `${(datum.rate as number).toFixed(1)}%`,
+        style: {
+          fill: '#333',
+          fontSize: 12,
+        },
+      },
+      tooltip: {
+        formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+          name: (datum.full_name as string | undefined) ?? (datum.ownership as string) ?? '',
+          value: `${(datum.rate as number).toFixed(2)}%`,
+        }),
+        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+          const datum = data?.[0]?.data as ColumnDataPoint | undefined;
+          if (datum == null) return null;
+          return (
+            <div style={{ padding: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                {(datum.full_name as string | undefined) ?? (datum.ownership as string)}
+              </div>
+              <div>出租率: {(datum.rate as number).toFixed(2)}%</div>
+              <div>资产数量: {datum.asset_count as number} 个</div>
             </div>
-            <div>出租率: {(datum.rate as number).toFixed(2)}%</div>
-            <div>资产数量: {datum.asset_count as number} 个</div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    yAxis: {
-      min: 0,
-      max: 100,
-      label: {
-        formatter: (value: number) => `${value}%`,
+      yAxis: {
+        min: 0,
+        max: 100,
+        label: {
+          formatter: (value: number) => `${value}%`,
+        },
       },
-    },
-    xAxis: {
-      label: {
-        autoRotate: true,
-        autoHide: true,
-        maxRotation: 45,
-        minRotation: 0,
+      xAxis: {
+        label: {
+          autoRotate: true,
+          autoHide: true,
+          maxRotation: 45,
+          minRotation: 0,
+        },
       },
-    },
-    animation: {
-      appear: {
-        animation: 'scale-in-y' as const,
-        duration: 1000,
+      animation: {
+        appear: {
+          animation: 'scale-in-y' as const,
+          duration: 1000,
+        },
       },
-    },
-  };
+    }),
+    [data]
+  );
 
   // 获取趋势图标
   const getTrendIcon = (trend: string, _percentage: number) => {
@@ -387,7 +396,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.top_performers?.map((asset, index) => (
                 <div
-                  key={index}
+                  key={asset.property_name}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -420,7 +429,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.low_performers?.map((asset, index) => (
                 <div
-                  key={index}
+                  key={asset.property_name}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -452,4 +461,4 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
   );
 };
 
-export default OccupancyRateChart;
+export default React.memo(OccupancyRateChart);

@@ -149,6 +149,87 @@ class TestEnvironmentConfiguration:
             elif "SECRET_KEY" in os.environ:
                 del os.environ["SECRET_KEY"]
 
+
+class TestIpBlacklistConfiguration:
+    """IP 黑名单配置测试"""
+
+    def test_ip_blacklist_parsing_from_env(self):
+        """测试 IP 黑名单可从环境变量解析"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_blacklist = os.environ.get("IP_BLACKLIST")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["IP_BLACKLIST"] = '["192.0.2.1","198.51.100.10"]'
+
+            settings = Settings()
+            assert settings.IP_BLACKLIST == ["192.0.2.1", "198.51.100.10"]
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+
+
+class TestSecurityAnalyzerConfiguration:
+    """安全分析配置测试"""
+
+    def test_security_analyzer_patterns_from_env(self):
+        """测试安全分析模式可从环境变量解析"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_patterns = os.environ.get("SECURITY_ANALYZER_PATTERNS")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["SECURITY_ANALYZER_PATTERNS"] = '["foo","bar","baz"]'
+
+            settings = Settings()
+            assert settings.SECURITY_ANALYZER_PATTERNS == ["foo", "bar", "baz"]
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_patterns is not None:
+                os.environ["SECURITY_ANALYZER_PATTERNS"] = original_patterns
+            elif "SECURITY_ANALYZER_PATTERNS" in os.environ:
+                del os.environ["SECURITY_ANALYZER_PATTERNS"]
+
+    def test_security_analyzer_invalid_values(self):
+        """测试安全分析配置非法值会触发校验错误"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_value = os.environ.get("SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"] = "0"
+
+            with pytest.raises(ValidationError):
+                Settings()
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_value is not None:
+                os.environ["SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"] = original_value
+            elif "SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS" in os.environ:
+                del os.environ["SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"]
+
     def test_environment_setting(self):
         """测试 ENVIRONMENT 可以正确设置"""
         original_env = os.environ.get("ENVIRONMENT")
@@ -173,3 +254,127 @@ class TestEnvironmentConfiguration:
                 os.environ["SECRET_KEY"] = original_key
             elif "SECRET_KEY" in os.environ:
                 del os.environ["SECRET_KEY"]
+
+
+class TestAdaptiveRateLimitConfiguration:
+    """自适应限流配置测试"""
+
+    def test_adaptive_rate_limit_invalid_error_rate(self):
+        """测试自适应限流错误率非法值会触发校验错误"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_rate = os.environ.get("ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE"] = "1.5"
+
+            with pytest.raises(ValidationError):
+                Settings()
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_rate is not None:
+                os.environ["ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE"] = original_rate
+            elif "ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE" in os.environ:
+                del os.environ["ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE"]
+
+
+class TestRequestLimiterConfiguration:
+    """请求限制配置测试"""
+
+    def test_request_limit_invalid_max_requests(self):
+        """测试请求限制非法值会触发校验错误"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_value = os.environ.get("REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE"] = "0"
+
+            with pytest.raises(ValidationError):
+                Settings()
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_value is not None:
+                os.environ["REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE"] = original_value
+            elif "REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE" in os.environ:
+                del os.environ["REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE"]
+
+
+class TestSecurityMiddlewareConfiguration:
+    """安全中间件配置测试"""
+
+    def test_security_middleware_invalid_user_agent_min_length(self):
+        """测试安全中间件 User-Agent 最小长度非法值"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_value = os.environ.get("SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH"] = "0"
+
+            with pytest.raises(ValidationError):
+                Settings()
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_value is not None:
+                os.environ["SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH"] = original_value
+            elif "SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH" in os.environ:
+                del os.environ["SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH"]
+
+    def test_security_middleware_rate_limits_from_env(self):
+        """测试安全中间件速率限制配置解析"""
+        original_key = os.environ.get("SECRET_KEY")
+        original_env = os.environ.get("ENVIRONMENT")
+        original_value = os.environ.get("SECURITY_MIDDLEWARE_RATE_LIMITS")
+
+        try:
+            os.environ["SECRET_KEY"] = "StrongSecretKey-With-Enough-Length-2026!"
+            os.environ["ENVIRONMENT"] = "development"
+            os.environ["SECURITY_MIDDLEWARE_RATE_LIMITS"] = (
+                '{"api":{"requests":5,"window":60}}'
+            )
+
+            settings = Settings()
+            assert settings.SECURITY_MIDDLEWARE_RATE_LIMITS == {
+                "api": {"requests": 5, "window": 60}
+            }
+        finally:
+            if original_key:
+                os.environ["SECRET_KEY"] = original_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_value is not None:
+                os.environ["SECURITY_MIDDLEWARE_RATE_LIMITS"] = original_value
+            elif "SECURITY_MIDDLEWARE_RATE_LIMITS" in os.environ:
+                del os.environ["SECURITY_MIDDLEWARE_RATE_LIMITS"]

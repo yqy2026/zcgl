@@ -22,11 +22,11 @@ except ImportError:
     REDIS_AVAILABLE = False
     redis = None
 
-from ...enums.status import TaskExecutionStatus
 from ...constants.timeout_constants import (
     REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
 )
+from ...enums.status import TaskExecutionStatus
 from ...models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,

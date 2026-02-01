@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Typography,
@@ -8,7 +8,6 @@ import {
   Space,
   Alert,
   Steps,
-  Table,
   Row,
   Col,
   Statistic,
@@ -20,12 +19,17 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import {
   UploadOutlined,
   DownloadOutlined,
   FileExcelOutlined,
   CheckCircleOutlined,
+  CheckCircleFilled,
   ExclamationCircleOutlined,
+  ExclamationCircleFilled,
+  CloseCircleFilled,
+  FileTextFilled,
   SettingOutlined,
 } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
@@ -33,6 +37,7 @@ import { apiClient } from '@/api/client';
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '@/config/excelConfig';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
+import { useArrayListData } from '@/hooks/useArrayListData';
 
 const importLogger = createLogger('AssetImport');
 
@@ -250,11 +255,29 @@ const OptimizedAssetImport: React.FC = () => {
     },
   ];
 
-  const errorData =
-    importResult?.errors?.map((error, index) => ({
-      key: index,
-      error,
-    })) ?? [];
+  const errorData = useMemo(
+    () =>
+      importResult?.errors?.map(error => ({
+        key: error,
+        error,
+      })) ?? [],
+    [importResult]
+  );
+
+  const {
+    data: pagedErrorData,
+    pagination: errorPagination,
+    loadList: loadErrorList,
+    updatePagination: updateErrorPagination,
+  } = useArrayListData<Record<string, unknown>, Record<string, never>>({
+    items: errorData,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadErrorList({ page: 1 });
+  }, [errorData, loadErrorList]);
 
   return (
     <div style={{ padding: '24px' }}>
@@ -344,7 +367,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <p>• 实时导入进度反馈</p>
                   <p>• 支持大文件导入 (最大50MB)</p>
                   {IMPORT_INSTRUCTIONS.map((instruction, index) => (
-                    <p key={index}>
+                    <p key={instruction}>
                       {index + 1}. {instruction}
                     </p>
                   ))}
@@ -423,7 +446,7 @@ const OptimizedAssetImport: React.FC = () => {
                 loading={uploading}
                 size="large"
               >
-                {uploading ? '导入中...' : '开始导入'}
+                {uploading ? '导入中…' : '开始导入'}
               </Button>
             </Space>
           </div>
@@ -461,13 +484,27 @@ const OptimizedAssetImport: React.FC = () => {
                 )}
 
                 <Title level={3} style={{ marginTop: '8px' }}>
-                  {importResult.success > 0 && importResult.failed === 0
-                    ? '🎉 导入成功！'
-                    : importResult.success > 0 && importResult.failed > 0
-                      ? '⚠️ 部分成功'
-                      : importResult.failed > 0
-                        ? '❌ 导入失败'
-                        : '📄 导入完成'}
+                  {importResult.success > 0 && importResult.failed === 0 ? (
+                    <Space>
+                      <CheckCircleFilled style={{ color: COLORS.success }} />
+                      导入成功！
+                    </Space>
+                  ) : importResult.success > 0 && importResult.failed > 0 ? (
+                    <Space>
+                      <ExclamationCircleFilled style={{ color: COLORS.warning }} />
+                      部分成功
+                    </Space>
+                  ) : importResult.failed > 0 ? (
+                    <Space>
+                      <CloseCircleFilled style={{ color: COLORS.error }} />
+                      导入失败
+                    </Space>
+                  ) : (
+                    <Space>
+                      <FileTextFilled style={{ color: COLORS.primary }} />
+                      导入完成
+                    </Space>
+                  )}
                 </Title>
 
                 <Text type="secondary" style={{ fontSize: '16px' }}>
@@ -552,10 +589,15 @@ const OptimizedAssetImport: React.FC = () => {
                   </Button>
                 }
               >
-                <Table
+                <TableWithPagination
                   columns={errorColumns}
-                  dataSource={errorData}
-                  pagination={{ pageSize: 10 }}
+                  dataSource={pagedErrorData}
+                  paginationState={errorPagination}
+                  onPageChange={updateErrorPagination}
+                  paginationProps={{
+                    showSizeChanger: true,
+                    showTotal: (total: number) => `共 ${total} 条`,
+                  }}
                   size="small"
                   scroll={{ y: 300 }}
                 />

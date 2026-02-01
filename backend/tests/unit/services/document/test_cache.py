@@ -1074,7 +1074,7 @@ class TestAsyncDocumentCache:
 
     def test_async_cache_init_without_aiofiles(self, temp_cache_dir):
         """测试异步缓存初始化时 aiofiles 不可用 (Lines 384-387)"""
-        with patch("src.services.document.cache.AIOFILES_AVAILABLE", False):
+        with patch("src.services.document.cache_async.AIOFILES_AVAILABLE", False):
             cache = AsyncDocumentCache(
                 cache_dir=temp_cache_dir, ttl_seconds=60, use_async=True
             )

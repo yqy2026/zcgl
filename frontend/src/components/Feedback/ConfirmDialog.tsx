@@ -70,8 +70,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div style={{ marginTop: 16 }}>
               <Text type="secondary">将要删除的内容：</Text>
               <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-                {details.map((detail, index) => (
-                  <li key={index}>
+                {details.map(detail => (
+                  <li key={detail}>
                     <Text type="secondary">{detail}</Text>
                   </li>
                 ))}
@@ -110,8 +110,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div style={{ marginTop: 16 }}>
               <Text type="secondary">将要保存的更改：</Text>
               <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-                {details.map((detail, index) => (
-                  <li key={index}>
+                {details.map(detail => (
+                  <li key={detail}>
                     <Text type="secondary">{detail}</Text>
                   </li>
                 ))}

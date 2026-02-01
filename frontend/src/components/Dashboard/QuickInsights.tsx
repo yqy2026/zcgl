@@ -124,8 +124,8 @@ const QuickInsights: React.FC<QuickInsightsProps> = ({ data, loading }) => {
       loading={loading}
     >
       <Row gutter={[16, 16]}>
-        {insights.map((insight, index) => (
-          <Col xs={24} sm={12} lg={8} key={index}>
+        {insights.map(insight => (
+          <Col xs={24} sm={12} lg={8} key={insight.title}>
             <Card
               className={`${styles.insightCard} ${getTypeClass(insight.type)}`}
               variant="borderless"

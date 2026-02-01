@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Modal,
@@ -34,6 +33,8 @@ import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 
 const pageLogger = createLogger('UserManagement');
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useListData } from '@/hooks/useListData';
 import {
   PlusOutlined,
   EditOutlined,
@@ -65,20 +66,21 @@ interface UserStatistics {
   by_organization: Record<string, number>;
 }
 
+interface UserFilters {
+  keyword: string;
+  status: string;
+  roleId: string;
+  organizationId: string;
+}
+
 const UserManagementPage: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [statistics, setStatistics] = useState<UserStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [_searchText, _setSearchText] = useState('');
-  const [_statusFilter, _setStatusFilter] = useState<string>('');
-  const [_roleFilter, _setRoleFilter] = useState<string>('');
-  const [_organizationFilter, _setOrganizationFilter] = useState<string>('');
 
   const [form] = Form.useForm();
 
@@ -89,19 +91,56 @@ const UserManagementPage: React.FC = () => {
     { value: 'locked', label: '锁定', color: 'orange' },
   ];
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await userService.getUsers();
-      setUsers(data.items);
-    } catch (error) {
-      pageLogger.error('加载用户列表失败:', error as Error);
-      MessageManager.error('加载用户列表失败');
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
+  const fetchUsers = useCallback(
+    async ({
+      page,
+      pageSize,
+      keyword,
+      status,
+      roleId,
+      organizationId,
+    }: {
+      page: number;
+      pageSize: number;
+    } & UserFilters) => {
+      const trimmedKeyword = keyword.trim();
+      const response = await userService.getUsers({
+        page,
+        page_size: pageSize,
+        search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
+        status: status !== '' ? status : undefined,
+        role: roleId !== '' ? roleId : undefined,
+        organization_id: organizationId !== '' ? organizationId : undefined,
+      });
+      return { items: response.items ?? [], total: response.total ?? 0 };
+    },
+    []
+  );
+
+  const handleLoadError = useCallback((error: unknown) => {
+    pageLogger.error('加载用户列表失败:', error as Error);
+    MessageManager.error('加载用户列表失败');
   }, []);
+
+  const {
+    data: users,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<User, UserFilters>({
+    fetcher: fetchUsers,
+    initialFilters: {
+      keyword: '',
+      status: '',
+      roleId: '',
+      organizationId: '',
+    },
+    initialPageSize: 10,
+    onError: handleLoadError,
+  });
 
   const loadOrganizations = useCallback(async () => {
     try {
@@ -169,16 +208,59 @@ const UserManagementPage: React.FC = () => {
   }, [users]);
 
   useEffect(() => {
-    loadUsers();
-    loadOrganizations();
-    loadRoles();
-    loadStatistics();
-  }, [loadUsers, loadOrganizations, loadRoles, loadStatistics]);
+    void loadList();
+    void loadOrganizations();
+    void loadRoles();
+    void loadStatistics();
+  }, [loadList, loadOrganizations, loadRoles, loadStatistics]);
 
-  const handleSearch = (value: string) => {
-    _setSearchText(value);
-    // 这里可以添加搜索逻辑
-  };
+  const handleSearch = useCallback(
+    (value: string) => {
+      applyFilters({
+        keyword: value,
+        status: filters.status,
+        roleId: filters.roleId,
+        organizationId: filters.organizationId,
+      });
+    },
+    [applyFilters, filters.organizationId, filters.roleId, filters.status]
+  );
+
+  const handleStatusFilterChange = useCallback(
+    (value?: string) => {
+      applyFilters({
+        keyword: filters.keyword,
+        status: value ?? '',
+        roleId: filters.roleId,
+        organizationId: filters.organizationId,
+      });
+    },
+    [applyFilters, filters.keyword, filters.organizationId, filters.roleId]
+  );
+
+  const handleRoleFilterChange = useCallback(
+    (value?: string) => {
+      applyFilters({
+        keyword: filters.keyword,
+        status: filters.status,
+        roleId: value ?? '',
+        organizationId: filters.organizationId,
+      });
+    },
+    [applyFilters, filters.keyword, filters.organizationId, filters.status]
+  );
+
+  const handleOrganizationFilterChange = useCallback(
+    (value?: string) => {
+      applyFilters({
+        keyword: filters.keyword,
+        status: filters.status,
+        roleId: filters.roleId,
+        organizationId: value ?? '',
+      });
+    },
+    [applyFilters, filters.keyword, filters.roleId, filters.status]
+  );
 
   const handleCreate = () => {
     setEditingUser(null);
@@ -204,8 +286,8 @@ const UserManagementPage: React.FC = () => {
     try {
       await userService.deleteUser(_id);
       MessageManager.success('删除成功');
-      loadUsers();
-      loadStatistics();
+      void loadList();
+      void loadStatistics();
     } catch (error) {
       pageLogger.error('删除用户失败:', error as Error);
       MessageManager.error('删除失败');
@@ -216,8 +298,8 @@ const UserManagementPage: React.FC = () => {
     try {
       await userService.updateUser(_user.id, { status: _newStatus as 'active' | 'inactive' });
       MessageManager.success('状态已更新');
-      loadUsers();
-      loadStatistics();
+      void loadList();
+      void loadStatistics();
     } catch (error) {
       pageLogger.error('更新用户状态失败:', error as Error);
       MessageManager.error('状态更新失败');
@@ -232,8 +314,8 @@ const UserManagementPage: React.FC = () => {
         await userService.lockUser(user.id);
       }
       MessageManager.success(user.is_locked ? '用户已解锁' : '用户已锁定');
-      loadUsers();
-      loadStatistics();
+      void loadList();
+      void loadStatistics();
     } catch (error) {
       pageLogger.error('更新用户锁定状态失败:', error as Error);
       MessageManager.error('操作失败');
@@ -255,8 +337,8 @@ const UserManagementPage: React.FC = () => {
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
-      loadUsers();
-      loadStatistics();
+      void loadList();
+      void loadStatistics();
     } catch (error) {
       pageLogger.error('保存用户失败:', error as Error);
       MessageManager.error(editingUser ? '更新失败' : '创建失败');
@@ -440,7 +522,8 @@ const UserManagementPage: React.FC = () => {
                     placeholder="状态筛选"
                     allowClear
                     style={{ width: 120 }}
-                    onChange={_setStatusFilter}
+                    value={filters.status || undefined}
+                    onChange={handleStatusFilterChange}
                   >
                     {statusOptions.map(status => (
                       <Option key={status.value} value={status.value}>
@@ -452,7 +535,8 @@ const UserManagementPage: React.FC = () => {
                     placeholder="角色筛选"
                     allowClear
                     style={{ width: 120 }}
-                    onChange={_setRoleFilter}
+                    value={filters.roleId || undefined}
+                    onChange={handleRoleFilterChange}
                   >
                     {roles.map(role => (
                       <Option key={role.id} value={role.id}>
@@ -464,7 +548,8 @@ const UserManagementPage: React.FC = () => {
                     placeholder="组织筛选"
                     allowClear
                     style={{ width: 120 }}
-                    onChange={_setOrganizationFilter}
+                    value={filters.organizationId || undefined}
+                    onChange={handleOrganizationFilterChange}
                   >
                     {organizations.map(org => (
                       <Option key={org.id} value={org.id}>
@@ -472,7 +557,7 @@ const UserManagementPage: React.FC = () => {
                       </Option>
                     ))}
                   </Select>
-                  <Button icon={<ReloadOutlined />} onClick={loadUsers}>
+                  <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
                     刷新
                   </Button>
                 </Space>
@@ -485,19 +570,17 @@ const UserManagementPage: React.FC = () => {
             </Row>
           </div>
 
-          <Table
+          <TableWithPagination
             columns={columns}
             dataSource={users}
             rowKey="id"
             loading={loading}
-            pagination={{
-              total: users.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: total => `共 ${total} 条记录`,
-            }}
-          />
+          paginationState={pagination}
+          onPageChange={updatePagination}
+          paginationProps={{
+            showTotal: (total: number) => `共 ${total} 条记录`,
+          }}
+        />
         </Card>
 
         {/* 创建/编辑模态框 */}

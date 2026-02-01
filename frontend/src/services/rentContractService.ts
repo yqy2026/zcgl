@@ -933,5 +933,4 @@ class RentContractService {
 
 // 创建单例实例
 export const rentContractService = new RentContractService();
-
-// 为了向后兼容，也导出�?export { RentContractService };
+export { RentContractService };

@@ -1,75 +1,71 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
 import { ownershipService } from '@/services/ownershipService';
-import type { TableProps } from 'antd';
 import type {
   RentContract,
-  RentContractQueryParams,
   RentContractPageState,
+  RentContractSearchFilters,
   RentStatisticsOverview,
 } from '@/types/rentContract';
 import type { Asset } from '@/types/asset';
 import type { Ownership } from '@/types/ownership';
+import { useListData } from '@/hooks/useListData';
 
 const logger = createLogger('useContractList');
 
 export const useContractList = () => {
-  const [state, setState] = useState<RentContractPageState>({
-    loading: false,
-    contracts: [],
-    pagination: {
-      current: 1,
-      pageSize: 10,
-      total: 0,
-    },
-    filters: {},
-    showModal: false,
-    modalMode: 'create',
-  });
-
   const [assets, setAssets] = useState<Asset[]>([]);
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
   const [statistics, setStatistics] = useState<RentStatisticsOverview | null>(null);
 
   // 加载合同列表
-  const loadContracts = useCallback(
-    async (params?: RentContractQueryParams) => {
-      setState(prev => ({ ...prev, loading: true }));
-      try {
-        const response = await rentContractService.getContracts({
-          page: state.pagination.current,
-          pageSize: state.pagination.pageSize,
-          ...state.filters,
-          ...params,
-        });
-
-        // 确保items是一个数组
-        const contracts = Array.isArray(response.items) ? response.items : [];
-
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          contracts: contracts,
-          pagination: {
-            ...prev.pagination,
-            total: response.total ?? 0,
-            pages: response.pages ?? 0,
-          },
-        }));
-      } catch (error) {
-        logger.error('加载合同列表失败:', error as Error);
-        MessageManager.error(
-          `加载合同列表失败: ${error instanceof Error ? error.message : '未知错误'}`
-        );
-        setState(prev => ({ ...prev, loading: false, contracts: [] }));
-      }
+  const fetchContracts = useCallback(
+    async ({
+      page,
+      pageSize,
+      ...filters
+    }: { page: number; pageSize: number } & RentContractSearchFilters) => {
+      const response = await rentContractService.getContracts({
+        page,
+        pageSize,
+        ...filters,
+      });
+      const contracts = Array.isArray(response.items) ? response.items : [];
+      return {
+        items: contracts,
+        total: response.total ?? 0,
+        pages: response.pages ?? 0,
+      };
     },
-    [state.pagination.current, state.pagination.pageSize, state.filters]
+    []
   );
+
+  const handleListError = useCallback((error: unknown) => {
+    logger.error('加载合同列表失败:', error as Error);
+    MessageManager.error(
+      `加载合同列表失败: ${error instanceof Error ? error.message : '未知错误'}`
+    );
+  }, []);
+
+  const {
+    data: contracts,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    resetFilters,
+    updatePagination,
+  } = useListData<RentContract, RentContractSearchFilters>({
+    fetcher: fetchContracts,
+    initialFilters: {},
+    initialPageSize: 10,
+    onError: handleListError,
+  });
 
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
@@ -96,45 +92,24 @@ export const useContractList = () => {
   }, []);
 
   useEffect(() => {
-    loadContracts();
-    loadStatistics();
-    loadReferenceData();
-  }, [loadContracts, loadStatistics, loadReferenceData]);
+    void loadList();
+    void loadStatistics();
+    void loadReferenceData();
+  }, [loadList, loadStatistics, loadReferenceData]);
 
   // 处理分页变化
-  const handleTableChange: TableProps<RentContract>['onChange'] = pagination => {
-    setState(prev => ({
-      ...prev,
-      pagination: {
-        ...prev.pagination,
-        current: pagination.current ?? 1,
-        pageSize: pagination.pageSize ?? 10,
-      },
-    }));
-    loadContracts({
-      page: pagination.current ?? 1,
-      pageSize: pagination.pageSize ?? 10,
-    });
+  const handleTableChange = (next: { current?: number; pageSize?: number }) => {
+    updatePagination(next);
   };
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
-    setState(prev => ({
-      ...prev,
-      filters: values,
-      pagination: { ...prev.pagination, current: 1 },
-    }));
-    loadContracts({ ...values, page: 1 });
+    applyFilters(values as RentContractSearchFilters);
   };
 
   // 重置搜索
   const handleReset = () => {
-    setState(prev => ({
-      ...prev,
-      filters: {},
-      pagination: { ...prev.pagination, current: 1 },
-    }));
-    loadContracts({ page: 1 });
+    resetFilters();
   };
 
   // 删除合同
@@ -148,8 +123,8 @@ export const useContractList = () => {
         try {
           await rentContractService.deleteContract(id);
           MessageManager.success('删除成功');
-          loadContracts(); // Reload list
-          loadStatistics(); // Reload stats
+          void loadList(); // Reload list
+          void loadStatistics(); // Reload stats
         } catch {
           MessageManager.error('删除失败');
         }
@@ -182,8 +157,8 @@ export const useContractList = () => {
             new Date().toISOString().split('T')[0]
           );
           MessageManager.success('合同已终止');
-          loadContracts();
-          loadStatistics();
+          void loadList();
+          void loadStatistics();
         } catch {
           MessageManager.error('终止合同失败');
         }
@@ -193,9 +168,21 @@ export const useContractList = () => {
 
   // 导入成功的回调
   const handleImportSuccess = () => {
-    loadContracts();
-    loadStatistics();
+    void loadList();
+    void loadStatistics();
   };
+
+  const state = useMemo<RentContractPageState>(
+    () => ({
+      loading,
+      contracts,
+      pagination,
+      filters,
+      showModal: false,
+      modalMode: 'create',
+    }),
+    [loading, contracts, pagination, filters]
+  );
 
   return {
     state,

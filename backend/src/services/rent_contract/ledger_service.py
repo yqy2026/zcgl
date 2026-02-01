@@ -13,7 +13,6 @@ from ...models.rent_contract import (
     ServiceFeeLedger,
 )
 from ...schemas.rent_contract import GenerateLedgerRequest, RentLedgerBatchUpdate
-
 from .helpers import RentContractHelperMixin
 
 

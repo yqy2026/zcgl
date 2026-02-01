@@ -28,12 +28,14 @@ from src.constants.message_constants import ErrorIDs
 
 from ....core.exception_handler import BaseBusinessError, InternalServerError
 from ....crud.auth import AuditLogCRUD
+from ....crud.security_event import security_event_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.roles import RoleNormalizer
 from ....security.route_guards import debug_only, require_localhost
+from ....core.observability import send_security_alert
 
 # 创建系统设置路由器
 router = APIRouter()
@@ -72,36 +74,13 @@ def handle_audit_log_failure(
     # 2. 生产环境发送安全警报
     environment = os.getenv("ENVIRONMENT", "development")
     if environment == "production":
-        # ✅ TODO: 集成到监控系统 (Sentry, PagerDuty等)
-        #
-        # 实现步骤 / Implementation Steps:
-        # 1. 安装Sentry SDK: pip install sentry-sdk[fastapi]
-        # 2. 配置Sentry初始化 (在src/core/__init__.py):
-        #    import sentry_sdk
-        #    sentry_sdk.init(
-        #        dsn=os.getenv("SENTRY_DSN"),
-        #        environment=environment,
-        #        traces_sample_rate=1.0,
-        #    )
-        # 3. 实现send_security_alert()函数:
-        #    def send_security_alert(alert_type: str, severity: str, **context):
-        #        sentry_sdk.capture_message(
-        #            f"Security Alert: {alert_type}",
-        #            level=severity.lower(),
-        #            extra=context
-        #        )
-        # 4. 取消下面的注释:
-        #    send_security_alert(
-        #        alert_type="AUDIT_LOG_FAILED",
-        #        severity="CRITICAL",
-        #        user_id=str(current_user.id),
-        #        action=action,
-        #        error=str(error)
-        #    )
-        #
-        # GitHub Issue: https://github.com/your-org/zcgl/issues/XXX
-        # 优先级: High | 预估时间: 2-3 hours
-        pass
+        send_security_alert(
+            alert_type="AUDIT_LOG_FAILED",
+            severity="CRITICAL",
+            user_id=str(current_user.id),
+            action=action,
+            error=str(error),
+        )
 
     # 3. 🔒 安全增强: 多层回退机制写入文件审计日志
     timestamp = datetime.now().isoformat()
@@ -386,18 +365,8 @@ def get_security_events(
     if not RoleNormalizer.is_admin(current_user.role):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    from ....models.security_event import SecurityEvent
-
-    # Get total count
-    total = db.query(SecurityEvent).count()
-
-    # Query events with pagination
-    events = (
-        db.query(SecurityEvent)
-        .order_by(SecurityEvent.created_at.desc())
-        .offset(skip)
-        .limit(page_size)
-        .all()
+    events, total = security_event_crud.get_multi_with_count(
+        db, skip=skip, limit=page_size
     )
 
     return {

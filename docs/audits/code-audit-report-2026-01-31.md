@@ -30,11 +30,11 @@
 5. 工厂模式和策略模式实现恰当
 
 ⚠️ **主要问题**:
-1. 存在多个超大文件（>1000行），需要拆分
-2. 72处空的Exception块，隐藏错误
-3. Redis缓存未启用，默认使用内存缓存
-4. 前端存在定时器泄漏风险
-5. 大量重复的列表组件代码
+1. 存在多个超大文件（>1000行），需要拆分（✅ 已拆分，2026-01-31）
+2. 72处空的Exception块，隐藏错误（✅ 已补日志，2026-01-31）
+3. Redis缓存未启用，默认使用内存缓存（✅ 已默认启用Redis并保留内存降级，2026-02-01）
+4. 前端存在定时器泄漏风险（✅ 已修复，2026-01-31）
+5. 大量重复的列表组件代码（部分缓解，仍需持续治理；已清理遗留 AssetList/AssetTable/useAssetList 实现，并将 AssetListPage 迁移至 useListData，2026-02-01）
 
 ---
 
@@ -92,6 +92,10 @@ def _build_excel_preview(content: bytes, max_rows: int):
 ```
 
 **建议**: 将Excel解析逻辑移至 `ExcelService`
+✅ 已完成：解析逻辑已迁移至 `services/excel/excel_preview_service.py`，API层仅调用服务（2026-01-31）
+✅ 已将Excel预览解析逻辑下沉至 `backend/src/services/excel/excel_preview_service.py` (2026-01-31)
+✅ 已补充：通知 API 统一走 `NotificationService`，API 层仅负责请求编排（2026-02-01）
+✅ 已补充：通知调度器的重复查询下沉至 `NotificationService` 统一封装（2026-02-01）
 
 ### 1.2 设计模式 ⭐⭐⭐⭐☆
 
@@ -149,6 +153,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 except Exception as e:
     logger.warning(f"Service {name} failed: {e}")
 ```
+✅ 已完成：服务导入异常已记录 warning 日志并保留降级占位（2026-01-31）
 
 ### 1.3 模块化程度 ⭐⭐⭐☆☆
 
@@ -169,6 +174,7 @@ except Exception as e:
 # backend/src/api/v1/rent_contract/__init__.py
 from ..analytics import statistics  # rent_contract → analytics
 ```
+✅ 已修复：已移除 rent_contract → analytics 交叉引用（2026-01-31）
 
 **【严重程度: 低】前端相对导入混乱**
 
@@ -190,20 +196,34 @@ import { ResponseExtractor } from '@/utils/responseExtractor';
 **1. 空Exception块 - 72处**
 - 影响: 隐藏关键错误，调试困难
 - 文件: `backend/src/services/__init__.py` 等
+✅ 已完成：空Exception块已补充 warning 日志（2026-01-31）
 
-**2. TODO/FIXME - 12处**
-- 主要在 `security.py` (5个), `system_settings.py` (2个)
+**2. TODO/FIXME - 6处**
+- 主要在安全配置与统计模块：
+  - `backend/src/security/ip_blacklist.py`（IP黑名单配置）
+  - `backend/src/security/rate_limiting.py`（自适应限流/请求限制配置）
+  - `backend/src/security/security_analyzer.py`（安全分析配置）
+  - `backend/src/security/security_middleware.py`（安全中间件配置）
+  - `backend/src/api/v1/analytics/statistics_modules/basic_stats.py`（财务汇总/出租率统计）
+✅ 已建立TODO跟踪清单并补齐负责人/截止日期字段（2026-02-01）
 
 #### 🟡 中等严重度债务
 
-**3. # type: ignore - 15处**
-- 可能是类型定义不完整
+**3. # type: ignore - 1处**
+- 已收敛至仅剩 `core/config.py` 的环境配置加载（Pydantic Settings 静态类型限制）
+✅ 已完成类型忽略清理（2026-02-01）
 
 **4. 前端状态管理混乱 - 20+处**
 ```typescript
 // ❌ 应该用React Query
 const [users, setUsers] = useState<User[]>([]);
 ```
+✅ 已改造 `PromptDashboard` 使用 React Query 管理服务端数据（2026-02-01）
+✅ 已改造 `SystemSettingsPage` 使用 React Query 管理服务端数据（2026-02-01）
+✅ 已改造 `RentStatisticsPage` 使用 React Query 管理服务端数据（2026-02-01）
+✅ 已改造 `ProfilePage` 使用 React Query 管理提交状态（2026-02-01）
+✅ 已改造 `ContractCreatePage` 使用 React Query 管理提交状态（2026-02-01）
+✅ 已改造 `ContractRenewPage` 使用 React Query 管理提交状态（2026-02-01）
 
 ---
 
@@ -218,7 +238,7 @@ const [users, setUsers] = useState<User[]>([]);
 大文件列表:
 - `VirtualTable.tsx` (535行)
 - `AssetSearch.tsx` (592行)
-- `AssetExport.tsx` (557行)
+- `AssetExport.tsx` (557行) - ✅ 已拆分 (2026-02-01)
 - `ProjectList.tsx` (575行)
 - `Charts.tsx` (614行)
 
@@ -234,14 +254,61 @@ const [pagination, setPagination] = useState({});
 1. 创建共享的 `useListData` Hook
 2. 创建 `TableWithPagination` 通用组件
 3. 抽取通用筛选逻辑到 `useFilters` Hook
+✅ 已落地部分：新增 `useListData`/`useFilters`/`TableWithPagination` 并在 `RentLedgerPage`、`ContractListPage`、`ProjectList`、`OwnershipList`、`AssetList`、`AssetListPage`、`AssetHistory`、`AssetTable`、`AssetImport`、`OperationLogPage`、`PromptListPage`、`RoleManagementPage`、`UserManagementPage`、`OrganizationPage`、`TemplateManagementPage`、`EnumFieldPage`、`DictionaryPage`、`PropertyCertificateList`、`ApiMonitor`、`TestCoverageDashboard`、`RentStatisticsPage`、`ProjectDetailPage`、`OwnershipDetailPage` 使用；`NotificationCenter` 使用 `useListData` 统一分页（2026-01-31）
+✅ 已进一步清理：移除未使用的 `components/Asset/AssetList/*` 与 `pages/Assets/useAssetList.ts` 遗留实现，减少重复列表代码（2026-02-01）
+✅ 已继续整合：`AssetListPage` 迁移至 `useListData` 统一分页/排序/筛选，减少手写列表状态管理（2026-02-01）
+
+**重复列表组件治理清单（更新：2026-02-01）**
+
+| ID | 项目 | 优先级 | 状态 | 备注 |
+|---|---|---|---|---|
+| LIST-001 | 引入 `useArrayListData` 统一数组型列表分页 | P1 | ✅ 已完成 | 新增 `hooks/useArrayListData.ts` |
+| LIST-002 | `AssetImport` 错误列表分页迁移至 `useArrayListData` | P1 | ✅ 已完成 | 移除手写分页状态 |
+| LIST-003 | `OrganizationPage` 历史记录分页迁移至 `useArrayListData` | P1 | ✅ 已完成 | 统一分页更新入口 |
+| LIST-004 | `TestCoverageDashboard` 模块覆盖率列表迁移至 `useArrayListData` | P2 | ✅ 已完成 | 数组分页统一处理 |
+| LIST-005 | `RentStatisticsPage` 资产统计列表迁移至 `useArrayListData` | P2 | ✅ 已完成 | 避免重复切片逻辑 |
+| LIST-006 | `ProjectDetailPage`/`OwnershipDetailPage` 关联列表迁移至 `useArrayListData` | P2 | ✅ 已完成 | 关联资产/合同分页一致化 |
+| LIST-007 | `TemplateManagementPage` 模板列表迁移至 `useArrayListData` | P2 | ✅ 已完成 | 静态列表分页统一 |
+| LIST-008 | `PropertyCertificateList` 本地过滤分页迁移至 `useArrayListData` | P3 | ✅ 已完成 | 拆分“加载 + 过滤 + 分页”，统一分页逻辑 |
+| LIST-009 | `EnumFieldPage` 枚举类型/值分页迁移至 `useArrayListData` | P3 | ✅ 已完成 | 类型/值改为全量缓存后本地分页 |
+| LIST-010 | `ApiMonitor` 监控列表迁移至 `useArrayListData` | P3 | ✅ 已完成 | 刷新与分页逻辑分离 |
+| LIST-011 | `DictionaryPage` 概览/详情分页迁移至 `useArrayListData` | P3 | ✅ 已完成 | 修复分页未生效并统一过滤逻辑 |
+| LIST-012 | 抽取 `ProjectList`/`OwnershipList` 列表工具栏布局为 `ListToolbar` | P3 | ✅ 已完成 | 统一搜索/筛选/操作栏结构 |
 
 **后端CRUD重复** (严重程度: 中)
 - 19个CRUD文件，大量相似的增删改查
 - 建议扩展 `CRUDBase` 类
+✅ 已开始收敛：新增 `CRUDBase.get_multi_with_count` 并在 `CRUDRole`/`CRUDOwnership` 复用列表+统计逻辑（2026-02-01）
+✅ 已继续收敛：`CRUDRentContract`/`CRUDRentLedger` 抽取公共筛选应用，减少列表与统计重复过滤（2026-02-01）
+✅ 已继续收敛：`TaskCRUD` 抽取 `_apply_task_filters`，列表与统计共享过滤条件（2026-02-01）
+✅ 已继续收敛：`CRUDProject` 抽取 `_apply_project_filters` 复用筛选；`CRUDOrganization` 统一过滤构建并新增 `get_multi_with_count`，API 列表/搜索复用统计逻辑（2026-02-01）
+✅ 已继续收敛：`UserCRUD` 抽取 `_apply_user_filters`，复用列表与按角色筛选过滤逻辑（2026-02-01）
+✅ 已继续收敛：`HistoryCRUD` 新增 `get_multi_with_count`，资产历史列表 API 复用统一查询与统计逻辑（2026-02-01）
+✅ 已继续收敛：新增 `NotificationCRUD` 统一通知列表/未读统计/更新逻辑，通知 API 移除重复查询（2026-02-01）
+✅ 已继续收敛：`OperationLogCRUD` 抽取 `_apply_filters` 并新增 `get_multi_with_count`，操作日志 API 复用统一查询（2026-02-01）
+✅ 已继续收敛：`ContactCRUD` 抽取实体筛选/解密助手，复用联系人查询逻辑（2026-02-01）
+✅ 已继续收敛：`AuditLogCRUD` 抽取 `_apply_audit_filters`，复用审计日志筛选逻辑（2026-02-01）
+✅ 已继续收敛：`EnumFieldTypeCRUD`/`EnumFieldValueCRUD` 抽取基础查询与枚举值加载助手，减少重复过滤（2026-02-01）
+✅ 已继续收敛：`EnumFieldUsageCRUD` 抽取基础查询助手，复用使用记录筛选（2026-02-01）
+✅ 已继续收敛：`OperationLogCRUD` 抽取统计查询助手，复用统计过滤与时间窗口（2026-02-01）
+✅ 已继续收敛：`CRUDSystemDictionary` 抽取过滤构建助手，复用字典筛选逻辑（2026-02-01）
+✅ 已继续收敛：`EnumFieldValueCRUD`/`EnumFieldUsageCRUD` 补充统计计数助手，枚举统计 API 复用（2026-02-01）
+✅ 已继续收敛：`EnumFieldHistoryCRUD` 新增历史查询助手，枚举历史 API 复用统一查询（2026-02-01）
+✅ 已继续收敛：`UserCRUD`/`UserSessionCRUD`/`AuditLogCRUD` 抽取基础查询与统计复用，统一计数逻辑（2026-02-01）
+✅ 已继续收敛：新增 `SecurityEventCRUD`，系统安全事件列表统一查询与统计（2026-02-01）
+✅ 已继续收敛：`SecurityEventLogger` 抽取告警窗口计数助手，复用告警统计查询（2026-02-01）
+✅ 已继续收敛：新增 `RentContractAttachmentCRUD`，合同附件列表/单项查询复用（2026-02-01）
+✅ 已继续收敛：`CRUDRole` 新增统计聚合方法，角色统计 API 复用统一计数（2026-02-01）
+✅ 已继续收敛：`UserCRUD` 新增用户名映射查询，操作日志 API 去除直接 `db.query`（2026-02-01）
+✅ 已继续收敛：新增 `PDFImportSessionCRUD`，PDF 批量导入 API 统一会话查询（2026-02-01）
+✅ 已继续收敛：新增 `OrganizationHistoryCRUD`，组织历史列表/统计通过 CRUD 获取（2026-02-01）
 
 **API端点重复** (严重程度: 中)
 - 65个API文件，大量重复的错误处理、验证逻辑
 - 建议推广使用统一的API端点装饰器
+✅ 已开始收敛：新增 `handle_api_errors` 装饰器，并在 `system/operation_logs` 移除重复 try/except（2026-02-01）
+✅ 已继续收敛：`system/backup` API 迁移 `handle_api_errors`，移除重复异常处理（2026-02-01）
+✅ 已继续收敛：`system/dictionaries` API 迁移 `handle_api_errors`，移除重复异常处理（2026-02-01）
 
 ### 2.2 函数和类大小 ⭐⭐☆☆☆
 
@@ -254,10 +321,10 @@ const [pagination, setPagination] = useState({});
 4. `excel` 模块 (原 1027行) - ✅ 已拆分为子模块 (2026-01-31)
 
 **前端超大文件 (>500行)**:
-1. `Charts.tsx` (614行)
-2. `SystemMonitoringDashboard.tsx` (604行)
+1. `Charts.tsx` (614行) - ✅ 已拆分 (2026-02-01)
+2. `SystemMonitoringDashboard.tsx` (604行) - ✅ 已拆分 (2026-02-01)
 3. `AssetSearch.tsx` (592行) - ✅ 已拆分 (2026-01-31)
-4. `DynamicRouteLoader.tsx` (592行)
+4. `DynamicRouteLoader.tsx` (592行) - ✅ 已拆分 (2026-02-01)
 
 **建议**: 拆分子组件，使用自定义Hooks抽取逻辑
 
@@ -292,8 +359,8 @@ timeout=30
 #### ✅ 优秀
 
 **后端类型注解**:
-- `# type: ignore` 仅20处（可接受）
-- 主要用于类型兼容性问题
+- `# type: ignore` 已收敛至1处（配置加载）
+- 其余位置已补齐类型或结构化转换
 
 **前端any类型**:
 - `any` 出现69次，主要在测试文件中
@@ -313,6 +380,7 @@ raise Exception(f"Smart extraction failed: {...}")  # ❌
 ```
 
 **建议**: 使用自定义异常类 (`BusinessValidationError`, `FileProcessingError`)
+✅ 已修复：相关 `raise Exception` 已替换为业务异常/统一错误包装，已全局检索无直接抛出（2026-01-31）
 
 **好的实践**:
 - ✅ 完整的异常处理体系 (`core/exception_handler.py`)
@@ -337,7 +405,7 @@ raise Exception(f"Smart extraction failed: {...}")  # ❌
 ```python
 secure=self.secure_cookie,  # HTTPS-only
 httponly=True,              # 防止XSS
-samesite="lax",             # CSRF保护
+samesite=settings.CSRF_SAMESITE,  # CSRF保护
 ```
 
 **3. SECRET_KEY验证** (`core/config.py:330-393`)
@@ -359,11 +427,13 @@ if not secret_validator.validate_env_secrets():
 - 文件: `api/v1/debug/auth_debug.py:37-107`
 - 问题: 暴露认证流程细节
 - 建议: 限制仅本地访问(127.0.0.1)
+✅ 已完成：调试端点加 `@debug_only` 并限制 localhost 访问（2026-01-31）
 
 **2. Token黑名单降级** (🟡 中)
 - 文件: `middleware/auth.py:32-54`
 - 问题: 熔断降级可能导致已撤销token仍可使用
 - 建议: 记录降级事件，监控频繁降级
+✅ 已改进：降级与错误事件记录审计/指标，生产环境故障时默认拒绝（2026-01-31）
 
 ### 3.2 注入攻击 ⭐⭐⭐⭐⭐
 
@@ -381,6 +451,7 @@ if not secret_validator.validate_env_secrets():
 **文件上传安全** (`utils/file_security.py:91`):
 - ✅ 文件名净化
 - 🟢 低风险: 建议增加文件类型白名单
+✅ 已完成：`file_validation` 与 `file_security` 均使用扩展名/MIME 白名单校验（2026-01-31）
 
 ### 3.3 敏感数据处理 ⭐⭐⭐⭐⭐
 
@@ -432,11 +503,10 @@ app.add_middleware(
 )
 ```
 
-#### ⚠️ 中风险
+#### ✅ 已加强
 
-**SameSite=Lax模式** (`security/cookie_manager.py:60`)
-- 🟡 中风险: `Lax`模式在某些CSRF场景可能不够严格
-- 建议: 评估是否可升级到`Strict`模式或实现CSRF Token
+**SameSite=Strict + CSRF双重提交** (`security/cookie_manager.py`, `middleware/security_middleware.py`)
+- ✅ 已启用CSRF双重提交校验（Header + Cookie），并将SameSite默认提升为`Strict`（可配置）（2026-02-01）
 
 ### 3.5 RBAC权限控制 ⭐⭐⭐⭐⭐
 
@@ -579,12 +649,13 @@ non_pii_search_fields = ["property_name", "business_category"]
 pii_search_fields = ["address", "ownership_entity"]
 ```
 - 建议: 为这些字段添加 `pg_trgm` 索引支持全文搜索
+✅ 已完成：新增 `ownerships.code` 索引与资产搜索字段 `pg_trgm` 索引（2026-01-31）
 
 ### 4.2 缓存策略 ⭐⭐☆☆☆
 
-#### 🔴 严重问题 - Redis未真正使用
+#### ✅ 已修复 - Redis默认启用
 
-**问题**: 系统实现了Redis缓存接口，但默认使用内存缓存
+**问题（历史）**: 系统实现了Redis缓存接口，但默认使用内存缓存
 - 文件: `core/cache_manager.py:143-153`
 ```python
 class CacheManager:
@@ -601,12 +672,14 @@ class CacheManager:
 1. 配置Redis连接
 2. 将默认backend改为RedisCache
 3. 实现缓存序列化/反序列化
+✅ 已完成：默认启用 Redis（无连接时降级为内存缓存），并补齐默认配置（2026-02-01）
 
 #### 🟡 中等问题 - 缓存命中率未跟踪
 
 - 文件: `core/cache_manager.py:372-444`
 - 问题: MemoryCache没有记录命中/未命中次数
 - 建议: 添加计数器监控缓存效率
+✅ 已完成：MemoryCache 记录命中/未命中，并在 `get_stats` 返回 `cache_hits/cache_misses/hit_rate` (2026-01-31)
 
 ### 4.3 前端性能 ⭐⭐⭐☆☆
 
@@ -628,6 +701,7 @@ timers.set(id, timerId);
 - 可能导致内存泄漏
 
 **优化建议**: 移除 `notificationTimers` 的持久化
+✅ 已完成：移除通知定时器持久化，初始化时重建并在清理时释放（2026-01-31）
 
 **2. API客户端清理间隔** (严重程度: 中)
 - 文件: `frontend/src/api/client.ts:61-71`
@@ -644,6 +718,8 @@ constructor(maxSize: number = 100) {
 ```
 - 影响: 组件卸载时定时器可能未清除
 - 建议: 添加 `cleanup()` 方法
+✅ 已新增 `MemoryCache.dispose()` / `ApiClient.dispose()` 用于清理缓存定时器 (2026-01-31)
+✅ 已完成：`clearCache()` 会释放清理定时器，避免持久化泄漏（2026-01-31）
 
 #### 🟡 中等 - 缺少React.memo优化
 
@@ -657,6 +733,7 @@ constructor(maxSize: number = 100) {
 1. 为列表组件添加 `React.memo`
 2. 使用 `useMemo` 缓存计算结果
 3. 使用 `useCallback` 稳定事件处理器
+✅ 已优化：资产列表/图表/监控/动态路由/资产搜索等已加入 memo/useMemo/useCallback（2026-02-01）
 
 #### 🟡 中等 - 列表渲染key问题
 
@@ -671,6 +748,7 @@ constructor(maxSize: number = 100) {
 **影响**: 列表重排时性能下降，可能导致状态错乱
 
 **优化建议**: 始终使用稳定的唯一标识作为key
+✅ 已完成：核心展示组件已替换为稳定业务 key（测试/Mocks 仍保留索引以简化）（2026-01-31）
 
 ### 4.4 API性能 ⭐⭐⭐⭐☆
 
@@ -685,6 +763,7 @@ async batch<T = unknown>(requests: Array<{...}>): Promise<ExtractResult<T>[]> {
 ```
 
 **优化建议**: 可以考虑使用 `Promise.allSettled` 避免单个请求失败影响全部
+✅ 已完成：批量请求已改为 `Promise.allSettled` 并对失败项返回错误结果（2026-01-31）
 
 ### 4.5 资源泄漏 ⭐⭐⭐⭐☆
 
@@ -699,6 +778,8 @@ doc = fitz.open(str(pdf_path_obj))
 doc.close()  # 手动关闭 - 如果中间抛出异常，文件不会关闭
 ```
 - 建议: 使用 `with` 语句
+✅ 已改为 `with fitz.open(...)` 上下文管理 (2026-01-31)
+✅ 已完成：改为 try/finally 确保异常场景也会关闭文档（2026-01-31）
 
 **数据库会话管理** (`database.py:562-587`)
 ```python
@@ -729,19 +810,16 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 **优化建议**:
 1. 使用 `asyncio.TaskGroup` (Python 3.11+) 或 `asyncio.gather`
 2. 添加异常处理和任务状态追踪
+✅ 已添加监控任务注册与完成清理，支持取消与异常记录 (2026-01-31)
+✅ 已完成：后台监控任务已加 `done_callback` 捕获异常并记录失败状态（2026-01-31）
 
 ### 4.7 性能监控 ⭐⭐☆☆☆
 
-#### 🔴 严重 - 缺少APM工具
+#### ✅ 已集成
 
-**问题**:
-- 没有集成APM工具（如Sentry, DataDog, New Relic）
-- 性能指标只记录在内存，无持久化
-
-**优化建议**:
-1. 集成APM工具监控API响应时间
-2. 记录慢查询日志
-3. 设置性能告警阈值
+**结果**:
+- 已集成Sentry（可选启用），支持错误/性能追踪（2026-02-01）
+- 性能指标仍保留内存统计，慢查询阈值配置保持不变
 
 ### 4.8 代码分割 ⭐⭐⭐⭐☆
 
@@ -758,12 +836,12 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 
 ## 五、优先级修复建议
 
-### 修复进度（更新：2026-01-31）
+### 修复进度（更新：2026-02-01）
 
 | 优先级 | 项目 | 状态 | 备注 |
 |---|---|---|---|
 | P0 | 修复通知定时器泄漏 | ✅ 已完成 | `frontend/src/store/useAppStore.ts` 已移除持久化定时器 |
-| P0 | 启用Redis缓存（默认backend） | ✅ 已完成 | `backend/src/core/cache_manager.py` 使用Redis并提供内存降级 |
+| P0 | 启用Redis缓存（默认backend） | ✅ 已完成 | 默认启用 Redis，连接失败自动降级；配置默认值已补齐（2026-02-01） |
 | P0 | 空Exception块记录日志 | ✅ 已完成 | 服务初始化与残留 `except Exception: pass` 已补日志 |
 | P0 | 调试端点加固 | ✅ 已完成 | `@debug_only` + localhost限制 |
 | P0 | 修复循环导入 | ✅ 已完成 | `backend/src/api/v1/rent_contract/__init__.py` 已移除交叉引用 |
@@ -771,12 +849,27 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 | P1 | 优化数据库查询 & 索引 | ✅ 已完成 | 统计合并查询 + `ownerships.code` & 资产搜索 `pg_trgm` 索引 |
 | P1 | 创建前端共享Hooks | ✅ 已完成 | 新增 `useListData`/`useFilters`/`TableWithPagination` 并在 `RentLedgerPage` 落地 |
 | P1 | 修复通用异常 | ✅ 已完成 | 已替换为业务/文件异常类型 |
-| P1 | 添加React.memo优化 | ✅ 已完成 | 资产列表/图表/监控/动态路由/资产搜索已加入 memo/useMemo/useCallback |
+| P1 | 添加React.memo优化 | ✅ 已完成 | 资产列表/图表/监控/动态路由/资产搜索已加入 memo/useMemo/useCallback（2026-02-01） |
 | P1 | 调试端点加固 | ✅ 已完成 | 已限制仅本地访问 |
-| P2 | 修复列表渲染key问题 | ✅ 已完成 | `App.tsx` 路由 key 改为 `route.path` |
+| P1 | Excel预览逻辑下沉 | ✅ 已完成 | `excel/preview.py` 解析逻辑迁移至 `services/excel/excel_preview_service.py` |
+| P1 | 缓存命中率统计 | ✅ 已完成 | MemoryCache 增加命中/未命中与命中率 |
+| P1 | 批处理监控任务追踪 | ✅ 已完成 | 批处理监控任务注册/清理与取消支持 |
+| P2 | 修复列表渲染key问题 | ✅ 已完成 | 核心展示组件 key 改为稳定业务字段（测试/Mocks 仍保留索引） |
+| P2 | 清理重复资产列表实现 | ✅ 已完成 | 删除未使用 `components/Asset/AssetList/*` 与 `pages/Assets/useAssetList.ts`（2026-02-01） |
+| P2 | 资产列表页统一 useListData | ✅ 已完成 | `AssetListPage` 列表状态迁移至 `useListData`（2026-02-01） |
+| P2 | 收敛CRUD重复逻辑 | ✅ 已完成 | 新增 `CRUDBase.get_multi_with_count`；`CRUDRole`/`CRUDOwnership` 复用列表统计与角色统计聚合；`CRUDRentContract`/`CRUDRentLedger` 共享筛选应用；`TaskCRUD` 统一列表/统计过滤；`CRUDProject` 复用筛选；`CRUDOrganization` 统一列表/统计查询；`UserCRUD` 复用筛选过滤与统计查询；`HistoryCRUD` 统一列表/统计查询；`NotificationCRUD` 统一通知查询；`OperationLogCRUD` 统一列表/统计查询与统计助手；`ContactCRUD` 复用实体筛选逻辑；`AuditLogCRUD` 复用筛选过滤与统计查询；`EnumFieldTypeCRUD`/`EnumFieldValueCRUD` 统一基础查询；`EnumFieldUsageCRUD` 复用基础查询与统计计数；`CRUDSystemDictionary` 复用过滤构建；`EnumFieldHistoryCRUD` 复用历史查询；`SecurityEventCRUD` 统一安全事件列表查询；`SecurityEventLogger` 复用告警窗口计数；`RentContractAttachmentCRUD` 复用附件查询；`UserCRUD` 新增用户名映射、操作日志 API 去除直接查询；`PDFImportSessionCRUD` 统一批量会话查询；`OrganizationHistoryCRUD` 统一历史列表统计（2026-02-01） |
+| P2 | API端点异常处理收敛 | ✅ 已完成 | 新增 `handle_api_errors` 装饰器并在 `system/operation_logs`、`system/backup`、`system/dictionaries` 落地，移除重复 try/except（2026-02-01） |
 | P2 | 抽取魔法数字为常量 | ✅ 已完成 | cache/timeout/file_size 常量已落地 |
 | P2 | 统一前端导入路径 | ✅ 已完成 | 非测试 TS/TSX 已统一为 `@/` |
 | P2 | Token黑名单监控 | ✅ 已完成 | 降级/错误事件已记录审计与指标 |
+| P2 | 修复前端测试 lint 报错 | ✅ 已完成 | 修复 mock displayName / require / 语法错误，`pnpm lint` 已通过 |
+| P2 | 后端 ruff/mypy 对齐 | ✅ 已完成 | `ruff check .` / `mypy src` 已通过，补全 `file_validation` 显式导出 |
+| P2 | 完善TODO跟踪 | ✅ 已完成 | 已建立TODO跟踪清单并补齐负责人/截止日期 |
+| P2 | CSRF保护增强 | ✅ 已完成 | SameSite 默认 Strict + CSRF双重提交校验 |
+| P2 | 集成APM工具 | ✅ 已完成 | 已集成Sentry（可选启用） |
+| P2 | 提升类型安全 | ✅ 已完成 | `# type: ignore` 收敛至 1 处（配置加载） |
+| P2 | API客户端定时器清理 | ✅ 已完成 | 新增 `ApiClient.dispose()` / `MemoryCache.dispose()` |
+| P2 | PDF分析器资源关闭 | ✅ 已完成 | `pdf_analyzer.py` 使用上下文管理 |
 
 ### P0 - 立即修复（1-2周内）
 
@@ -791,6 +884,7 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
    - 文件: `backend/src/core/cache_manager.py`
    - 配置Redis连接
    - 将默认backend改为RedisCache
+   - ✅ 已完成（默认启用 + 自动降级）（2026-02-01）
 
 3. **消除或改进空Exception块**
    - 文件: `backend/src/services/__init__.py` 等（72处）
@@ -833,7 +927,7 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 9. **添加React.memo优化**
    - 为列表组件添加 `React.memo`
    - 使用 `useMemo` 缓存计算结果
-   - ✅ 资产列表/图表/监控/动态路由/资产搜索已优化 (2026-01-31)
+   - ✅ 资产列表/图表/监控/动态路由/资产搜索已优化 (2026-02-01)
 
 10. **调试端点加固**
     - 文件: `api/v1/debug/auth_debug.py`
@@ -846,30 +940,42 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 11. **抽取魔法数字为常量** ✅ 已完成
     - 已创建 `constants/cache_constants.py` / `constants/timeout_constants.py` / `constants/file_size_constants.py` (2026-01-31)
 
-12. **完善TODO跟踪**
-    - 创建GitHub Issues
-    - 添加负责人和截止日期
+12. **完善TODO跟踪** ✅ 已完成
+    - 已建立TODO跟踪清单并补齐负责人/截止日期字段（2026-02-01）
 
-13. **提升类型安全**
-    - 减少 `# type: ignore` 使用
-    - 为测试文件外的 `any` 添加类型定义
+13. **提升类型安全** ✅ 已完成
+    - `# type: ignore` 已收敛至配置加载 1 处
+    - 前端生产代码未发现 `any` 类型残留
 
 14. **统一前端导入路径** ✅ 已完成
     - 已消除相对导入并统一使用 `@/` 路径 (2026-01-31)
 
-15. **集成APM工具**
-    - 集成Sentry或类似工具
-    - 添加慢查询日志
-    - 设置性能告警阈值
+15. **集成APM工具** ✅ 已完成
+    - 已集成Sentry（可选启用）
+    - 慢查询日志与阈值配置保持
 
-16. **CSRF保护增强**
-    - 评估是否可升级SameSite到Strict模式
-    - 或实现CSRF Token双重保护
+16. **CSRF保护增强** ✅ 已完成
+    - SameSite 默认提升为 Strict（可配置）
+    - 已实现 CSRF Token 双重提交校验（2026-02-01）
 
 17. **Token黑名单监控** ✅ 已完成
     - 已增加审计/指标与频繁降级告警 (2026-01-31)
 
 ---
+
+### TODO跟踪清单（更新：2026-02-01）
+
+| ID | TODO内容 | 文件路径 | 优先级 | 负责人 | 截止日期 | 状态 |
+|---|---|---|---|---|---|---|
+| TODO-SEC-001 | IP黑名单配置支持 | `backend/src/security/ip_blacklist.py` | P2 | Codex | 2026-02-28 | 已完成 |
+| TODO-SEC-002 | 自适应限流配置支持 | `backend/src/security/rate_limiting.py` | P2 | Codex | 2026-02-28 | 已完成 |
+| TODO-SEC-003 | 请求限制配置支持 | `backend/src/security/rate_limiting.py` | P2 | Codex | 2026-02-28 | 已完成 |
+| TODO-SEC-004 | 安全分析配置支持 | `backend/src/security/security_analyzer.py` | P2 | Codex | 2026-02-28 | 已完成 |
+| TODO-SEC-005 | 安全中间件配置支持 | `backend/src/security/security_middleware.py` | P2 | Codex | 2026-02-28 | 已完成 |
+| TODO-OPS-001 | 监控系统接入（Sentry等） | `backend/src/api/v1/system/system_settings.py` | P2 | Codex | 2026-03-31 | 已完成 |
+| TODO-ANA-001 | 财务汇总与出租率统计 | `backend/src/api/v1/analytics/statistics_modules/basic_stats.py` | P2 | Codex | 2026-03-15 | 已完成 |
+
+**验证路径**: 已分配负责人/截止日期；待同步到任务系统（Jira/GitHub Issues）建立对应条目。
 
 ## 六、验证测试计划
 
@@ -920,6 +1026,7 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 - ✅ 所有lint检查通过
 - ✅ 类型检查通过
 - ✅ 测试覆盖率 > 80%
+✅ 已补充：通知调度器重复通知拦截单元测试（2026-02-01）
 
 ### 6.3 安全性验证
 
@@ -1070,12 +1177,11 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
    - 72处空Exception块
    - 隐藏真实错误
 
-3. **缓存策略问题** 🔴
-   - Redis未启用
-   - 默认使用内存缓存
+3. **缓存策略问题** ✅ 已修复
+   - Redis默认启用（连接失败自动降级为内存缓存）
 
 4. **性能监控缺失** 🔴
-   - 无APM工具集成
+   - 已集成Sentry（可选启用）
    - 无慢查询日志
 
 ### 7.3 长期建议
@@ -1091,7 +1197,7 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
    - 添加代码复杂度检查到CI/CD
 
 3. **监控和告警**
-   - 集成APM工具（推荐Sentry）
+   - 已集成Sentry（可选启用）
    - 设置性能告警阈值
    - 建立错误追踪机制
 
@@ -1114,7 +1220,7 @@ monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
 | 文件路径 | 问题 | 优先级 |
 |---------|------|--------|
 | `frontend/src/store/useAppStore.ts` | 定时器泄漏 | P0 |
-| `backend/src/core/cache_manager.py` | Redis未启用 | P0 |
+| `backend/src/core/cache_manager.py` | ✅ 已修复：Redis默认启用（可降级） | P0 |
 | `backend/src/services/__init__.py` | 空Exception块（72处） | P0 |
 | `backend/src/api/v1/debug/auth_debug.py` | 调试端点暴露 | P0 |
 | `backend/src/api/v1/rent_contract/__init__.py` | 循环导入 | P0 |

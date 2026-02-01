@@ -41,6 +41,7 @@ const { formInstance, formMock } = vi.hoisted(() => {
       </form>
     )
   );
+  (formMock as React.FC).displayName = 'MockForm';
 
   return { formInstance, formMock };
 });
@@ -75,11 +76,13 @@ interface ListItemMetaMockProps {
 
 // Mock Ant Design components
 vi.mock('antd', () => {
-  formMock.Item = ({ children, label, name }: FormItemMockProps) => (
+  const FormItem = ({ children, label, name }: FormItemMockProps) => (
     <div data-testid="form-item" data-label={label} data-name={name}>
       {children}
     </div>
   );
+  FormItem.displayName = 'MockFormItem';
+  formMock.Item = FormItem;
   formMock.useForm = vi.fn(() => [formInstance]);
 
   const ListItem = ({ children, onClick, style }: ListItemMockProps) => (
@@ -91,13 +94,16 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  ListItem.displayName = 'MockListItem';
 
-  ListItem.Meta = ({ title, description }: ListItemMetaMockProps) => (
+  const ListItemMeta = ({ title, description }: ListItemMetaMockProps) => (
     <div data-testid="list-item-meta">
       <div>{title}</div>
       <div>{description}</div>
     </div>
   );
+  ListItemMeta.displayName = 'MockListItemMeta';
+  ListItem.Meta = ListItemMeta;
 
   const List = ({ dataSource, renderItem }: ListMockProps<unknown>) => (
     <div data-testid="list">
@@ -106,89 +112,130 @@ vi.mock('antd', () => {
       ))}
     </div>
   );
+  List.displayName = 'MockList';
   (List as unknown as { Item?: typeof ListItem }).Item = ListItem;
 
+  const Card = ({
+    children,
+    title,
+    extra,
+  }: {
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+    extra?: React.ReactNode;
+  }) => (
+    <div data-testid="card">
+      {title && <div data-testid="card-title">{title}</div>}
+      {extra && <div data-testid="card-extra">{extra}</div>}
+      {children}
+    </div>
+  );
+  Card.displayName = 'MockCard';
+
+  const Input = ({ suffix }: { suffix?: React.ReactNode }) => (
+    <input data-testid="input" data-suffix={suffix} />
+  );
+  Input.displayName = 'MockInput';
+
+  const SelectOption = ({ children, value }: { children?: React.ReactNode; value?: string }) => (
+    <option value={value}>{children}</option>
+  );
+  SelectOption.displayName = 'MockSelectOption';
+
+  const Select = Object.assign(
+    ({ children, placeholder }: { children?: React.ReactNode; placeholder?: string }) => (
+      <select data-testid="select" data-placeholder={placeholder}>
+        {children}
+      </select>
+    ),
+    {
+      Option: SelectOption,
+    }
+  );
+  Select.displayName = 'MockSelect';
+
+  const DatePicker = ({ style }: { style?: React.CSSProperties }) => (
+    <input data-testid="date-picker" data-style={JSON.stringify(style)} />
+  );
+  DatePicker.displayName = 'MockDatePicker';
+
+  const Button = ({
+    children,
+    htmlType,
+    onClick,
+    loading,
+  }: {
+    children?: React.ReactNode;
+    htmlType?: string;
+    onClick?: () => void;
+    loading?: boolean;
+  }) => (
+    <button
+      data-testid="button"
+      type={htmlType}
+      data-loading={loading}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+  Button.displayName = 'MockButton';
+
+  const Space = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+
+  const Tag = ({ children, color }: { children?: React.ReactNode; color?: string }) => (
+    <span data-testid="tag" data-color={color}>
+      {children}
+    </span>
+  );
+  Tag.displayName = 'MockTag';
+
+  const Collapse = ({ items, style }: CollapseMockProps) => (
+    <div data-testid="collapse" data-style={JSON.stringify(style)}>
+      {items?.map(item => (
+        <div key={item.key} data-testid={`collapse-item-${item.key}`}>
+          <div>{item.label}</div>
+          <div>{item.children}</div>
+        </div>
+      ))}
+    </div>
+  );
+  Collapse.displayName = 'MockCollapse';
+
+  const TypographyText = ({ children, type }: { children?: React.ReactNode; type?: string }) => (
+    <span data-testid="text" data-type={type}>
+      {children}
+    </span>
+  );
+  TypographyText.displayName = 'MockTypographyText';
+
   return {
-    Card: ({ children, title, extra }: { children?: React.ReactNode; title?: React.ReactNode; extra?: React.ReactNode }) => (
-      <div data-testid="card">
-        {title && <div data-testid="card-title">{title}</div>}
-        {extra && <div data-testid="card-extra">{extra}</div>}
-        {children}
-      </div>
-    ),
+    Card,
     Form: formMock,
-    Input: ({ suffix }: { suffix?: React.ReactNode }) => (
-      <input data-testid="input" data-suffix={suffix} />
-    ),
-    Select: Object.assign(
-      ({ children, placeholder }: { children?: React.ReactNode; placeholder?: string }) => (
-        <select data-testid="select" data-placeholder={placeholder}>
-          {children}
-        </select>
-      ),
-      {
-        Option: ({ children, value }: { children?: React.ReactNode; value?: string }) => (
-          <option value={value}>{children}</option>
-        ),
-      }
-    ),
-    DatePicker: ({ style }: { style?: React.CSSProperties }) => (
-      <input data-testid="date-picker" data-style={JSON.stringify(style)} />
-    ),
-    Button: ({
-      children,
-      htmlType,
-      onClick,
-      loading,
-    }: {
-      children?: React.ReactNode;
-      htmlType?: string;
-      onClick?: () => void;
-      loading?: boolean;
-    }) => (
-      <button
-        data-testid="button"
-        type={htmlType}
-        data-loading={loading}
-        onClick={onClick}
-      >
-        {children}
-      </button>
-    ),
-    Space: ({ children }: { children?: React.ReactNode }) => (
-      <div data-testid="space">{children}</div>
-    ),
-    Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
-      <span data-testid="tag" data-color={color}>
-        {children}
-      </span>
-    ),
-    Collapse: ({ items, style }: CollapseMockProps) => (
-      <div data-testid="collapse" data-style={JSON.stringify(style)}>
-        {items?.map(item => (
-          <div key={item.key} data-testid={`collapse-item-${item.key}`}>
-            <div>{item.label}</div>
-            <div>{item.children}</div>
-          </div>
-        ))}
-      </div>
-    ),
+    Input,
+    Select,
+    DatePicker,
+    Button,
+    Space,
+    Tag,
+    Collapse,
     List,
     Typography: {
-      Text: ({ children, type }: { children?: React.ReactNode; type?: string }) => (
-        <span data-testid="text" data-type={type}>
-          {children}
-        </span>
-      ),
+      Text: TypographyText,
     },
     ListItem,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  SaveOutlined: () => <span data-testid="save-icon" />,
-}));
+vi.mock('@ant-design/icons', () => {
+  const SaveOutlined = () => <span data-testid="save-icon" />;
+  SaveOutlined.displayName = 'SaveOutlined';
+  return { SaveOutlined };
+});
 
 const mockAssetMatches: AssetMatch[] = [
   {

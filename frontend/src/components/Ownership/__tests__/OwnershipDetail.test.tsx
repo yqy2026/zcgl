@@ -14,8 +14,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock Ant Design
-vi.mock('antd', () => ({
-  Descriptions: ({
+vi.mock('antd', () => {
+  const Descriptions = ({
     children,
     column,
     bordered,
@@ -27,7 +27,22 @@ vi.mock('antd', () => ({
     <div data-testid="descriptions" data-column={column} data-bordered={bordered}>
       {children}
     </div>
-  ),
+  );
+  Descriptions.Item = ({
+    children,
+    label,
+  }: {
+    children?: React.ReactNode;
+    label?: string;
+  }) => (
+    <div data-testid="descriptions-item" data-label={label}>
+      {children}
+    </div>
+  );
+  Descriptions.displayName = 'MockDescriptions';
+  Descriptions.Item.displayName = 'MockDescriptionsItem';
+  return {
+    Descriptions,
   Card: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
     <div data-testid="card" data-title={title}>
       {title && <div data-testid="card-title">{title}</div>}
@@ -116,7 +131,8 @@ vi.mock('antd', () => ({
       ))}
     </div>
   ),
-}));
+  };
+});
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({

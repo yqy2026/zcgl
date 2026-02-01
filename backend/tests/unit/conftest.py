@@ -41,6 +41,7 @@ def engine(test_database_url):
 @pytest.fixture(scope="session")
 def db_tables(engine):
     """Create database tables using Alembic migrations when available."""
+    import importlib
     from alembic.config import Config
 
     from src.database import Base
@@ -55,6 +56,7 @@ def db_tables(engine):
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
         command.upgrade(alembic_cfg, "head")
 
+    importlib.import_module("src.models")
     Base.metadata.create_all(bind=engine)
 
     yield

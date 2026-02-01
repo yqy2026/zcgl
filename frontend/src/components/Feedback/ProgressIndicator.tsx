@@ -117,8 +117,8 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             status={status === 'exception' ? 'error' : undefined}
             direction={direction}
             size={size === 'large' ? 'default' : size}
-            items={steps.map((step, index) => ({
-              key: index,
+            items={steps.map(step => ({
+              key: step.title,
               title: step.title,
               description: step.description,
               status: step.status,
@@ -130,9 +130,9 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
       case 'timeline':
         return (
           <Timeline>
-            {steps.map((step, index) => (
+            {steps.map(step => (
               <Timeline.Item
-                key={index}
+                key={step.title}
                 color={
                   step.status === 'finish'
                     ? 'green'

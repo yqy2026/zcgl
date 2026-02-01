@@ -166,8 +166,8 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
           详细信息：
         </Text>
         <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, fontSize: '12px' }}>
-          {result.details.map((detail, index) => (
-            <li key={index}>
+          {result.details.map(detail => (
+            <li key={detail}>
               <Text type="secondary">{detail}</Text>
             </li>
           ))}
@@ -347,8 +347,8 @@ export const ActionFeedbackCard: React.FC<{
         <div>
           <Text type="secondary">详细信息：</Text>
           <ul style={{ marginTop: 8, paddingLeft: 16 }}>
-            {result.details.map((detail, index) => (
-              <li key={index}>
+            {result.details.map(detail => (
+              <li key={detail}>
                 <Text type="secondary">{detail}</Text>
               </li>
             ))}

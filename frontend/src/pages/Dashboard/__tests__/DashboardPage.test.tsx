@@ -177,7 +177,7 @@ describe('DashboardPage', () => {
 
       expect(screen.getByText('数据加载失败')).toBeInTheDocument();
       expect(screen.getByText('网络错误')).toBeInTheDocument();
-      expect(screen.getByText('重试')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /重\s*试/ })).toBeInTheDocument();
     });
 
     it('点击重试按钮调用 refetch', () => {
@@ -191,7 +191,7 @@ describe('DashboardPage', () => {
 
       renderWithProviders();
 
-      fireEvent.click(screen.getByText('重试'));
+      fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }));
 
       expect(refetch).toHaveBeenCalled();
     });

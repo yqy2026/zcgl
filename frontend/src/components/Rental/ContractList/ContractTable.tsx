@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, Space, Tag, Tooltip, Card } from 'antd';
+import { Button, Space, Tag, Tooltip, Card } from 'antd';
 import {
   EyeOutlined,
   EditOutlined,
@@ -9,12 +9,6 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type {
-  FilterValue,
-  SorterResult,
-  TableCurrentDataSource,
-  TablePaginationConfig,
-} from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { useFormat } from '@/utils/format';
 import {
@@ -23,6 +17,7 @@ import {
   ContractStatusLabels,
   ContractStatusColors,
 } from '@/types/rentContract';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 interface ContractTableProps {
   loading: boolean;
@@ -32,12 +27,7 @@ interface ContractTableProps {
     pageSize: number;
     total: number;
   };
-  onTableChange: (
-    pagination: TablePaginationConfig,
-    filters: Record<string, FilterValue | null>,
-    sorter: SorterResult<RentContract> | SorterResult<RentContract>[],
-    extra: TableCurrentDataSource<RentContract>
-  ) => void;
+  onTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   onView: (contract: RentContract) => void;
   onEdit: (contract: RentContract) => void;
   onGenerateLedger: (id: string) => void;
@@ -206,20 +196,17 @@ const ContractTable: React.FC<ContractTableProps> = ({
 
   return (
     <Card>
-      <Table
+      <TableWithPagination
         columns={columns}
         dataSource={contracts}
         rowKey="id"
         loading={loading}
-        pagination={{
-          current: pagination.current,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+        paginationState={pagination}
+        onPageChange={onTableChange}
+        paginationProps={{
+          showTotal: (total: number, range: [number, number]) =>
+            `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
         }}
-        onChange={onTableChange}
         scroll={{ x: 1200 }}
       />
     </Card>

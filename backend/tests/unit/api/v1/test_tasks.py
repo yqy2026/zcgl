@@ -28,6 +28,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import status
 
 from src.core.exception_handler import BaseBusinessError
 from src.enums.task import TaskStatus, TaskType
@@ -879,6 +880,25 @@ class TestGetRecentTasks:
 class TestCreateExcelConfig:
     """Tests for POST /api/v1/tasks/configs/excel endpoint"""
 
+    def test_create_excel_config_unauthorized(self, unauthenticated_client):
+        """Test unauthorized access to create Excel config"""
+        payload = {
+            "config_name": "Auth Test",
+            "config_type": "import",
+            "task_type": TaskType.EXCEL_IMPORT.value,
+            "field_mapping": {},
+            "validation_rules": {},
+            "format_config": {},
+            "is_default": False,
+        }
+        response = unauthenticated_client.post(
+            "/api/v1/tasks/configs/excel", json=payload
+        )
+        assert response.status_code in [
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ]
+
     @patch("src.api.v1.system.tasks.task_service")
     def test_create_excel_config_success(
         self, mock_task_service, mock_db, mock_current_user
@@ -940,6 +960,14 @@ class TestCreateExcelConfig:
 
 class TestGetExcelConfigs:
     """Tests for GET /api/v1/tasks/configs/excel endpoint"""
+
+    def test_get_excel_configs_unauthorized(self, unauthenticated_client):
+        """Test unauthorized access to Excel configs list"""
+        response = unauthenticated_client.get("/api/v1/tasks/configs/excel")
+        assert response.status_code in [
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ]
 
     @patch("src.api.v1.system.tasks.excel_task_config_crud")
     def test_get_excel_configs_default(self, mock_excel_crud, mock_db):

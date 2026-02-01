@@ -189,8 +189,8 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
                 建议解决方案
               </Title>
               <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                {getErrorSuggestions().map((suggestion, index) => (
-                  <li key={index} style={{ marginBottom: '4px', color: '#666' }}>
+                {getErrorSuggestions().map(suggestion => (
+                  <li key={suggestion} style={{ marginBottom: '4px', color: '#666' }}>
                     {suggestion}
                   </li>
                 ))}

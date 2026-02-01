@@ -508,15 +508,14 @@ export class ProjectService {
       ]);
 
       // 从统计中查找当前项目的数据
-      const projectStats = statistics.projects?.find(p => p.id === id) || {
-        asset_count: 0,
-        total_area: 0,
-      };
+      const projectStats = statistics.projects?.find(p => p.id === id);
+      const assetCount = projectStats?.asset_count ?? project.asset_count ?? 0;
+      const totalArea = projectStats?.total_area ?? 0;
 
       return {
         project,
-        assetCount: projectStats.asset_count ?? project.asset_count ?? 0,
-        totalArea: projectStats.total_area ?? 0,
+        assetCount,
+        totalArea,
         lastUpdated: project.updated_at,
       };
     } catch (error) {

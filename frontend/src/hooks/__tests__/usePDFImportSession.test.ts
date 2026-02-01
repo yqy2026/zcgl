@@ -24,6 +24,7 @@ vi.mock('@/utils/messageManager', () => ({
     error: vi.fn(),
     warning: vi.fn(),
     loading: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
@@ -58,8 +59,10 @@ describe('usePDFImportSession', () => {
       const { result } = renderHook(() => usePDFImportSession());
 
       expect(typeof result.current.loadSessionHistory).toBe('function');
-      expect(typeof result.current.startUpload).toBe('function');
-      expect(typeof result.current.cancelCurrentSession).toBe('function');
+      expect(typeof result.current.handleUploadSuccess).toBe('function');
+      expect(typeof result.current.handleUploadError).toBe('function');
+      expect(typeof result.current.handleConfirmImport).toBe('function');
+      expect(typeof result.current.handleCancel).toBe('function');
     });
   });
 
@@ -104,62 +107,37 @@ describe('usePDFImportSession', () => {
     });
   });
 
-  describe('startUpload', () => {
-    it('应该开始上传文件', async () => {
-      vi.mocked(pdfImportService.uploadPDFFile).mockResolvedValue({
-        success: true,
-        message: '上传成功',
-        session_id: 'session-123',
-      });
-
+  describe('handleUpload', () => {
+    it('应该设置当前会话', () => {
       const { result } = renderHook(() => usePDFImportSession());
-      const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
+      const fileInfo = {
+        uid: 'file-1',
+        name: 'test.pdf',
+        status: 'done',
+        size: 123,
+        type: 'application/pdf',
+      } as const;
 
-      await act(async () => {
-        await result.current.startUpload(mockFile);
+      act(() => {
+        result.current.handleUploadSuccess('session-123', fileInfo);
       });
 
-      expect(pdfImportService.uploadPDFFile).toHaveBeenCalled();
+      expect(result.current.currentSession?.sessionId).toBe('session-123');
     });
 
-    it('应该处理上传失败', async () => {
-      vi.mocked(pdfImportService.uploadPDFFile).mockResolvedValue({
-        success: false,
-        message: '上传失败',
-        error: '文件格式错误',
-      });
-
+    it('应该处理上传失败', () => {
       const { result } = renderHook(() => usePDFImportSession());
-      const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-      await act(async () => {
-        await result.current.startUpload(mockFile);
+      act(() => {
+        result.current.handleUploadError(new Error('上传失败'));
       });
 
       expect(MessageManager.error).toHaveBeenCalled();
-    });
-
-    it('应该设置 loading 状态', async () => {
-      vi.mocked(pdfImportService.uploadPDFFile).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          success: true,
-          message: '上传成功',
-          session_id: 'session-123',
-        }), 100))
-      );
-
-      const { result } = renderHook(() => usePDFImportSession());
-      const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-
-      act(() => {
-        result.current.startUpload(mockFile);
-      });
-
-      expect(result.current.loading).toBe(true);
+      expect(result.current.currentSession).toBeNull();
     });
   });
 
-  describe('cancelCurrentSession', () => {
+  describe('handleCancel', () => {
     it('应该取消当前会话', async () => {
       vi.mocked(pdfImportService.cancelSession).mockResolvedValue({
         success: true,
@@ -168,20 +146,18 @@ describe('usePDFImportSession', () => {
 
       const { result } = renderHook(() => usePDFImportSession());
 
-      // 模拟有当前会话
-      await act(async () => {
-        // 先设置会话
-        vi.mocked(pdfImportService.uploadPDFFile).mockResolvedValue({
-          success: true,
-          message: '上传成功',
-          session_id: 'session-123',
-        });
-        const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-        await result.current.startUpload(mockFile);
+      act(() => {
+        result.current.handleUploadSuccess('session-123', {
+          uid: 'session-123',
+          name: 'test.pdf',
+          status: 'done',
+          size: 0,
+          type: 'application/pdf',
+        } as const);
       });
 
       await act(async () => {
-        await result.current.cancelCurrentSession();
+        await result.current.handleCancel();
       });
 
       expect(pdfImportService.cancelSession).toHaveBeenCalled();
@@ -191,14 +167,14 @@ describe('usePDFImportSession', () => {
       const { result } = renderHook(() => usePDFImportSession());
 
       await act(async () => {
-        await result.current.cancelCurrentSession();
+        await result.current.handleCancel();
       });
 
       expect(pdfImportService.cancelSession).not.toHaveBeenCalled();
     });
   });
 
-  describe('confirmImport', () => {
+  describe('handleConfirmImport', () => {
     it('应该确认导入', async () => {
       vi.mocked(pdfImportService.confirmImport).mockResolvedValue({
         success: true,
@@ -207,6 +183,16 @@ describe('usePDFImportSession', () => {
       });
 
       const { result } = renderHook(() => usePDFImportSession());
+
+      act(() => {
+        result.current.handleUploadSuccess('session-123', {
+          uid: 'session-123',
+          name: 'test.pdf',
+          status: 'done',
+          size: 0,
+          type: 'application/pdf',
+        } as const);
+      });
 
       const confirmedData = {
         contract_number: 'HT-001',
@@ -218,7 +204,7 @@ describe('usePDFImportSession', () => {
       };
 
       await act(async () => {
-        await result.current.confirmImport('session-123', confirmedData);
+        await result.current.handleConfirmImport(confirmedData);
       });
 
       expect(pdfImportService.confirmImport).toHaveBeenCalledWith(
@@ -236,74 +222,61 @@ describe('usePDFImportSession', () => {
 
       const { result } = renderHook(() => usePDFImportSession());
 
-      await act(async () => {
-        await result.current.confirmImport('session-123', {} as Record<string, unknown>);
+      act(() => {
+        result.current.handleUploadSuccess('session-123', {
+          uid: 'session-123',
+          name: 'test.pdf',
+          status: 'done',
+          size: 0,
+          type: 'application/pdf',
+        } as const);
       });
-
-      expect(MessageManager.error).toHaveBeenCalled();
-    });
-  });
-
-  describe('getSessionResult', () => {
-    it('应该获取会话结果', async () => {
-      vi.mocked(pdfImportService.getResult).mockResolvedValue({
-        success: true,
-        result: {
-          success: true,
-          session_id: 'session-123',
-          extraction_result: { data: {} },
-        } as unknown as Awaited<ReturnType<typeof pdfImportService.getResult>>,
-      });
-
-      const { result } = renderHook(() => usePDFImportSession());
 
       await act(async () => {
-        const sessionResult = await result.current.getSessionResult('session-123');
-        expect(sessionResult).toBeDefined();
+        await result.current.handleConfirmImport({} as Record<string, unknown>);
       });
 
-      expect(pdfImportService.getResult).toHaveBeenCalledWith('session-123');
+      expect(MessageManager.success).not.toHaveBeenCalled();
     });
   });
 
   describe('状态管理', () => {
     it('上传成功后应设置当前会话', async () => {
-      vi.mocked(pdfImportService.uploadPDFFile).mockResolvedValue({
-        success: true,
-        message: '上传成功',
-        session_id: 'session-123',
-      });
-
       const { result } = renderHook(() => usePDFImportSession());
-      const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-      await act(async () => {
-        await result.current.startUpload(mockFile);
+      act(() => {
+        result.current.handleUploadSuccess('session-123', {
+          uid: 'session-123',
+          name: 'test.pdf',
+          status: 'done',
+          size: 0,
+          type: 'application/pdf',
+        } as const);
       });
 
       expect(result.current.currentSession).not.toBeNull();
     });
 
     it('取消会话后应清空当前会话', async () => {
-      vi.mocked(pdfImportService.uploadPDFFile).mockResolvedValue({
-        success: true,
-        message: '上传成功',
-        session_id: 'session-123',
-      });
       vi.mocked(pdfImportService.cancelSession).mockResolvedValue({
         success: true,
         message: '已取消',
       });
 
       const { result } = renderHook(() => usePDFImportSession());
-      const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-      await act(async () => {
-        await result.current.startUpload(mockFile);
+      act(() => {
+        result.current.handleUploadSuccess('session-123', {
+          uid: 'session-123',
+          name: 'test.pdf',
+          status: 'done',
+          size: 0,
+          type: 'application/pdf',
+        } as const);
       });
 
       await act(async () => {
-        await result.current.cancelCurrentSession();
+        await result.current.handleCancel();
       });
 
       expect(result.current.currentSession).toBeNull();

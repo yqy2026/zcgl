@@ -49,7 +49,7 @@ describe('useAssetStore - 初始化状态', () => {
     const { result } = renderHook(() => useAssetStore());
 
     expect(result.current.selectedAsset).toBeNull();
-    expect(result.current.selectedIds).toEqual([]);
+    expect(Array.from(result.current.selectedIds)).toEqual([]);
     expect(result.current.viewMode).toBe('table');
   });
 
@@ -111,7 +111,7 @@ describe('useAssetStore - 选择功能', () => {
         result.current.setSelectedIds(['asset-001', 'asset-002']);
       });
 
-      expect(result.current.selectedIds).toEqual(['asset-001', 'asset-002']);
+      expect(Array.from(result.current.selectedIds)).toEqual(['asset-001', 'asset-002']);
     });
 
     it('应该支持清空选择', () => {
@@ -125,7 +125,7 @@ describe('useAssetStore - 选择功能', () => {
         result.current.setSelectedIds([]);
       });
 
-      expect(result.current.selectedIds).toEqual([]);
+      expect(Array.from(result.current.selectedIds)).toEqual([]);
     });
   });
 
@@ -137,7 +137,7 @@ describe('useAssetStore - 选择功能', () => {
         result.current.toggleSelectedId('asset-001');
       });
 
-      expect(result.current.selectedIds).toContain('asset-001');
+      expect(result.current.selectedIds.has('asset-001')).toBe(true);
     });
 
     it('应该移除已选中的ID', () => {
@@ -151,8 +151,8 @@ describe('useAssetStore - 选择功能', () => {
         result.current.toggleSelectedId('asset-001');
       });
 
-      expect(result.current.selectedIds).not.toContain('asset-001');
-      expect(result.current.selectedIds).toContain('asset-002');
+      expect(result.current.selectedIds.has('asset-001')).toBe(false);
+      expect(result.current.selectedIds.has('asset-002')).toBe(true);
     });
   });
 });
@@ -259,7 +259,7 @@ describe('useAssetStore - 重置功能', () => {
 
     // 验证状态已修改
     expect(result.current.selectedAsset).not.toBeNull();
-    expect(result.current.selectedIds).toHaveLength(2);
+    expect(result.current.selectedIds.size).toBe(2);
     expect(result.current.viewMode).toBe('card');
 
     // 重置
@@ -269,7 +269,7 @@ describe('useAssetStore - 重置功能', () => {
 
     // 验证所有状态回到初始值
     expect(result.current.selectedAsset).toBeNull();
-    expect(result.current.selectedIds).toEqual([]);
+    expect(Array.from(result.current.selectedIds)).toEqual([]);
     expect(result.current.viewMode).toBe('table');
     expect(result.current.searchParams).toEqual({
       page: 1,

@@ -130,8 +130,9 @@ describe('ActionButtons', () => {
 
       render(<ActionButtons />);
 
-      const container = screen.getByText('取消处理').closest('div');
-      expect(container).toHaveStyle({ textAlign: 'center' });
+      const container = screen.getByText('取消处理').closest('.ant-space')?.parentElement;
+      expect(container).not.toBeNull();
+      expect(container as HTMLElement).toHaveStyle({ textAlign: 'center' });
     });
   });
 });

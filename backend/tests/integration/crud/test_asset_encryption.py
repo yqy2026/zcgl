@@ -274,6 +274,39 @@ class TestSearchEncryptedFields:
                 # 确保结果是解密后的明文
                 assert not asset.tenant_name.startswith("enc:v1:")
 
+    def test_search_on_encrypted_address_and_owner(
+        self,
+        db_session: Session,
+        asset_crud_with_encryption: AssetCRUD,
+        sample_asset_data: dict,
+    ):
+        """测试搜索加密的地址/权属方字段"""
+        assert asset_crud_with_encryption.sensitive_data_handler.encryption_enabled is True
+        data = sample_asset_data.copy()
+        data["property_name"] = "SearchTargetProperty"
+        data["address"] = "Test Address 123"
+        data["ownership_entity"] = "Test Owner LLC"
+        asset_crud_with_encryption.create(db=db_session, obj_in=data)
+
+        assets_by_address, total_by_address = (
+            asset_crud_with_encryption.get_multi_with_search(
+                db=db_session, search=data["address"], skip=0, limit=20
+            )
+        )
+        assert total_by_address >= 1
+        assert any(
+            asset.property_name == "SearchTargetProperty"
+            for asset in assets_by_address
+        )
+
+        assets_by_owner, total_by_owner = asset_crud_with_encryption.get_multi_with_search(
+            db=db_session, search=data["ownership_entity"], skip=0, limit=20
+        )
+        assert total_by_owner >= 1
+        assert any(
+            asset.property_name == "SearchTargetProperty" for asset in assets_by_owner
+        )
+
 
 # ============================================================================
 # 优雅降级测试

@@ -13,6 +13,7 @@ import type { Asset, AssetListResponse } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
 import { getOccupancyRateColor } from '@/styles/colorMap';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 // Constants
 const UUID_LENGTH = 36;
@@ -444,8 +445,21 @@ const AssetList: React.FC<AssetListProps> = ({
     };
   }, [onSelectChange, selectedRowKeys]);
 
+  const paginationState = {
+    current: data?.page ?? 1,
+    pageSize: data?.page_size ?? 20,
+    total: data?.total ?? 0,
+  };
+
+  const handlePageChange = useCallback(
+    (_pagination: { current?: number; pageSize?: number }) => {
+      void _pagination;
+    },
+    []
+  );
+
   return (
-    <Table
+    <TableWithPagination
       columns={columns}
       dataSource={data?.items ?? []}
       rowKey="id"
@@ -453,15 +467,13 @@ const AssetList: React.FC<AssetListProps> = ({
       scroll={{ x: 1800, y: 600 }}
       rowSelection={rowSelection}
       summary={renderSummary}
-      pagination={{
-        current: data?.page ?? 1,
-        pageSize: data?.page_size ?? 20,
-        total: data?.total ?? 0,
+      paginationState={paginationState}
+      onPageChange={handlePageChange}
+      paginationProps={{
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+        showTotal: (total: number, range: [number, number]) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
         pageSizeOptions: ['10', '20', '50', '100'],
-        size: 'middle',
       }}
       onChange={onTableChange}
       size="middle"

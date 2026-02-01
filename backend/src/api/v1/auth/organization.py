@@ -14,7 +14,6 @@ from ....crud.organization import organization as organization_crud
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....models.organization import Organization, OrganizationHistory
 from ....schemas.organization import (
     OrganizationBatchRequest,
     OrganizationCreate,
@@ -48,11 +47,10 @@ def get_organizations(
     """获取组织列表"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     skip = (page - 1) * page_size
-    organizations = organization_crud.get_multi_with_filters(
+    organizations, total = organization_crud.get_multi_with_count(
         db, skip=skip, limit=page_size
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
-    total = db.query(Organization).filter(Organization.is_deleted.is_(False)).count()
     return ResponseHandler.paginated(
         data=items,
         page=page,
@@ -107,24 +105,10 @@ def search_organizations(
     """搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     skip = (page - 1) * page_size
-    organizations = organization_crud.search(
+    organizations, total = organization_crud.get_multi_with_count(
         db, keyword=keyword, skip=skip, limit=page_size
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
-
-    from sqlalchemy import or_
-
-    total = (
-        db.query(Organization)
-        .filter(Organization.is_deleted.is_(False))
-        .filter(
-            or_(
-                Organization.name.ilike(f"%{keyword}%"),
-                Organization.description.ilike(f"%{keyword}%"),
-            )
-        )
-        .count()
-    )
 
     return ResponseHandler.paginated(
         data=items,
@@ -213,15 +197,10 @@ def get_organization_history(
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
     skip = (page - 1) * page_size
-    history = organization_service.get_history(
+    history, total = organization_service.get_history_with_count(
         db, org_id=org_id, skip=skip, limit=page_size
     )
     items = [OrganizationHistoryResponse.model_validate(item) for item in history]
-    total = (
-        db.query(OrganizationHistory)
-        .filter(OrganizationHistory.organization_id == org_id)
-        .count()
-    )
 
     return ResponseHandler.paginated(
         data=items,

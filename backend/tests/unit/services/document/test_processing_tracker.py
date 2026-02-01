@@ -359,7 +359,7 @@ class TestSaveResult:
 
         result = ExtractionResult(
             success=True,
-            extracted_fields={},
+            extracted_fields={"field1": "value1"},
             confidence=0.0,
             extraction_method=ExtractionMethod.UNKNOWN,
         )

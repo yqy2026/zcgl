@@ -7,10 +7,30 @@ from __future__ import annotations
 import logging
 import os
 
+from typing import Literal, cast
+
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_SECURITY_ANALYZER_PATTERNS = [
+    r"<script",
+    r"javascript:",
+    r"vbscript:",
+    r"onload=",
+    r"onerror=",
+    r"document\.cookie",
+    r"eval\(",
+    r"alert\(",
+    r"window\.",
+    r"select\s+.*\s+from",
+    r"union\s+select",
+    r"drop\s+table",
+    r"delete\s+from",
+    r"insert\s+into",
+    r"update\s+.*\s+set",
+]
 
 
 class SecuritySettings(BaseModel):
@@ -43,6 +63,108 @@ class SecuritySettings(BaseModel):
     )
     TOKEN_BLACKLIST_ENABLED: bool = Field(
         default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
+    )
+
+    # CSRF 配置
+    CSRF_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "CSRF_ENABLED"}
+    )
+    CSRF_COOKIE_NAME: str = Field(
+        default="csrf_token", json_schema_extra={"env": "CSRF_COOKIE_NAME"}
+    )
+    CSRF_HEADER_NAME: str = Field(
+        default="X-CSRF-Token", json_schema_extra={"env": "CSRF_HEADER_NAME"}
+    )
+    CSRF_SAMESITE: Literal["lax", "strict", "none"] = Field(
+        default="strict", json_schema_extra={"env": "CSRF_SAMESITE"}
+    )
+
+    # IP黑名单配置
+    IP_BLACKLIST: list[str] = Field(
+        default=[],
+        description="IP黑名单列表（建议使用JSON数组）",
+        json_schema_extra={"env": "IP_BLACKLIST"},
+    )
+    IP_AUTO_BLOCK_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "IP_AUTO_BLOCK_ENABLED"}
+    )
+    IP_AUTO_BLOCK_THRESHOLD: int = Field(
+        default=10, json_schema_extra={"env": "IP_AUTO_BLOCK_THRESHOLD"}
+    )
+    IP_AUTO_BLOCK_DURATION: int = Field(
+        default=3600, json_schema_extra={"env": "IP_AUTO_BLOCK_DURATION"}
+    )
+
+    # 安全分析配置
+    SECURITY_ANALYZER_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "SECURITY_ANALYZER_ENABLED"}
+    )
+    SECURITY_ANALYZER_ENABLE_IP_BLOCK: bool = Field(
+        default=True, json_schema_extra={"env": "SECURITY_ANALYZER_ENABLE_IP_BLOCK"}
+    )
+    SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS: int = Field(
+        default=5, json_schema_extra={"env": "SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"}
+    )
+    SECURITY_ANALYZER_BLOCK_DURATION: int = Field(
+        default=3600, json_schema_extra={"env": "SECURITY_ANALYZER_BLOCK_DURATION"}
+    )
+    SECURITY_ANALYZER_PATTERNS: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_SECURITY_ANALYZER_PATTERNS),
+        description="安全分析可疑模式列表（支持JSON数组或逗号分隔）",
+        json_schema_extra={"env": "SECURITY_ANALYZER_PATTERNS"},
+    )
+
+    # 安全中间件配置
+    SECURITY_MIDDLEWARE_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "SECURITY_MIDDLEWARE_ENABLED"}
+    )
+    SECURITY_MIDDLEWARE_IP_BLACKLIST_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={"env": "SECURITY_MIDDLEWARE_IP_BLACKLIST_ENABLED"},
+    )
+    SECURITY_MIDDLEWARE_RATE_LIMIT_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={"env": "SECURITY_MIDDLEWARE_RATE_LIMIT_ENABLED"},
+    )
+    SECURITY_MIDDLEWARE_USER_AGENT_CHECK_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={"env": "SECURITY_MIDDLEWARE_USER_AGENT_CHECK_ENABLED"},
+    )
+    SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH: int = Field(
+        default=10,
+        json_schema_extra={"env": "SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH"},
+    )
+    SECURITY_MIDDLEWARE_RATE_LIMITS: dict[str, dict[str, int]] | None = Field(
+        default=None,
+        description="安全中间件速率限制配置（JSON对象，键为端点名，值含 requests/window）",
+        json_schema_extra={"env": "SECURITY_MIDDLEWARE_RATE_LIMITS"},
+    )
+
+    # 自适应限流配置
+    ADAPTIVE_RATE_LIMIT_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "ADAPTIVE_RATE_LIMIT_ENABLED"}
+    )
+    ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE: float = Field(
+        default=0.3, json_schema_extra={"env": "ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE"}
+    )
+    ADAPTIVE_RATE_LIMIT_SUSPICIOUS_MAX_ERROR_RATE: float = Field(
+        default=0.1,
+        json_schema_extra={"env": "ADAPTIVE_RATE_LIMIT_SUSPICIOUS_MAX_ERROR_RATE"},
+    )
+    ADAPTIVE_RATE_LIMIT_RESET_SECONDS: int = Field(
+        default=60, json_schema_extra={"env": "ADAPTIVE_RATE_LIMIT_RESET_SECONDS"}
+    )
+
+    # 请求限制配置
+    REQUEST_LIMIT_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "REQUEST_LIMIT_ENABLED"}
+    )
+    REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE: int = Field(
+        default=100,
+        json_schema_extra={"env": "REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE"},
+    )
+    REQUEST_LIMIT_RESET_SECONDS: int = Field(
+        default=60, json_schema_extra={"env": "REQUEST_LIMIT_RESET_SECONDS"}
     )
 
     # 数据加密配置
@@ -140,8 +262,150 @@ class SecuritySettings(BaseModel):
 
         return v
 
+    @field_validator("CSRF_SAMESITE")
+    @classmethod
+    def validate_csrf_samesite(cls, v: str) -> Literal["lax", "strict", "none"]:
+        """验证 CSRF SameSite 配置"""
+        normalized = v.lower().strip()
+        if normalized not in {"lax", "strict", "none"}:
+            raise PydanticCustomError(
+                "invalid_csrf_samesite",
+                "CSRF_SAMESITE 必须是 lax / strict / none 之一",
+                {"value": v},
+            )
+        return cast(Literal["lax", "strict", "none"], normalized)
+
+    @field_validator("IP_BLACKLIST", mode="before")
+    @classmethod
+    def parse_ip_blacklist(cls, v: object) -> list[str]:
+        """解析 IP 黑名单配置（兼容JSON数组与逗号分隔字符串）"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return []
+
+    @field_validator("IP_AUTO_BLOCK_THRESHOLD", "IP_AUTO_BLOCK_DURATION")
+    @classmethod
+    def validate_ip_blacklist_thresholds(cls, v: int) -> int:
+        """验证 IP 黑名单阈值配置"""
+        if v <= 0:
+            raise PydanticCustomError(
+                "invalid_ip_blacklist_value",
+                "IP 黑名单阈值配置必须为正整数，当前值: {value}",
+                {"value": v},
+            )
+        return v
+
+    @field_validator("SECURITY_ANALYZER_PATTERNS", mode="before")
+    @classmethod
+    def parse_security_analyzer_patterns(cls, v: object) -> list[str]:
+        """解析安全分析模式配置（兼容JSON数组与逗号分隔字符串）"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return []
+
+    @field_validator(
+        "SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS",
+        "SECURITY_ANALYZER_BLOCK_DURATION",
+    )
+    @classmethod
+    def validate_security_analyzer_values(cls, v: int) -> int:
+        """验证安全分析配置"""
+        if v <= 0:
+            raise PydanticCustomError(
+                "invalid_security_analyzer_value",
+                "安全分析配置必须为正整数，当前值: {value}",
+                {"value": v},
+            )
+        return v
+
+    @field_validator(
+        "ADAPTIVE_RATE_LIMIT_MAX_ERROR_RATE",
+        "ADAPTIVE_RATE_LIMIT_SUSPICIOUS_MAX_ERROR_RATE",
+    )
+    @classmethod
+    def validate_adaptive_rate_limit_error_rate(cls, v: float) -> float:
+        """验证自适应限流错误率阈值"""
+        if v < 0 or v > 1:
+            raise PydanticCustomError(
+                "invalid_adaptive_rate_limit_value",
+                "自适应限流错误率必须在 0 和 1 之间，当前值: {value}",
+                {"value": v},
+            )
+        return float(v)
+
+    @field_validator(
+        "ADAPTIVE_RATE_LIMIT_RESET_SECONDS",
+        "REQUEST_LIMIT_MAX_REQUESTS_PER_MINUTE",
+        "REQUEST_LIMIT_RESET_SECONDS",
+    )
+    @classmethod
+    def validate_rate_limit_positive_values(cls, v: int) -> int:
+        """验证限流配置必须为正整数"""
+        if v <= 0:
+            raise PydanticCustomError(
+                "invalid_rate_limit_value",
+                "限流配置必须为正整数，当前值: {value}",
+                {"value": v},
+            )
+        return v
+
+    @field_validator("SECURITY_MIDDLEWARE_USER_AGENT_MIN_LENGTH")
+    @classmethod
+    def validate_security_middleware_user_agent_min_length(cls, v: int) -> int:
+        """验证安全中间件 User-Agent 最小长度"""
+        if v <= 0:
+            raise PydanticCustomError(
+                "invalid_security_middleware_value",
+                "安全中间件 User-Agent 最小长度必须为正整数，当前值: {value}",
+                {"value": v},
+            )
+        return v
+
+    @field_validator("SECURITY_MIDDLEWARE_RATE_LIMITS")
+    @classmethod
+    def validate_security_middleware_rate_limits(
+        cls, v: dict[str, dict[str, int]] | None
+    ) -> dict[str, dict[str, int]] | None:
+        """验证安全中间件速率限制配置"""
+        if v is None:
+            return None
+
+        for endpoint, config in v.items():
+            if not isinstance(config, dict):
+                raise PydanticCustomError(
+                    "invalid_security_middleware_rate_limits",
+                    "安全中间件速率限制配置无效: {endpoint}",
+                    {"endpoint": endpoint},
+                )
+
+            requests = config.get("requests")
+            window = config.get("window")
+
+            if not isinstance(requests, int) or not isinstance(window, int):
+                raise PydanticCustomError(
+                    "invalid_security_middleware_rate_limits",
+                    "安全中间件速率限制配置需要整型 requests/window: {endpoint}",
+                    {"endpoint": endpoint},
+                )
+            if requests <= 0 or window <= 0:
+                raise PydanticCustomError(
+                    "invalid_security_middleware_rate_limits",
+                    "安全中间件速率限制配置必须为正整数: {endpoint}",
+                    {"endpoint": endpoint},
+                )
+
+        return v
+
     @model_validator(mode="after")
-    def validate_security_configuration(self) -> "SecuritySettings":
+    def validate_security_configuration(self) -> SecuritySettings:
         """
         统一安全配置验证
         处理所有安全检查并根据环境记录警告或抛出错误

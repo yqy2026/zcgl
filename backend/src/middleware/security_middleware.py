@@ -4,10 +4,11 @@ FastAPI安全中间件
 """
 
 import logging
+import secrets
 import time
 from collections import defaultdict
 from ipaddress import ip_address, ip_network
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -27,20 +28,25 @@ from ..core.exception_handler import (
     RateLimitError,
 )
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
+from ..core.config import settings
+from ..security.cookie_manager import cookie_manager
 from ..security.ip_whitelist import ip_whitelist
 from ..security.logging_security import security_auditor
 from ..security.security import RateLimiter
 
-try:
-    from ..security.security import AdaptiveRateLimiter, adaptive_limiter
+if TYPE_CHECKING:
+    from ..security.security import AdaptiveRateLimiter
 
+adaptive_limiter: "AdaptiveRateLimiter | None"
+
+try:
+    from ..security.security import AdaptiveRateLimiter, adaptive_limiter as _adaptive_limiter
+
+    adaptive_limiter = _adaptive_limiter
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
-    # Use string annotation to avoid NameError when AdaptiveRateLimiter is not defined
-    adaptive_limiter_var: "AdaptiveRateLimiter | None" = None
+    adaptive_limiter = None
     ADAPTIVE_LIMITER_AVAILABLE = False
-    # Create a compatible wrapper for type checking
-    adaptive_limiter = adaptive_limiter_var  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +116,88 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'"
 
         return response
+
+
+class CSRFMiddleware(BaseHTTPMiddleware):
+    """CSRF 防护中间件（双重提交）"""
+
+    def __init__(self, app: ASGIApp) -> None:
+        super().__init__(app)
+        self.enabled = settings.CSRF_ENABLED
+        self.cookie_name = settings.CSRF_COOKIE_NAME
+        self.header_name = settings.CSRF_HEADER_NAME
+        self.exempt_paths = {
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
+        }
+        self.safe_methods = set(HTTPMethods.get_safe_methods() + [HTTPMethods.TRACE])
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        if not self.enabled:
+            return await call_next(request)
+
+        method = (request.method or "").upper()
+        if method in self.safe_methods:
+            return await call_next(request)
+
+        path = request.url.path or ""
+        if path in self.exempt_paths:
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            return await call_next(request)
+
+        auth_cookie = request.cookies.get(cookie_manager.cookie_name)
+        if auth_cookie is None:
+            return await call_next(request)
+
+        csrf_cookie = request.cookies.get(self.cookie_name)
+        csrf_header = request.headers.get(self.header_name)
+        if (
+            csrf_cookie is None
+            or csrf_header is None
+            or csrf_cookie == ""
+            or csrf_header == ""
+        ):
+            security_auditor.log_security_event(
+                event_type="CSRF_VALIDATION_FAILED",
+                message="CSRF token missing",
+                user_id=None,
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent", ""),
+                details={"path": path, "method": method},
+            )
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "success": False,
+                    "message": "CSRF token missing",
+                    "error_type": "csrf_missing",
+                },
+            )
+
+        if not secrets.compare_digest(csrf_cookie, csrf_header):
+            security_auditor.log_security_event(
+                event_type="CSRF_VALIDATION_FAILED",
+                message="CSRF token mismatch",
+                user_id=None,
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent", ""),
+                details={"path": path, "method": method},
+            )
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "success": False,
+                    "message": "CSRF token mismatch",
+                    "error_type": "csrf_mismatch",
+                },
+            )
+
+        return await call_next(request)
 
 
 class RequestValidationMiddleware(BaseHTTPMiddleware):
@@ -681,7 +769,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
                 self.allowed_methods
             )
             response.headers["Access-Control-Allow-Headers"] = (
-                "Authorization, Content-Type, X-Requested-With, Accept, Origin"
+                "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-CSRF-Token"
             )
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Max-Age"] = "86400"
@@ -706,6 +794,7 @@ def create_security_middleware(app: Any, config: dict[str, Any] | None = None) -
 
     # 按顺序添加中间件
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(CSRFMiddleware)
     app.add_middleware(
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", DEFAULT_MAX_FILE_SIZE),

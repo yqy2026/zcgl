@@ -8,8 +8,12 @@ Test coverage for Property Certificate API endpoints:
 - Error handling
 """
 
+import io
+from pathlib import Path
+
 import pytest
 from fastapi import status
+from src.services.property_certificate.service import PropertyCertificateService
 
 # ============================================================================
 # Fixtures
@@ -36,11 +40,40 @@ def admin_user_headers(client, admin_user, monkeypatch):
 class TestUploadCertificate:
     """测试上传产权证API"""
 
-    def test_upload_certificate_success(self, client, admin_user_headers):
-        """测试成功上传产权证"""
-        # 这个测试需要实际文件，这里主要验证端点存在
-        # 实际测试可能需要mock文件上传
-        pass
+    @pytest.mark.parametrize(
+        ("filename", "content_type"),
+        [
+            ("cert.jpg", "image/jpeg"),
+            ("cert.jpeg", "image/jpeg"),
+            ("cert.png", "image/png"),
+        ],
+    )
+    def test_upload_certificate_accepts_images(
+        self, client, admin_user_headers, monkeypatch, filename, content_type
+    ):
+        """测试上传图片格式产权证"""
+
+        async def fake_extract(self, file_path: str, safe_name: str):
+            expected_ext = Path(filename).suffix
+            assert safe_name.endswith(expected_ext)
+            return {
+                "data": {"certificate_number": "IMG-001"},
+                "confidence": 0.88,
+            }
+
+        monkeypatch.setattr(PropertyCertificateService, "extract_from_file", fake_extract)
+        monkeypatch.setattr(PropertyCertificateService, "match_assets", lambda *_: [])
+
+        response = client.post(
+            "/api/v1/property-certificates/upload",
+            files={"file": (filename, io.BytesIO(b"fake image data"), content_type)},
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["confidence_score"] == 0.88
+        assert payload["extracted_data"]["certificate_number"] == "IMG-001"
 
     def test_upload_certificate_unauthorized(self, unauthenticated_client):
         """测试未授权上传"""

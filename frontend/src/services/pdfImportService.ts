@@ -232,7 +232,7 @@ function isAxiosError(error: unknown): error is {
   );
 }
 
-class PDFImportService {
+export class PDFImportService {
   /**
    * 上传PDF文件
    */

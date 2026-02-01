@@ -3,32 +3,78 @@
  * 产权证列表页面
  */
 
-import { useState } from 'react';
-import { Table, Button, Space, Tag, Input } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Space, Tag, Input } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { MessageManager } from '@/utils/messageManager';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import type { PropertyCertificate, CertificateType } from '@/types/propertyCertificate';
 import dayjs from 'dayjs';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+
+interface CertificateFilters {
+  keyword: string;
+}
 
 export const PropertyCertificateList: React.FC = () => {
   const navigate = useNavigate();
-  const [searchText, setSearchText] = useState('');
+  const [certificateSource, setCertificateSource] = useState<PropertyCertificate[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
 
-  const { data: certificates, isLoading } = useQuery({
-    queryKey: ['property-certificates'],
-    queryFn: () => propertyCertificateService.listCertificates(),
+  const {
+    data: certificates,
+    loading: listLoading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useArrayListData<PropertyCertificate, CertificateFilters>({
+    items: certificateSource,
+    initialFilters: {
+      keyword: '',
+    },
+    initialPageSize: 10,
+    filterFn: (items, nextFilters) => {
+      const trimmedKeyword = nextFilters.keyword.trim().toLowerCase();
+      if (trimmedKeyword === '') {
+        return items;
+      }
+      return items.filter(cert =>
+        cert.certificate_number?.toLowerCase().includes(trimmedKeyword)
+      );
+    },
   });
+
+  useEffect(() => {
+    const loadCertificates = async () => {
+      setIsFetching(true);
+      try {
+        const data = await propertyCertificateService.listCertificates();
+        setCertificateSource(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '加载产权证列表失败';
+        MessageManager.error(message);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    void loadCertificates();
+  }, []);
+
+  useEffect(() => {
+    void loadList({ page: 1 });
+  }, [certificateSource, loadList]);
+
+  const loading = useMemo(() => isFetching || listLoading, [isFetching, listLoading]);
 
   const columns = [
     {
       title: '证书编号',
       dataIndex: 'certificate_number',
       key: 'certificate_number',
-      filteredValue: searchText ? [searchText] : null,
-      onFilter: (value: unknown, record: PropertyCertificate) =>
-        record.certificate_number.toLowerCase().includes((value as string).toLowerCase()),
     },
     {
       title: '类型',
@@ -105,7 +151,8 @@ export const PropertyCertificateList: React.FC = () => {
             placeholder="搜索证书编号"
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
-            onChange={e => setSearchText(e.target.value)}
+            value={filters.keyword}
+            onChange={e => applyFilters({ keyword: e.target.value })}
             allowClear
           />
           <Button
@@ -117,14 +164,15 @@ export const PropertyCertificateList: React.FC = () => {
           </Button>
         </Space>
 
-        <Table
+        <TableWithPagination
           columns={columns}
-          dataSource={certificates ?? []}
+          dataSource={certificates}
           rowKey="id"
-          loading={isLoading}
-          pagination={{
-            showSizeChanger: true,
-            showTotal: total => `共 ${total} 条`,
+          loading={loading}
+          paginationState={pagination}
+          onPageChange={updatePagination}
+          paginationProps={{
+            showTotal: (total: number) => `共 ${total} 条`,
           }}
         />
       </Space>

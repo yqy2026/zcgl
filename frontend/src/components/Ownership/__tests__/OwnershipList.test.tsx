@@ -12,36 +12,17 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
-// Mock services
+import { useListData } from '@/hooks/useListData';
+import { ownershipService } from '@/services/ownershipService';
+
+vi.mock('@/hooks/useListData', () => ({
+  useListData: vi.fn(),
+}));
+
 vi.mock('@/services/ownershipService', () => ({
   ownershipService: {
-    getOwnerships: vi.fn(() =>
-      Promise.resolve({
-        items: [
-          {
-            id: '1',
-            name: '权属方1',
-            code: 'OWN-001',
-            short_name: '权属1',
-            is_active: true,
-            asset_count: 10,
-            project_count: 5,
-          },
-          {
-            id: '2',
-            name: '权属方2',
-            code: 'OWN-002',
-            short_name: '权属2',
-            is_active: false,
-            asset_count: 5,
-            project_count: 2,
-          },
-        ],
-        total: 2,
-      })
-    ),
     getOwnershipStatistics: vi.fn(() =>
       Promise.resolve({
         total_count: 10,
@@ -100,18 +81,13 @@ vi.mock('../OwnershipDetail', () => ({
   ),
 }));
 
-// Mock Ant Design
-vi.mock('antd', () => ({
-  Table: ({
+vi.mock('@/components/Common/TableWithPagination', () => ({
+  TableWithPagination: ({
     dataSource,
-    loading,
-    columns,
   }: {
     dataSource?: Array<{ id: string; name: string; code: string; is_active: boolean }>;
-    loading?: boolean;
-    columns?: Array<{ title: string; key: string }>;
   }) => (
-    <div data-testid="table" data-loading={loading} data-column-count={columns?.length}>
+    <div data-testid="table">
       {dataSource?.map(item => (
         <div key={item.id} data-testid={`row-${item.id}`}>
           <span data-testid={`name-${item.id}`}>{item.name}</span>
@@ -121,6 +97,10 @@ vi.mock('antd', () => ({
       ))}
     </div>
   ),
+}));
+
+// Mock Ant Design
+vi.mock('antd', () => ({
   Button: ({
     children,
     onClick,
@@ -221,7 +201,7 @@ vi.mock('antd', () => ({
       placeholder?: string;
       value?: string;
       onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-      onSearch?: () => void;
+      onSearch?: (value: string) => void;
     }) => (
       <div data-testid="input-search">
         <input
@@ -229,38 +209,59 @@ vi.mock('antd', () => ({
           placeholder={placeholder}
           value={value || ''}
           onChange={onChange}
+          onKeyDown={event => {
+            if (event.key === 'Enter') {
+              onSearch?.((event.target as HTMLInputElement).value);
+            }
+          }}
         />
-        <button data-testid="search-button" onClick={onSearch}>
+        <button
+          data-testid="search-button"
+          onClick={() => onSearch?.(value ?? '')}
+        >
           搜索
         </button>
       </div>
     ),
   },
-  Select: ({
-    children,
-    placeholder,
-    value,
-    onChange,
-  }: {
-    children?: React.ReactNode;
-    placeholder?: string;
-    value?: boolean;
-    onChange?: (value: boolean | undefined) => void;
-  }) => (
-    <div data-testid="select" data-placeholder={placeholder}>
-      <select
-        data-testid="select-input"
-        value={value === undefined ? '' : String(value)}
-        onChange={e => {
-          const val = e.target.value;
-          onChange?.(val === '' ? undefined : val === 'true');
-        }}
-      >
-        <option value="">{placeholder}</option>
-        {children}
-      </select>
-    </div>
-  ),
+  Select: (() => {
+    const Select = ({
+      children,
+      placeholder,
+      value,
+      onChange,
+    }: {
+      children?: React.ReactNode;
+      placeholder?: string;
+      value?: boolean;
+      onChange?: (value: boolean | undefined) => void;
+    }) => (
+      <div data-testid="select" data-placeholder={placeholder}>
+        <select
+          data-testid="select-input"
+          value={value === undefined ? '' : String(value)}
+          onChange={e => {
+            const val = e.target.value;
+            onChange?.(val === '' ? undefined : val === 'true');
+          }}
+        >
+          <option value="">{placeholder}</option>
+          {children}
+        </select>
+      </div>
+    );
+    Select.displayName = 'MockSelect';
+    const Option = ({
+      children,
+      value,
+    }: {
+      children?: React.ReactNode;
+      value?: string | boolean;
+    }) => <option value={String(value ?? '')}>{children}</option>;
+    Option.displayName = 'MockSelectOption';
+    Select.Option = Option;
+    return Select;
+  })(),
   Switch: ({
     checked,
     onChange,
@@ -289,45 +290,93 @@ vi.mock('@ant-design/icons', () => ({
 
 import OwnershipList from '../OwnershipList';
 
+const flushPromises = () =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, 0);
+  });
+
+const renderOwnershipList = async (
+  props?: React.ComponentProps<typeof OwnershipList>
+) => {
+  await act(async () => {
+    render(<OwnershipList {...props} />);
+    await flushPromises();
+  });
+};
+
+const mockLoadList = vi.fn();
+const mockApplyFilters = vi.fn();
+const mockResetFilters = vi.fn();
+const mockUpdatePagination = vi.fn();
+
 describe('OwnershipList 组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useListData).mockReturnValue({
+      data: [
+        {
+          id: '1',
+          name: '权属方1',
+          code: 'OWN-001',
+          short_name: '权属1',
+          is_active: true,
+          asset_count: 10,
+          project_count: 5,
+        },
+        {
+          id: '2',
+          name: '权属方2',
+          code: 'OWN-002',
+          short_name: '权属2',
+          is_active: false,
+          asset_count: 5,
+          project_count: 2,
+        },
+      ],
+      loading: false,
+      pagination: { current: 1, pageSize: 10, total: 2 },
+      filters: { keyword: '', isActive: null },
+      loadList: mockLoadList,
+      applyFilters: mockApplyFilters,
+      resetFilters: mockResetFilters,
+      updatePagination: mockUpdatePagination,
+    });
   });
 
   describe('基本渲染', () => {
-    it('应该正确渲染组件', () => {
-      render(<OwnershipList />);
+    it('应该正确渲染组件', async () => {
+      await renderOwnershipList();
 
       expect(screen.getByTestId('input-search')).toBeInTheDocument();
       expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('应该渲染搜索输入框', () => {
-      render(<OwnershipList />);
+    it('应该渲染搜索输入框', async () => {
+      await renderOwnershipList();
 
       const searchInput = screen.getByTestId('search-input');
       expect(searchInput).toBeInTheDocument();
       expect(searchInput).toHaveAttribute('placeholder', '搜索权属方名称、简称等');
     });
 
-    it('应该渲染状态筛选下拉框', () => {
-      render(<OwnershipList />);
+    it('应该渲染状态筛选下拉框', async () => {
+      await renderOwnershipList();
 
       const select = screen.getByTestId('select');
       expect(select).toBeInTheDocument();
       expect(select).toHaveAttribute('data-placeholder', '状态');
     });
 
-    it('应该渲染新建按钮', () => {
-      render(<OwnershipList />);
+    it('应该渲染新建按钮', async () => {
+      await renderOwnershipList();
 
       const buttons = screen.getAllByTestId('button');
       const createButton = buttons.find(btn => btn.textContent?.includes('新建权属方'));
       expect(createButton).toBeInTheDocument();
     });
 
-    it('应该渲染刷新按钮', () => {
-      render(<OwnershipList />);
+    it('应该渲染刷新按钮', async () => {
+      await renderOwnershipList();
 
       const buttons = screen.getAllByTestId('button');
       const refreshButton = buttons.find(btn => btn.textContent?.includes('刷新'));
@@ -336,17 +385,20 @@ describe('OwnershipList 组件测试', () => {
   });
 
   describe('搜索功能', () => {
-    it('应该能输入搜索关键字', () => {
-      render(<OwnershipList />);
+    it('应该能输入搜索关键字', async () => {
+      await renderOwnershipList();
 
       const searchInput = screen.getByTestId('search-input');
       fireEvent.change(searchInput, { target: { value: '测试权属方' } });
 
-      expect(searchInput).toHaveValue('测试权属方');
+      expect(mockApplyFilters).toHaveBeenCalledWith({
+        keyword: '测试权属方',
+        isActive: null,
+      });
     });
 
-    it('应该能点击搜索按钮', () => {
-      render(<OwnershipList />);
+    it('应该能点击搜索按钮', async () => {
+      await renderOwnershipList();
 
       const searchButton = screen.getByTestId('search-button');
       fireEvent.click(searchButton);
@@ -354,8 +406,8 @@ describe('OwnershipList 组件测试', () => {
       expect(searchButton).toBeInTheDocument();
     });
 
-    it('应该能重置筛选条件', () => {
-      render(<OwnershipList />);
+    it('应该能重置筛选条件', async () => {
+      await renderOwnershipList();
 
       const buttons = screen.getAllByTestId('button');
       const resetButton = buttons.find(btn => btn.textContent === '重置');
@@ -364,20 +416,22 @@ describe('OwnershipList 组件测试', () => {
       if (resetButton) {
         fireEvent.click(resetButton);
       }
+
+      expect(mockResetFilters).toHaveBeenCalled();
     });
   });
 
   describe('表格渲染', () => {
-    it('应该渲染表格组件', () => {
-      render(<OwnershipList />);
+    it('应该渲染表格组件', async () => {
+      await renderOwnershipList();
 
       expect(screen.getByTestId('table')).toBeInTheDocument();
     });
   });
 
   describe('模态框交互', () => {
-    it('点击新建按钮应该打开表单模态框', () => {
-      render(<OwnershipList />);
+    it('点击新建按钮应该打开表单模态框', async () => {
+      await renderOwnershipList();
 
       const buttons = screen.getAllByTestId('button');
       const createButton = buttons.find(btn => btn.textContent?.includes('新建权属方'));
@@ -391,8 +445,8 @@ describe('OwnershipList 组件测试', () => {
       expect(formModal).toHaveAttribute('data-open', 'true');
     });
 
-    it('应该能关闭模态框', () => {
-      render(<OwnershipList />);
+    it('应该能关闭模态框', async () => {
+      await renderOwnershipList();
 
       // 打开模态框
       const buttons = screen.getAllByTestId('button');
@@ -414,15 +468,15 @@ describe('OwnershipList 组件测试', () => {
   });
 
   describe('选择模式', () => {
-    it('应该支持选择模式', () => {
+    it('应该支持选择模式', async () => {
       const handleSelect = vi.fn();
-      render(<OwnershipList mode="select" onSelectOwnership={handleSelect} />);
+      await renderOwnershipList({ mode: 'select', onSelectOwnership: handleSelect });
 
       expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
-    it('列表模式不显示统计卡片', () => {
-      render(<OwnershipList mode="select" />);
+    it('列表模式不显示统计卡片', async () => {
+      await renderOwnershipList({ mode: 'select' });
 
       const statistics = screen.queryAllByTestId('statistic');
       // 选择模式下不显示统计卡片
@@ -431,17 +485,28 @@ describe('OwnershipList 组件测试', () => {
   });
 
   describe('刷新功能', () => {
-    it('点击刷新按钮应该刷新列表', () => {
-      render(<OwnershipList />);
+    it('点击刷新按钮应该刷新列表', async () => {
+      await renderOwnershipList();
 
       const buttons = screen.getAllByTestId('button');
       const refreshButton = buttons.find(btn => btn.textContent?.includes('刷新'));
 
       if (refreshButton) {
-        fireEvent.click(refreshButton);
+        await act(async () => {
+          fireEvent.click(refreshButton);
+          await flushPromises();
+        });
       }
 
-      expect(screen.getByTestId('table')).toBeInTheDocument();
+      expect(mockLoadList).toHaveBeenCalled();
+      expect(ownershipService.getOwnershipStatistics).toHaveBeenCalled();
     });
+  });
+
+  it('初始化时会加载列表与统计信息', async () => {
+    await renderOwnershipList();
+
+    expect(mockLoadList).toHaveBeenCalled();
+    expect(ownershipService.getOwnershipStatistics).toHaveBeenCalled();
   });
 });

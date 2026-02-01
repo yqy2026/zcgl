@@ -21,7 +21,7 @@ class CacheSettings(BaseModel):
     CACHE_PREFIX: str = Field(default="zcgl", json_schema_extra={"env": "CACHE_PREFIX"})
 
     @model_validator(mode="after")
-    def validate_cache_configuration(self) -> "CacheSettings":
+    def validate_cache_configuration(self) -> CacheSettings:
         """验证缓存配置一致性"""
         if self.CACHE_TTL < 0:
             raise PydanticCustomError(

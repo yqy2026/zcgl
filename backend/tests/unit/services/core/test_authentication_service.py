@@ -316,8 +316,8 @@ class TestCreateTokens:
         assert "session_id" in payload
         assert "iat" in payload
         assert "exp" in payload
-        assert payload["aud"] == "land-property-system"
-        assert payload["iss"] == "land-property-auth"
+        assert payload["aud"] == settings.JWT_AUDIENCE
+        assert payload["iss"] == settings.JWT_ISSUER
 
     def test_refresh_token_structure(self, auth_service, mock_user):
         """Test refresh token has correct structure"""
@@ -333,8 +333,8 @@ class TestCreateTokens:
         assert "jti" in payload
         assert "session_id" in payload
         assert "nbf" in payload
-        assert payload["aud"] == "land-property-system"
-        assert payload["iss"] == "land-property-auth"
+        assert payload["aud"] == settings.JWT_AUDIENCE
+        assert payload["iss"] == settings.JWT_ISSUER
 
     def test_tokens_have_unique_jti(self, auth_service, mock_user):
         """Test that each token gets unique JTI"""
@@ -706,7 +706,7 @@ class TestIsTokenRevoked:
             auth_service.token_blacklist, "is_blacklisted", return_value=False
         ) as mock_check:
             auth_service._is_token_revoked("test-jti")
-            mock_check.assert_called_once_with("test-jti")
+            mock_check.assert_called_once_with(jti="test-jti", user_id=None)
 
 
 # ============================================================================
@@ -775,8 +775,8 @@ class TestEdgeCases:
             "type": "refresh",
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(days=7)).timestamp()),
-            "aud": "land-property-system",
-            "iss": "land-property-auth",
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         result = auth_service.validate_refresh_token(token)

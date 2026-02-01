@@ -108,8 +108,8 @@ class TestCRUDProjectGetByCode:
         assert result is None
 
 
-class TestCRUDProjectGetMultiWithFilters:
-    """测试 get_multi_with_filters 方法"""
+class TestCRUDProjectGetMulti:
+    """测试 get_multi 方法"""
 
     @pytest.fixture
     def crud(self):
@@ -117,42 +117,32 @@ class TestCRUDProjectGetMultiWithFilters:
 
     @pytest.fixture
     def mock_db(self, db_session):
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        db_session.execute = MagicMock(return_value=mock_result)
+        # Setup mock query chain
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.offset.return_value.limit.return_value.all.return_value = [
+            MagicMock(spec=Project),
+            MagicMock(spec=Project),
+        ]
+        db_session.query = MagicMock(return_value=mock_query)
         return db_session
 
     def test_get_multi_default_params(self, crud, mock_db):
         """测试默认参数获取多个项目"""
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            mock_build.return_value = MagicMock()
-            result = crud.get_multi_with_filters(mock_db)
+        result = crud.get_multi(mock_db)
 
+        # Should return list
         assert isinstance(result, list)
+        assert len(result) == 2  # Mock returns 2 projects
 
-    def test_get_multi_with_is_active_filter(self, crud, mock_db):
-        """测试带活跃状态筛选"""
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, is_active=True)
+    def test_get_multi_with_skip_limit(self, crud, mock_db):
+        """测试分页参数"""
+        result = crud.get_multi(mock_db, skip=10, limit=20)
 
-        mock_build.assert_called_once()
-
-    def test_get_multi_with_keyword(self, crud, mock_db):
-        """测试带关键词搜索"""
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, keyword="测试")
-
-        mock_build.assert_called_once()
-
-    def test_get_multi_with_ownership_filter(self, crud, mock_db):
-        """测试带权属方ID筛选"""
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, ownership_id="own-1")
-
-        mock_build.assert_called_once()
+        # Verify offset and limit were called
+        assert isinstance(result, list)
+        mock_db.query.return_value.offset.assert_called_once_with(10)
+        mock_db.query.return_value.offset.return_value.limit.assert_called_once_with(20)
 
 
 class TestCRUDProjectSearch:
@@ -164,27 +154,36 @@ class TestCRUDProjectSearch:
 
     @pytest.fixture
     def mock_db(self, db_session):
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        db_session.execute = MagicMock(return_value=mock_result)
-        db_session.scalar = MagicMock(return_value=0)
+        db_session.query = MagicMock()
         return db_session
 
-    def test_search_returns_dict(self, crud, mock_db):
-        """测试搜索返回字典结构"""
+    def test_search_returns_tuple(self, crud, mock_db):
+        """测试搜索返回元组结构 (items, total)"""
+        # Create mock query chain
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.count.return_value = 5
+        mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value.limit.return_value.all.return_value = [
+            MagicMock(spec=Project),
+            MagicMock(spec=Project),
+        ]
+
+        mock_db.query.return_value = mock_query
+
+        # Create search params
         search_params = MagicMock()
         search_params.page = 1
         search_params.page_size = 10
         search_params.keyword = None
-        search_params.is_active = None
+        search_params.project_status = None
         search_params.ownership_id = None
 
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            with patch.object(crud.query_builder, "build_count_query") as mock_count:
-                mock_build.return_value = MagicMock()
-                mock_count.return_value = MagicMock()
-                result = crud.search(mock_db, search_params)
+        result = crud.search(mock_db, search_params)
 
-        assert isinstance(result, dict)
-        assert "items" in result
-        assert "total" in result
+        # search() returns (items, total) tuple
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        items, total = result
+        assert isinstance(items, list)
+        assert isinstance(total, int)

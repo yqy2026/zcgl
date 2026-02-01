@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { message, Modal } from 'antd';
 
 import PromptListPage from '../PromptListPage';
@@ -183,6 +183,18 @@ const createMockStatistics = () => ({
   overall_avg_confidence: 0.82,
 });
 
+const flushPromises = () =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, 0);
+  });
+
+const renderPromptListPage = async () => {
+  await act(async () => {
+    render(<PromptListPage />);
+    await flushPromises();
+  });
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(llmPromptService.getPrompts).mockResolvedValue({ items: [], total: 0 });
@@ -190,14 +202,14 @@ beforeEach(() => {
 });
 
 describe('PromptListPage - 基础渲染', () => {
-  it('应该渲染标题和新建按钮', () => {
-    render(<PromptListPage />);
+  it('应该渲染标题和新建按钮', async () => {
+    await renderPromptListPage();
     expect(screen.getByText('LLM Prompt 管理')).toBeInTheDocument();
     expect(screen.getByText('新建 Prompt')).toBeInTheDocument();
   });
 
-  it('应该渲染筛选器', () => {
-    render(<PromptListPage />);
+  it('应该渲染筛选器', async () => {
+    await renderPromptListPage();
     expect(screen.getByTestId('select-文档类型')).toBeInTheDocument();
     expect(screen.getByTestId('select-提供商')).toBeInTheDocument();
     expect(screen.getByTestId('select-状态')).toBeInTheDocument();
@@ -206,7 +218,7 @@ describe('PromptListPage - 基础渲染', () => {
 
 describe('PromptListPage - 数据加载', () => {
   it('应该加载Prompt列表与统计数据', async () => {
-    render(<PromptListPage />);
+    await renderPromptListPage();
 
     await waitFor(() => {
       expect(llmPromptService.getPrompts).toHaveBeenCalled();
@@ -216,8 +228,8 @@ describe('PromptListPage - 数据加载', () => {
 });
 
 describe('PromptListPage - Prompt操作', () => {
-  it('点击新建按钮应显示编辑器', () => {
-    render(<PromptListPage />);
+  it('点击新建按钮应显示编辑器', async () => {
+    await renderPromptListPage();
     fireEvent.click(screen.getByText('新建 Prompt'));
     expect(screen.getByTestId('prompt-editor')).toBeInTheDocument();
   });
@@ -229,7 +241,7 @@ describe('PromptListPage - Prompt操作', () => {
     });
     vi.mocked(llmPromptService.activatePrompt).mockResolvedValue(undefined);
 
-    render(<PromptListPage />);
+    await renderPromptListPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -260,7 +272,7 @@ describe('PromptListPage - Prompt操作', () => {
       },
     ]);
 
-    render(<PromptListPage />);
+    await renderPromptListPage();
 
     await waitFor(() => {
       expect(screen.getAllByTestId('table-row')).toHaveLength(1);
@@ -280,7 +292,7 @@ describe('PromptListPage - 错误处理', () => {
   it('加载失败应提示错误', async () => {
     vi.mocked(llmPromptService.getPrompts).mockRejectedValue(new Error('Load failed'));
 
-    render(<PromptListPage />);
+    await renderPromptListPage();
 
     await waitFor(() => {
       expect(message.error).toHaveBeenCalledWith('加载 Prompt 列表失败');
@@ -289,8 +301,8 @@ describe('PromptListPage - 错误处理', () => {
 });
 
 describe('PromptListPage - 组件契约', () => {
-  it('PromptEditor 接收可见性控制', () => {
-    render(<PromptListPage />);
+  it('PromptEditor 接收可见性控制', async () => {
+    await renderPromptListPage();
     expect(PromptEditor).toHaveBeenCalled();
   });
 });

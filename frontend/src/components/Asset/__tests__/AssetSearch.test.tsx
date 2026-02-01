@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock dependencies before imports
 vi.mock('@/utils/messageManager', () => ({
@@ -81,6 +81,7 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  Card.displayName = 'MockCard';
 
   const Form = ({
     children,
@@ -93,7 +94,9 @@ vi.mock('antd', () => {
       {children}
     </form>
   );
-  Form.Item = ({
+  Form.displayName = 'MockForm';
+
+  const FormItem = ({
     children,
     label,
     name,
@@ -107,6 +110,9 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
+  FormItem.displayName = 'MockFormItem';
+
+  Form.Item = FormItem;
   Form.useForm = () => [mockFormInstance];
 
   const Select = ({
@@ -130,6 +136,7 @@ vi.mock('antd', () => {
       {children}
     </select>
   );
+  Select.displayName = 'MockSelect';
 
   const Option = ({
     children,
@@ -138,6 +145,7 @@ vi.mock('antd', () => {
     children: React.ReactNode;
     value: string;
   }) => <option value={value}>{children}</option>;
+  Option.displayName = 'MockSelectOption';
 
   Select.Option = Option;
 
@@ -147,12 +155,16 @@ vi.mock('antd', () => {
     allowClear,
     value,
     onChange,
+    onBlur,
+    onPressEnter,
   }: {
     placeholder?: string;
     prefix?: React.ReactNode;
     allowClear?: boolean;
     value?: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onBlur?: () => void;
+    onPressEnter?: () => void;
   }) => (
     <div data-testid="input-wrapper">
       {prefix}
@@ -162,18 +174,227 @@ vi.mock('antd', () => {
         data-allow-clear={allowClear}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
+        onKeyDown={event => {
+          if (event.key === 'Enter') {
+            onPressEnter?.();
+          }
+        }}
       />
     </div>
   );
+  Input.displayName = 'MockInput';
+
+  const RangePicker = ({ format }: { format?: string }) => (
+    <div data-testid="range-picker" data-format={format}>
+      <input data-testid="date-start" />
+      <input data-testid="date-end" />
+    </div>
+  );
+  RangePicker.displayName = 'MockRangePicker';
 
   const DatePicker = {
-    RangePicker: ({ format }: { format?: string }) => (
-      <div data-testid="range-picker" data-format={format}>
-        <input data-testid="date-start" />
-        <input data-testid="date-end" />
-      </div>
-    ),
+    RangePicker,
   };
+
+  const InputNumber = ({
+    placeholder,
+    value,
+    onChange,
+  }: {
+    placeholder?: string;
+    value?: number;
+    onChange?: (value: number | null) => void;
+  }) => (
+    <input
+      data-testid="input-number"
+      type="number"
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange?.(parseFloat(e.target.value) || null)}
+    />
+  );
+  InputNumber.displayName = 'MockInputNumber';
+
+  const Button = ({
+    children,
+    onClick,
+    icon,
+    type,
+    loading,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    icon?: React.ReactNode;
+    type?: string;
+    loading?: boolean;
+    disabled?: boolean;
+  }) => (
+    <button
+      data-testid={`btn-${type || 'default'}`}
+      data-loading={loading}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+  Button.displayName = 'MockButton';
+
+  const Space = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="space">{children}</div>
+  );
+  Space.displayName = 'MockSpace';
+  const SpaceCompact = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="space-compact">{children}</div>
+  );
+  SpaceCompact.displayName = 'MockSpaceCompact';
+  Space.Compact = SpaceCompact;
+
+  const Row = ({
+    children,
+    gutter,
+  }: {
+    children: React.ReactNode;
+    gutter?: number;
+  }) => (
+    <div data-testid="row" data-gutter={gutter}>
+      {children}
+    </div>
+  );
+  Row.displayName = 'MockRow';
+
+  const Col = ({
+    children,
+    xs,
+    sm,
+    md,
+    lg,
+  }: {
+    children: React.ReactNode;
+    xs?: number;
+    sm?: number;
+    md?: number;
+    lg?: number;
+  }) => (
+    <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
+      {children}
+    </div>
+  );
+  Col.displayName = 'MockCol';
+
+  const Modal = ({
+    children,
+    open,
+    title,
+    onOk,
+    onCancel,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    title?: string;
+    onOk?: () => void;
+    onCancel?: () => void;
+  }) =>
+    open ? (
+      <div data-testid="modal" data-title={title}>
+        <div data-testid="modal-title">{title}</div>
+        <div data-testid="modal-content">{children}</div>
+        <button data-testid="modal-ok" onClick={onOk}>
+          确定
+        </button>
+        <button data-testid="modal-cancel" onClick={onCancel}>
+          取消
+        </button>
+      </div>
+    ) : null;
+  Modal.displayName = 'MockModal';
+
+  const List = ({
+    dataSource,
+    renderItem,
+    locale,
+  }: {
+    dataSource: Array<{ id: string; name: string }>;
+    renderItem: (item: { id: string; name: string }) => React.ReactNode;
+    locale?: { emptyText: string };
+  }) => (
+    <div data-testid="list">
+      {dataSource.length === 0 ? (
+        <div data-testid="list-empty">{locale?.emptyText}</div>
+      ) : (
+        dataSource.map(item => <div key={item.id}>{renderItem(item)}</div>)
+      )}
+    </div>
+  );
+  List.displayName = 'MockList';
+  const ListItem = ({
+    children,
+    actions,
+  }: {
+    children: React.ReactNode;
+    actions?: React.ReactNode[];
+  }) => (
+    <div data-testid="list-item">
+      <div data-testid="list-item-content">{children}</div>
+      {actions && <div data-testid="list-item-actions">{actions}</div>}
+    </div>
+  );
+  ListItem.displayName = 'MockListItem';
+
+  const ListItemMeta = ({
+    title,
+    description,
+  }: {
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+  }) => (
+    <div data-testid="list-item-meta">
+      {title && <div data-testid="list-item-meta-title">{title}</div>}
+      {description && (
+        <div data-testid="list-item-meta-description">{description}</div>
+      )}
+    </div>
+  );
+  ListItemMeta.displayName = 'MockListItemMeta';
+
+  List.Item = ListItem;
+  List.Item.Meta = ListItemMeta;
+
+  const TypographyText = ({ children }: { children: React.ReactNode }) => (
+    <span data-testid="text">{children}</span>
+  );
+  TypographyText.displayName = 'MockTypographyText';
+
+  const Popconfirm = ({
+    children,
+    title,
+    onConfirm,
+  }: {
+    children: React.ReactNode;
+    title: string;
+    onConfirm?: () => void;
+  }) => (
+    <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
+      {children}
+    </div>
+  );
+  Popconfirm.displayName = 'MockPopconfirm';
+
+  const Tag = ({
+    children,
+    color,
+  }: {
+    children: React.ReactNode;
+    color?: string;
+  }) => (
+    <span data-testid="tag" data-color={color}>
+      {children}
+    </span>
+  );
+  Tag.displayName = 'MockTag';
 
   return {
     Card,
@@ -181,164 +402,46 @@ vi.mock('antd', () => {
     Input,
     Select,
     DatePicker,
-    InputNumber: ({
-      placeholder,
-      value,
-      onChange,
-    }: {
-      placeholder?: string;
-      value?: number;
-      onChange?: (value: number | null) => void;
-    }) => (
-      <input
-        data-testid="input-number"
-        type="number"
-        placeholder={placeholder}
-        value={value}
-        onChange={e => onChange?.(parseFloat(e.target.value) || null)}
-      />
-    ),
-    Button: ({
-      children,
-      onClick,
-      icon,
-      type,
-      loading,
-      disabled,
-    }: {
-      children?: React.ReactNode;
-      onClick?: () => void;
-      icon?: React.ReactNode;
-      type?: string;
-      loading?: boolean;
-      disabled?: boolean;
-    }) => (
-      <button
-        data-testid={`btn-${type || 'default'}`}
-        data-loading={loading}
-        disabled={disabled}
-        onClick={onClick}
-      >
-        {icon}
-        {children}
-      </button>
-    ),
-    Space: ({
-      children,
-    }: {
-      children: React.ReactNode;
-    }) => <div data-testid="space">{children}</div>,
-    Row: ({
-      children,
-      gutter,
-    }: {
-      children: React.ReactNode;
-      gutter?: number;
-    }) => (
-      <div data-testid="row" data-gutter={gutter}>
-        {children}
-      </div>
-    ),
-    Col: ({
-      children,
-      xs,
-      sm,
-      md,
-      lg,
-    }: {
-      children: React.ReactNode;
-      xs?: number;
-      sm?: number;
-      md?: number;
-      lg?: number;
-    }) => (
-      <div data-testid="col" data-xs={xs} data-sm={sm} data-md={md} data-lg={lg}>
-        {children}
-      </div>
-    ),
-    Modal: ({
-      children,
-      open,
-      title,
-      onOk,
-      onCancel,
-    }: {
-      children: React.ReactNode;
-      open?: boolean;
-      title?: string;
-      onOk?: () => void;
-      onCancel?: () => void;
-    }) =>
-      open ? (
-        <div data-testid="modal" data-title={title}>
-          <div data-testid="modal-title">{title}</div>
-          <div data-testid="modal-content">{children}</div>
-          <button data-testid="modal-ok" onClick={onOk}>
-            确定
-          </button>
-          <button data-testid="modal-cancel" onClick={onCancel}>
-            取消
-          </button>
-        </div>
-      ) : null,
-    List: ({
-      dataSource,
-      renderItem,
-      locale,
-    }: {
-      dataSource: Array<{ id: string; name: string }>;
-      renderItem: (item: { id: string; name: string }) => React.ReactNode;
-      locale?: { emptyText: string };
-    }) => (
-      <div data-testid="list">
-        {dataSource.length === 0 ? (
-          <div data-testid="list-empty">{locale?.emptyText}</div>
-        ) : (
-          dataSource.map(item => <div key={item.id}>{renderItem(item)}</div>)
-        )}
-      </div>
-    ),
+    InputNumber,
+    Button,
+    Space,
+    Row,
+    Col,
+    Modal,
+    List,
     Typography: {
-      Text: ({ children }: { children: React.ReactNode }) => (
-        <span data-testid="text">{children}</span>
-      ),
+      Text: TypographyText,
     },
-    Popconfirm: ({
-      children,
-      title,
-      onConfirm,
-    }: {
-      children: React.ReactNode;
-      title: string;
-      onConfirm?: () => void;
-    }) => (
-      <div data-testid="popconfirm" data-title={title} onClick={onConfirm}>
-        {children}
-      </div>
-    ),
-    Tag: ({
-      children,
-      color,
-    }: {
-      children: React.ReactNode;
-      color?: string;
-    }) => (
-      <span data-testid="tag" data-color={color}>
-        {children}
-      </span>
-    ),
+    Popconfirm,
+    Tag,
   };
 });
 
 // Mock icons
-vi.mock('@ant-design/icons', () => ({
-  SearchOutlined: () => <span data-testid="icon-search">SearchIcon</span>,
-  ReloadOutlined: () => <span data-testid="icon-reload">ReloadIcon</span>,
-  DownOutlined: () => <span data-testid="icon-down">DownIcon</span>,
-  UpOutlined: () => <span data-testid="icon-up">UpIcon</span>,
-  SaveOutlined: () => <span data-testid="icon-save">SaveIcon</span>,
-  HistoryOutlined: () => <span data-testid="icon-history">HistoryIcon</span>,
-}));
+vi.mock('@ant-design/icons', () => {
+  const SearchOutlined = () => <span data-testid="icon-search">SearchIcon</span>;
+  const ReloadOutlined = () => <span data-testid="icon-reload">ReloadIcon</span>;
+  const DownOutlined = () => <span data-testid="icon-down">DownIcon</span>;
+  const UpOutlined = () => <span data-testid="icon-up">UpIcon</span>;
+  const SaveOutlined = () => <span data-testid="icon-save">SaveIcon</span>;
+  const HistoryOutlined = () => <span data-testid="icon-history">HistoryIcon</span>;
+
+  SearchOutlined.displayName = 'SearchOutlined';
+  ReloadOutlined.displayName = 'ReloadOutlined';
+  DownOutlined.displayName = 'DownOutlined';
+  UpOutlined.displayName = 'UpOutlined';
+  SaveOutlined.displayName = 'SaveOutlined';
+  HistoryOutlined.displayName = 'HistoryOutlined';
+
+  return {
+    SearchOutlined,
+    ReloadOutlined,
+    DownOutlined,
+    UpOutlined,
+    SaveOutlined,
+    HistoryOutlined,
+  };
+});
 
 import AssetSearch from '../AssetSearch';
 import { MessageManager } from '@/utils/messageManager';
@@ -573,7 +676,7 @@ describe('AssetSearch', () => {
       fireEvent.click(screen.getByText('搜索历史'));
 
       expect(screen.getByTestId('modal')).toBeInTheDocument();
-      expect(screen.getByText('搜索历史')).toBeInTheDocument();
+      expect(screen.getByTestId('modal-title')).toHaveTextContent('搜索历史');
     });
 
     it('历史弹窗应该显示历史列表', () => {
@@ -610,7 +713,7 @@ describe('AssetSearch', () => {
     it('loading时应该显示加载中标签', () => {
       render(<AssetSearch {...defaultProps} loading={true} />);
 
-      expect(screen.getByText('加载中...')).toBeInTheDocument();
+      expect(screen.getByText('加载中…')).toBeInTheDocument();
     });
   });
 

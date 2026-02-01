@@ -13,6 +13,36 @@ from .base import CRUDBase
 class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
     """任务CRUD操作类"""
 
+    def _apply_task_filters(
+        self,
+        query,
+        *,
+        task_type: str | None = None,
+        status: str | None = None,
+        user_id: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        filters: dict[str, Any] | None = None,
+    ):
+        """应用任务筛选条件（用于列表与统计）"""
+        if filters:
+            for field, value in filters.items():
+                if hasattr(AsyncTask, field) and value is not None:
+                    query = query.filter(getattr(AsyncTask, field) == value)
+
+        if task_type:
+            query = query.filter(AsyncTask.task_type == task_type)
+        if status:
+            query = query.filter(AsyncTask.status == status)
+        if user_id:
+            query = query.filter(AsyncTask.user_id == user_id)
+        if created_after:
+            query = query.filter(AsyncTask.created_at >= created_after)
+        if created_before:
+            query = query.filter(AsyncTask.created_at <= created_before)
+
+        return query
+
     def get_multi(
         self,
         db: Session,
@@ -26,22 +56,22 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         created_before: datetime | None = None,
         order_by: str = "created_at",
         order_dir: str = "desc",
+        filters: dict[str, Any] | None = None,
         **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[AsyncTask]:
         """获取任务列表"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
 
         # 应用筛选条件
-        if task_type:
-            query = query.filter(AsyncTask.task_type == task_type)
-        if status:
-            query = query.filter(AsyncTask.status == status)
-        if user_id:
-            query = query.filter(AsyncTask.user_id == user_id)
-        if created_after:
-            query = query.filter(AsyncTask.created_at >= created_after)
-        if created_before:
-            query = query.filter(AsyncTask.created_at <= created_before)
+        query = self._apply_task_filters(
+            query,
+            task_type=task_type,
+            status=status,
+            user_id=user_id,
+            created_after=created_after,
+            created_before=created_before,
+            filters=filters,
+        )
 
         # 应用排序
         if hasattr(AsyncTask, order_by):
@@ -55,22 +85,28 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         return query.offset(skip).limit(limit).all()
 
     def count(
-        self, db: Session, filters: dict[str, Any] | None = None, **kwargs: Any
+        self,
+        db: Session,
+        filters: dict[str, Any] | None = None,
+        task_type: str | None = None,
+        status: str | None = None,
+        user_id: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        **kwargs: Any,
     ) -> int:
         """统计任务数量"""
-        task_type = kwargs.pop("task_type", None)
-        status = kwargs.pop("status", None)
         query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
 
-        if filters:
-            for field, value in filters.items():
-                if hasattr(AsyncTask, field) and value is not None:
-                    query = query.filter(getattr(AsyncTask, field) == value)
-
-        if task_type:
-            query = query.filter(AsyncTask.task_type == task_type)
-        if status:
-            query = query.filter(AsyncTask.status == status)
+        query = self._apply_task_filters(
+            query,
+            task_type=task_type,
+            status=status,
+            user_id=user_id,
+            created_after=created_after,
+            created_before=created_before,
+            filters=filters,
+        )
 
         return query.count()
 

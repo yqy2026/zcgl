@@ -203,7 +203,7 @@ describe('ConfirmDialog - 预设类型测试', () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
     render(<ConfirmDialog type={type as any} visible={true} />);
 
-    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByTestId('modal-title')).toHaveTextContent(String(title));
     expect(screen.getByTestId('ok-button')).toHaveTextContent(okText);
   });
 });

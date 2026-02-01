@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.exception_handler import conflict, not_found
 from ..crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ..models.asset import SystemDictionary
+from ..models.enum_field import EnumFieldHistory, EnumFieldValue
 from ..schemas.dictionary import (
     DictionaryOptionResponse,
     DictionaryValueCreate,
@@ -243,8 +244,35 @@ class CommonDictionaryService:
         if not enum_type:
             raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
 
-        # 软删除枚举类型（会级联删除枚举值）
         enum_type_id_str = str(enum_type.id)
+        values_to_delete = (
+            db.query(EnumFieldValue)
+            .filter(
+                EnumFieldValue.enum_type_id == enum_type_id_str,
+                EnumFieldValue.is_deleted.is_(False),
+            )
+            .order_by(EnumFieldValue.level.desc())
+            .all()
+        )
+        value_ids_to_delete = [str(value.id) for value in values_to_delete]
+        if value_ids_to_delete:
+            (
+                db.query(EnumFieldHistory)
+                .filter(EnumFieldHistory.enum_value_id.in_(value_ids_to_delete))
+                .delete(synchronize_session=False)
+            )
+            db.query(EnumFieldValue).filter(
+                EnumFieldValue.id.in_(value_ids_to_delete)
+            ).update(
+                {
+                    EnumFieldValue.is_deleted: True,
+                    EnumFieldValue.updated_by: operator,
+                },
+                synchronize_session=False,
+            )
+            db.flush()
+
+        # 软删除枚举类型
         enum_type_crud.delete(enum_type_id_str, deleted_by=operator)
 
         return {"message": f"字典类型 {dict_type} 删除成功"}

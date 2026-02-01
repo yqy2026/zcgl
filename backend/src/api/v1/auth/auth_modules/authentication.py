@@ -98,6 +98,7 @@ def login(
         # Set httpOnly cookie for XSS protection
         cookie_manager.set_auth_cookie(response, tokens.access_token)
         cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
+        cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
 
         # 创建会话
         auth_service.create_user_session(
@@ -209,6 +210,7 @@ def logout(
     # Clear httpOnly cookie
     cookie_manager.clear_auth_cookie(response)
     cookie_manager.clear_refresh_cookie(response)
+    cookie_manager.clear_csrf_cookie(response)
 
     # 提取并黑名单当前JWT令牌（优先Header，回退Cookie）
     token = None
@@ -343,6 +345,7 @@ def refresh_token(
     tokens = auth_service.create_tokens(user, device_info)
     cookie_manager.set_auth_cookie(response, tokens.access_token)
     cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
+    cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
 
     # 更新会话
     # Note: UserSession 需要单独查询和更新，这里暂时跳过

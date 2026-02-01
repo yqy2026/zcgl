@@ -5,7 +5,7 @@
  * @module pages/Ownership
  */
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Typography,
   Button,
@@ -16,7 +16,6 @@ import {
   Alert,
   Card,
   Descriptions,
-  Table,
   Tag,
   Statistic,
   Badge,
@@ -39,6 +38,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
 import type { RentContract } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 const { Title, Text } = Typography;
 
@@ -201,8 +202,8 @@ const OwnershipDetailPage: React.FC = () => {
   ];
 
   // 计算统计数据
-  const assets = assetsData?.items || [];
-  const contracts = contractsData?.items || [];
+  const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
+  const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items]);
   const stats = financeStats?.[0] || {
     total_due_amount: 0,
     total_paid_amount: 0,
@@ -213,6 +214,38 @@ const OwnershipDetailPage: React.FC = () => {
     stats.total_due_amount > 0
       ? ((stats.total_paid_amount / stats.total_due_amount) * 100).toFixed(1)
       : '0';
+
+  const {
+    data: assetRows,
+    loading: assetTableLoading,
+    pagination: assetPagination,
+    loadList: loadAssetList,
+    updatePagination: updateAssetPagination,
+  } = useArrayListData<Asset, Record<string, never>>({
+    items: assets,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  const {
+    data: contractRows,
+    loading: contractTableLoading,
+    pagination: contractPagination,
+    loadList: loadContractList,
+    updatePagination: updateContractPagination,
+  } = useArrayListData<RentContract, Record<string, never>>({
+    items: contracts,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadAssetList({ page: 1 });
+  }, [assets, loadAssetList]);
+
+  useEffect(() => {
+    void loadContractList({ page: 1 });
+  }, [contracts, loadContractList]);
 
   // 加载状态
   if (ownershipLoading) {
@@ -263,14 +296,15 @@ const OwnershipDetailPage: React.FC = () => {
         </span>
       ),
       children: (
-        <Table
+        <TableWithPagination
           columns={assetColumns}
-          dataSource={assets}
+          dataSource={assetRows}
           rowKey="id"
-          loading={assetsLoading}
-          pagination={{
-            pageSize: 10,
-            showTotal: total => `共 ${total} 条`,
+          loading={assetsLoading || assetTableLoading}
+          paginationState={assetPagination}
+          onPageChange={updateAssetPagination}
+          paginationProps={{
+            showTotal: (total: number) => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联资产' }}
         />
@@ -285,14 +319,15 @@ const OwnershipDetailPage: React.FC = () => {
         </span>
       ),
       children: (
-        <Table
+        <TableWithPagination
           columns={contractColumns}
-          dataSource={contracts}
+          dataSource={contractRows}
           rowKey="id"
-          loading={contractsLoading}
-          pagination={{
-            pageSize: 10,
-            showTotal: total => `共 ${total} 条`,
+          loading={contractsLoading || contractTableLoading}
+          paginationState={contractPagination}
+          onPageChange={updateContractPagination}
+          paginationProps={{
+            showTotal: (total: number) => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联合同' }}
         />

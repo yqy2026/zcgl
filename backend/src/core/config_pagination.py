@@ -42,7 +42,7 @@ class PaginationSettings(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_page_size_consistency(self) -> "PaginationSettings":
+    def validate_page_size_consistency(self) -> PaginationSettings:
         """验证分页大小一致性 - DEFAULT_PAGE_SIZE 不能超过 MAX_PAGE_SIZE"""
         if self.DEFAULT_PAGE_SIZE > self.MAX_PAGE_SIZE:
             raise PydanticCustomError(

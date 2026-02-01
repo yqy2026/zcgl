@@ -5,7 +5,7 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from ..models.operation_log import OperationLog
@@ -13,6 +13,91 @@ from ..models.operation_log import OperationLog
 
 class OperationLogCRUD:
     """操作日志CRUD操作"""
+
+    def _stats_start_date(self, days: int) -> datetime:
+        return datetime.now() - timedelta(days=days)
+
+    def _stats_query(
+        self,
+        db: Session,
+        *,
+        start_date: datetime,
+        user_id: str | None = None,
+        module: str | None = None,
+        error_only: bool = False,
+    ) -> Any:
+        query = db.query(OperationLog).filter(OperationLog.created_at >= start_date)
+        if user_id:
+            query = query.filter(OperationLog.user_id == user_id)
+        if module:
+            query = query.filter(OperationLog.module == module)
+        if error_only:
+            query = query.filter(OperationLog.error_message.isnot(None))
+        return query
+
+    def _apply_filters(
+        self,
+        query: Any,
+        *,
+        user_id: str | None = None,
+        action: str | None = None,
+        module: str | None = None,
+        resource_type: str | None = None,
+        response_status: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        search: str | None = None,
+    ) -> Any:
+        # 用户筛选
+        if user_id:
+            query = query.filter(OperationLog.user_id == user_id)
+
+        # 操作类型筛选
+        if action:
+            query = query.filter(OperationLog.action == action)
+
+        # 模块筛选
+        if module:
+            query = query.filter(OperationLog.module == module)
+
+        # 资源类型筛选
+        if resource_type:
+            query = query.filter(OperationLog.resource_type == resource_type)
+
+        if response_status:
+            if response_status == "success":
+                query = query.filter(
+                    OperationLog.response_status >= 200,
+                    OperationLog.response_status < 300,
+                )
+            elif response_status == "warning":
+                query = query.filter(
+                    OperationLog.response_status >= 400,
+                    OperationLog.response_status < 500,
+                )
+            elif response_status == "error":
+                query = query.filter(OperationLog.response_status >= 500)
+            elif response_status.isdigit():
+                query = query.filter(
+                    OperationLog.response_status == int(response_status)
+                )
+
+        # 日期范围筛选
+        if start_date:
+            query = query.filter(OperationLog.created_at >= start_date)
+        if end_date:
+            query = query.filter(OperationLog.created_at <= end_date)
+
+        # 关键词搜索
+        if search:
+            search_filter = or_(
+                OperationLog.username.ilike(f"%{search}%"),
+                OperationLog.action_name.ilike(f"%{search}%"),
+                OperationLog.resource_name.ilike(f"%{search}%"),
+            )
+            query = query.filter(search_filter)
+
+        return query
 
     def create(
         self,
@@ -86,56 +171,17 @@ class OperationLogCRUD:
         search: str | None = None,
     ) -> tuple[list[OperationLog], int]:
         """获取操作日志列表"""
-        query = db.query(OperationLog)
-
-        # 用户筛选
-        if user_id:
-            query = query.filter(OperationLog.user_id == user_id)
-
-        # 操作类型筛选
-        if action:
-            query = query.filter(OperationLog.action == action)
-
-        # 模块筛选
-        if module:
-            query = query.filter(OperationLog.module == module)
-
-        # 资源类型筛选
-        if resource_type:
-            query = query.filter(OperationLog.resource_type == resource_type)
-
-        if response_status:
-            if response_status == "success":
-                query = query.filter(
-                    OperationLog.response_status >= 200,
-                    OperationLog.response_status < 300,
-                )
-            elif response_status == "warning":
-                query = query.filter(
-                    OperationLog.response_status >= 400,
-                    OperationLog.response_status < 500,
-                )
-            elif response_status == "error":
-                query = query.filter(OperationLog.response_status >= 500)
-            elif response_status.isdigit():
-                query = query.filter(
-                    OperationLog.response_status == int(response_status)
-                )
-
-        # 日期范围筛选
-        if start_date:
-            query = query.filter(OperationLog.created_at >= start_date)
-        if end_date:
-            query = query.filter(OperationLog.created_at <= end_date)
-
-        # 关键词搜索
-        if search:
-            search_filter = or_(
-                OperationLog.username.ilike(f"%{search}%"),
-                OperationLog.action_name.ilike(f"%{search}%"),
-                OperationLog.resource_name.ilike(f"%{search}%"),
-            )
-            query = query.filter(search_filter)
+        query = self._apply_filters(
+            db.query(OperationLog),
+            user_id=user_id,
+            action=action,
+            module=module,
+            resource_type=resource_type,
+            response_status=response_status,
+            start_date=start_date,
+            end_date=end_date,
+            search=search,
+        )
 
         # 总数
         total = query.count()
@@ -148,6 +194,42 @@ class OperationLogCRUD:
             .all()
         )
 
+        return logs, total
+
+    def get_multi_with_count(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        user_id: str | None = None,
+        action: str | None = None,
+        module: str | None = None,
+        resource_type: str | None = None,
+        response_status: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        search: str | None = None,
+    ) -> tuple[list[OperationLog], int]:
+        """获取操作日志列表与总数"""
+        query = self._apply_filters(
+            db.query(OperationLog),
+            user_id=user_id,
+            action=action,
+            module=module,
+            resource_type=resource_type,
+            response_status=response_status,
+            start_date=start_date,
+            end_date=end_date,
+            search=search,
+        )
+        total = query.count()
+        logs = (
+            query.order_by(OperationLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
         return logs, total
 
     def delete_old_logs(self, db: Session, days: int = 90) -> int:
@@ -165,28 +247,13 @@ class OperationLogCRUD:
         self, db: Session, user_id: str, days: int = 30
     ) -> dict[str, Any]:
         """获取用户操作统计"""
-        start_date = datetime.now() - timedelta(days=days)
-
-        total_operations = (
-            db.query(func.count(OperationLog.id))
-            .filter(
-                and_(
-                    OperationLog.user_id == user_id,
-                    OperationLog.created_at >= start_date,
-                )
-            )
-            .scalar()
-        )
+        start_date = self._stats_start_date(days)
+        base_query = self._stats_query(db, start_date=start_date, user_id=user_id)
+        total_operations = base_query.with_entities(func.count(OperationLog.id)).scalar()
 
         # 按操作类型统计
         action_stats = (
-            db.query(OperationLog.action, func.count(OperationLog.id))
-            .filter(
-                and_(
-                    OperationLog.user_id == user_id,
-                    OperationLog.created_at >= start_date,
-                )
-            )
+            base_query.with_entities(OperationLog.action, func.count(OperationLog.id))
             .group_by(OperationLog.action)
             .all()
         )
@@ -202,28 +269,13 @@ class OperationLogCRUD:
         self, db: Session, module: str, days: int = 30
     ) -> dict[str, Any]:
         """获取模块操作统计"""
-        start_date = datetime.now() - timedelta(days=days)
-
-        total_operations = (
-            db.query(func.count(OperationLog.id))
-            .filter(
-                and_(
-                    OperationLog.module == module,
-                    OperationLog.created_at >= start_date,
-                )
-            )
-            .scalar()
-        )
+        start_date = self._stats_start_date(days)
+        base_query = self._stats_query(db, start_date=start_date, module=module)
+        total_operations = base_query.with_entities(func.count(OperationLog.id)).scalar()
 
         # 按操作类型统计
         action_stats = (
-            db.query(OperationLog.action, func.count(OperationLog.id))
-            .filter(
-                and_(
-                    OperationLog.module == module,
-                    OperationLog.created_at >= start_date,
-                )
-            )
+            base_query.with_entities(OperationLog.action, func.count(OperationLog.id))
             .group_by(OperationLog.action)
             .all()
         )
@@ -237,14 +289,13 @@ class OperationLogCRUD:
 
     def get_daily_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取每日操作统计"""
-        start_date = datetime.now() - timedelta(days=days)
-
+        start_date = self._stats_start_date(days)
         daily_stats = (
-            db.query(
+            self._stats_query(db, start_date=start_date)
+            .with_entities(
                 func.date(OperationLog.created_at),
                 func.count(OperationLog.id),
             )
-            .filter(OperationLog.created_at >= start_date)
             .group_by(func.date(OperationLog.created_at))
             .order_by(func.date(OperationLog.created_at))
             .all()
@@ -257,30 +308,15 @@ class OperationLogCRUD:
 
     def get_error_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取错误操作统计"""
-        start_date = datetime.now() - timedelta(days=days)
-
-        total_errors = (
-            db.query(func.count(OperationLog.id))
-            .filter(
-                and_(
-                    OperationLog.error_message.isnot(None),
-                    OperationLog.created_at >= start_date,
-                )
-            )
-            .scalar()
-        )
+        start_date = self._stats_start_date(days)
+        base_query = self._stats_query(db, start_date=start_date, error_only=True)
+        total_errors = base_query.with_entities(func.count(OperationLog.id)).scalar()
 
         # 按错误类型统计
         error_types = (
-            db.query(
+            base_query.with_entities(
                 OperationLog.action,
                 func.count(OperationLog.id),
-            )
-            .filter(
-                and_(
-                    OperationLog.error_message.isnot(None),
-                    OperationLog.created_at >= start_date,
-                )
             )
             .group_by(OperationLog.action)
             .all()

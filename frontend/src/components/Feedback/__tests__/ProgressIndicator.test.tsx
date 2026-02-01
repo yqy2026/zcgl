@@ -80,75 +80,115 @@ interface IconMockProps {
 
 vi.mock('antd', () => {
   const Timeline = ({ children }: TimelineMockProps) => <div data-testid="timeline">{children}</div>;
-  Timeline.Item = ({ children, color, dot }: TimelineItemMockProps) => (
+  Timeline.displayName = 'MockTimeline';
+
+  const TimelineItem = ({ children, color, dot }: TimelineItemMockProps) => (
     <div data-testid="timeline-item" data-color={color}>
       {dot && <div data-testid="timeline-dot">{dot}</div>}
       {children}
     </div>
   );
+  TimelineItem.displayName = 'MockTimelineItem';
+  Timeline.Item = TimelineItem;
+
+  const Progress = ({ percent, status, showInfo, strokeColor, type, width }: ProgressMockProps) => (
+    <div
+      data-testid="progress"
+      data-percent={percent}
+      data-status={status}
+      data-show-info={showInfo}
+      data-type={type || 'line'}
+      data-width={width}
+      data-stroke-color={strokeColor}
+    />
+  );
+  Progress.displayName = 'MockProgress';
+
+  const TypographyText = ({ children, type, strong, style }: TypographyTextMockProps) => (
+    <span data-testid="text" data-type={type} data-strong={strong} style={style}>
+      {children}
+    </span>
+  );
+  TypographyText.displayName = 'MockTypographyText';
+
+  const TypographyTitle = ({ children, level, style }: TypographyTitleMockProps) => (
+    <div data-testid="title" data-level={level} style={style}>
+      {children}
+    </div>
+  );
+  TypographyTitle.displayName = 'MockTypographyTitle';
+
+  const Space = ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>;
+  Space.displayName = 'MockSpace';
+
+  const Card = ({ children, title, extra, actions }: CardMockProps) => (
+    <div data-testid="card">
+      {title && <div data-testid="card-title">{title}</div>}
+      {extra && <div data-testid="card-extra">{extra}</div>}
+      {children}
+      {actions && <div data-testid="card-actions">{actions}</div>}
+    </div>
+  );
+  Card.displayName = 'MockCard';
+
+  const Steps = ({ items = [], current, status, direction, size }: StepsMockProps) => (
+    <div
+      data-testid="steps"
+      data-current={current}
+      data-status={status}
+      data-direction={direction}
+      data-size={size}
+    >
+      {items.map((item, index) => (
+        <div key={index} data-testid="step-item" data-status={item.status}>
+          <div data-testid="step-title">{item.title}</div>
+          {item.description && <div data-testid="step-description">{item.description}</div>}
+          {item.icon && <div data-testid="step-icon">{item.icon}</div>}
+        </div>
+      ))}
+    </div>
+  );
+  Steps.displayName = 'MockSteps';
 
   return {
-    Progress: ({ percent, status, showInfo, strokeColor, type, width }: ProgressMockProps) => (
-      <div
-        data-testid="progress"
-        data-percent={percent}
-        data-status={status}
-        data-show-info={showInfo}
-        data-type={type || 'line'}
-        data-width={width}
-        data-stroke-color={strokeColor}
-      />
-    ),
+    Progress,
     Typography: {
-      Text: ({ children, type, strong, style }: TypographyTextMockProps) => (
-        <span data-testid="text" data-type={type} data-strong={strong} style={style}>
-          {children}
-        </span>
-      ),
-      Title: ({ children, level, style }: TypographyTitleMockProps) => (
-        <div data-testid="title" data-level={level} style={style}>
-          {children}
-        </div>
-      ),
+      Text: TypographyText,
+      Title: TypographyTitle,
     },
-    Space: ({ children }: SpaceMockProps) => <div data-testid="space">{children}</div>,
-    Card: ({ children, title, extra, actions }: CardMockProps) => (
-      <div data-testid="card">
-        {title && <div data-testid="card-title">{title}</div>}
-        {extra && <div data-testid="card-extra">{extra}</div>}
-        {children}
-        {actions && <div data-testid="card-actions">{actions}</div>}
-      </div>
-    ),
-    Steps: ({ items = [], current, status, direction, size }: StepsMockProps) => (
-      <div
-        data-testid="steps"
-        data-current={current}
-        data-status={status}
-        data-direction={direction}
-        data-size={size}
-      >
-        {items.map((item, index) => (
-          <div key={index} data-testid="step-item" data-status={item.status}>
-            <div data-testid="step-title">{item.title}</div>
-            {item.description && <div data-testid="step-description">{item.description}</div>}
-            {item.icon && <div data-testid="step-icon">{item.icon}</div>}
-          </div>
-        ))}
-      </div>
-    ),
+    Space,
+    Card,
+    Steps,
     Timeline,
   };
 });
 
-vi.mock('@ant-design/icons', () => ({
-  CheckCircleOutlined: ({ style }: IconMockProps) => <div data-testid="icon-check" style={style} />,
-  LoadingOutlined: ({ style }: IconMockProps) => <div data-testid="icon-loading" style={style} />,
-  ClockCircleOutlined: ({ style }: IconMockProps) => <div data-testid="icon-clock" style={style} />,
-  ExclamationCircleOutlined: ({ style }: IconMockProps) => (
+vi.mock('@ant-design/icons', () => {
+  const CheckCircleOutlined = ({ style }: IconMockProps) => (
+    <div data-testid="icon-check" style={style} />
+  );
+  const LoadingOutlined = ({ style }: IconMockProps) => (
+    <div data-testid="icon-loading" style={style} />
+  );
+  const ClockCircleOutlined = ({ style }: IconMockProps) => (
+    <div data-testid="icon-clock" style={style} />
+  );
+  const ExclamationCircleOutlined = ({ style }: IconMockProps) => (
     <div data-testid="icon-exclamation" style={style} />
-  ),
-}));
+  );
+
+  CheckCircleOutlined.displayName = 'CheckCircleOutlined';
+  LoadingOutlined.displayName = 'LoadingOutlined';
+  ClockCircleOutlined.displayName = 'ClockCircleOutlined';
+  ExclamationCircleOutlined.displayName = 'ExclamationCircleOutlined';
+
+  return {
+    CheckCircleOutlined,
+    LoadingOutlined,
+    ClockCircleOutlined,
+    ExclamationCircleOutlined,
+  };
+});
 
 describe('ProgressIndicator', () => {
   it('renders line progress with defaults', () => {

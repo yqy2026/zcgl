@@ -315,8 +315,8 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
                 message="发现以下问题:"
                 description={
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                    {validationResult.issues.map((issue, index) => (
-                      <li key={index}>{issue}</li>
+                    {validationResult.issues.map(issue => (
+                      <li key={issue}>{issue}</li>
                     ))}
                   </ul>
                 }
@@ -355,8 +355,8 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
                 <Divider style={{ margin: '12px 0 8px 0' }} />
                 <Text strong>改进建议:</Text>
                 <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '12px' }}>
-                  {validationResult.suggestions.map((suggestion, index) => (
-                    <li key={index}>{suggestion}</li>
+                  {validationResult.suggestions.map(suggestion => (
+                    <li key={suggestion}>{suggestion}</li>
                   ))}
                 </ul>
               </div>

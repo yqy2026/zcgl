@@ -33,7 +33,7 @@ vi.mock('@/components/ErrorHandling', () => ({
   ),
 }));
 
-vi.mock('../System/PermissionGuard', () => ({
+vi.mock('@/components/System/PermissionGuard', () => ({
   PermissionGuard: ({ children, fallback, mode, permissions }: PermissionGuardMockProps) => (
     <div
       data-testid="permission-guard"

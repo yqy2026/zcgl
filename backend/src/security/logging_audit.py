@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .logging_filters import SensitiveDataFilter, SecurityLogFormatter
+from .logging_filters import SecurityLogFormatter, SensitiveDataFilter
 
 
 class SecurityAuditor:

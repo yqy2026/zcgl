@@ -308,6 +308,44 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
+    def get_multi_with_count(
+        self,
+        db: Session,
+        *,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        search_fields: list[str] | None = None,
+        search_conditions: list[Any] | None = None,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: str | None = None,
+        order_desc: bool = True,
+    ) -> tuple[list[ModelType], int]:
+        """基于 QueryBuilder 获取列表与总数"""
+        try:
+            stmt = self.query_builder.build_query(
+                filters=filters,
+                search_query=search,
+                search_fields=search_fields,
+                search_conditions=search_conditions,
+                sort_by=order_by,
+                sort_desc=order_desc,
+                skip=skip,
+                limit=limit,
+            )
+            count_stmt = self.query_builder.build_count_query(
+                filters=filters,
+                search_query=search,
+                search_fields=search_fields,
+                search_conditions=search_conditions,
+            )
+
+            result = db.execute(stmt).scalars().all()
+            total = int(db.execute(count_stmt).scalar() or 0)
+            return list(result), total
+        except Exception as e:  # pragma: no cover
+            raise self._handle_database_error(e, "高级查询统计")  # pragma: no cover
+
     def bulk_create(
         self, db: Session, *, objects_in: list[CreateSchemaType | dict[str, Any]]
     ) -> list[ModelType]:

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, Button, Table, Tag, Space, Typography, Row, Col, Modal, Tooltip } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Tag, Space, Typography, Row, Col, Modal, Tooltip } from 'antd';
 import {
   DownloadOutlined,
   EyeOutlined,
@@ -14,6 +14,8 @@ import { rentContractExcelService } from '@/services/rentContractExcelService';
 import type { ColumnsType } from 'antd/es/table';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { useArrayListData } from '@/hooks/useArrayListData';
 
 const _pageLogger = createLogger('TemplateManagement');
 
@@ -31,72 +33,94 @@ interface TemplateInfo {
   status: 'active' | 'draft' | 'deprecated';
 }
 
+interface TemplateFilters {
+  placeholder: string;
+}
+
+// 模板数据
+const templates: TemplateInfo[] = [
+  {
+    key: 'asset-import',
+    name: '资产导入模板',
+    description: '用于批量导入资产数据的Excel模板，包含所有必要字段',
+    type: 'asset',
+    version: 'v2.0',
+    updateDate: '2025-09-24',
+    fileSize: '25KB',
+    fields: [
+      '权属方',
+      '权属类别',
+      '项目名称',
+      '物业名称',
+      '物业地址',
+      '土地面积',
+      '实际房产面积',
+      '非经营物业面积',
+      '可出租面积',
+      '已出租面积',
+      '确权状态',
+      '证载用途',
+      '实际用途',
+      '业态类别',
+      '使用状态',
+      '是否涉诉',
+      '物业性质',
+      '是否计入出租率',
+      '接收模式',
+      '接收协议开始日期',
+      '接收协议结束日期',
+    ],
+    status: 'active',
+  },
+  {
+    key: 'rent-contract-import',
+    name: '租赁合同导入模板',
+    description: '用于批量导入租赁合同信息的Excel模板',
+    type: 'rent-contract',
+    version: 'v1.0',
+    updateDate: '2025-09-20',
+    fileSize: '18KB',
+    fields: [
+      '合同编号',
+      '资产名称',
+      '承租方',
+      '合同开始日期',
+      '合同结束日期',
+      '月租金',
+      '押金',
+      '付款方式',
+      '合同状态',
+    ],
+    status: 'active',
+  },
+];
+
 const TemplateManagementPage: React.FC = () => {
-  const [loading, setLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateInfo | null>(null);
 
-  // 模板数据
-  const templates: TemplateInfo[] = [
-    {
-      key: 'asset-import',
-      name: '资产导入模板',
-      description: '用于批量导入资产数据的Excel模板，包含所有必要字段',
-      type: 'asset',
-      version: 'v2.0',
-      updateDate: '2025-09-24',
-      fileSize: '25KB',
-      fields: [
-        '权属方',
-        '权属类别',
-        '项目名称',
-        '物业名称',
-        '物业地址',
-        '土地面积',
-        '实际房产面积',
-        '非经营物业面积',
-        '可出租面积',
-        '已出租面积',
-        '确权状态',
-        '证载用途',
-        '实际用途',
-        '业态类别',
-        '使用状态',
-        '是否涉诉',
-        '物业性质',
-        '是否计入出租率',
-        '接收模式',
-        '接收协议开始日期',
-        '接收协议结束日期',
-      ],
-      status: 'active',
+  const {
+    data: templateRows,
+    loading,
+    pagination,
+    loadList,
+    updatePagination,
+  } = useArrayListData<TemplateInfo, TemplateFilters>({
+    items: templates,
+    initialFilters: {
+      placeholder: '',
     },
-    {
-      key: 'rent-contract-import',
-      name: '租赁合同导入模板',
-      description: '用于批量导入租赁合同信息的Excel模板',
-      type: 'rent-contract',
-      version: 'v1.0',
-      updateDate: '2025-09-20',
-      fileSize: '18KB',
-      fields: [
-        '合同编号',
-        '资产名称',
-        '承租方',
-        '合同开始日期',
-        '合同结束日期',
-        '月租金',
-        '押金',
-        '付款方式',
-        '合同状态',
-      ],
-      status: 'active',
-    },
-  ];
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadList({ page: 1 });
+  }, [loadList]);
 
   // 下载模板
   const handleDownloadTemplate = async (template: TemplateInfo) => {
-    setLoading(true);
+    setDownloadLoading(true);
     try {
       if (template.type === 'asset') {
         await assetService.downloadImportTemplate();
@@ -109,7 +133,7 @@ const TemplateManagementPage: React.FC = () => {
       _pageLogger.error('下载模板失败:', error as Error);
       MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`);
     } finally {
-      setLoading(false);
+      setDownloadLoading(false);
     }
   };
 
@@ -202,7 +226,7 @@ const TemplateManagementPage: React.FC = () => {
               size="small"
               icon={<DownloadOutlined />}
               onClick={() => handleDownloadTemplate(record)}
-              loading={loading}
+              loading={downloadLoading}
             >
               下载
             </Button>
@@ -299,14 +323,16 @@ const TemplateManagementPage: React.FC = () => {
 
       {/* 模板列表 */}
       <Card>
-        <Table
+        <TableWithPagination
           columns={columns}
-          dataSource={templates}
+          dataSource={templateRows}
           rowKey="key"
-          pagination={{
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+          loading={loading}
+          paginationState={pagination}
+          onPageChange={updatePagination}
+          paginationProps={{
+            showTotal: (total: number, range: [number, number]) =>
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
         />
       </Card>
@@ -347,8 +373,8 @@ const TemplateManagementPage: React.FC = () => {
               <Col span={24}>
                 <Text strong>包含字段：</Text>
                 <div style={{ marginTop: 8, maxHeight: '200px', overflowY: 'auto' }}>
-                  {previewTemplate.fields.map((field, index) => (
-                    <Tag key={index} style={{ marginBottom: 4 }}>
+                  {previewTemplate.fields.map(field => (
+                    <Tag key={field} style={{ marginBottom: 4 }}>
                       {field}
                     </Tag>
                   ))}

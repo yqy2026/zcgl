@@ -4,7 +4,16 @@
  */
 
 import { setupServer } from 'msw/node';
-import { handlers } from './handlers';
+import { handlers as oldHandlers } from './handlers';
+import { handlers as newHandlers } from '@/test/utils/handlers';
+import { allHandlers as statisticsHandlers } from '@/test/utils/handlers-statistics';
+
+// 合并所有 handlers
+export const handlers = [
+  ...statisticsHandlers,  // 新增：统计 API handlers (优先级高)
+  ...oldHandlers,
+  ...newHandlers,
+];
 
 /**
  * 创建MSW服务器实例

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Form, Input, Switch, Button, Divider, Typography, Space, Tabs, Alert } from 'antd';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageManager } from '@/utils/messageManager';
 import {
   SettingOutlined,
@@ -18,109 +19,134 @@ const { TabPane } = Tabs;
 
 const SystemSettingsPage: React.FC = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [activeTab, setActiveTab] = useState('settings');
+  const queryClient = useQueryClient();
 
-  // 获取系统信息
-  const fetchSystemInfo = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await systemService.getSystemInfo();
-      setSystemInfo(response);
-    } catch (error: unknown) {
-      pageLogger.error('获取系统信息失败:', error as Error);
-      const errorMsg = error instanceof Error ? error.message : '未知错误';
+  const systemInfoQuery = useQuery<SystemInfo, Error>({
+    queryKey: ['system', 'info'],
+    queryFn: async () => {
+      try {
+        return await systemService.getSystemInfo();
+      } catch (error: unknown) {
+        pageLogger.error('获取系统信息失败:', error as Error);
+        throw error;
+      }
+    },
+    enabled: activeTab === 'info',
+    refetchOnWindowFocus: false,
+  });
+
+  const settingsQuery = useQuery<SystemSettings, Error>({
+    queryKey: ['system', 'settings'],
+    queryFn: async () => {
+      try {
+        return await systemService.getSettings();
+      } catch (error: unknown) {
+        pageLogger.error('获取系统设置失败:', error as Error);
+        throw error;
+      }
+    },
+    enabled: activeTab === 'settings',
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (systemInfoQuery.isError === true) {
+      const errorMsg = systemInfoQuery.error?.message ?? '未知错误';
       MessageManager.error('获取系统信息失败: ' + errorMsg);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [systemInfoQuery.error, systemInfoQuery.isError]);
 
-  // 获取系统设置
-  const fetchSettings = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await systemService.getSettings();
-      setSettings(response);
-      form.setFieldsValue(response);
-    } catch (error: unknown) {
-      pageLogger.error('获取系统设置失败:', error as Error);
-      const errorMsg = error instanceof Error ? error.message : '未知错误';
-      MessageManager.error('获取系统设置失败: ' + errorMsg);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (settingsQuery.data != null) {
+      form.setFieldsValue(settingsQuery.data);
     }
-  }, [form]);
+  }, [form, settingsQuery.data]);
+
+  useEffect(() => {
+    if (settingsQuery.isError === true) {
+      const errorMsg = settingsQuery.error?.message ?? '未知错误';
+      MessageManager.error('获取系统设置失败: ' + errorMsg);
+    }
+  }, [settingsQuery.error, settingsQuery.isError]);
+
+  const systemInfo: SystemInfo | null = systemInfoQuery.data ?? null;
+  const settings: SystemSettings | null = settingsQuery.data ?? null;
+  const isSettingsLoading = settingsQuery.isLoading || settingsQuery.isFetching;
+  const isInfoLoading = systemInfoQuery.isLoading || systemInfoQuery.isFetching;
+
 
   // 保存设置
-  const handleSaveSettings = async (values: Partial<SystemSettings>) => {
-    try {
-      setLoading(true);
-      await systemService.updateSettings(values);
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (values: Partial<SystemSettings>) => {
+      return await systemService.updateSettings(values);
+    },
+    onSuccess: () => {
       MessageManager.success('设置保存成功');
-      void fetchSettings();
-    } catch (error: unknown) {
+      void queryClient.invalidateQueries({ queryKey: ['system', 'settings'] });
+    },
+    onError: (error: unknown) => {
       pageLogger.error('保存设置失败:', error as Error);
       const errorMsg = error instanceof Error ? error.message : '未知错误';
       MessageManager.error('保存设置失败: ' + errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   // 备份数据
-  const handleBackup = async () => {
-    try {
-      setLoading(true);
-      const response = await systemService.backupSystem();
+  const backupMutation = useMutation({
+    mutationFn: async () => {
+      return await systemService.backupSystem();
+    },
+    onSuccess: response => {
       MessageManager.success('数据备份成功');
-      // 创建下载链接
-      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(response, null, 2)], {
+        type: 'application/json',
+      });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+      anchor.click();
       window.URL.revokeObjectURL(url);
-    } catch (error: unknown) {
+    },
+    onError: (error: unknown) => {
       pageLogger.error('数据备份失败:', error as Error);
       const errorMsg = error instanceof Error ? error.message : '未知错误';
       MessageManager.error('数据备份失败: ' + errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   // 恢复数据
-  const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      await systemService.restoreSystem(file);
+  const restoreMutation = useMutation({
+    mutationFn: async (file: File) => {
+      return await systemService.restoreSystem(file);
+    },
+    onSuccess: () => {
       MessageManager.success('数据恢复成功，请刷新页面查看最新数据');
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-    } catch (error: unknown) {
+    },
+    onError: (error: unknown) => {
       pageLogger.error('数据恢复失败:', error as Error);
       const errorMsg = error instanceof Error ? error.message : '未知错误';
       MessageManager.error('数据恢复失败: ' + errorMsg);
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const handleSaveSettings = (values: Partial<SystemSettings>) => {
+    updateSettingsMutation.mutate(values);
   };
 
-  useEffect(() => {
-    if (activeTab === 'info') {
-      void fetchSystemInfo();
-    } else if (activeTab === 'settings') {
-      void fetchSettings();
-    }
-  }, [activeTab]);
+  const handleBackup = () => {
+    backupMutation.mutate();
+  };
+
+  const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file == null) return;
+    restoreMutation.mutate(file);
+  };
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -130,7 +156,10 @@ const SystemSettingsPage: React.FC = () => {
 
       <Tabs activeKey={activeTab} onChange={setActiveTab}>
         <TabPane tab="基本设置" key="settings">
-          <Card title="系统基本设置" loading={loading}>
+          <Card
+            title="系统基本设置"
+            loading={isSettingsLoading || updateSettingsMutation.isPending}
+          >
             <Form
               form={form}
               layout="vertical"
@@ -204,7 +233,7 @@ const SystemSettingsPage: React.FC = () => {
               </Form.Item>
 
               <Form.Item>
-                <Button type="primary" htmlType="submit" loading={loading}>
+                <Button type="primary" htmlType="submit" loading={updateSettingsMutation.isPending}>
                   保存设置
                 </Button>
               </Form.Item>
@@ -213,7 +242,7 @@ const SystemSettingsPage: React.FC = () => {
         </TabPane>
 
         <TabPane tab="系统信息" key="info">
-          <Card title="系统信息" loading={loading}>
+          <Card title="系统信息" loading={isInfoLoading}>
             {systemInfo ? (
               <div>
                 <Space direction="vertical" style={{ width: '100%' }}>
@@ -270,7 +299,7 @@ const SystemSettingsPage: React.FC = () => {
                   type="primary"
                   icon={<CloudDownloadOutlined />}
                   onClick={handleBackup}
-                  loading={loading}
+                  loading={backupMutation.isPending}
                 >
                   立即备份
                 </Button>
@@ -296,7 +325,7 @@ const SystemSettingsPage: React.FC = () => {
                   danger
                   icon={<CloudUploadOutlined />}
                   onClick={() => document.getElementById('restore-file-input')?.click()}
-                  loading={loading}
+                  loading={restoreMutation.isPending}
                 >
                   选择备份文件恢复
                 </Button>

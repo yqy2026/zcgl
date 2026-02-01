@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { List, Card, Typography, Tag, Button, Space, Empty, Tabs, Badge, Spin, Modal } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -19,67 +19,74 @@ dayjs.locale('zh-cn');
 import { useNavigate } from 'react-router-dom';
 import { notificationService } from '@/services/notificationService';
 import { Notification, NotificationType, NotificationPriority } from '@/types/notification';
+import { useListData } from '@/hooks/useListData';
 
 const { Text, Paragraph } = Typography;
 
+interface NotificationFilters {
+  type: string;
+}
+
 const NotificationCenter: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('all');
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
 
-  // 加载通知列表
-  const loadNotifications = async (page = 1, type?: string) => {
-    setLoading(true);
-    try {
-      const response = await notificationService.getNotifications({
+  const fetchNotifications = useCallback(
+    async ({
+      page,
+      pageSize,
+      type,
+    }: {
+      page: number;
+      pageSize: number;
+    } & NotificationFilters) => {
+      return await notificationService.getNotifications({
         page,
-        page_size: pagination.pageSize,
+        page_size: pageSize,
         type: type === 'all' ? undefined : type,
       });
+    },
+    []
+  );
 
-      setNotifications(response.items);
-      setPagination({
-        ...pagination,
-        current: response.page,
-        total: response.total,
-      });
-    } catch {
-      // eslint-disable-next-line no-console
-      console.error('加载通知失败');
-      MessageManager.error('加载通知列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleLoadError = useCallback(() => {
+    MessageManager.error('加载通知列表失败');
+  }, []);
+
+  const {
+    data: notifications,
+    loading,
+    pagination,
+    filters,
+    loadList,
+    applyFilters,
+    updatePagination,
+  } = useListData<Notification, NotificationFilters>({
+    fetcher: fetchNotifications,
+    initialFilters: {
+      type: 'all',
+    },
+    initialPageSize: 10,
+    onError: handleLoadError,
+  });
 
   useEffect(() => {
-    loadNotifications(1, activeTab);
-  }, [activeTab]);
+    void loadList();
+  }, [loadList]);
 
   // 处理Tab切换
-  const handleTabChange = (key: string) => {
-    setActiveTab(key);
-    setPagination({ ...pagination, current: 1 });
-  };
+  const handleTabChange = useCallback(
+    (key: string) => {
+      applyFilters({ type: key });
+    },
+    [applyFilters]
+  );
 
   // 标记为已读
   const handleMarkAsRead = async (id: string) => {
     try {
       await notificationService.markAsRead(id);
       MessageManager.success('已标记为已读');
-      // 更新本地状态
-      setNotifications(prev =>
-        prev.map(item =>
-          item.id === id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item
-        )
-      );
-      // 触发全局未读数更新（如果有Context的话）
+      void loadList();
     } catch {
       MessageManager.error('操作失败');
     }
@@ -94,7 +101,7 @@ const NotificationCenter: React.FC = () => {
         try {
           await notificationService.markAllAsRead();
           MessageManager.success('全部已读成功');
-          loadNotifications(1, activeTab);
+          void loadList({ page: 1 });
         } catch {
           MessageManager.error('操作失败');
         }
@@ -112,7 +119,7 @@ const NotificationCenter: React.FC = () => {
         try {
           await notificationService.deleteNotification(id);
           MessageManager.success('删除成功');
-          loadNotifications(pagination.current, activeTab);
+          void loadList();
         } catch {
           MessageManager.error('删除失败');
         }
@@ -187,7 +194,7 @@ const NotificationCenter: React.FC = () => {
         }
       >
         <Tabs
-          activeKey={activeTab}
+          activeKey={filters.type}
           onChange={handleTabChange}
           items={[
             { label: '全部消息', key: 'all' },
@@ -206,8 +213,12 @@ const NotificationCenter: React.FC = () => {
           <List
             dataSource={notifications}
             pagination={{
-              ...pagination,
-              onChange: page => loadNotifications(page, activeTab),
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: (page, pageSize) => {
+                updatePagination({ current: page, pageSize });
+              },
             }}
             locale={{ emptyText: <Empty description="暂无通知" /> }}
             renderItem={item => (

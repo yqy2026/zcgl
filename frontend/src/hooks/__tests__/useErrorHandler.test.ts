@@ -15,8 +15,15 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('@/components/Feedback/SuccessNotification', () => ({
   default: {
-    error: vi.fn(),
-    warning: vi.fn(),
+    notify: vi.fn(),
+    warning: {
+      permission: vi.fn(),
+    },
+    error: {
+      network: vi.fn(),
+      server: vi.fn(),
+      validation: vi.fn(),
+    },
     success: vi.fn(),
   },
 }));
@@ -43,7 +50,6 @@ describe('useErrorHandler', () => {
       const { result } = renderHook(() => useErrorHandler());
 
       expect(result.current.handleApiError).toBeDefined();
-      expect(result.current.handleError).toBeDefined();
       expect(typeof result.current.handleApiError).toBe('function');
     });
 
@@ -73,7 +79,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
 
     it('应该处理 401 错误', () => {
@@ -90,6 +96,7 @@ describe('useErrorHandler', () => {
         });
       });
 
+      expect(SuccessNotification.warning.permission).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/login');
     });
 
@@ -105,7 +112,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
 
     it('应该处理 404 错误', () => {
@@ -120,7 +127,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
 
     it('应该处理 422 错误', () => {
@@ -135,7 +142,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
 
     it('应该处理 429 错误', () => {
@@ -150,7 +157,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
 
     it('应该处理 500 错误', () => {
@@ -165,7 +172,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.error.server).toHaveBeenCalled();
     });
 
     it('应该处理 502 错误', () => {
@@ -180,7 +187,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.error.server).toHaveBeenCalled();
     });
 
     it('应该处理 503 错误', () => {
@@ -195,7 +202,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.error.server).toHaveBeenCalled();
     });
 
     it('应该处理网络错误（无响应）', () => {
@@ -208,7 +215,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.error.network).toHaveBeenCalled();
     });
 
     it('应该处理未知错误', () => {
@@ -220,29 +227,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
-    });
-  });
-
-  describe('handleError', () => {
-    it('应该处理普通 Error 对象', () => {
-      const { result } = renderHook(() => useErrorHandler());
-
-      act(() => {
-        result.current.handleError(new Error('测试错误'));
-      });
-
-      expect(SuccessNotification.error).toHaveBeenCalled();
-    });
-
-    it('应该处理字符串错误', () => {
-      const { result } = renderHook(() => useErrorHandler());
-
-      act(() => {
-        result.current.handleError('字符串错误消息');
-      });
-
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
   });
 
@@ -258,7 +243,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).not.toHaveBeenCalled();
+      expect(SuccessNotification.notify).not.toHaveBeenCalled();
     });
 
     it('redirectOnError=false 时不重定向', () => {
@@ -289,9 +274,9 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalledWith(
+      expect(SuccessNotification.notify).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.stringContaining('自定义错误消息'),
+          description: expect.stringContaining('自定义错误消息'),
         })
       );
     });
@@ -308,7 +293,7 @@ describe('useErrorHandler', () => {
         });
       });
 
-      expect(SuccessNotification.error).toHaveBeenCalled();
+      expect(SuccessNotification.notify).toHaveBeenCalled();
     });
   });
 });

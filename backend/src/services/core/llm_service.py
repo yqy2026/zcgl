@@ -13,11 +13,11 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
-from ...core.exception_handler import ConfigurationError
 from ...constants.timeout_constants import (
     DEFAULT_LLM_COMPAT_TIMEOUT_SECONDS,
     DEFAULT_LLM_TIMEOUT_SECONDS,
 )
+from ...core.exception_handler import ConfigurationError
 from ..document.config import LLMProvider
 
 logger = logging.getLogger(__name__)

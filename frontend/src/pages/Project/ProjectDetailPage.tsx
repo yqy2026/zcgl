@@ -5,7 +5,7 @@
  * @module pages/Project
  */
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Typography,
   Button,
@@ -16,7 +16,6 @@ import {
   Alert,
   Card,
   Descriptions,
-  Table,
   Tag,
   Statistic,
   Badge,
@@ -35,6 +34,8 @@ import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
 import { COLORS } from '@/styles/colorMap';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 const { Title, Text } = Typography;
 
@@ -123,12 +124,28 @@ const ProjectDetailPage: React.FC = () => {
   ];
 
   // 计算统计数据
-  const assets = assetsData?.items || [];
+  const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
   const totalAssets = assets.length;
   const totalRentableArea = assets.reduce((sum, a) => sum + (a.rentable_area ?? 0), 0);
   const totalRentedArea = assets.reduce((sum, a) => sum + (a.rented_area ?? 0), 0);
   const occupancyRate =
     totalRentableArea > 0 ? ((totalRentedArea / totalRentableArea) * 100).toFixed(1) : '0';
+
+  const {
+    data: assetRows,
+    loading: assetTableLoading,
+    pagination: assetPagination,
+    loadList: loadAssetList,
+    updatePagination: updateAssetPagination,
+  } = useArrayListData<Asset, Record<string, never>>({
+    items: assets,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadAssetList({ page: 1 });
+  }, [assets, loadAssetList]);
 
   // 加载状态
   if (projectLoading) {
@@ -275,15 +292,16 @@ const ProjectDetailPage: React.FC = () => {
           </Space>
         }
       >
-        <Table
+        <TableWithPagination
           columns={assetColumns}
-          dataSource={assets}
+          dataSource={assetRows}
           rowKey="id"
-          loading={assetsLoading}
-          pagination={{
-            pageSize: 10,
+          loading={assetsLoading || assetTableLoading}
+          paginationState={assetPagination}
+          onPageChange={updateAssetPagination}
+          paginationProps={{
             showSizeChanger: true,
-            showTotal: total => `共 ${total} 条`,
+            showTotal: (total: number) => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联资产' }}
         />

@@ -28,8 +28,8 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
             {(dimension === 'count'
               ? (analyticsData.property_nature_distribution ?? [])
               : (analyticsData.property_nature_area_distribution ?? [])
-            ).map((item, index) => (
-              <div key={index} className={styles.distributionItem}>
+            ).map(item => (
+              <div key={item.name} className={styles.distributionItem}>
                 <span className={styles.itemName}>
                   {item.name}
                 </span>
@@ -52,8 +52,8 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
             {(dimension === 'count'
               ? (analyticsData.ownership_status_distribution ?? [])
               : (analyticsData.ownership_status_area_distribution ?? [])
-            ).map((item, index) => (
-              <div key={index} className={styles.distributionItem}>
+            ).map(item => (
+              <div key={(item as { status: string }).status} className={styles.distributionItem}>
                 <span className={styles.itemName}>
                   {(item as { status: string }).status}
                 </span>
@@ -76,8 +76,8 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
             {(dimension === 'count'
               ? (analyticsData.usage_status_distribution ?? [])
               : (analyticsData.usage_status_area_distribution ?? [])
-            ).map((item, index) => (
-              <div key={index} className={styles.distributionItem}>
+            ).map(item => (
+              <div key={(item as { status: string }).status} className={styles.distributionItem}>
                 <span className={styles.itemName}>
                   {(item as { status: string }).status}
                 </span>
@@ -100,15 +100,19 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
             {(dimension === 'count'
               ? (analyticsData.business_category_distribution ?? [])
               : (analyticsData.business_category_area_distribution ?? [])
-            ).map((item, index) => {
+            ).map(item => {
               const isCount = dimension === 'count';
               const countItem = isCount ? item : null;
               const areaItem = isCount
                 ? null
                 : (item as BusinessCategoryAreaDistribution);
+              const itemKey =
+                isCount && countItem
+                  ? countItem.category
+                  : (areaItem?.category ?? '');
 
               return (
-                <div key={index} className={styles.distributionItem}>
+                <div key={itemKey} className={styles.distributionItem}>
                   <span className={styles.itemName}>
                     {isCount && countItem
                       ? countItem.category

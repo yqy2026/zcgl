@@ -13,6 +13,7 @@
 
 # Optional service imports; log failures for visibility during startup.
 import logging
+from typing import Any
 
 # Core Services
 __all__: list[str] = []
@@ -23,14 +24,22 @@ def _log_import_error(service_name: str) -> None:
     logger.warning(f"Service import failed: {service_name}", exc_info=True)
 
 
+AuthService: Any
+SecurityService: Any
+ErrorRecoveryEngine: Any
+
 try:
-    from .auth_service import AuthService as AuthService
+    from .auth_service import AuthService as _AuthService
+
+    AuthService = _AuthService
 
     __all__.append("AuthService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService as AuthService  # type: ignore[no-redef]
+        from ..auth_service import AuthService as _LegacyAuthService
+
+        AuthService = _LegacyAuthService
 
         __all__.append("AuthService")
     except Exception:  # nosec - B110: Intentional graceful degradation
@@ -46,35 +55,42 @@ except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("core.audit_service.AuditService")
 
 try:
-    from .security_service import SecurityService as SecurityService
+    from .security_service import SecurityService as _SecurityService
+
+    SecurityService = _SecurityService
 
     __all__.append("SecurityService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
-    class SecurityService:  # type: ignore[no-redef]
+    class _SecurityServiceStub:
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
+    SecurityService = _SecurityServiceStub
     __all__.append("SecurityService")
     _log_import_error("core.security_service.SecurityService (stubbed)")
 
 try:
-    from .error_recovery_service import ErrorRecoveryEngine as ErrorRecoveryEngine
+    from .error_recovery_service import ErrorRecoveryEngine as _ErrorRecoveryEngine
+
+    ErrorRecoveryEngine = _ErrorRecoveryEngine
 
     __all__.append("ErrorRecoveryEngine")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
         from ..error_recovery_service import (
-            ErrorRecoveryEngine as ErrorRecoveryEngine,
+            ErrorRecoveryEngine as _LegacyErrorRecoveryEngine,
         )
 
+        ErrorRecoveryEngine = _LegacyErrorRecoveryEngine
         __all__.append("ErrorRecoveryEngine")
     except Exception:  # nosec - B110: Intentional graceful degradation
         # Provide a minimal stub to ensure import success
-        class ErrorRecoveryEngine:  # type: ignore[no-redef]
+        class _ErrorRecoveryEngineStub:
             def __init__(self, *args: object, **kwargs: object) -> None:
                 pass
 
+        ErrorRecoveryEngine = _ErrorRecoveryEngineStub
         __all__.append("ErrorRecoveryEngine")
         _log_import_error("core.error_recovery_service.ErrorRecoveryEngine (stubbed)")

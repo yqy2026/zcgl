@@ -36,10 +36,10 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
       </Title>
 
       <div style={{ marginBottom: '24px' }}>
-        {propertyTypes.map((item, index) => {
+        {propertyTypes.map(item => {
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
           return (
-            <div key={index} style={{ marginBottom: '12px' }}>
+            <div key={item.name} style={{ marginBottom: '12px' }}>
               <Row justify="space-between" align="middle" style={{ marginBottom: '4px' }}>
                 <Col>
                   <Space>
@@ -75,8 +75,8 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
       </Title>
 
       <div>
-        {data?.occupancyTrend?.map((item, index) => (
-          <div key={index} style={{ marginBottom: '8px' }}>
+        {data?.occupancyTrend?.map(item => (
+          <div key={item.month} style={{ marginBottom: '8px' }}>
             <Row justify="space-between" align="middle">
               <Col>
                 <Text>{item.month}</Text>

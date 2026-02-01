@@ -381,22 +381,9 @@ class SecurityEventLogger:
                 should_close = True
 
             try:
-                # Calculate time window
-                window_start = datetime.now() - timedelta(
-                    minutes=self.alert_window_minutes
+                count = self._count_events_in_window(
+                    db, ip=ip, event_type=event_type
                 )
-
-                # Query events within window for this IP and event type
-                count = (
-                    db.query(SecurityEvent)
-                    .filter(
-                        SecurityEvent.ip_address == ip,
-                        SecurityEvent.event_type == event_type.value,
-                        SecurityEvent.created_at >= window_start,
-                    )
-                    .count()
-                )
-
                 return count >= threshold
 
             finally:
@@ -439,23 +426,9 @@ class SecurityEventLogger:
                 should_close = True
 
             try:
-                # Calculate time window
-                window_start = datetime.now() - timedelta(
-                    minutes=self.alert_window_minutes
+                return self._count_events_in_window(
+                    db, ip=ip, event_type=event_type
                 )
-
-                # Query events within window for this IP and event type
-                count = (
-                    db.query(SecurityEvent)
-                    .filter(
-                        SecurityEvent.ip_address == ip,
-                        SecurityEvent.event_type == event_type.value,
-                        SecurityEvent.created_at >= window_start,
-                    )
-                    .count()
-                )
-
-                return count
 
             finally:
                 if should_close:
@@ -464,6 +437,24 @@ class SecurityEventLogger:
         except Exception as e:
             logger.error(f"Failed to get event count: {e}")
             return 0
+
+    def _count_events_in_window(
+        self,
+        db: Session,
+        *,
+        ip: str,
+        event_type: SecurityEventType,
+    ) -> int:
+        window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
+        return (
+            db.query(SecurityEvent)
+            .filter(
+                SecurityEvent.ip_address == ip,
+                SecurityEvent.event_type == event_type.value,
+                SecurityEvent.created_at >= window_start,
+            )
+            .count()
+        )
 
 
 # Global instance

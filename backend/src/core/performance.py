@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 """
 性能优化模块
@@ -263,7 +263,9 @@ class QueryOptimizer:
             return (
                 self.db.query(Asset)
                 .filter(Asset.id.in_(asset_ids))
-                .update(update_data, synchronize_session=False)  # type: ignore[arg-type]
+                .update(
+                    cast(dict[Any, Any], update_data), synchronize_session=False
+                )
             )
 
     def optimize_statistics_query(self) -> Any:
@@ -354,7 +356,7 @@ class DatabaseOptimizer:
 
         for index in indexes:  # pragma: no cover
             try:  # pragma: no cover
-                index.create(self.db.bind)  # type: ignore[arg-type]  # pragma: no cover
+                index.create(self.db.get_bind())  # pragma: no cover
                 logger.info(f"Created index: {index.name}")  # pragma: no cover
             except Exception as e:  # pragma: no cover
                 logger.warning(

@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.core.exception_handler import bad_request
 from src.database import get_db
 from src.middleware.auth import get_current_active_user
@@ -26,7 +27,6 @@ from src.schemas.statistics import (
 )
 from src.services.analytics import OccupancyService
 from src.utils.cache_manager import cache_statistics
-from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def get_overall_occupancy_rate(
     )
 
 
-@cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存  # type: ignore[misc]
+@cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存
 @router.get(
     "/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse
 )

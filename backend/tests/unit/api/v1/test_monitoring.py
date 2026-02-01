@@ -27,29 +27,27 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Create mock modules BEFORE importing
-permission_mock = MagicMock()
-permission_mock.permission_required = lambda *args, **kwargs: lambda f: f
-sys.modules["src.security.permissions"] = permission_mock
-
-auth_mock = MagicMock()
-auth_mock.get_current_user = lambda: MagicMock(
-    id="admin-id", username="admin", role="admin", is_active=True
-)
-sys.modules["src.middleware.auth"] = auth_mock
-
 from fastapi import HTTPException, status
 
 pytestmark = pytest.mark.api
 
-try:
-    importlib.import_module("src.api.v1.monitoring")
-except ModuleNotFoundError:
-    pytest.skip(
-        "monitoring API module not available in current codebase",
-        allow_module_level=True,
+
+@pytest.fixture(autouse=True)
+def _mock_monitoring_dependencies(monkeypatch):
+    permission_mock = MagicMock()
+    permission_mock.permission_required = lambda *args, **kwargs: lambda f: f
+    auth_mock = MagicMock()
+    auth_mock.get_current_user = lambda: MagicMock(
+        id="admin-id", username="admin", role="admin", is_active=True
     )
+    monkeypatch.setitem(sys.modules, "src.security.permissions", permission_mock)
+    monkeypatch.setitem(sys.modules, "src.middleware.auth", auth_mock)
+
+    try:
+        importlib.import_module("src.api.v1.monitoring")
+    except ModuleNotFoundError:
+        pytest.skip("monitoring API module not available in current codebase")
+    yield
 
 
 # ============================================================================

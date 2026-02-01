@@ -206,13 +206,14 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
       onSuccess?: (response: unknown) => void,
       onError?: (error: Error) => void
     ) => {
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
       try {
         setUploading(true);
         setUploadProgress(0);
 
         abortControllerRef.current = new AbortController();
 
-        const progressInterval = setInterval(() => {
+        progressInterval = setInterval(() => {
           setUploadProgress(prev => {
             const newProgress = prev + Math.random() * 10;
             return Math.min(newProgress, 90);
@@ -225,7 +226,9 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
           abortControllerRef.current.signal
         );
 
-        clearInterval(progressInterval);
+        if (progressInterval !== null) {
+          clearInterval(progressInterval);
+        }
         setUploadProgress(100);
 
         if (response.success) {
@@ -276,6 +279,9 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
         onUploadError(errorMessage);
         MessageManager.error(errorMessage);
       } finally {
+        if (progressInterval !== null) {
+          clearInterval(progressInterval);
+        }
         setTimeout(() => {
           setUploading(false);
           setUploadProgress(0);

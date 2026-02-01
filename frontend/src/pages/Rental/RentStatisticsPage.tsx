@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   Row,
   Col,
   Statistic,
-  Table,
   DatePicker,
   Select,
   Button,
@@ -13,7 +12,9 @@ import {
   Progress,
   Space,
   Typography,
+  Table,
 } from 'antd';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { MessageManager } from '@/utils/messageManager';
 import { Pie, Column, Line } from '@ant-design/plots';
 import {
@@ -28,6 +29,8 @@ import 'dayjs/locale/zh-cn';
 import type { ColumnsType } from 'antd/es/table';
 
 import { rentContractService } from '@/services/rentContractService';
+import { useArrayListData } from '@/hooks/useArrayListData';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 import {
   OwnershipRentStatistics,
@@ -71,73 +74,111 @@ interface LineChartDatum {
   rate: number;
 }
 
+interface RentStatisticsData {
+  overview: RentStatisticsOverview;
+  ownershipData: OwnershipRentStatistics[];
+  assetData: AssetRentStatistics[];
+  monthlyData: MonthlyRentStatistics[];
+}
+
 const RentStatisticsPage: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
     dayjs().startOf('year'),
     dayjs().endOf('year'),
   ]);
-  const [overviewData, setOverviewData] = useState<RentStatisticsOverview | null>(null);
-  const [ownershipStats, setOwnershipStats] = useState<OwnershipRentStatistics[]>([]);
-  const [assetStats, setAssetStats] = useState<AssetRentStatistics[]>([]);
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyRentStatistics[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(dayjs().year());
 
-  // 获取统计数据
-  const fetchStatistics = async () => {
-    setLoading(true);
-    try {
-      const [startDate, endDate] = dateRange;
-      const startStr = startDate.format('YYYY-MM-DD');
-      const endStr = endDate.format('YYYY-MM-DD');
+  const startDateStr = useMemo(
+    () => dateRange[0].format('YYYY-MM-DD'),
+    [dateRange]
+  );
+  const endDateStr = useMemo(
+    () => dateRange[1].format('YYYY-MM-DD'),
+    [dateRange]
+  );
 
-      // 并行获取所有统计数据
-      const [overview, ownershipData, assetData, monthlyData] = await Promise.all([
-        rentContractService.getStatisticsOverview({
-          start_date: startStr,
-          end_date: endStr,
-        }),
-        rentContractService.getOwnershipStatistics({
-          start_date: startStr,
-          end_date: endStr,
-        }),
-        rentContractService.getAssetStatistics({
-          start_date: startStr,
-          end_date: endStr,
-        }),
-        rentContractService.getMonthlyStatistics({
-          year: selectedYear,
-        }),
-      ]);
+  const statisticsQuery = useQuery<RentStatisticsData, Error>({
+    queryKey: [
+      'rent-statistics',
+      { start: startDateStr, end: endDateStr, year: selectedYear },
+    ],
+    queryFn: async () => {
+      try {
+        const [overview, ownershipData, assetData, monthlyData] =
+          await Promise.all([
+            rentContractService.getStatisticsOverview({
+              start_date: startDateStr,
+              end_date: endDateStr,
+            }),
+            rentContractService.getOwnershipStatistics({
+              start_date: startDateStr,
+              end_date: endDateStr,
+            }),
+            rentContractService.getAssetStatistics({
+              start_date: startDateStr,
+              end_date: endDateStr,
+            }),
+            rentContractService.getMonthlyStatistics({
+              year: selectedYear,
+            }),
+          ]);
 
-      setOverviewData(overview);
-      setOwnershipStats(ownershipData);
-      setAssetStats(assetData);
-      setMonthlyStats(monthlyData);
-    } catch (error) {
-      pageLogger.error('Statistics fetch error:', error as Error);
-      MessageManager.error('获取统计数据失败');
-      setOverviewData(null);
-      setOwnershipStats([]);
-      setAssetStats([]);
-      setMonthlyStats([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+        return {
+          overview,
+          ownershipData,
+          assetData,
+          monthlyData,
+        };
+      } catch (error) {
+        pageLogger.error('Statistics fetch error:', error as Error);
+        throw error;
+      }
+    },
+  });
 
   useEffect(() => {
-    void fetchStatistics();
-  }, [dateRange, selectedYear]);
+    if (statisticsQuery.isError === true) {
+      MessageManager.error('获取统计数据失败');
+    }
+  }, [statisticsQuery.isError]);
+
+  const overviewData: RentStatisticsOverview | null =
+    statisticsQuery.data?.overview ?? null;
+  const ownershipStats: OwnershipRentStatistics[] =
+    statisticsQuery.data?.ownershipData ?? [];
+  const assetStats: AssetRentStatistics[] = useMemo(
+    () => statisticsQuery.data?.assetData ?? [],
+    [statisticsQuery.data?.assetData]
+  );
+  const monthlyStats: MonthlyRentStatistics[] =
+    statisticsQuery.data?.monthlyData ?? [];
+  const isStatisticsLoading = statisticsQuery.isLoading || statisticsQuery.isFetching;
+
+  const {
+    data: assetRows,
+    loading: assetTableLoading,
+    pagination: assetPagination,
+    loadList: loadAssetList,
+    updatePagination: updateAssetPagination,
+  } = useArrayListData<AssetRentStatistics, Record<string, never>>({
+    items: assetStats,
+    initialFilters: {},
+    initialPageSize: 10,
+  });
+
+  useEffect(() => {
+    void loadAssetList({ page: 1 });
+  }, [assetStats, loadAssetList]);
 
   // 导出统计数据
-  const exportStatistics = async () => {
-    try {
-      const blob = await rentContractService.exportStatistics({
-        start_date: dateRange[0].format('YYYY-MM-DD'),
-        end_date: dateRange[1].format('YYYY-MM-DD'),
+  const exportStatisticsMutation = useMutation({
+    mutationFn: async () => {
+      return await rentContractService.exportStatistics({
+        start_date: startDateStr,
+        end_date: endDateStr,
       });
-
+    },
+    onSuccess: blob => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -148,11 +189,12 @@ const RentStatisticsPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       MessageManager.success('导出成功');
-    } catch (error) {
+    },
+    onError: (error: unknown) => {
       pageLogger.error('Export failed:', error as Error);
       MessageManager.error('导出失败');
-    }
-  };
+    },
+  });
 
   // 权属方统计表格列
   const ownershipColumns: ColumnsType<OwnershipRentStatistics> = [
@@ -413,18 +455,18 @@ const RentStatisticsPage: React.FC = () => {
       children: (
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
-            <Card title="权属方租金分布" loading={loading}>
+            <Card title="权属方租金分布" loading={isStatisticsLoading}>
               <Pie {...ownershipPieConfig} height={300} />
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title="权属方收缴情况" loading={loading}>
+            <Card title="权属方收缴情况" loading={isStatisticsLoading}>
               <Table
                 columns={ownershipColumns}
                 dataSource={ownershipStats}
                 rowKey="ownership_id"
                 pagination={false}
-                loading={loading}
+                loading={isStatisticsLoading}
                 scroll={{ x: 800 }}
               />
             </Card>
@@ -438,17 +480,18 @@ const RentStatisticsPage: React.FC = () => {
       children: (
         <Row gutter={[16, 16]}>
           <Col xs={24}>
-            <Card title="资产租金统计" loading={loading}>
-              <Table
+            <Card title="资产租金统计" loading={isStatisticsLoading}>
+              <TableWithPagination
                 columns={assetColumns}
-                dataSource={assetStats}
+                dataSource={assetRows}
                 rowKey="asset_id"
-                pagination={{
-                  pageSize: 10,
+                loading={isStatisticsLoading || assetTableLoading}
+                paginationState={assetPagination}
+                onPageChange={updateAssetPagination}
+                paginationProps={{
                   showSizeChanger: true,
                   showQuickJumper: true,
                 }}
-                loading={loading}
                 scroll={{ x: 1000 }}
               />
             </Card>
@@ -462,12 +505,12 @@ const RentStatisticsPage: React.FC = () => {
       children: (
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={16}>
-            <Card title="月度租金趋势" loading={loading}>
+            <Card title="月度租金趋势" loading={isStatisticsLoading}>
               <Column {...monthlyBarConfig} height={400} />
             </Card>
           </Col>
           <Col xs={24} lg={8}>
-            <Card title="收缴率趋势" loading={loading}>
+            <Card title="收缴率趋势" loading={isStatisticsLoading}>
               <Line {...monthlyLineConfig} height={400} />
             </Card>
           </Col>
@@ -491,7 +534,9 @@ const RentStatisticsPage: React.FC = () => {
                 <RangePicker
                   value={dateRange}
                   onChange={dates => {
-                    if (dates) setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs]);
+                    if (dates != null) {
+                      setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs]);
+                    }
                   }}
                   style={{ width: 300 }}
                 />
@@ -505,12 +550,16 @@ const RentStatisticsPage: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<ReloadOutlined />}
-                  onClick={fetchStatistics}
-                  loading={loading}
+                  onClick={() => void statisticsQuery.refetch()}
+                  loading={statisticsQuery.isFetching}
                 >
                   刷新
                 </Button>
-                <Button icon={<DownloadOutlined />} onClick={exportStatistics}>
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={() => exportStatisticsMutation.mutate()}
+                  loading={exportStatisticsMutation.isPending}
+                >
                   导出
                 </Button>
               </Space>

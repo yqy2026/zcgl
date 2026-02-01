@@ -227,7 +227,40 @@ if (import.meta.hot) {
 
 // 缓存装饰器
 export function cached(options: CacheOptions = {}) {
-  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (...decoratorArgs: unknown[]) {
+    const [targetOrValue, propertyKeyOrContext, descriptor] = decoratorArgs as [
+      unknown,
+      unknown,
+      PropertyDescriptor | undefined
+    ];
+
+    if (descriptor === undefined && propertyKeyOrContext != null && typeof propertyKeyOrContext === 'object') {
+      const context = propertyKeyOrContext as { kind?: string; name?: string | symbol };
+      if (context.kind !== 'method') {
+        return targetOrValue;
+      }
+      const originalMethod = targetOrValue as (...args: unknown[]) => Promise<unknown>;
+      return async function (this: unknown, ...args: unknown[]) {
+        const className =
+          (this as { constructor?: { name?: string } } | null)?.constructor?.name ?? 'UnknownClass';
+        const cacheKey = `${className}.${String(context.name ?? 'unknown')}`;
+        const params = args.length > 0 ? args[0] : undefined;
+
+        if ((options.force ?? false) || !cacheManager.has(cacheKey, params)) {
+          const result = await originalMethod.apply(this, args);
+          cacheManager.set(cacheKey, result, options, params);
+          return result;
+        }
+
+        return cacheManager.get(cacheKey, params);
+      };
+    }
+
+    const target = targetOrValue;
+    const propertyKey = propertyKeyOrContext as string;
+    if (descriptor === undefined) {
+      return undefined;
+    }
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: unknown[]) {
@@ -236,7 +269,6 @@ export function cached(options: CacheOptions = {}) {
       const cacheKey = `${className}.${propertyKey}`;
       const params = args.length > 0 ? args[0] : undefined;
 
-      // 如果强制刷新或没有缓存，执行原方法
       if ((options.force ?? false) || !cacheManager.has(cacheKey, params)) {
         const result = await (originalMethod as (...args: unknown[]) => Promise<unknown>).apply(
           this,
@@ -246,7 +278,6 @@ export function cached(options: CacheOptions = {}) {
         return result;
       }
 
-      // 返回缓存结果
       return cacheManager.get(cacheKey, params);
     };
 
@@ -256,7 +287,31 @@ export function cached(options: CacheOptions = {}) {
 
 // 缓存失效装饰器
 export function invalidateCache(tags: string[]) {
-  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (...decoratorArgs: unknown[]) {
+    const [targetOrValue, propertyKeyOrContext, descriptor] = decoratorArgs as [
+      unknown,
+      unknown,
+      PropertyDescriptor | undefined
+    ];
+
+    if (descriptor === undefined && propertyKeyOrContext != null && typeof propertyKeyOrContext === 'object') {
+      const context = propertyKeyOrContext as { kind?: string };
+      if (context.kind !== 'method') {
+        return targetOrValue;
+      }
+      const originalMethod = targetOrValue as (...args: unknown[]) => Promise<unknown>;
+      return async function (this: unknown, ...args: unknown[]) {
+        const result = await originalMethod.apply(this, args);
+        tags.forEach(tag => {
+          cacheManager.deleteByTag(tag);
+        });
+        return result;
+      };
+    }
+
+    if (descriptor === undefined) {
+      return undefined;
+    }
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: unknown[]) {
@@ -265,7 +320,6 @@ export function invalidateCache(tags: string[]) {
         args
       );
 
-      // 执行成功后失效相关缓存
       tags.forEach(tag => {
         cacheManager.deleteByTag(tag);
       });

@@ -27,12 +27,50 @@ class ContactCRUD:
             }
         )
 
-    def get(self, db: Session, id: str) -> Contact | None:
-        """根据ID获取联系人 - 解密敏感字段"""
-        obj = db.query(Contact).filter(Contact.id == id).first()
+    def _build_entity_query(
+        self,
+        db: Session,
+        *,
+        entity_type: str,
+        entity_id: str | None = None,
+        entity_ids: list[str] | None = None,
+        is_active: bool | None = True,
+        is_primary: bool | None = None,
+        contact_type: ContactType | None = None,
+    ):
+        query = db.query(Contact).filter(Contact.entity_type == entity_type)
+
+        if entity_id is not None:
+            query = query.filter(Contact.entity_id == entity_id)
+
+        if entity_ids is not None:
+            query = query.filter(Contact.entity_id.in_(entity_ids))
+
+        if is_active is not None:
+            query = query.filter(Contact.is_active.is_(is_active))
+
+        if is_primary is not None:
+            query = query.filter(Contact.is_primary.is_(is_primary))
+
+        if contact_type:
+            query = query.filter(Contact.contact_type == contact_type)
+
+        return query
+
+    def _decrypt_contact(self, obj: Contact | None) -> Contact | None:
         if obj is not None:
             self.sensitive_data_handler.decrypt_data(obj.__dict__)
         return obj
+
+    def _decrypt_contacts(self, results: list[Contact]) -> list[Contact]:
+        for contact in results:
+            self.sensitive_data_handler.decrypt_data(contact.__dict__)
+        return results
+
+    def get(self, db: Session, id: str) -> Contact | None:
+        """根据ID获取联系人 - 解密敏感字段"""
+        obj = db.query(Contact).filter(Contact.id == id).first()
+        return self._decrypt_contact(obj)
 
     def get_multi(
         self,
@@ -43,10 +81,11 @@ class ContactCRUD:
         limit: int = 100,
     ) -> tuple[list[Contact], int]:
         """获取指定实体的所有联系人 - 解密敏感字段"""
-        query = db.query(Contact).filter(
-            Contact.entity_type == entity_type,
-            Contact.entity_id == entity_id,
-            Contact.is_active.is_(True),
+        query = self._build_entity_query(
+            db,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            is_active=True,
         )
 
         total = query.count()
@@ -57,29 +96,23 @@ class ContactCRUD:
             .all()
         )
 
-        # 解密敏感字段
-        for contact in contacts:
-            self.sensitive_data_handler.decrypt_data(contact.__dict__)
-
-        return contacts, total
+        return self._decrypt_contacts(contacts), total
 
     def get_primary(
         self, db: Session, entity_type: str, entity_id: str
     ) -> Contact | None:
         """获取指定实体的主要联系人 - 解密敏感字段"""
         obj = (
-            db.query(Contact)
-            .filter(
-                Contact.entity_type == entity_type,
-                Contact.entity_id == entity_id,
-                Contact.is_primary.is_(True),
-                Contact.is_active.is_(True),
+            self._build_entity_query(
+                db,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                is_active=True,
+                is_primary=True,
             )
             .first()
         )
-        if obj is not None:
-            self.sensitive_data_handler.decrypt_data(obj.__dict__)
-        return obj
+        return self._decrypt_contact(obj)
 
     def create(self, db: Session, obj_in: dict[str, Any]) -> Contact:
         """创建联系人 - 加密敏感字段"""
@@ -151,22 +184,15 @@ class ContactCRUD:
         contact_type: ContactType | None = None,
     ) -> list[Contact]:
         """批量获取联系人 - 解密敏感字段"""
-        query = db.query(Contact).filter(
-            Contact.entity_type == entity_type,
-            Contact.entity_id.in_(entity_ids),
-            Contact.is_active.is_(True),
+        query = self._build_entity_query(
+            db,
+            entity_type=entity_type,
+            entity_ids=entity_ids,
+            is_active=True,
+            contact_type=contact_type,
         )
-
-        if contact_type:
-            query = query.filter(Contact.contact_type == contact_type)
-
         results = query.all()
-
-        # 解密敏感字段
-        for contact in results:
-            self.sensitive_data_handler.decrypt_data(contact.__dict__)
-
-        return results
+        return self._decrypt_contacts(results)
 
 
 contact_crud = ContactCRUD()

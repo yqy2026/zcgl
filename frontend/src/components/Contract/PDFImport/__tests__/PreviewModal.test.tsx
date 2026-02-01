@@ -69,7 +69,7 @@ describe('PreviewModal', () => {
     it('点击关闭按钮调用 setShowPreviewModal(false)', () => {
       render(<PreviewModal />);
 
-      const closeButton = screen.getByText('关闭');
+      const closeButton = screen.getByRole('button', { name: /关\s*闭/ });
       fireEvent.click(closeButton);
 
       expect(mockSetShowPreviewModal).toHaveBeenCalledWith(false);

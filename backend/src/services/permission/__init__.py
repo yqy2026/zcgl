@@ -1,5 +1,6 @@
 # Permission Management Services
 import logging
+from typing import Any
 
 __all__: list[str] = []
 logger = logging.getLogger(__name__)
@@ -9,14 +10,20 @@ def _log_import_error(service_name: str) -> None:
     logger.warning(f"Service import failed: {service_name}", exc_info=True)
 
 
+RBACService: Any
+
 try:
-    from .rbac_service import RBACService as RBACService
+    from .rbac_service import RBACService as _RBACService
+
+    RBACService = _RBACService
 
     __all__.append("RBACService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim if available
     try:
-        from ..rbac_service import RBACService as RBACService  # type: ignore
+        from ..rbac_service import RBACService as _LegacyRBACService
+
+        RBACService = _LegacyRBACService
 
         __all__.append("RBACService")
     except Exception:  # nosec - B110: Intentional graceful degradation

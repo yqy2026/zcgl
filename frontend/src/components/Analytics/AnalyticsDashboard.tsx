@@ -335,8 +335,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <>
           {/* 关键指标概览 */}
           <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-            {keyMetrics.map((metric, index) => (
-              <Col xs={24} sm={6} key={index}>
+            {keyMetrics.map(metric => (
+              <Col xs={24} sm={6} key={metric.title}>
                 <StatisticCard
                   title={metric.title}
                   value={metric.value}
@@ -363,8 +363,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
           {/* 财务指标 */}
           <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-            {financialMetrics.map((metric, index) => (
-              <Col xs={24} sm={6} key={index}>
+            {financialMetrics.map(metric => (
+              <Col xs={24} sm={6} key={metric.title}>
                 <FinancialStatisticCard
                   title={metric.title}
                   value={metric.value}
