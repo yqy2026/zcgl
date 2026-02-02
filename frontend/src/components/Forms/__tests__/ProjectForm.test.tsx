@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { createMockProject } from '@/test-utils/factories';
 import type { Project } from '@/types/project';
 
@@ -125,7 +125,7 @@ describe('ProjectForm', () => {
 
   describe('渲染测试', () => {
     it('应该正确渲染表单', () => {
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -137,7 +137,7 @@ describe('ProjectForm', () => {
     });
 
     it('应该渲染提交按钮', () => {
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -151,7 +151,7 @@ describe('ProjectForm', () => {
 
   describe('创建模式', () => {
     it('创建模式下表单应为空', () => {
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -171,7 +171,7 @@ describe('ProjectForm', () => {
         })
       );
 
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -198,7 +198,7 @@ describe('ProjectForm', () => {
     });
 
     it('编辑模式下应设置初始值', () => {
-      render(
+      renderWithProviders(
         <ProjectForm
           project={mockProject}
           onSuccess={mockOnSuccess}
@@ -221,7 +221,7 @@ describe('ProjectForm', () => {
         name: '更新后的名称',
       });
 
-      render(
+      renderWithProviders(
         <ProjectForm
           project={mockProject}
           onSuccess={mockOnSuccess}
@@ -240,7 +240,7 @@ describe('ProjectForm', () => {
 
   describe('取消操作', () => {
     it('点击取消应调用 onCancel', () => {
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -261,7 +261,7 @@ describe('ProjectForm', () => {
         new Error('创建失败')
       );
 
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}
@@ -287,7 +287,7 @@ describe('ProjectForm', () => {
         })
       );
 
-      render(
+      renderWithProviders(
         <ProjectForm
           project={null}
           onSuccess={mockOnSuccess}

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import DataTrendCard from '../DataTrendCard';
 
 interface CardMockProps {
@@ -88,7 +88,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
   });
 
   it('应该渲染标题与统计值', () => {
-    render(
+    renderWithProviders(
       <DataTrendCard title="总面积" value={1234.5} precision={1} suffix="㎡" />
     );
 
@@ -100,7 +100,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
   });
 
   it('正向趋势应显示上升图标与正号', () => {
-    render(
+    renderWithProviders(
       <DataTrendCard
         title="出租率"
         value={90}
@@ -114,7 +114,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
   });
 
   it('负向趋势应显示下降图标与负号', () => {
-    render(
+    renderWithProviders(
       <DataTrendCard
         title="出租率"
         value={80}
@@ -127,7 +127,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
   });
 
   it('趋势为0时应显示中性图标', () => {
-    render(
+    renderWithProviders(
       <DataTrendCard
         title="出租率"
         value={80}
@@ -140,7 +140,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
   });
 
   it('应根据颜色和尺寸应用类名', () => {
-    render(
+    renderWithProviders(
       <DataTrendCard
         title="总资产"
         value={100}

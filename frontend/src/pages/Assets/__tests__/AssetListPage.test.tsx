@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -102,7 +102,7 @@ const createTestQueryClient = () =>
 
 const renderWithProviders = () => {
   const queryClient = createTestQueryClient();
-  return render(
+  return renderWithProviders(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <AssetListPage />

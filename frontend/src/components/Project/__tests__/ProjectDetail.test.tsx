@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { useQuery } from '@tanstack/react-query';
 
 // Mock services
@@ -303,25 +303,25 @@ describe('ProjectDetail', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染详情卡片', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('detail-card')).toBeInTheDocument();
     });
 
     it('应该显示项目名称', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByText('测试项目')).toBeInTheDocument();
     });
 
     it('应该显示项目编号', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByText('PROJ-001')).toBeInTheDocument();
     });
 
     it('应该显示项目状态标签', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('tag')).toBeInTheDocument();
     });
@@ -329,13 +329,13 @@ describe('ProjectDetail', () => {
 
   describe('项目信息', () => {
     it('应该显示描述信息', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('descriptions')).toBeInTheDocument();
     });
 
     it('应该显示项目类型', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByText('商业')).toBeInTheDocument();
     });
@@ -343,19 +343,19 @@ describe('ProjectDetail', () => {
 
   describe('统计数据', () => {
     it('应该显示总面积统计', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('statistic-总面积')).toBeInTheDocument();
     });
 
     it('应该显示已出租面积', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('statistic-已出租面积')).toBeInTheDocument();
     });
 
     it('应该显示出租率进度条', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('progress')).toBeInTheDocument();
     });
@@ -363,14 +363,14 @@ describe('ProjectDetail', () => {
 
   describe('操作按钮', () => {
     it('应该显示编辑按钮', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByText('编辑')).toBeInTheDocument();
     });
 
     it('点击编辑按钮应该触发onEdit', () => {
       const handleEdit = vi.fn();
-      render(<ProjectDetail {...defaultProps} onEdit={handleEdit} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} onEdit={handleEdit} />);
 
       const editButton = screen.getByText('编辑');
       fireEvent.click(editButton);
@@ -379,13 +379,13 @@ describe('ProjectDetail', () => {
     });
 
     it('应该显示删除按钮', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByText('删除')).toBeInTheDocument();
     });
 
     it('readonly模式不显示编辑按钮', () => {
-      render(<ProjectDetail {...defaultProps} readonly={true} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} readonly={true} />);
 
       expect(screen.queryByText('编辑')).not.toBeInTheDocument();
     });
@@ -400,7 +400,7 @@ describe('ProjectDetail', () => {
         refetch: vi.fn(),
       });
 
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       const spin = screen.getByTestId('spin');
       expect(spin).toHaveAttribute('data-spinning', 'true');
@@ -417,7 +417,7 @@ describe('ProjectDetail', () => {
         refetch: vi.fn(),
       });
 
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('alert')).toBeInTheDocument();
     });
@@ -425,7 +425,7 @@ describe('ProjectDetail', () => {
 
   describe('标签页', () => {
     it('应该显示标签页', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('tabs')).toBeInTheDocument();
     });
@@ -433,13 +433,13 @@ describe('ProjectDetail', () => {
 
   describe('图标显示', () => {
     it('应该显示编辑图标', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('icon-edit')).toBeInTheDocument();
     });
 
     it('应该显示删除图标', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('icon-delete')).toBeInTheDocument();
     });
@@ -447,14 +447,14 @@ describe('ProjectDetail', () => {
 
   describe('布局', () => {
     it('应该使用Row和Col布局', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getAllByTestId('row').length).toBeGreaterThan(0);
       expect(screen.getAllByTestId('col').length).toBeGreaterThan(0);
     });
 
     it('应该使用Divider分隔内容', () => {
-      render(<ProjectDetail {...defaultProps} />);
+      renderWithProviders(<ProjectDetail {...defaultProps} />);
 
       expect(screen.getByTestId('divider')).toBeInTheDocument();
     });

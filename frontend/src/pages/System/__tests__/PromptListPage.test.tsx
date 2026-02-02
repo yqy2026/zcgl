@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@/test/utils/test-helpers';
 import { message, Modal } from 'antd';
 
 import PromptListPage from '../PromptListPage';
@@ -190,7 +190,7 @@ const flushPromises = () =>
 
 const renderPromptListPage = async () => {
   await act(async () => {
-    render(<PromptListPage />);
+    renderWithProviders(<PromptListPage />);
     await flushPromises();
   });
 };

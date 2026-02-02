@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ActionButtons from '../ActionButtons';
 
@@ -40,7 +40,7 @@ describe('ActionButtons', () => {
         handleReset: mockHandleReset,
       } as ReturnType<typeof usePDFImportContext>);
 
-      const { container } = render(<ActionButtons />);
+      const { container } = renderWithProviders(<ActionButtons />);
       expect(container.firstChild).toBeNull();
     });
 
@@ -52,7 +52,7 @@ describe('ActionButtons', () => {
         handleReset: mockHandleReset,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
       expect(screen.getByText('取消处理')).toBeInTheDocument();
       expect(screen.getByText('重新开始')).toBeInTheDocument();
     });
@@ -65,7 +65,7 @@ describe('ActionButtons', () => {
         handleReset: mockHandleReset,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
       expect(screen.getByText('取消处理')).toBeInTheDocument();
       expect(screen.getByText('重新开始')).toBeInTheDocument();
     });
@@ -78,7 +78,7 @@ describe('ActionButtons', () => {
         handleReset: mockHandleReset,
       } as unknown as ReturnType<typeof usePDFImportContext>);
 
-      const { container } = render(<ActionButtons />);
+      const { container } = renderWithProviders(<ActionButtons />);
       expect(container.firstChild).toBeNull();
     });
   });
@@ -94,7 +94,7 @@ describe('ActionButtons', () => {
     });
 
     it('点击取消按钮调用 handleCancel', () => {
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
 
       const cancelButton = screen.getByText('取消处理');
       fireEvent.click(cancelButton);
@@ -103,7 +103,7 @@ describe('ActionButtons', () => {
     });
 
     it('点击重新开始按钮调用 handleReset', () => {
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
 
       const resetButton = screen.getByText('重新开始');
       fireEvent.click(resetButton);
@@ -112,7 +112,7 @@ describe('ActionButtons', () => {
     });
 
     it('取消按钮有 danger 样式', () => {
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
 
       const cancelButton = screen.getByText('取消处理');
       expect(cancelButton.closest('button')).toHaveClass('ant-btn-dangerous');
@@ -128,7 +128,7 @@ describe('ActionButtons', () => {
         handleReset: mockHandleReset,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<ActionButtons />);
+      renderWithProviders(<ActionButtons />);
 
       const container = screen.getByText('取消处理').closest('.ant-space')?.parentElement;
       expect(container).not.toBeNull();

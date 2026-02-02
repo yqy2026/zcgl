@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { screen, fireEvent, waitFor, act } from '@/test/utils/test-helpers';
 import AssetImport from '../AssetImport';
 
 interface UploadDraggerMockProps {
@@ -251,7 +251,7 @@ describe('AssetImport - 渲染与交互测试', () => {
   });
 
   it('应该渲染初始步骤与上传区域', () => {
-    render(<AssetImport />);
+    renderWithProviders(<AssetImport />);
 
     expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
     expect(screen.getByText('下载Excel模板')).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe('AssetImport - 渲染与交互测试', () => {
   });
 
   it('上传无效类型文件应提示错误且不前进', () => {
-    render(<AssetImport />);
+    renderWithProviders(<AssetImport />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
 
     const invalidFile = { type: 'text/plain', size: 1024 } as File;
@@ -272,7 +272,7 @@ describe('AssetImport - 渲染与交互测试', () => {
   });
 
   it('上传有效文件应进入步骤1并显示文件名', async () => {
-    render(<AssetImport />);
+    renderWithProviders(<AssetImport />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
 
     act(() => {
@@ -299,7 +299,7 @@ describe('AssetImport - 渲染与交互测试', () => {
       },
     });
 
-    render(<AssetImport />);
+    renderWithProviders(<AssetImport />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
     act(() => {
       draggerProps.beforeUpload?.(createUploadFile());
@@ -331,7 +331,7 @@ describe('AssetImport - 渲染与交互测试', () => {
     const { apiClient } = await import('@/api/client');
     vi.mocked(apiClient.post).mockRejectedValue(new Error('Network error'));
 
-    render(<AssetImport />);
+    renderWithProviders(<AssetImport />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
     act(() => {
       draggerProps.beforeUpload?.(createUploadFile());

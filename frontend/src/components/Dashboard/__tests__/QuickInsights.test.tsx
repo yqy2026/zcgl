@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import QuickInsights from '../QuickInsights';
 
 interface CardMockProps {
@@ -119,7 +119,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('应该显示标题与副标题', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 100,
@@ -136,7 +136,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('高出租率应显示成功洞察', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 100,
@@ -153,7 +153,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('低出租率应显示警告洞察', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 100,
@@ -170,7 +170,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('正常出租率应显示信息洞察', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 100,
@@ -186,7 +186,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('资产规模大于阈值应显示规模洞察', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 600,
@@ -203,7 +203,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('空置面积过大应显示空置洞察', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         data={{
           totalAssets: 200,
@@ -220,7 +220,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
   });
 
   it('loading为true时应透传给Card', () => {
-    render(
+    renderWithProviders(
       <QuickInsights
         loading={true}
         data={{

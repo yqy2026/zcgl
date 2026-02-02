@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 // Mock dependencies before imports
 vi.mock('@/utils/messageManager', () => ({
@@ -459,25 +459,25 @@ describe('AssetSearch', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染搜索卡片', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('search-card')).toBeInTheDocument();
     });
 
     it('应该显示资产搜索标题', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('资产搜索')).toBeInTheDocument();
     });
 
     it('应该显示搜索表单', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('search-form')).toBeInTheDocument();
     });
 
     it('应该显示搜索图标', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
     });
@@ -485,25 +485,25 @@ describe('AssetSearch', () => {
 
   describe('搜索字段', () => {
     it('应该显示关键词搜索输入框', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('form-item-search')).toBeInTheDocument();
     });
 
     it('应该显示确权状态下拉框', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('form-item-ownership_status')).toBeInTheDocument();
     });
 
     it('应该显示物业性质下拉框', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('form-item-property_nature')).toBeInTheDocument();
     });
 
     it('应该显示使用状态下拉框', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('form-item-usage_status')).toBeInTheDocument();
     });
@@ -511,37 +511,37 @@ describe('AssetSearch', () => {
 
   describe('操作按钮', () => {
     it('应该显示搜索按钮', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('搜索')).toBeInTheDocument();
     });
 
     it('应该显示重置按钮', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('重置')).toBeInTheDocument();
     });
 
     it('应该显示保存条件按钮', () => {
-      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
       expect(screen.getByText('保存条件')).toBeInTheDocument();
     });
 
     it('应该显示搜索历史按钮', () => {
-      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showHistoryButton={true} />);
 
       expect(screen.getByText('搜索历史')).toBeInTheDocument();
     });
 
     it('应该显示展开/收起按钮', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('展开')).toBeInTheDocument();
     });
 
     it('搜索按钮应该是primary类型', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('btn-primary')).toBeInTheDocument();
     });
@@ -550,7 +550,7 @@ describe('AssetSearch', () => {
   describe('点击事件', () => {
     it('点击搜索按钮应该触发onSearch', () => {
       const handleSearch = vi.fn();
-      render(<AssetSearch {...defaultProps} onSearch={handleSearch} />);
+      renderWithProviders(<AssetSearch {...defaultProps} onSearch={handleSearch} />);
 
       const searchButton = screen.getByText('搜索');
       fireEvent.click(searchButton);
@@ -560,7 +560,7 @@ describe('AssetSearch', () => {
 
     it('点击重置按钮应该触发onReset', () => {
       const handleReset = vi.fn();
-      render(<AssetSearch {...defaultProps} onReset={handleReset} />);
+      renderWithProviders(<AssetSearch {...defaultProps} onReset={handleReset} />);
 
       const resetButton = screen.getByText('重置');
       fireEvent.click(resetButton);
@@ -569,7 +569,7 @@ describe('AssetSearch', () => {
     });
 
     it('点击重置按钮应该重置表单', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       const resetButton = screen.getByText('重置');
       fireEvent.click(resetButton);
@@ -578,7 +578,7 @@ describe('AssetSearch', () => {
     });
 
     it('点击展开按钮应该切换状态', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       // 初始状态显示"展开"
       expect(screen.getByText('展开')).toBeInTheDocument();
@@ -594,14 +594,14 @@ describe('AssetSearch', () => {
 
   describe('展开/收起高级搜索', () => {
     it('默认不显示高级搜索字段', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       // 高级字段不应该显示
       expect(screen.queryByTestId('form-item-ownership_entity')).not.toBeInTheDocument();
     });
 
     it('展开后应该显示高级搜索字段', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       // 点击展开
       const expandButton = screen.getByText('展开');
@@ -614,7 +614,7 @@ describe('AssetSearch', () => {
     });
 
     it('展开后应该显示日期范围选择器', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       fireEvent.click(screen.getByText('展开'));
 
@@ -622,7 +622,7 @@ describe('AssetSearch', () => {
     });
 
     it('展开后应该显示面积范围输入', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       fireEvent.click(screen.getByText('展开'));
 
@@ -630,7 +630,7 @@ describe('AssetSearch', () => {
     });
 
     it('展开后应该显示排序方式', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       fireEvent.click(screen.getByText('展开'));
 
@@ -640,7 +640,7 @@ describe('AssetSearch', () => {
 
   describe('保存搜索条件', () => {
     it('点击保存按钮应该打开保存弹窗', () => {
-      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
       fireEvent.click(screen.getByText('保存条件'));
 
@@ -650,7 +650,7 @@ describe('AssetSearch', () => {
 
     it('没有搜索条件时保存应该提示警告', () => {
       mockFormInstance.getFieldsValue.mockReturnValue({});
-      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
       fireEvent.click(screen.getByText('保存条件'));
       fireEvent.click(screen.getByTestId('modal-ok'));
@@ -659,7 +659,7 @@ describe('AssetSearch', () => {
     });
 
     it('点击取消应该关闭保存弹窗', () => {
-      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
       fireEvent.click(screen.getByText('保存条件'));
       expect(screen.getByTestId('modal')).toBeInTheDocument();
@@ -671,7 +671,7 @@ describe('AssetSearch', () => {
 
   describe('搜索历史', () => {
     it('点击历史按钮应该打开历史弹窗', () => {
-      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showHistoryButton={true} />);
 
       fireEvent.click(screen.getByText('搜索历史'));
 
@@ -680,7 +680,7 @@ describe('AssetSearch', () => {
     });
 
     it('历史弹窗应该显示历史列表', () => {
-      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showHistoryButton={true} />);
 
       fireEvent.click(screen.getByText('搜索历史'));
 
@@ -690,28 +690,28 @@ describe('AssetSearch', () => {
 
   describe('loading状态', () => {
     it('loading时搜索按钮应该显示loading状态', () => {
-      render(<AssetSearch {...defaultProps} loading={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} loading={true} />);
 
       const searchButton = screen.getByTestId('btn-primary');
       expect(searchButton).toHaveAttribute('data-loading', 'true');
     });
 
     it('loading时重置按钮应该禁用', () => {
-      render(<AssetSearch {...defaultProps} loading={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} loading={true} />);
 
       const resetButton = screen.getByText('重置').closest('button');
       expect(resetButton).toBeDisabled();
     });
 
     it('loading时保存按钮应该禁用', () => {
-      render(<AssetSearch {...defaultProps} loading={true} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} loading={true} showSaveButton={true} />);
 
       const saveButton = screen.getByText('保存条件').closest('button');
       expect(saveButton).toBeDisabled();
     });
 
     it('loading时应该显示加载中标签', () => {
-      render(<AssetSearch {...defaultProps} loading={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} loading={true} />);
 
       expect(screen.getByText('加载中…')).toBeInTheDocument();
     });
@@ -720,13 +720,13 @@ describe('AssetSearch', () => {
   describe('初始值', () => {
     it('应该接受initialValues属性', () => {
       const initialValues = { search: '测试' };
-      render(<AssetSearch {...defaultProps} initialValues={initialValues} />);
+      renderWithProviders(<AssetSearch {...defaultProps} initialValues={initialValues} />);
 
       expect(mockFormInstance.setFieldsValue).toHaveBeenCalled();
     });
 
     it('空initialValues不应该调用setFieldsValue', () => {
-      render(<AssetSearch {...defaultProps} initialValues={{}} />);
+      renderWithProviders(<AssetSearch {...defaultProps} initialValues={{}} />);
 
       expect(mockFormInstance.setFieldsValue).not.toHaveBeenCalled();
     });
@@ -734,19 +734,19 @@ describe('AssetSearch', () => {
 
   describe('可选按钮显示', () => {
     it('showSaveButton为false时不显示保存按钮', () => {
-      render(<AssetSearch {...defaultProps} showSaveButton={false} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={false} />);
 
       expect(screen.queryByText('保存条件')).not.toBeInTheDocument();
     });
 
     it('showHistoryButton为false时不显示历史按钮', () => {
-      render(<AssetSearch {...defaultProps} showHistoryButton={false} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showHistoryButton={false} />);
 
       expect(screen.queryByText('搜索历史')).not.toBeInTheDocument();
     });
 
     it('默认显示保存和历史按钮', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('保存条件')).toBeInTheDocument();
       expect(screen.getByText('搜索历史')).toBeInTheDocument();
@@ -755,37 +755,37 @@ describe('AssetSearch', () => {
 
   describe('图标渲染', () => {
     it('应该显示搜索图标', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
     });
 
     it('应该显示重置图标', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
     });
 
     it('应该显示保存图标', () => {
-      render(<AssetSearch {...defaultProps} showSaveButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showSaveButton={true} />);
 
       expect(screen.getByTestId('icon-save')).toBeInTheDocument();
     });
 
     it('应该显示历史图标', () => {
-      render(<AssetSearch {...defaultProps} showHistoryButton={true} />);
+      renderWithProviders(<AssetSearch {...defaultProps} showHistoryButton={true} />);
 
       expect(screen.getByTestId('icon-history')).toBeInTheDocument();
     });
 
     it('初始应该显示展开图标', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByTestId('icon-down')).toBeInTheDocument();
     });
 
     it('展开后应该显示收起图标', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       fireEvent.click(screen.getByText('展开'));
 
@@ -795,14 +795,14 @@ describe('AssetSearch', () => {
 
   describe('布局验证', () => {
     it('应该使用Row和Col布局', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getAllByTestId('row').length).toBeGreaterThan(0);
       expect(screen.getAllByTestId('col').length).toBeGreaterThan(0);
     });
 
     it('应该使用Space组件', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getAllByTestId('space').length).toBeGreaterThan(0);
     });
@@ -810,21 +810,21 @@ describe('AssetSearch', () => {
 
   describe('下拉选项', () => {
     it('确权状态应该有正确的选项', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('已确权')).toBeInTheDocument();
       expect(screen.getByText('未确权')).toBeInTheDocument();
     });
 
     it('物业性质应该有正确的选项', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('经营性')).toBeInTheDocument();
       expect(screen.getByText('非经营性')).toBeInTheDocument();
     });
 
     it('使用状态应该有正确的选项', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       expect(screen.getByText('出租')).toBeInTheDocument();
       expect(screen.getByText('空置')).toBeInTheDocument();
@@ -834,7 +834,7 @@ describe('AssetSearch', () => {
 
   describe('表单验证', () => {
     it('表单应该使用垂直布局', () => {
-      render(<AssetSearch {...defaultProps} />);
+      renderWithProviders(<AssetSearch {...defaultProps} />);
 
       const form = screen.getByTestId('search-form');
       expect(form).toBeInTheDocument();

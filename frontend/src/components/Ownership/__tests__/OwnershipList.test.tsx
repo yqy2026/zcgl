@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act } from '@/test/utils/test-helpers';
 
 import { useListData } from '@/hooks/useListData';
 import { ownershipService } from '@/services/ownershipService';
@@ -299,7 +299,7 @@ const renderOwnershipList = async (
   props?: React.ComponentProps<typeof OwnershipList>
 ) => {
   await act(async () => {
-    render(<OwnershipList {...props} />);
+    renderWithProviders(<OwnershipList {...props} />);
     await flushPromises();
   });
 };

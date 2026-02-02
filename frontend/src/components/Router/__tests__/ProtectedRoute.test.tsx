@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { ReactNode } from 'react';
 
 import ProtectedRoute from '../ProtectedRoute';
@@ -49,7 +49,7 @@ describe('ProtectedRoute', () => {
   it('renders component inside error boundary by default', () => {
     const TestComponent = () => <div data-testid="content">Protected Content</div>;
 
-    render(
+    renderWithProviders(
       <ProtectedRoute
         path="/test"
         title="测试路由"
@@ -67,7 +67,7 @@ describe('ProtectedRoute', () => {
     const TestComponent = () => <div data-testid="content">Protected Content</div>;
     const permissions = [{ resource: 'asset', action: 'view' }];
 
-    render(
+    renderWithProviders(
       <ProtectedRoute
         path="/test"
         title="测试路由"
@@ -84,7 +84,7 @@ describe('ProtectedRoute', () => {
   it('renders fallback when permission guard denies', () => {
     const TestComponent = () => <div>Protected Content</div>;
 
-    render(
+    renderWithProviders(
       <ProtectedRoute
         path="/test"
         title="测试路由"
@@ -100,7 +100,7 @@ describe('ProtectedRoute', () => {
   it('skips error boundary when disabled', () => {
     const TestComponent = () => <div data-testid="content">Content</div>;
 
-    render(
+    renderWithProviders(
       <ProtectedRoute
         path="/test"
         title="测试路由"
@@ -116,7 +116,7 @@ describe('ProtectedRoute', () => {
   it('treats empty permissions as public route', () => {
     const TestComponent = () => <div data-testid="content">Public Content</div>;
 
-    render(
+    renderWithProviders(
       <ProtectedRoute
         path="/public"
         title="公共路由"

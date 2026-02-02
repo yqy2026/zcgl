@@ -43,6 +43,13 @@
 - ⚠️ Token 黑名单逻辑已重构，但一致性未验证
 - ⚠️ 会话管理可能出现不一致
 
+#### 现状证据（复核：2026-02-02）
+
+- `backend/src/api/v1/auth/auth_modules/authentication.py`：登录/刷新已设置 httpOnly Cookie（auth/refresh/csrf），但响应仍返回 `access_token`/`refresh_token`；登出从 Header 或 Cookie 取 token 并加入黑名单。
+- `backend/src/middleware/auth.py`：`get_current_user` cookie 优先、Bearer fallback；`get_optional_current_user` 仅支持 Bearer（`oauth2_scheme`），与“Cookie 优先”策略不一致。
+- `backend/src/middleware/security_middleware.py`：CSRF 对 Cookie 认证生效；带 Bearer 的请求直接绕过 CSRF（且 `/api/v1/auth/refresh` 免检），形成双轨策略。
+- `backend/src/security/security.py`：仍暴露 `HTTPBearer` 的 `get_current_user` 桩函数（返回 None），属于迁移残留接口。
+
 **根本原因**：
 - 大规模重构（531个文件变更）正在进行中
 - Git 提交记录显示："从JWT切换为httpOnly Cookie认证并重构后端JWT库"
@@ -63,6 +70,16 @@
 2. 验证 Cookie 认证在生产环境的安全性
 3. 确保 CSRF 保护正确实现
 4. 移除所有 JWT 配置残留
+
+**收敛路径建议（可选其一）**：
+1. **Cookie-only 模式（推荐给浏览器端）**
+   - 移除 `Authorization` fallback（`get_current_user`/`get_optional_current_user` 仅读取 Cookie）。
+   - 登录/刷新响应不再返回 `access_token/refresh_token`（避免前端 JS 接触 token）。
+   - CSRF 保护覆盖所有状态变更端点（包括 `/auth/refresh`）。
+2. **Dual-Mode 过渡（短期兼容）**
+   - 引入 `AUTH_MODE`（cookie / bearer / dual），统一在中间件内控制策略。
+   - Bearer 仅用于服务到服务或调试环境；浏览器端强制 Cookie + CSRF。
+   - 记录 Bearer fallback 命中率，设定下线日期并逐步移除。
 
 **验证清单**：
 - [ ] 所有 API 端点都通过新的认证中间件

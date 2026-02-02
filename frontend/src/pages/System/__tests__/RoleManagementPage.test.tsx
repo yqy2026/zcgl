@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@/test/utils/test-helpers';
 import RoleManagementPage from '../RoleManagementPage';
 import { roleService } from '@/services/systemService';
 import { MessageManager } from '@/utils/messageManager';
@@ -286,7 +286,7 @@ const flushPromises = () =>
 
 const renderRoleManagementPage = async () => {
   await act(async () => {
-    render(<RoleManagementPage />);
+    renderWithProviders(<RoleManagementPage />);
     await flushPromises();
   });
 };

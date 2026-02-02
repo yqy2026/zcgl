@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import AppBreadcrumb from '../AppBreadcrumb';
@@ -66,7 +66,7 @@ vi.mock('@ant-design/icons', () => ({
 
 const renderBreadcrumb = (pathname: string) => {
   mockPathname = pathname;
-  return render(<AppBreadcrumb />);
+  return renderWithProviders(<AppBreadcrumb />);
 };
 
 describe('AppBreadcrumb', () => {

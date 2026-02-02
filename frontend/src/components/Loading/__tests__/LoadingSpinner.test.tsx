@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import LoadingSpinner from '../LoadingSpinner';
@@ -56,7 +56,7 @@ vi.mock('@ant-design/icons', () => ({
 
 describe('LoadingSpinner', () => {
   it('renders default spinner without tip', () => {
-    render(<LoadingSpinner />);
+    renderWithProviders(<LoadingSpinner />);
 
     const spin = screen.getByTestId('spin');
     expect(spin).toHaveAttribute('data-size', 'default');
@@ -68,20 +68,20 @@ describe('LoadingSpinner', () => {
     ['small', 'small'],
     ['large', 'large'],
   ])('renders size %s', (_label, size) => {
-    render(<LoadingSpinner size={size as 'small' | 'large'} />);
+    renderWithProviders(<LoadingSpinner size={size as 'small' | 'large'} />);
 
     expect(screen.getByTestId('spin')).toHaveAttribute('data-size', size);
   });
 
   it('renders tip text when provided (no children)', () => {
-    render(<LoadingSpinner tip="加载中..." />);
+    renderWithProviders(<LoadingSpinner tip="加载中..." />);
 
     expect(screen.getByTestId('text')).toHaveTextContent('加载中...');
     expect(screen.getByTestId('spin').getAttribute('data-tip')).toBeNull();
   });
 
   it('wraps children and passes tip to Spin when children provided', () => {
-    render(
+    renderWithProviders(
       <LoadingSpinner tip="处理" spinning={false}>
         <div data-testid="child">Content</div>
       </LoadingSpinner>
@@ -94,13 +94,13 @@ describe('LoadingSpinner', () => {
   });
 
   it('passes delay to Spin', () => {
-    render(<LoadingSpinner delay={300} />);
+    renderWithProviders(<LoadingSpinner delay={300} />);
 
     expect(screen.getByTestId('spin')).toHaveAttribute('data-delay', '300');
   });
 
   it('applies wrapper className and style when no children', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <LoadingSpinner className="custom-spinner" style={{ margin: 20 }} />
     );
 
@@ -110,7 +110,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('applies className to Spin when children provided', () => {
-    render(
+    renderWithProviders(
       <LoadingSpinner className="custom-spin" spinning>
         <div>Child</div>
       </LoadingSpinner>
@@ -120,7 +120,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('handles null children gracefully', () => {
-    render(<LoadingSpinner spinning={false}>{null}</LoadingSpinner>);
+    renderWithProviders(<LoadingSpinner spinning={false}>{null}</LoadingSpinner>);
 
     const spin = screen.getByTestId('spin');
     expect(spin).toHaveAttribute('data-spin', 'false');

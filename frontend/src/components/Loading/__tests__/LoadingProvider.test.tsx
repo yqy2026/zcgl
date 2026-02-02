@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 interface SpinMockProps {
   children?: React.ReactNode;
@@ -89,7 +89,7 @@ describe('LoadingProvider - 基础功能测试', () => {
 
   it('应该能够渲染LoadingProvider并展示children', async () => {
     const { LoadingProvider } = await import('../LoadingProvider');
-    render(
+    renderWithProviders(
       <LoadingProvider>
         <div>Test Content</div>
       </LoadingProvider>
@@ -111,7 +111,7 @@ describe('LoadingProvider - 基础功能测试', () => {
       );
     };
 
-    render(
+    renderWithProviders(
       <LoadingProvider>
         <TestComponent />
         <GlobalLoadingOverlay />
@@ -141,7 +141,7 @@ describe('LoadingProvider - 基础功能测试', () => {
       );
     };
 
-    render(
+    renderWithProviders(
       <LoadingProvider>
         <TestComponent />
       </LoadingProvider>
@@ -159,7 +159,7 @@ describe('LoadingProvider - 基础功能测试', () => {
   it('GlobalLoadingOverlay在未加载时不显示', async () => {
     const { LoadingProvider, GlobalLoadingOverlay } = await import('../LoadingProvider');
 
-    render(
+    renderWithProviders(
       <LoadingProvider>
         <GlobalLoadingOverlay />
       </LoadingProvider>
@@ -171,7 +171,7 @@ describe('LoadingProvider - 基础功能测试', () => {
   it('LocalLoading应该透传Spin属性并渲染内容', async () => {
     const { LocalLoading } = await import('../LoadingProvider');
 
-    render(
+    renderWithProviders(
       <LocalLoading loading={true} tip="Loading..." size="large" delay={300}>
         <div>Content</div>
       </LocalLoading>
@@ -189,7 +189,7 @@ describe('LoadingProvider - 基础功能测试', () => {
     const { LoadingButton } = await import('../LoadingProvider');
     const handleClick = vi.fn();
 
-    render(
+    renderWithProviders(
       <LoadingButton loading={false} onClick={handleClick}>
         Click
       </LoadingButton>
@@ -203,7 +203,7 @@ describe('LoadingProvider - 基础功能测试', () => {
     const { LoadingButton } = await import('../LoadingProvider');
     const handleClick = vi.fn();
 
-    render(
+    renderWithProviders(
       <LoadingButton loading={true} onClick={handleClick}>
         Click
       </LoadingButton>
@@ -216,7 +216,7 @@ describe('LoadingProvider - 基础功能测试', () => {
 
   it('应该支持嵌套LoadingProvider', async () => {
     const { LoadingProvider } = await import('../LoadingProvider');
-    render(
+    renderWithProviders(
       <LoadingProvider>
         <LoadingProvider>
           <div>Nested</div>

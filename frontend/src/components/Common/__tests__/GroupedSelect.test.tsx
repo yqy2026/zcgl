@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import type { EnumGroup, EnumOption } from '@/utils/enumHelpers';
 import GroupedSelect, { GroupedSelectMultiple, GroupedSelectSingle } from '../GroupedSelect';
 
@@ -190,7 +190,7 @@ describe('GroupedSelect - 渲染测试', () => {
   });
 
   it('应该渲染分组标签与选项', () => {
-    render(<GroupedSelect groups={groups} />);
+    renderWithProviders(<GroupedSelect groups={groups} />);
 
     expect(screen.getByText('分组1')).toBeInTheDocument();
     expect(screen.getByText('(2)')).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe('GroupedSelect - 渲染测试', () => {
   });
 
   it('showGroupLabel为false时不渲染分组标签', () => {
-    render(<GroupedSelect groups={groups} showGroupLabel={false} />);
+    renderWithProviders(<GroupedSelect groups={groups} showGroupLabel={false} />);
 
     expect(screen.queryByTestId('optgroup')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('option')).toHaveLength(3);
@@ -214,7 +214,7 @@ describe('GroupedSelect - 搜索测试', () => {
   });
 
   it('搜索关键字应过滤选项', () => {
-    render(<GroupedSelect groups={groups} />);
+    renderWithProviders(<GroupedSelect groups={groups} />);
     expect(screen.getAllByTestId('option')).toHaveLength(3);
 
     fireEvent.change(screen.getByTestId('search-input'), { target: { value: '选项2' } });
@@ -224,7 +224,7 @@ describe('GroupedSelect - 搜索测试', () => {
   });
 
   it('搜索无结果时显示提示', async () => {
-    render(<GroupedSelect groups={groups} />);
+    renderWithProviders(<GroupedSelect groups={groups} />);
 
     fireEvent.change(screen.getByTestId('search-input'), { target: { value: '不存在' } });
     expect(await screen.findByText('未找到匹配的选项')).toBeInTheDocument();

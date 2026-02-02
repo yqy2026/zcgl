@@ -274,6 +274,7 @@ const [pagination, setPagination] = useState({});
 | LIST-010 | `ApiMonitor` 监控列表迁移至 `useArrayListData` | P3 | ✅ 已完成 | 刷新与分页逻辑分离 |
 | LIST-011 | `DictionaryPage` 概览/详情分页迁移至 `useArrayListData` | P3 | ✅ 已完成 | 修复分页未生效并统一过滤逻辑 |
 | LIST-012 | 抽取 `ProjectList`/`OwnershipList` 列表工具栏布局为 `ListToolbar` | P3 | ✅ 已完成 | 统一搜索/筛选/操作栏结构 |
+| LIST-013 | `PromptListPage`/`RoleManagementPage`/`UserManagementPage` 工具栏迁移至 `ListToolbar` | P3 | ✅ 已完成 | 进一步收敛列表筛选与操作栏 |
 
 **后端CRUD重复** (严重程度: 中)
 - 19个CRUD文件，大量相似的增删改查

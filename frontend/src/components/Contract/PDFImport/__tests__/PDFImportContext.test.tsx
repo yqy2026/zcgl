@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PDFImportProvider, usePDFImportContext, usePDFImportUpload } from '../PDFImportContext';
 

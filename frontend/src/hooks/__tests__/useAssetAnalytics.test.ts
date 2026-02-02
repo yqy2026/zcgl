@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useAssetAnalytics } from '../useAssetAnalytics';
 import { analyticsService } from '@/services/analyticsService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

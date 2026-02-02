@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PreviewModal from '../PreviewModal';
 
@@ -33,7 +33,7 @@ describe('PreviewModal', () => {
         processingProgress: null,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.queryByText('处理结果预览')).not.toBeInTheDocument();
     });
@@ -48,7 +48,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.getByText('处理结果预览')).toBeInTheDocument();
     });
@@ -67,7 +67,7 @@ describe('PreviewModal', () => {
     });
 
     it('点击关闭按钮调用 setShowPreviewModal(false)', () => {
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       const closeButton = screen.getByRole('button', { name: /关\s*闭/ });
       fireEvent.click(closeButton);
@@ -76,7 +76,7 @@ describe('PreviewModal', () => {
     });
 
     it('点击模态框关闭图标调用 setShowPreviewModal(false)', () => {
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       const closeIcon = document.querySelector('.ant-modal-close');
       if (closeIcon) {
@@ -97,7 +97,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.getByText('处理状态：')).toBeInTheDocument();
       expect(screen.getByText('ready_for_review')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       const tag = screen.getByText('ready_for_review');
       expect(tag.closest('.ant-tag')).toHaveClass('ant-tag-green');
@@ -129,7 +129,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       const tag = screen.getByText('processing');
       expect(tag.closest('.ant-tag')).toHaveClass('ant-tag-blue');
@@ -161,7 +161,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.getByText('文档分析结果：')).toBeInTheDocument();
       expect(screen.getByText(/文档类型：租赁合同/)).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.getByText('提取质量：')).toBeInTheDocument();
       expect(screen.getByText(/总体质量：9\/10/)).toBeInTheDocument();
@@ -216,7 +216,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.getByText(/文档类型：未知/)).toBeInTheDocument();
       expect(screen.getByText(/质量评分：0\/10/)).toBeInTheDocument();
@@ -232,7 +232,7 @@ describe('PreviewModal', () => {
         processingProgress: null,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.queryByText('处理状态：')).not.toBeInTheDocument();
     });
@@ -247,7 +247,7 @@ describe('PreviewModal', () => {
         },
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PreviewModal />);
+      renderWithProviders(<PreviewModal />);
 
       expect(screen.queryByText('文档分析结果：')).not.toBeInTheDocument();
     });

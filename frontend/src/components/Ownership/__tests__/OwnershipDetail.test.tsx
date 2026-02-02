@@ -11,7 +11,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 // Mock Ant Design
 vi.mock('antd', () => {
@@ -181,26 +181,26 @@ describe('OwnershipDetail 组件测试', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染组件', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
 
     it('应该显示权属方名称', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const nameElement = screen.getByTestId('text');
       expect(nameElement).toHaveTextContent('测试权属方');
     });
 
     it('应该显示权属方简称', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       expect(screen.getByText(/简称：测试/)).toBeInTheDocument();
     });
 
     it('应该显示启用状态', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const badges = screen.getAllByTestId('badge');
       const activeBadge = badges.find(badge => badge.textContent === '启用');
@@ -212,7 +212,7 @@ describe('OwnershipDetail 组件测试', () => {
   describe('禁用状态', () => {
     it('禁用权属方应该显示禁用状态', () => {
       const inactiveOwnership = { ...mockOwnership, is_active: false };
-      render(<OwnershipDetail ownership={inactiveOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={inactiveOwnership} onEdit={mockOnEdit} />);
 
       const badges = screen.getAllByTestId('badge');
       const inactiveBadge = badges.find(badge => badge.textContent === '禁用');
@@ -223,7 +223,7 @@ describe('OwnershipDetail 组件测试', () => {
 
   describe('编辑按钮', () => {
     it('应该显示编辑按钮', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const buttons = screen.getAllByTestId('button');
       const editButton = buttons.find(btn => btn.textContent?.includes('编辑'));
@@ -231,7 +231,7 @@ describe('OwnershipDetail 组件测试', () => {
     });
 
     it('点击编辑按钮应该触发 onEdit', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const buttons = screen.getAllByTestId('button');
       const editButton = buttons.find(btn => btn.textContent?.includes('编辑'));
@@ -244,7 +244,7 @@ describe('OwnershipDetail 组件测试', () => {
     });
 
     it('编辑按钮应该显示 EditOutlined 图标', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       expect(screen.getByTestId('icon-edit')).toBeInTheDocument();
     });
@@ -252,7 +252,7 @@ describe('OwnershipDetail 组件测试', () => {
 
   describe('基本信息卡片', () => {
     it('应该显示基本信息卡片', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const cards = screen.getAllByTestId('card');
       const basicInfoCard = cards.find(card => card.getAttribute('data-title') === '基本信息');
@@ -260,14 +260,14 @@ describe('OwnershipDetail 组件测试', () => {
     });
 
     it('应该显示 Descriptions 组件', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const descriptions = screen.getAllByTestId('descriptions');
       expect(descriptions.length).toBeGreaterThan(0);
     });
 
     it('应该显示关联资产数量', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const tags = screen.getAllByTestId('tag');
       const assetTag = tags.find(tag => tag.textContent?.includes('10'));
@@ -275,7 +275,7 @@ describe('OwnershipDetail 组件测试', () => {
     });
 
     it('应该显示关联项目数量', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const tags = screen.getAllByTestId('tag');
       const projectTag = tags.find(tag => tag.textContent?.includes('5'));
@@ -285,7 +285,7 @@ describe('OwnershipDetail 组件测试', () => {
 
   describe('关联项目卡片', () => {
     it('应该显示关联项目卡片', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const cards = screen.getAllByTestId('card');
       const projectCard = cards.find(card => card.getAttribute('data-title') === '关联项目');
@@ -293,14 +293,14 @@ describe('OwnershipDetail 组件测试', () => {
     });
 
     it('应该显示关联项目表格', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       expect(screen.getByTestId('table')).toBeInTheDocument();
     });
 
     it('没有关联项目时不应该显示关联项目卡片', () => {
       const ownershipWithoutProjects = { ...mockOwnership, related_projects: [] };
-      render(<OwnershipDetail ownership={ownershipWithoutProjects} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={ownershipWithoutProjects} onEdit={mockOnEdit} />);
 
       const cards = screen.getAllByTestId('card');
       const projectCard = cards.find(card => card.getAttribute('data-title') === '关联项目');
@@ -310,7 +310,7 @@ describe('OwnershipDetail 组件测试', () => {
 
   describe('系统信息卡片', () => {
     it('应该显示系统信息卡片', () => {
-      render(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
 
       const cards = screen.getAllByTestId('card');
       const systemCard = cards.find(card => card.getAttribute('data-title') === '系统信息');
@@ -321,14 +321,14 @@ describe('OwnershipDetail 组件测试', () => {
   describe('无简称情况', () => {
     it('没有简称时不应该显示简称', () => {
       const ownershipWithoutShortName = { ...mockOwnership, short_name: null };
-      render(<OwnershipDetail ownership={ownershipWithoutShortName} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={ownershipWithoutShortName} onEdit={mockOnEdit} />);
 
       expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
 
     it('简称为空字符串时不应该显示简称', () => {
       const ownershipWithEmptyShortName = { ...mockOwnership, short_name: '' };
-      render(<OwnershipDetail ownership={ownershipWithEmptyShortName} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={ownershipWithEmptyShortName} onEdit={mockOnEdit} />);
 
       expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
@@ -337,7 +337,7 @@ describe('OwnershipDetail 组件测试', () => {
   describe('资产和项目计数', () => {
     it('资产数量为0时应该显示0', () => {
       const ownershipWithZeroAssets = { ...mockOwnership, asset_count: 0 };
-      render(<OwnershipDetail ownership={ownershipWithZeroAssets} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={ownershipWithZeroAssets} onEdit={mockOnEdit} />);
 
       const tags = screen.getAllByTestId('tag');
       const zeroTag = tags.find(tag => tag.textContent === '0 个');
@@ -346,7 +346,7 @@ describe('OwnershipDetail 组件测试', () => {
 
     it('项目数量为undefined时应该显示0', () => {
       const ownershipWithNoProjectCount = { ...mockOwnership, project_count: undefined };
-      render(<OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />);
+      renderWithProviders(<OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />);
 
       const tags = screen.getAllByTestId('tag');
       expect(tags.length).toBeGreaterThan(0);

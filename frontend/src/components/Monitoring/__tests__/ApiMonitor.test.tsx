@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ApiMonitor from '../ApiMonitor';
 
@@ -104,7 +104,7 @@ describe('ApiMonitor', () => {
 
   describe('渲染', () => {
     it('渲染标题和刷新按钮', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('API健康监控')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('ApiMonitor', () => {
     });
 
     it('渲染统计卡片', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('总体健康度')).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('ApiMonitor', () => {
     });
 
     it('渲染端点详细状态表格', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('端点详细状态')).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('ApiMonitor', () => {
     });
 
     it('渲染监控说明', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('监控说明')).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('ApiMonitor', () => {
 
   describe('健康状态显示', () => {
     it('显示 100% 健康度时不显示警告', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.queryByText('API健康状况需要关注')).not.toBeInTheDocument();
@@ -163,7 +163,7 @@ describe('ApiMonitor', () => {
         healthPercentage: 70,
       });
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('API健康状况需要关注')).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('ApiMonitor', () => {
         healthPercentage: 50,
       });
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('API健康状况严重')).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe('ApiMonitor', () => {
 
   describe('端点状态表格', () => {
     it('显示健康端点状态', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('/api/v1/health')).toBeInTheDocument();
@@ -220,7 +220,7 @@ describe('ApiMonitor', () => {
         healthPercentage: 0,
       });
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('/api/v1/broken')).toBeInTheDocument();
@@ -244,7 +244,7 @@ describe('ApiMonitor', () => {
         ])
       );
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('UNKNOWN')).toBeInTheDocument();
@@ -254,7 +254,7 @@ describe('ApiMonitor', () => {
 
   describe('刷新功能', () => {
     it('点击刷新按钮重新加载状态', async () => {
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
@@ -273,7 +273,7 @@ describe('ApiMonitor', () => {
 
     it('自动每 30 秒刷新一次', async () => {
       vi.useFakeTimers();
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await vi.runAllTicks();
       expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
@@ -309,7 +309,7 @@ describe('ApiMonitor', () => {
         ])
       );
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('150ms')).toBeInTheDocument();
@@ -331,7 +331,7 @@ describe('ApiMonitor', () => {
         ])
       );
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         expect(screen.getByText('2.50s')).toBeInTheDocument();
@@ -345,7 +345,7 @@ describe('ApiMonitor', () => {
         new Error('Network error')
       );
 
-      render(<ApiMonitor />);
+      renderWithProviders(<ApiMonitor />);
 
       await waitFor(() => {
         // 组件应该正常渲染，不崩溃
@@ -357,7 +357,7 @@ describe('ApiMonitor', () => {
   describe('清理', () => {
     it('卸载时清理定时器', async () => {
       vi.useFakeTimers();
-      const { unmount } = render(<ApiMonitor />);
+      const { unmount } = renderWithProviders(<ApiMonitor />);
 
       await vi.runAllTicks();
       expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);

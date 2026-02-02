@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import { createMockAsset } from '@/test-utils/factories';
 
 // Mock format utilities
@@ -238,28 +238,28 @@ describe('AssetDetailInfo', () => {
   describe('基本渲染', () => {
     it('应该正确渲染组件', () => {
       const asset = createMockAsset({ property_name: '测试物业' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
     });
 
     it('应该显示基本信息卡片标题', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('基本信息')).toBeInTheDocument();
     });
 
     it('应该显示面积信息卡片', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('面积信息')).toBeInTheDocument();
     });
 
     it('应该显示接收信息卡片', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('接收信息')).toBeInTheDocument();
     });
@@ -268,56 +268,56 @@ describe('AssetDetailInfo', () => {
   describe('基本信息显示', () => {
     it('应该显示物业名称', () => {
       const asset = createMockAsset({ property_name: '测试物业A栋' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试物业A栋')).toBeInTheDocument();
     });
 
     it('应该显示项目名称', () => {
       const asset = createMockAsset({ project_name: '测试项目' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试项目')).toBeInTheDocument();
     });
 
     it('应该显示权属方', () => {
       const asset = createMockAsset({ ownership_entity: '测试集团有限公司' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试集团有限公司')).toBeInTheDocument();
     });
 
     it('应该显示地址', () => {
       const asset = createMockAsset({ address: '深圳市南山区科技园' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('深圳市南山区科技园')).toBeInTheDocument();
     });
 
     it('应该显示确权状态标签', () => {
       const asset = createMockAsset({ ownership_status: '已确权' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('已确权')).toBeInTheDocument();
     });
 
     it('应该显示使用状态标签', () => {
       const asset = createMockAsset({ usage_status: '出租' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('出租')).toBeInTheDocument();
     });
 
     it('应该显示物业性质标签', () => {
       const asset = createMockAsset({ property_nature: '经营性' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('经营性')).toBeInTheDocument();
     });
 
     it('应该显示是否涉诉', () => {
       const asset = createMockAsset({ is_litigated: true });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const yesElements = screen.getAllByText('是');
       expect(yesElements.length).toBeGreaterThan(0);
@@ -327,14 +327,14 @@ describe('AssetDetailInfo', () => {
   describe('面积信息显示', () => {
     it('应该显示土地面积', () => {
       const asset = createMockAsset({ land_area: 1000 });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
 
     it('应该显示实际房产面积', () => {
       const asset = createMockAsset({ actual_property_area: 800 });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-实际房产面积')).toBeInTheDocument();
     });
@@ -344,7 +344,7 @@ describe('AssetDetailInfo', () => {
         property_nature: '经营性',
         rentable_area: 600,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-可出租面积')).toBeInTheDocument();
     });
@@ -354,7 +354,7 @@ describe('AssetDetailInfo', () => {
         property_nature: '经营性',
         rented_area: 300,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-已出租面积')).toBeInTheDocument();
     });
@@ -364,7 +364,7 @@ describe('AssetDetailInfo', () => {
         property_nature: '经营性',
         unrented_area: 100,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-未出租面积')).toBeInTheDocument();
     });
@@ -374,7 +374,7 @@ describe('AssetDetailInfo', () => {
         property_nature: '非经营性',
         rentable_area: 600,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByTestId('statistic-可出租面积')).not.toBeInTheDocument();
     });
@@ -388,7 +388,7 @@ describe('AssetDetailInfo', () => {
         rented_area: 80,
         occupancy_rate: 80,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const rateElements = screen.getAllByText(/出租率/);
       expect(rateElements.length).toBeGreaterThan(0);
@@ -400,7 +400,7 @@ describe('AssetDetailInfo', () => {
         rentable_area: 100,
         rented_area: 80,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('progress')).toBeInTheDocument();
     });
@@ -410,7 +410,7 @@ describe('AssetDetailInfo', () => {
         property_nature: '经营性',
         rentable_area: 0,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByTestId('progress')).not.toBeInTheDocument();
     });
@@ -419,14 +419,14 @@ describe('AssetDetailInfo', () => {
   describe('接收信息显示', () => {
     it('应该显示接收模式', () => {
       const asset = createMockAsset({ business_model: '委托经营' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('委托经营')).toBeInTheDocument();
     });
 
     it('应该显示是否计入出租率', () => {
       const asset = createMockAsset({ include_in_occupancy_rate: true });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       // 检查标签存在
       const tags = screen.getAllByTestId('tag');
@@ -436,7 +436,7 @@ describe('AssetDetailInfo', () => {
 
     it('应该显示权属类别', () => {
       const asset = createMockAsset({ ownership_category: '自有物业' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('自有物业')).toBeInTheDocument();
     });
@@ -448,7 +448,7 @@ describe('AssetDetailInfo', () => {
         usage_status: '出租',
         tenant_name: '租户A',
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('合同信息')).toBeInTheDocument();
     });
@@ -458,7 +458,7 @@ describe('AssetDetailInfo', () => {
         usage_status: '出租',
         tenant_name: '测试租户公司',
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试租户公司')).toBeInTheDocument();
     });
@@ -468,14 +468,14 @@ describe('AssetDetailInfo', () => {
         usage_status: '出租',
         lease_contract_number: 'LC-2024-001',
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('LC-2024-001')).toBeInTheDocument();
     });
 
     it('非出租状态不应该显示合同信息卡片', () => {
       const asset = createMockAsset({ usage_status: '空置' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByText('合同信息')).not.toBeInTheDocument();
     });
@@ -484,7 +484,7 @@ describe('AssetDetailInfo', () => {
   describe('备注信息显示', () => {
     it('有备注时应该显示备注卡片', () => {
       const asset = createMockAsset({ notes: '这是备注内容' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('备注信息')).toBeInTheDocument();
       expect(screen.getByText('这是备注内容')).toBeInTheDocument();
@@ -492,14 +492,14 @@ describe('AssetDetailInfo', () => {
 
     it('无备注时不应该显示备注卡片', () => {
       const asset = createMockAsset({ notes: '' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByText('备注信息')).not.toBeInTheDocument();
     });
 
     it('备注为undefined时不应该显示备注卡片', () => {
       const asset = createMockAsset({ notes: undefined });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByText('备注信息')).not.toBeInTheDocument();
     });
@@ -508,21 +508,21 @@ describe('AssetDetailInfo', () => {
   describe('图标显示', () => {
     it('应该显示基本信息图标', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('icon-info')).toBeInTheDocument();
     });
 
     it('应该显示位置图标', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('icon-environment')).toBeInTheDocument();
     });
 
     it('应该显示用户图标', () => {
       const asset = createMockAsset();
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('icon-user')).toBeInTheDocument();
     });
@@ -531,7 +531,7 @@ describe('AssetDetailInfo', () => {
   describe('空值处理', () => {
     it('应该处理缺失的物业名称', () => {
       const asset = createMockAsset({ property_name: undefined });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const dashElements = screen.queryAllByText('-');
       expect(dashElements.length).toBeGreaterThan(0);
@@ -539,7 +539,7 @@ describe('AssetDetailInfo', () => {
 
     it('应该处理缺失的地址', () => {
       const asset = createMockAsset({ address: undefined });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const dashElements = screen.getAllByText('-');
       expect(dashElements.length).toBeGreaterThan(0);
@@ -547,7 +547,7 @@ describe('AssetDetailInfo', () => {
 
     it('应该处理缺失的权属方', () => {
       const asset = createMockAsset({ ownership_entity: undefined });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const dashElements = screen.getAllByText('-');
       expect(dashElements.length).toBeGreaterThan(0);
@@ -558,7 +558,7 @@ describe('AssetDetailInfo', () => {
         land_area: 0,
         actual_property_area: 0,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
@@ -567,7 +567,7 @@ describe('AssetDetailInfo', () => {
       const asset = createMockAsset({
         land_area: null as unknown as number,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('statistic-土地面积')).toBeInTheDocument();
     });
@@ -576,14 +576,14 @@ describe('AssetDetailInfo', () => {
   describe('时间信息', () => {
     it('应该显示创建时间', () => {
       const asset = createMockAsset({ created_at: '2024-01-01T00:00:00.000Z' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText(/创建时间/)).toBeInTheDocument();
     });
 
     it('应该显示更新时间', () => {
       const asset = createMockAsset({ updated_at: '2024-01-15T00:00:00.000Z' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText(/更新时间/)).toBeInTheDocument();
     });
@@ -595,7 +595,7 @@ describe('AssetDetailInfo', () => {
         operation_agreement_start_date: '2024-01-01',
         operation_agreement_end_date: '2025-01-01',
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('接收协议详情')).toBeInTheDocument();
     });
@@ -606,7 +606,7 @@ describe('AssetDetailInfo', () => {
         operation_agreement_end_date: undefined,
         operation_agreement_attachments: undefined,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByText('接收协议详情')).not.toBeInTheDocument();
     });
@@ -618,14 +618,14 @@ describe('AssetDetailInfo', () => {
         property_nature: '经营性',
         rentable_area: 100,
       });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByTestId('icon-percentage')).toBeInTheDocument();
     });
 
     it('非经营性资产不应该显示出租率信息', () => {
       const asset = createMockAsset({ property_nature: '非经营性' });
-      render(<AssetDetailInfo asset={asset} />);
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.queryByTestId('icon-percentage')).not.toBeInTheDocument();
     });

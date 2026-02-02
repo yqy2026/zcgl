@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { useMutation } from '@tanstack/react-query';
 
 // Mock services
@@ -450,25 +450,25 @@ describe('AssetExport', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染导出卡片', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('export-card')).toBeInTheDocument();
     });
 
     it('应该显示导出表单', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('export-form')).toBeInTheDocument();
     });
 
     it('应该显示导出按钮', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByText('开始导出')).toBeInTheDocument();
     });
 
     it('导出按钮应该是primary类型', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('btn-primary')).toBeInTheDocument();
     });
@@ -476,13 +476,13 @@ describe('AssetExport', () => {
 
   describe('导出格式选择', () => {
     it('应该显示格式选择器', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('form-item-format')).toBeInTheDocument();
     });
 
     it('应该有Excel和CSV选项', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByText('Excel (.xlsx)')).toBeInTheDocument();
       expect(screen.getByText('CSV (.csv)')).toBeInTheDocument();
@@ -491,13 +491,13 @@ describe('AssetExport', () => {
 
   describe('导出选项', () => {
     it('应该显示包含空值选项', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getAllByTestId('checkbox').length).toBeGreaterThan(0);
     });
 
     it('应该显示选择导出字段选项', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByText('选择导出字段')).toBeInTheDocument();
     });
@@ -505,7 +505,7 @@ describe('AssetExport', () => {
 
   describe('导出按钮点击', () => {
     it('点击导出按钮应该触发导出', async () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       const exportButton = screen.getByText('开始导出');
       fireEvent.click(exportButton);
@@ -530,7 +530,7 @@ describe('AssetExport', () => {
         isSuccess: false,
         isError: false,
       }));
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       const exportButton = screen.getByText('开始导出');
       fireEvent.click(exportButton);
@@ -543,13 +543,13 @@ describe('AssetExport', () => {
 
   describe('导出历史', () => {
     it('应该显示历史按钮', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByText('导出历史')).toBeInTheDocument();
     });
 
     it('点击历史按钮应该打开历史弹窗', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       const historyButton = screen.getByText('导出历史');
       fireEvent.click(historyButton);
@@ -558,7 +558,7 @@ describe('AssetExport', () => {
     });
 
     it('历史弹窗应该显示历史列表', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       const historyButton = screen.getByText('导出历史');
       fireEvent.click(historyButton);
@@ -569,13 +569,13 @@ describe('AssetExport', () => {
 
   describe('选中资产导出', () => {
     it('有选中资产时应该显示选中数量', () => {
-      render(<AssetExport selectedAssetIds={['1', '2', '3']} />);
+      renderWithProviders(<AssetExport selectedAssetIds={['1', '2', '3']} />);
 
       expect(screen.getByText(/已选择 3 条记录/)).toBeInTheDocument();
     });
 
     it('没有选中资产时应该显示导出全部', () => {
-      render(<AssetExport selectedAssetIds={[]} />);
+      renderWithProviders(<AssetExport selectedAssetIds={[]} />);
 
       expect(screen.queryByText(/已选择/)).not.toBeInTheDocument();
     });
@@ -584,14 +584,14 @@ describe('AssetExport', () => {
   describe('属性传递', () => {
     it('应该接受searchParams属性', () => {
       const searchParams = { ownership_status: '已确权' as const };
-      render(<AssetExport searchParams={searchParams} />);
+      renderWithProviders(<AssetExport searchParams={searchParams} />);
 
       expect(screen.getByTestId('export-card')).toBeInTheDocument();
     });
 
     it('应该接受onExportComplete回调', () => {
       const onExportComplete = vi.fn();
-      render(<AssetExport onExportComplete={onExportComplete} />);
+      renderWithProviders(<AssetExport onExportComplete={onExportComplete} />);
 
       expect(screen.getByTestId('export-card')).toBeInTheDocument();
     });
@@ -599,19 +599,19 @@ describe('AssetExport', () => {
 
   describe('图标显示', () => {
     it('应该显示下载图标', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('icon-download')).toBeInTheDocument();
     });
 
     it('应该显示Excel图标', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('icon-excel')).toBeInTheDocument();
     });
 
     it('应该显示历史图标', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(screen.getByTestId('icon-history')).toBeInTheDocument();
     });
@@ -626,7 +626,7 @@ describe('AssetExport', () => {
         isError: false,
       });
 
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       const exportButton = screen.getByTestId('btn-primary');
       expect(exportButton).toHaveAttribute('data-loading', 'true');
@@ -635,7 +635,7 @@ describe('AssetExport', () => {
 
   describe('表单验证', () => {
     it('表单应该有默认值', () => {
-      render(<AssetExport />);
+      renderWithProviders(<AssetExport />);
 
       expect(mockFormInstance.getFieldsValue).toBeDefined();
     });
@@ -643,13 +643,13 @@ describe('AssetExport', () => {
 
   describe('提示信息', () => {
     it('应该显示导出说明', () => {
-      render(<AssetExport searchParams={{ ownership_status: '已确权' }} />);
+      renderWithProviders(<AssetExport searchParams={{ ownership_status: '已确权' }} />);
 
       expect(screen.getByTestId('alert')).toBeInTheDocument();
     });
 
     it('说明应该是info类型', () => {
-      render(<AssetExport searchParams={{ ownership_status: '已确权' }} />);
+      renderWithProviders(<AssetExport searchParams={{ ownership_status: '已确权' }} />);
 
       const alert = screen.getByTestId('alert');
       expect(alert).toHaveAttribute('data-type', 'info');

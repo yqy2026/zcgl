@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { useQuery } from '@tanstack/react-query';
 
 // Mock @tanstack/react-query
@@ -156,20 +156,20 @@ describe('ProjectSelect', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染TreeSelect组件', () => {
-      render(<ProjectSelect />);
+      renderWithProviders(<ProjectSelect />);
 
       expect(screen.getByTestId('tree-select')).toBeInTheDocument();
     });
 
     it('应该显示占位符', () => {
-      render(<ProjectSelect placeholder="请选择项目" />);
+      renderWithProviders(<ProjectSelect placeholder="请选择项目" />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-placeholder', '请选择项目');
     });
 
     it('应该加载项目数据', () => {
-      render(<ProjectSelect />);
+      renderWithProviders(<ProjectSelect />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-has-data', 'true');
@@ -178,14 +178,14 @@ describe('ProjectSelect', () => {
 
   describe('value属性', () => {
     it('应该接受value属性', () => {
-      render(<ProjectSelect value="1" />);
+      renderWithProviders(<ProjectSelect value="1" />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-value', '1');
     });
 
     it('多选模式应该接受数组value', () => {
-      render(<ProjectSelect value={['1', '2']} multiple={true} />);
+      renderWithProviders(<ProjectSelect value={['1', '2']} multiple={true} />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-value', '1,2');
@@ -195,7 +195,7 @@ describe('ProjectSelect', () => {
   describe('onChange回调', () => {
     it('选择项目应该触发onChange', () => {
       const handleChange = vi.fn();
-      render(<ProjectSelect onChange={handleChange} />);
+      renderWithProviders(<ProjectSelect onChange={handleChange} />);
 
       const selectInput = screen.getByTestId('select-input');
       fireEvent.change(selectInput, { target: { value: '1' } });
@@ -205,7 +205,7 @@ describe('ProjectSelect', () => {
 
     it('多选模式onChange应该返回数组', () => {
       const handleChange = vi.fn();
-      render(<ProjectSelect onChange={handleChange} multiple={true} />);
+      renderWithProviders(<ProjectSelect onChange={handleChange} multiple={true} />);
 
       const selectInput = screen.getByTestId('select-input');
       fireEvent.change(selectInput, { target: { value: '1' } });
@@ -216,14 +216,14 @@ describe('ProjectSelect', () => {
 
   describe('disabled状态', () => {
     it('disabled时应该不可交互', () => {
-      render(<ProjectSelect disabled={true} />);
+      renderWithProviders(<ProjectSelect disabled={true} />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-disabled', 'true');
     });
 
     it('disabled时select应该被禁用', () => {
-      render(<ProjectSelect disabled={true} />);
+      renderWithProviders(<ProjectSelect disabled={true} />);
 
       const selectInput = screen.getByTestId('select-input');
       expect(selectInput).toBeDisabled();
@@ -232,7 +232,7 @@ describe('ProjectSelect', () => {
 
   describe('allowClear属性', () => {
     it('allowClear为true时应该显示清除功能', () => {
-      render(<ProjectSelect allowClear={true} value="1" />);
+      renderWithProviders(<ProjectSelect allowClear={true} value="1" />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-allow-clear', 'true');
@@ -241,7 +241,7 @@ describe('ProjectSelect', () => {
 
   describe('多选模式', () => {
     it('multiple为true时应该支持多选', () => {
-      render(<ProjectSelect multiple={true} />);
+      renderWithProviders(<ProjectSelect multiple={true} />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-multiple', 'true');
@@ -250,7 +250,7 @@ describe('ProjectSelect', () => {
 
   describe('搜索功能', () => {
     it('showSearch为true时应该支持搜索', () => {
-      render(<ProjectSelect showSearch={true} />);
+      renderWithProviders(<ProjectSelect showSearch={true} />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-show-search', 'true');
@@ -266,7 +266,7 @@ describe('ProjectSelect', () => {
         refetch: vi.fn(),
       });
 
-      render(<ProjectSelect />);
+      renderWithProviders(<ProjectSelect />);
 
       const treeSelect = screen.getByTestId('tree-select');
       expect(treeSelect).toHaveAttribute('data-loading', 'true');
@@ -282,7 +282,7 @@ describe('ProjectSelect', () => {
         refetch: vi.fn(),
       });
 
-      render(<ProjectSelect />);
+      renderWithProviders(<ProjectSelect />);
 
       expect(screen.getByTestId('empty')).toBeInTheDocument();
     });
@@ -290,7 +290,7 @@ describe('ProjectSelect', () => {
 
   describe('默认值', () => {
     it('应该支持defaultValue', () => {
-      render(<ProjectSelect defaultValue="1" />);
+      renderWithProviders(<ProjectSelect defaultValue="1" />);
 
       expect(screen.getByTestId('tree-select')).toBeInTheDocument();
     });

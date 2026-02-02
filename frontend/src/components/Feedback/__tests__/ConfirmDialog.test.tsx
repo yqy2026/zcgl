@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 interface ModalOkButtonPropsMock {
   danger?: boolean;
@@ -163,7 +163,7 @@ describe('ConfirmDialog - 基础渲染测试', () => {
 
   it('应该支持title与content属性', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(
+    renderWithProviders(
       <ConfirmDialog
         type="warning"
         visible={true}
@@ -179,7 +179,7 @@ describe('ConfirmDialog - 基础渲染测试', () => {
 
   it('visible为false时应该关闭对话框', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(<ConfirmDialog type="warning" visible={false} />);
+    renderWithProviders(<ConfirmDialog type="warning" visible={false} />);
 
     expect(screen.getByTestId('modal')).toHaveAttribute('data-open', 'false');
   });
@@ -201,7 +201,7 @@ describe('ConfirmDialog - 预设类型测试', () => {
     ['info', '提示', '确定'],
   ])('type=%s 应该显示默认标题与按钮文案', async (type, title, okText) => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(<ConfirmDialog type={type as any} visible={true} />);
+    renderWithProviders(<ConfirmDialog type={type as any} visible={true} />);
 
     expect(screen.getByTestId('modal-title')).toHaveTextContent(String(title));
     expect(screen.getByTestId('ok-button')).toHaveTextContent(okText);
@@ -217,7 +217,7 @@ describe('ConfirmDialog - 回调与配置测试', () => {
   it('点击确定应该触发onConfirm', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
     const handleConfirm = vi.fn();
-    render(<ConfirmDialog type="delete" visible={true} onConfirm={handleConfirm} />);
+    renderWithProviders(<ConfirmDialog type="delete" visible={true} onConfirm={handleConfirm} />);
 
     fireEvent.click(screen.getByTestId('ok-button'));
     expect(handleConfirm).toHaveBeenCalledTimes(1);
@@ -226,7 +226,7 @@ describe('ConfirmDialog - 回调与配置测试', () => {
   it('点击取消应该触发onCancel', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
     const handleCancel = vi.fn();
-    render(<ConfirmDialog type="warning" visible={true} onCancel={handleCancel} />);
+    renderWithProviders(<ConfirmDialog type="warning" visible={true} onCancel={handleCancel} />);
 
     fireEvent.click(screen.getByTestId('cancel-button'));
     expect(handleCancel).toHaveBeenCalledTimes(1);
@@ -234,7 +234,7 @@ describe('ConfirmDialog - 回调与配置测试', () => {
 
   it('应该支持按钮与对话框配置', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(
+    renderWithProviders(
       <ConfirmDialog
         type="warning"
         visible={true}
@@ -266,7 +266,7 @@ describe('ConfirmDialog - 内容渲染测试', () => {
 
   it('delete类型应显示itemName与itemCount信息', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(
+    renderWithProviders(
       <ConfirmDialog type="delete" visible={true} itemName="测试项目" itemCount={2} />
     );
 
@@ -275,7 +275,7 @@ describe('ConfirmDialog - 内容渲染测试', () => {
 
   it('details应渲染在内容区域', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    render(
+    renderWithProviders(
       <ConfirmDialog type="save" visible={true} details={['更改1', '更改2']} />
     );
 
@@ -292,13 +292,13 @@ describe('ConfirmDialog - 预设组件测试', () => {
 
   it('DeleteConfirmDialog应该正确渲染', async () => {
     const { DeleteConfirmDialog } = await import('../ConfirmDialog');
-    render(<DeleteConfirmDialog visible={true} />);
+    renderWithProviders(<DeleteConfirmDialog visible={true} />);
     expect(screen.getByText('确认删除')).toBeInTheDocument();
   });
 
   it('SaveConfirmDialog应该正确渲染', async () => {
     const { SaveConfirmDialog } = await import('../ConfirmDialog');
-    render(<SaveConfirmDialog visible={true} />);
+    renderWithProviders(<SaveConfirmDialog visible={true} />);
     expect(screen.getByText('确认保存')).toBeInTheDocument();
   });
 });

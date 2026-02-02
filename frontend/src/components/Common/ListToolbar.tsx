@@ -14,6 +14,7 @@ interface ListToolbarProps {
   gutter?: [number, number];
   align?: 'top' | 'middle' | 'bottom';
   cardProps?: Omit<CardProps, 'children'>;
+  variant?: 'card' | 'plain';
 }
 
 export const ListToolbar: React.FC<ListToolbarProps> = ({
@@ -21,16 +22,25 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   gutter = [16, 16],
   align = 'middle',
   cardProps,
+  variant = 'card',
 }) => {
+  const content = (
+    <Row gutter={gutter} align={align}>
+      {items.map(item => (
+        <Col key={item.key} {...item.col}>
+          {item.content}
+        </Col>
+      ))}
+    </Row>
+  );
+
+  if (variant === 'plain') {
+    return content;
+  }
+
   return (
     <Card style={{ marginBottom: 16, ...(cardProps?.style ?? {}) }} {...cardProps}>
-      <Row gutter={gutter} align={align}>
-        {items.map(item => (
-          <Col key={item.key} {...item.col}>
-            {item.content}
-          </Col>
-        ))}
-      </Row>
+      {content}
     </Card>
   );
 };

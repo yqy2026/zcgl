@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { waitFor } from '@/test/utils/test-helpers';
 import AssetForm from '../AssetForm';
 
 const {
@@ -308,7 +308,7 @@ describe('AssetForm - 核心行为测试', () => {
   });
 
   it('应调用useDictionaries加载字典', () => {
-    render(<AssetForm />);
+    renderWithProviders(<AssetForm />);
 
     expect(useDictionariesMock).toHaveBeenCalledWith([
       'property_nature',
@@ -324,7 +324,7 @@ describe('AssetForm - 核心行为测试', () => {
   });
 
   it('初始数据应设置表单并触发合同加载', async () => {
-    render(
+    renderWithProviders(
       <AssetForm
         initialData={{
           id: 'asset-123',
@@ -343,7 +343,7 @@ describe('AssetForm - 核心行为测试', () => {
 
   it('提交时必填字段齐全应调用onSubmit', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<AssetForm onSubmit={onSubmit} />);
+    renderWithProviders(<AssetForm onSubmit={onSubmit} />);
 
     const onFinish = formMock.mock.calls[0][0].onFinish as (
       values: Record<string, unknown>
@@ -363,7 +363,7 @@ describe('AssetForm - 核心行为测试', () => {
 
   it('提交时缺少必填字段应提示错误', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<AssetForm onSubmit={onSubmit} />);
+    renderWithProviders(<AssetForm onSubmit={onSubmit} />);
 
     const onFinish = formMock.mock.calls[0][0].onFinish as (
       values: Record<string, unknown>

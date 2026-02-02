@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import MobileMenu from '../MobileMenu';
@@ -134,7 +134,7 @@ describe('MobileMenu', () => {
   });
 
   it('renders menu trigger button and closed drawer by default', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const triggerButton = screen.getByTestId('icon-menu').closest('button');
     expect(triggerButton).not.toBeNull();
@@ -142,7 +142,7 @@ describe('MobileMenu', () => {
   });
 
   it('opens drawer when trigger button clicked', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const triggerButton = screen.getByTestId('icon-menu').closest('button');
     if (triggerButton) {
@@ -152,7 +152,7 @@ describe('MobileMenu', () => {
   });
 
   it('closes drawer when close button clicked', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const triggerButton = screen.getByTestId('icon-menu').closest('button');
     if (triggerButton) {
@@ -165,7 +165,7 @@ describe('MobileMenu', () => {
   });
 
   it('navigates and closes drawer when menu item clicked', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const triggerButton = screen.getByTestId('icon-menu').closest('button');
     if (triggerButton) {
@@ -180,7 +180,7 @@ describe('MobileMenu', () => {
   });
 
   it('passes selected/open keys to Menu based on location', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     expect(getSelectedKeys).toHaveBeenCalledWith('/dashboard');
     expect(getOpenKeys).toHaveBeenCalledWith('/dashboard');
@@ -191,7 +191,7 @@ describe('MobileMenu', () => {
   });
 
   it('renders drawer title with Home icon', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const title = screen.getByTestId('drawer-title');
     expect(title).toBeInTheDocument();
@@ -199,7 +199,7 @@ describe('MobileMenu', () => {
   });
 
   it('uses menu items from config', () => {
-    render(<MobileMenu />);
+    renderWithProviders(<MobileMenu />);
 
     const items = screen.getAllByTestId('menu-item');
     expect(items).toHaveLength(MENU_ITEMS.length);

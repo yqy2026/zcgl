@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import ProgressIndicator, {
@@ -192,7 +192,7 @@ vi.mock('@ant-design/icons', () => {
 
 describe('ProgressIndicator', () => {
   it('renders line progress with defaults', () => {
-    render(<ProgressIndicator />);
+    renderWithProviders(<ProgressIndicator />);
 
     const progress = screen.getByTestId('progress');
     expect(progress).toHaveAttribute('data-type', 'line');
@@ -200,7 +200,7 @@ describe('ProgressIndicator', () => {
   });
 
   it('renders circle progress with small size', () => {
-    render(<ProgressIndicator type="circle" size="small" percent={50} />);
+    renderWithProviders(<ProgressIndicator type="circle" size="small" percent={50} />);
 
     const progress = screen.getByTestId('progress');
     expect(progress).toHaveAttribute('data-type', 'circle');
@@ -208,14 +208,14 @@ describe('ProgressIndicator', () => {
   });
 
   it('renders title and success icon', () => {
-    render(<ProgressIndicator title="完成" status="success" percent={100} />);
+    renderWithProviders(<ProgressIndicator title="完成" status="success" percent={100} />);
 
     expect(screen.getByTestId('title')).toHaveTextContent('完成');
     expect(screen.getByTestId('icon-check')).toBeInTheDocument();
   });
 
   it('renders steps with items and current index', () => {
-    render(
+    renderWithProviders(
       <ProcessSteps
         title="流程"
         current={1}
@@ -232,7 +232,7 @@ describe('ProgressIndicator', () => {
   });
 
   it('renders timeline with status-based colors', () => {
-    render(
+    renderWithProviders(
       <ProcessTimeline
         steps={[
           { title: '事件1', status: 'finish' },
@@ -251,21 +251,21 @@ describe('ProgressIndicator', () => {
   });
 
   it('renders LoadingProgress defaults', () => {
-    render(<LoadingProgress />);
+    renderWithProviders(<LoadingProgress />);
 
     expect(screen.getByTestId('title')).toHaveTextContent('加载中');
     expect(screen.getByTestId('icon-loading')).toBeInTheDocument();
   });
 
   it('renders UploadProgress description and success status', () => {
-    render(<UploadProgress percent={100} fileName="demo.xlsx" />);
+    renderWithProviders(<UploadProgress percent={100} fileName="demo.xlsx" />);
 
     expect(screen.getByTestId('text')).toHaveTextContent('正在上传: demo.xlsx');
     expect(screen.getByTestId('progress')).toHaveAttribute('data-status', 'success');
   });
 
   it('renders ProgressCard content and actions', () => {
-    render(
+    renderWithProviders(
       <ProgressCard
         title="导入进度"
         description="处理中"

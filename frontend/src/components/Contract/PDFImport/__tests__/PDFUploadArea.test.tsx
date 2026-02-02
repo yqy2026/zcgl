@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PDFUploadArea from '../PDFUploadArea';
 
@@ -45,7 +45,7 @@ describe('PDFUploadArea', () => {
         maxSize: 50,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
       expect(screen.getByText('点击或拖拽文件到此区域上传')).toBeInTheDocument();
     });
 
@@ -56,7 +56,7 @@ describe('PDFUploadArea', () => {
         maxSize: 50,
       } as ReturnType<typeof usePDFImportContext>);
 
-      const { container } = render(<PDFUploadArea />);
+      const { container } = renderWithProviders(<PDFUploadArea />);
       expect(container.firstChild).toBeNull();
     });
 
@@ -67,7 +67,7 @@ describe('PDFUploadArea', () => {
         maxSize: 100,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
       expect(screen.getByText('支持PDF文件，最大100MB')).toBeInTheDocument();
     });
 
@@ -78,7 +78,7 @@ describe('PDFUploadArea', () => {
         maxSize: 50,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
       const uploadArea = document.querySelector('.ant-upload-disabled');
       expect(uploadArea).toBeInTheDocument();
     });
@@ -94,7 +94,7 @@ describe('PDFUploadArea', () => {
     });
 
     it('拒绝非 PDF 文件', async () => {
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -117,7 +117,7 @@ describe('PDFUploadArea', () => {
         maxSize: 1, // 1MB
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       // 创建一个大于 1MB 的文件
       const largeContent = new Array(1024 * 1024 * 2).fill('a').join('');
@@ -137,7 +137,7 @@ describe('PDFUploadArea', () => {
     });
 
     it('接受有效的 PDF 文件 (通过 MIME 类型)', () => {
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       const file = new File(['%PDF-1.4'], 'valid.pdf', { type: 'application/pdf' });
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -154,7 +154,7 @@ describe('PDFUploadArea', () => {
     });
 
     it('接受 .pdf 扩展名的文件', () => {
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       // 即使 MIME 类型不是 application/pdf，扩展名是 .pdf 也应该通过
       const file = new File(['content'], 'document.pdf', { type: '' });
@@ -178,7 +178,7 @@ describe('PDFUploadArea', () => {
         maxSize: 50,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       expect(input).not.toHaveAttribute('multiple');
@@ -191,7 +191,7 @@ describe('PDFUploadArea', () => {
         maxSize: 50,
       } as ReturnType<typeof usePDFImportContext>);
 
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       expect(input.getAttribute('accept')).toBe('.pdf,application/pdf');
@@ -208,12 +208,12 @@ describe('PDFUploadArea', () => {
     });
 
     it('显示上传图标', () => {
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
       expect(document.querySelector('.ant-upload-drag-icon')).toBeInTheDocument();
     });
 
     it('显示拖拽提示文本', () => {
-      render(<PDFUploadArea />);
+      renderWithProviders(<PDFUploadArea />);
       expect(screen.getByText('点击或拖拽文件到此区域上传')).toBeInTheDocument();
     });
   });

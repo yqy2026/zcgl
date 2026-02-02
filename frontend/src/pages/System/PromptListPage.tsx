@@ -43,6 +43,7 @@ import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
 import PromptEditor from '@/components/System/PromptEditor';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useListData } from '@/hooks/useListData';
 
 const logger = createLogger('PromptListPage');
@@ -484,43 +485,64 @@ const PromptListPage: React.FC = () => {
         }
       >
         {/* 筛选器 */}
-        <Space style={{ marginBottom: 16 }} size="middle">
-          <Select
-            placeholder="文档类型"
-            allowClear
-            style={{ width: 150 }}
-            value={filters.doc_type}
-            onChange={handleDocTypeChange}
-          >
-            <Option value={DocType.CONTRACT}>租赁合同</Option>
-            <Option value={DocType.PROPERTY_CERT}>产权证</Option>
-          </Select>
-
-          <Select
-            placeholder="提供商"
-            allowClear
-            style={{ width: 150 }}
-            value={filters.provider}
-            onChange={handleProviderChange}
-          >
-            <Option value={LLMProvider.QWEN}>Qwen</Option>
-            <Option value={LLMProvider.HUNYUAN}>混元</Option>
-            <Option value={LLMProvider.DEEPSEEK}>DeepSeek</Option>
-            <Option value={LLMProvider.GLM}>智谱</Option>
-          </Select>
-
-          <Select
-            placeholder="状态"
-            allowClear
-            style={{ width: 120 }}
-            value={filters.status}
-            onChange={handleStatusChange}
-          >
-            <Option value={PromptStatus.ACTIVE}>活跃</Option>
-            <Option value={PromptStatus.DRAFT}>草稿</Option>
-            <Option value={PromptStatus.ARCHIVED}>已归档</Option>
-          </Select>
-        </Space>
+        <div style={{ marginBottom: 16 }}>
+          <ListToolbar
+            variant="plain"
+            items={[
+              {
+                key: 'doc-type',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="文档类型"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.doc_type}
+                    onChange={handleDocTypeChange}
+                  >
+                    <Option value={DocType.CONTRACT}>租赁合同</Option>
+                    <Option value={DocType.PROPERTY_CERT}>产权证</Option>
+                  </Select>
+                ),
+              },
+              {
+                key: 'provider',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="提供商"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.provider}
+                    onChange={handleProviderChange}
+                  >
+                    <Option value={LLMProvider.QWEN}>Qwen</Option>
+                    <Option value={LLMProvider.HUNYUAN}>混元</Option>
+                    <Option value={LLMProvider.DEEPSEEK}>DeepSeek</Option>
+                    <Option value={LLMProvider.GLM}>智谱</Option>
+                  </Select>
+                ),
+              },
+              {
+                key: 'status',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="状态"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.status}
+                    onChange={handleStatusChange}
+                  >
+                    <Option value={PromptStatus.ACTIVE}>活跃</Option>
+                    <Option value={PromptStatus.DRAFT}>草稿</Option>
+                    <Option value={PromptStatus.ARCHIVED}>已归档</Option>
+                  </Select>
+                ),
+              },
+            ]}
+          />
+        </div>
 
         {/* 表格 */}
         <TableWithPagination

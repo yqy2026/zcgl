@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 interface HeaderMockProps {
   children?: React.ReactNode;
@@ -211,7 +211,7 @@ describe('AppHeader - 渲染与交互测试', () => {
 
   it('应该显示标题、用户名与通知中心', async () => {
     const AppHeader = (await import('../AppHeader')).default;
-    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
+    renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
     expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
     expect(screen.getByText('测试用户')).toBeInTheDocument();
@@ -221,7 +221,7 @@ describe('AppHeader - 渲染与交互测试', () => {
   it('折叠按钮应显示正确图标并触发回调', async () => {
     const AppHeader = (await import('../AppHeader')).default;
     const handleToggle = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <AppHeader collapsed={false} onToggleCollapsed={handleToggle} />
     );
 
@@ -236,7 +236,7 @@ describe('AppHeader - 渲染与交互测试', () => {
 
   it('用户菜单点击应触发导航与提示', async () => {
     const AppHeader = (await import('../AppHeader')).default;
-    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
+    renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId('menu-item-profile'));
     expect(navigateMock).toHaveBeenCalledWith('/profile');
@@ -252,7 +252,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     const AppHeader = (await import('../AppHeader')).default;
     const { AuthService } = await import('../../../services/authService');
 
-    render(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
+    renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
     fireEvent.click(screen.getByTestId('menu-item-logout'));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);

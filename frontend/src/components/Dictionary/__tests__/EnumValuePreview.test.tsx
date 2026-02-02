@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import EnumValuePreview from '../EnumValuePreview';
@@ -40,7 +40,7 @@ vi.mock('antd', () => ({
 
 describe('EnumValuePreview', () => {
   it('renders empty state when no values', () => {
-    render(<EnumValuePreview values={[]} />);
+    renderWithProviders(<EnumValuePreview values={[]} />);
 
     expect(screen.getByText('暂无枚举值')).toBeInTheDocument();
   });
@@ -65,7 +65,7 @@ describe('EnumValuePreview', () => {
       },
     ];
 
-    render(<EnumValuePreview values={values} />);
+    renderWithProviders(<EnumValuePreview values={values} />);
 
     const tags = screen.getAllByTestId('tag');
     expect(tags[0]).toHaveTextContent('B');
@@ -110,7 +110,7 @@ describe('EnumValuePreview', () => {
       },
     ];
 
-    render(<EnumValuePreview values={values} maxDisplay={2} />);
+    renderWithProviders(<EnumValuePreview values={values} maxDisplay={2} />);
 
     expect(screen.getByText('+2')).toBeInTheDocument();
     expect(screen.getByText('1 个已禁用')).toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('EnumValuePreview', () => {
       },
     ];
 
-    render(<EnumValuePreview values={values} maxDisplay={1} />);
+    renderWithProviders(<EnumValuePreview values={values} maxDisplay={1} />);
 
     const tags = screen.getAllByTestId('tag');
     const defaultTag = tags.find(tag => tag.textContent?.includes('默认值'));
@@ -167,7 +167,7 @@ describe('EnumValuePreview', () => {
       },
     ];
 
-    render(<EnumValuePreview values={values} _showInactiveCount={false} />);
+    renderWithProviders(<EnumValuePreview values={values} _showInactiveCount={false} />);
 
     expect(screen.queryByText('1 个已禁用')).toBeNull();
   });

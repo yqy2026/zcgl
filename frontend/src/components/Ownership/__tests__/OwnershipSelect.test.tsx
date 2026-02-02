@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { useOwnershipOptions } from '@/hooks/useOwnership';
 
 // Mock useOwnership hook
@@ -294,27 +294,27 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染组件', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       expect(screen.getByTestId('select')).toBeInTheDocument();
     });
 
     it('应该显示默认占位符', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-placeholder', '请选择权属方');
     });
 
     it('应该支持自定义占位符', () => {
-      render(<OwnershipSelect placeholder="自定义占位符" />);
+      renderWithProviders(<OwnershipSelect placeholder="自定义占位符" />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-placeholder', '自定义占位符');
     });
 
     it('应该渲染 Space.Compact 容器', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       expect(screen.getByTestId('space-compact')).toBeInTheDocument();
     });
@@ -322,14 +322,14 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('value 属性', () => {
     it('应该接受 value 属性', () => {
-      render(<OwnershipSelect value="1" />);
+      renderWithProviders(<OwnershipSelect value="1" />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-value', '1');
     });
 
     it('多选模式应该接受数组 value', () => {
-      render(<OwnershipSelect value={['1', '2']} mode="multiple" />);
+      renderWithProviders(<OwnershipSelect value={['1', '2']} mode="multiple" />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-value', '1,2');
@@ -339,7 +339,7 @@ describe('OwnershipSelect 组件测试', () => {
   describe('onChange 回调', () => {
     it('选择权属方应该触发 onChange', () => {
       const handleChange = vi.fn();
-      render(<OwnershipSelect onChange={handleChange} />);
+      renderWithProviders(<OwnershipSelect onChange={handleChange} />);
 
       const selectInput = screen.getByTestId('select-input');
       fireEvent.change(selectInput, { target: { value: '1' } });
@@ -349,7 +349,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('多选模式 onChange 应该返回数组', () => {
       const handleChange = vi.fn();
-      render(<OwnershipSelect onChange={handleChange} mode="multiple" />);
+      renderWithProviders(<OwnershipSelect onChange={handleChange} mode="multiple" />);
 
       const selectInput = screen.getByTestId('select-input');
       fireEvent.change(selectInput, { target: { value: '1' } });
@@ -360,21 +360,21 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('disabled 状态', () => {
     it('disabled 时应该不可交互', () => {
-      render(<OwnershipSelect disabled={true} />);
+      renderWithProviders(<OwnershipSelect disabled={true} />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-disabled', 'true');
     });
 
     it('disabled 时 select 应该被禁用', () => {
-      render(<OwnershipSelect disabled={true} />);
+      renderWithProviders(<OwnershipSelect disabled={true} />);
 
       const selectInput = screen.getByTestId('select-input');
       expect(selectInput).toBeDisabled();
     });
 
     it('disabled 时按钮应该被禁用', () => {
-      render(<OwnershipSelect disabled={true} />);
+      renderWithProviders(<OwnershipSelect disabled={true} />);
 
       const buttons = screen.getAllByTestId('button');
       buttons.forEach(button => {
@@ -385,7 +385,7 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('allowClear 属性', () => {
     it('allowClear 为 true 时应该显示清除功能', () => {
-      render(<OwnershipSelect allowClear={true} value="1" />);
+      renderWithProviders(<OwnershipSelect allowClear={true} value="1" />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-allow-clear', 'true');
@@ -393,7 +393,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('点击清除应该清空值', () => {
       const handleChange = vi.fn();
-      render(<OwnershipSelect allowClear={true} value="1" onChange={handleChange} />);
+      renderWithProviders(<OwnershipSelect allowClear={true} value="1" onChange={handleChange} />);
 
       const clearBtn = screen.getByTestId('clear-btn');
       fireEvent.click(clearBtn);
@@ -404,14 +404,14 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('搜索功能', () => {
     it('showSearch 为 true 时应该支持搜索', () => {
-      render(<OwnershipSelect showSearch={true} />);
+      renderWithProviders(<OwnershipSelect showSearch={true} />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-show-search', 'true');
     });
 
     it('应该能输入搜索文本', () => {
-      render(<OwnershipSelect showSearch={true} />);
+      renderWithProviders(<OwnershipSelect showSearch={true} />);
 
       const searchInput = screen.getByTestId('search-input');
       fireEvent.change(searchInput, { target: { value: '权属方1' } });
@@ -422,7 +422,7 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('多选模式', () => {
     it('mode 为 multiple 时应该支持多选', () => {
-      render(<OwnershipSelect mode="multiple" />);
+      renderWithProviders(<OwnershipSelect mode="multiple" />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-mode', 'multiple');
@@ -431,25 +431,25 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('按钮功能', () => {
     it('应该显示搜索按钮', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       expect(screen.getByTestId('icon-search')).toBeInTheDocument();
     });
 
     it('showAdvancedSelect 为 true 时应该显示列表选择按钮', () => {
-      render(<OwnershipSelect showAdvancedSelect={true} />);
+      renderWithProviders(<OwnershipSelect showAdvancedSelect={true} />);
 
       expect(screen.getByTestId('icon-list')).toBeInTheDocument();
     });
 
     it('showCreateButton 为 true 时应该显示创建按钮', () => {
-      render(<OwnershipSelect showCreateButton={true} />);
+      renderWithProviders(<OwnershipSelect showCreateButton={true} />);
 
       expect(screen.getByTestId('icon-plus')).toBeInTheDocument();
     });
 
     it('应该显示刷新按钮', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
     });
@@ -462,7 +462,7 @@ describe('OwnershipSelect 组件测试', () => {
         refresh: mockRefresh,
       });
 
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       const buttons = screen.getAllByTestId('button');
       const refreshButton = buttons.find(btn => btn.querySelector('[data-testid="icon-reload"]'));
@@ -477,7 +477,7 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('模态框交互', () => {
     it('点击搜索按钮应该打开选择弹窗', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       const buttons = screen.getAllByTestId('button');
       const searchButton = buttons.find(btn => btn.querySelector('[data-testid="icon-search"]'));
@@ -491,7 +491,7 @@ describe('OwnershipSelect 组件测试', () => {
     });
 
     it('应该能关闭选择弹窗', () => {
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       // 打开弹窗
       const buttons = screen.getAllByTestId('button');
@@ -510,7 +510,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('从弹窗中选择权属方应该触发 onChange 并关闭弹窗', () => {
       const handleChange = vi.fn();
-      render(<OwnershipSelect onChange={handleChange} />);
+      renderWithProviders(<OwnershipSelect onChange={handleChange} />);
 
       // 打开弹窗
       const buttons = screen.getAllByTestId('button');
@@ -538,7 +538,7 @@ describe('OwnershipSelect 组件测试', () => {
         refresh: vi.fn(),
       });
 
-      render(<OwnershipSelect />);
+      renderWithProviders(<OwnershipSelect />);
 
       const select = screen.getByTestId('select');
       expect(select).toHaveAttribute('data-loading', 'true');
@@ -547,7 +547,7 @@ describe('OwnershipSelect 组件测试', () => {
 
   describe('size 属性', () => {
     it('应该支持 large 尺寸', () => {
-      render(<OwnershipSelect size="large" />);
+      renderWithProviders(<OwnershipSelect size="large" />);
 
       const buttons = screen.getAllByTestId('button');
       buttons.forEach(button => {
@@ -556,7 +556,7 @@ describe('OwnershipSelect 组件测试', () => {
     });
 
     it('应该支持 small 尺寸', () => {
-      render(<OwnershipSelect size="small" />);
+      renderWithProviders(<OwnershipSelect size="small" />);
 
       const buttons = screen.getAllByTestId('button');
       buttons.forEach(button => {

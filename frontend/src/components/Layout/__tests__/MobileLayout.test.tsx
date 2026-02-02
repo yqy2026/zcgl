@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import MobileLayout from '../MobileLayout';
@@ -111,7 +111,7 @@ vi.mock('../AppBreadcrumb', () => ({
 
 describe('MobileLayout', () => {
   it('renders header, content, footer, and children', () => {
-    render(
+    renderWithProviders(
       <MobileLayout>
         <div data-testid="child">Content</div>
       </MobileLayout>
@@ -124,7 +124,7 @@ describe('MobileLayout', () => {
   });
 
   it('renders mobile menu, title, notification, and avatar in header', () => {
-    render(
+    renderWithProviders(
       <MobileLayout>
         <div>Content</div>
       </MobileLayout>
@@ -137,7 +137,7 @@ describe('MobileLayout', () => {
   });
 
   it('renders breadcrumb section', () => {
-    render(
+    renderWithProviders(
       <MobileLayout>
         <div>Content</div>
       </MobileLayout>
@@ -147,7 +147,7 @@ describe('MobileLayout', () => {
   });
 
   it('renders footer text', () => {
-    render(
+    renderWithProviders(
       <MobileLayout>
         <div>Content</div>
       </MobileLayout>
@@ -157,7 +157,7 @@ describe('MobileLayout', () => {
   });
 
   it('applies header fixed styles', () => {
-    render(
+    renderWithProviders(
       <MobileLayout>
         <div>Content</div>
       </MobileLayout>

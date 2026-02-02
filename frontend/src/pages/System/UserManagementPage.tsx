@@ -34,6 +34,7 @@ import { createLogger } from '@/utils/logger';
 
 const pageLogger = createLogger('UserManagement');
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useListData } from '@/hooks/useListData';
 import {
   PlusOutlined,
@@ -509,65 +510,98 @@ const UserManagementPage: React.FC = () => {
 
         <Card>
           <div style={{ marginBottom: 16 }}>
-            <Row justify="space-between" gutter={16}>
-              <Col flex="auto">
-                <Space size="middle">
-                  <Search
-                    placeholder="搜索用户名、邮箱或姓名"
-                    allowClear
-                    style={{ width: 300 }}
-                    onSearch={handleSearch}
-                  />
-                  <Select
-                    placeholder="状态筛选"
-                    allowClear
-                    style={{ width: 120 }}
-                    value={filters.status || undefined}
-                    onChange={handleStatusFilterChange}
-                  >
-                    {statusOptions.map(status => (
-                      <Option key={status.value} value={status.value}>
-                        {status.label}
-                      </Option>
-                    ))}
-                  </Select>
-                  <Select
-                    placeholder="角色筛选"
-                    allowClear
-                    style={{ width: 120 }}
-                    value={filters.roleId || undefined}
-                    onChange={handleRoleFilterChange}
-                  >
-                    {roles.map(role => (
-                      <Option key={role.id} value={role.id}>
-                        {role.name}
-                      </Option>
-                    ))}
-                  </Select>
-                  <Select
-                    placeholder="组织筛选"
-                    allowClear
-                    style={{ width: 120 }}
-                    value={filters.organizationId || undefined}
-                    onChange={handleOrganizationFilterChange}
-                  >
-                    {organizations.map(org => (
-                      <Option key={org.id} value={org.id}>
-                        {org.name}
-                      </Option>
-                    ))}
-                  </Select>
-                  <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
-                    刷新
-                  </Button>
-                </Space>
-              </Col>
-              <Col>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                  新建用户
-                </Button>
-              </Col>
-            </Row>
+            <ListToolbar
+              variant="plain"
+              items={[
+                {
+                  key: 'search',
+                  col: { xs: 24, sm: 12, md: 10, lg: 8 },
+                  content: (
+                    <Search
+                      placeholder="搜索用户名、邮箱或姓名"
+                      allowClear
+                      style={{ width: '100%' }}
+                      onSearch={handleSearch}
+                    />
+                  ),
+                },
+                {
+                  key: 'status',
+                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                  content: (
+                    <Select
+                      placeholder="状态筛选"
+                      allowClear
+                      style={{ width: '100%' }}
+                      value={filters.status || undefined}
+                      onChange={handleStatusFilterChange}
+                    >
+                      {statusOptions.map(status => (
+                        <Option key={status.value} value={status.value}>
+                          {status.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  ),
+                },
+                {
+                  key: 'role',
+                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                  content: (
+                    <Select
+                      placeholder="角色筛选"
+                      allowClear
+                      style={{ width: '100%' }}
+                      value={filters.roleId || undefined}
+                      onChange={handleRoleFilterChange}
+                    >
+                      {roles.map(role => (
+                        <Option key={role.id} value={role.id}>
+                          {role.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  ),
+                },
+                {
+                  key: 'organization',
+                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                  content: (
+                    <Select
+                      placeholder="组织筛选"
+                      allowClear
+                      style={{ width: '100%' }}
+                      value={filters.organizationId || undefined}
+                      onChange={handleOrganizationFilterChange}
+                    >
+                      {organizations.map(org => (
+                        <Option key={org.id} value={org.id}>
+                          {org.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  ),
+                },
+                {
+                  key: 'refresh',
+                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                  content: (
+                    <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
+                      刷新
+                    </Button>
+                  ),
+                },
+                {
+                  key: 'create',
+                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                  content: (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                      新建用户
+                    </Button>
+                  ),
+                },
+              ]}
+            />
           </div>
 
           <TableWithPagination

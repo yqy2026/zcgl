@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 interface SiderMockProps {
   children?: React.ReactNode;
@@ -133,7 +133,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
 
   it('应该渲染主要菜单项与子菜单项', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    render(<AppSidebar collapsed={false} />);
+    renderWithProviders(<AppSidebar collapsed={false} />);
 
     expect(screen.getByText('数据看板')).toBeInTheDocument();
     expect(screen.getAllByText('资产管理').length).toBeGreaterThan(0);
@@ -146,7 +146,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
 
   it('应该设置选中与展开的菜单Key', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    render(<AppSidebar collapsed={false} />);
+    renderWithProviders(<AppSidebar collapsed={false} />);
 
     const menu = screen.getByTestId('menu');
     expect(menu).toHaveAttribute('data-selected-keys', JSON.stringify(['/dashboard']));
@@ -155,7 +155,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
 
   it('折叠时隐藏Logo文本，展开时显示', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    const { rerender } = render(<AppSidebar collapsed={true} />);
+    const { rerender } = renderWithProviders(<AppSidebar collapsed={true} />);
 
     expect(screen.getAllByText('资产管理')).toHaveLength(1);
 
@@ -165,7 +165,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
 
   it('点击菜单项应触发导航', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
-    render(<AppSidebar collapsed={false} />);
+    renderWithProviders(<AppSidebar collapsed={false} />);
 
     fireEvent.click(screen.getByText('数据看板'));
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');

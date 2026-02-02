@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 
 import SkeletonLoader from '../SkeletonLoader';
 
@@ -146,7 +146,7 @@ vi.mock('antd', () => {
 
 describe('SkeletonLoader', () => {
   it('renders list skeleton with default rows', () => {
-    render(<SkeletonLoader type="list" />);
+    renderWithProviders(<SkeletonLoader type="list" />);
 
     const cards = screen.getAllByTestId('card');
     expect(cards).toHaveLength(3);
@@ -154,48 +154,48 @@ describe('SkeletonLoader', () => {
   });
 
   it('supports custom rows for list type', () => {
-    render(<SkeletonLoader type="list" rows={5} />);
+    renderWithProviders(<SkeletonLoader type="list" rows={5} />);
 
     const cards = screen.getAllByTestId('card');
     expect(cards).toHaveLength(5);
   });
 
   it('renders card type layout', () => {
-    render(<SkeletonLoader type="card" rows={2} />);
+    renderWithProviders(<SkeletonLoader type="card" rows={2} />);
 
     expect(screen.getByTestId('row')).toBeInTheDocument();
     expect(screen.getAllByTestId('col').length).toBeGreaterThan(0);
   });
 
   it('renders form type skeleton fields', () => {
-    render(<SkeletonLoader type="form" rows={2} />);
+    renderWithProviders(<SkeletonLoader type="form" rows={2} />);
 
     expect(screen.getAllByTestId('skeleton-input').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('skeleton-button').length).toBeGreaterThan(0);
   });
 
   it('renders table type skeleton', () => {
-    render(<SkeletonLoader type="table" rows={4} />);
+    renderWithProviders(<SkeletonLoader type="table" rows={4} />);
 
     expect(screen.getAllByTestId('skeleton-input').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('row').length).toBeGreaterThan(0);
   });
 
   it('renders chart type skeleton', () => {
-    render(<SkeletonLoader type="chart" />);
+    renderWithProviders(<SkeletonLoader type="chart" />);
 
     expect(screen.getByTestId('skeleton-node')).toBeInTheDocument();
   });
 
   it('renders detail type skeleton', () => {
-    render(<SkeletonLoader type="detail" rows={2} />);
+    renderWithProviders(<SkeletonLoader type="detail" rows={2} />);
 
     expect(screen.getByTestId('skeleton-avatar')).toBeInTheDocument();
     expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
   });
 
   it('renders children when loading is false and children provided', () => {
-    render(
+    renderWithProviders(
       <SkeletonLoader loading={false}>
         <div data-testid="content">Actual Content</div>
       </SkeletonLoader>
@@ -205,13 +205,13 @@ describe('SkeletonLoader', () => {
   });
 
   it('renders skeleton when loading is false but children missing', () => {
-    render(<SkeletonLoader loading={false} />);
+    renderWithProviders(<SkeletonLoader loading={false} />);
 
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('falls back to default skeleton for unknown type', () => {
-    render(<SkeletonLoader type={'unknown' as 'list'} />);
+    renderWithProviders(<SkeletonLoader type={'unknown' as 'list'} />);
 
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });

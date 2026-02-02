@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { ReactNode } from 'react';
 import type { DictionaryOption } from '../../services/dictionary';
 
@@ -87,7 +87,7 @@ describe('DictionarySelect', () => {
   });
 
   it('renders options from useDictionary', () => {
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     const options = screen.getAllByTestId('option');
     expect(options).toHaveLength(2);
@@ -95,13 +95,13 @@ describe('DictionarySelect', () => {
   });
 
   it('uses default placeholder derived from dictType', () => {
-    render(<DictionarySelect dictType="asset_type" />);
+    renderWithProviders(<DictionarySelect dictType="asset_type" />);
 
     expect(screen.getByTestId('select')).toHaveAttribute('data-placeholder', '请选择assettype');
   });
 
   it('uses custom placeholder when provided', () => {
-    render(<DictionarySelect dictType="test_type" placeholder="请选择" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" placeholder="请选择" />);
 
     expect(screen.getByTestId('select')).toHaveAttribute('data-placeholder', '请选择');
   });
@@ -113,7 +113,7 @@ describe('DictionarySelect', () => {
       error: null,
     });
 
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     expect(screen.getByTestId('spin')).toBeInTheDocument();
   });
@@ -125,39 +125,39 @@ describe('DictionarySelect', () => {
       error: null,
     });
 
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 
   it('invokes useDictionary with dictType and isActive', () => {
-    render(<DictionarySelect dictType="test_type" isActive={false} />);
+    renderWithProviders(<DictionarySelect dictType="test_type" isActive={false} />);
 
     expect(useDictionary).toHaveBeenCalledWith('test_type', false);
   });
 
   it('checks dictionary type availability', () => {
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     expect(dictionaryService.isTypeAvailable).toHaveBeenCalledWith('test_type');
   });
 
   it('filterOption matches string labels', () => {
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     expect(lastFilterOption?.('选项', { label: '选项1', value: 'opt1' })).toBe(true);
     expect(lastFilterOption?.('其他', { label: '选项1', value: 'opt1' })).toBe(false);
   });
 
   it('filterOption matches React element labels', () => {
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     const labelElement = <span>Alpha</span>;
     expect(lastFilterOption?.('alpha', { label: labelElement, value: 'opt3' })).toBe(true);
   });
 
   it('enables search and virtual list by default', () => {
-    render(<DictionarySelect dictType="test_type" />);
+    renderWithProviders(<DictionarySelect dictType="test_type" />);
 
     const select = screen.getByTestId('select');
     expect(select).toHaveAttribute('data-show-search', 'true');

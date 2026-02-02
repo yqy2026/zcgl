@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import EmptyState, {
@@ -84,7 +84,7 @@ vi.mock('@ant-design/icons', () => ({
 describe('EmptyState', () => {
   it('renders default no-data state and create button when handler provided', () => {
     const handleCreate = vi.fn();
-    render(<EmptyState onCreateClick={handleCreate} />);
+    renderWithProviders(<EmptyState onCreateClick={handleCreate} />);
 
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
     const createButton = screen.getByText('新增数据');
@@ -94,7 +94,7 @@ describe('EmptyState', () => {
 
   it('renders network error with refresh button', () => {
     const handleRefresh = vi.fn();
-    render(<NetworkErrorState onRefreshClick={handleRefresh} />);
+    renderWithProviders(<NetworkErrorState onRefreshClick={handleRefresh} />);
 
     expect(screen.getByText('网络连接失败')).toBeInTheDocument();
     const refreshButton = screen.getByText('刷新');
@@ -104,7 +104,7 @@ describe('EmptyState', () => {
 
   it('renders filter result state with clear filter action', () => {
     const handleClear = vi.fn();
-    render(<NoFilterResultsState onClearFilterClick={handleClear} />);
+    renderWithProviders(<NoFilterResultsState onClearFilterClick={handleClear} />);
 
     const clearButton = screen.getByText('清除筛选');
     fireEvent.click(clearButton);
@@ -112,7 +112,7 @@ describe('EmptyState', () => {
   });
 
   it('uses custom title, description, and image overrides', () => {
-    render(
+    renderWithProviders(
       <EmptyState
         title="自定义标题"
         description="自定义描述"
@@ -126,7 +126,7 @@ describe('EmptyState', () => {
   });
 
   it('uses actions prop instead of default buttons', () => {
-    render(
+    renderWithProviders(
       <EmptyState
         actions={<button type="button">自定义操作</button>}
         onCreateClick={vi.fn()}
@@ -138,13 +138,13 @@ describe('EmptyState', () => {
   });
 
   it('does not render action container when no actions and no handlers', () => {
-    render(<EmptyState />);
+    renderWithProviders(<EmptyState />);
 
     expect(screen.queryByTestId('space')).toBeNull();
   });
 
   it('preset wrapper renders default title', () => {
-    render(<NoDataState onCreateClick={vi.fn()} />);
+    renderWithProviders(<NoDataState onCreateClick={vi.fn()} />);
 
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });

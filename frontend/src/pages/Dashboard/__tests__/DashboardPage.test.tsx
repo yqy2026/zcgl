@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from '../DashboardPage';
@@ -75,7 +75,7 @@ const createTestQueryClient = () =>
 const renderWithProviders = () => {
   const queryClient = createTestQueryClient();
 
-  return render(
+  return renderWithProviders(
     <QueryClientProvider client={queryClient}>
       <DashboardPage />
     </QueryClientProvider>

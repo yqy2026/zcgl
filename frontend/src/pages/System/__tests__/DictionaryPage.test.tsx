@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderWithProviders, screen, waitFor, within, fireEvent } from '@/test/utils/test-helpers';
 import DictionaryPage from '../DictionaryPage';
 import { dictionaryService } from '@/services/dictionary';
 
@@ -238,7 +238,7 @@ const detailRows = [
 ];
 
 const renderDictionaryPage = async () => {
-  render(<DictionaryPage />);
+  renderWithProviders(<DictionaryPage />);
   await waitFor(() => {
     expect(dictionaryService.getEnumFieldData).toHaveBeenCalled();
   });
@@ -260,8 +260,14 @@ describe('DictionaryPage - 概览加载', () => {
       expect(dictionaryService.getEnumFieldData).toHaveBeenCalled();
     });
 
-    expect(screen.getByText('状态')).toBeInTheDocument();
-    expect(screen.getByText('status')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-row').length).toBeGreaterThan(0);
+    });
+
+    const rows = screen.getAllByTestId('table-row');
+    const firstRow = rows[0];
+    expect(within(firstRow).getByText('状态')).toBeInTheDocument();
+    expect(within(firstRow).getByText('status')).toBeInTheDocument();
   });
 });
 
@@ -279,6 +285,6 @@ describe('DictionaryPage - 详情加载', () => {
       expect(dictionaryService.getEnumFieldValuesByTypeCode).toHaveBeenCalledWith('status');
     });
 
-    expect(screen.getByText('仅详情')).toBeInTheDocument();
+    expect(await screen.findByText('仅详情')).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useContractList } from '../useContractList';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';

@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { ReactNode } from 'react';
 
 import RouteBuilder, { AssetRoutes, SystemRoutes } from '../RouteBuilder';
@@ -69,7 +69,7 @@ describe('RouteBuilder', () => {
       component: TestComponent,
     });
 
-    render(element);
+    renderWithProviders(element);
 
     const protectedRoute = screen.getByTestId('protected-route');
     expect(protectedRoute).toHaveAttribute('data-path', '/dashboard');
@@ -87,7 +87,7 @@ describe('RouteBuilder', () => {
       lazy: true,
     });
 
-    render(element);
+    renderWithProviders(element);
 
     expect(screen.getByTestId('lazy-route')).toHaveAttribute('data-path', '/lazy');
   });
@@ -99,7 +99,7 @@ describe('RouteBuilder', () => {
       element: <div data-testid="custom-element">Custom</div>,
     });
 
-    render(element);
+    renderWithProviders(element);
 
     expect(screen.getByTestId('route')).toHaveAttribute('data-has-element', 'true');
     expect(screen.getByTestId('custom-element')).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('RouteBuilder', () => {
       ],
     });
 
-    render(element);
+    renderWithProviders(element);
 
     expect(screen.getByTestId('route')).toHaveAttribute('data-has-children', 'true');
     expect(screen.getByTestId('protected-route')).toHaveAttribute('data-path', '/child');
@@ -132,7 +132,7 @@ describe('RouteBuilder', () => {
       title: '孤立',
     });
 
-    render(element);
+    renderWithProviders(element);
 
     expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/');
   });
@@ -146,13 +146,13 @@ describe('RouteBuilder', () => {
       { path: '/b', title: 'B', component: ComponentB },
     ]);
 
-    render(<>{elements}</>);
+    renderWithProviders(<>{elements}</>);
 
     expect(screen.getAllByTestId('protected-route')).toHaveLength(2);
   });
 
   it('createRedirect produces navigate element', () => {
-    render(RouteBuilder.createRedirect('/old', '/new', true));
+    renderWithProviders(RouteBuilder.createRedirect('/old', '/new', true));
 
     expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/new');
   });
@@ -160,7 +160,7 @@ describe('RouteBuilder', () => {
   it('createProtectedRoute passes permissions', () => {
     const TestComponent = () => <div>Protected</div>;
 
-    render(
+    renderWithProviders(
       RouteBuilder.createProtectedRoute(
         '/protected',
         TestComponent,
@@ -180,7 +180,7 @@ describe('RouteBuilder', () => {
       default: () => <div>Lazy</div>,
     }));
 
-    render(
+    renderWithProviders(
       RouteBuilder.createLazyRoute('/lazy', TestComponent, {
         title: '懒加载页面',
         permissions: [PERMISSIONS.ASSET_VIEW],
@@ -196,7 +196,7 @@ describe('RouteBuilder', () => {
   it('AssetRoutes/SystemRoutes produce protected routes', () => {
     const TestComponent = () => <div>Page</div>;
 
-    render(
+    renderWithProviders(
       <>
         {AssetRoutes.list(TestComponent)}
         {SystemRoutes.roles(TestComponent)}

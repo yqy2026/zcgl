@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 
 interface AlertMockProps {
   message?: React.ReactNode;
@@ -111,14 +111,14 @@ describe('FriendlyErrorDisplay - 基础渲染测试', () => {
 
   it('error为undefined且showDetails为false时应返回空渲染', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    render(<FriendlyErrorDisplay error={undefined} showDetails={false} />);
+    renderWithProviders(<FriendlyErrorDisplay error={undefined} showDetails={false} />);
 
     expect(screen.queryByTestId('result')).not.toBeInTheDocument();
   });
 
   it('默认type应该是network', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    render(<FriendlyErrorDisplay error={{ message: '测试错误' }} />);
+    renderWithProviders(<FriendlyErrorDisplay error={{ message: '测试错误' }} />);
 
     expect(screen.getByTestId('result')).toHaveAttribute('data-title', '网络连接问题');
   });
@@ -137,7 +137,7 @@ describe('FriendlyErrorDisplay - 错误类型测试', () => {
     ['not-found', '未找到数据', 'icon-exclamation-circle'],
   ])('type=%s 应该显示对应标题与图标', async (type, title, iconTestId) => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    render(<FriendlyErrorDisplay error={{ message: '测试' }} type={type as any} />);
+    renderWithProviders(<FriendlyErrorDisplay error={{ message: '测试' }} type={type as any} />);
 
     expect(screen.getByTestId('result')).toHaveAttribute('data-title', title);
     expect(screen.getByTestId(iconTestId)).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('FriendlyErrorDisplay - 按钮与详情测试', () => {
     const handleRetry = vi.fn();
     const handleGoHome = vi.fn();
 
-    render(
+    renderWithProviders(
       <FriendlyErrorDisplay
         error={{ message: '测试错误' }}
         onRetry={handleRetry}
@@ -170,7 +170,7 @@ describe('FriendlyErrorDisplay - 按钮与详情测试', () => {
 
   it('showDetails为true时应该展示错误详情', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    render(
+    renderWithProviders(
       <FriendlyErrorDisplay
         error={{ status: 500, code: 'TEST_ERROR', message: '测试错误' }}
         showDetails={true}
@@ -191,7 +191,7 @@ describe('FriendlyErrorDisplay - 建议解决方案测试', () => {
 
   it('network类型应包含网络建议', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    render(<FriendlyErrorDisplay error={{ message: '网络错误' }} type="network" />);
+    renderWithProviders(<FriendlyErrorDisplay error={{ message: '网络错误' }} type="network" />);
 
     expect(screen.getByText('检查网络连接是否正常')).toBeInTheDocument();
     expect(screen.getByTestId('icon-bulb')).toBeInTheDocument();

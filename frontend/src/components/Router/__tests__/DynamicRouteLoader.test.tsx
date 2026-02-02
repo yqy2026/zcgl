@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import { BrowserRouter } from 'react-router-dom';
 import {
   DynamicRouteProvider,
@@ -26,7 +26,7 @@ describe('DynamicRouteLoader - 基础功能测试', () => {
   });
 
   it('DynamicRouteProvider应该正确渲染', () => {
-    render(
+    renderWithProviders(
       <DynamicRouteProvider>
         <div data-testid="test-child">Test Child</div>
       </DynamicRouteProvider>
@@ -38,7 +38,7 @@ describe('DynamicRouteLoader - 基础功能测试', () => {
 
 describe('DynamicRouteRenderer - 路由渲染测试', () => {
   it('应该在Router和Provider内正确渲染', async () => {
-    render(
+    renderWithProviders(
       <BrowserRouter>
         <DynamicRouteProvider>
           <DynamicRouteRenderer />
@@ -58,7 +58,7 @@ describe('路由Hook测试', () => {
       return <div data-testid="route-count">Routes: {context.routes.size}</div>;
     };
 
-    render(
+    renderWithProviders(
       <DynamicRouteProvider>
         <TestComponent />
       </DynamicRouteProvider>
@@ -77,7 +77,7 @@ describe('路由Hook测试', () => {
       }
     };
 
-    render(<TestComponent />);
+    renderWithProviders(<TestComponent />);
     expect(screen.getByTestId('error-message')).toHaveTextContent('useDynamicRoute must be used');
   });
 });
@@ -94,7 +94,7 @@ describe('RouteModuleLoader - 模块加载测试', () => {
       );
     };
 
-    render(
+    renderWithProviders(
       <DynamicRouteProvider>
         <TestComponent />
       </DynamicRouteProvider>
@@ -112,7 +112,7 @@ describe('usePermissionBasedRoutes - 权限路由测试', () => {
       return <div data-testid="available-routes">Available Routes: {availableRoutes.length}</div>;
     };
 
-    render(
+    renderWithProviders(
       <DynamicRouteProvider>
         <TestComponent />
       </DynamicRouteProvider>

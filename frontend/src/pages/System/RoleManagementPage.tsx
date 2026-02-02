@@ -41,6 +41,7 @@ import type { DataNode } from 'antd/es/tree';
 import dayjs from 'dayjs';
 import { COLORS } from '@/styles/colorMap';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useListData } from '@/hooks/useListData';
 
 const { Option } = Select;
@@ -600,38 +601,59 @@ const RoleManagementPage: React.FC = () => {
 
         <Card>
           <div style={{ marginBottom: 16 }}>
-            <Row justify="space-between" gutter={16}>
-              <Col flex="auto">
-                <Space size="middle">
-                  <Search
-                    placeholder="搜索角色名称或编码"
-                    allowClear
-                    style={{ width: 300 }}
-                    onSearch={handleSearch}
-                  />
-                  <Select
-                    placeholder="状态筛选"
-                    allowClear
-                    style={{ width: 120 }}
-                    onChange={handleStatusFilterChange}
-                  >
-                    {statusOptions.map(status => (
-                      <Option key={status.value} value={status.value}>
-                        {status.label}
-                      </Option>
-                    ))}
-                  </Select>
-                  <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
-                    刷新
-                  </Button>
-                </Space>
-              </Col>
-              <Col>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                  新建角色
-                </Button>
-              </Col>
-            </Row>
+            <ListToolbar
+              variant="plain"
+              items={[
+                {
+                  key: 'search',
+                  col: { xs: 24, sm: 12, md: 10, lg: 8 },
+                  content: (
+                    <Search
+                      placeholder="搜索角色名称或编码"
+                      allowClear
+                      style={{ width: '100%' }}
+                      onSearch={handleSearch}
+                    />
+                  ),
+                },
+                {
+                  key: 'status',
+                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                  content: (
+                    <Select
+                      placeholder="状态筛选"
+                      allowClear
+                      style={{ width: '100%' }}
+                      onChange={handleStatusFilterChange}
+                    >
+                      {statusOptions.map(status => (
+                        <Option key={status.value} value={status.value}>
+                          {status.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  ),
+                },
+                {
+                  key: 'refresh',
+                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                  content: (
+                    <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
+                      刷新
+                    </Button>
+                  ),
+                },
+                {
+                  key: 'create',
+                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                  content: (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                      新建角色
+                    </Button>
+                  ),
+                },
+              ]}
+            />
           </div>
 
           <TableWithPagination

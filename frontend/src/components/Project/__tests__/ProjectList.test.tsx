@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act } from '@/test/utils/test-helpers';
 
 import { useListData } from '@/hooks/useListData';
 import { ownershipService } from '@/services/ownershipService';
@@ -329,7 +329,7 @@ const renderProjectList = async (
   props?: React.ComponentProps<typeof ProjectList>
 ) => {
   await act(async () => {
-    render(<ProjectList {...props} />);
+    renderWithProviders(<ProjectList {...props} />);
     await flushPromises();
   });
 };

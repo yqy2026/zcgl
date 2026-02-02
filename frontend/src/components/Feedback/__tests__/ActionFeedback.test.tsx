@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import React from 'react';
 
 // Mock Ant Design components
@@ -101,14 +101,14 @@ describe('ActionFeedback - 渲染测试', () => {
 
   it('没有result时应该返回null', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
-    const { container } = render(<ActionFeedback result={undefined} />);
+    const { container } = renderWithProviders(<ActionFeedback result={undefined} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('应该正确渲染success状态', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'success' as const, message: '操作成功' };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
     expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'success');
@@ -117,7 +117,7 @@ describe('ActionFeedback - 渲染测试', () => {
   it('应该正确渲染error状态', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'error' as const, message: '操作失败' };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
     expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'error');
@@ -126,7 +126,7 @@ describe('ActionFeedback - 渲染测试', () => {
   it('应该正确渲染loading状态', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'loading' as const };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
     expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'info');
@@ -135,7 +135,7 @@ describe('ActionFeedback - 渲染测试', () => {
   it('应该正确渲染warning状态', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'warning' as const };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
     expect(screen.getByTestId('alert')).toHaveAttribute('data-type', 'warning');
@@ -144,7 +144,7 @@ describe('ActionFeedback - 渲染测试', () => {
   it('应该显示自定义标题', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'success' as const };
-    render(<ActionFeedback result={result} title="自定义标题" />);
+    renderWithProviders(<ActionFeedback result={result} title="自定义标题" />);
 
     expect(screen.getByText('自定义标题')).toBeInTheDocument();
   });
@@ -152,7 +152,7 @@ describe('ActionFeedback - 渲染测试', () => {
   it('应该显示消息内容', async () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const result = { status: 'success' as const, message: '测试消息' };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByText('测试消息')).toBeInTheDocument();
   });
@@ -167,7 +167,7 @@ describe('ActionFeedback - 回调函数测试', () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const handleClose = vi.fn();
     const result = { status: 'success' as const };
-    render(<ActionFeedback result={result} onClose={handleClose} />);
+    renderWithProviders(<ActionFeedback result={result} onClose={handleClose} />);
 
     fireEvent.click(screen.getByTestId('alert-close'));
     expect(handleClose).toHaveBeenCalledTimes(1);
@@ -181,28 +181,28 @@ describe('ActionFeedback - 预设组件测试', () => {
 
   it('LoadingFeedback应该正确渲染', async () => {
     const { LoadingFeedback } = await import('../ActionFeedback');
-    render(<LoadingFeedback />);
+    renderWithProviders(<LoadingFeedback />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
   });
 
   it('SuccessFeedback应该正确渲染', async () => {
     const { SuccessFeedback } = await import('../ActionFeedback');
-    render(<SuccessFeedback />);
+    renderWithProviders(<SuccessFeedback />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
   });
 
   it('ErrorFeedback应该正确渲染', async () => {
     const { ErrorFeedback } = await import('../ActionFeedback');
-    render(<ErrorFeedback />);
+    renderWithProviders(<ErrorFeedback />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
   });
 
   it('WarningFeedback应该正确渲染', async () => {
     const { WarningFeedback } = await import('../ActionFeedback');
-    render(<WarningFeedback />);
+    renderWithProviders(<WarningFeedback />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
   });
@@ -210,7 +210,7 @@ describe('ActionFeedback - 预设组件测试', () => {
   it('ActionFeedbackCard应该正确渲染', async () => {
     const { ActionFeedbackCard } = await import('../ActionFeedback');
     const result = { status: 'success' as const };
-    render(<ActionFeedbackCard result={result} />);
+    renderWithProviders(<ActionFeedbackCard result={result} />);
 
     expect(screen.getByTestId('card')).toBeInTheDocument();
   });
@@ -218,7 +218,7 @@ describe('ActionFeedback - 预设组件测试', () => {
   it('ActionFeedbackCard应该显示标题', async () => {
     const { ActionFeedbackCard } = await import('../ActionFeedback');
     const result = { status: 'success' as const };
-    render(<ActionFeedbackCard result={result} title="测试标题" />);
+    renderWithProviders(<ActionFeedbackCard result={result} title="测试标题" />);
 
     expect(screen.getByText('测试标题')).toBeInTheDocument();
   });
@@ -235,7 +235,7 @@ describe('ActionFeedback - 详情和错误信息测试', () => {
       status: 'success' as const,
       details: ['详情1', '详情2'],
     };
-    render(<ActionFeedback result={result} showDetails={true} />);
+    renderWithProviders(<ActionFeedback result={result} showDetails={true} />);
 
     expect(screen.getByText('详情1')).toBeInTheDocument();
     expect(screen.getByText('详情2')).toBeInTheDocument();
@@ -245,7 +245,7 @@ describe('ActionFeedback - 详情和错误信息测试', () => {
     const ActionFeedback = (await import('../ActionFeedback')).default;
     const error = new Error('测试错误');
     const result = { status: 'error' as const, error };
-    render(<ActionFeedback result={result} />);
+    renderWithProviders(<ActionFeedback result={result} />);
 
     expect(screen.getByText('测试错误')).toBeInTheDocument();
   });

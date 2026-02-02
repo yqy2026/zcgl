@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import type { ReactNode } from 'react';
 
 import LazyRoute from '../LazyRoute';
@@ -58,7 +58,7 @@ describe('LazyRoute', () => {
         new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
     );
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"
@@ -76,7 +76,7 @@ describe('LazyRoute', () => {
         new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
     );
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"
@@ -94,7 +94,7 @@ describe('LazyRoute', () => {
       default: () => <div data-testid="lazy-content">Lazy Content</div>,
     }));
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"
@@ -111,7 +111,7 @@ describe('LazyRoute', () => {
     }));
     const permissions = [{ resource: 'asset', action: 'view' }];
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"
@@ -130,7 +130,7 @@ describe('LazyRoute', () => {
       default: () => <div data-testid="lazy-content">Lazy Content</div>,
     }));
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"
@@ -148,7 +148,7 @@ describe('LazyRoute', () => {
       default: () => <div data-testid="lazy-content">Lazy Content</div>,
     }));
 
-    render(
+    renderWithProviders(
       <LazyRoute
         path="/test"
         title="测试路由"

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@/test/utils/test-helpers';
 import AppLayout from '../AppLayout';
 
 // =============================================================================
@@ -61,7 +61,7 @@ describe('AppLayout - 基础功能', () => {
   });
 
   it('应该正常渲染布局结构', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -74,7 +74,7 @@ describe('AppLayout - 基础功能', () => {
   });
 
   it('应该渲染页脚', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -85,7 +85,7 @@ describe('AppLayout - 基础功能', () => {
   });
 
   it('应该渲染子组件内容', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -106,7 +106,7 @@ describe('AppLayout - 侧边栏状态', () => {
   });
 
   it('默认应该显示展开的侧边栏', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -116,7 +116,7 @@ describe('AppLayout - 侧边栏状态', () => {
   });
 
   it('应该显示折叠切换按钮', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -137,7 +137,7 @@ describe('AppLayout - 布局结构', () => {
   });
 
   it('应该包含所有主要布局区域', () => {
-    const { container: _container } = render(
+    const { container: _container } = renderWithProviders(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -152,7 +152,7 @@ describe('AppLayout - 布局结构', () => {
   });
 
   it('应该正确渲染多个子组件', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <div>Child 1</div>
         <div>Child 2</div>
@@ -176,7 +176,7 @@ describe('AppLayout - 边界情况', () => {
   });
 
   it('应该处理null children', () => {
-    const { container: _container } = render(<AppLayout>{null}</AppLayout>);
+    const { container: _container } = renderWithProviders(<AppLayout>{null}</AppLayout>);
 
     // 布局仍然应该渲染，即使内容为空
     expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('AppLayout - 边界情况', () => {
   });
 
   it('应该处理空children', () => {
-    const { container: _container } = render(
+    const { container: _container } = renderWithProviders(
       <AppLayout>
         <></>
       </AppLayout>
@@ -195,7 +195,7 @@ describe('AppLayout - 边界情况', () => {
   });
 
   it('应该处理复杂的子组件树', () => {
-    render(
+    renderWithProviders(
       <AppLayout>
         <div>
           <section>

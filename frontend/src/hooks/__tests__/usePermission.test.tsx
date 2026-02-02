@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook } from '@/test/utils/test-helpers';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import usePermission from '../usePermission';
 import { AuthStorage } from '@/utils/AuthStorage';

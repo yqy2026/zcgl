@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { screen, act } from '@/test/utils/test-helpers';
 import { PropertyCertificateUpload } from '../PropertyCertificateUpload';
 import type { CertificateExtractionResult, CertificateType } from '@/types/propertyCertificate';
 
@@ -89,7 +89,7 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
   });
 
   it('应该渲染上传说明与拖拽区域', () => {
-    render(<PropertyCertificateUpload onSuccess={vi.fn()} />);
+    renderWithProviders(<PropertyCertificateUpload onSuccess={vi.fn()} />);
 
     expect(screen.getByTestId('alert')).toBeInTheDocument();
     expect(screen.getByTestId('upload-dragger')).toHaveAttribute('data-disabled', 'false');
@@ -97,14 +97,14 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
   });
 
   it('loading为true时应禁用上传并显示处理中提示', () => {
-    render(<PropertyCertificateUpload onSuccess={vi.fn()} loading={true} />);
+    renderWithProviders(<PropertyCertificateUpload onSuccess={vi.fn()} loading={true} />);
 
     expect(screen.getByTestId('upload-dragger')).toHaveAttribute('data-disabled', 'true');
     expect(screen.getByText('正在处理...')).toBeInTheDocument();
   });
 
   it('beforeUpload应校验文件类型与大小', () => {
-    render(<PropertyCertificateUpload onSuccess={vi.fn()} />);
+    renderWithProviders(<PropertyCertificateUpload onSuccess={vi.fn()} />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
       beforeUpload?: (file: File) => boolean;
     };
@@ -130,7 +130,7 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
     vi.mocked(propertyCertificateService.uploadCertificate).mockResolvedValue(mockResult);
 
     const onSuccess = vi.fn();
-    render(<PropertyCertificateUpload onSuccess={onSuccess} />);
+    renderWithProviders(<PropertyCertificateUpload onSuccess={onSuccess} />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
       customRequest?: (options: {
         file: File;
@@ -165,7 +165,7 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
     );
 
     const onSuccess = vi.fn();
-    render(<PropertyCertificateUpload onSuccess={onSuccess} />);
+    renderWithProviders(<PropertyCertificateUpload onSuccess={onSuccess} />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as {
       customRequest?: (options: {
         file: File;

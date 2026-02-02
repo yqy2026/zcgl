@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@/test/utils/test-helpers';
 import { useAssetStore } from '../useAssetStore';
 import type { Asset } from '../../types/asset';
 

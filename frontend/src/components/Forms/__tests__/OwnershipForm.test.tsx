@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { createMockOwnership } from '@/test-utils/factories';
 import type { Ownership } from '@/types/ownership';
 
@@ -117,7 +117,7 @@ describe('OwnershipForm', () => {
 
   describe('渲染测试', () => {
     it('应该正确渲染表单', () => {
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -129,7 +129,7 @@ describe('OwnershipForm', () => {
     });
 
     it('应该渲染提交和取消按钮', () => {
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -143,7 +143,7 @@ describe('OwnershipForm', () => {
 
   describe('创建模式', () => {
     it('创建模式下表单应为空', () => {
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -163,7 +163,7 @@ describe('OwnershipForm', () => {
         })
       );
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -189,7 +189,7 @@ describe('OwnershipForm', () => {
     });
 
     it('编辑模式下应设置初始值', () => {
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={mockOwnership}
           onSuccess={mockOnSuccess}
@@ -213,7 +213,7 @@ describe('OwnershipForm', () => {
         code: 'OWN-001',
       });
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={mockOwnership}
           onSuccess={mockOnSuccess}
@@ -234,7 +234,7 @@ describe('OwnershipForm', () => {
     it('名称唯一性验证 - 名称已存在', async () => {
       vi.mocked(ownershipService.validateOwnershipName).mockResolvedValue(false);
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -249,7 +249,7 @@ describe('OwnershipForm', () => {
     it('名称唯一性验证 - 名称可用', async () => {
       vi.mocked(ownershipService.validateOwnershipName).mockResolvedValue(true);
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -263,7 +263,7 @@ describe('OwnershipForm', () => {
 
   describe('取消操作', () => {
     it('点击取消应调用 onCancel', () => {
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -284,7 +284,7 @@ describe('OwnershipForm', () => {
         new Error('创建失败')
       );
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -305,7 +305,7 @@ describe('OwnershipForm', () => {
         new Error('更新失败')
       );
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={createMockOwnership({ id: '1', name: '测试' })}
           onSuccess={mockOnSuccess}
@@ -331,7 +331,7 @@ describe('OwnershipForm', () => {
         })
       );
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={null}
           onSuccess={mockOnSuccess}
@@ -355,7 +355,7 @@ describe('OwnershipForm', () => {
         })
       );
 
-      render(
+      renderWithProviders(
         <OwnershipForm
           initialValues={createMockOwnership({ id: '1', name: '测试' })}
           onSuccess={mockOnSuccess}

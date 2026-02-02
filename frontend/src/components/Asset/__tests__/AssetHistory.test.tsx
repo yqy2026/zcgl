@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 
 // Mock @tanstack/react-query
 vi.mock('@tanstack/react-query', () => ({
@@ -369,25 +369,25 @@ describe('AssetHistory', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染历史记录卡片', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getAllByTestId('history-card').length).toBeGreaterThan(0);
     });
 
     it('应该显示卡片标题', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByText('变更历史')).toBeInTheDocument();
     });
 
     it('应该显示时间线组件', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('timeline')).toBeInTheDocument();
     });
 
     it('应该显示时间线项目', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const items = screen.getAllByTestId('timeline-item');
       expect(items.length).toBeGreaterThan(0);
@@ -396,19 +396,19 @@ describe('AssetHistory', () => {
 
   describe('筛选功能', () => {
     it('应该显示变更类型筛选器', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('select')).toBeInTheDocument();
     });
 
     it('应该显示日期范围筛选器', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('range-picker')).toBeInTheDocument();
     });
 
     it('变更类型选项应该包含创建、更新、删除', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getAllByText('创建').length).toBeGreaterThan(0);
       expect(screen.getAllByText('更新').length).toBeGreaterThan(0);
@@ -418,13 +418,13 @@ describe('AssetHistory', () => {
 
   describe('刷新功能', () => {
     it('应该显示刷新按钮', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByText('刷新')).toBeInTheDocument();
     });
 
     it('点击刷新按钮应该触发数据重新加载', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const refreshButton = screen.getByText('刷新');
       fireEvent.click(refreshButton);
@@ -433,7 +433,7 @@ describe('AssetHistory', () => {
     });
 
     it('刷新按钮应该显示刷新图标', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('icon-reload')).toBeInTheDocument();
     });
@@ -441,14 +441,14 @@ describe('AssetHistory', () => {
 
   describe('变更类型标签', () => {
     it('应该显示变更类型标签', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const tags = screen.getAllByTestId('tag');
       expect(tags.length).toBeGreaterThan(0);
     });
 
     it('创建操作应该使用绿色标签', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const tags = screen.getAllByTestId('tag');
       const createTag = tags.find(tag => tag.getAttribute('data-color') === 'green');
@@ -456,7 +456,7 @@ describe('AssetHistory', () => {
     });
 
     it('更新操作应该使用蓝色标签', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const tags = screen.getAllByTestId('tag');
       const updateTag = tags.find(tag => tag.getAttribute('data-color') === 'blue');
@@ -466,13 +466,13 @@ describe('AssetHistory', () => {
 
   describe('分页功能', () => {
     it('应该显示分页组件', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('pagination')).toBeInTheDocument();
     });
 
     it('分页应该显示正确的总数', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const pagination = screen.getByTestId('pagination');
       expect(pagination).toHaveAttribute('data-total', '20');
@@ -481,13 +481,13 @@ describe('AssetHistory', () => {
 
   describe('详情弹窗', () => {
     it('应该有查看详情按钮', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getAllByText('查看详情').length).toBeGreaterThan(0);
     });
 
     it('点击查看详情应该打开弹窗', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const viewButtons = screen.getAllByText('查看详情');
       fireEvent.click(viewButtons[0]);
@@ -496,7 +496,7 @@ describe('AssetHistory', () => {
     });
 
     it('弹窗应该有关闭按钮', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const viewButtons = screen.getAllByText('查看详情');
       fireEvent.click(viewButtons[0]);
@@ -505,7 +505,7 @@ describe('AssetHistory', () => {
     });
 
     it('点击关闭按钮应该关闭弹窗', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const viewButtons = screen.getAllByText('查看详情');
       fireEvent.click(viewButtons[0]);
@@ -519,7 +519,7 @@ describe('AssetHistory', () => {
 
   describe('用户信息显示', () => {
     it('应该显示操作人姓名', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByText('张三')).toBeInTheDocument();
       expect(screen.getByText('李四')).toBeInTheDocument();
@@ -531,7 +531,7 @@ describe('AssetHistory', () => {
       mockLoading = true;
       mockData = [];
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const spin = screen.getByTestId('spin');
       expect(spin).toHaveAttribute('data-spinning', 'true');
@@ -541,7 +541,7 @@ describe('AssetHistory', () => {
       mockLoading = true;
       mockData = [];
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('spin-tip')).toBeInTheDocument();
     });
@@ -553,7 +553,7 @@ describe('AssetHistory', () => {
       mockData = [];
       mockLoading = false;
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       await waitFor(() => {
         expect(screen.getByTestId('alert')).toBeInTheDocument();
@@ -565,7 +565,7 @@ describe('AssetHistory', () => {
       mockData = [];
       mockLoading = false;
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       await waitFor(() => {
         const alert = screen.getByTestId('alert');
@@ -579,7 +579,7 @@ describe('AssetHistory', () => {
       mockData = [];
       mockPagination = { current: 1, pageSize: 10, total: 0 };
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('empty')).toBeInTheDocument();
     });
@@ -588,7 +588,7 @@ describe('AssetHistory', () => {
       mockData = [];
       mockPagination = { current: 1, pageSize: 10, total: 0 };
 
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByText('暂无变更历史')).toBeInTheDocument();
     });
@@ -596,7 +596,7 @@ describe('AssetHistory', () => {
 
   describe('时间信息', () => {
     it('应该显示变更时间', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       // 格式化后的时间
       expect(screen.getAllByText('2024-01-01').length).toBeGreaterThan(0);
@@ -605,13 +605,13 @@ describe('AssetHistory', () => {
 
   describe('图标显示', () => {
     it('应该显示历史图标', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('icon-history')).toBeInTheDocument();
     });
 
     it('应该显示筛选图标', () => {
-      render(<AssetHistory assetId="asset-1" />);
+      renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('icon-filter')).toBeInTheDocument();
     });
@@ -619,7 +619,7 @@ describe('AssetHistory', () => {
 
   describe('属性传递', () => {
     it('应该接受assetId属性', () => {
-      render(<AssetHistory assetId="test-asset-123" />);
+      renderWithProviders(<AssetHistory assetId="test-asset-123" />);
 
       expect(screen.getAllByTestId('history-card').length).toBeGreaterThan(0);
     });

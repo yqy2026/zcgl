@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { PropertyCertificateReview } from '../PropertyCertificateReview';
 import type {
   CertificateExtractionResult,
@@ -279,7 +279,7 @@ describe('PropertyCertificateReview - 渲染与提交测试', () => {
   });
 
   it('应显示置信度标签与验证错误/警告', () => {
-    render(
+    renderWithProviders(
       <PropertyCertificateReview
         extractionResult={createExtractionResult({
           confidence_score: 0.92,
@@ -300,7 +300,7 @@ describe('PropertyCertificateReview - 渲染与提交测试', () => {
 
   it('未选择资产时应创建新资产', async () => {
     const onConfirm = vi.fn();
-    render(
+    renderWithProviders(
       <PropertyCertificateReview
         extractionResult={createExtractionResult()}
         onConfirm={onConfirm}
@@ -323,7 +323,7 @@ describe('PropertyCertificateReview - 渲染与提交测试', () => {
 
   it('选择匹配资产后应关联资产', async () => {
     const onConfirm = vi.fn();
-    render(
+    renderWithProviders(
       <PropertyCertificateReview
         extractionResult={createExtractionResult({ asset_matches: mockAssetMatches })}
         onConfirm={onConfirm}
