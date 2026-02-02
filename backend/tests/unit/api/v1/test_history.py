@@ -20,7 +20,7 @@ AUTH_FAILURE_STATUSES = {
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 class TestHistoryAPI:
@@ -61,3 +61,4 @@ class TestHistoryAPI:
             status.HTTP_404_NOT_FOUND,
             *AUTH_FAILURE_STATUSES,
         }
+

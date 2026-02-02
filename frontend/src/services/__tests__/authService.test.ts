@@ -22,7 +22,6 @@ describe('AuthService - Login with Permissions', () => {
   it('should store permissions from login response', async () => {
     const mockResponse = {
       data: {
-        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
@@ -31,14 +30,10 @@ describe('AuthService - Login with Permissions', () => {
           role: 'admin',
           organization_id: 'org-123',
         },
-        data: {
-          access_token: 'test-access-token',
-          refresh_token: 'test-refresh-token',
-          permissions: [
-            { resource: 'assets', action: 'read', description: 'Read assets' },
-            { resource: 'users', action: 'write', description: 'Write users' },
-          ],
-        },
+        permissions: [
+          { resource: 'assets', action: 'read', description: 'Read assets' },
+          { resource: 'users', action: 'write', description: 'Write users' },
+        ],
       },
     };
 
@@ -66,17 +61,12 @@ describe('AuthService - Login with Permissions', () => {
   it('should handle empty permissions array', async () => {
     const mockResponse = {
       data: {
-        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
           email: 'test@example.com',
         },
-        data: {
-          access_token: 'test-access-token',
-          refresh_token: 'test-refresh-token',
-          permissions: [],
-        },
+        permissions: [],
       },
     };
 
@@ -97,15 +87,10 @@ describe('AuthService - Login with Permissions', () => {
   it('should handle missing permissions field (defaults to empty array)', async () => {
     const mockResponse = {
       data: {
-        token: 'legacy-token',
         user: {
           id: '1',
           username: 'testuser',
           email: 'test@example.com',
-        },
-        data: {
-          access_token: 'test-access-token',
-          refresh_token: 'test-refresh-token',
         },
         // permissions field missing
       },

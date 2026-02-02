@@ -44,14 +44,10 @@ class TestTokenBlacklistApi:
         )
 
         # Sanity check: token should work before blacklisting
-        ok_response = client.get(
-            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
-        )
+        ok_response = client.get("/api/v1/auth/me", cookies={"auth_token": token})
         assert ok_response.status_code == 200
 
         blacklist_manager.add_token(jti, exp)
 
-        blocked_response = client.get(
-            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
-        )
+        blocked_response = client.get("/api/v1/auth/me", cookies={"auth_token": token})
         assert blocked_response.status_code == 401

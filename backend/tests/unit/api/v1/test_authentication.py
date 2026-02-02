@@ -193,7 +193,8 @@ class TestLogin:
 
         assert result["message"] == "登录成功"
         assert result["user"]["username"] == "testuser"
-        assert result["tokens"]["access_token"] == "access_token"
+        assert result["auth_mode"] == "cookie"
+        assert "tokens" not in result
         mock_auth_service.authenticate_user.assert_called_once_with(
             "testuser", "password123"
         )
@@ -422,7 +423,6 @@ class TestLogout:
         from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.headers = {
-            "Authorization": "Bearer valid_token",
             "user-agent": "test-agent",
         }
 
@@ -446,7 +446,7 @@ class TestLogout:
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
-    def test_logout_without_auth_header(
+    def test_logout_without_auth_cookie(
         self,
         mock_auth_service_class,
         mock_audit_crud_class,
@@ -454,7 +454,7 @@ class TestLogout:
         mock_db,
         mock_admin_user,
     ):
-        """Test logout without Authorization header"""
+        """Test logout without auth cookie"""
         from src.api.v1.auth.auth_modules.authentication import logout
 
         mock_request.headers = {"user-agent": "test-agent"}
@@ -489,9 +489,9 @@ class TestLogout:
         """Test logout successfully blacklists token"""
         from src.api.v1.auth.auth_modules.authentication import logout
         from src.core.config import settings
+        from src.security.cookie_manager import cookie_manager
 
         mock_request.headers = {
-            "Authorization": "Bearer valid_token",
             "user-agent": "test-agent",
         }
 
@@ -503,7 +503,9 @@ class TestLogout:
             "iat": 1736996400,
         }
         valid_token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
-        mock_request.headers["Authorization"] = f"Bearer {valid_token}"
+        mock_request.headers["cookie"] = (
+            f"{cookie_manager.cookie_name}={valid_token}"
+        )
 
         mock_auth_service = MagicMock()
         mock_auth_service.revoke_all_user_sessions.return_value = 1
@@ -535,7 +537,7 @@ class TestLogout:
         mock_db,
         mock_admin_user,
     ):
-        """Test logout blacklists token from auth cookie when no Authorization header."""
+        """Test logout blacklists token from auth cookie."""
         from src.api.v1.auth.auth_modules.authentication import logout
         from src.core.config import settings
         from src.security.cookie_manager import cookie_manager
@@ -586,9 +588,10 @@ class TestLogout:
     ):
         """Test logout with invalid token (should still logout)"""
         from src.api.v1.auth.auth_modules.authentication import logout
+        from src.security.cookie_manager import cookie_manager
 
         mock_request.headers = {
-            "Authorization": "Bearer invalid_token",
+            "cookie": f"{cookie_manager.cookie_name}=invalid_token",
             "user-agent": "test-agent",
         }
 
@@ -684,8 +687,8 @@ class TestRefreshToken:
             db=mock_db,
         )
 
-        assert result.access_token == "mock_access_token"
-        assert result.refresh_token == "mock_refresh_token"
+        assert result["auth_mode"] == "cookie"
+        assert result["message"] == "令牌刷新成功"
         mock_auth_service.validate_refresh_token.assert_called_once()
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
@@ -825,7 +828,7 @@ class TestRefreshToken:
             db=mock_db,
         )
 
-        assert result.access_token == "mock_access_token"
+        assert result["auth_mode"] == "cookie"
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AuthService")
@@ -862,7 +865,7 @@ class TestRefreshToken:
             db=mock_db,
         )
 
-        assert result.access_token == "mock_access_token"
+        assert result["auth_mode"] == "cookie"
 
 
 # ============================================================================
@@ -1092,3 +1095,4 @@ class TestTestMeDebug:
         assert result["is_admin"] is True
         assert result["session_status"] == "active"
         assert "timestamp" in result
+

@@ -20,7 +20,7 @@ from fastapi import status
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already overrides authentication to an admin user
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def normal_user_headers(client, normal_user):
     client.app.dependency_overrides[require_admin] = lambda: (_ for _ in ()).throw(
         forbidden("需要管理员权限")
     )
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 @pytest.fixture
@@ -206,3 +206,4 @@ class TestAdminAPIEdgeCases:
 
         # 所有请求都应该成功
         assert all(status_code == status.HTTP_200_OK for status_code in results)
+

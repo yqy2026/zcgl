@@ -100,3 +100,4 @@ class TestFinancialStatistics:
 
             # Assert
             assert response.status_code == 200
+

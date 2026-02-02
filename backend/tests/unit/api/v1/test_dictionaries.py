@@ -19,7 +19,7 @@ AUTH_FAILURE_STATUSES = {
 @pytest.fixture
 def admin_user_headers():
     """管理员用户认证头 - Mock"""
-    return {"Authorization": "Bearer mock_token"}
+    return {}
 
 
 class TestDictionariesAPI:
@@ -159,3 +159,4 @@ class TestDictionariesAPI:
         )
 
         assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+

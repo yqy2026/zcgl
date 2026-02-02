@@ -209,6 +209,24 @@ class LoginResponse(BaseModel):
     message: str = Field(default="登录成功", description="响应消息")
 
 
+class CookieAuthResponse(BaseModel):
+    """基于Cookie的认证响应（不返回Token）"""
+
+    user: UserResponse
+    permissions: list["PermissionSchema"] = Field(
+        default_factory=list, description="用户权限列表"
+    )
+    message: str = Field(default="登录成功", description="响应消息")
+    auth_mode: str = Field(default="cookie", description="认证模式")
+
+
+class CookieRefreshResponse(BaseModel):
+    """Cookie刷新响应（不返回Token）"""
+
+    message: str = Field(default="令牌刷新成功", description="响应消息")
+    auth_mode: str = Field(default="cookie", description="认证模式")
+
+
 class RefreshTokenRequest(BaseModel):
     """刷新令牌请求模型"""
 

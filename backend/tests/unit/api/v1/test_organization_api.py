@@ -1520,3 +1520,4 @@ class TestOrganizationEdgeCases:
         # Should return root with nested children
         assert len(result) == 1
         assert result[0].id == "root"
+

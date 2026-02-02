@@ -16,7 +16,7 @@ class TestAssetFilterEndpoints:
         """Test GET /ownership-entities"""
         response = client.get(
             "/api/v1/assets/ownership-entities",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
 
         assert response.status_code == 200
@@ -28,7 +28,7 @@ class TestAssetFilterEndpoints:
         """Test GET /business-categories"""
         response = client.get(
             "/api/v1/assets/business-categories",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
 
         assert response.status_code == 200
@@ -39,7 +39,7 @@ class TestAssetFilterEndpoints:
         """Test GET /usage-statuses"""
         response = client.get(
             "/api/v1/assets/usage-statuses",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
 
         assert response.status_code == 200
@@ -49,7 +49,7 @@ class TestAssetFilterEndpoints:
         """Test GET /property-natures"""
         response = client.get(
             "/api/v1/assets/property-natures",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
 
         assert response.status_code == 200
@@ -59,7 +59,7 @@ class TestAssetFilterEndpoints:
         """Test GET /ownership-statuses"""
         response = client.get(
             "/api/v1/assets/ownership-statuses",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
 
         assert response.status_code == 200
@@ -71,7 +71,7 @@ class TestAssetFilterEndpoints:
         """Test that endpoints return sorted, unique values"""
         response = client.get(
             "/api/v1/assets/ownership-entities",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
         data = response.json()
 
@@ -85,7 +85,7 @@ class TestAssetFilterEndpoints:
         """Ensure response format matches original implementation"""
         response = client.get(
             "/api/v1/assets/ownership-entities",
-            headers={"Authorization": f"Bearer {test_token}"},
+            cookies={"auth_token": test_token},
         )
         data = response.json()
 
@@ -114,7 +114,7 @@ class TestAssetFilterEndpoints:
         for endpoint in endpoints:
             response = client.get(
                 endpoint,
-                headers={"Authorization": f"Bearer {test_token}"},
+                cookies={"auth_token": test_token},
             )
 
             assert response.status_code == 200
@@ -126,3 +126,4 @@ class TestAssetFilterEndpoints:
             assert data == sorted(data)
             # All values should be unique
             assert len(data) == len(set(data))
+

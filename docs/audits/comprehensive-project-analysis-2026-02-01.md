@@ -21,8 +21,8 @@
 
 ## ✅ 补充进展（更新：2026-02-02）
 
-- 认证链路：JWT issuer/audience 与黑名单校验已修复并有单测覆盖（`tests/unit/services/core/test_authentication_service.py`、`tests/unit/core/test_blacklist.py`、`tests/integration/api/test_token_blacklist_api.py`、`tests/unit/middleware/test_optional_auth.py`），但 `backend/src/middleware/auth.py` 仍同时支持 Cookie 与 Bearer Token，迁移尚未完全收敛。
-- 可选认证：`get_optional_current_user` 已改为 Cookie 优先 + Bearer fallback，新增单测覆盖 Cookie 场景（`tests/unit/middleware/test_optional_auth.py`）。
+- 认证链路：JWT issuer/audience 与黑名单校验已修复并有单测覆盖（`tests/unit/services/core/test_authentication_service.py`、`tests/unit/core/test_blacklist.py`、`tests/integration/api/test_token_blacklist_api.py`、`tests/unit/middleware/test_optional_auth.py`），认证已收敛为 **cookie-only**（`get_current_user` 不再支持 Bearer fallback，登录/刷新仅设置 httpOnly Cookie，响应体不再返回 access/refresh token，CSRF 保护不再被 Authorization 旁路）。
+- 可选认证：`get_optional_current_user` 已改为 cookie-only（不再接受 Bearer fallback），并复用黑名单校验逻辑。
 - 测试环境说明：在 `REDIS_ENABLED=false` 且临时 `DATA_ENCRYPTION_KEY` 下复跑 `tests/unit/middleware/test_optional_auth.py`，消除了 Redis/加密相关噪音，仅保留缺失可选服务模块的 warning。
 - 缓存系统：当前已收敛为 `backend/src/core/cache_manager.py`，`backend/src/utils/cache_manager.py` 仅作委托包装，`backend/src/core/performance.py` 复用核心缓存；未发现 `backend/src/utils/cache.py` 或 `backend/src/performance/cache.py`。已通过 `tests/unit/utils/test_cache_manager_unified.py` 验证委托与清理逻辑。
 
@@ -47,17 +47,15 @@
 
 #### 现状证据（复核：2026-02-02）
 
-- `backend/src/api/v1/auth/auth_modules/authentication.py`：登录/刷新已设置 httpOnly Cookie（auth/refresh/csrf），但响应仍返回 `access_token`/`refresh_token`；登出从 Header 或 Cookie 取 token 并加入黑名单。
-- `backend/src/middleware/auth.py`：`get_current_user` cookie 优先、Bearer fallback；`get_optional_current_user` 已同步为 Cookie 优先 + Bearer fallback（仍保留 `oauth2_scheme` 兼容）。
-- `backend/src/middleware/security_middleware.py`：CSRF 对 Cookie 认证生效；带 Bearer 的请求直接绕过 CSRF（且 `/api/v1/auth/refresh` 免检），形成双轨策略。
-- `backend/src/security/security.py`：仍暴露 `HTTPBearer` 的 `get_current_user` 桩函数（返回 None），属于迁移残留接口。
+- `backend/src/api/v1/auth/auth_modules/authentication.py`：登录/刷新仅设置 httpOnly Cookie（auth/refresh/csrf），响应体不再返回 `access_token`/`refresh_token`；登出仅从 Cookie 取 token 并加入黑名单。
+- `backend/src/middleware/auth.py`：`get_current_user` 与 `get_optional_current_user` 均为 cookie-only（移除 Bearer fallback 与 `oauth2_scheme` 兼容）。
+- `backend/src/middleware/security_middleware.py`：CSRF 对 Cookie 认证生效，Authorization 不再作为旁路；`/api/v1/auth/refresh` 不再免检。
+- `backend/src/security/security.py`：不再暴露 `HTTPBearer` 桩函数，直接复用中间件的 `get_current_user`。
 
 #### Bearer-only 依赖映射（更新：2026-02-02）
 
-- 全仓仅 `get_optional_current_user` 保留 `oauth2_scheme` 兼容，但已支持 Cookie 优先 + Bearer fallback；未发现 API 端点直接依赖 `oauth2_scheme`。
-- `get_optional_current_user` 仅被 `audit_action`（`AuditLogger`）使用；当前仅在资产增删改接口启用审计依赖：
-  - `backend/src/api/v1/assets/assets.py`（create/update/delete）。
-- 结果：**Cookie-only** 客户端场景下，审计日志可正常获取 user 上下文（已补齐）。
+- 未发现任何 API 端点或依赖仍使用 Bearer-only 路径。
+- `audit_action` 仍使用 `get_optional_current_user` 获取用户上下文，但已完全走 cookie-only 流程。
 
 **根本原因**：
 - 大规模重构（531个文件变更）正在进行中
@@ -80,15 +78,11 @@
 3. 确保 CSRF 保护正确实现
 4. 移除所有 JWT 配置残留
 
-**收敛路径建议（可选其一）**：
-1. **Cookie-only 模式（推荐给浏览器端）**
-   - 移除 `Authorization` fallback（`get_current_user`/`get_optional_current_user` 仅读取 Cookie）。
+**收敛路径建议**：
+1. **Cookie-only 模式（已选定）**
+   - `get_current_user`/`get_optional_current_user` 仅读取 Cookie。
    - 登录/刷新响应不再返回 `access_token/refresh_token`（避免前端 JS 接触 token）。
    - CSRF 保护覆盖所有状态变更端点（包括 `/auth/refresh`）。
-2. **Dual-Mode 过渡（短期兼容）**
-   - 引入 `AUTH_MODE`（cookie / bearer / dual），统一在中间件内控制策略。
-   - Bearer 仅用于服务到服务或调试环境；浏览器端强制 Cookie + CSRF。
-   - 记录 Bearer fallback 命中率，设定下线日期并逐步移除。
 
 **验证清单**：
 - [ ] 所有 API 端点都通过新的认证中间件

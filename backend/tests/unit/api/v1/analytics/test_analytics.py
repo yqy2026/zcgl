@@ -451,3 +451,4 @@ class TestPerformance:
             assert response1.status_code == 200
             assert response2.status_code == 200
             # 第二次调用应该使用缓存（实际测试中需要测量时间）
+

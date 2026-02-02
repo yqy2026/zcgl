@@ -372,3 +372,4 @@ class TestDataValidation:
             data = response.json()
             assert "filters_applied" in data
             assert data["filters_applied"]["ownership_status"] == "confirmed"
+

@@ -118,3 +118,4 @@ class TestOccupancyStatistics:
 
         # Assert - 端点可能不存在，返回 404 或 200
         assert response.status_code in [200, 404]
+

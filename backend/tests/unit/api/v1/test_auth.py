@@ -482,3 +482,4 @@ class TestAuthSecurity:
         """Test handling concurrent login attempts"""
         # Would test concurrent session handling
         pass
+

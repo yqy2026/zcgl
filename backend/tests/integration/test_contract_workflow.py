@@ -15,10 +15,10 @@ def admin_user_headers(client, admin_user):
     """管理员认证头"""
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": admin_user.username, "password": "admin123"},
+        json={"username": admin_user.username, "password": "admin123"},
     )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    assert response.status_code == status.HTTP_200_OK
+    return {}
 
 
 class TestContractWorkflow:

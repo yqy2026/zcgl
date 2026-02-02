@@ -36,7 +36,8 @@ from .....schemas.auth import (
     LoginRequest,
     PermissionSchema,
     RefreshTokenRequest,
-    TokenResponse,
+    CookieAuthResponse,
+    CookieRefreshResponse,
     UserResponse,
 )
 from .....security.cookie_manager import cookie_manager
@@ -46,7 +47,7 @@ from .....services.permission.rbac_service import RBACService
 router = APIRouter(tags=["认证管理"])
 
 
-@router.post("/login", summary="用户登录")
+@router.post("/login", response_model=CookieAuthResponse, summary="用户登录")
 def login(
     request: Request,
     credentials: LoginRequest,
@@ -144,7 +145,7 @@ def login(
             logger.warning(f"Failed to fetch permissions for user {user.id}: {e}")
             permissions_list = []
 
-        # Return simple response instead of LoginResponse to avoid validation issues
+        # Cookie-based auth: do not return tokens in response body
         return {
             "user": {
                 "id": user.id,
@@ -155,12 +156,16 @@ def login(
                 "is_active": bool(user.is_active)
                 if hasattr(user.is_active, "__int__")
                 else user.is_active,
-            },
-            "tokens": {
-                "access_token": tokens.access_token,
-                "refresh_token": tokens.refresh_token,
-                "token_type": tokens.token_type,
-                "expires_in": tokens.expires_in,
+                "is_locked": bool(getattr(user, "is_locked", False))
+                if hasattr(getattr(user, "is_locked", False), "__int__")
+                else getattr(user, "is_locked", False),
+                "last_login_at": getattr(user, "last_login_at", None),
+                "employee_id": getattr(user, "employee_id", None),
+                "default_organization_id": getattr(
+                    user, "default_organization_id", None
+                ),
+                "created_at": getattr(user, "created_at", None) or datetime.now(UTC),
+                "updated_at": getattr(user, "updated_at", None) or datetime.now(UTC),
             },
             "permissions": [
                 {
@@ -171,6 +176,7 @@ def login(
                 for p in permissions_list
             ],
             "message": "登录成功",
+            "auth_mode": "cookie",
         }
 
     except BusinessLogicError as e:
@@ -212,16 +218,11 @@ def logout(
     cookie_manager.clear_refresh_cookie(response)
     cookie_manager.clear_csrf_cookie(response)
 
-    # 提取并黑名单当前JWT令牌（优先Header，回退Cookie）
-    token = None
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-    else:
-        cookie_header = request.headers.get("cookie", "")
-        token = cookie_manager.get_token_from_cookie(
-            cookie_header, cookie_name=cookie_manager.cookie_name
-        )
+    # 提取并黑名单当前JWT令牌（cookie-only）
+    cookie_header = request.headers.get("cookie", "")
+    token = cookie_manager.get_token_from_cookie(
+        cookie_header, cookie_name=cookie_manager.cookie_name
+    )
 
     if token:
         try:
@@ -265,17 +266,17 @@ def logout(
     return {"message": "登出成功", "revoked_sessions": revoked_count}
 
 
-@router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
+@router.post("/refresh", response_model=CookieRefreshResponse, summary="刷新令牌")
 def refresh_token(
     request: Request,
     response: Response,
     refresh_data: RefreshTokenRequest | None = None,
     db: Session = Depends(get_db),
-) -> TokenResponse:
+) -> CookieRefreshResponse:
     """
     刷新访问令牌接口
 
-    - 使用刷新令牌获取新的访问令牌
+    - 使用刷新令牌刷新会话（不在响应体返回Token）
     - 自动延长会话有效期
     - 增强安全性：记录刷新操作、检查IP变化等
 
@@ -370,7 +371,10 @@ def refresh_token(
         user_agent=user_agent,
     )
 
-    return tokens
+    return {
+        "message": "令牌刷新成功",
+        "auth_mode": "cookie",
+    }
 
 
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")

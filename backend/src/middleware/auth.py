@@ -8,8 +8,7 @@ from time import time
 from typing import Any
 
 import jwt
-from fastapi import Cookie, Depends, Header, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Cookie, Depends, Request
 from jwt import PyJWTError as JWTError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -33,10 +32,6 @@ from ..security.logging_security import security_monitor
 from ..services import RBACService
 
 logger = logging.getLogger(__name__)
-
-
-# OAuth2密码流 - 始终启用安全性
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 _token_blacklist_degrade_events: deque[float] = deque(maxlen=100)
@@ -274,29 +269,18 @@ def safe_role_compare(role_value: Any, target_role: Any) -> bool:
 
 def get_current_user(
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ) -> User:
     """
     Get current authenticated user from JWT token.
 
-    Authentication priority:
-    1. httpOnly cookie (primary method for XSS protection)
-    2. Authorization header (fallback for backward compatibility)
-
-    This unified approach ensures ALL protected endpoints automatically
-    support both cookie and Bearer token authentication.
+    Cookie-only authentication. Tokens are read from httpOnly cookies.
     """
     credentials_exception = unauthorized("无效的认证凭据")
 
-    # Try cookie first (primary method for XSS protection)
-    token = None
-    if auth_token:
-        token = auth_token
+    token = auth_token
+    if token:
         logger.debug("Authenticating using httpOnly cookie")
-    elif authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        logger.debug("Authenticating using Authorization header (fallback)")
 
     # No token found in either cookie or header
     if not token:
@@ -322,21 +306,13 @@ def get_current_user(
 
 def get_current_user_from_cookie(
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ) -> User:
     """
-    Get current user from httpOnly cookie or Authorization header (fallback)
-
-    This function implements cookie-first authentication with Bearer token fallback:
-    1. First tries to read JWT from httpOnly cookie (primary method for XSS protection)
-    2. Falls back to Authorization header (for backward compatibility)
-    3. Validates the JWT token
-    4. Returns the User object
+    Get current user from httpOnly cookie.
 
     Args:
         auth_token: JWT from httpOnly cookie (automatically sent by browser)
-        authorization: Bearer token from Authorization header (fallback)
         db: Database session
 
     Returns:
@@ -345,14 +321,9 @@ def get_current_user_from_cookie(
     Raises:
         unauthorized: If no valid token found or user is inactive/locked
     """
-    # Try cookie first (primary method for XSS protection)
-    token = None
-    if auth_token:
-        token = auth_token
+    token = auth_token
+    if token:
         logger.debug("Authenticating using httpOnly cookie")
-    elif authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        logger.debug("Authenticating using Authorization header (fallback)")
 
     # No token found in either cookie or header
     if not token:
@@ -396,19 +367,10 @@ def require_admin(current_user: User = Depends(get_current_active_user)) -> User
 
 def get_optional_current_user(
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    authorization: str | None = Header(None),
-    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User | None:
     """获取可选的当前用户（用于可选认证的端点）"""
-    resolved_token: str | None = None
-
-    if isinstance(auth_token, str) and auth_token:
-        resolved_token = auth_token
-    elif isinstance(authorization, str) and authorization.startswith("Bearer "):
-        resolved_token = authorization.split(" ")[1]
-    elif isinstance(token, str) and token:
-        resolved_token = token
+    resolved_token = auth_token
 
     if not resolved_token:
         return None

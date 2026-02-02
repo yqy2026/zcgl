@@ -103,7 +103,7 @@ class TestContractV2API:
         response = client.post(
             "/api/v1/rent/contracts",
             json=v2_contract_payload,
-            headers={"Authorization": "Bearer test_token"},
+            cookies={"auth_token": "test_token"},
         )
 
         # Verify
@@ -141,7 +141,7 @@ class TestContractV2API:
             "/api/v1/rent/contracts/original_001/renew",
             json=renewal_payload,
             params={"transfer_deposit": True},
-            headers={"Authorization": "Bearer test_token"},
+            cookies={"auth_token": "test_token"},
         )
 
         # Endpoint should exist
@@ -172,7 +172,7 @@ class TestContractV2API:
                 "deduction_amount": 5000,
                 "termination_reason": "提前退租",
             },
-            headers={"Authorization": "Bearer test_token"},
+            cookies={"auth_token": "test_token"},
         )
 
         # Endpoint should exist
@@ -283,7 +283,7 @@ class TestStatisticsV2API:
 
         response = client.get(
             "/api/v1/rent/statistics/ownership",
-            headers={"Authorization": "Bearer test_token"},
+            cookies={"auth_token": "test_token"},
         )
 
         assert response.status_code != 404
@@ -303,7 +303,8 @@ class TestStatisticsV2API:
 
         response = client.get(
             "/api/v1/rent/statistics/asset",
-            headers={"Authorization": "Bearer test_token"},
+            cookies={"auth_token": "test_token"},
         )
 
         assert response.status_code != 404
+

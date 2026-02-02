@@ -27,7 +27,6 @@ from ....crud.pdf_import_session import PDFImportSessionCRUD
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....models.pdf_import_session import PDFImportSession, SessionStatus
 from ....services.document.pdf_import_service import PDFImportService
 from ....services.document.processing_tracker import BatchStatusTracker
 from ....utils.file_security import generate_safe_filename
@@ -256,23 +255,21 @@ async def batch_upload_pdfs(
 
             # 创建导入会话
             session_id = f"session-{uuid.uuid4().hex[:12]}"
-            session = PDFImportSession()
-            session.session_id = session_id
-            session.organization_id = organization_id
-            session.original_filename = file.filename or "unknown.pdf"
-            session.file_size = file_size
-            session.file_path = temp_path
-            session.content_type = "application/pdf"
-            session.status = SessionStatus.UPLOADED
-            db.add(session)
-            db.commit()
-
-            # 启动处理
             processing_options: dict[str, Any] = {
                 "prefer_ocr": prefer_ocr,
                 "prefer_vision": prefer_vision,
                 "auto_confirm": auto_confirm,
             }
+            service.create_import_session(
+                db,
+                session_id=session_id,
+                original_filename=file.filename or "unknown.pdf",
+                file_size=file_size,
+                file_path=temp_path,
+                content_type="application/pdf",
+                organization_id=organization_id,
+                processing_options=processing_options,
+            )
 
             await service.process_pdf_file(
                 db=db,

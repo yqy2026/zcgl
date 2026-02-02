@@ -1137,3 +1137,4 @@ class TestGetEnumFieldValueHistory:
         )
 
         assert len(result) == 0
+

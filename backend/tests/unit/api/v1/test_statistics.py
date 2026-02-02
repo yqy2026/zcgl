@@ -1598,3 +1598,4 @@ class TestStatisticsEdgeCases:
 
         assert result.financial_summary.income_per_sqm == 0.0
         assert result.financial_summary.expense_per_sqm == 0.0
+

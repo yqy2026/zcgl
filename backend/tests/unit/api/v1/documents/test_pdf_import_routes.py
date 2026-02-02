@@ -343,3 +343,4 @@ class TestIntegration:
         # Step 3: 查询会话列表
         sessions_response = client.get("/api/v1/documents/pdf-import/sessions")
         assert sessions_response.status_code == 200
+

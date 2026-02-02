@@ -501,3 +501,4 @@ class TestOrganizationAPIEdgeCases:
             )
 
         assert "alphanumeric" in str(exc_info.value).lower()
+

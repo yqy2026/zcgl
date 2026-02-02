@@ -25,5 +25,5 @@ class AuthFixture:
 
     @staticmethod
     def create_auth_headers(token: str) -> dict[str, str]:
-        """创建认证头"""
-        return {"Authorization": f"Bearer {token}"}
+        """创建认证 Cookie（cookie-only auth）"""
+        return {"auth_token": token}

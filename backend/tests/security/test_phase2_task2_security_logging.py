@@ -190,9 +190,11 @@ class TestSecurityAlertsEndpoint:
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
+        csrf_token = "test-csrf-token"
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token, "csrf_token": csrf_token},
+            headers={"X-CSRF-Token": csrf_token},
         )
 
         assert response.status_code == 200
@@ -229,9 +231,11 @@ class TestSecurityAlertsEndpoint:
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
         # Call test endpoint
+        csrf_token = "test-csrf-token"
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token, "csrf_token": csrf_token},
+            headers={"X-CSRF-Token": csrf_token},
         )
 
         assert response.status_code == 200
@@ -266,9 +270,11 @@ class TestSecurityAlertsEndpoint:
         }
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
 
+        csrf_token = "test-csrf-token"
         response = test_client.post(
             "/api/v1/system/security/alerts/test",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token, "csrf_token": csrf_token},
+            headers={"X-CSRF-Token": csrf_token},
         )
 
         assert response.status_code == 403
@@ -309,7 +315,7 @@ class TestSecurityEventsEndpoint:
 
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token},
         )
 
         assert response.status_code == 200
@@ -344,7 +350,7 @@ class TestSecurityEventsEndpoint:
         # Test first page
         response = test_client.get(
             "/api/v1/system/security/events?skip=0&limit=5",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token},
         )
 
         assert response.status_code == 200
@@ -390,7 +396,7 @@ class TestSecurityEventsEndpoint:
         # Fetch events
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token},
         )
 
         assert response.status_code == 200
@@ -440,7 +446,7 @@ class TestSecurityEventsEndpoint:
 
         response = test_client.get(
             "/api/v1/system/security/events",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token},
         )
 
         assert response.status_code == 403
@@ -496,7 +502,7 @@ class TestSecurityEventsEndpoint:
         # Fetch events
         response = test_client.get(
             "/api/v1/system/security/events?limit=10",
-            headers={"Authorization": f"Bearer {token}"},
+            cookies={"auth_token": token},
         )
 
         assert response.status_code == 200
@@ -514,3 +520,4 @@ class TestSecurityEventsEndpoint:
         assert positions[0] < positions[1] < positions[2], (
             "Events should be ordered by created_at descending"
         )
+

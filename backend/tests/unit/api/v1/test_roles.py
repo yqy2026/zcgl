@@ -16,7 +16,7 @@ from fastapi import status
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 class TestRolesCRUD:
@@ -201,3 +201,4 @@ class TestRolesAuthentication:
             status.HTTP_404_NOT_FOUND,
             status.HTTP_400_BAD_REQUEST,
         ]
+

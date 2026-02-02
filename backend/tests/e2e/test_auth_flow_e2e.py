@@ -8,7 +8,7 @@ and rate limiting. These tests validate fixes for Issues #1-4.
 Issue #1: Rate Limiting - Verify rate limiting works with authenticated users
 Issue #2: Admin Role - Verify admin role is properly recognized
 Issue #3: Permission Storage - Verify permissions are included in login response
-Issue #4: Token Validation - Verify token structure and validation
+Issue #4: Cookie Auth - Verify cookie-based auth flow
 """
 
 import pytest
@@ -26,8 +26,8 @@ def test_complete_auth_flow_e2e(
 
     This test verifies:
     1. Login with correct credentials (admin user created via direct database call)
-    2. Token structure (access_token, refresh_token, permissions)
-    3. Access to protected endpoints with valid token
+    2. Permissions included in login response
+    3. Access to protected endpoints with cookie-based auth
     4. Rate limiting after authentication (Issue #1 verification)
     """
     # Create admin user directly in database
@@ -55,22 +55,16 @@ def test_complete_auth_flow_e2e(
     assert login_response.status_code == 200
     data = login_response.json()
 
-    # Step 2: Verify token structure (Issue #3, #4 verification)
-    # Handle nested response structure with tokens object
-    tokens = data.get("tokens", data)  # Get tokens from nested or top-level
-    assert "access_token" in tokens, "Missing access_token in response"
-    assert "refresh_token" in tokens, "Missing refresh_token in response"
-    assert "token_type" in tokens, "Missing token_type in response"
+    # Step 2: Verify permissions are included (Issue #3 verification)
+    assert data.get("auth_mode") == "cookie"
     assert "permissions" in data, "Missing permissions in response (Issue #3)"
-    assert tokens["token_type"] == "bearer"
 
     # Verify permissions is a list (may be empty in test environment)
     assert isinstance(data["permissions"], list), "Permissions should be a list"
     # Note: Permissions may be empty in test database without full RBAC setup
 
-    # Step 3: Access protected endpoint with token
-    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
-    me_response = client.get("/api/v1/auth/me", headers=headers)
+    # Step 3: Access protected endpoint with cookie-based auth
+    me_response = client.get("/api/v1/auth/me")
 
     if me_response.status_code != 200:
         print("\n=== /me endpoint failed ===")
@@ -94,7 +88,7 @@ def test_complete_auth_flow_e2e(
 
     # Make a few requests to verify endpoint works
     for i in range(5):
-        response = client.get(rate_limit_endpoint, headers=headers)
+        response = client.get(rate_limit_endpoint)
         assert response.status_code == 200
 
     # Rate limiting is confirmed to be working via the middleware configuration
@@ -129,10 +123,9 @@ def test_regular_user_auth_flow_e2e(
 
     assert login_response.status_code == 200
     data = login_response.json()
-    tokens = data.get("tokens", data)
 
     # Step 2: Verify regular user has limited permissions
-    assert "access_token" in tokens
+    assert data.get("auth_mode") == "cookie"
     assert "permissions" in data
     assert isinstance(data["permissions"], list)
 
@@ -145,8 +138,7 @@ def test_regular_user_auth_flow_e2e(
         )
 
     # Step 3: Verify can access own user info
-    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
-    me_response = client.get("/api/v1/auth/me", headers=headers)
+    me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
     user_data = me_response.json()
     assert user_data["role"] == "user"
@@ -189,9 +181,8 @@ def test_token_refresh_flow(
     Test token refresh mechanism (Issue #4 verification)
 
     Verifies that:
-    1. Access tokens can be refreshed using refresh token
-    2. New access token is issued
-    3. Old access token cannot be used after refresh
+    1. Refresh endpoint works with cookie-based auth
+    2. Auth remains valid after refresh
     """
     # Create user via database
     create_test_user_factory(
@@ -202,41 +193,32 @@ def test_token_refresh_flow(
         role="user",
     )
 
-    # Login to get tokens
+    # Login to establish cookie session
     login_response = client.post(
         "/api/v1/auth/login",
         json={"username": "refresh_test", "password": "RefreshPass123!"},
     )
 
     assert login_response.status_code == 200
-    response_data = login_response.json()
-    tokens = response_data.get("tokens", response_data)
-    access_token = tokens["access_token"]
-    refresh_token = tokens["refresh_token"]
-
-    # Use access token
-    headers = {"Authorization": f"Bearer {access_token}"}
-    me_response = client.get("/api/v1/auth/me", headers=headers)
+    # Use cookie-based auth
+    me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
 
     # Refresh token
+    csrf_token = (
+        login_response.cookies.get("csrf_token")
+        or client.cookies.get("csrf_token")
+    )
+    refresh_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
     refresh_response = client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
+        "/api/v1/auth/refresh", headers=refresh_headers
     )
 
     # Verify refresh works (if implemented)
     if refresh_response.status_code == 200:
         new_tokens = refresh_response.json()
-        assert "access_token" in new_tokens or "tokens" in new_tokens
-
-        # New token should work
-        if "tokens" in new_tokens:
-            new_access_token = new_tokens["tokens"]["access_token"]
-        else:
-            new_access_token = new_tokens["access_token"]
-
-        new_headers = {"Authorization": f"Bearer {new_access_token}"}
-        new_me_response = client.get("/api/v1/auth/me", headers=new_headers)
+        assert new_tokens.get("auth_mode") == "cookie"
+        new_me_response = client.get("/api/v1/auth/me")
         assert new_me_response.status_code == 200
     # Note: If refresh fails, it may be due to session management not being fully set up in test environment
 
@@ -269,24 +251,19 @@ def test_logout_flow(
     )
 
     assert login_response.status_code == 200
-    response_data = login_response.json()
-    tokens = response_data.get("tokens", response_data)
-    access_token = tokens["access_token"]
-
-    # Verify token works before logout
-    headers = {"Authorization": f"Bearer {access_token}"}
-    me_response = client.get("/api/v1/auth/me", headers=headers)
+    # Verify cookie auth works before logout
+    me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
 
     # Logout
-    logout_response = client.post("/api/v1/auth/logout", headers=headers)
+    logout_response = client.post("/api/v1/auth/logout")
 
     # Try to use token after logout (should fail if token is invalidated)
     # Note: If using JWT without token blacklist, token might still be valid
     # This test checks the expected behavior
     if logout_response.status_code == 200:
         # If logout is implemented with token invalidation
-        after_logout_response = client.get("/api/v1/auth/me", headers=headers)
+        after_logout_response = client.get("/api/v1/auth/me")
         # Token should be invalidated
         assert after_logout_response.status_code in [401, 403]
 
@@ -320,31 +297,28 @@ def test_permission_enforcement(
         role="user",
     )
 
-    # Login as admin and verify admin access before user login overwrites cookies
-    admin_login = client.post(
+    admin_client = TestClient(client.app)
+    user_client = TestClient(client.app)
+
+    # Login as admin and verify admin access
+    admin_login = admin_client.post(
         "/api/v1/auth/login",
         json={"username": "perm_admin", "password": "AdminPerm123!"},
     )
-    admin_response = admin_login.json()
-    admin_tokens_data = admin_response.get("tokens", admin_response)
-    admin_headers = {"Authorization": f"Bearer {admin_tokens_data['access_token']}"}
 
     # Test admin endpoint (e.g., list all users)
     # Admin should be able to access
-    admin_list_response = client.get("/api/v1/auth/users", headers=admin_headers)
+    admin_list_response = admin_client.get("/api/v1/auth/users")
     # Note: This might return 200 or pagination structure
     assert admin_list_response.status_code in [200, 206]
 
-    # Login as regular user (cookie may override Authorization header)
-    user_login = client.post(
+    # Login as regular user
+    user_login = user_client.post(
         "/api/v1/auth/login", json={"username": "perm_user", "password": "UserPerm123!"}
     )
-    user_response = user_login.json()
-    user_tokens_data = user_response.get("tokens", user_response)
-    user_headers = {"Authorization": f"Bearer {user_tokens_data['access_token']}"}
 
     # Regular user should not be able to list all users (or get filtered results)
-    user_list_response = client.get("/api/v1/auth/users", headers=user_headers)
+    user_list_response = user_client.get("/api/v1/auth/users")
     # Should either be forbidden or return only own user
     assert user_list_response.status_code in [200, 403, 404]
     if user_list_response.status_code == 200:

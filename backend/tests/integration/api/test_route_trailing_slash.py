@@ -25,9 +25,7 @@ def auth_headers(client: TestClient) -> dict:
             "/api/v1/auth/login", json={"username": "admin", "password": "admin"}
         )
         if response.status_code == 200:
-            token = response.json().get("access_token")
-            if token:
-                return {"Authorization": f"Bearer {token}"}
+            return {}
     except Exception:
         pass
     return {}

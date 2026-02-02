@@ -985,3 +985,4 @@ class TestDefectTrackingEdgeCases:
             pass
 
         mock_conn.close.assert_called_once()
+

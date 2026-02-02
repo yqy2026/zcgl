@@ -1146,3 +1146,4 @@ class TestAdditionalErrorCases:
             )
 
         assert exc_info.value.status_code == 404
+

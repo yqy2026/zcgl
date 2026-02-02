@@ -247,5 +247,6 @@ def test_token():
 
 @pytest.fixture(scope="function")
 def auth_headers(test_token: str):
-    """Provide authentication headers for API requests."""
-    return {"Authorization": f"Bearer {test_token}"}
+    """Provide empty headers (cookie-only auth)."""
+    _ = test_token
+    return {}

@@ -78,7 +78,7 @@ def contact_data(db_session: Session, sample_ownership):
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 # ============================================================================
@@ -641,3 +641,4 @@ class TestContactAPIEdgeCases:
             status.HTTP_200_OK,
             *AUTH_FAILURE_STATUSES,
         ]
+

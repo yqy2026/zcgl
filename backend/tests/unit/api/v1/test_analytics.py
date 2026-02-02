@@ -26,7 +26,7 @@ AUTH_FAILURE_STATUSES = {
 def admin_user_headers():
     """管理员用户认证头"""
     # Since client fixture mocks authentication, we don't need real token
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 # ============================================================================
@@ -313,3 +313,4 @@ class TestAnalyticsResponseStructure:
         assert "success" in data
         assert "data" in data
         assert data["success"] is True
+

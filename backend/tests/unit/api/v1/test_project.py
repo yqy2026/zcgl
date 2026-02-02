@@ -60,7 +60,7 @@ def admin_user_headers(client, admin_user):
     app.dependency_overrides[project_module.get_current_active_user] = (
         mock_get_current_user
     )
-    yield {"Authorization": "Bearer mocked_token"}
+    yield {}
     app.dependency_overrides.pop(project_module.get_current_active_user, None)
 
 
@@ -439,3 +439,4 @@ class TestSearchProjects:
             f"/api/v1/projects/{project.id}", headers=admin_user_headers
         )
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
+

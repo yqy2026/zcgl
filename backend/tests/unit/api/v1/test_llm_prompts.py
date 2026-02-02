@@ -21,7 +21,7 @@ AUTH_FAILURE_STATUSES = {
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 class TestLLMPromptsCRUD:
@@ -190,3 +190,4 @@ class TestLLMPromptsAuthentication:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_422_UNPROCESSABLE_ENTITY,
         }
+

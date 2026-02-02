@@ -8,8 +8,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Depends, UploadFile
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import UploadFile
 
 from .field_validation import MODEL_REGISTRY, FieldValidator
 from .file_validation import MAGIC_AVAILABLE, FileValidationConfig, FileValidator, magic
@@ -29,6 +28,7 @@ from .rate_limiting import (
 from .request_security import RequestSecurity
 from .security_analyzer import SecurityAnalyzer
 from .security_middleware import SecurityMiddleware
+from ..middleware.auth import get_current_user as get_current_user
 
 __all__ = [
     "MAGIC_AVAILABLE",
@@ -59,15 +59,6 @@ __all__ = [
 
 security_middleware = SecurityMiddleware()
 request_security = RequestSecurity()
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
-) -> None:
-    """获取当前用户"""
-    _ = credentials
-    # 这里可以实现JWT验证或其他身份验证逻辑
-    return None
 
 
 async def validate_file_upload_dependency(

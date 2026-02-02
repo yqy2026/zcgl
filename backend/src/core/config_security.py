@@ -179,7 +179,6 @@ class SecuritySettings(BaseModel):
         json_schema_extra={"env": "REQUIRE_ENCRYPTION"},
     )
 
-    # 认证配置
     MIN_PASSWORD_LENGTH: int = Field(
         default=8, json_schema_extra={"env": "MIN_PASSWORD_LENGTH"}
     )

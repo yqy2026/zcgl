@@ -79,19 +79,16 @@ export interface TokenResponse {
 
 export interface LoginResponse {
   user: User;
-  tokens: TokenResponse;
+  tokens?: TokenResponse;
   message: string;
 }
 
 export interface AuthResponse {
-  success: boolean;
-  data: {
-    user: User;
-    token: string;
-    refreshToken: string;
-    permissions: Permission[];
-  };
+  user: User;
+  permissions: Permission[];
+  tokens?: TokenResponse;
   message?: string;
+  auth_mode?: string;
 }
 
 export interface ErrorResponse {

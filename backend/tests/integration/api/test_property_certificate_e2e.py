@@ -25,11 +25,7 @@ def get_auth_headers(client: TestClient, admin_user) -> dict:
         json={"username": admin_user.username, "password": "Admin123!@#"},
     )
     assert response.status_code == 200
-    data = response.json()
-    tokens = data.get("tokens", data)
-    access_token = tokens.get("access_token")
-    assert access_token
-    return {"Authorization": f"Bearer {access_token}"}
+    return {}
 
 
 @pytest.mark.integration

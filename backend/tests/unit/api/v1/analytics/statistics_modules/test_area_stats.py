@@ -122,3 +122,4 @@ class TestAreaStatistics:
 
             # Assert
             assert response.status_code == 200
+

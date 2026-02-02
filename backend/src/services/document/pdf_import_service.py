@@ -93,6 +93,37 @@ class PDFImportService:
             "file_size": len(file_content),
         }
 
+    def create_import_session(
+        self,
+        db: Session,
+        *,
+        session_id: str,
+        original_filename: str,
+        file_size: int,
+        file_path: str,
+        content_type: str,
+        organization_id: int | None,
+        processing_options: dict[str, Any] | None = None,
+    ) -> PDFImportSession:
+        """创建PDF导入会话并持久化"""
+        session = PDFImportSession()
+        session.session_id = session_id
+        session.original_filename = original_filename
+        session.file_size = file_size
+        session.file_path = file_path
+        session.content_type = content_type
+        session.organization_id = organization_id
+        session.status = SessionStatus.UPLOADED
+        session.current_step = ProcessingStep.FILE_UPLOAD
+        session.progress_percentage = 0.0
+        if processing_options is not None:
+            session.processing_options = processing_options
+
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        return session
+
     @classmethod
     def get_available_slots(cls) -> int:
         """获取当前可用的处理槽位数"""

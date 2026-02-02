@@ -21,10 +21,9 @@ def client():
 
 @pytest.fixture
 def auth_headers():
-    """创建认证头（使用测试用户）"""
-    # 注意：实际测试需要真实的 token 或使用测试用户
-    # 这里返回一个基本的结构，实际使用时需要替换
-    return {"Authorization": "Bearer test_token"}
+    """创建认证头（cookie-only 环境下为空）"""
+    # Cookie-only auth does not use Authorization headers
+    return {}
 
 
 class TestAnalyticsAPI:

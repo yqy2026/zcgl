@@ -271,7 +271,6 @@ app.add_middleware(
     ],
     allow_headers=[
         "Content-Type",
-        "Authorization",
         "X-CSRF-Token",
         "X-Requested-With",
         "X-Request-ID",

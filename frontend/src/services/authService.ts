@@ -93,10 +93,10 @@ export class AuthService {
         : Array.isArray(tokenPayload?.permissions)
           ? tokenPayload?.permissions
           : []) as AuthResponse['permissions'];
-
-      if (!accessToken || !refreshToken) {
-        throw new Error('Access token or refresh token not found');
-      }
+      const hasAccessToken =
+        accessToken != null && typeof accessToken === 'string' && accessToken !== '';
+      const hasRefreshToken =
+        refreshToken != null && typeof refreshToken === 'string' && refreshToken !== '';
 
       // Store user/permissions locally (tokens stay in httpOnly cookies)
       AuthStorage.setAuthData({ user, permissions });
@@ -105,12 +105,15 @@ export class AuthService {
         success: true,
         data: {
           user,
-          tokens: {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            token_type: tokenPayload?.token_type ?? 'Bearer',
-            expires_in: tokenPayload?.expires_in ?? 3600,
-          },
+          tokens:
+            hasAccessToken && hasRefreshToken
+              ? {
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                  token_type: tokenPayload?.token_type ?? 'Bearer',
+                  expires_in: tokenPayload?.expires_in ?? 3600,
+                }
+              : undefined,
           permissions,
         },
         message: (responseData.message as string) || '登录成功',
@@ -139,7 +142,9 @@ export class AuthService {
   }
 
   // 刷新令牌
-  static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
+  static async refreshToken(): Promise<
+    StandardApiResponse<{ message?: string; auth_mode?: string }>
+  > {
     try {
       const result = await apiClient.post(
         AUTH_API.REFRESH,
@@ -162,7 +167,8 @@ export class AuthService {
         throw new Error(`令牌刷新失败: ${result.error}`);
       }
 
-      const responseData = result.data as AuthResponse['tokens'];
+      const responseData =
+        (result.data as { message?: string; auth_mode?: string } | undefined) ?? {};
 
       // Tokens are rotated in httpOnly cookies by backend
       // No need to update localStorage

@@ -1347,3 +1347,4 @@ class TestOwnershipEdgeCases:
 
         # Payment rate should be 0 when due amount is 0
         assert result["financial_summary"]["payment_rate"] == 0.0
+

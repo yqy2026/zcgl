@@ -1772,3 +1772,4 @@ class TestProcessExcelExportAsync:
         # Verify task was updated to failed
         calls = mock_task_crud.update.call_args_list
         assert any(call for call in calls if "FAILED" in str(call))
+

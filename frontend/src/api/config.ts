@@ -108,7 +108,6 @@ export const HTTP_STATUS = {
 
 export const HEADERS = {
   CONTENT_TYPE: 'Content-Type',
-  AUTHORIZATION: 'Authorization',
   REQUEST_ID: 'X-Request-ID',
   USER_AGENT: 'X-User-Agent',
   CLIENT_VERSION: 'X-Client-Version',

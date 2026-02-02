@@ -29,7 +29,7 @@ def admin_user_headers(client, admin_user, monkeypatch):
         return admin_user
 
     monkeypatch.setattr(RBACPermissionChecker, "__call__", allow_admin)
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 # ============================================================================
@@ -347,3 +347,4 @@ class TestPropertyCertificateEdgeCases:
         if response.status_code == status.HTTP_200_OK:
             data = response.json()
             assert isinstance(data, list) or "items" in data or "results" in data
+

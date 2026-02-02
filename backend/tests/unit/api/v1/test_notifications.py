@@ -119,7 +119,7 @@ def multiple_notifications(db_session: Session, admin_user_in_db):
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 # ============================================================================
@@ -530,3 +530,4 @@ class TestNotificationsEdgeCases:
                 assert (
                     data["data"]["items"][i]["created_at"] >= data["data"]["items"][i + 1]["created_at"]
                 )
+

@@ -15,7 +15,7 @@ from fastapi import status
 def admin_user_headers(client, admin_user):
     """管理员用户认证头"""
     # client fixture already bypasses authentication
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
 
 
 class TestSystemSettingsAPI:
@@ -95,4 +95,5 @@ def normal_user_headers(client, normal_user):
     from src.middleware.auth import get_current_active_user
 
     client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
-    return {"Authorization": "Bearer mocked_token"}
+    return {}
+

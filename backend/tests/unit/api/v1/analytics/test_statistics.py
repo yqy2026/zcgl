@@ -322,3 +322,4 @@ class TestPerformance:
 
             # Assert
             assert response.status_code == 200
+

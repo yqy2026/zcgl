@@ -578,3 +578,4 @@ class TestAssetAPIEdgeCases:
         )
 
         assert result is not None
+

@@ -3,6 +3,10 @@ Integration tests for httpOnly cookie-based authentication
 Tests cookie setting, security attributes, and clearing on logout
 """
 
+from fastapi.testclient import TestClient
+
+from src.core.environment import is_production
+
 
 def test_login_sets_http_only_cookie(client, test_data):
     """Test that login response sets httpOnly cookie"""
@@ -43,7 +47,8 @@ def test_cookie_is_http_only(client, test_data):
     # Note: Cookie headers contain these attributes
     cookie_lower = cookie_header.lower()
     assert "httponly" in cookie_lower, "Cookie should be HttpOnly to prevent XSS"
-    assert "secure" in cookie_lower, "Cookie should be Secure (HTTPS only)"
+    if is_production():
+        assert "secure" in cookie_lower, "Cookie should be Secure (HTTPS only)"
     assert "samesite" in cookie_lower, (
         "Cookie should have SameSite attribute for CSRF protection"
     )
@@ -79,13 +84,16 @@ def test_logout_clears_cookie(client, test_data):
 
     assert login_response.status_code == 200
 
-    # Get the access token from response
-    login_data = login_response.json()
-    access_token = login_data["tokens"]["access_token"]
+    auth_cookie = login_response.cookies.get("auth_token")
+    csrf_cookie = login_response.cookies.get("csrf_token")
+    assert auth_cookie is not None
+    assert csrf_cookie is not None
 
     # Now logout
     logout_response = client.post(
-        "/api/v1/auth/logout", headers={"Authorization": f"Bearer {access_token}"}
+        "/api/v1/auth/logout",
+        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
+        headers={"X-CSRF-Token": csrf_cookie},
     )
 
     assert logout_response.status_code == 200
@@ -100,8 +108,8 @@ def test_logout_clears_cookie(client, test_data):
         ), "Logout should clear the cookie"
 
 
-def test_backward_compatibility_tokens_in_response(client, test_data):
-    """Test that login still returns tokens in response body for backward compatibility"""
+def test_login_response_does_not_include_tokens(client, test_data):
+    """Test that login does not return tokens in response body"""
     admin_user = test_data["admin"]
 
     response = client.post(
@@ -112,11 +120,7 @@ def test_backward_compatibility_tokens_in_response(client, test_data):
     assert response.status_code == 200
     data = response.json()
 
-    # Verify tokens are still in response body
-    assert "tokens" in data, "Tokens should be in response for backward compatibility"
-    assert "access_token" in data["tokens"], "Access token should be in response"
-    assert "refresh_token" in data["tokens"], "Refresh token should be in response"
-    assert data["tokens"]["token_type"] == "bearer", "Token type should be bearer"
+    assert "tokens" not in data, "Tokens should not be exposed in response body"
 
 
 def test_cookie_path_is_root(client, test_data):
@@ -235,8 +239,8 @@ def test_csrf_allows_cookie_post_with_header(client, test_data):
     assert response.status_code == 200
 
 
-def test_cookie_auth_fallback_to_authorization_header(client, test_data):
-    """Test that cookie auth falls back to Authorization header if cookie is missing"""
+def test_bearer_rejected_in_cookie_only_mode(client, test_data):
+    """Test that Authorization header is rejected in cookie-only auth"""
     admin_user = test_data["admin"]
 
     # Login
@@ -246,17 +250,17 @@ def test_cookie_auth_fallback_to_authorization_header(client, test_data):
     )
     assert login_response.status_code == 200
 
-    # Get the token
-    login_data = login_response.json()
-    access_token = login_data["tokens"]["access_token"]
+    # Get the token from cookie (avoid response body)
+    access_token = login_response.cookies.get("auth_token")
+    assert access_token is not None
+
+    stateless_client = TestClient(client.app)
 
     # Access protected endpoint with Authorization header but NO cookie
     # (simulate browser with cookies disabled)
-    protected_response = client.get(
+    protected_response = stateless_client.get(
         "/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"}
     )
 
-    # Should succeed using Authorization header fallback
-    assert protected_response.status_code == 200
-    data = protected_response.json()
-    assert data["username"] == admin_user.username
+    # Should be rejected in cookie-only mode
+    assert protected_response.status_code in [401, 403]

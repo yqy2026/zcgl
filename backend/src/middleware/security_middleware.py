@@ -58,7 +58,6 @@ _DEFAULT_TRUSTED_PROXY_NETWORKS = [
     ip_network("::1/128"),
 ]
 
-
 def _is_valid_ip_value(ip: str) -> bool:
     try:
         ip_address(ip)
@@ -128,7 +127,6 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         self.header_name = settings.CSRF_HEADER_NAME
         self.exempt_paths = {
             "/api/v1/auth/login",
-            "/api/v1/auth/refresh",
         }
         self.safe_methods = set(HTTPMethods.get_safe_methods() + [HTTPMethods.TRACE])
 
@@ -144,10 +142,6 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path or ""
         if path in self.exempt_paths:
-            return await call_next(request)
-
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.lower().startswith("bearer "):
             return await call_next(request)
 
         auth_cookie = request.cookies.get(cookie_manager.cookie_name)
@@ -769,7 +763,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
                 self.allowed_methods
             )
             response.headers["Access-Control-Allow-Headers"] = (
-                "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-CSRF-Token"
+                "Content-Type, X-Requested-With, Accept, Origin, X-CSRF-Token"
             )
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Max-Age"] = "86400"

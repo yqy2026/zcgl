@@ -31,11 +31,6 @@ from ....core.exception_handler import BaseBusinessError, bad_request, internal_
 from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....models.pdf_import_session import (
-    PDFImportSession,
-    ProcessingStep,
-    SessionStatus,
-)
 from ....schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ....security.file_validation import validate_upload_file
 from ....services.document.pdf_import_service import PDFImportService
@@ -103,17 +98,7 @@ async def upload_pdf_file(
         raise internal_error(f"文件处理失败: {str(e)}")
 
     session_id = f"session-{uuid.uuid4().hex[:12]}"
-    session = PDFImportSession()
-    session.session_id = session_id
-    session.original_filename = file.filename or "upload.pdf"
-    session.file_size = total_size
-    session.file_path = str(temp_file_path)
-    session.content_type = file.content_type or "application/pdf"
-    session.organization_id = organization_id
-    session.status = SessionStatus.UPLOADED
-    session.current_step = ProcessingStep.FILE_UPLOAD
-    session.progress_percentage = 0.0
-    session.processing_options = {
+    processing_options = {
         "prefer_ocr": prefer_ocr,
         "prefer_markitdown": prefer_markitdown,
         "max_pages": 100,
@@ -123,8 +108,16 @@ async def upload_pdf_file(
         "enable_ownership_matching": True,
         "enable_duplicate_check": True,
     }
-    db.add(session)
-    db.commit()
+    session = pdf_service.create_import_session(
+        db,
+        session_id=session_id,
+        original_filename=file.filename or "upload.pdf",
+        file_size=total_size,
+        file_path=str(temp_file_path),
+        content_type=file.content_type or "application/pdf",
+        organization_id=organization_id,
+        processing_options=processing_options,
+    )
 
     # 开始处理
     try:
