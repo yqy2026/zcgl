@@ -1,91 +1,18 @@
 /**
  * QuickInsights 组件测试
  * 测试智能洞察卡片组件
+ *
+ * 修复说明：
+ * - 移除 antd Card, Row, Col, Typography 组件 mock
+ * - 移除 @ant-design/icons mock
+ * - 保留 CSS modules mock（非 antd 相关）
+ * - 使用 className 和文本内容进行断言
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen } from '@/test/utils/test-helpers';
 import QuickInsights from '../QuickInsights';
-
-interface CardMockProps {
-  children?: React.ReactNode;
-  title?: React.ReactNode;
-  loading?: boolean;
-  className?: string;
-  variant?: string;
-  size?: string;
-}
-
-interface RowMockProps {
-  children?: React.ReactNode;
-  gutter?: unknown;
-}
-
-interface ColMockProps {
-  children?: React.ReactNode;
-  xs?: unknown;
-  sm?: unknown;
-  lg?: unknown;
-}
-
-interface TitleMockProps {
-  children?: React.ReactNode;
-  level?: number;
-  className?: string;
-}
-
-interface TextMockProps {
-  children?: React.ReactNode;
-  type?: string;
-}
-
-// Mock Ant Design components
-vi.mock('antd', () => ({
-  Card: ({ children, title, loading, className, variant, size }: CardMockProps) => (
-    <div
-      data-testid="card"
-      data-loading={loading}
-      data-class-name={className}
-      data-variant={variant}
-      data-size={size}
-    >
-      {title && <div data-testid="card-title">{title}</div>}
-      {children}
-    </div>
-  ),
-  Row: ({ children, gutter }: RowMockProps) => (
-    <div data-testid="row" data-gutter={JSON.stringify(gutter)}>
-      {children}
-    </div>
-  ),
-  Col: ({ children, xs, sm, lg }: ColMockProps) => (
-    <div data-testid="col" data-xs={xs} data-sm={sm} data-lg={lg}>
-      {children}
-    </div>
-  ),
-  Typography: {
-    Title: ({ children, level, className }: TitleMockProps) => (
-      <div data-testid="title" data-level={level} className={className}>
-        {children}
-      </div>
-    ),
-    Text: ({ children, type }: TextMockProps) => (
-      <div data-testid="text" data-type={type}>
-        {children}
-      </div>
-    ),
-  },
-}));
-
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  HomeOutlined: () => <div data-testid="icon-home" />,
-  PieChartOutlined: () => <div data-testid="icon-pie-chart" />,
-  RiseOutlined: () => <div data-testid="icon-rise" />,
-  AlertOutlined: () => <div data-testid="icon-alert" />,
-  CheckCircleOutlined: () => <div data-testid="icon-check-circle" />,
-}));
 
 // Mock CSS modules
 vi.mock('../QuickInsights.module.css', () => ({
@@ -219,8 +146,8 @@ describe('QuickInsights - 渲染与洞察测试', () => {
     expect(screen.getByText('12000㎡ 空置')).toBeInTheDocument();
   });
 
-  it('loading为true时应透传给Card', () => {
-    renderWithProviders(
+  it('loading为true时应显示loading状态', () => {
+    const { container } = renderWithProviders(
       <QuickInsights
         loading={true}
         data={{
@@ -233,7 +160,7 @@ describe('QuickInsights - 渲染与洞察测试', () => {
       />
     );
 
-    const cards = screen.getAllByTestId('card');
-    expect(cards[0]).toHaveAttribute('data-loading', 'true');
+    const card = container.querySelector('.ant-card-loading');
+    expect(card).toBeInTheDocument();
   });
 });
