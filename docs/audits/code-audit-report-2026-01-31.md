@@ -258,7 +258,7 @@ const [pagination, setPagination] = useState({});
 ✅ 已进一步清理：移除未使用的 `components/Asset/AssetList/*` 与 `pages/Assets/useAssetList.ts` 遗留实现，减少重复列表代码（2026-02-01）
 ✅ 已继续整合：`AssetListPage` 迁移至 `useListData` 统一分页/排序/筛选，减少手写列表状态管理（2026-02-01）
 
-**重复列表组件治理清单（更新：2026-02-01）**
+**重复列表组件治理清单（更新：2026-02-02）**
 
 | ID | 项目 | 优先级 | 状态 | 备注 |
 |---|---|---|---|---|
@@ -275,6 +275,8 @@ const [pagination, setPagination] = useState({});
 | LIST-011 | `DictionaryPage` 概览/详情分页迁移至 `useArrayListData` | P3 | ✅ 已完成 | 修复分页未生效并统一过滤逻辑 |
 | LIST-012 | 抽取 `ProjectList`/`OwnershipList` 列表工具栏布局为 `ListToolbar` | P3 | ✅ 已完成 | 统一搜索/筛选/操作栏结构 |
 | LIST-013 | `PromptListPage`/`RoleManagementPage`/`UserManagementPage` 工具栏迁移至 `ListToolbar` | P3 | ✅ 已完成 | 进一步收敛列表筛选与操作栏 |
+| LIST-014 | `OperationLogPage` 筛选工具栏迁移至 `ListToolbar` | P3 | ✅ 已完成 | 统一筛选/刷新栏布局 |
+| LIST-015 | `RentLedgerPage` 筛选工具栏迁移至 `ListToolbar` | P3 | ✅ 已完成 | 统一筛选/导出栏布局 |
 
 **后端CRUD重复** (严重程度: 中)
 - 19个CRUD文件，大量相似的增删改查

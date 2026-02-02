@@ -6,6 +6,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import { mswServer } from '@/mocks/server';
+import { renderWithProviders } from '@/test/utils/test-helpers';
 
 // =============================================================================
 // MSW 服务器设置
@@ -39,6 +40,9 @@ vi.stubGlobal('import.meta', {
     NODE_ENV: 'test',
   },
 });
+
+(globalThis as typeof globalThis & { renderWithProviders: typeof renderWithProviders }).renderWithProviders =
+  renderWithProviders;
 
 // =============================================================================
 // 浏览器API Mock

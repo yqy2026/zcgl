@@ -395,14 +395,26 @@ def require_admin(current_user: User = Depends(get_current_active_user)) -> User
 
 
 def get_optional_current_user(
-    token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
+    authorization: str | None = Header(None),
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ) -> User | None:
     """获取可选的当前用户（用于可选认证的端点）"""
-    if not token:
+    resolved_token: str | None = None
+
+    if isinstance(auth_token, str) and auth_token:
+        resolved_token = auth_token
+    elif isinstance(authorization, str) and authorization.startswith("Bearer "):
+        resolved_token = authorization.split(" ")[1]
+    elif isinstance(token, str) and token:
+        resolved_token = token
+
+    if not resolved_token:
         return None
 
     try:
-        token_data = _validate_jwt_token(token)
+        token_data = _validate_jwt_token(resolved_token)
     except Exception:
         return None
 

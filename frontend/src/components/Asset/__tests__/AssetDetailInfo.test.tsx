@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import { createMockAsset } from '@/test-utils/factories';
 
 // Mock format utilities
@@ -190,6 +190,12 @@ vi.mock('antd', () => {
   );
   Divider.displayName = 'MockDivider';
 
+  const ConfigProvider = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="config-provider">{children}</div>
+  );
+  ConfigProvider.displayName = 'MockConfigProvider';
+  const theme = { defaultAlgorithm: 'default' };
+
   return {
     Card,
     Descriptions,
@@ -199,6 +205,8 @@ vi.mock('antd', () => {
     Col,
     Statistic,
     Divider,
+    ConfigProvider,
+    theme,
   };
 });
 

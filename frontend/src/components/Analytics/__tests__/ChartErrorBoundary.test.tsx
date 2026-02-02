@@ -122,7 +122,7 @@ describe('ChartErrorBoundary - 错误处理测试', () => {
       </ChartErrorBoundary>
     );
 
-    const retryButton = await screen.findByRole('button', { name: '重试' });
+    const retryButton = await screen.findByRole('button', { name: /重\s*试/ });
     expect(retryButton).toBeInTheDocument();
   });
 
@@ -183,7 +183,7 @@ describe('ChartErrorBoundary - 重试功能测试', () => {
     shouldThrow = false;
 
     // 点击重试
-    const retryButton = await screen.findByRole('button', { name: '重试' });
+    const retryButton = await screen.findByRole('button', { name: /重\s*试/ });
     fireEvent.click(retryButton);
 
     expect(await screen.findByTestId('recovered')).toBeInTheDocument();

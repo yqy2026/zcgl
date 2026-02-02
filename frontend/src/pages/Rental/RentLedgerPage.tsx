@@ -22,6 +22,7 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useListData } from '@/hooks/useListData';
 import {
   SearchOutlined,
@@ -437,71 +438,99 @@ const RentLedgerPage: React.FC = () => {
 
       {/* 搜索区域 */}
       <Card style={{ marginBottom: '24px' }}>
-        <Row gutter={16}>
-          <Col span={4}>
-            <Search
-              placeholder="搜索合同或承租方"
-              onSearch={value => handleSearch({ keyword: value })}
-              enterButton={<SearchOutlined />}
-            />
-          </Col>
-          <Col span={4}>
-            <Select
-              placeholder="选择物业"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={value => handleSearch({ asset_id: value })}
-            >
-              {assets.map(asset => (
-                <Option key={asset.id} value={asset.id}>
-                  {asset.property_name}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col span={4}>
-            <Select
-              placeholder="选择权属方"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={value => handleSearch({ ownership_id: value })}
-            >
-              {ownerships.map(ownership => (
-                <Option key={ownership.id} value={ownership.id}>
-                  {ownership.name}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col span={4}>
-            <Select
-              placeholder="支付状态"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={value => handleSearch({ payment_status: value })}
-            >
-              <Option value="未支付">未支付</Option>
-              <Option value="部分支付">部分支付</Option>
-              <Option value="已支付">已支付</Option>
-              <Option value="逾期">逾期</Option>
-            </Select>
-          </Col>
-          <Col span={4}>
-            <DatePicker.MonthPicker
-              placeholder="选择月份"
-              style={{ width: '100%' }}
-              onChange={(_date, dateString) => handleSearch({ year_month: dateString })}
-            />
-          </Col>
-          <Col span={4}>
-            <Space>
-              <Button onClick={handleReset}>重置</Button>
-              <Button type="primary" icon={<FileExcelOutlined />} onClick={handleExport}>
-                导出
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+        <ListToolbar
+          variant="plain"
+          gutter={[16, 16]}
+          items={[
+            {
+              key: 'search',
+              col: { span: 4 },
+              content: (
+                <Search
+                  placeholder="搜索合同或承租方"
+                  onSearch={value => handleSearch({ keyword: value })}
+                  enterButton={<SearchOutlined />}
+                />
+              ),
+            },
+            {
+              key: 'asset',
+              col: { span: 4 },
+              content: (
+                <Select
+                  placeholder="选择物业"
+                  style={{ width: '100%' }}
+                  allowClear
+                  onChange={value => handleSearch({ asset_id: value })}
+                >
+                  {assets.map(asset => (
+                    <Option key={asset.id} value={asset.id}>
+                      {asset.property_name}
+                    </Option>
+                  ))}
+                </Select>
+              ),
+            },
+            {
+              key: 'ownership',
+              col: { span: 4 },
+              content: (
+                <Select
+                  placeholder="选择权属方"
+                  style={{ width: '100%' }}
+                  allowClear
+                  onChange={value => handleSearch({ ownership_id: value })}
+                >
+                  {ownerships.map(ownership => (
+                    <Option key={ownership.id} value={ownership.id}>
+                      {ownership.name}
+                    </Option>
+                  ))}
+                </Select>
+              ),
+            },
+            {
+              key: 'status',
+              col: { span: 4 },
+              content: (
+                <Select
+                  placeholder="支付状态"
+                  style={{ width: '100%' }}
+                  allowClear
+                  onChange={value => handleSearch({ payment_status: value })}
+                >
+                  <Option value="未支付">未支付</Option>
+                  <Option value="部分支付">部分支付</Option>
+                  <Option value="已支付">已支付</Option>
+                  <Option value="逾期">逾期</Option>
+                </Select>
+              ),
+            },
+            {
+              key: 'month',
+              col: { span: 4 },
+              content: (
+                <DatePicker.MonthPicker
+                  placeholder="选择月份"
+                  style={{ width: '100%' }}
+                  onChange={(_date, dateString) => handleSearch({ year_month: dateString })}
+                />
+              ),
+            },
+            {
+              key: 'actions',
+              col: { span: 4 },
+              content: (
+                <Space>
+                  <Button onClick={handleReset}>重置</Button>
+                  <Button type="primary" icon={<FileExcelOutlined />} onClick={handleExport}>
+                    导出
+                  </Button>
+                </Space>
+              ),
+            },
+          ]}
+        />
       </Card>
 
       {/* 操作区域 */}

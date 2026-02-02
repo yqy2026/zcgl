@@ -41,6 +41,7 @@ const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useListData } from '@/hooks/useListData';
 import { logService, type OperationLog, type LogStatistics } from '@/services/systemService';
 
@@ -496,82 +497,110 @@ const OperationLogPage: React.FC = () => {
 
       <Card>
         <div style={{ marginBottom: 16 }}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={6}>
-              <Search
-                placeholder="搜索用户名、资源或操作"
-                allowClear
-                onSearch={handleSearch}
-                value={filters.searchText}
-                onChange={event => handleSearch(event.target.value)}
-                prefix={<SearchOutlined />}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Select
-                placeholder="模块筛选"
-                allowClear
-                style={{ width: '100%' }}
-                value={filters.module === '' ? undefined : filters.module}
-                onChange={handleModuleChange}
-              >
-                {moduleOptions.map(module => (
-                  <Option key={module.value} value={module.value}>
-                    {module.label}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Select
-                placeholder="操作筛选"
-                allowClear
-                style={{ width: '100%' }}
-                value={filters.action === '' ? undefined : filters.action}
-                onChange={handleActionChange}
-              >
-                {actionOptions.map(action => (
-                  <Option key={action.value} value={action.value}>
-                    {action.label}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Select
-                placeholder="状态筛选"
-                allowClear
-                style={{ width: '100%' }}
-                value={filters.status === '' ? undefined : filters.status}
-                onChange={handleStatusChange}
-              >
-                {statusOptions.map(status => (
-                  <Option key={status.value} value={status.value}>
-                    {status.label}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <RangePicker
-                style={{ width: '100%' }}
-                value={filters.dateRange}
-                onChange={dates => {
-                  if (dates != null && dates[0] != null && dates[1] != null) {
-                    handleDateRangeChange([dates[0], dates[1]]);
-                  } else {
-                    handleDateRangeChange(null);
-                  }
-                }}
-                placeholder={['开始日期', '结束日期']}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Button icon={<ReloadOutlined />} onClick={() => void loadList()} loading={loading}>
-                刷新
-              </Button>
-            </Col>
-          </Row>
+          <ListToolbar
+            variant="plain"
+            gutter={[16, 16]}
+            items={[
+              {
+                key: 'search',
+                col: { xs: 24, sm: 12, md: 6 },
+                content: (
+                  <Search
+                    placeholder="搜索用户名、资源或操作"
+                    allowClear
+                    onSearch={handleSearch}
+                    value={filters.searchText}
+                    onChange={event => handleSearch(event.target.value)}
+                    prefix={<SearchOutlined />}
+                  />
+                ),
+              },
+              {
+                key: 'module',
+                col: { xs: 24, sm: 12, md: 4 },
+                content: (
+                  <Select
+                    placeholder="模块筛选"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.module === '' ? undefined : filters.module}
+                    onChange={handleModuleChange}
+                  >
+                    {moduleOptions.map(module => (
+                      <Option key={module.value} value={module.value}>
+                        {module.label}
+                      </Option>
+                    ))}
+                  </Select>
+                ),
+              },
+              {
+                key: 'action',
+                col: { xs: 24, sm: 12, md: 4 },
+                content: (
+                  <Select
+                    placeholder="操作筛选"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.action === '' ? undefined : filters.action}
+                    onChange={handleActionChange}
+                  >
+                    {actionOptions.map(action => (
+                      <Option key={action.value} value={action.value}>
+                        {action.label}
+                      </Option>
+                    ))}
+                  </Select>
+                ),
+              },
+              {
+                key: 'status',
+                col: { xs: 24, sm: 12, md: 4 },
+                content: (
+                  <Select
+                    placeholder="状态筛选"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={filters.status === '' ? undefined : filters.status}
+                    onChange={handleStatusChange}
+                  >
+                    {statusOptions.map(status => (
+                      <Option key={status.value} value={status.value}>
+                        {status.label}
+                      </Option>
+                    ))}
+                  </Select>
+                ),
+              },
+              {
+                key: 'range',
+                col: { xs: 24, sm: 12, md: 6 },
+                content: (
+                  <RangePicker
+                    style={{ width: '100%' }}
+                    value={filters.dateRange}
+                    onChange={dates => {
+                      if (dates != null && dates[0] != null && dates[1] != null) {
+                        handleDateRangeChange([dates[0], dates[1]]);
+                      } else {
+                        handleDateRangeChange(null);
+                      }
+                    }}
+                    placeholder={['开始日期', '结束日期']}
+                  />
+                ),
+              },
+              {
+                key: 'refresh',
+                col: { xs: 24, sm: 12, md: 4 },
+                content: (
+                  <Button icon={<ReloadOutlined />} onClick={() => void loadList()} loading={loading}>
+                    刷新
+                  </Button>
+                ),
+              },
+            ]}
+          />
         </div>
 
         <TableWithPagination

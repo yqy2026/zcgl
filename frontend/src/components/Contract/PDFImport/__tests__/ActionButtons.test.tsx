@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { screen, fireEvent } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ActionButtons from '../ActionButtons';
 

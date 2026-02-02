@@ -19,9 +19,11 @@
 
 ---
 
-## ✅ 补充进展（更新：2026-02-01）
+## ✅ 补充进展（更新：2026-02-02）
 
 - 认证链路：JWT issuer/audience 与黑名单校验已修复并有单测覆盖（`tests/unit/services/core/test_authentication_service.py`、`tests/unit/core/test_blacklist.py`、`tests/integration/api/test_token_blacklist_api.py`、`tests/unit/middleware/test_optional_auth.py`），但 `backend/src/middleware/auth.py` 仍同时支持 Cookie 与 Bearer Token，迁移尚未完全收敛。
+- 可选认证：`get_optional_current_user` 已改为 Cookie 优先 + Bearer fallback，新增单测覆盖 Cookie 场景（`tests/unit/middleware/test_optional_auth.py`）。
+- 测试环境说明：在 `REDIS_ENABLED=false` 且临时 `DATA_ENCRYPTION_KEY` 下复跑 `tests/unit/middleware/test_optional_auth.py`，消除了 Redis/加密相关噪音，仅保留缺失可选服务模块的 warning。
 - 缓存系统：当前已收敛为 `backend/src/core/cache_manager.py`，`backend/src/utils/cache_manager.py` 仅作委托包装，`backend/src/core/performance.py` 复用核心缓存；未发现 `backend/src/utils/cache.py` 或 `backend/src/performance/cache.py`。已通过 `tests/unit/utils/test_cache_manager_unified.py` 验证委托与清理逻辑。
 
 ## 📊 问题详细分析
@@ -46,9 +48,16 @@
 #### 现状证据（复核：2026-02-02）
 
 - `backend/src/api/v1/auth/auth_modules/authentication.py`：登录/刷新已设置 httpOnly Cookie（auth/refresh/csrf），但响应仍返回 `access_token`/`refresh_token`；登出从 Header 或 Cookie 取 token 并加入黑名单。
-- `backend/src/middleware/auth.py`：`get_current_user` cookie 优先、Bearer fallback；`get_optional_current_user` 仅支持 Bearer（`oauth2_scheme`），与“Cookie 优先”策略不一致。
+- `backend/src/middleware/auth.py`：`get_current_user` cookie 优先、Bearer fallback；`get_optional_current_user` 已同步为 Cookie 优先 + Bearer fallback（仍保留 `oauth2_scheme` 兼容）。
 - `backend/src/middleware/security_middleware.py`：CSRF 对 Cookie 认证生效；带 Bearer 的请求直接绕过 CSRF（且 `/api/v1/auth/refresh` 免检），形成双轨策略。
 - `backend/src/security/security.py`：仍暴露 `HTTPBearer` 的 `get_current_user` 桩函数（返回 None），属于迁移残留接口。
+
+#### Bearer-only 依赖映射（更新：2026-02-02）
+
+- 全仓仅 `get_optional_current_user` 保留 `oauth2_scheme` 兼容，但已支持 Cookie 优先 + Bearer fallback；未发现 API 端点直接依赖 `oauth2_scheme`。
+- `get_optional_current_user` 仅被 `audit_action`（`AuditLogger`）使用；当前仅在资产增删改接口启用审计依赖：
+  - `backend/src/api/v1/assets/assets.py`（create/update/delete）。
+- 结果：**Cookie-only** 客户端场景下，审计日志可正常获取 user 上下文（已补齐）。
 
 **根本原因**：
 - 大规模重构（531个文件变更）正在进行中

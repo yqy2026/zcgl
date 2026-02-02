@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PDFUploadArea from '../PDFUploadArea';
 

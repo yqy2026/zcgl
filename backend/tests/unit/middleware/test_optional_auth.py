@@ -61,6 +61,15 @@ def test_optional_auth_returns_user_for_valid_token():
     assert result is expected_user
 
 
+def test_optional_auth_accepts_cookie_token():
+    db, expected_user = _mock_db_with_user("user-cookie")
+    token, _jti, _exp = _build_access_token("user-cookie", "tester", "admin")
+
+    result = get_optional_current_user(auth_token=token, db=db)
+
+    assert result is expected_user
+
+
 def test_optional_auth_returns_none_for_blacklisted_token():
     db, _user = _mock_db_with_user("user-2")
     token, jti, exp = _build_access_token("user-2", "tester", "admin")
