@@ -1,11 +1,20 @@
 /**
  * PromptListPage 页面测试
  * 验证 Prompt 列表加载、操作与筛选的核心行为
+ *
+ * 修复说明：
+ * - 移除 antd 所有组件 mock
+ * - 移除 @ant-design/icons mock
+ * - 保留服务层 mock (llmPromptService)
+ * - 保留组件 mock (PromptEditor) - 业务组件
+ * - 保留工具类 mock (logger, dayjs, colorMap)
+ * - 使用真实 antd message 和 Modal API
+ * - 使用文本内容和 className 进行断言
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@/test/utils/test-helpers';
+import { act, fireEvent, screen, waitFor } from '@/test/utils/test-helpers';
 import { message, Modal } from 'antd';
 
 import PromptListPage from '../PromptListPage';
@@ -42,111 +51,6 @@ vi.mock('dayjs', () => ({
   default: vi.fn(() => ({
     format: vi.fn(() => '2024-01-01 12:00'),
   })),
-}));
-
-// Mock Ant Design
-vi.mock('antd', () => {
-  const Table = vi.fn(({ columns = [], dataSource = [], rowKey }) => (
-    <div data-testid="table">
-      {dataSource.map((record: Record<string, unknown>, index: number) => {
-        const key =
-          typeof rowKey === 'function'
-            ? rowKey(record)
-            : rowKey
-              ? record[rowKey]
-              : index;
-        return (
-          <div key={String(key)} data-testid="table-row">
-            {columns.map(
-              (
-                column: {
-                  key?: string | number;
-                  dataIndex?: string;
-                  render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
-                },
-                colIndex: number
-              ) => {
-                const columnKey = String(column.key ?? column.dataIndex ?? colIndex);
-                if (column.render) {
-                  const value = column.dataIndex ? record[column.dataIndex] : undefined;
-                  return (
-                    <div key={columnKey}>{column.render(value, record)}</div>
-                  );
-                }
-                if (column.dataIndex) {
-                  return <div key={columnKey}>{record[column.dataIndex]}</div>;
-                }
-                return <div key={columnKey} />;
-              }
-            )}
-          </div>
-        );
-      })}
-    </div>
-  ));
-
-  return {
-    Table,
-    Card: vi.fn(({ children, title, extra }) => (
-      <div data-testid="card">
-        <div>{title}</div>
-        <div>{extra}</div>
-        {children}
-      </div>
-    )),
-    Button: vi.fn(({ children, onClick, icon, type }) => (
-      <button data-testid="button" data-type={type} onClick={onClick}>
-        {icon}
-        {children}
-      </button>
-    )),
-    Space: vi.fn(({ children }) => <div data-testid="space">{children}</div>),
-    Tag: vi.fn(({ children }) => <span data-testid="tag">{children}</span>),
-    Select: Object.assign(
-      vi.fn(({ children, onChange, placeholder }) => (
-        <select
-          data-testid={`select-${placeholder}`}
-          onChange={event => onChange?.((event.target as HTMLSelectElement).value)}
-        >
-          {children}
-        </select>
-      )),
-      {
-        Option: vi.fn(({ children, value }) => <option value={value}>{children}</option>),
-      }
-    ),
-    Modal: Object.assign(vi.fn(() => null), {
-      info: vi.fn(),
-    }),
-    Tooltip: vi.fn(({ children, title }) => (
-      <span data-testid={`tooltip-${title}`}>{children}</span>
-    )),
-    Row: vi.fn(({ children }) => <div data-testid="row">{children}</div>),
-    Col: vi.fn(({ children }) => <div data-testid="col">{children}</div>),
-    Statistic: vi.fn(({ title, value }) => (
-      <div data-testid={`statistic-${title}`}>{value}</div>
-    )),
-    Typography: {
-      Title: vi.fn(({ children }) => <h4>{children}</h4>),
-    },
-    message: {
-      success: vi.fn(),
-      error: vi.fn(),
-      warning: vi.fn(),
-      info: vi.fn(),
-    },
-  };
-});
-
-// Mock icons
-vi.mock('@ant-design/icons', () => ({
-  PlusOutlined: () => null,
-  EditOutlined: () => null,
-  RocketOutlined: () => null,
-  HistoryOutlined: () => null,
-  ReloadOutlined: () => null,
-  CheckCircleOutlined: () => null,
-  FileTextOutlined: () => null,
 }));
 
 vi.mock('@/styles/colorMap', () => ({
@@ -210,9 +114,9 @@ describe('PromptListPage - 基础渲染', () => {
 
   it('应该渲染筛选器', async () => {
     await renderPromptListPage();
-    expect(screen.getByTestId('select-文档类型')).toBeInTheDocument();
-    expect(screen.getByTestId('select-提供商')).toBeInTheDocument();
-    expect(screen.getByTestId('select-状态')).toBeInTheDocument();
+    expect(screen.getByText('文档类型')).toBeInTheDocument();
+    expect(screen.getByText('提供商')).toBeInTheDocument();
+    expect(screen.getByText('状态')).toBeInTheDocument();
   });
 });
 
@@ -244,12 +148,11 @@ describe('PromptListPage - Prompt操作', () => {
     await renderPromptListPage();
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+      expect(llmPromptService.getPrompts).toHaveBeenCalled();
     });
 
-    const activateWrapper = screen.getByTestId('tooltip-激活');
-    const activateButton = activateWrapper.querySelector('button');
-    fireEvent.click(activateButton!);
+    const activateButtons = screen.getAllByText('激活');
+    fireEvent.click(activateButtons[0]);
 
     await waitFor(() => {
       expect(llmPromptService.activatePrompt).toHaveBeenCalledWith('prompt-001');
@@ -275,12 +178,11 @@ describe('PromptListPage - Prompt操作', () => {
     await renderPromptListPage();
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('table-row')).toHaveLength(1);
+      expect(llmPromptService.getPrompts).toHaveBeenCalled();
     });
 
-    const historyWrapper = screen.getByTestId('tooltip-版本历史');
-    const historyButton = historyWrapper.querySelector('button');
-    fireEvent.click(historyButton!);
+    const historyButtons = screen.getAllByText('版本历史');
+    fireEvent.click(historyButtons[0]);
 
     await waitFor(() => {
       expect(Modal.info).toHaveBeenCalled();
