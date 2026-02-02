@@ -19,7 +19,7 @@ Endpoints Tested:
 13. GET /api/v1/auth/users/statistics/summary - Get user statistics
 
 Testing Approach:
-- Mock all dependencies (UserCRUD, AuthService, database, auth)
+- Mock all dependencies (UserCRUD, UserManagementService, PasswordService, database, auth)
 - Test successful responses
 - Test error handling scenarios
 - Test request validation
@@ -618,10 +618,10 @@ class TestUpdateUser:
 class TestChangePassword:
     """Tests for POST /api/v1/auth/users/{user_id}/change-password endpoint"""
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_success(
-        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user
+        self, mock_user_crud_class, mock_user_service_class, mock_db, mock_regular_user
     ):
         """Test changing password successfully"""
         from src.api.v1.auth.auth_modules.users import change_password
@@ -634,9 +634,9 @@ class TestChangePassword:
         mock_user = MagicMock()
         mock_user.id = "user-id"
 
-        mock_auth_service = MagicMock()
-        mock_auth_service.change_password.return_value = True
-        mock_auth_service_class.return_value = mock_auth_service
+        mock_user_service = MagicMock()
+        mock_user_service.change_password.return_value = True
+        mock_user_service_class.return_value = mock_user_service
 
         mock_user_crud = MagicMock()
         mock_user_crud.get.return_value = mock_user
@@ -650,12 +650,12 @@ class TestChangePassword:
         )
 
         assert result["message"] == "密码修改成功"
-        mock_auth_service.change_password.assert_called_once()
+        mock_user_service.change_password.assert_called_once()
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_admin_for_user(
-        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_admin_user
+        self, mock_user_crud_class, mock_user_service_class, mock_db, mock_admin_user
     ):
         """Test admin changing password for another user"""
         from src.api.v1.auth.auth_modules.users import change_password
@@ -668,9 +668,9 @@ class TestChangePassword:
         mock_user = MagicMock()
         mock_user.id = "target-user-id"
 
-        mock_auth_service = MagicMock()
-        mock_auth_service.change_password.return_value = True
-        mock_auth_service_class.return_value = mock_auth_service
+        mock_user_service = MagicMock()
+        mock_user_service.change_password.return_value = True
+        mock_user_service_class.return_value = mock_user_service
 
         mock_user_crud = MagicMock()
         mock_user_crud.get.return_value = mock_user
@@ -685,10 +685,10 @@ class TestChangePassword:
 
         assert result["message"] == "密码修改成功"
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_forbidden(
-        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_regular_user
+        self, mock_user_crud_class, mock_user_service_class, mock_db, mock_regular_user
     ):
         """Test user trying to change another user's password"""
         from src.api.v1.auth.auth_modules.users import change_password
@@ -709,10 +709,10 @@ class TestChangePassword:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert "无权修改" in exc_info.value.message
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_user_not_found(
-        self, mock_user_crud_class, mock_auth_service_class, mock_db, mock_admin_user
+        self, mock_user_crud_class, mock_user_service_class, mock_db, mock_admin_user
     ):
         """Test changing password for non-existent user"""
         from src.api.v1.auth.auth_modules.users import change_password
@@ -793,34 +793,34 @@ class TestDeactivateUser:
 class TestActivateUser:
     """Tests for POST /api/v1/auth/users/{user_id}/activate endpoint"""
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     def test_activate_user_success(
-        self, mock_auth_service_class, mock_db, mock_admin_user
+        self, mock_user_service_class, mock_db, mock_admin_user
     ):
         """Test activating user successfully"""
         from src.api.v1.auth.auth_modules.users import activate_user
 
-        mock_auth_service = MagicMock()
-        mock_auth_service.activate_user.return_value = True
-        mock_auth_service_class.return_value = mock_auth_service
+        mock_user_service = MagicMock()
+        mock_user_service.activate_user.return_value = True
+        mock_user_service_class.return_value = mock_user_service
 
         result = activate_user(
             user_id="user-id", db=mock_db, current_user=mock_admin_user
         )
 
         assert result["message"] == "用户已激活"
-        mock_auth_service.activate_user.assert_called_once_with("user-id")
+        mock_user_service.activate_user.assert_called_once_with("user-id")
 
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
     def test_activate_user_not_found(
-        self, mock_auth_service_class, mock_db, mock_admin_user
+        self, mock_user_service_class, mock_db, mock_admin_user
     ):
         """Test activating non-existent user"""
         from src.api.v1.auth.auth_modules.users import activate_user
 
-        mock_auth_service = MagicMock()
-        mock_auth_service.activate_user.return_value = False
-        mock_auth_service_class.return_value = mock_auth_service
+        mock_user_service = MagicMock()
+        mock_user_service.activate_user.return_value = False
+        mock_user_service_class.return_value = mock_user_service
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
             activate_user(
@@ -969,12 +969,12 @@ class TestResetUserPassword:
     """Tests for POST /api/v1/auth/users/{user_id}/reset-password endpoint"""
 
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
-    @patch("src.api.v1.auth.auth_modules.users.AuthService")
+    @patch("src.api.v1.auth.auth_modules.users.PasswordService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_reset_password_success(
         self,
         mock_user_crud_class,
-        mock_auth_service_class,
+        mock_password_service_class,
         mock_audit_crud_class,
         mock_db,
         mock_admin_user,
@@ -992,9 +992,9 @@ class TestResetUserPassword:
         mock_user = MagicMock()
         mock_user.username = "testuser"
 
-        mock_auth_service = MagicMock()
-        mock_auth_service.get_password_hash.return_value = "hashed_password"
-        mock_auth_service_class.return_value = mock_auth_service
+        mock_password_service = MagicMock()
+        mock_password_service.get_password_hash.return_value = "hashed_password"
+        mock_password_service_class.return_value = mock_password_service
 
         mock_audit_crud = MagicMock()
 

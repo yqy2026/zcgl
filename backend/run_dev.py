@@ -61,10 +61,10 @@ if __name__ == "__main__":
         print("建议在 .env 文件中设置此密钥以保护敏感数据")
         print()
         print("生成方法:")
-        print('  python -c "import secrets; print(secrets.token_urlsafe(32))"')
+        print("  python -m src.core.encryption")
         print()
         print("然后将生成的密钥添加到 .env 文件:")
-        print("  DATA_ENCRYPTION_KEY=<生成的密钥>")
+        print("  DATA_ENCRYPTION_KEY=<base64_key>:1")
         print()
         print("按 Enter 继续启动服务，或按 Ctrl+C 退出并配置密钥...")
         try:

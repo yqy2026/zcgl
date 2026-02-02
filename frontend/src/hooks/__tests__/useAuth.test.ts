@@ -3,66 +3,40 @@
  * 测试认证相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { useAuth } from '../useAuth';
+import { AuthService } from '@/services/authService';
+import { MessageManager } from '@/utils/messageManager';
 
-// =============================================================================
 // Mock AuthService
-// =============================================================================
-
 vi.mock('@/services/authService', () => ({
   AuthService: {
-    getLocalUser: vi.fn(() => null),
-    isAuthenticated: vi.fn(() => false),
-    getLocalPermissions: vi.fn(() => []),
-    login: vi.fn(() =>
-      Promise.resolve({
-        success: true,
-        data: {
-          user: {
-            id: '1',
-            username: 'testuser',
-            fullName: 'Test User',
-            email: 'test@example.com',
-          },
-        },
-      })
-    ),
-    logout: vi.fn(() => Promise.resolve()),
-    getCurrentUser: vi.fn(() =>
-      Promise.resolve({
-        id: '1',
-        username: 'testuser',
-        fullName: 'Test User',
-      })
-    ),
-    refreshToken: vi.fn(() => Promise.resolve()),
-    hasPermission: vi.fn(() => true),
-    hasAnyPermission: vi.fn(() => true),
+    getLocalUser: vi.fn(),
+    isAuthenticated: vi.fn(),
+    getLocalPermissions: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    getCurrentUser: vi.fn(),
+    refreshToken: vi.fn(),
+    hasPermission: vi.fn(),
+    hasAnyPermission: vi.fn(),
   },
 }));
 
-// =============================================================================
-// Mock localStorage
-// =============================================================================
+// Mock logger
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
 
-const mockLocalStorage = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-
-Object.defineProperty(global, 'localStorage', {
-  value: mockLocalStorage,
-  writable: true,
-});
-
-// =============================================================================
-// Mock antd message
-// =============================================================================
-
-vi.mock('antd', () => ({
-  message: {
+// Mock MessageManager
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
@@ -70,13 +44,116 @@ vi.mock('antd', () => ({
   },
 }));
 
-// =============================================================================
-// useAuth Hook 测试
-// =============================================================================
+describe('useAuth Hook', () => {
+  const mockUser = {
+    id: '1',
+    username: 'testuser',
+    email: 'test@example.com',
+    full_name: 'Test User',
+    role: 'admin',
+    organization_id: 'org-1',
+  };
 
-describe('useAuth - Hook验证', () => {
-  it('应该导出useAuth hook', async () => {
-    const { useAuth } = await import('../useAuth');
-    expect(typeof useAuth).toBe('function');
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(AuthService.getLocalUser).mockReturnValue(null);
+    vi.mocked(AuthService.isAuthenticated).mockReturnValue(false);
+  });
+
+  describe('初始化', () => {
+    it('如果未认证，应该初始化为空用户', () => {
+      vi.mocked(AuthService.isAuthenticated).mockReturnValue(false);
+      vi.mocked(AuthService.getLocalUser).mockReturnValue(null);
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+
+    it('如果已认证，应该初始化为本地用户', () => {
+      vi.mocked(AuthService.isAuthenticated).mockReturnValue(true);
+      vi.mocked(AuthService.getLocalUser).mockReturnValue(mockUser);
+      vi.mocked(AuthService.getLocalPermissions).mockReturnValue([]);
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.user).toEqual(mockUser);
+    });
+  });
+
+  describe('login', () => {
+    it('应该处理登录成功', async () => {
+      vi.mocked(AuthService.login).mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          access_token: 'token',
+          refresh_token: 'refresh',
+          expires_in: 3600,
+          token_type: 'bearer',
+          permissions: [],
+        },
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.login({ username: 'testuser', password: 'password' });
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.error).toBeNull();
+      expect(MessageManager.success).toHaveBeenCalledWith('登录成功');
+    });
+
+    it('应该处理登录失败', async () => {
+      vi.mocked(AuthService.login).mockResolvedValue({
+        success: false,
+        message: 'Invalid credentials',
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.login({ username: 'testuser', password: 'wrong' });
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.error).toBe('用户名或密码错误');
+    });
+
+    it('应该处理登录异常', async () => {
+      vi.mocked(AuthService.login).mockRejectedValue(new Error('Network error'));
+
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.login({ username: 'testuser', password: 'password' });
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.error).toBe('Network error');
+      expect(MessageManager.error).toHaveBeenCalledWith('Network error');
+    });
+  });
+
+  describe('logout', () => {
+    it('应该处理登出', async () => {
+      vi.mocked(AuthService.logout).mockResolvedValue(undefined);
+      
+      // Setup initial state
+      vi.mocked(AuthService.isAuthenticated).mockReturnValue(true);
+      vi.mocked(AuthService.getLocalUser).mockReturnValue(mockUser);
+
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(MessageManager.success).toHaveBeenCalledWith('已安全登出');
+    });
   });
 });

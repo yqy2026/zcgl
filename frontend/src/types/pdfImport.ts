@@ -7,13 +7,9 @@ import type { CompleteResult } from '@/services/pdfImportService';
 
 // 引擎类型枚举
 export enum EngineType {
-  PADDLE_OCR = 'paddle_ocr',
-  TESSERACT = 'tesseract',
-  EASY_OCR = 'easy_ocr',
   PYMUPDF = 'pymupdf',
   PDFPLUMBER = 'pdfplumber',
-  CUSTOM_NLP = 'custom_nlp',
-  VISION_AI = 'vision_ai',
+  VISION_LLM = 'vision_llm',
 }
 
 // 字段类型枚举
@@ -120,8 +116,8 @@ export interface TableInfo {
   };
 }
 
-// OCR结果接口
-export interface OCRResult {
+// 视觉结果接口
+export interface VisionResult {
   success: boolean;
   text: string;
   confidence: number;
@@ -130,7 +126,7 @@ export interface OCRResult {
   fusion_result?: FusionResult;
   metadata: {
     page_count: number;
-    ocr_used: boolean;
+    vision_used: boolean;
     processing_time: number;
     quality_score: number;
   };
@@ -191,7 +187,7 @@ export interface PatternMatch {
 
 // 处理选项接口
 export interface ProcessingOptions {
-  prefer_ocr?: boolean;
+  force_method?: 'text' | 'vision' | 'smart';
   enable_chinese_optimization?: boolean;
   enable_table_detection?: boolean;
   enable_seal_detection?: boolean;
@@ -218,7 +214,7 @@ export interface PdfImportSessionProgress {
   validation_results?: Record<string, unknown> | boolean;
   progress_percentage?: number;
   confidence_score?: number;
-  ocr_used?: boolean;
+  vision_used?: boolean;
   warnings?: string[];
   processing_status?: PdfImportProcessingStatus;
 }
@@ -226,7 +222,7 @@ export interface PdfImportSessionProgress {
 export interface PdfImportProcessingStatus {
   extraction_results?: {
     methods_used: string[];
-    has_chinese_ocr: boolean;
+    has_chinese_vision: boolean;
     has_tables: boolean;
     has_seals: boolean;
   };
@@ -309,7 +305,7 @@ export interface PdfImportExtractionResult {
   extraction_method: string;
   processed_fields: number;
   total_fields: number;
-  ocr_result?: OCRResult;
+  vision_result?: VisionResult;
   table_analysis?: TableAnalysisResult;
   seal_detection?: SealDetectionResult;
   template_learning?: TemplateLearningResult;
@@ -378,7 +374,7 @@ export interface ProcessingStepResult {
 // 性能指标接口
 export interface PerformanceMetrics {
   total_processing_time: number;
-  ocr_processing_time?: number;
+  vision_processing_time?: number;
   table_analysis_time?: number;
   fusion_processing_time?: number;
   validation_processing_time?: number;
@@ -411,7 +407,7 @@ export interface PdfImportSystemCapabilities {
   pdfplumber_available: boolean;
   pymupdf_available: boolean;
   spacy_available: boolean;
-  ocr_available: boolean;
+  vision_available: boolean;
   enhanced_extraction: boolean;
   intelligent_matching: boolean;
   multi_engine_support: boolean;

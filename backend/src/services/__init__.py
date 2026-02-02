@@ -40,14 +40,6 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         "permission.permission_cache_service.get_permission_cache_service"
     )
 
-# Core services
-try:
-    from .core.auth_service import AuthService as AuthService
-
-    __all__.append("AuthService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("core.auth_service.AuthService")
-
 try:
     from .core.security_service import SecurityService as SecurityService
 
@@ -113,15 +105,8 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
 # Data analysis services
 try:
-    from .analytics.statistics import StatisticsService as StatisticsService
+    from .analytics.analytics_service import AnalyticsService as AnalyticsService
 
-    __all__.append("StatisticsService")
+    __all__.append("AnalyticsService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("analytics.statistics.StatisticsService")
-
-try:
-    from .analytics.data_filter import DataFilterService as DataFilterService
-
-    __all__.append("DataFilterService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("analytics.data_filter.DataFilterService")
+    _log_import_error("analytics.analytics_service.AnalyticsService")

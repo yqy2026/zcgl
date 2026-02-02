@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ContractExtractorInterface(ABC):
     """
     Abstract base class for Contract Extractors.
-    All LLM/OCR providers (GLM-4V, Qwen-VL, DeepSeek) must implement this interface.
+    All LLM/Vision providers (GLM-4V, Qwen-VL, DeepSeek) must implement this interface.
     """
 
     @abstractmethod
@@ -28,7 +28,7 @@ class ContractExtractorInterface(ABC):
 
         Args:
             file_path: Absolute path to the file (PDF/Image)
-            **kwargs: Additional model-specific parameters (e.g., max_pages, force_ocr)
+            **kwargs: Additional model-specific parameters (e.g., max_pages, force_method)
 
         Returns:
             Dict containing:

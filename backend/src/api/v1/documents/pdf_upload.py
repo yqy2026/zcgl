@@ -46,7 +46,7 @@ router = APIRouter(tags=["PDF上传"])
 async def upload_pdf_file(
     file: UploadFile = File(...),
     prefer_markitdown: bool = Form(default=False),
-    prefer_ocr: bool = Form(default=False),
+    force_method: str | None = Form(default=None),
     organization_id: int | None = Form(default=None),
     db: Session = Depends(get_db),
     pdf_service: PDFImportService = Depends(get_pdf_import_service),
@@ -97,12 +97,19 @@ async def upload_pdf_file(
             raise
         raise internal_error(f"文件处理失败: {str(e)}")
 
+    sanitized_force_method = force_method.strip() if force_method else None
+    allowed_methods = {"text", "vision", "smart"}
+    if sanitized_force_method is not None and sanitized_force_method not in allowed_methods:
+        raise bad_request(
+            "force_method 仅支持: text, vision, smart"
+        )
+
     session_id = f"session-{uuid.uuid4().hex[:12]}"
     processing_options = {
-        "prefer_ocr": prefer_ocr,
         "prefer_markitdown": prefer_markitdown,
+        "force_method": sanitized_force_method,
         "max_pages": 100,
-        "dpi": 300 if prefer_ocr else 150,
+        "dpi": 300 if sanitized_force_method == "vision" else 150,
         "validate_fields": True,
         "enable_asset_matching": True,
         "enable_ownership_matching": True,

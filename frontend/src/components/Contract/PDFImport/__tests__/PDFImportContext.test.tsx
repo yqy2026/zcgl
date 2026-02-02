@@ -249,7 +249,7 @@ describe('PDFImportContext', () => {
         processing_status: {
           final_results: {
             extraction_quality: {
-              processing_methods: ['OCR'],
+              processing_methods: ['Vision'],
             },
           },
         },

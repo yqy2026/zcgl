@@ -86,8 +86,7 @@ class TestBatchUploadEndpoint:
                 files=sample_pdf_files,
                 data={
                     "organization_id": 1,
-                    "prefer_ocr": False,
-                    "prefer_vision": True,
+                    "force_method": "vision",
                     "auto_confirm": False,
                 },
             )

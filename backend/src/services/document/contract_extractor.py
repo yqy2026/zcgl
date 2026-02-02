@@ -308,7 +308,7 @@ class ContractExtractor:
         # 移除多余的空白字符
         text = re.sub(r"\s+", " ", text)
 
-        # 修复常见的OCR错误
+        # 修复常见的识别错误
         text = text.replace(" ", "")
 
         return text.strip()
@@ -534,7 +534,7 @@ if __name__ == "__main__":  # pragma: no cover
                 },
             }
 
-            # 这里可以添加具体的正则表达式和NLP逻辑来提取合同信息
+            # 这里可以添加具体的正则表达式和语义逻辑来提取合同信息
             # 目前返回基本结构
 
             return result

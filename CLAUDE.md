@@ -151,3 +151,6 @@ When working with Python, invoke the relevant /astral:<skill> for uv, ty, and ru
   - 单元测试 (60%): 使用 Mock - 快速反馈
   - 集成测试 (30%): 真实数据库 - 验证集成
   - E2E 测试 (10%): 全真实 - 关键流程
+
+# 维护文档
+CHANGELOG.md

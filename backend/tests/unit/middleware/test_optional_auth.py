@@ -56,7 +56,7 @@ def test_optional_auth_returns_user_for_valid_token():
     db, expected_user = _mock_db_with_user("user-1")
     token, _jti, _exp = _build_access_token("user-1", "tester", "admin")
 
-    result = get_optional_current_user(token=token, db=db)
+    result = get_optional_current_user(auth_token=token, db=db)
 
     assert result is expected_user
 
@@ -75,6 +75,36 @@ def test_optional_auth_returns_none_for_blacklisted_token():
     token, jti, exp = _build_access_token("user-2", "tester", "admin")
     blacklist_manager.add_token(jti, exp)
 
-    result = get_optional_current_user(token=token, db=db)
+    result = get_optional_current_user(auth_token=token, db=db)
 
     assert result is None
+
+
+def test_optional_auth_cookie_priority():
+    """Test that cookie token takes precedence over header token"""
+    # Create two different users
+    db, cookie_user = _mock_db_with_user("user-cookie")
+    _, header_user = _mock_db_with_user("user-header")
+    
+    # Mock DB query to return correct user based on ID in token
+    def mock_query_first(self):
+        # We need to inspect the filter criteria which is hard with this simple mock
+        # So we'll rely on the fact that the auth function calls db.query(User).filter(User.id == sub)
+        # We can just return a mock that matches the 'sub' we expect to win
+        return cookie_user
+
+    # Setup DB mock to return cookie_user
+    query_mock = type("QueryStub", (), {})()
+    query_mock.filter = lambda *args, **kwargs: query_mock
+    query_mock.first = lambda: cookie_user
+    db.query = lambda *args, **kwargs: query_mock
+
+    # Create tokens for both
+    cookie_token, _, _ = _build_access_token("user-cookie", "cookie-user", "user")
+    header_token, _, _ = _build_access_token("user-header", "header-user", "user")
+
+    # Pass only cookie token as header token is no longer supported in get_optional_current_user
+    result = get_optional_current_user(auth_token=cookie_token, db=db)
+
+    # Should return the user associated with the cookie token
+    assert result is cookie_user

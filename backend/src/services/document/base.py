@@ -20,7 +20,7 @@ class ExtractionMethod(str, Enum):
     VISION_GLM4V = "vision_glm4v"  # GLM-4V 视觉提取
     REGEX_PATTERN = "regex_pattern"  # 正则表达式提取
     SMART_AUTO = "smart_auto"  # 智能自动检测
-    NVIDIA_CLOUD = "nvidia_cloud"  # NVIDIA Cloud OCR
+    NVIDIA_CLOUD = "nvidia_cloud"  # Legacy NVIDIA cloud vision
     UNKNOWN = "unknown"  # 未知方法
 
 
@@ -48,8 +48,7 @@ class ErrorCode(str, Enum):
     FILE_TOO_LARGE = "FILE_TOO_LARGE"
     CORRUPTED_FILE = "CORRUPTED_FILE"
 
-    # 服务相关
-    OCR_UNAVAILABLE = "OCR_UNAVAILABLE"
+    # 服务相关    
     LLM_UNAVAILABLE = "LLM_UNAVAILABLE"
     VISION_UNAVAILABLE = "VISION_UNAVAILABLE"
     SERVICE_ERROR = "SERVICE_ERROR"

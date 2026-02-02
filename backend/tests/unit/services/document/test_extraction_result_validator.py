@@ -125,13 +125,13 @@ class TestExtractionResultValidator:
         result = ExtractionResult(
             success=False,
             status=ExtractionStatus.FAILED,
-            error="OCR failed to process PDF",
+            error="Vision failed to process PDF",
             extracted_fields={},
         )
 
         assert result.success is False
         assert result.status == ExtractionStatus.FAILED
-        assert result.error == "OCR failed to process PDF"
+        assert result.error == "Vision failed to process PDF"
         assert result.extracted_fields == {}
 
     def test_skipped_status_allowed(self):

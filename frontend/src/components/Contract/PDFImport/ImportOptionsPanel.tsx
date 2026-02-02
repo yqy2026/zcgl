@@ -21,10 +21,15 @@ const ImportOptionsPanel: React.FC = () => {
       extra={
         <Space>
           <Switch
-            checked={processingOptions.prefer_ocr}
-            onChange={checked => setProcessingOptions(prev => ({ ...prev, prefer_ocr: checked }))}
-            checkedChildren="OCR"
-            unCheckedChildren="文本"
+            checked={processingOptions.force_method === 'vision'}
+            onChange={checked =>
+              setProcessingOptions(prev => ({
+                ...prev,
+                force_method: checked ? 'vision' : 'smart',
+              }))
+            }
+            checkedChildren="视觉"
+            unCheckedChildren="智能"
           />
           <Switch
             checked={processingOptions.enable_chinese_optimization}

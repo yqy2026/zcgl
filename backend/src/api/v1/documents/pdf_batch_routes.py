@@ -145,7 +145,7 @@ async def batch_upload_pdfs(
     db: Annotated[Session, Depends(get_db)],
     files: Annotated[list[UploadFile], File(...)],
     organization_id: Annotated[int | None, Form()] = None,
-    prefer_ocr: Annotated[bool, Form()] = False,
+    force_method: Annotated[str | None, Form()] = None,
     prefer_vision: Annotated[bool, Form()] = False,
     auto_confirm: Annotated[bool, Form()] = False,
     current_user: User = Depends(get_current_active_user),
@@ -161,7 +161,7 @@ async def batch_upload_pdfs(
     **Args**:
         - files: PDF 文件列表（最多 10 个）
         - organization_id: 所属组织 ID
-        - prefer_ocr: 优先使用 OCR 文字识别
+        - force_method: 强制使用 text/vision/smart
         - prefer_vision: 优先使用视觉模型
         - auto_confirm: 自动确认（跳过人工验证）
 
@@ -230,12 +230,19 @@ async def batch_upload_pdfs(
         raise bad_request("没有有效的 PDF 文件（请检查文件格式和大小）")
 
     # 初始化批处理状态（使用 BatchStatusTracker）
+    sanitized_force_method = force_method.strip() if force_method else None
+    allowed_methods = {"text", "vision", "smart"}
+    if sanitized_force_method is not None and sanitized_force_method not in allowed_methods:
+        raise bad_request("force_method 仅支持: text, vision, smart")
+
+    if sanitized_force_method is None and prefer_vision:
+        sanitized_force_method = "vision"
+
     tracker.create_batch(
         batch_id=batch_id,
         total=len(valid_files),
         organization_id=organization_id,
-        prefer_ocr=prefer_ocr,
-        prefer_vision=prefer_vision,
+        force_method=sanitized_force_method,
         auto_confirm=auto_confirm,
     )
 
@@ -256,8 +263,7 @@ async def batch_upload_pdfs(
             # 创建导入会话
             session_id = f"session-{uuid.uuid4().hex[:12]}"
             processing_options: dict[str, Any] = {
-                "prefer_ocr": prefer_ocr,
-                "prefer_vision": prefer_vision,
+                "force_method": sanitized_force_method,
                 "auto_confirm": auto_confirm,
             }
             service.create_import_session(

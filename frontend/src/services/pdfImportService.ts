@@ -42,7 +42,7 @@ export interface SessionProgress {
   progress_percentage?: number;
   chinese_char_count?: number;
   confidence_score?: number;
-  ocr_used?: boolean;
+  vision_used?: boolean;
   validation_results?: Record<string, unknown>;
   // Extended properties for multi-engine processing
   file_name?: string;
@@ -68,7 +68,7 @@ export interface SystemInfoResponse {
   capabilities: SystemCapabilities;
   system_info?: {
     version: string;
-    ocr_available: boolean;
+    vision_available: boolean;
     features: string[];
   };
   extractor_summary?: Record<string, unknown>;
@@ -244,14 +244,13 @@ export class PDFImportService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('prefer_markitdown', preferMarkitdown.toString());
-    formData.append('prefer_ocr', 'false');
 
     try {
       const response = await apiClient.post<FileUploadResponse>(`${API_BASE_URL}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 300000, // 增加到5分钟，支持大文件OCR处理
+        timeout: 300000, // 增加到5分钟，支持大文件视觉处理
         onUploadProgress: progressEvent => {
           if (progressEvent.total != null && progressEvent.total > 0) {
             const _percentCompleted = Math.round(
@@ -496,7 +495,7 @@ export class PDFImportService {
         capabilities: SystemCapabilities;
         system_info?: {
           version: string;
-          ocr_available: boolean;
+          vision_available: boolean;
           features: string[];
         };
         extractor_summary?: Record<string, unknown>;
@@ -513,7 +512,7 @@ export class PDFImportService {
         pdfplumber_available: true,
         pymupdf_available: true,
         spacy_available: true,
-        ocr_available: true,
+        vision_available: true,
         supported_formats: ['.pdf', '.jpg', '.jpeg', '.png'],
         max_file_size_mb: 50,
         estimated_processing_time: '30-60秒',
@@ -536,7 +535,7 @@ export class PDFImportService {
         extractor_summary: {
           method: 'multi_engine',
           description: '多引擎PDF处理，支持智能引擎选择和质量评估',
-          engines: ['PyMuPDF', 'PDFPlumber', 'PaddleOCR'],
+          engines: ['PyMuPDF', 'PDFPlumber', 'LLM Vision'],
           features: ['智能预处理', '多引擎字段提取', '实时验证', '优化匹配算法'],
         },
         validator_summary: {
@@ -559,7 +558,7 @@ export class PDFImportService {
             pdfplumber_available: true,
             pymupdf_available: true,
             spacy_available: false,
-            ocr_available: false,
+            vision_available: false,
             supported_formats: ['.pdf'],
             max_file_size_mb: 10,
             estimated_processing_time: '30-60秒',
@@ -591,7 +590,7 @@ export class PDFImportService {
           pdfplumber_available: false,
           pymupdf_available: false,
           spacy_available: false,
-          ocr_available: false,
+          vision_available: false,
           supported_formats: [],
           max_file_size_mb: 0,
           estimated_processing_time: '未知',
@@ -605,7 +604,7 @@ export class PDFImportService {
   // 获取系统能力信息
   static async getSystemCapabilities(): Promise<{
     spacy_available: boolean;
-    ocr_available: boolean;
+    vision_available: boolean;
     supported_formats: string[];
     max_file_size_mb: number;
     estimated_processing_time: string;
@@ -623,7 +622,7 @@ export class PDFImportService {
       }
       return {
         spacy_available: true,
-        ocr_available: true,
+        vision_available: true,
         supported_formats: ['.pdf', '.jpg', '.jpeg', '.png'],
         max_file_size_mb: 50,
         estimated_processing_time: '30-60秒',
@@ -814,7 +813,7 @@ export class PDFImportService {
           pdfplumber_available: false,
           pymupdf_available: false,
           spacy_available: false,
-          ocr_available: false,
+          vision_available: false,
           supported_formats: [],
           max_file_size_mb: 0,
           estimated_processing_time: '未知',
@@ -833,7 +832,7 @@ export class PDFImportService {
   ): Promise<PdfImportFileUploadResponse> {
     // 默认处理选项
     const defaultOptions: ProcessingOptions = {
-      prefer_ocr: true,
+      force_method: 'smart',
       enable_chinese_optimization: true,
       enable_table_detection: true,
       enable_seal_detection: true,
@@ -847,6 +846,9 @@ export class PDFImportService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('processing_options', JSON.stringify(defaultOptions));
+    if (defaultOptions.force_method != null && defaultOptions.force_method !== '') {
+      formData.append('force_method', defaultOptions.force_method);
+    }
 
     try {
       const response = await apiClient.post<PdfImportFileUploadResponse>(
@@ -1319,7 +1321,7 @@ export class PDFImportService {
         pdfplumber_available: Boolean(systemInfo.capabilities.pdfplumber_available),
         pymupdf_available: Boolean(systemInfo.capabilities.pymupdf_available),
         spacy_available: Boolean(systemInfo.capabilities.spacy_available),
-        ocr_available: Boolean(systemInfo.capabilities.ocr_available),
+        vision_available: Boolean(systemInfo.capabilities.vision_available),
       };
 
       const availableCount = Object.values(features).filter(Boolean).length;

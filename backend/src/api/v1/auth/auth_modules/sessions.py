@@ -12,7 +12,7 @@ from .....crud.auth import UserSessionCRUD
 from .....database import get_db
 from .....middleware.auth import get_current_active_user
 from .....schemas.auth import UserResponse, UserSessionResponse
-from .....services import AuthService
+from .....services.core.session_service import SessionService
 
 router = APIRouter(prefix="/sessions", tags=["会话管理"])
 
@@ -35,7 +35,7 @@ def revoke_session(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, str]:
     """撤销指定会话"""
-    auth_service = AuthService(db)
+    session_service = SessionService(db)
     session_crud = UserSessionCRUD()
 
     # 获取会话记录
@@ -44,7 +44,7 @@ def revoke_session(
         raise not_found("会话不存在", resource_type="session", resource_id=session_id)
 
     # 使用refresh_token撤销会话（API修复：传递refresh_token而非session_id）
-    success = auth_service.revoke_session(session.refresh_token)
+    success = session_service.revoke_session(session.refresh_token)
     if success:
         return {"message": "会话已撤销"}
     else:

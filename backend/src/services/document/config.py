@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-PDF/OCR 统一配置
-集中管理所有 PDF 处理和 OCR 相关的配置参数
+PDF/LLM Vision 统一配置
+集中管理所有 PDF 处理和 LLM Vision 相关的配置参数
 """
 
 import logging
@@ -88,19 +88,17 @@ class LLMProvider(str, Enum):
             ) from exc
 
 
-class OCRConfig(BaseModel):
+class PDFProcessingConfig(BaseModel):
     """
     PDF 文件处理配置
 
     .. note::
-        OCR 引擎（PaddleOCR, Tesseract）已在 v2.0 中完全移除。
-        现在使用 LLM Vision API 进行合同提取：
+        当前使用 LLM Vision API 进行合同提取：
         - Qwen3-VL-Flash: services/document/extractors/qwen_adapter.py
         - DeepSeek-VL: services/document/extractors/deepseek_adapter.py
         - GLM-4V: services/document/extractors/glm_adapter.py
 
-        此配置类名称 OCRConfig 保留用于向后兼容，
-        实际仅用于文件大小、页数限制等通用设置。
+        此配置仅用于文件大小、页数限制等通用设置。
     """
 
     # 文件限制（通用配置）
@@ -124,7 +122,7 @@ class OCRConfig(BaseModel):
     )
 
     @classmethod
-    def from_env(cls) -> "OCRConfig":
+    def from_env(cls) -> "PDFProcessingConfig":
         """
         从环境变量加载配置
 
@@ -134,7 +132,7 @@ class OCRConfig(BaseModel):
             PDF_MAX_CONCURRENT: 最大并发数（默认: 3）
 
         Returns:
-            OCRConfig: 配置实例
+            PDFProcessingConfig: 配置实例
         """
         return cls(
             max_pdf_pages=int(os.getenv("PDF_MAX_PAGES", "20")),
@@ -200,16 +198,6 @@ class ExtractionConfig(BaseModel):
         description="LLM 最大 tokens",
     )
 
-    # OCR 配置
-    ocr_enabled: bool = Field(
-        default=True,
-        description="是否启用 OCR 文字识别",
-    )
-    ocr_fallback: bool = Field(
-        default=True,
-        description="LLM 失败时是否回退到 OCR",
-    )
-
     # 批处理配置
     batch_size: int = Field(
         default=3,
@@ -238,7 +226,7 @@ class ExtractionConfig(BaseModel):
     def validate_force_method(cls, v: str | None) -> str | None:
         """验证强制方法"""
         if v is not None:
-            valid_methods = ["text", "vision", "smart", "ocr", "llm"]
+            valid_methods = ["text", "vision", "smart", "llm"]
             if v not in valid_methods:
                 raise PydanticCustomError(
                     "invalid_method",
@@ -274,8 +262,6 @@ class ExtractionConfig(BaseModel):
                 os.getenv("EXTRACTION_LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))
             ),
             llm_max_tokens=int(os.getenv("EXTRACTION_LLM_MAX_TOKENS", "1500")),
-            ocr_enabled=os.getenv("EXTRACTION_OCR_ENABLED", "true").lower() == "true",
-            ocr_fallback=os.getenv("EXTRACTION_OCR_FALLBACK", "true").lower() == "true",
             batch_size=int(os.getenv("EXTRACTION_BATCH_SIZE", "3")),
             enable_cache=os.getenv("EXTRACTION_ENABLE_CACHE", "true").lower() == "true",
             cache_ttl_seconds=int(os.getenv("EXTRACTION_CACHE_TTL", "3600")),
@@ -289,7 +275,7 @@ class PDFImportConfig(BaseModel):
     聚合所有相关配置
     """
 
-    ocr: OCRConfig = Field(default_factory=OCRConfig)
+    pdf: PDFProcessingConfig = Field(default_factory=PDFProcessingConfig)
     extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
 
     # 调试选项
@@ -306,7 +292,7 @@ class PDFImportConfig(BaseModel):
     def from_env(cls) -> "PDFImportConfig":
         """从环境变量加载完整配置"""
         return cls(
-            ocr=OCRConfig.from_env(),
+            pdf=PDFProcessingConfig.from_env(),
             extraction=ExtractionConfig.from_env(),
             debug_mode=os.getenv("DEBUG", "false").lower() == "true",
             save_intermediate=os.getenv("SAVE_INTERMEDIATE", "false").lower() == "true",
@@ -361,9 +347,9 @@ def set_config(config: PDFImportConfig) -> None:
 # ============================================================================
 
 
-def get_ocr_config() -> OCRConfig:
-    """获取 OCR 配置"""
-    return get_config().ocr
+def get_pdf_config() -> PDFProcessingConfig:
+    """获取 PDF 处理配置"""
+    return get_config().pdf
 
 
 def get_extraction_config() -> ExtractionConfig:
@@ -399,12 +385,12 @@ def validate_config(config: PDFImportConfig) -> list[str]:
     warnings = []
 
     # 检查内存相关的配置
-    if config.ocr.max_concurrent_tasks > 5:
+    if config.pdf.max_concurrent_tasks > 5:
         warnings.append(
-            f"max_concurrent_tasks={config.ocr.max_concurrent_tasks} may cause memory issues"
+            f"max_concurrent_tasks={config.pdf.max_concurrent_tasks} may cause memory issues"
         )
 
-    if config.ocr.max_pdf_pages > 50 and config.ocr.max_pdf_size_mb > 100:
+    if config.pdf.max_pdf_pages > 50 and config.pdf.max_pdf_size_mb > 100:
         warnings.append(
             "Large max_pdf_pages and max_pdf_size_mb may cause memory issues"
         )
@@ -444,9 +430,9 @@ def export_config_env() -> list[str]:
         "# PDF/LLM Vision Configuration",
         "",
         "# File Limits",
-        f"export PDF_MAX_PAGES={config.ocr.max_pdf_pages}",
-        f"export PDF_MAX_SIZE_MB={config.ocr.max_pdf_size_mb}",
-        f"export PDF_MAX_CONCURRENT={config.ocr.max_concurrent_tasks}",
+        f"export PDF_MAX_PAGES={config.pdf.max_pdf_pages}",
+        f"export PDF_MAX_SIZE_MB={config.pdf.max_pdf_size_mb}",
+        f"export PDF_MAX_CONCURRENT={config.pdf.max_concurrent_tasks}",
         "",
         "# Extraction",
         f"export EXTRACTION_CONFIDENCE_THRESHOLD={config.extraction.confidence_threshold}",
@@ -467,9 +453,9 @@ if __name__ == "__main__":  # pragma: no cover
     logger = logging.getLogger(__name__)
 
     logger.info("=== PDF Processing Configuration ===")
-    logger.info(f"Max Pages: {config.ocr.max_pdf_pages}")
-    logger.info(f"Max File Size: {config.ocr.max_pdf_size_mb}MB")
-    logger.info(f"Max Concurrent Tasks: {config.ocr.max_concurrent_tasks}")
+    logger.info(f"Max Pages: {config.pdf.max_pdf_pages}")
+    logger.info(f"Max File Size: {config.pdf.max_pdf_size_mb}MB")
+    logger.info(f"Max Concurrent Tasks: {config.pdf.max_concurrent_tasks}")
 
     logger.info("=== Extraction Configuration ===")
     logger.info(f"LLM Provider: {config.extraction.llm_provider}")

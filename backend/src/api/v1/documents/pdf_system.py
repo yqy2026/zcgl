@@ -38,7 +38,7 @@ def get_system_info() -> SystemInfoResponse:
     获取系统信息和能力
 
     返回：
-    - SystemInfoResponse: 包含系统能力、OCR可用性等信息
+    - SystemInfoResponse: 包含系统能力、视觉可用性等信息
     """
     try:
         return SystemInfoResponse(

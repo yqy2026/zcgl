@@ -14,7 +14,7 @@ Endpoints Tested:
 8. POST /api/v1/auth/verify-email - Verify email address
 
 Testing Approach:
-- Mock all dependencies (AuthService, database, email service)
+- Mock all dependencies (authentication service, database, email service)
 - Test successful authentication flows
 - Test error handling (invalid credentials, expired tokens, etc.)
 - Test security scenarios (rate limiting, token validation)

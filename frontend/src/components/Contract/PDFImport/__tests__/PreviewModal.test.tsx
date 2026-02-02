@@ -153,7 +153,7 @@ describe('PreviewModal', () => {
             final_results: {
               extraction_quality: {
                 overall_quality: 9,
-                processing_methods: ['OCR', 'NLP'],
+                processing_methods: ['Vision', 'Text'],
               },
               validation_score: 7,
             },
@@ -184,7 +184,7 @@ describe('PreviewModal', () => {
             final_results: {
               extraction_quality: {
                 overall_quality: 9,
-                processing_methods: ['OCR', 'NLP'],
+                processing_methods: ['Vision', 'Text'],
               },
               validation_score: 7,
             },
@@ -197,7 +197,7 @@ describe('PreviewModal', () => {
       expect(screen.getByText('提取质量：')).toBeInTheDocument();
       expect(screen.getByText(/总体质量：9\/10/)).toBeInTheDocument();
       expect(screen.getByText(/验证分数：7\/10/)).toBeInTheDocument();
-      expect(screen.getByText(/处理方法：OCR、NLP/)).toBeInTheDocument();
+      expect(screen.getByText(/处理方法：Vision、Text/)).toBeInTheDocument();
     });
 
     it('处理 undefined 值时显示默认值', () => {

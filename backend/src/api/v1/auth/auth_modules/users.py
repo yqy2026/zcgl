@@ -43,7 +43,8 @@ from .....schemas.auth import (
 from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
-from .....services import AuthService
+from .....services.core.password_service import PasswordService
+from .....services.core.user_management_service import UserManagementService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
@@ -186,7 +187,7 @@ def change_password(
     - 管理员可以为任何用户修改密码
     - 需要验证当前密码
     """
-    auth_service = AuthService(db)
+    user_service = UserManagementService(db)
     user_crud = UserCRUD()
 
     # 权限检查
@@ -200,7 +201,7 @@ def change_password(
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
     try:
-        success = auth_service.change_password(
+        success = user_service.change_password(
             user=user,
             current_password=password_data.current_password,
             new_password=password_data.new_password,
@@ -269,9 +270,9 @@ def activate_user(
     - 激活被停用的用户
     - 解除账户锁定
     """
-    auth_service = AuthService(db)
+    user_service = UserManagementService(db)
 
-    success = auth_service.activate_user(user_id)
+    success = user_service.activate_user(user_id)
     if not success:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -390,7 +391,7 @@ def reset_user_password(
         reset_request = password_data
 
         user_crud = UserCRUD()
-        auth_service = AuthService(db)
+        password_service = PasswordService()
 
         user = user_crud.get(db, user_id)
         if not user:
@@ -400,7 +401,7 @@ def reset_user_password(
         setattr(
             user,
             "password_hash",
-            auth_service.get_password_hash(reset_request.new_password),
+            password_service.get_password_hash(reset_request.new_password),
         )
         setattr(user, "updated_at", datetime.now(UTC))
         db.commit()

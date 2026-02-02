@@ -49,7 +49,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
       key: '1',
       question: '支持哪些PDF格式？',
       answer:
-        '支持标准PDF格式（.pdf），包括文本型PDF和扫描型PDF。文本型PDF提取效果更好，扫描型PDF会使用OCR技术进行识别。',
+        '支持标准PDF格式（.pdf），包括文本型PDF和扫描型PDF。文本型PDF提取效果更好，扫描型PDF会使用视觉模型进行识别。',
     },
     {
       key: '2',

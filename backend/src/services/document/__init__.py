@@ -76,13 +76,6 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("document.contract_extractor_manager.ContractExtractorManager")
 
-try:
-    from .chinese_nlp_processor import ChineseNLPProcessor as ChineseNLPProcessor
-
-    __all__.append("ChineseNLPProcessor")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("document.chinese_nlp_processor.ChineseNLPProcessor")
-
 # Excel services
 try:
     from .excel_export import ExcelExportService as ExcelExportService

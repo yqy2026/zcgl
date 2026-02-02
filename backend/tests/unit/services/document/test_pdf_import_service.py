@@ -236,8 +236,7 @@ class TestProcessPdfFile:
             mock_create_task.return_value = mock_task
 
             processing_options = {
-                "prefer_ocr": True,
-                "prefer_vision": False,
+                "force_method": "vision",
             }
 
             result = await pdf_service.process_pdf_file(

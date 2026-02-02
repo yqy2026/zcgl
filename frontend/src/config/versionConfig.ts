@@ -20,7 +20,7 @@ export const VERSION_CONFIG = {
   FEATURES: {
     // PDF处理功能
     PDF_PROCESSING: true,
-    OCR_SUPPORT: false, // OCR服务可能不可用
+    VISION_SUPPORT: true, // LLM Vision处理支持
 
     // 高级功能
     ADVANCED_ANALYTICS: true,

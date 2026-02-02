@@ -37,6 +37,7 @@ nano backend/.env
 
 # 必须修改的配置项:
 # - SECRET_KEY (生产环境)
+# - DATA_ENCRYPTION_KEY (生产环境，PII 加密)
 # - DATABASE_URL
 # - REDIS_HOST/REDIS_PORT/REDIS_DB (如使用缓存)
 ```
@@ -77,6 +78,11 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 SECRET_KEY=your-generated-secret-key-here
 
+# PII 加密密钥 - 必须是标准 Base64（含 padding）并带版本号 :1
+# 生成方法（在 backend 目录）:
+# python -m src.core.encryption
+DATA_ENCRYPTION_KEY=<base64_key>:1
+
 # JWT 算法和过期时间
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=120
@@ -93,6 +99,7 @@ TOKEN_BLACKLIST_ENABLED=true
 - ❌ 禁止使用默认密钥 `EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW`
 - ✅ 生产环境使用环境变量或密钥管理服务
 - ✅ 密钥长度至少 32 字符
+- ✅ `DATA_ENCRYPTION_KEY` 使用标准 Base64（含 `=` padding）并带版本号
 - ✅ 定期轮换密钥
 
 #### 3. 数据库配置
@@ -504,6 +511,7 @@ redis-cli ping  # 应返回 PONG
 
 ### 生产环境
 - [ ] `SECRET_KEY` 已设置为强随机值
+- [ ] `DATA_ENCRYPTION_KEY` 已设置为标准 Base64（含 padding）并带版本号
 - [ ] `DEBUG=false`
 - [ ] `DATABASE_URL` 使用 PostgreSQL
 - [ ] `REDIS_ENABLED=true`

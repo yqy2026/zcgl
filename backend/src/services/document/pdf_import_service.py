@@ -45,7 +45,7 @@ class PDFImportService:
     职责:
     - 管理数据库会话
     - 调度异步处理任务
-    - 整合 OCR 和提取逻辑
+    - 整合文本/视觉提取逻辑
     - 并发控制和错误追踪
     """
 
@@ -311,10 +311,8 @@ class PDFImportService:
 
         try:
             # 确定提取方法
-            force_method = None
-            if options.get("prefer_ocr"):
-                force_method = "text"
-            elif options.get("prefer_vision"):
+            force_method = options.get("force_method")
+            if force_method is None and options.get("prefer_vision"):
                 force_method = "vision"
 
             # Step 1: 智能提取

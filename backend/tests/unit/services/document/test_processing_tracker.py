@@ -253,7 +253,7 @@ class TestFailStep:
         details = {"page_number": 5, "error_details": "Corrupted content"}
         result = tracker.fail_step(
             step=ProcessingStep.INFO_EXTRACTION,
-            error_message="OCR failed",
+            error_message="Vision failed",
             details=details,
         )
 
@@ -408,7 +408,7 @@ class TestCreateLog:
         result = tracker._create_log(
             step=ProcessingStep.INFO_EXTRACTION,
             status="completed",
-            message="OCR completed",
+            message="Extraction completed",
             details=details,
         )
 

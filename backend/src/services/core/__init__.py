@@ -24,26 +24,8 @@ def _log_import_error(service_name: str) -> None:
     logger.warning(f"Service import failed: {service_name}", exc_info=True)
 
 
-AuthService: Any
 SecurityService: Any
 ErrorRecoveryEngine: Any
-
-try:
-    from .auth_service import AuthService as _AuthService
-
-    AuthService = _AuthService
-
-    __all__.append("AuthService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    # Fallback to legacy shim
-    try:
-        from ..auth_service import AuthService as _LegacyAuthService
-
-        AuthService = _LegacyAuthService
-
-        __all__.append("AuthService")
-    except Exception:  # nosec - B110: Intentional graceful degradation
-        _log_import_error("core.auth_service.AuthService (legacy fallback)")
 
 # Import AuditService
 try:

@@ -84,8 +84,6 @@ class TestExtractionConfig:
         assert config.llm_provider == LLMProvider.GLM
         assert config.llm_timeout == 30
         assert config.llm_max_tokens == 1500
-        assert config.ocr_enabled is True
-        assert config.ocr_fallback is True
         assert config.enable_cache is True
         assert config.cache_ttl_seconds == 3600
 
@@ -123,7 +121,6 @@ class TestExtractionConfig:
                 "EXTRACTION_MAX_RETRIES": "5",
                 "EXTRACTION_LLM_PROVIDER": "qwen",
                 "EXTRACTION_LLM_TIMEOUT": "60",
-                "EXTRACTION_OCR_ENABLED": "false",
             },
         ):
             config = ExtractionConfig.from_env()
@@ -132,7 +129,6 @@ class TestExtractionConfig:
             assert config.max_retries == 5
             assert config.llm_provider == LLMProvider.QWEN
             assert config.llm_timeout == 60
-            assert config.ocr_enabled is False
 
     def test_from_env_with_alias(self):
         """测试从环境变量加载时处理提供商别名"""
@@ -159,7 +155,7 @@ class TestExtractionConfig:
     def test_force_method_validation(self):
         """测试强制方法验证"""
         # 有效方法
-        for method in ["text", "vision", "smart", "ocr", "llm"]:
+        for method in ["text", "vision", "smart", "llm"]:
             config = ExtractionConfig(force_method=method)
             assert config.force_method == method
 
@@ -177,26 +173,26 @@ class TestPDFImportConfig:
         config = PDFImportConfig()
 
         # 验证子配置存在
-        assert config.ocr is not None
+        assert config.pdf is not None
         assert config.extraction is not None
 
         # 验证默认值
         assert config.extraction.llm_provider == LLMProvider.GLM
-        assert config.ocr.language == "ch"
+        assert config.pdf.max_pdf_pages == 20
 
     def test_from_env(self):
         """测试从环境变量加载完整配置"""
         with patch.dict(
             os.environ,
             {
-                "OCR_LANG": "en",
+                "PDF_MAX_PAGES": "10",
                 "EXTRACTION_LLM_PROVIDER": "deepseek",
                 "DEBUG": "true",
             },
         ):
             config = PDFImportConfig.from_env()
 
-            assert config.ocr.language == "en"
+            assert config.pdf.max_pdf_pages == 10
             assert config.extraction.llm_provider == LLMProvider.DEEPSEEK
             assert config.debug_mode is True
 
@@ -206,7 +202,7 @@ class TestPDFImportConfig:
 
         config_dict = config.model_dump()
 
-        assert "ocr" in config_dict
+        assert "pdf" in config_dict
         assert "extraction" in config_dict
         assert "debug_mode" in config_dict
         assert config_dict["extraction"]["llm_provider"] == "glm"
@@ -248,14 +244,14 @@ class TestConfigIntegration:
         assert config.debug_mode is True
         assert config.save_intermediate is True
 
-    def test_get_ocr_config(self):
-        """测试获取 OCR 配置便捷函数"""
-        from src.services.document.config import get_ocr_config
+    def test_get_pdf_config(self):
+        """测试获取 PDF 配置便捷函数"""
+        from src.services.document.config import get_pdf_config
 
-        ocr_config = get_ocr_config()
+        pdf_config = get_pdf_config()
 
-        assert ocr_config.language == "ch"
-        assert ocr_config.engine_provider == "paddle"
+        assert pdf_config.max_pdf_pages == 20
+        assert pdf_config.max_concurrent_tasks == 3
 
     def test_get_extraction_config(self):
         """测试获取提取配置便捷函数"""

@@ -166,11 +166,9 @@ python -m src.core.encryption
 
 输出示例:
 ```
-Generating new encryption key...
-
 Add this to your .env file:
 ----------------------------------------------------------------------
-DATA_ENCRYPTION_KEY="YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwMTIzOjE="
+DATA_ENCRYPTION_KEY="<base64_key>:1"
 ----------------------------------------------------------------------
 
 ⚠️  IMPORTANT SECURITY NOTES:
@@ -180,6 +178,10 @@ DATA_ENCRYPTION_KEY="YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwMTIzOjE="
    • Rotate keys periodically (increment version number)
    • Test key recovery procedures before production deployment
 ```
+
+说明:
+- `DATA_ENCRYPTION_KEY` 必须是**标准 Base64**（末尾通常带 `=` padding），格式为 `{base64_key}:{version}`
+- 不要使用 `secrets.token_urlsafe` 生成 `DATA_ENCRYPTION_KEY`
 
 #### 2. 配置环境变量
 
@@ -203,7 +205,7 @@ print(f"Encryption enabled: {asset_crud.sensitive_data_handler.encryption_enable
 
 ```bash
 # 使用生成的密钥
-DATA_ENCRYPTION_KEY="test-key-for-development-only:1"
+DATA_ENCRYPTION_KEY="<base64_key>:1"
 ```
 
 #### 生产环境
@@ -221,9 +223,8 @@ DATA_ENCRYPTION_KEY="test-key-for-development-only:1"
 
 示例:
 ```
-MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzOjE=
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ^ ^
-                  32字节密钥 (base64)                  版本号
+BASE64_KEY_WITH_PADDING==:1
+# 32字节密钥 (base64)          版本号
 ```
 
 ### 密钥轮换
@@ -268,9 +269,9 @@ from src.core.import_utils import safe_import
 router_registry = safe_import("core.router_registry", critical=True)
 
 # 可选依赖 - 优雅降级
-ocr = safe_import("services.ocr", fallback=None)
-if ocr:
-    # 使用 OCR
+vision = safe_import("services.document.extraction_manager", fallback=None)
+if vision:
+    # 使用 LLM Vision 处理
 else:
     # 提供回退方案
 ```
@@ -300,5 +301,3 @@ pytest --cov=src --cov-report=html  # 覆盖率
 | Alembic 失败 | `alembic stamp head && alembic upgrade head` |
 | 加密未生效 | 检查 `DATA_ENCRYPTION_KEY` 是否设置 |
 | 搜索加密字段失败 | 确保使用确定性加密（SEARCHABLE_FIELDS） |
-
-

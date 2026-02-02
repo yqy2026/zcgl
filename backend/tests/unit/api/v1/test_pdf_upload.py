@@ -207,7 +207,7 @@ class TestUploadPdfFile:
                         result = await upload_pdf_file(
                             file=mock_pdf_file,
                             prefer_markitdown=False,
-                            prefer_ocr=False,
+                            force_method=None,
                             organization_id=1,
                             db=mock_db,
                             pdf_service=mock_pdf_import_service,
@@ -249,7 +249,7 @@ class TestUploadPdfFile:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=1,
                         db=mock_db,
                         pdf_service=mock_service,
@@ -284,7 +284,7 @@ class TestUploadPdfFile:
                         await upload_pdf_file(
                             file=mock_non_pdf_file,
                             prefer_markitdown=False,
-                            prefer_ocr=False,
+                            force_method=None,
                             organization_id=None,
                             db=mock_db,
                             pdf_service=mock_service,
@@ -319,7 +319,7 @@ class TestUploadPdfFile:
                         await upload_pdf_file(
                             file=mock_non_pdf_file,
                             prefer_markitdown=False,
-                            prefer_ocr=False,
+                            force_method=None,
                             organization_id=None,
                             db=mock_db,
                             pdf_service=mock_service,
@@ -364,7 +364,7 @@ class TestUploadPdfFile:
                         await upload_pdf_file(
                             file=mock_large_pdf_file,
                             prefer_markitdown=False,
-                            prefer_ocr=False,
+                            force_method=None,
                             organization_id=None,
                             db=mock_db,
                             pdf_service=mock_service,
@@ -410,7 +410,7 @@ class TestUploadPdfFile:
                     await upload_pdf_file(
                         file=mock_large_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_service,
@@ -456,7 +456,7 @@ class TestUploadPdfFile:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=True,
-                        prefer_ocr=True,
+                        force_method="vision",
                         organization_id=5,
                         db=mock_db,
                         pdf_service=mock_pdf_import_service,
@@ -467,7 +467,7 @@ class TestUploadPdfFile:
         assert result.success is True
         # Verify process_pdf_file was called with correct options
         call_args = mock_pdf_import_service.process_pdf_file.call_args
-        assert call_args.kwargs["processing_options"]["prefer_ocr"] is True
+        assert call_args.kwargs["processing_options"]["force_method"] == "vision"
         assert call_args.kwargs["processing_options"]["prefer_markitdown"] is True
         assert call_args.kwargs["organization_id"] == 5
 
@@ -509,7 +509,7 @@ class TestUploadPdfFile:
                             await upload_pdf_file(
                                 file=mock_pdf_file,
                                 prefer_markitdown=False,
-                                prefer_ocr=False,
+                                force_method=None,
                                 organization_id=None,
                                 db=mock_db,
                                 pdf_service=mock_service,
@@ -557,7 +557,7 @@ class TestUploadPdfFile:
                         await upload_pdf_file(
                             file=mock_pdf_file,
                             prefer_markitdown=False,
-                            prefer_ocr=False,
+                            force_method=None,
                             organization_id=None,
                             db=mock_db,
                             pdf_service=mock_service,
@@ -604,7 +604,7 @@ class TestUploadPdfFile:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_service,
@@ -651,7 +651,7 @@ class TestUploadPdfFile:
                             await upload_pdf_file(
                                 file=mock_pdf_file,
                                 prefer_markitdown=False,
-                                prefer_ocr=False,
+                                force_method=None,
                                 organization_id=None,
                                 db=mock_db,
                                 pdf_service=mock_service,
@@ -701,7 +701,7 @@ class TestUploadPdfFile:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_pdf_import_service,
@@ -1191,7 +1191,7 @@ class TestEdgeCases:
                     await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_service,
@@ -1240,7 +1240,7 @@ class TestEdgeCases:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_pdf_import_service,
@@ -1291,7 +1291,7 @@ class TestEdgeCases:
                     result = await upload_pdf_file(
                         file=mock_pdf_file,
                         prefer_markitdown=False,
-                        prefer_ocr=False,
+                        force_method=None,
                         organization_id=None,
                         db=mock_db,
                         pdf_service=mock_pdf_import_service,

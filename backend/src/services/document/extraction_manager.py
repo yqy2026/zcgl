@@ -5,7 +5,7 @@ Document Extraction Manager
 提供多文档类型支持和 LLM Vision 统一入口
 Provides multi-document-type support with unified LLM Vision entry point
 
-2026-01 重构: 移除 OCR 依赖，专注 LLM Vision
+2026-01 重构: 移除传统识别依赖，专注 LLM Vision
 """
 
 import logging

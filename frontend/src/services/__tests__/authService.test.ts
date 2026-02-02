@@ -84,6 +84,62 @@ describe('AuthService - Login with Permissions', () => {
     expect(authData?.permissions).toEqual([]);
   });
 
+  it('should handle logout successfully', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      message: 'Logged out successfully',
+    });
+
+    await AuthService.logout();
+
+    const authData = AuthStorage.getAuthData();
+    expect(authData).toBeNull();
+    expect(apiClient.post).toHaveBeenCalledWith('/auth/logout', undefined, { retry: false });
+  });
+
+  it('should refresh token successfully', async () => {
+    // Setup initial state
+    // AuthStorage.setToken('old-token');
+    // AuthStorage.setRefreshToken('old-refresh-token');
+
+    const mockResponse = {
+      success: true,
+      data: {
+        message: '令牌刷新成功',
+        auth_mode: 'cookie',
+      },
+    };
+
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: mockResponse.data,
+    });
+
+    const result = await AuthService.refreshToken();
+
+    expect(result.success).toBe(true);
+  });
+
+  it('should get current user successfully', async () => {
+    const mockUser = {
+      id: '1',
+      username: 'testuser',
+      email: 'test@example.com',
+    };
+
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: mockUser,
+    });
+
+    const result = await AuthService.getCurrentUser();
+
+    expect(result).toEqual(mockUser);
+    expect(apiClient.get).toHaveBeenCalledWith('/auth/me', expect.objectContaining({
+      cache: false,
+    }));
+  });
+
   it('should handle missing permissions field (defaults to empty array)', async () => {
     const mockResponse = {
       data: {

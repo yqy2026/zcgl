@@ -143,7 +143,7 @@ async def test_client_no_auth(test_db):
 def test_user(test_db):
     """创建测试用户"""
     from src.models.auth import User
-    from src.services import AuthService
+    from src.services.core.password_service import PasswordService
 
     # Check if user already exists to avoid UNIQUE constraint errors
     existing_user = test_db.query(User).filter(User.username == "testuser").first()
@@ -151,8 +151,8 @@ def test_user(test_db):
         return existing_user
 
     # Create proper password hash with special character
-    auth_service = AuthService(test_db)
-    password_hash = auth_service.get_password_hash("Admin@123")
+    password_service = PasswordService()
+    password_hash = password_service.get_password_hash("Admin@123")
 
     user = User(
         username="testuser",
@@ -172,7 +172,7 @@ def test_user(test_db):
 def test_admin(test_db):
     """创建测试管理员"""
     from src.models.auth import User
-    from src.services import AuthService
+    from src.services.core.password_service import PasswordService
 
     # Check if admin already exists to avoid UNIQUE constraint errors
     existing_admin = test_db.query(User).filter(User.username == "admin").first()
@@ -180,8 +180,8 @@ def test_admin(test_db):
         return existing_admin
 
     # Create proper password hash with special character
-    auth_service = AuthService(test_db)
-    password_hash = auth_service.get_password_hash("Admin@123")
+    password_service = PasswordService()
+    password_hash = password_service.get_password_hash("Admin@123")
 
     admin = User(
         username="admin",
@@ -326,12 +326,12 @@ def mock_redis():
 
 
 @pytest.fixture
-def mock_ocr_service():
-    """Mock OCR服务"""
-    ocr_mock = AsyncMock()
-    ocr_mock.extract_text = AsyncMock(return_value="提取的文本内容")
-    ocr_mock.extract_structure = AsyncMock(return_value={})
-    return ocr_mock
+def mock_vision_service():
+    """Mock Vision服务"""
+    vision_mock = AsyncMock()
+    vision_mock.extract_text = AsyncMock(return_value="提取的文本内容")
+    vision_mock.extract_structure = AsyncMock(return_value={})
+    return vision_mock
 
 
 # =============================================================================

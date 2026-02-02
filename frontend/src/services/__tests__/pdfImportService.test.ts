@@ -187,7 +187,7 @@ describe('PDFImportService', () => {
           session_status: {
             session_id: 'session-123',
             status: 'failed',
-            error_message: '文件解析失败',
+            error_message: 'Processing failed',
           },
         },
       });
@@ -195,7 +195,7 @@ describe('PDFImportService', () => {
       const result = await pdfImportService.getResult('session-123');
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('失败');
+      expect(result.error).toBe('Processing failed');
     });
   });
 
@@ -325,7 +325,7 @@ describe('PDFImportService', () => {
           capabilities: {
             pdfplumber_available: true,
             pymupdf_available: true,
-            ocr_available: true,
+            vision_available: true,
           },
         },
       });
@@ -448,7 +448,7 @@ describe('PDFImportService', () => {
             pdfplumber_available: true,
             pymupdf_available: true,
             spacy_available: true,
-            ocr_available: true,
+            vision_available: true,
           },
         },
       });
@@ -484,7 +484,7 @@ describe('PDFImportService', () => {
       const result = await PDFImportService.getSystemCapabilities();
 
       expect(result.spacy_available).toBe(true);
-      expect(result.ocr_available).toBe(true);
+      expect(result.vision_available).toBe(true);
       expect(result.max_file_size_mb).toBe(50);
     });
 

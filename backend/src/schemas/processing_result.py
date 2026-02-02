@@ -55,8 +55,6 @@ class ProcessingResultEnvelope(BaseModel):
     pages: list[dict[str, Any]] | None = None
     total_pages: int | None = None
     processing_method: str | None = None
-    # DEPRECATED: OCR 已移除，保留用于历史数据兼容
-    was_ocr_used: bool | None = None
     overall_confidence_score: float | None = None
 
     quality_assessment: QualityAssessment | None = None

@@ -58,10 +58,6 @@ export default defineConfig(({ command, mode }) => {
       },
     },
 
-    optimizeDeps: {
-      include: ['lodash/debounce'],
-    },
-
     server: {
       port: 5173,
       host: true,
@@ -262,6 +258,7 @@ export default defineConfig(({ command, mode }) => {
         'axios',
         'dayjs',
         'lodash',
+        'lodash/debounce',
         'zustand',
         '@tanstack/react-query',
         'react-hook-form',

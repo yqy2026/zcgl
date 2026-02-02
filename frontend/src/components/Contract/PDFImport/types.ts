@@ -31,7 +31,7 @@ export interface UploadStats {
 }
 
 export interface ProcessingOptions {
-  prefer_ocr: boolean;
+  force_method: 'smart' | 'vision' | 'text';
   enable_chinese_optimization: boolean;
   enable_table_detection: boolean;
   enable_seal_detection: boolean;
@@ -65,7 +65,7 @@ export interface PDFImportContextType {
 }
 
 export const DEFAULT_PROCESSING_OPTIONS: ProcessingOptions = {
-  prefer_ocr: false,
+  force_method: 'smart',
   enable_chinese_optimization: true,
   enable_table_detection: true,
   enable_seal_detection: true,

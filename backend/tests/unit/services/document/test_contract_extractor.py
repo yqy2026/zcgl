@@ -563,8 +563,8 @@ class TestPDFProcessingLogic:
         assert "广州" in result
 
     @pytest.mark.unit
-    def test_preprocess_text_removes_ocr_errors(self):
-        """测试预处理修复 OCR 错误"""
+    def test_preprocess_text_removes_recognition_errors(self):
+        """测试预处理修复识别错误"""
         extractor = ContractExtractor()
 
         input_text = "出租方：广州 包装制品厂\n承租方：王军"

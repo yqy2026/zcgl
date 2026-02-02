@@ -17,7 +17,9 @@ from ....database import get_db
 from ....middleware.auth import get_current_active_user
 from ....schemas.auth import UserResponse
 from ....security.route_guards import debug_only, require_localhost
-from ....services import AuthService
+from ....services.core.authentication_service import AuthenticationService
+from ....services.core.password_service import PasswordService
+from ....services.core.user_management_service import UserManagementService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Auth Debug"], dependencies=[Depends(require_localhost)])
@@ -49,15 +51,17 @@ async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
                 "hint": "Set DEBUG_AUTH_PASSWORD environment variable for debug endpoint",
             }
 
-        auth_service = AuthService(db)
+        auth_service = AuthenticationService(db)
+        user_service = UserManagementService(db)
+        password_service = PasswordService()
 
         # 1. 测试用户查询
-        admin_user = auth_service.get_user_by_username(test_username)
+        admin_user = user_service.get_user_by_username(test_username)
         if not admin_user:
             return {"error": f"Test user '{test_username}' not found"}
 
         # 2. 测试密码验证
-        password_valid = auth_service.verify_password(
+        password_valid = password_service.verify_password(
             test_password, admin_user.password_hash
         )
 

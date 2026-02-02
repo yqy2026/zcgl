@@ -14,15 +14,17 @@
 ## 生成加密密钥
 
 ```bash
-python -m backend.src.core.encryption
+cd backend
+python -m src.core.encryption
 ```
 
 输出示例：
 ```
-DATA_ENCRYPTION_KEY="MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz:1"
+DATA_ENCRYPTION_KEY="<base64_key>:1"
 ```
 
 将生成的密钥添加到 `.env` 文件中。
+> 说明：`DATA_ENCRYPTION_KEY` 必须是**标准 Base64**（含 `=` padding），格式为 `{base64_key}:{version}`。不要使用 `secrets.token_urlsafe` 生成。
 
 ## 环境行为
 
@@ -85,7 +87,7 @@ GET /api/v1/system/health
 **原因**：生产环境未配置加密密钥
 
 **解决方案**：
-1. 生成密钥：`python -m backend.src.core.encryption`
+1. 生成密钥：`cd backend && python -m src.core.encryption`
 2. 添加到环境变量或 `.env` 文件
 3. 或设置 `REQUIRE_ENCRYPTION=false`（不推荐）
 
@@ -97,3 +99,11 @@ GET /api/v1/system/health
 - 数据损坏
 
 **解决方案**：检查日志中的详细错误信息
+
+### 启动报错：`Incorrect padding`
+
+**原因**：使用了 URL-safe 或缺少 padding 的密钥（不是标准 Base64）。
+
+**解决方案**：
+1. 使用 `cd backend && python -m src.core.encryption` 重新生成
+2. 确保密钥格式为 `{base64_key}:{version}`，末尾通常带一个或两个 `=`

@@ -41,7 +41,8 @@ from .....schemas.auth import (
     UserResponse,
 )
 from .....security.cookie_manager import cookie_manager
-from .....services import AuthService
+from .....services.core.authentication_service import AuthenticationService
+from .....services.core.session_service import SessionService
 from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["认证管理"])
@@ -61,7 +62,8 @@ def login(
     - 返回JWT访问令牌和刷新令牌
     - 记录登录审计日志
     """
-    auth_service = AuthService(db)
+    auth_service = AuthenticationService(db)
+    session_service = SessionService(db)
     audit_crud = AuditLogCRUD()
     user_crud = UserCRUD()
 
@@ -102,7 +104,7 @@ def login(
         cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
 
         # 创建会话
-        auth_service.create_user_session(
+        session_service.create_user_session(
             user_id=str(user.id),
             refresh_token=tokens.refresh_token,
             ip_address=client_ip,
@@ -206,7 +208,7 @@ def logout(
     - 清除客户端令牌（包括 httpOnly cookie）
     - 记录登出审计日志
     """
-    auth_service = AuthService(db)
+    session_service = SessionService(db)
     audit_crud = AuditLogCRUD()
 
     # 获取客户端信息
@@ -247,7 +249,7 @@ def logout(
             logger.warning(f"Failed to blacklist token during logout: {e}")
 
     # 撤销用户所有会话
-    revoked_count = auth_service.revoke_all_user_sessions(current_user.id)
+    revoked_count = session_service.revoke_all_user_sessions(current_user.id)
 
     # 记录登出日志
     audit_crud.create(
@@ -281,11 +283,11 @@ def refresh_token(
     - 增强安全性：记录刷新操作、检查IP变化等
 
     Note:
-        auth_service.validate_refresh_token() returns User object, not UserSession
-        This is different from authentication_service.validate_refresh_token() which
-        returns UserSession. The auth_service wrapper extracts the User from the session.
+        authentication_service.validate_refresh_token() returns UserSession, so we
+        extract the User from the session relationship.
     """
-    auth_service = AuthService(db)
+    auth_service = AuthenticationService(db)
+    session_service = SessionService(db)
 
     # 获取客户端信息
     client_ip = request.client.host if request.client else "unknown"
@@ -302,10 +304,10 @@ def refresh_token(
     if not refresh_token:
         raise bad_request("刷新令牌缺失")
 
-    user: User | None = auth_service.validate_refresh_token(
+    session = auth_service.validate_refresh_token(
         refresh_token, client_ip=client_ip, user_agent=user_agent
     )
-    if not user:
+    if not session:
         # 记录失败的刷新尝试
         from .....crud.auth import AuditLogCRUD
 
@@ -325,11 +327,11 @@ def refresh_token(
         raise unauthorized("无效的刷新令牌")
 
     # 验证用户状态
-    # Note: 'user' is the User object returned by validate_refresh_token()
+    user: User | None = getattr(session, "user", None)
     user_active = getattr(user, "is_active", False) if user else False
     if not user or not user_active:
         # 撤销无效会话
-        auth_service.revoke_session(refresh_token)
+        session_service.revoke_session(refresh_token)
         raise unauthorized("用户不存在或已被禁用")
 
     # 记录刷新操作（可选：检查IP变化等安全检查）
