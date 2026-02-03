@@ -25,11 +25,7 @@ logger = logging.getLogger(__name__)
 from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_db
 from .....exceptions import BusinessLogicError
-from .....middleware.auth import (
-    ALGORITHM,
-    SECRET_KEY,
-    get_current_active_user,
-)
+from .....middleware.auth import get_current_active_user
 from .....middleware.security_middleware import get_client_ip
 from .....models.auth import User
 from .....schemas.auth import (
@@ -231,8 +227,8 @@ def logout(
             # 解码JWT获取jti和exp
             payload = jwt.decode(
                 token,
-                SECRET_KEY,
-                algorithms=[ALGORITHM],
+                settings.SECRET_KEY,
+                algorithms=[getattr(settings, "ALGORITHM", "HS256")],
                 audience=settings.JWT_AUDIENCE,
                 issuer=settings.JWT_ISSUER,
                 options={"verify_exp": False},  # 允许解码已过期的令牌

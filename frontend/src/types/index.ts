@@ -139,9 +139,8 @@ export type {
   // Permission, // Duplicate - exported from common
   // Organization, // Duplicate - exported from organization
   AuthState,
-  TokenResponse,
-  LoginResponse,
   AuthResponse,
+  CookieAuthResponse,
   UserActivity,
 } from './auth';
 

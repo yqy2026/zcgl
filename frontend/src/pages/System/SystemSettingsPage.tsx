@@ -245,7 +245,7 @@ const SystemSettingsPage: React.FC = () => {
           <Card title="系统信息" loading={isInfoLoading}>
             {systemInfo ? (
               <div>
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   <div>
                     <strong>版本号：</strong>
                     {systemInfo.version}
@@ -272,7 +272,7 @@ const SystemSettingsPage: React.FC = () => {
               </div>
             ) : (
               <Alert
-                message="无法获取系统信息"
+                title="无法获取系统信息"
                 description="请检查服务器连接状态"
                 type="warning"
                 showIcon
@@ -283,9 +283,9 @@ const SystemSettingsPage: React.FC = () => {
 
         <TabPane tab="数据备份" key="backup">
           <Card title="数据备份与恢复">
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <Alert
-                message="备份说明"
+                title="备份说明"
                 description="定期备份数据是保障系统安全的重要措施。建议每周至少备份一次数据。"
                 type="info"
                 showIcon

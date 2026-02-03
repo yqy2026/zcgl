@@ -271,7 +271,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
         status: 'finish',
         content: (
           <div>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <div>
                 <Text strong>建议文件名:</Text>
                 <div
@@ -317,7 +317,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           content: (
             <Alert
               type="error"
-              message="文件名修复失败"
+              title="文件名修复失败"
               description="请检查文件名格式或手动重命名"
             />
           ),
@@ -378,7 +378,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       destroyOnHidden
     >
       <Spin spinning={loading}>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           <div>
             <Title level={4}>文件名智能修复</Title>
             <Paragraph type="secondary">
@@ -393,7 +393,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
           {/* 手动编辑选项 */}
           <Card title="手动调整（可选）" size="small">
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <div>
                 <Text strong>自定义文件名:</Text>
                 <div style={{ marginTop: 8 }}>
@@ -412,7 +412,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
                 </div>
               </div>
               <Alert
-                message="提示"
+                title="提示"
                 description="您可以直接编辑文件名，系统会实时验证并提供修复建议。"
                 type="info"
                 showIcon
@@ -424,7 +424,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           {/* 预览结果 */}
           {suggestedFilename && (
             <Card title="修复结果预览" size="small">
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <Row gutter={16}>
                   <Col span={4}>
                     <Text strong>修复前:</Text>
@@ -454,7 +454,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
           {/* 修复说明 */}
           <Alert
-            message="关于文件名修复"
+            title="关于文件名修复"
             description={
               <div style={{ fontSize: '12px' }}>
                 <p>

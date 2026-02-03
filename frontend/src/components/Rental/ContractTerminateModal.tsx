@@ -190,7 +190,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
       >
         {/* 原合同信息摘要 */}
         <Alert
-          message="原合同信息"
+          title="原合同信息"
           description={
             <Descriptions column={2} size="small" style={{ marginTop: 8 }}>
               <Descriptions.Item label="合同编号">{contract.contract_number}</Descriptions.Item>
@@ -264,7 +264,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
           {deductionAmount > 0 && (
             <Alert
               type="info"
-              message={
+              title={
                 <>
                   应退押金: <strong>¥{refundableAmount.toFixed(2)}</strong>
                   &nbsp;(押金¥
@@ -313,7 +313,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
         width={500}
       >
         <Alert
-          message="此操作不可撤销"
+          title="此操作不可撤销"
           description={
             <div style={{ marginTop: 8 }}>
               <p>您即将终止以下合同：</p>

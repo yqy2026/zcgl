@@ -481,7 +481,7 @@ const UserManagementPage: React.FC = () => {
                   title="活跃用户"
                   value={statistics.active}
                   prefix={<TeamOutlined />}
-                  valueStyle={{ color: COLORS.success }}
+                  styles={{ content: { color: COLORS.success } }}
                 />
               </Card>
             </Col>
@@ -491,7 +491,7 @@ const UserManagementPage: React.FC = () => {
                   title="停用用户"
                   value={statistics.inactive}
                   prefix={<SettingOutlined />}
-                  valueStyle={{ color: COLORS.error }}
+                  styles={{ content: { color: COLORS.error } }}
                 />
               </Card>
             </Col>
@@ -501,7 +501,7 @@ const UserManagementPage: React.FC = () => {
                   title="锁定用户"
                   value={statistics.locked}
                   prefix={<LockOutlined />}
-                  valueStyle={{ color: COLORS.warning }}
+                  styles={{ content: { color: COLORS.warning } }}
                 />
               </Card>
             </Col>
@@ -739,7 +739,7 @@ const UserManagementPage: React.FC = () => {
           placement="right"
           onClose={() => setDetailDrawerVisible(false)}
           open={detailDrawerVisible}
-          width={600}
+          size={600}
         >
           {selectedUser && (
             <div>

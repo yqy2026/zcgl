@@ -340,16 +340,16 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={currentProgress.progress}
                 precision={0}
                 suffix="%"
-                valueStyle={{
+                styles={{ content: {
                   color: getStatusColor(currentProgress.status),
-                }}
+                } }}
               />
             </Col>
           </Row>
 
           {(currentProgress.error_message?.length ?? 0) > 0 && (
             <Alert
-              message="处理错误"
+              title="处理错误"
               description={currentProgress.error_message}
               type="error"
               showIcon
@@ -453,7 +453,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 title="提取字段数"
                 value={result.extraction_result.processed_fields}
                 suffix={`/ ${result.extraction_result.total_fields}`}
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Col>
             <Col span={6}>
@@ -462,7 +462,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.validation_result.validation_score}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Col>
             <Col span={6}>
@@ -471,7 +471,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.matching_result.match_confidence}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Col>
             <Col span={6}>
@@ -480,7 +480,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.summary.total_confidence}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Col>
           </Row>

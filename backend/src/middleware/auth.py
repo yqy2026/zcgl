@@ -3,6 +3,7 @@
 """
 
 import logging
+import sys
 from collections import deque
 from time import time
 from typing import Any
@@ -11,6 +12,7 @@ import jwt
 from fastapi import Cookie, Depends, Request
 from jwt import PyJWTError as JWTError
 from sqlalchemy import and_
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ..constants.security_constants import (
@@ -23,13 +25,14 @@ from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
 from ..core.environment import is_production
 from ..core.exception_handler import bad_request, forbidden, unauthorized
-from ..database import get_db
+from ..database import get_async_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..security.logging_security import security_monitor
 from ..services import RBACService
+from ..utils.async_db import AsyncServiceClassAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -162,11 +165,13 @@ def _is_token_blacklisted(
 _token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
 
 
-# JWT配置
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
-JWT_AUDIENCE = settings.JWT_AUDIENCE
-JWT_ISSUER = settings.JWT_ISSUER
+def _get_jwt_settings() -> tuple[str, str, str, str]:
+    return (
+        settings.SECRET_KEY,
+        getattr(settings, "ALGORITHM", "HS256"),
+        settings.JWT_AUDIENCE,
+        settings.JWT_ISSUER,
+    )
 
 
 def _validate_jwt_token(token: str) -> TokenData:
@@ -185,12 +190,13 @@ def _validate_jwt_token(token: str) -> TokenData:
     credentials_exception = unauthorized("无效的认证凭据")
 
     try:
+        secret_key, algorithm, audience, issuer = _get_jwt_settings()
         payload = jwt.decode(
             token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
-            audience=JWT_AUDIENCE,
-            issuer=JWT_ISSUER,
+            secret_key,
+            algorithms=[algorithm],
+            audience=audience,
+            issuer=issuer,
         )
 
         user_id: str | None = payload.get("sub")
@@ -254,7 +260,11 @@ def _validate_jwt_token(token: str) -> TokenData:
             raise credentials_exception
 
     except JWTError as e:
+        sys.stderr.write(f"DEBUG: [_validate_jwt_token] JWTError: {e}\n")
         logger.warning(f"JWT decode error: {e}")
+        raise credentials_exception
+    except Exception as e:
+        sys.stderr.write(f"DEBUG: [_validate_jwt_token] Unexpected error: {e}\n")
         raise credentials_exception
 
     return token_data
@@ -267,14 +277,17 @@ def safe_role_compare(role_value: Any, target_role: Any) -> bool:
     return bool(role_value == target_role)
 
 
-def get_current_user(
+
+async def get_current_user(
+    request: Request,
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User:
     """
     Get current authenticated user from JWT token.
 
     Cookie-only authentication. Tokens are read from httpOnly cookies.
+    Also supports Authorization header for API access/testing.
     """
     credentials_exception = unauthorized("无效的认证凭据")
 
@@ -282,15 +295,29 @@ def get_current_user(
     if token:
         logger.debug("Authenticating using httpOnly cookie")
 
+    # No token found in cookie, try header
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            logger.debug("Authenticating using Authorization header")
+
     # No token found in either cookie or header
     if not token:
         raise credentials_exception
 
     # 使用共享的JWT验证逻辑
-    token_data = _validate_jwt_token(token)
+    try:
+        token_data = _validate_jwt_token(token)
+    except Exception as e:
+        raise credentials_exception
 
     # Get user from database
-    user = db.query(User).filter(User.id == token_data.sub).first()
+    user = await db.run_sync(
+        lambda sync_db: sync_db.query(User)
+        .filter(User.id == token_data.sub)
+        .first()
+    )
     if user is None:
         raise credentials_exception
 
@@ -304,9 +331,9 @@ def get_current_user(
     return user
 
 
-def get_current_user_from_cookie(
+async def get_current_user_from_cookie(
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User:
     """
     Get current user from httpOnly cookie.
@@ -330,10 +357,17 @@ def get_current_user_from_cookie(
         raise unauthorized("Not authenticated")
 
     # 使用共享的JWT验证逻辑
-    token_data = _validate_jwt_token(token)
+    try:
+        token_data = _validate_jwt_token(token)
+    except Exception:
+        raise unauthorized("Invalid token")
 
     # Get user from database
-    user = db.query(User).filter(User.id == token_data.sub).first()
+    user = await db.run_sync(
+        lambda sync_db: sync_db.query(User)
+        .filter(User.id == token_data.sub)
+        .first()
+    )
     if user is None:
         raise unauthorized("Invalid authentication credentials")
 
@@ -365,9 +399,9 @@ def require_admin(current_user: User = Depends(get_current_active_user)) -> User
     return current_user
 
 
-def get_optional_current_user(
+async def get_optional_current_user(
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User | None:
     """获取可选的当前用户（用于可选认证的端点）"""
     resolved_token = auth_token
@@ -380,7 +414,11 @@ def get_optional_current_user(
     except Exception:
         return None
 
-    user = db.query(User).filter(User.id == token_data.sub).first()
+    user = await db.run_sync(
+        lambda sync_db: sync_db.query(User)
+        .filter(User.id == token_data.sub)
+        .first()
+    )
     if user and user.is_active and not user.is_locked_now():
         return user
 
@@ -465,11 +503,11 @@ class AuditLogger:
         self.action = action
         self.resource_type = resource_type
 
-    def __call__(
+    async def __call__(
         self,
         request: Request,
         current_user: User | None = Depends(get_optional_current_user),
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_async_db),
     ) -> User | None:
         """记录审计日志"""
         if not current_user:
@@ -482,14 +520,16 @@ class AuditLogger:
             user_agent = request.headers.get("user-agent", "")
             request_params = str(request.query_params) if request.query_params else None
 
-            self.log_action(
-                db=db,
-                user=current_user,
-                api_endpoint=request.url.path,
-                http_method=request.method,
-                request_params=request_params,
-                ip_address=ip_address,
-                user_agent=user_agent,
+            await db.run_sync(
+                lambda sync_db: self.log_action(
+                    db=sync_db,
+                    user=current_user,
+                    api_endpoint=request.url.path,
+                    http_method=request.method,
+                    request_params=request_params,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
             )
         except Exception as e:
             logger.warning(f"审计日志记录失败: {e}")
@@ -578,7 +618,7 @@ class SecurityConfig:
         return {
             "access_token_expire_minutes": cls.ACCESS_TOKEN_EXPIRE_MINUTES,
             "refresh_token_expire_days": cls.REFRESH_TOKEN_EXPIRE_DAYS,
-            "algorithm": ALGORITHM,
+            "algorithm": getattr(settings, "ALGORITHM", "HS256"),
             "max_concurrent_sessions": cls.MAX_CONCURRENT_SESSIONS,
             "session_expire_days": cls.SESSION_EXPIRE_DAYS,
         }
@@ -595,10 +635,10 @@ class RBACPermissionChecker:
         self.action = action
         self.resource_id = resource_id
 
-    def __call__(
+    async def __call__(
         self,
         current_user: User | None = Depends(get_current_user),
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_async_db),
     ) -> User | None:
         """检查用户权限"""
 
@@ -611,7 +651,7 @@ class RBACPermissionChecker:
             return current_user
 
         # 使用RBAC服务检查权限
-        rbac_service = RBACService(db)
+        rbac_service = AsyncServiceClassAdapter(db, RBACService)
         permission_request = PermissionCheckRequest(
             resource=self.resource,
             action=self.action,
@@ -619,7 +659,7 @@ class RBACPermissionChecker:
             context=None,
         )
 
-        permission_result = rbac_service.check_permission(
+        permission_result = await rbac_service.check_permission(
             current_user.id, permission_request
         )
 
@@ -643,10 +683,10 @@ class ResourcePermissionChecker:
         self.resource_type = resource_type
         self.required_level = required_level
 
-    def __call__(
+    async def __call__(
         self,
         current_user: User = Depends(get_current_active_user),
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_async_db),
         resource_id: str | None = None,
     ) -> User:
         """检查用户资源权限"""
@@ -657,8 +697,8 @@ class ResourcePermissionChecker:
         # 检查是否有对应的资源权限
         from ..models.rbac import ResourcePermission
 
-        resource_permission = (
-            db.query(ResourcePermission)
+        resource_permission = await db.run_sync(
+            lambda sync_db: sync_db.query(ResourcePermission)
             .filter(
                 and_(
                     ResourcePermission.user_id == current_user.id,
@@ -701,10 +741,10 @@ class RoleBasedAccessChecker:
     def __init__(self, required_roles: list[str]):
         self.required_roles = required_roles
 
-    def __call__(
+    async def __call__(
         self,
         current_user: User = Depends(get_current_active_user),
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_async_db),
     ) -> User:
         """检查用户角色"""
         # 管理员拥有所有权限
@@ -712,8 +752,8 @@ class RoleBasedAccessChecker:
             return current_user
 
         # 获取用户角色
-        rbac_service = RBACService(db)
-        user_roles = rbac_service.get_user_roles(current_user.id)
+        rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        user_roles = await rbac_service.get_user_roles(current_user.id)
 
         user_role_names = [role.name for role in user_roles]
 
@@ -729,7 +769,7 @@ def require_roles(required_roles: list[str]) -> RoleBasedAccessChecker:
     return RoleBasedAccessChecker(required_roles)
 
 
-def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
+async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> bool:
     """
     检查用户是否可以编辑合同
 
@@ -745,7 +785,7 @@ def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
         from ..schemas.rbac import PermissionCheckRequest
         from ..services.permission.rbac_service import RBACService
 
-        rbac_service = RBACService(db)
+        rbac_service = AsyncServiceClassAdapter(db, RBACService)
         permission_request = PermissionCheckRequest(
             resource="rent_contract",
             action="edit",
@@ -753,22 +793,25 @@ def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
             context=None,
         )
 
-        result = rbac_service.check_permission(user.id, permission_request)
+        result = await rbac_service.check_permission(user.id, permission_request)
         return result.has_permission
     except Exception:
         # 如果RBAC检查失败，默认拒绝权限（安全优先）
         return False
 
 
-def get_user_rbac_permissions(
-    current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
+async def get_user_rbac_permissions(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """获取用户RBAC权限信息"""
     if current_user.role == UserRole.ADMIN:
         return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
 
-    rbac_service = RBACService(db)
-    permissions_summary = rbac_service.get_user_permissions_summary(current_user.id)
+    rbac_service = AsyncServiceClassAdapter(db, RBACService)
+    permissions_summary = await rbac_service.get_user_permissions_summary(
+        current_user.id
+    )
 
     return {
         "is_admin": False,

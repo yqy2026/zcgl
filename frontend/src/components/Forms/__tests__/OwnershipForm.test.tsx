@@ -66,7 +66,6 @@ vi.mock('antd', () => ({
 
 import OwnershipForm from '../OwnershipForm';
 import { ownershipService } from '@/services/ownershipService';
-import { MessageManager } from '@/utils/messageManager';
 
 describe('OwnershipForm', () => {
   const mockOnSuccess = vi.fn();

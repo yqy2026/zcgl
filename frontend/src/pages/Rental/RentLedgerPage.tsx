@@ -418,7 +418,7 @@ const RentLedgerPage: React.FC = () => {
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
-                valueStyle={{ color: COLORS.error }}
+                styles={{ content: { color: COLORS.error } }}
               />
             </Card>
           </Col>
@@ -429,7 +429,7 @@ const RentLedgerPage: React.FC = () => {
                 value={statistics.payment_rate}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error }}
+                styles={{ content: { color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error } }}
               />
             </Card>
           </Col>
@@ -536,7 +536,7 @@ const RentLedgerPage: React.FC = () => {
       {/* 操作区域 */}
       {uiState.selectedLedgers.length > 0 && (
         <Alert
-          message={`已选择 ${uiState.selectedLedgers.length} 条记录`}
+          title={`已选择 ${uiState.selectedLedgers.length} 条记录`}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}

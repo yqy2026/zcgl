@@ -246,7 +246,34 @@ class RentContract(Base):
                 kwargs["assets"] = sa_assets
             else:
                 kwargs.pop("assets", None)
+        ownership_id = kwargs.get("ownership_id")
+        if (
+            ownership_id in (None, "")
+            and all(
+                field in kwargs
+                for field in ("tenant_name", "sign_date", "start_date", "end_date")
+            )
+        ):
+            raise ValueError("ownership_id is required")
+        if kwargs.get("id") in (None, ""):
+            kwargs["id"] = str(uuid.uuid4())
+        if kwargs.get("contract_type") is None:
+            kwargs["contract_type"] = ContractType.LEASE_DOWNSTREAM
         super().__init__(**kwargs)
+
+    @property
+    def status(self) -> ContractStatus:
+        try:
+            return ContractStatus(self.contract_status)
+        except Exception:
+            return ContractStatus.ACTIVE
+
+    @status.setter
+    def status(self, value: ContractStatus | str) -> None:
+        if isinstance(value, ContractStatus):
+            self.contract_status = value.value
+        else:
+            self.contract_status = str(value)
 
     def __repr__(self) -> str:
         return f"<RentContract(contract_number={self.contract_number}, tenant_name={self.tenant_name})>"  # pragma: no cover

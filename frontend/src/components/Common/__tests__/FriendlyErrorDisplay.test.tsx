@@ -89,7 +89,7 @@ describe('FriendlyErrorDisplay - 按钮与详情测试', () => {
 
   it('showDetails为true时应该展示错误详情', async () => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    const { container } = renderWithProviders(
+    renderWithProviders(
       <FriendlyErrorDisplay
         error={{ status: 500, code: 'TEST_ERROR', message: '测试错误' }}
         showDetails={true}

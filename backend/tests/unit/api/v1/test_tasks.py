@@ -51,6 +51,7 @@ def create_mock_task(**kwargs):
         "status": TaskStatus.PENDING.value,
         "title": "Test Task",
         "description": None,
+        "user_id": "test-user-id",
         "created_at": datetime.now(UTC),
         "started_at": None,
         "completed_at": None,
@@ -305,8 +306,11 @@ class TestGetTask:
 class TestUpdateTask:
     """Tests for PUT /api/v1/tasks/{task_id} endpoint"""
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_update_task_success(self, mock_task_service, mock_db, mock_current_user):
+    def test_update_task_success(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test updating task successfully"""
         from src.api.v1.system.tasks import update_task
 
@@ -319,6 +323,7 @@ class TestUpdateTask:
             processed_items=50,
             failed_items=0,
         )
+        mock_task_crud.get.return_value = mock_task
 
         mock_task_service.update_task.return_value = mock_task
 
@@ -332,14 +337,17 @@ class TestUpdateTask:
         assert result.progress == 50
         mock_task_service.update_task.assert_called_once()
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_update_task_not_found(self, mock_task_service, mock_db, mock_current_user):
+    def test_update_task_not_found(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test updating non-existent task"""
         from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
-        mock_task_service.update_task.side_effect = ValueError("任务不存在")
+        mock_task_crud.get.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
             update_task(
@@ -349,17 +357,19 @@ class TestUpdateTask:
                 current_user=mock_current_user,
             )
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
     def test_update_task_invalid_status(
-        self, mock_task_service, mock_db, mock_current_user
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
     ):
         """Test updating completed task (forbidden)"""
         from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.update_task.side_effect = ValueError("已完成的任务无法更新")
 
         with pytest.raises(BaseBusinessError) as exc_info:
@@ -372,13 +382,17 @@ class TestUpdateTask:
 
         assert exc_info.value.status_code == 500
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_update_task_exception(self, mock_task_service, mock_db, mock_current_user):
+    def test_update_task_exception(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test updating task with exception"""
         from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.update_task.side_effect = Exception("Database error")
 
         with pytest.raises(BaseBusinessError) as exc_info:
@@ -401,8 +415,11 @@ class TestUpdateTask:
 class TestCancelTask:
     """Tests for POST /api/v1/tasks/{task_id}/cancel endpoint"""
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_success(self, mock_task_service, mock_db, mock_current_user):
+    def test_cancel_task_success(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test cancelling task successfully"""
         from src.api.v1.system.tasks import cancel_task
 
@@ -413,6 +430,7 @@ class TestCancelTask:
             completed_at=datetime.now(UTC),
         )
 
+        mock_task_crud.get.return_value = mock_task
         mock_task_service.cancel_task.return_value = mock_task
 
         cancel_request = TaskCancelRequest(reason="User requested")
@@ -427,9 +445,10 @@ class TestCancelTask:
         assert result.status == TaskStatus.CANCELLED.value
         mock_task_service.cancel_task.assert_called_once()
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
     def test_cancel_task_without_reason(
-        self, mock_task_service, mock_db, mock_current_user
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
     ):
         """Test cancelling task without reason"""
         from src.api.v1.system.tasks import cancel_task
@@ -440,6 +459,7 @@ class TestCancelTask:
             completed_at=datetime.now(UTC),
         )
 
+        mock_task_crud.get.return_value = mock_task
         mock_task_service.cancel_task.return_value = mock_task
 
         result = cancel_task(
@@ -451,12 +471,15 @@ class TestCancelTask:
 
         assert result.status == TaskStatus.CANCELLED.value
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_not_found(self, mock_task_service, mock_db, mock_current_user):
+    def test_cancel_task_not_found(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test cancelling non-existent task"""
         from src.api.v1.system.tasks import cancel_task
 
-        mock_task_service.cancel_task.side_effect = ValueError("任务不存在")
+        mock_task_crud.get.return_value = None
 
         cancel_request = TaskCancelRequest(reason="Test")
 
@@ -468,15 +491,17 @@ class TestCancelTask:
                 current_user=mock_current_user,
             )
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
     def test_cancel_task_invalid_status(
-        self, mock_task_service, mock_db, mock_current_user
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
     ):
         """Test cancelling task that cannot be cancelled"""
         from src.api.v1.system.tasks import cancel_task
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.cancel_task.side_effect = ValueError("任务无法取消")
 
         cancel_request = TaskCancelRequest(reason="Test")
@@ -491,11 +516,15 @@ class TestCancelTask:
 
         assert exc_info.value.status_code == 500
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_exception(self, mock_task_service, mock_db, mock_current_user):
+    def test_cancel_task_exception(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test cancelling task with exception"""
         from src.api.v1.system.tasks import cancel_task
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.cancel_task.side_effect = Exception("Database error")
 
         cancel_request = TaskCancelRequest(reason="Test")
@@ -520,11 +549,15 @@ class TestCancelTask:
 class TestDeleteTask:
     """Tests for DELETE /api/v1/tasks/{task_id} endpoint"""
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_success(self, mock_task_service, mock_db, mock_current_user):
+    def test_delete_task_success(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test deleting task successfully"""
         from src.api.v1.system.tasks import delete_task
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.delete_task.return_value = None
 
         result = delete_task(
@@ -536,25 +569,32 @@ class TestDeleteTask:
             db=mock_db, task_id="task-123"
         )
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_not_found(self, mock_task_service, mock_db, mock_current_user):
+    def test_delete_task_not_found(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test deleting non-existent task"""
         from src.api.v1.system.tasks import delete_task
 
-        mock_task_service.delete_task.side_effect = ValueError("任务不存在")
+        mock_task_crud.get.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
             delete_task(
                 task_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
+    @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_exception(self, mock_task_service, mock_db, mock_current_user):
+    def test_delete_task_exception(
+        self, mock_task_service, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test deleting task with exception"""
         from src.api.v1.system.tasks import delete_task
 
+        mock_task_crud.get.return_value = create_mock_task()
         mock_task_service.delete_task.side_effect = Exception("Database error")
 
         with pytest.raises(BaseBusinessError) as exc_info:
@@ -769,6 +809,7 @@ class TestGetRunningTasks:
             db=mock_db,
             limit=100,
             status=TaskStatus.RUNNING.value,
+            user_id="test-user-id",
             order_by="started_at",
             order_dir="asc",
         )
@@ -834,7 +875,11 @@ class TestGetRecentTasks:
 
         assert len(result) == 10
         mock_task_crud.get_multi.assert_called_once_with(
-            db=mock_db, limit=10, order_by="created_at", order_dir="desc"
+            db=mock_db,
+            limit=10,
+            user_id="test-user-id",
+            order_by="created_at",
+            order_dir="desc",
         )
 
     @patch("src.api.v1.system.tasks.task_crud")
@@ -853,7 +898,11 @@ class TestGetRecentTasks:
 
         assert len(result) == 5
         mock_task_crud.get_multi.assert_called_once_with(
-            db=mock_db, limit=5, order_by="created_at", order_dir="desc"
+            db=mock_db,
+            limit=5,
+            user_id="test-user-id",
+            order_by="created_at",
+            order_dir="desc",
         )
 
     @patch("src.api.v1.system.tasks.task_crud")

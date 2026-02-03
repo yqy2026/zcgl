@@ -112,7 +112,7 @@ pnpm add -D puppeteer tsx @puppeteer/replay
   ✓ 失败: 0
   ✓ 错误: 0
   ✓ 警告: 0
-  📸 截图: frontend/diagnostics/screenshots/-dashboard.png
+  📸 截图: test-results/frontend/diagnostics/screenshots/-dashboard.png
 ```
 
 ---

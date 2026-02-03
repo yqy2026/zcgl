@@ -211,7 +211,7 @@ const ApiMonitor: React.FC = () => {
               value={summary.healthPercentage}
               precision={1}
               suffix="%"
-              valueStyle={{ color: getHealthStatusColor(summary.healthPercentage) }}
+              styles={{ content: { color: getHealthStatusColor(summary.healthPercentage) } }}
               prefix={<CloudServerOutlined />}
             />
             <Progress
@@ -227,7 +227,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="健康端点"
               value={summary.healthy}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -237,7 +237,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="异常端点"
               value={summary.unhealthy}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
               prefix={<ExclamationCircleOutlined />}
             />
           </Card>
@@ -247,7 +247,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="未知状态"
               value={summary.unknown}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
               prefix={<CloudServerOutlined />}
             />
           </Card>
@@ -257,7 +257,7 @@ const ApiMonitor: React.FC = () => {
       {/* 健康状态警告 */}
       {summary.healthPercentage < 80 && (
         <Alert
-          message="API健康状况需要关注"
+          title="API健康状况需要关注"
           description={`当前API健康度为${summary.healthPercentage.toFixed(1)}%，低于80%的健康阈值。建议检查异常端点并采取相应措施。`}
           type="warning"
           showIcon
@@ -267,7 +267,7 @@ const ApiMonitor: React.FC = () => {
 
       {summary.healthPercentage < 60 && (
         <Alert
-          message="API健康状况严重"
+          title="API健康状况严重"
           description={`当前API健康度仅为${summary.healthPercentage.toFixed(1)}%，系统可能存在严重问题。建议立即检查所有API端点状态。`}
           type="error"
           showIcon

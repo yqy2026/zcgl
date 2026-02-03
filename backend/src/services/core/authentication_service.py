@@ -1,5 +1,6 @@
 import logging
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -10,7 +11,6 @@ from sqlalchemy.orm import Session
 from ...core.config import settings
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
-from ...schemas.auth import TokenResponse
 from ...security.token_blacklist import blacklist_manager
 from .password_service import PasswordService
 from .session_service import SessionService
@@ -29,6 +29,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 JWT_AUDIENCE = settings.JWT_AUDIENCE
 JWT_ISSUER = settings.JWT_ISSUER
+
+
+@dataclass(frozen=True)
+class TokenPair:
+    """Internal token container (not a public API schema)."""
+
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int
+    session_id: str | None = None
 
 
 class AuthenticationService:
@@ -106,7 +117,7 @@ class AuthenticationService:
 
     def create_tokens(
         self, user: User, device_info: dict[str, Any] | None = None
-    ) -> TokenResponse:
+    ) -> TokenPair:
         """创建JWT令牌"""
         now = datetime.now(UTC)
         jti_access: JtiType = self._generate_jti()
@@ -166,7 +177,7 @@ class AuthenticationService:
             refresh_token_data, SECRET_KEY, algorithm=ALGORITHM
         )
 
-        return TokenResponse(
+        return TokenPair(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",  # nosec B106  # Standard OAuth token type, not a password

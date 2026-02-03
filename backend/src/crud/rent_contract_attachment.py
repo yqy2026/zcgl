@@ -23,12 +23,10 @@ class RentContractAttachmentCRUD:
         attachment_id: str,
         contract_id: str | None = None,
     ) -> RentContractAttachment | None:
-        query = db.query(RentContractAttachment).filter(
-            RentContractAttachment.id == attachment_id
-        )
+        filters = [RentContractAttachment.id == attachment_id]
         if contract_id:
-            query = query.filter(RentContractAttachment.contract_id == contract_id)
-        return query.first()
+            filters.append(RentContractAttachment.contract_id == contract_id)
+        return db.query(RentContractAttachment).filter(*filters).first()
 
 
 rent_contract_attachment_crud = RentContractAttachmentCRUD()

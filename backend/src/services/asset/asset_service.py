@@ -12,7 +12,6 @@ from ...core.exception_handler import (
     conflict,
     validation_error,
 )
-from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...models.asset import Asset, AssetHistory
 from ...models.auth import User
@@ -22,6 +21,18 @@ from ...services.enum_validation_service import (
     get_enum_validation_service,
     get_enum_validation_service_async,
 )
+
+_DEFAULT_ASSET_CRUD: object = object()
+asset_crud: Any = _DEFAULT_ASSET_CRUD
+
+
+def _get_asset_crud():
+    if asset_crud is not _DEFAULT_ASSET_CRUD:
+        return asset_crud
+
+    from ...crud import asset as asset_module
+
+    return asset_module.asset_crud
 
 
 class AssetService:
@@ -84,6 +95,7 @@ class AssetService:
         """
         获取资产列表，支持分页、搜索和筛选
         """
+        asset_crud = _get_asset_crud()
         result: tuple[list[Asset], int] = asset_crud.get_multi_with_search(
             self.db,
             skip=skip,
@@ -97,6 +109,7 @@ class AssetService:
         return result
 
     def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
+        asset_crud = _get_asset_crud()
         asset = asset_crud.get(db=self.db, id=asset_id, use_cache=use_cache)
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
@@ -107,6 +120,7 @@ class AssetService:
         return history_crud.get_by_asset_id(db=self.db, asset_id=asset_id)
 
     def get_distinct_field_values(self, field_name: str) -> list[str]:
+        asset_crud = _get_asset_crud()
         values = asset_crud.get_distinct_field_values(self.db, field_name)
         return [str(value) for value in values]
 
@@ -125,6 +139,7 @@ class AssetService:
         )
 
         with self._transaction():
+            asset_crud = _get_asset_crud()
             validation_service = get_enum_validation_service(self.db)
             is_valid, errors = validation_service.validate_asset_data(
                 asset_in.model_dump()
@@ -183,6 +198,7 @@ class AssetService:
         try:
             with self._transaction():
                 asset = self.get_asset(asset_id, use_cache=False)
+                asset_crud = _get_asset_crud()
 
                 validation_service = get_enum_validation_service(self.db)
                 update_data_raw = asset_in.model_dump(exclude_unset=True)
@@ -265,6 +281,7 @@ class AssetService:
         try:
             with self._transaction():
                 asset = self.get_asset(asset_id, use_cache=False)
+                asset_crud = _get_asset_crud()
                 operator = (
                     getattr(current_user, "username", None)
                     or getattr(current_user, "id", None)
@@ -309,6 +326,7 @@ class AsyncAssetService:
         sort_order: str = "desc",
         include_relations: bool = False,
     ) -> tuple[list[Asset], int]:
+        asset_crud = _get_asset_crud()
         result = await asset_crud.get_multi_with_search_async(
             self.db,
             skip=skip,
@@ -322,6 +340,7 @@ class AsyncAssetService:
         return result
 
     async def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
+        asset_crud = _get_asset_crud()
         asset = await asset_crud.get_async(db=self.db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
@@ -346,6 +365,7 @@ class AsyncAssetService:
         )
 
         async with self._transaction():
+            asset_crud = _get_asset_crud()
             # 1. 枚举值验证
             validation_service = get_enum_validation_service_async(self.db)
             is_valid, errors = await validation_service.validate_asset_data(
@@ -410,6 +430,7 @@ class AsyncAssetService:
 
         try:
             async with self._transaction():
+                asset_crud = _get_asset_crud()
                 # 1. 存在性检查
                 asset = await self.get_asset(asset_id, use_cache=False)
 
@@ -504,6 +525,7 @@ class AsyncAssetService:
         try:
             async with self._transaction():
                 asset = await self.get_asset(asset_id, use_cache=False)
+                asset_crud = _get_asset_crud()
                 operator = (
                     getattr(current_user, "username", None)
                     or getattr(current_user, "id", None)

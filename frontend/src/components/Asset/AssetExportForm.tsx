@@ -108,7 +108,7 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
             selectedAssetIds !== null &&
             selectedAssetIds.length > 0 ? (
               <Alert
-                message={`将导出已选择的 ${selectedAssetIds.length} 条资产记录`}
+                title={`将导出已选择的 ${selectedAssetIds.length} 条资产记录`}
                 type="info"
                 showIcon
                 style={{ marginBottom: 16 }}
@@ -116,7 +116,7 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
             ) : (
               searchParams && (
                 <Alert
-                  message="将根据当前搜索条件导出匹配的资产记录"
+                  title="将根据当前搜索条件导出匹配的资产记录"
                   description={
                     <div style={{ marginTop: 8 }}>
                       <Space wrap>

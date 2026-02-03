@@ -343,7 +343,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               <Statistic
                 title="总数量"
                 value={derivedStatistics.total_count}
-                valueStyle={{ color: '#3f8600' }}
+                styles={{ content: { color: '#3f8600' } }}
               />
             </Card>
           </Col>
@@ -352,7 +352,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               <Statistic
                 title="启用数量"
                 value={derivedStatistics.active_count}
-                valueStyle={{ color: '#1890ff' }}
+                styles={{ content: { color: '#1890ff' } }}
               />
             </Card>
           </Col>
@@ -361,7 +361,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               <Statistic
                 title="禁用数量"
                 value={derivedStatistics.inactive_count}
-                valueStyle={{ color: '#cf1322' }}
+                styles={{ content: { color: '#cf1322' } }}
               />
             </Card>
           </Col>
@@ -370,7 +370,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               <Statistic
                 title="关联资产"
                 value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count ?? 0), 0)}
-                valueStyle={{ color: '#722ed1' }}
+                styles={{ content: { color: '#722ed1' } }}
               />
             </Card>
           </Col>

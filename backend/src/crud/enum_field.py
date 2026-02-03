@@ -213,9 +213,11 @@ class EnumFieldTypeCRUD:
     def get_categories(self) -> list[str]:
         """获取所有枚举类别"""
         result = (
-            self._type_query()
-            .filter(EnumFieldType.category.isnot(None))
-            .with_entities(EnumFieldType.category)
+            self.db.query(EnumFieldType.category)
+            .filter(
+                EnumFieldType.is_deleted.is_(False),
+                EnumFieldType.category.isnot(None),
+            )
             .distinct()
             .all()
         )
@@ -230,10 +232,10 @@ class EnumFieldTypeCRUD:
 
         # 按类别统计
         categories = (
-            self._type_query()
-            .with_entities(
+            self.db.query(
                 EnumFieldType.category, func.count(EnumFieldType.id).label("count")
             )
+            .filter(EnumFieldType.is_deleted.is_(False))
             .group_by(EnumFieldType.category)
             .all()
         )
@@ -454,14 +456,8 @@ class EnumFieldValueCRUD:
             created_by=deleted_by,
         )
 
-        self.db.query(EnumFieldValue).filter(
-            EnumFieldValue.id == enum_value_id
-        ).update(
-            {
-                EnumFieldValue.is_deleted: True,
-                EnumFieldValue.updated_by: deleted_by,
-            }
-        )
+        _set_attr(db_obj, "is_deleted", True)
+        _set_attr(db_obj, "updated_by", deleted_by)
 
         self.db.commit()
         return True

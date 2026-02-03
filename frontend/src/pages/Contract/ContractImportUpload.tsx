@@ -286,7 +286,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
                 marginBottom: 16,
               }}
             >
-              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                 <Row justify="space-between">
                   <Col>
                     <Text type="secondary">文件名：</Text>
@@ -317,7 +317,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             </div>
 
             <Alert
-              message="文件正在处理中"
+              title="文件正在处理中"
               description="系统正在自动提取PDF中的合同信息，请稍候..."
               type="info"
               showIcon
@@ -392,7 +392,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             <Title level={5} style={{ color: COLORS.primaryActive, marginBottom: 12 }}>
               <EyeOutlined /> 使用说明
             </Title>
-            <Space direction="vertical" size="small">
+            <Space orientation="vertical" size="small">
               <Text>• 支持标准PDF格式的合同文件</Text>
               <Text>• 系统将自动提取58个关键字段，包括合同编号、承租方、地址、租金等</Text>
               <Text>• 提取完成后可以进行人工确认和修改</Text>

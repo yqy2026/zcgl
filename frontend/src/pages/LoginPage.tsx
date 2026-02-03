@@ -125,7 +125,7 @@ const LoginPage: React.FC = () => {
 
             {error !== undefined && error !== null && error !== '' && (
               <Alert
-                message="登录失败"
+                title="登录失败"
                 description={error}
                 type="error"
                 showIcon

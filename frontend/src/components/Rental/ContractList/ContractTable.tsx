@@ -103,7 +103,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
       title: '租期',
       key: 'lease_period',
       render: (record: RentContract) => (
-        <Space direction="vertical" size="small">
+        <Space orientation="vertical" size="small">
           <div>{dayjs(record.start_date).format('YYYY-MM-DD')}</div>
           <div>至</div>
           <div>{dayjs(record.end_date).format('YYYY-MM-DD')}</div>

@@ -319,7 +319,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           </Card>
 
           <Alert
-            message="提示"
+            title="提示"
             description="预览中的 {pages_hint} 等变量将在实际使用时被替换为具体内容"
             type="info"
             showIcon
@@ -372,7 +372,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           </Card>
 
           <Alert
-            message="最佳实践"
+            title="最佳实践"
             description={
               <ul>
                 <li>System Prompt 要简洁明了，定义清楚角色和规则</li>

@@ -60,22 +60,32 @@ class HunyuanVisionService:
     DEFAULT_BASE_URL = "https://api.hunyuan.cloud.tencent.com/v1"
 
     def __init__(self) -> None:
-        # 优先使用 centralized config，fallback 到环境变量
-        try:
-            from src.core.config import settings
+        env_api_key = os.getenv("HUNYUAN_API_KEY")
+        env_base_url = os.getenv("HUNYUAN_BASE_URL")
+        env_model = os.getenv("HUNYUAN_VISION_MODEL")
 
-            self.api_key = settings.HUNYUAN_API_KEY or os.getenv("HUNYUAN_API_KEY")
-            self.base_url = settings.HUNYUAN_BASE_URL or os.getenv(
-                "HUNYUAN_BASE_URL", self.DEFAULT_BASE_URL
-            )
-            self.model = settings.HUNYUAN_VISION_MODEL or os.getenv(
-                "HUNYUAN_VISION_MODEL", "hunyuan-vision"
-            )
-        except ImportError:
-            # Fallback for standalone usage
-            self.api_key = os.getenv("HUNYUAN_API_KEY")
-            self.base_url = os.getenv("HUNYUAN_BASE_URL", self.DEFAULT_BASE_URL)
-            self.model = os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision")
+        # In tests, avoid cached settings so env changes are respected.
+        if os.getenv("ENVIRONMENT") == "testing":
+            self.api_key = env_api_key
+            self.base_url = env_base_url or self.DEFAULT_BASE_URL
+            self.model = env_model or "hunyuan-vision"
+        else:
+            # 优先使用 centralized config，fallback 到环境变量
+            try:
+                from src.core.config import settings
+
+                self.api_key = env_api_key or settings.HUNYUAN_API_KEY
+                self.base_url = (
+                    env_base_url
+                    or settings.HUNYUAN_BASE_URL
+                    or self.DEFAULT_BASE_URL
+                )
+                self.model = env_model or settings.HUNYUAN_VISION_MODEL or "hunyuan-vision"
+            except ImportError:
+                # Fallback for standalone usage
+                self.api_key = env_api_key
+                self.base_url = env_base_url or self.DEFAULT_BASE_URL
+                self.model = env_model or "hunyuan-vision"
 
         self.timeout = int(os.getenv("HUNYUAN_TIMEOUT", "120"))
 

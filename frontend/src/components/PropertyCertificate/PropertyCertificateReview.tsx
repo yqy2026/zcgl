@@ -64,7 +64,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
   };
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       {/* Confidence Score */}
       <Card
         title="提取结果"

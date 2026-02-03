@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter
 
-from . import attachments, contracts, excel_ops, ledger, lifecycle, terms
+from . import attachments, contracts, excel_ops, ledger, lifecycle, statistics, terms
 
 # 创建主路由器
 router = APIRouter()
@@ -18,6 +18,7 @@ router.include_router(terms.router)
 router.include_router(ledger.router)
 router.include_router(excel_ops.router)
 router.include_router(attachments.router)
+router.include_router(statistics.router)
 
 # 向后兼容导出
 __all__ = ["router"]

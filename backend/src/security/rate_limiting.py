@@ -18,7 +18,7 @@ class RateLimitConfig:
 
     # 默认限制配置
     DEFAULT_LIMITS = {
-        "api": {"requests": 1000, "window": 3600},  # 1000次/小时
+        "api": {"requests": 100, "window": 60},  # 100次/分钟
         "upload": {"requests": 50, "window": 3600},  # 50次/小时
         "auth": {"requests": 10, "window": 300},  # 10次/5分钟
         "search": {"requests": 100, "window": 3600},  # 100次/小时
@@ -43,6 +43,8 @@ class RateLimiter:
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or RateLimitConfig.DEFAULT_LIMITS
         self.request_times: dict[str, deque[float]] = defaultdict(deque)
+        # Alias for backward compatibility in tests and older code.
+        self.requests = self.request_times
         self.blocked_ips: dict[str, float] = {}
         self.lock = Lock()
 
@@ -50,7 +52,14 @@ class RateLimiter:
         """获取端点限制配置"""
         return self.config.get(endpoint, self.config["api"])
 
-    def check_rate_limit(self, client_ip: str, endpoint: str = "api") -> bool:
+    def check_rate_limit(
+        self,
+        client_ip: str,
+        endpoint: str = "api",
+        *,
+        max_requests: int | None = None,
+        time_window: float | None = None,
+    ) -> bool:
         """检查速率限制"""
         if client_ip in RateLimitConfig.WHITELIST_IPS:
             return True
@@ -72,13 +81,17 @@ class RateLimiter:
                     del self.blocked_ips[client_ip]
 
             # 获取限制配置
-            limit_config = self._get_limit_config(endpoint)
-            max_requests = limit_config["requests"]
-            window = limit_config["window"]
+            if max_requests is None or time_window is None:
+                limit_config = self._get_limit_config(endpoint)
+                max_requests = limit_config["requests"] if max_requests is None else max_requests
+                time_window = limit_config["window"] if time_window is None else time_window
+
+            if max_requests <= 0 or time_window <= 0:
+                return False
 
             # 清理过期请求记录
             request_queue = self.request_times[client_ip]
-            while request_queue and current_time - request_queue[0] > window:
+            while request_queue and current_time - request_queue[0] > time_window:
                 request_queue.popleft()
 
             # 检查是否超过限制
@@ -100,6 +113,31 @@ class RateLimiter:
             # 记录请求
             request_queue.append(current_time)
             return True
+
+    def get_remaining_requests(
+        self,
+        client_ip: str,
+        endpoint: str = "api",
+        *,
+        max_requests: int | None = None,
+        time_window: float | None = None,
+    ) -> int:
+        """获取剩余可用请求数"""
+        if max_requests is None or time_window is None:
+            limit_config = self._get_limit_config(endpoint)
+            max_requests = limit_config["requests"] if max_requests is None else max_requests
+            time_window = limit_config["window"] if time_window is None else time_window
+
+        if max_requests <= 0 or time_window <= 0:
+            return 0
+
+        current_time = time()
+        with self.lock:
+            request_queue = self.request_times[client_ip]
+            while request_queue and current_time - request_queue[0] > time_window:
+                request_queue.popleft()
+            remaining = max_requests - len(request_queue)
+            return remaining if remaining > 0 else 0
 
 
 class TokenBucketRateLimiter:

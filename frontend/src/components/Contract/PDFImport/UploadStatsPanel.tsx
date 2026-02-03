@@ -25,7 +25,7 @@ const UploadStatsPanel: React.FC = () => {
         <Statistic
           title="推荐方法"
           value={uploadStats.fileAnalysis.recommendedMethod}
-          valueStyle={{ fontSize: 14 }}
+          styles={{ content: { fontSize: 14 } }}
         />
       </Col>
     </Row>

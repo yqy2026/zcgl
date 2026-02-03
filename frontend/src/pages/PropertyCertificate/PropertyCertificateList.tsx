@@ -3,7 +3,7 @@
  * 产权证列表页面
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Space, Tag, Input } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +37,7 @@ export const PropertyCertificateList: React.FC = () => {
       keyword: '',
     },
     initialPageSize: 10,
-    filterFn: (items, nextFilters) => {
+    filterFn: useCallback((items, nextFilters) => {
       const trimmedKeyword = nextFilters.keyword.trim().toLowerCase();
       if (trimmedKeyword === '') {
         return items;
@@ -45,7 +45,7 @@ export const PropertyCertificateList: React.FC = () => {
       return items.filter(cert =>
         cert.certificate_number?.toLowerCase().includes(trimmedKeyword)
       );
-    },
+    }, []),
   });
 
   useEffect(() => {
@@ -145,7 +145,7 @@ export const PropertyCertificateList: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Space>
           <Input
             placeholder="搜索证书编号"

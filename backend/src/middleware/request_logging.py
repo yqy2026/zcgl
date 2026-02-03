@@ -19,8 +19,7 @@ from starlette.types import ASGIApp
 
 from ..core.config import settings
 from ..crud.operation_log import OperationLogCRUD
-from ..database import SessionLocal, _init_globals
-from ..middleware.auth import ALGORITHM, SECRET_KEY
+from ..database import async_session_scope
 from ..models.auth import User
 from ..security.cookie_manager import cookie_manager
 from ..security.logging_security import SensitiveDataFilter, log_request_info
@@ -97,7 +96,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             user_id=user_id,
         )
 
-        self._log_operation(
+        await self._log_operation(
             request=request,
             response=response,
             duration_ms=duration_ms,
@@ -131,7 +130,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         return "unknown"  # pragma: no cover
 
-    def _log_operation(
+    async def _log_operation(
         self,
         request: Request,
         response: Response,
@@ -171,11 +170,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             request_params = json.dumps(filtered_query_params, ensure_ascii=False)
 
         try:
-            _init_globals()
-            if SessionLocal is None:
-                return
-            db = SessionLocal()
-            try:
+            async with async_session_scope() as db:
                 error_message = None
                 if response.status_code >= 400:
                     try:
@@ -188,30 +183,36 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
                 resolved_username = username
                 if not resolved_username and user_id:
-                    user = db.query(User).filter(User.id == user_id).first()
-                    if user:
-                        resolved_username = user.username
+                    user_obj = await db.run_sync(
+                        lambda sync_db: (
+                            sync_db.query(User)
+                            .filter(User.id == user_id)
+                            .first()
+                        )
+                    )
+                    if user_obj:
+                        resolved_username = user_obj.username
 
-                OperationLogCRUD().create(
-                    db=db,
-                    user_id=user_id,
-                    username=resolved_username,
-                    action=action,
-                    action_name=action_name,
-                    module=module,
-                    module_name=module_name,
-                    request_method=request_method,
-                    request_url=path,
-                    response_status=response.status_code,
-                    response_time=int(duration_ms),
-                    ip_address=client_ip,
-                    user_agent=user_agent,
-                    request_params=request_params,
-                    request_body=request_body,
-                    error_message=error_message,
+                await db.run_sync(
+                    lambda sync_db: OperationLogCRUD().create(
+                        db=sync_db,
+                        user_id=user_id,
+                        username=resolved_username,
+                        action=action,
+                        action_name=action_name,
+                        module=module,
+                        module_name=module_name,
+                        request_method=request_method,
+                        request_url=path,
+                        response_status=response.status_code,
+                        response_time=int(duration_ms),
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                        request_params=request_params,
+                        request_body=request_body,
+                        error_message=error_message,
+                    )
                 )
-            finally:
-                db.close()
         except Exception:
             logger.exception("Operation log creation failed")
             return
@@ -232,8 +233,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         try:
             payload = jwt.decode(
                 token,
-                SECRET_KEY,
-                algorithms=[ALGORITHM],
+                settings.SECRET_KEY,
+                algorithms=[getattr(settings, "ALGORITHM", "HS256")],
                 audience=settings.JWT_AUDIENCE,
                 issuer=settings.JWT_ISSUER,
             )

@@ -1,8 +1,13 @@
 """Find remaining uncovered lines after latest tests"""
 
 import json
+from pathlib import Path
 
-with open("coverage.json") as f:
+coverage_path = Path(__file__).resolve().parents[3] / 'test-results' / 'backend' / 'coverage' / 'coverage.json'
+if not coverage_path.exists():
+    coverage_path = Path('coverage.json')
+
+with coverage_path.open() as f:
     data = json.load(f)
 
 totals = data["totals"]

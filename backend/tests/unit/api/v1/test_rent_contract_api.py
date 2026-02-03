@@ -703,9 +703,9 @@ class TestGetRentLedgerDetail:
 class TestUpdateRentLedger:
     """Tests for PUT /ledger/{ledger_id} endpoint"""
 
-    @patch("src.api.v1.rent_contract.ledger.rent_ledger")
+    @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
     def test_update_rent_ledger_success(
-        self, mock_rent_ledger, mock_db, mock_current_user
+        self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test successful ledger update"""
         from src.api.v1.rent_contract.ledger import update_rent_ledger
@@ -713,8 +713,7 @@ class TestUpdateRentLedger:
 
         ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
-        mock_rent_ledger.get.return_value = mock_ledger
-        mock_rent_ledger.update.return_value = mock_ledger
+        mock_rent_contract_service.update_ledger.return_value = mock_ledger
 
         result = update_rent_ledger(
             ledger_id="ledger-123",
@@ -725,9 +724,9 @@ class TestUpdateRentLedger:
 
         assert result is not None
 
-    @patch("src.api.v1.rent_contract.ledger.rent_ledger")
+    @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
     def test_update_rent_ledger_not_found(
-        self, mock_rent_ledger, mock_db, mock_current_user
+        self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test updating non-existent ledger"""
         from src.api.v1.rent_contract.ledger import update_rent_ledger
@@ -735,7 +734,9 @@ class TestUpdateRentLedger:
 
         ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
-        mock_rent_ledger.get.return_value = None
+        mock_rent_contract_service.update_ledger.side_effect = ResourceNotFoundError(
+            "台账记录", "nonexistent"
+        )
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
             update_rent_ledger(
@@ -747,17 +748,15 @@ class TestUpdateRentLedger:
 
         assert exc_info.value.status_code == 404
 
-    @patch("src.api.v1.rent_contract.ledger.rent_ledger")
+    @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
     def test_update_rent_ledger_invalid_status(
-        self, mock_rent_ledger, mock_db, mock_current_user
+        self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test ledger update with invalid payment status"""
         from src.api.v1.rent_contract.ledger import update_rent_ledger
         from src.schemas.rent_contract import RentLedgerUpdate
 
         ledger_in = RentLedgerUpdate(payment_status="invalid_status")
-
-        mock_rent_ledger.get.return_value = mock_ledger
 
         with pytest.raises(BusinessValidationError) as exc_info:
             update_rent_ledger(
@@ -768,6 +767,7 @@ class TestUpdateRentLedger:
             )
 
         assert exc_info.value.status_code == 422
+        mock_rent_contract_service.update_ledger.assert_not_called()
 
 
 # ============================================================================

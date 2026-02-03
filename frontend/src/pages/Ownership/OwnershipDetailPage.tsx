@@ -262,7 +262,7 @@ const OwnershipDetailPage: React.FC = () => {
     return (
       <div style={{ padding: '24px' }}>
         <Alert
-          message="数据加载失败"
+          title="数据加载失败"
           description={`错误详情: ${ownershipError instanceof Error ? ownershipError.message : '未知错误'}`}
           type="error"
           showIcon
@@ -276,7 +276,7 @@ const OwnershipDetailPage: React.FC = () => {
     return (
       <div style={{ padding: '24px' }}>
         <Alert
-          message="权属方不存在"
+          title="权属方不存在"
           description="未找到指定的权属方信息"
           type="warning"
           showIcon
@@ -402,7 +402,7 @@ const OwnershipDetailPage: React.FC = () => {
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Card>
         </Col>
@@ -414,14 +414,14 @@ const OwnershipDetailPage: React.FC = () => {
               precision={1}
               prefix={<PercentageOutlined />}
               suffix="%"
-              valueStyle={{
+              styles={{ content: {
                 color:
                   parseFloat(collectionRate) >= 90
                     ? COLORS.success
                     : parseFloat(collectionRate) >= 70
                       ? COLORS.warning
                       : COLORS.error,
-              }}
+              } }}
             />
           </Card>
         </Col>

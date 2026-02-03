@@ -11,7 +11,7 @@
 - 安全配置最佳实践
 
 ## ✅ Status
-**当前状态**: Active (2026-01-08 更新)
+**当前状态**: Active (2026-02-03 更新)
 **适用版本**: v1.1.0
 **配置文件位置**:
 - 后端: `backend/.env.example`
@@ -38,6 +38,7 @@ nano backend/.env
 # 必须修改的配置项:
 # - SECRET_KEY (生产环境)
 # - DATA_ENCRYPTION_KEY (生产环境，PII 加密)
+# - REQUIRE_ENCRYPTION (生产环境建议 true)
 # - DATABASE_URL
 # - REDIS_HOST/REDIS_PORT/REDIS_DB (如使用缓存)
 ```
@@ -82,6 +83,9 @@ SECRET_KEY=your-generated-secret-key-here
 # 生成方法（在 backend 目录）:
 # python -m src.core.encryption
 DATA_ENCRYPTION_KEY=<base64_key>:1
+
+# 是否强制要求加密密钥（生产环境建议 true；开发可 false）
+REQUIRE_ENCRYPTION=true
 
 # JWT 算法和过期时间
 ALGORITHM=HS256
@@ -362,6 +366,8 @@ REDIS_PASSWORD=<prod-redis-password>
 CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com
 LOG_LEVEL=WARNING
 SECRET_KEY=<strong-random-key-from-vault>
+DATA_ENCRYPTION_KEY=<base64_key>:1
+REQUIRE_ENCRYPTION=true
 ```
 
 ```bash
@@ -512,6 +518,7 @@ redis-cli ping  # 应返回 PONG
 ### 生产环境
 - [ ] `SECRET_KEY` 已设置为强随机值
 - [ ] `DATA_ENCRYPTION_KEY` 已设置为标准 Base64（含 padding）并带版本号
+- [ ] `REQUIRE_ENCRYPTION=true`（生产环境）
 - [ ] `DEBUG=false`
 - [ ] `DATABASE_URL` 使用 PostgreSQL
 - [ ] `REDIS_ENABLED=true`
@@ -543,6 +550,9 @@ redis-cli ping  # 应返回 PONG
 - 🌍 新增：不同环境的配置差异说明
 - 🧪 新增：配置验证和检查清单
 - 🚨 新增：常见问题排除方案
+
+### 2026-02-03 v1.1.1 - 安全配置补充
+- 🔐 新增：`REQUIRE_ENCRYPTION` 配置说明与生产环境示例
 
 ## 🔍 Evidence Sources
 - **后端配置**: `backend/src/core/config.py`

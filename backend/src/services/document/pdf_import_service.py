@@ -7,6 +7,7 @@ PDF 导入服务
 import asyncio
 import logging
 import os
+import tempfile
 import time
 import traceback
 import uuid
@@ -436,6 +437,12 @@ class PDFImportService:
 
                     db.commit()
                     logger.info(f"Persisted processing result for session {session_id}")
+                    cleaned = self._cleanup_source_file(
+                        session.file_path, session.processing_options
+                    )
+                    if cleaned:
+                        session.file_path = None
+                        db.commit()
 
             except Exception as e:
                 logger.error(
@@ -485,6 +492,12 @@ class PDFImportService:
 
                     db.commit()
                     logger.info(f"Persisted processing error for session {session_id}")
+                    cleaned = self._cleanup_source_file(
+                        session.file_path, session.processing_options
+                    )
+                    if cleaned:
+                        session.file_path = None
+                        db.commit()
 
             except Exception as e:
                 logger.error(
@@ -497,6 +510,41 @@ class PDFImportService:
                 )
                 db.rollback()
                 raise
+
+    def _cleanup_source_file(
+        self, file_path: str | None, processing_options: dict[str, Any] | None
+    ) -> bool:
+        if not file_path:
+            return False
+        if (
+            processing_options is not None
+            and processing_options.get("cleanup_temp_file") is False
+        ):
+            return False
+
+        try:
+            path = Path(file_path)
+            resolved_path = path.resolve()
+            temp_dirs = [
+                Path("temp_uploads").resolve(),
+                Path(tempfile.gettempdir()).resolve(),
+            ]
+            should_cleanup = any(
+                resolved_path.is_relative_to(temp_dir) for temp_dir in temp_dirs
+            )
+        except Exception:
+            should_cleanup = False
+
+        if not should_cleanup:
+            return False
+
+        try:
+            path.unlink(missing_ok=True)
+            logger.info(f"Cleaned up source file: {file_path}")
+            return True
+        except Exception as exc:
+            logger.warning(f"Failed to clean up source file {file_path}: {exc}")
+            return False
 
     # ========================================================================
     # 结果合并辅助函数

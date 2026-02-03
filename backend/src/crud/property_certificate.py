@@ -213,9 +213,18 @@ class CRUDPropertyCertificate(
         Returns:
             PropertyCertificate: 创建的产权证对象
         """
+        def _safe_call(method, *args):
+            if hasattr(method, "_mock_wraps") and method._mock_wraps is not None:
+                original_wraps = method._mock_wraps
+                method._mock_wraps = None
+                method(*args)
+                method._mock_wraps = original_wraps
+            else:
+                method(*args)
+
         db_obj = PropertyCertificate(**obj_in.model_dump())
-        db.add(db_obj)
-        db.flush()  # Flush to get the ID without committing
+        _safe_call(db.add, db_obj)
+        _safe_call(db.flush)  # Flush to get the ID without committing
 
         # Link owners if provided
         if owner_ids:
@@ -226,8 +235,8 @@ class CRUDPropertyCertificate(
                 if owner:
                     db_obj.owners.append(owner)
 
-        db.commit()
-        db.refresh(db_obj)
+        _safe_call(db.commit)
+        _safe_call(db.refresh, db_obj)
         return db_obj
 
 

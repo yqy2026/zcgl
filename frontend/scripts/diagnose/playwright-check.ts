@@ -7,6 +7,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { chromium, Browser, Page, ConsoleMessage, Response } from 'playwright';
 
+const repoRoot = path.resolve(__dirname, '../../..');
+const defaultReportDir = path.join(repoRoot, 'test-results', 'frontend', 'diagnostics');
+const defaultScreenshotDir = path.join(defaultReportDir, 'screenshots');
+
 interface DiagnosticOptions {
   baseUrl: string;
   pages: string[];
@@ -71,15 +75,15 @@ export class FrontendDiagnostics {
   private screenshotDir: string;
 
   constructor(options?: { reportDir?: string; screenshotDir?: string }) {
-    this.reportDir = options?.reportDir ?? 'frontend/diagnostics';
-    this.screenshotDir = options?.screenshotDir ?? 'frontend/diagnostics/screenshots';
+    this.reportDir = options?.reportDir ?? defaultReportDir;
+    this.screenshotDir = options?.screenshotDir ?? defaultScreenshotDir;
 
     // 确保目录存在
     if (!fs.existsSync(this.reportDir)) {
       fs.mkdirSync(this.reportDir, { recursive: true });
     }
     if (!fs.existsSync(this.screenshotDir)) {
-      fs.mkdirSync(this.screenshotDir, { { recursive: true });
+      fs.mkdirSync(this.screenshotDir, { recursive: true });
     }
   }
 

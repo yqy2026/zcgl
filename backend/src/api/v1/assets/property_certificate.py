@@ -206,10 +206,9 @@ def list_certificates(
     Returns:
         List[PropertyCertificateResponse]: 产权证列表
     """
-    from ....crud.property_certificate import property_certificate_crud
-
     try:
-        certificates = property_certificate_crud.get_multi(db, skip=skip, limit=limit)
+        service = PropertyCertificateService(db)
+        certificates = service.list_certificates(skip=skip, limit=limit)
         logger.debug(
             "Retrieved %d certificates (skip=%d, limit=%d)",
             len(certificates),
@@ -247,10 +246,9 @@ def get_certificate(
     Raises:
         HTTPException: 产权证不存在
     """
-    from ....crud.property_certificate import property_certificate_crud
-
     try:
-        cert = property_certificate_crud.get(db, certificate_id)
+        service = PropertyCertificateService(db)
+        cert = service.get_certificate(certificate_id)
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
@@ -288,7 +286,6 @@ def create_certificate(
     Raises:
         HTTPException: 创建失败
     """
-    from ....crud.property_certificate import property_certificate_crud
     from ....models.property_certificate import CertificateType
     from ....services.property_certificate.validator import PropertyCertificateValidator
 
@@ -310,7 +307,8 @@ def create_certificate(
                 detail={"errors": validation.errors},
             )
 
-        result = property_certificate_crud.create(db, obj_in=certificate)
+        service = PropertyCertificateService(db)
+        result = service.create_certificate(certificate)
         logger.info(
             "Created certificate %s (number: %r)",
             result.id,
@@ -348,10 +346,9 @@ def update_certificate(
     Raises:
         HTTPException: 产权证不存在或更新失败
     """
-    from ....crud.property_certificate import property_certificate_crud
-
     try:
-        cert = property_certificate_crud.get(db, certificate_id)
+        service = PropertyCertificateService(db)
+        cert = service.get_certificate(certificate_id)
         if not cert:
             logger.warning(f"Certificate not found for update: {certificate_id}")
             raise HTTPException(
@@ -359,7 +356,7 @@ def update_certificate(
                 detail="产权证不存在",
             )
 
-        result = property_certificate_crud.update(db, db_obj=cert, obj_in=certificate)
+        result = service.update_certificate(cert, certificate)
         logger.info(f"Updated certificate {certificate_id}")
         return PropertyCertificateResponse.model_validate(result)
     except HTTPException:
@@ -391,10 +388,9 @@ def delete_certificate(
     Raises:
         HTTPException: 产权证不存在或删除失败
     """
-    from ....crud.property_certificate import property_certificate_crud
-
     try:
-        cert = property_certificate_crud.get(db, certificate_id)
+        service = PropertyCertificateService(db)
+        cert = service.get_certificate(certificate_id)
         if not cert:
             logger.warning(f"Certificate not found for deletion: {certificate_id}")
             raise HTTPException(
@@ -402,7 +398,7 @@ def delete_certificate(
                 detail="产权证不存在",
             )
 
-        property_certificate_crud.remove(db, id=certificate_id)
+        service.delete_certificate(certificate_id)
         logger.info(f"Deleted certificate {certificate_id}")
         return {"status": "deleted"}
     except HTTPException:

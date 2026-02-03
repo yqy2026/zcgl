@@ -14,8 +14,7 @@ from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.file_size_constants import DEFAULT_MAX_EXCEL_FILE_SIZE
 from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import BusinessValidationError
-from src.crud.task import task_crud
-from src.database import get_db
+from src.database import get_db, get_session_factory
 from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
@@ -24,6 +23,7 @@ from src.schemas.task import TaskCreate, TaskUpdate
 from src.security.logging_security import security_auditor
 from src.security.security import security_middleware
 from src.services.excel import ExcelImportService
+from src.services.task import task_service
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,7 @@ async def import_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    task = task_crud.create(db=db, obj_in=task_in)
+    task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
 
     # 保存上传文件到临时位置
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
@@ -175,7 +175,6 @@ async def import_excel_async(
         task_id=str(task.id),
         file_path=tmp_file_path,
         request=request,
-        db_session=db,
     )
 
     return {
@@ -187,28 +186,28 @@ async def import_excel_async(
 
 
 async def _process_excel_import_async(
-    task_id: str, file_path: str, request: ExcelImportRequest, db_session: Session
+    task_id: str, file_path: str, request: ExcelImportRequest
 ) -> None:
     """
     后台处理Excel导入任务
     """
-    # 更新任务状态为运行中
+    session_factory = get_session_factory()
+    db_session: Session | None = None
     try:
-        db_obj = task_crud.get(db=db_session, id=task_id)
-        if db_obj is not None:
-            task_crud.update(
-                db=db_session,
-                db_obj=db_obj,
-                obj_in=TaskUpdate(
-                    status=TaskStatus.RUNNING,
-                    progress=0,
-                    processed_items=0,
-                    failed_items=0,
-                    error_message=None,
-                    result_data=None,
-                ),
-            )
-        db_session.commit()
+        db_session = session_factory()
+        # 更新任务状态为运行中
+        task_service.update_task(
+            db=db_session,
+            task_id=task_id,
+            obj_in=TaskUpdate(
+                status=TaskStatus.RUNNING,
+                progress=0,
+                processed_items=0,
+                failed_items=0,
+                error_message=None,
+                result_data=None,
+            ),
+        )
 
         # 使用ExcelImportService进行导入
         import_service = ExcelImportService(db_session)
@@ -225,29 +224,26 @@ async def _process_excel_import_async(
         )
 
         # 更新任务完成状态
-        db_obj = task_crud.get(db=db_session, id=task_id)
-        if db_obj is not None:
-            task_crud.update(
-                db=db_session,
-                db_obj=db_obj,
-                obj_in=TaskUpdate(
-                    status=TaskStatus.COMPLETED,
-                    progress=100,
-                    processed_items=0,
-                    failed_items=0,
-                    error_message=None,
-                    result_data={
-                        "total": result.get("total", 0),
-                        "success": result.get("success", 0),
-                        "failed": result.get("failed", 0),
-                        "created_assets": result.get("created_assets", 0),
-                        "updated_assets": result.get("updated_assets", 0),
-                        "errors": result.get("errors", []),
-                        "warnings": result.get("warnings", []),
-                    },
-                ),
-            )
-        db_session.commit()
+        task_service.update_task(
+            db=db_session,
+            task_id=task_id,
+            obj_in=TaskUpdate(
+                status=TaskStatus.COMPLETED,
+                progress=100,
+                processed_items=0,
+                failed_items=0,
+                error_message=None,
+                result_data={
+                    "total": result.get("total", 0),
+                    "success": result.get("success", 0),
+                    "failed": result.get("failed", 0),
+                    "created_assets": result.get("created_assets", 0),
+                    "updated_assets": result.get("updated_assets", 0),
+                    "errors": result.get("errors", []),
+                    "warnings": result.get("warnings", []),
+                },
+            ),
+        )
 
     except Exception as e:
         # 记录关键错误到监控系统
@@ -264,11 +260,11 @@ async def _process_excel_import_async(
 
         # 更新任务失败状态
         try:
-            db_obj = task_crud.get(db=db_session, id=task_id)
-            if db_obj is not None:
-                task_crud.update(
+            if db_session is not None:
+                db_session.rollback()
+                task_service.update_task(
                     db=db_session,
-                    db_obj=db_obj,
+                    task_id=task_id,
                     obj_in=TaskUpdate(
                         status=TaskStatus.FAILED,
                         error_message=str(e),
@@ -278,7 +274,6 @@ async def _process_excel_import_async(
                         result_data=None,
                     ),
                 )
-            db_session.commit()
         except Exception as commit_error:
             logger.error(
                 f"无法更新任务失败状态: task_id={task_id}",
@@ -293,6 +288,8 @@ async def _process_excel_import_async(
             # 不抛出异常 - 让原始异常传播
 
     finally:
+        if db_session is not None:
+            db_session.close()
         # 清理临时文件
         try:
             if os.path.exists(file_path):

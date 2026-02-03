@@ -32,7 +32,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.totalAssets ?? 0}
             suffix="个"
             prefix={<BuildOutlined />}
-            valueStyle={{ color: COLORS.primary }}
+            styles={{ content: { color: COLORS.primary } }}
           />
         </Card>
       </Col>
@@ -43,7 +43,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.totalArea ?? 0}
             suffix="㎡"
             prefix={<AreaChartOutlined />}
-            valueStyle={{ color: COLORS.success }}
+            styles={{ content: { color: COLORS.success } }}
           />
         </Card>
       </Col>
@@ -55,7 +55,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             suffix="%"
             prefix={<PercentageOutlined />}
             precision={1}
-            valueStyle={{ color: COLORS.warning }}
+            styles={{ content: { color: COLORS.warning } }}
           />
         </Card>
       </Col>
@@ -65,7 +65,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             title="月度收入"
             value={metrics?.monthlyRevenue ?? 0}
             prefix={<DollarOutlined />}
-            valueStyle={{ color: COLORS.info }}
+            styles={{ content: { color: COLORS.info } }}
           />
         </Card>
       </Col>
@@ -76,7 +76,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.rentedAssets ?? 0}
             suffix="个"
             prefix={<HomeOutlined />}
-            valueStyle={{ color: COLORS.success }}
+            styles={{ content: { color: COLORS.success } }}
           />
         </Card>
       </Col>
@@ -87,7 +87,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.vacantAssets ?? 0}
             suffix="个"
             prefix={<ShopOutlined />}
-            valueStyle={{ color: COLORS.error }}
+            styles={{ content: { color: COLORS.error } }}
           />
         </Card>
       </Col>

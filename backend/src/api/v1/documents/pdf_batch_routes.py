@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -198,22 +199,14 @@ async def batch_upload_pdfs(
     batch_id = _generate_batch_id()
 
     # 验证文件
-    valid_files: list[tuple[UploadFile, bytes, int, str]] = []
+    valid_files: list[tuple[str, Path, int]] = []
+    temp_dir = Path("temp_uploads")
+    temp_dir.mkdir(exist_ok=True)
+    max_size = DEFAULT_MAX_FILE_SIZE
+    chunk_size = 64 * 1024
     for file in files:
         if file.filename is None or not file.filename.lower().endswith(".pdf"):
             logger.warning(f"跳过非 PDF 文件: {file.filename}")
-            continue
-
-        # 检查文件大小
-        content = await file.read()
-        file_size = len(content)
-        await file.seek(0)  # 重置文件指针
-
-        max_size = DEFAULT_MAX_FILE_SIZE
-        if file_size > max_size:
-            logger.warning(
-                f"文件 {file.filename} 大小 {file_size / 1024 / 1024:.1f}MB 超过限制"
-            )
             continue
 
         try:
@@ -224,7 +217,38 @@ async def batch_upload_pdfs(
             logger.warning(f"文件名不安全，已跳过: {file.filename} ({e})")
             continue
 
-        valid_files.append((file, content, file_size, safe_filename))
+        temp_path = temp_dir / safe_filename
+        total_size = 0
+        too_large = False
+
+        try:
+            with open(temp_path, "wb") as temp_file:
+                while chunk := await file.read(chunk_size):
+                    total_size += len(chunk)
+                    if total_size > max_size:
+                        too_large = True
+                        break
+                    temp_file.write(chunk)
+        except Exception as e:
+            temp_path.unlink(missing_ok=True)
+            logger.warning(f"读取文件失败，已跳过: {file.filename} ({e})")
+            continue
+        finally:
+            await file.close()
+
+        if too_large:
+            temp_path.unlink(missing_ok=True)
+            logger.warning(
+                f"文件 {file.filename} 大小 {total_size / 1024 / 1024:.1f}MB 超过限制"
+            )
+            continue
+
+        if total_size == 0:
+            temp_path.unlink(missing_ok=True)
+            logger.warning(f"空文件已跳过: {file.filename}")
+            continue
+
+        valid_files.append((file.filename or "unknown.pdf", temp_path, total_size))
 
     if not valid_files:
         raise bad_request("没有有效的 PDF 文件（请检查文件格式和大小）")
@@ -250,16 +274,8 @@ async def batch_upload_pdfs(
     service = PDFImportService()
     session_ids: list[str] = []
 
-    for file, content, file_size, safe_filename in valid_files:
+    for original_filename, temp_path, file_size in valid_files:
         try:
-            # 保存临时文件
-            temp_dir = "uploads/temp"
-            os.makedirs(temp_dir, exist_ok=True)
-            temp_path = os.path.join(temp_dir, safe_filename)
-
-            with open(temp_path, "wb") as f:
-                f.write(content)
-
             # 创建导入会话
             session_id = f"session-{uuid.uuid4().hex[:12]}"
             processing_options: dict[str, Any] = {
@@ -269,9 +285,9 @@ async def batch_upload_pdfs(
             service.create_import_session(
                 db,
                 session_id=session_id,
-                original_filename=file.filename or "unknown.pdf",
+                original_filename=original_filename,
                 file_size=file_size,
-                file_path=temp_path,
+                file_path=str(temp_path),
                 content_type="application/pdf",
                 organization_id=organization_id,
                 processing_options=processing_options,
@@ -282,7 +298,7 @@ async def batch_upload_pdfs(
                 session_id=session_id,
                 organization_id=organization_id,
                 file_size=file_size,
-                file_path=temp_path,
+                file_path=str(temp_path),
                 content_type="application/pdf",
                 processing_options=processing_options,
             )
@@ -290,11 +306,12 @@ async def batch_upload_pdfs(
             session_ids.append(session_id)
 
             logger.info(
-                f"Batch {batch_id}: Started processing {file.filename} -> {session_id}"
+                f"Batch {batch_id}: Started processing {original_filename} -> {session_id}"
             )
 
         except Exception as e:
-            logger.error(f"Failed to start processing for {file.filename}: {e}")
+            logger.error(f"Failed to start processing for {original_filename}: {e}")
+            temp_path.unlink(missing_ok=True)
             tracker.update_progress(batch_id, failed=1)
             continue
 

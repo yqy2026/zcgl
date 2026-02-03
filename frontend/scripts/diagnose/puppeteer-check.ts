@@ -9,6 +9,9 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import type { ConsoleMessage, DiagnosticOptions, DiagnosticReport, NetworkRequest, PageMetrics } from './types';
 import { DiagnosticReporter } from './reporter';
 
+const repoRoot = path.resolve(__dirname, '../../..');
+const defaultScreenshotDir = path.join(repoRoot, 'test-results', 'frontend', 'diagnostics', 'screenshots');
+
 export class FrontendDiagnostics {
   private browser: Browser | null = null;
   private reporter: DiagnosticReporter;
@@ -16,7 +19,7 @@ export class FrontendDiagnostics {
 
   constructor(options?: { reportDir?: string; screenshotDir?: string }) {
     this.reporter = new DiagnosticReporter(options?.reportDir);
-    this.screenshotDir = options?.screenshotDir ?? 'frontend/diagnostics/screenshots';
+    this.screenshotDir = options?.screenshotDir ?? defaultScreenshotDir;
 
     // 确保截图目录存在
     if (!fs.existsSync(this.screenshotDir)) {

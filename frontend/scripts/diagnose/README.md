@@ -29,21 +29,21 @@ cd frontend && pnpm diagnose
 
 诊断完成后，会生成两个报告文件:
 
-- **JSON 报告**: `frontend/diagnostics/diagnostic-report-<timestamp>.json`
-- **HTML 报告**: `frontend/diagnostics/diagnostic-report-<timestamp>.html`
-- **页面截图**: `frontend/diagnostics/screenshots/`
+- **JSON 报告**: `test-results/frontend/diagnostics/diagnostic-report-<timestamp>.json`
+- **HTML 报告**: `test-results/frontend/diagnostics/diagnostic-report-<timestamp>.html`
+- **页面截图**: `test-results/frontend/diagnostics/screenshots/`
 
 打开 HTML 报告查看可视化结果:
 
 ```bash
 # Windows
-start frontend/diagnostics/diagnostic-report-*.html
+start test-results/frontend/diagnostics/diagnostic-report-*.html
 
 # Mac
-open frontend/diagnostics/diagnostic-report-*.html
+open test-results/frontend/diagnostics/diagnostic-report-*.html
 
 # Linux
-xdg-open frontend/diagnostics/diagnostic-report-*.html
+xdg-open test-results/frontend/diagnostics/diagnostic-report-*.html
 
 # 或使用命令
 pnpm diagnose:report
@@ -161,7 +161,7 @@ TIMEOUT=60000 pnpm diagnose
 # Windows: 以管理员身份运行终端
 
 # Linux/Mac:
-chmod -R 755 frontend/diagnostics
+chmod -R 755 test-results/frontend/diagnostics
 ```
 
 ## CI/CD 集成
@@ -213,7 +213,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: diagnostic-reports
-          path: frontend/diagnostics/
+          path: test-results/frontend/diagnostics/
 ```
 
 ## 高级用法

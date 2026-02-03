@@ -76,20 +76,20 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("document.contract_extractor_manager.ContractExtractorManager")
 
-# Excel services
+# Excel services (re-export from services.excel)
 try:
-    from .excel_export import ExcelExportService as ExcelExportService
+    from ..excel.excel_export_service import ExcelExportService as ExcelExportService
 
     __all__.append("ExcelExportService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("document.excel_export.ExcelExportService")
+    _log_import_error("excel.excel_export_service.ExcelExportService")
 
 try:
-    from .excel_import import ExcelImportService as ExcelImportService
+    from ..excel.excel_import_service import ExcelImportService as ExcelImportService
 
     __all__.append("ExcelImportService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("document.excel_import.ExcelImportService")
+    _log_import_error("excel.excel_import_service.ExcelImportService")
 
 # V3 Document Extraction Manager (2026-01)
 try:

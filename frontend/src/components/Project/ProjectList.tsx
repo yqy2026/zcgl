@@ -422,7 +422,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
             <Statistic
               title="启用项目"
               value={statistics?.active_count ?? 0}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
               prefix={<span style={{ color: '#52c41a' }}>✅</span>}
             />
           </Card>
@@ -432,7 +432,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
             <Statistic
               title="禁用项目"
               value={statistics?.inactive_count ?? 0}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
               prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
             />
           </Card>

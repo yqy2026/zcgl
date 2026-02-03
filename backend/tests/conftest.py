@@ -3,6 +3,21 @@ Root conftest.py - runs before any test collection
 """
 
 import os
+import unittest.mock as _mock
+
+# Work around Python's MagicMock(spec=..., __dict__=...) init bug in tests.
+_OriginalMagicMock = _mock.MagicMock
+
+
+class _SafeMagicMock(_OriginalMagicMock):
+    def __init__(self, *args, **kwargs):
+        dict_override = kwargs.pop("__dict__", None)
+        super().__init__(*args, **kwargs)
+        if dict_override:
+            object.__getattribute__(self, "__dict__").update(dict_override)
+
+
+_mock.MagicMock = _SafeMagicMock
 
 import pytest
 
@@ -171,6 +186,24 @@ def reset_settings_debug():
     yield
     # Always restore to original value after test
     settings.DEBUG = original_debug
+
+
+@pytest.fixture(autouse=True)
+def reset_settings_secret_key():
+    """
+    Keep settings.SECRET_KEY aligned with the current environment for test isolation.
+    Some test modules mutate os.environ; ensure the global settings object stays stable.
+    """
+    from src.core.config import settings
+
+    def sync_secret_key() -> None:
+        env_key = os.environ.get("SECRET_KEY")
+        if env_key:
+            settings.SECRET_KEY = env_key
+
+    sync_secret_key()
+    yield
+    sync_secret_key()
 
 
 @pytest.fixture(autouse=True)

@@ -56,7 +56,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
       return (
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <Alert
-            message="图表加载失败"
+            title="图表加载失败"
             description={
               <div>
                 <p>无法渲染图表，可能是数据格式有问题。</p>

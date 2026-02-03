@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import and_
@@ -6,13 +8,35 @@ from sqlalchemy.orm import Session
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.task import excel_task_config_crud, task_crud
-from ...enums.task import TaskStatus
+from ...enums.task import TaskStatus, TaskType
 from ...models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 from ...schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
+from ...utils.file_security import validate_file_path
 
 
 class TaskService:
     """任务服务层"""
+
+    def _cleanup_task_file(self, task: AsyncTask) -> bool:
+        result_data = task.result_data
+        if not isinstance(result_data, dict):
+            return False
+        file_path = result_data.get("file_path")
+        if not file_path:
+            return False
+
+        allowed_dirs = [
+            str(Path("temp_uploads").resolve()),
+            tempfile.gettempdir(),
+        ]
+        if not validate_file_path(str(file_path), allowed_dirs):
+            return False
+
+        try:
+            Path(str(file_path)).unlink(missing_ok=True)
+            return True
+        except Exception:
+            return False
 
     def create_task(
         self, db: Session, *, obj_in: TaskCreate, user_id: str | None = None
@@ -206,6 +230,10 @@ class TaskService:
         if not task:
             raise ResourceNotFoundError("任务", task_id)
 
+        cleaned = self._cleanup_task_file(task)
+        if cleaned and isinstance(task.result_data, dict):
+            task.result_data = {**task.result_data, "file_path": None}
+
         setattr(task, "is_active", False)
         db.add(task)
         db.commit()
@@ -282,6 +310,11 @@ class TaskService:
 
         count = 0
         for task in old_tasks:
+            cleaned = False
+            if task.task_type == TaskType.EXCEL_EXPORT:
+                cleaned = self._cleanup_task_file(task)
+                if cleaned and isinstance(task.result_data, dict):
+                    task.result_data = {**task.result_data, "file_path": None}
             setattr(task, "is_active", False)
             count += 1
 

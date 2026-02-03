@@ -12,7 +12,11 @@ from ...models.rent_contract import (
     RentLedger,
     ServiceFeeLedger,
 )
-from ...schemas.rent_contract import GenerateLedgerRequest, RentLedgerBatchUpdate
+from ...schemas.rent_contract import (
+    GenerateLedgerRequest,
+    RentLedgerBatchUpdate,
+    RentLedgerUpdate,
+)
 from .helpers import RentContractHelperMixin
 
 
@@ -118,6 +122,33 @@ class RentContractLedgerService(RentContractHelperMixin):
 
         db.commit()
         return ledgers
+
+    def update_ledger(
+        self, db: Session, *, ledger_id: str, update_data: RentLedgerUpdate
+    ) -> RentLedger:
+        """更新单条租金台账并处理衍生字段"""
+        ledger = rent_ledger.get(db, id=ledger_id)
+        if not ledger:
+            raise ResourceNotFoundError("台账记录", ledger_id)
+
+        payload = update_data.model_dump(exclude_unset=True)
+        for field, value in payload.items():
+            setattr(ledger, field, value)
+
+        # 与批量更新逻辑保持一致：仅在收款状态下计算逾期与服务费
+        if ledger.payment_status in [PaymentStatus.PAID, PaymentStatus.PARTIAL]:
+            if ledger.paid_amount < ledger.due_amount:
+                ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
+            else:
+                ledger.overdue_amount = Decimal("0")
+
+            # V2: 委托运营合同自动计算服务费
+            self._calculate_service_fee_for_ledger(db, ledger)
+
+        db.add(ledger)
+        db.commit()
+        db.refresh(ledger)
+        return ledger
 
     def get_contract_by_id(
         self, db: Session, *, contract_id: str

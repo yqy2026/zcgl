@@ -213,7 +213,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
         type={config.type}
         showIcon
         icon={config.icon}
-        message={
+        title={
           <Space>
             <Text strong>{title ?? config.title}</Text>
             {result.status === 'loading' && <Text type="secondary">(请稍候...)</Text>}

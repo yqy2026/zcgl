@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 from src.core.exception_handler import not_found
 from src.crud.task import task_crud
 from src.database import get_db
+from src.middleware.auth import get_current_active_user
+from src.models.auth import User
 from src.schemas.excel_advanced import ExcelStatusResponse
+from src.services.task.access import ensure_task_access, resolve_task_user_filter
 
 router = APIRouter()
 
@@ -19,7 +22,9 @@ router = APIRouter()
     "/status/{task_id}", response_model=ExcelStatusResponse, summary="获取任务状态"
 )
 def get_excel_task_status(
-    task_id: str, db: Session = Depends(get_db)
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> ExcelStatusResponse:
     """
     获取Excel导入导出任务状态
@@ -29,6 +34,7 @@ def get_excel_task_status(
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
 
     # Extract values from Column objects - use getattr to get actual values
     task_id_val = str(getattr(task, "id", ""))
@@ -62,6 +68,7 @@ def get_excel_history(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """
     获取Excel操作历史记录
@@ -74,14 +81,22 @@ def get_excel_history(
     # 转换 page 到 skip (offset)
     skip = (page - 1) * page_size
 
+    effective_user_id = resolve_task_user_filter(None, current_user)
     tasks = task_crud.get_multi(
         db=db,
         skip=skip,
         limit=page_size,
         task_type=task_type,
         status=status,
+        user_id=effective_user_id,
         order_by="created_at",
         order_dir="desc",
+    )
+    total = task_crud.count(
+        db=db,
+        task_type=task_type,
+        status=status,
+        user_id=effective_user_id,
     )
 
     # 转换为响应格式
@@ -111,7 +126,7 @@ def get_excel_history(
 
     return {
         "items": history_items,
-        "total": len(history_items),
+        "total": total,
         "page": page,
         "page_size": page_size,
     }

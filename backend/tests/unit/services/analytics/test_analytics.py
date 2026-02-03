@@ -216,7 +216,7 @@ class TestAnalyticsServiceCacheManagement:
 
         result = analytics_service.get_cache_stats()
 
-        assert result["cache_type"] == "analytics_cache"
+        assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == mock_stats
         assert "timestamp" in result
 
@@ -227,7 +227,7 @@ class TestAnalyticsServiceCacheManagement:
 
         result = analytics_service.get_cache_stats()
 
-        assert result["cache_type"] == "analytics_cache"
+        assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == {}
 
 

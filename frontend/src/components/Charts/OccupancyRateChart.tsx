@@ -288,7 +288,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
   if (error !== undefined && error !== null) {
     return (
       <Alert
-        message="数据加载失败"
+        title="数据加载失败"
         description="无法加载出租率统计数据，请稍后重试"
         type="error"
         showIcon
@@ -308,14 +308,14 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
               precision={2}
               suffix="%"
               prefix={<PercentageOutlined />}
-              valueStyle={{
+              styles={{ content: {
                 color:
                   (data?.overall_rate ?? 0) >= 80
                     ? '#52c41a'
                     : (data?.overall_rate ?? 0) >= 60
                       ? '#faad14'
                       : '#ff4d4f',
-              }}
+              } }}
             />
           </Card>
         </Col>
@@ -328,7 +328,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
               precision={2}
               suffix="%"
               prefix={getTrendIcon(data?.trend ?? 'stable', data?.trend_percentage ?? 0)}
-              valueStyle={{ color: getTrendColor(data?.trend ?? 'stable') }}
+              styles={{ content: { color: getTrendColor(data?.trend ?? 'stable') } }}
             />
           </Card>
         </Col>
@@ -342,7 +342,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
               }
               precision={2}
               suffix="%"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -353,7 +353,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
               title="权属方数量"
               value={data?.by_ownership_entity?.length ?? 0}
               suffix="个"
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>

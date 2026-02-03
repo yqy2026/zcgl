@@ -22,7 +22,10 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "pillow>=12.0.0",
     "sentry-sdk[fastapi]>=1.45.0",
+    "httpx>=0.28.1",
+    "cryptography>=42.0.0",
     # PDF基础处理（移动到可选依赖）
+    "bcrypt>=5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -36,22 +39,11 @@ pdf-basic = [
     "python-magic-bin>=0.4.14; sys_platform != 'linux'",
 ]
 
-# 文档生成功能
-docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.22",
-    "mkdocs-macros-plugin>=1.4.0",
-    "mkdocs-minify-plugin>=0.8.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
-    "pymdown-extensions>=10.16.1",
-]
-
 # 完整功能（所有可选依赖）
 all = [
-    "land-property-management[pdf-basic,docs]",
+    "land-property-management[pdf-basic]",
 ]
 dev = [
-    "httpx>=0.28.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
@@ -186,7 +178,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --junitxml=junit-report.xml --cov-fail-under=20"
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:../test-results/backend/coverage/html --cov-report=xml:../test-results/backend/coverage/coverage.xml --cov-report=json:../test-results/backend/coverage/coverage.json --junitxml=../test-results/backend/junit/junit-report.xml --cov-fail-under=20"
 norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build", "node_modules", "__pycache__", ".pytest_cache"]
 log_cli = true
 log_cli_level = "INFO"
@@ -216,6 +208,7 @@ timeout_method = "thread"
 
 [tool.coverage.run]
 source = ["src"]
+data_file = "../test-results/backend/coverage/.coverage"
 omit = [
     "*/tests/*",
     "*/test_*",
@@ -243,7 +236,7 @@ show_missing = true
 skip_covered = false
 
 [tool.coverage.html]
-directory = "htmlcov"
+directory = "../test-results/backend/coverage/html"
 
 # =============================================================================
 # Bandit - Security Linter Configuration
@@ -267,3 +260,8 @@ exclude_dirs = [
 # -ll: Only report HIGH and MEDIUM severity issues
 # -iii: Skip some checks to reduce false positives
 assert_used = false  # Don't treat assert as security issue
+
+[dependency-groups]
+dev = [
+    "faker>=40.1.2",
+]

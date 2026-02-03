@@ -223,7 +223,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 1"
                 value="基本信息"
                 prefix={<FileTextOutlined />}
-                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
+                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
               />
             </Col>
             <Col span={6}>
@@ -231,7 +231,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 2"
                 value="关联资产"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
+                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
               />
             </Col>
             <Col span={6}>
@@ -239,7 +239,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 3"
                 value="承租信息"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
+                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
               />
             </Col>
             <Col span={6}>
@@ -247,7 +247,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 4"
                 value="租金条款"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
+                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
               />
             </Col>
           </Row>

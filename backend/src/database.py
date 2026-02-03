@@ -9,7 +9,7 @@ import os
 import threading
 import time
 from collections.abc import AsyncGenerator, Generator
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
@@ -588,6 +588,30 @@ def get_db() -> Generator[Session, None, None]:
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    _init_async_globals()
+    if AsyncSessionLocal is None:
+        raise InternalServerError("Async database session factory is not initialized")
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception as e:  # pragma: no cover
+            await session.rollback()  # pragma: no cover
+            logger.critical(
+                "数据库会话异常",
+                exc_info=True,
+                extra={
+                    "error_id": ErrorIDs.Database.SESSION_ERROR,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "session_id": id(session),
+                },
+            )
+            raise  # pragma: no cover
+
+
+@asynccontextmanager
+async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """获取异步数据库会话（非依赖场景的上下文管理器）"""
     _init_async_globals()
     if AsyncSessionLocal is None:
         raise InternalServerError("Async database session factory is not initialized")

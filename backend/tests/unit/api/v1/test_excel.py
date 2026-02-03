@@ -59,6 +59,7 @@ def mock_current_user():
     user.id = "test-user-id"
     user.username = "testuser"
     user.is_active = True
+    user.role = "user"
     return user
 
 
@@ -1191,7 +1192,9 @@ class TestDownloadExportFile:
 
     @patch("src.api.v1.documents.excel.export_ops.task_crud")
     @pytest.mark.asyncio
-    async def test_download_file_success(self, mock_task_crud, mock_db):
+    async def test_download_file_success(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test successful file download"""
         from src.api.v1.documents.excel.export_ops import download_export_file
         from src.enums.task import TaskStatus
@@ -1206,9 +1209,12 @@ class TestDownloadExportFile:
             mock_task.id = "task-123"
             mock_task.status = TaskStatus.COMPLETED
             mock_task.result_data = {"file_path": temp_path, "file_name": "test.xlsx"}
+            mock_task.user_id = mock_current_user.id
             mock_task_crud.get.return_value = mock_task
 
-            result = download_export_file(task_id="task-123", db=mock_db)
+            result = download_export_file(
+                task_id="task-123", db=mock_db, current_user=mock_current_user
+            )
 
             assert isinstance(result, StreamingResponse)
             assert (
@@ -1222,21 +1228,27 @@ class TestDownloadExportFile:
 
     @patch("src.api.v1.documents.excel.export_ops.task_crud")
     @pytest.mark.asyncio
-    async def test_download_file_not_found(self, mock_task_crud, mock_db):
+    async def test_download_file_not_found(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test downloading non-existent task"""
         from src.api.v1.documents.excel.export_ops import download_export_file
 
         mock_task_crud.get.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            download_export_file(task_id="nonexistent", db=mock_db)
+            download_export_file(
+                task_id="nonexistent", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
         assert "task" in exc_info.value.message
 
     @patch("src.api.v1.documents.excel.export_ops.task_crud")
     @pytest.mark.asyncio
-    async def test_download_file_task_pending(self, mock_task_crud, mock_db):
+    async def test_download_file_task_pending(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test downloading file when task is not completed"""
         from src.api.v1.documents.excel.export_ops import download_export_file
         from src.enums.task import TaskStatus
@@ -1244,17 +1256,22 @@ class TestDownloadExportFile:
         mock_task = MagicMock()
         mock_task.id = "task-pending"
         mock_task.status = TaskStatus.PENDING
+        mock_task.user_id = mock_current_user.id
         mock_task_crud.get.return_value = mock_task
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            download_export_file(task_id="task-pending", db=mock_db)
+            download_export_file(
+                task_id="task-pending", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 400
         assert "任务尚未完成" in exc_info.value.message
 
     @patch("src.api.v1.documents.excel.export_ops.task_crud")
     @pytest.mark.asyncio
-    async def test_download_file_missing(self, mock_task_crud, mock_db):
+    async def test_download_file_missing(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test downloading file when file is missing"""
         from src.api.v1.documents.excel.export_ops import download_export_file
         from src.enums.task import TaskStatus
@@ -1266,10 +1283,13 @@ class TestDownloadExportFile:
             "file_path": "/nonexistent/file.xlsx",
             "file_name": "test.xlsx",
         }
+        mock_task.user_id = mock_current_user.id
         mock_task_crud.get.return_value = mock_task
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            download_export_file(task_id="task-no-file", db=mock_db)
+            download_export_file(
+                task_id="task-no-file", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
         assert "file" in exc_info.value.message
@@ -1285,7 +1305,9 @@ class TestGetExcelTaskStatus:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_success(self, mock_task_crud, mock_db):
+    async def test_get_status_success(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test successful task status retrieval"""
         from src.api.v1.documents.excel.status import get_excel_task_status
         from src.enums.task import TaskStatus
@@ -1300,9 +1322,12 @@ class TestGetExcelTaskStatus:
         mock_task.created_at = datetime.now(UTC)
         mock_task.started_at = datetime.now(UTC)
         mock_task.completed_at = None
+        mock_task.user_id = mock_current_user.id
         mock_task_crud.get.return_value = mock_task
 
-        result = get_excel_task_status(task_id="task-123", db=mock_db)
+        result = get_excel_task_status(
+            task_id="task-123", db=mock_db, current_user=mock_current_user
+        )
 
         assert result.task_id == "task-123"
         assert result.status == TaskStatus.RUNNING.value
@@ -1313,7 +1338,9 @@ class TestGetExcelTaskStatus:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_completed(self, mock_task_crud, mock_db):
+    async def test_get_status_completed(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test getting status of completed task"""
         from src.api.v1.documents.excel.status import get_excel_task_status
         from src.enums.task import TaskStatus
@@ -1328,9 +1355,12 @@ class TestGetExcelTaskStatus:
         mock_task.created_at = datetime.now(UTC)
         mock_task.started_at = datetime.now(UTC)
         mock_task.completed_at = datetime.now(UTC)
+        mock_task.user_id = mock_current_user.id
         mock_task_crud.get.return_value = mock_task
 
-        result = get_excel_task_status(task_id="task-completed", db=mock_db)
+        result = get_excel_task_status(
+            task_id="task-completed", db=mock_db, current_user=mock_current_user
+        )
 
         assert result.status == TaskStatus.COMPLETED.value
         assert result.progress == 100
@@ -1338,7 +1368,9 @@ class TestGetExcelTaskStatus:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_failed(self, mock_task_crud, mock_db):
+    async def test_get_status_failed(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test getting status of failed task"""
         from src.api.v1.documents.excel.status import get_excel_task_status
         from src.enums.task import TaskStatus
@@ -1353,23 +1385,30 @@ class TestGetExcelTaskStatus:
         mock_task.created_at = datetime.now(UTC)
         mock_task.started_at = datetime.now(UTC)
         mock_task.completed_at = None
+        mock_task.user_id = mock_current_user.id
         mock_task_crud.get.return_value = mock_task
 
-        result = get_excel_task_status(task_id="task-failed", db=mock_db)
+        result = get_excel_task_status(
+            task_id="task-failed", db=mock_db, current_user=mock_current_user
+        )
 
         assert result.status == TaskStatus.FAILED.value
         assert result.error_message == "Import failed: Invalid data"
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_not_found(self, mock_task_crud, mock_db):
+    async def test_get_status_not_found(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test getting status of non-existent task"""
         from src.api.v1.documents.excel.status import get_excel_task_status
 
         mock_task_crud.get.return_value = None
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_excel_task_status(task_id="nonexistent", db=mock_db)
+            get_excel_task_status(
+                task_id="nonexistent", db=mock_db, current_user=mock_current_user
+            )
 
         assert exc_info.value.status_code == 404
         assert "task" in exc_info.value.message
@@ -1385,7 +1424,9 @@ class TestGetExcelHistory:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_history_success(self, mock_task_crud, mock_db):
+    async def test_get_history_success(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test successful history retrieval"""
         from src.api.v1.documents.excel.status import get_excel_history
 
@@ -1403,6 +1444,7 @@ class TestGetExcelHistory:
             mock_tasks.append(task)
 
         mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.count.return_value = 5
 
         result = get_excel_history(
             task_type=None,
@@ -1410,6 +1452,7 @@ class TestGetExcelHistory:
             page_size=20,
             page=1,
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["total"] == 5
@@ -1419,7 +1462,9 @@ class TestGetExcelHistory:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_history_with_filters(self, mock_task_crud, mock_db):
+    async def test_get_history_with_filters(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test history with type and status filters"""
         from src.api.v1.documents.excel.status import get_excel_history
 
@@ -1437,6 +1482,7 @@ class TestGetExcelHistory:
             mock_tasks.append(task)
 
         mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.count.return_value = 3
 
         result = get_excel_history(
             task_type="excel_import",
@@ -1444,6 +1490,7 @@ class TestGetExcelHistory:
             page_size=10,
             page=1,
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["total"] == 3
@@ -1453,13 +1500,22 @@ class TestGetExcelHistory:
             limit=10,
             task_type="excel_import",
             status="completed",
+            user_id="test-user-id",
             order_by="created_at",
             order_dir="desc",
+        )
+        mock_task_crud.count.assert_called_once_with(
+            db=mock_db,
+            task_type="excel_import",
+            status="completed",
+            user_id="test-user-id",
         )
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_history_with_pagination(self, mock_task_crud, mock_db):
+    async def test_get_history_with_pagination(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test history with pagination"""
         from src.api.v1.documents.excel.status import get_excel_history
 
@@ -1475,6 +1531,7 @@ class TestGetExcelHistory:
             task.result_data = None
 
         mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.count.return_value = 15
 
         result = get_excel_history(
             task_type=None,
@@ -1482,18 +1539,23 @@ class TestGetExcelHistory:
             page_size=10,
             page=5,
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["page"] == 5
         assert result["page_size"] == 10
+        assert result["total"] == 15
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_history_empty(self, mock_task_crud, mock_db):
+    async def test_get_history_empty(
+        self, mock_task_crud, mock_db, mock_current_user
+    ):
         """Test history when no tasks exist"""
         from src.api.v1.documents.excel.status import get_excel_history
 
         mock_task_crud.get_multi.return_value = []
+        mock_task_crud.count.return_value = 0
 
         result = get_excel_history(
             task_type=None,
@@ -1501,6 +1563,7 @@ class TestGetExcelHistory:
             page_size=20,
             page=1,
             db=mock_db,
+            current_user=mock_current_user,
         )
 
         assert result["total"] == 0

@@ -16,7 +16,7 @@ const SystemInfoDisplay: React.FC = () => {
 
   return (
     <Alert
-      message={
+      title={
         <Space>
           <RocketOutlined />
           <span>AI增强PDF处理系统已就绪</span>

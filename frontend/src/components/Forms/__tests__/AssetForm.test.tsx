@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { createMockAsset } from '@/test-utils/factories';
-import type { Asset } from '@/types/asset';
 
 vi.mock('@/services/assetService', () => ({
   assetService: {

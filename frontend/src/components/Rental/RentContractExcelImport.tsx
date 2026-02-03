@@ -189,9 +189,9 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               从Excel文件批量导入租金合同数据，支持合同信息、租金条款和台账记录的导入。
             </Paragraph>
 
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <Alert
-                message="导入说明"
+                title="导入说明"
                 description={
                   <ul style={{ margin: 0, paddingLeft: 16 }}>
                     <li>请先下载模板，按照模板格式填写数据</li>
@@ -225,9 +225,9 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               将租金合同数据导出为Excel文件，支持按时间范围筛选和选择导出内容。
             </Paragraph>
 
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <Alert
-                message="导出说明"
+                title="导出说明"
                 description={
                   <ul style={{ margin: 0, paddingLeft: 16 }}>
                     <li>可选择导出合同信息、租金条款和台账记录</li>
@@ -255,10 +255,10 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         footer={null}
         width={600}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           {/* 导入选项 */}
           <Card title="导入选项" size="small">
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <Checkbox
                 checked={importOptions.import_terms}
                 onChange={e =>
@@ -317,7 +317,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               }
               size="small"
             >
-              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                 <Row gutter={16}>
                   <Col span={8}>
                     <Statistic title="合同" value={importResult.imported_contracts} suffix="个" />

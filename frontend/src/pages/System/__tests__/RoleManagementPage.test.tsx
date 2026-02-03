@@ -13,6 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import userEvent from '@testing-library/user-event';
 import { act, fireEvent, screen, waitFor } from '@/test/utils/test-helpers';
 import RoleManagementPage from '../RoleManagementPage';
 import { roleService } from '@/services/systemService';
@@ -207,10 +208,13 @@ describe('RoleManagementPage - 数据加载测试', () => {
 
 describe('RoleManagementPage - 角色操作测试', () => {
   it('应该支持创建角色', async () => {
+    const user = userEvent.setup();
     await renderRoleManagementPage();
 
-    fireEvent.click(screen.getByText('新建角色'));
-    expect(screen.getByText(/创建角色/)).toBeInTheDocument();
+    await user.click(screen.getByText('新建角色'));
+    
+    // Check for form field in the modal
+    expect(await screen.findByLabelText('角色名称')).toBeInTheDocument();
   });
 
   it('应该支持编辑角色', async () => {
@@ -225,7 +229,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
       expect(roleService.getRoles).toHaveBeenCalled();
     });
 
-    const editButtons = screen.getAllByText('编辑');
+    const editButtons = screen.getAllByRole('button', { name: '编辑' });
     fireEvent.click(editButtons[0]);
   });
 
@@ -242,8 +246,15 @@ describe('RoleManagementPage - 角色操作测试', () => {
       expect(roleService.getRoles).toHaveBeenCalled();
     });
 
-    const deleteButtons = screen.getAllByText('删除');
+    const deleteButtons = screen.getAllByRole('button', { name: '删除' });
     fireEvent.click(deleteButtons[0]);
+
+    // Popconfirm interaction
+    await screen.findByText('确定要删除这个角色吗？');
+    // 使用 querySelector 查找 Ant Design Popconfirm 的确认按钮
+    const confirmButton = document.querySelector('.ant-popconfirm-buttons .ant-btn-primary');
+    if (!confirmButton) throw new Error('Confirm button not found');
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(roleService.deleteRole).toHaveBeenCalledWith('role-001');
@@ -303,7 +314,7 @@ describe('RoleManagementPage - 权限管理测试', () => {
       expect(roleService.getRoles).toHaveBeenCalled();
     });
 
-    const permissionButtons = screen.getAllByText('权限配置');
+    const permissionButtons = screen.getAllByRole('button', { name: '权限配置' });
     fireEvent.click(permissionButtons[0]);
   });
 });
@@ -390,8 +401,15 @@ describe('RoleManagementPage - 错误处理测试', () => {
       expect(roleService.getRoles).toHaveBeenCalled();
     });
 
-    const deleteButtons = screen.getAllByText('删除');
+    const deleteButtons = screen.getAllByRole('button', { name: '删除' });
     fireEvent.click(deleteButtons[0]);
+
+    // Popconfirm interaction
+    await screen.findByText('确定要删除这个角色吗？');
+    // 使用 querySelector 查找 Ant Design Popconfirm 的确认按钮
+    const confirmButton = document.querySelector('.ant-popconfirm-buttons .ant-btn-primary');
+    if (!confirmButton) throw new Error('Confirm button not found');
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(MessageManager.error).toHaveBeenCalledWith('删除失败');

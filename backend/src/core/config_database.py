@@ -41,7 +41,7 @@ class DatabaseSettings(BaseModel):
 
     # Redis缓存配置
     REDIS_HOST: str | None = Field(
-        default="localhost", json_schema_extra={"env": "REDIS_HOST"}
+        default=None, json_schema_extra={"env": "REDIS_HOST"}
     )
     REDIS_PORT: int = Field(default=6379, json_schema_extra={"env": "REDIS_PORT"})
     REDIS_DB: int = Field(default=0, json_schema_extra={"env": "REDIS_DB"})
@@ -49,7 +49,7 @@ class DatabaseSettings(BaseModel):
         default=None, json_schema_extra={"env": "REDIS_PASSWORD"}
     )
     REDIS_ENABLED: bool = Field(
-        default=True, json_schema_extra={"env": "REDIS_ENABLED"}
+        default=False, json_schema_extra={"env": "REDIS_ENABLED"}
     )
 
     @field_validator("REDIS_PORT")

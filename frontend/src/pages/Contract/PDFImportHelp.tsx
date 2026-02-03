@@ -250,7 +250,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         {activeTab === 'guide' && (
           <div>
             <Alert
-              message="功能特点"
+              title="功能特点"
               description="PDF合同智能导入功能可以自动识别和提取合同中的关键信息，大幅提高数据录入效率。"
               type="info"
               showIcon
@@ -274,7 +274,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             <Card title="详细步骤说明">
               <Collapse>
                 <Panel header="步骤1: 准备文件" key="1">
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <Text>
                       <strong>文件要求：</strong>
                     </Text>
@@ -295,7 +295,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤2: 上传文件" key="2">
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <Text>
                       <strong>上传方式：</strong>
                     </Text>
@@ -314,7 +314,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤3: 等待处理" key="3">
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <Text>
                       <strong>处理过程：</strong>
                     </Text>
@@ -335,7 +335,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤4: 确认信息" key="4">
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <Text>
                       <strong>确认内容：</strong>
                     </Text>
@@ -356,7 +356,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤5: 完成导入" key="5">
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <Text>
                       <strong>导入确认：</strong>
                     </Text>
@@ -398,7 +398,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         {activeTab === 'best' && (
           <div>
             <Alert
-              message="最佳实践建议"
+              title="最佳实践建议"
               description="遵循以下建议可以获得更好的处理效果和用户体验。"
               type="info"
               showIcon
@@ -409,7 +409,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               {bestPractices.map(practice => (
                 <Col span={12} key={practice.title}>
                   <Card style={{ height: '100%', marginBottom: 16 }}>
-                    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                    <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 32, color: COLORS.primary }}>{practice.icon}</div>
                         <Title level={4} style={{ margin: 0 }}>
@@ -439,7 +439,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         {activeTab === 'fields' && (
           <div>
             <Alert
-              message="58个关键字段说明"
+              title="58个关键字段说明"
               description="系统会自动提取以下58个关键字段，覆盖合同的完整信息。"
               type="info"
               showIcon
@@ -449,7 +449,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             <Row gutter={16}>
               <Col span={12}>
                 <Card title="字段分类统计" style={{ marginBottom: 16 }}>
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     {keyFields.map(category => (
                       <div key={category.category}>
                         <Text strong>{category.category}：</Text>
@@ -467,7 +467,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               </Col>
               <Col span={12}>
                 <Card title="提取准确率说明" style={{ marginBottom: 16 }}>
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                     <div>
                       <Text strong>高准确率字段 (&gt;90%)：</Text>
                       <div style={{ marginTop: 4 }}>

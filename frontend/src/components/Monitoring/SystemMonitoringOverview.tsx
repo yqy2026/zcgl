@@ -25,9 +25,9 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="CPU使用率"
             value={cpuPercent}
             suffix="%"
-            valueStyle={{
+            styles={{ content: {
               color: getStatusColor(cpuPercent > 80 ? 'critical' : 'normal'),
-            }}
+            } }}
           />
           <Progress
             percent={cpuPercent}
@@ -42,9 +42,9 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="内存使用率"
             value={memoryPercent}
             suffix="%"
-            valueStyle={{
+            styles={{ content: {
               color: getStatusColor(memoryPercent > 85 ? 'critical' : 'normal'),
-            }}
+            } }}
           />
           <Progress
             percent={memoryPercent}
@@ -59,9 +59,9 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="磁盘使用率"
             value={diskPercent}
             suffix="%"
-            valueStyle={{
+            styles={{ content: {
               color: getStatusColor(diskPercent > 90 ? 'critical' : 'normal'),
-            }}
+            } }}
           />
           <Progress
             percent={diskPercent}
@@ -72,7 +72,7 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
       </Col>
       <Col span={6}>
         <Card size="small">
-          <Statistic title="活跃连接" value={activeConnections} valueStyle={{ color: '#1890ff' }} />
+          <Statistic title="活跃连接" value={activeConnections} styles={{ content: { color: '#1890ff' } }} />
         </Card>
       </Col>
     </Row>

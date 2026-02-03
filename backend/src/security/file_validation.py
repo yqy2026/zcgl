@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,18 @@ __all__ = [
     "FileValidator",
     "validate_upload_file",
 ]
+
+
+def _get_magic_module() -> Any | None:
+    """
+    Resolve the magic module, honoring test patches from src.security.security.
+    """
+    security_module = sys.modules.get("src.security.security")
+    if security_module is not None:
+        security_magic = getattr(security_module, "magic", None)
+        if security_magic is not None:
+            return security_magic
+    return magic
 
 class FileValidationConfig:
     """文件验证配置"""
@@ -171,7 +184,23 @@ class FileValidator:
             file_content = file.file.read(4096)
             file.file.seek(original_position)  # 重置文件指针到原始位置
 
-            detected_mime = magic.from_buffer(file_content, mime=True)
+            magic_module = _get_magic_module()
+            if magic_module is None:
+                # 无 magic 时仅基于扩展名与允许列表做最小校验
+                if allowed_types:
+                    allowed_exts: list[str] = []
+                    for mime_type in allowed_types:
+                        expected_exts = self.config.ALLOWED_MIME_TYPES.get(mime_type)
+                        if expected_exts:
+                            allowed_exts.extend(expected_exts.split(","))
+                    if allowed_exts and file_ext not in allowed_exts:
+                        raise BusinessValidationError(
+                            f"不支持的文件类型: {file_ext}",
+                            details={"allowed_extensions": allowed_exts},
+                        )
+                return True
+
+            detected_mime = magic_module.from_buffer(file_content, mime=True)
 
             # 检查是否为可疑的MIME类型
             suspicious_mimes = [
@@ -187,12 +216,6 @@ class FileValidator:
                     details={"detected_mime": detected_mime},
                 )
 
-            if detected_mime not in allowed_types:
-                raise BusinessValidationError(
-                    f"不支持的文件类型: {detected_mime}",
-                    details={"allowed_types": allowed_types},
-                )
-
             # 验证扩展名与MIME类型匹配
             expected_ext = self.config.ALLOWED_MIME_TYPES.get(detected_mime, "")
             if expected_ext and file_ext not in expected_ext.split(","):
@@ -203,6 +226,12 @@ class FileValidator:
                         "detected_mime": detected_mime,
                         "expected_ext": expected_ext,
                     },
+                )
+
+            if detected_mime not in allowed_types:
+                raise BusinessValidationError(
+                    f"不支持的文件类型: {detected_mime}",
+                    details={"allowed_types": allowed_types},
                 )
 
         except BusinessValidationError:

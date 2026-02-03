@@ -811,11 +811,15 @@ class TestUploadAndExtractPdf:
     ):
         """Test upload and extract with file exceeding size limit"""
         from src.api.v1.documents.pdf_upload import upload_and_extract_pdf_v1_compatible
+        from src.constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 
         optional = MagicMock()
-        optional.pdf_processing_service = None
+        optional.pdf_processing_service = MagicMock()
         mock_large_pdf_file.read = AsyncMock(
-            return_value=b"%PDF-1.4\n" + b"x" * (51 * 1024 * 1024)
+            side_effect=[
+                b"%PDF-1.4\n" + b"x" * (DEFAULT_MAX_FILE_SIZE + 1),
+                b"",
+            ]
         )
 
         with patch(
@@ -1058,15 +1062,11 @@ class TestUploadAndExtractPdf:
         ) as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch(
-                "src.api.v1.documents.pdf_upload.PDFImportService"
-            ) as mock_import_service_class:
-                mock_import_service = MagicMock()
-                mock_import_service.upload_file = AsyncMock(
-                    side_effect=Exception("Unexpected error")
-                )
-                mock_import_service_class.return_value = mock_import_service
-
+            with patch.object(
+                mock_optional_services_with_all.pdf_processing_service,
+                "extract_text_from_pdf",
+                AsyncMock(side_effect=Exception("Unexpected error")),
+            ):
                 result = await upload_and_extract_pdf_v1_compatible(
                     file=mock_pdf_file,
                     should_include_raw_text=False,
@@ -1313,15 +1313,11 @@ class TestEdgeCases:
         ) as mock_get_optional:
             mock_get_optional.return_value = mock_optional_services_with_all
 
-            with patch(
-                "src.api.v1.documents.pdf_upload.PDFImportService"
-            ) as mock_import_service_class:
-                mock_import_service = MagicMock()
-                mock_import_service.upload_file = AsyncMock(
-                    side_effect=TimeoutError("Processing timeout")
-                )
-                mock_import_service_class.return_value = mock_import_service
-
+            with patch.object(
+                mock_optional_services_with_all.pdf_processing_service,
+                "extract_text_from_pdf",
+                AsyncMock(side_effect=TimeoutError("Processing timeout")),
+            ):
                 result = await upload_and_extract_pdf_v1_compatible(
                     file=mock_pdf_file,
                     should_include_raw_text=False,

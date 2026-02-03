@@ -26,7 +26,7 @@ function MyComponent() {
   const { options, loading, error } = useDictionary('property_nature')
 
   if (loading) return <Spin />
-  if (error) return <Alert message="加载失败" type="error" />
+  if (error) return <Alert title="加载失败" type="error" />
 
   return (
     <Select>

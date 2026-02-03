@@ -437,7 +437,7 @@ const OrganizationPage: React.FC = () => {
                 title="活跃组织"
                 value={statistics.active}
                 prefix={<TeamOutlined />}
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Card>
           </Col>
@@ -447,7 +447,7 @@ const OrganizationPage: React.FC = () => {
                 title="停用组织"
                 value={statistics.inactive}
                 prefix={<SettingOutlined />}
-                valueStyle={{ color: COLORS.error }}
+                styles={{ content: { color: COLORS.error } }}
               />
             </Card>
           </Col>

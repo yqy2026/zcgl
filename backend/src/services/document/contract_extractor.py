@@ -16,6 +16,34 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+def _log_info(message: str) -> None:
+    if logger.disabled or not logger.propagate:
+        logging.getLogger().info(message)
+    else:
+        logger.info(message)
+
+
+def _log_warning(message: str) -> None:
+    if logger.disabled or not logger.propagate:
+        logging.getLogger().warning(message)
+    else:
+        logger.warning(message)
+
+
+def _log_error(message: str) -> None:
+    if logger.disabled or not logger.propagate:
+        logging.getLogger().error(message)
+    else:
+        logger.error(message)
+
+
+def _log_debug(message: str) -> None:
+    if logger.disabled or not logger.propagate:
+        logging.getLogger().debug(message)
+    else:
+        logger.debug(message)
+
+
 class ExtractionMethod(Enum):
     """提取方法"""
 
@@ -171,11 +199,11 @@ class ContractExtractor:
         Returns:
             提取结果字典
         """
-        logger.info("开始使用修复后的提取器处理合同文本")
+        _log_info("开始使用修复后的提取器处理合同文本")
 
         # 验证输入文本
         if not text or not isinstance(text, str):
-            logger.error("输入文本无效")
+            _log_error("输入文本无效")
             return {
                 "success": False,
                 "error": "输入文本无效",
@@ -185,7 +213,7 @@ class ContractExtractor:
 
         # 检查是否包含真实的合同信息（防止返回虚假数据）
         if not self._validate_real_contract_text(text):
-            logger.warning("输入文本可能不是真实的合同内容")
+            _log_warning("输入文本可能不是真实的合同内容")
             return {
                 "success": False,
                 "error": "输入文本可能不是真实的合同内容",
@@ -227,12 +255,12 @@ class ContractExtractor:
 
                                 total_confidence += confidence
                                 field_count += 1
-                                logger.info(
+                                _log_info(
                                     f"成功提取字段 {field_name}: {value} (置信度 {confidence:.2f})"
                                 )
                                 break
                     except Exception as e:  # pragma: no cover
-                        logger.warning(
+                        _log_warning(
                             f"提取字段 {field_name} 时出错: {e}"
                         )  # pragma: no cover
                         continue  # pragma: no cover
@@ -252,13 +280,13 @@ class ContractExtractor:
                 "validation_passed": True,
             }
 
-            logger.info(
+            _log_info(
                 f"提取完成，共提取 {field_count} 个字段，总体置信度 {overall_confidence:.2f}"
             )
             return result
 
         except Exception as e:  # pragma: no cover
-            logger.error(f"合同信息提取失败: {e}")  # pragma: no cover
+            _log_error(f"合同信息提取失败: {e}")  # pragma: no cover
             return {  # pragma: no cover
                 "success": False,
                 "error": f"提取失败: {str(e)}",
@@ -274,7 +302,7 @@ class ContractExtractor:
         keyword_count = sum(1 for keyword in contract_keywords if keyword in text)
 
         if keyword_count < 3:
-            logger.warning("文本中缺少基本合同关键词")
+            _log_warning("文本中缺少基本合同关键词")
             return False
 
         # 检查是否包含示例数据特征（这些是已知的虚假数据标识）
@@ -293,12 +321,12 @@ class ContractExtractor:
 
         for pattern in fake_data_patterns:
             if re.search(pattern, text):
-                logger.warning(f"检测到可能的示例数据: {pattern}")
+                _log_warning(f"检测到可能的示例数据: {pattern}")
                 return False
 
         # 检查文本长度 - 真实合同通常较长
         if len(text.strip()) < 20:
-            logger.warning("文本过短，可能不是真实合同")
+            _log_warning("文本过短，可能不是真实合同")
             return False
 
         return True
@@ -540,7 +568,7 @@ if __name__ == "__main__":  # pragma: no cover
             return result
 
         except Exception as e:
-            logger.error(f"固定租金合同提取失败: {str(e)}")
+            _log_error(f"固定租金合同提取失败: {str(e)}")
             return {
                 "contract_type": "fixed_rent",
                 "error": str(e),
@@ -549,5 +577,5 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 运行测试  # pragma: no cover
     result = extract_fixed_rent_contract_info(test_text)  # pragma: no cover
-    logger.debug("固定租金提取器测试结果:")  # pragma: no cover
-    logger.debug(json.dumps(result, ensure_ascii=False, indent=2))  # pragma: no cover
+    _log_debug("固定租金提取器测试结果:")  # pragma: no cover
+    _log_debug(json.dumps(result, ensure_ascii=False, indent=2))  # pragma: no cover

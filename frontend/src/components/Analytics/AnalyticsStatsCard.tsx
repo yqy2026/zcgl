@@ -114,12 +114,12 @@ const StatCard: React.FC<StatCardProps> = ({
             precision={precision}
             suffix={suffix}
             prefix={prefix}
-            valueStyle={{
+            styles={{ content: {
               fontSize: 24,
               fontWeight: 'bold',
               margin: 0,
               ...valueStyle,
-            }}
+            } }}
           />
         </div>
       </div>
@@ -257,7 +257,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_annual_income}
             precision={2}
             suffix="元"
-            valueStyle={{ color: COLORS.success }}
+            styles={{ content: { color: COLORS.success } }}
           />
         </Card>
       </Col>
@@ -269,7 +269,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_annual_expense}
             precision={2}
             suffix="元"
-            valueStyle={{ color: COLORS.error }}
+            styles={{ content: { color: COLORS.error } }}
           />
         </Card>
       </Col>
@@ -281,9 +281,9 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_net_income}
             precision={2}
             suffix="元"
-            valueStyle={{
+            styles={{ content: {
               color: data.total_net_income >= 0 ? COLORS.success : COLORS.error,
-            }}
+            } }}
           />
         </Card>
       </Col>
@@ -295,7 +295,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_monthly_rent}
             precision={2}
             suffix="元"
-            valueStyle={{ color: COLORS.primary }}
+            styles={{ content: { color: COLORS.primary } }}
           />
         </Card>
       </Col>

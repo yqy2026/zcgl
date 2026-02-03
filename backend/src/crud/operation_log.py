@@ -26,7 +26,24 @@ class OperationLogCRUD:
         module: str | None = None,
         error_only: bool = False,
     ) -> Any:
-        query = db.query(OperationLog).filter(OperationLog.created_at >= start_date)
+        return self._apply_stats_filters(
+            db.query(OperationLog),
+            start_date=start_date,
+            user_id=user_id,
+            module=module,
+            error_only=error_only,
+        )
+
+    def _apply_stats_filters(
+        self,
+        query: Any,
+        *,
+        start_date: datetime,
+        user_id: str | None = None,
+        module: str | None = None,
+        error_only: bool = False,
+    ) -> Any:
+        query = query.filter(OperationLog.created_at >= start_date)
         if user_id:
             query = query.filter(OperationLog.user_id == user_id)
         if module:
@@ -248,12 +265,19 @@ class OperationLogCRUD:
     ) -> dict[str, Any]:
         """获取用户操作统计"""
         start_date = self._stats_start_date(days)
-        base_query = self._stats_query(db, start_date=start_date, user_id=user_id)
-        total_operations = base_query.with_entities(func.count(OperationLog.id)).scalar()
+        total_operations = self._apply_stats_filters(
+            db.query(func.count(OperationLog.id)),
+            start_date=start_date,
+            user_id=user_id,
+        ).scalar()
 
         # 按操作类型统计
         action_stats = (
-            base_query.with_entities(OperationLog.action, func.count(OperationLog.id))
+            self._apply_stats_filters(
+                db.query(OperationLog.action, func.count(OperationLog.id)),
+                start_date=start_date,
+                user_id=user_id,
+            )
             .group_by(OperationLog.action)
             .all()
         )
@@ -270,12 +294,19 @@ class OperationLogCRUD:
     ) -> dict[str, Any]:
         """获取模块操作统计"""
         start_date = self._stats_start_date(days)
-        base_query = self._stats_query(db, start_date=start_date, module=module)
-        total_operations = base_query.with_entities(func.count(OperationLog.id)).scalar()
+        total_operations = self._apply_stats_filters(
+            db.query(func.count(OperationLog.id)),
+            start_date=start_date,
+            module=module,
+        ).scalar()
 
         # 按操作类型统计
         action_stats = (
-            base_query.with_entities(OperationLog.action, func.count(OperationLog.id))
+            self._apply_stats_filters(
+                db.query(OperationLog.action, func.count(OperationLog.id)),
+                start_date=start_date,
+                module=module,
+            )
             .group_by(OperationLog.action)
             .all()
         )
@@ -291,10 +322,12 @@ class OperationLogCRUD:
         """获取每日操作统计"""
         start_date = self._stats_start_date(days)
         daily_stats = (
-            self._stats_query(db, start_date=start_date)
-            .with_entities(
-                func.date(OperationLog.created_at),
-                func.count(OperationLog.id),
+            self._apply_stats_filters(
+                db.query(
+                    func.date(OperationLog.created_at),
+                    func.count(OperationLog.id),
+                ),
+                start_date=start_date,
             )
             .group_by(func.date(OperationLog.created_at))
             .order_by(func.date(OperationLog.created_at))
@@ -309,14 +342,18 @@ class OperationLogCRUD:
     def get_error_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取错误操作统计"""
         start_date = self._stats_start_date(days)
-        base_query = self._stats_query(db, start_date=start_date, error_only=True)
-        total_errors = base_query.with_entities(func.count(OperationLog.id)).scalar()
+        total_errors = self._apply_stats_filters(
+            db.query(func.count(OperationLog.id)),
+            start_date=start_date,
+            error_only=True,
+        ).scalar()
 
         # 按错误类型统计
         error_types = (
-            base_query.with_entities(
-                OperationLog.action,
-                func.count(OperationLog.id),
+            self._apply_stats_filters(
+                db.query(OperationLog.action, func.count(OperationLog.id)),
+                start_date=start_date,
+                error_only=True,
             )
             .group_by(OperationLog.action)
             .all()

@@ -32,9 +32,15 @@ def admin_user_in_db(db_session: Session, admin_user):
     """Ensure admin user exists in DB for FK constraints."""
     from src.models.auth import User
 
+    # Check by ID first
     existing = db_session.query(User).filter(User.id == admin_user.id).first()
     if existing:
-        return admin_user
+        return existing
+
+    # Check by username to avoid unique constraint violations
+    existing_by_name = db_session.query(User).filter(User.username == admin_user.username).first()
+    if existing_by_name:
+        return existing_by_name
 
     user = User(
         id=admin_user.id,
@@ -46,9 +52,9 @@ def admin_user_in_db(db_session: Session, admin_user):
         is_active=True,
     )
     db_session.add(user)
-    db_session.commit()
+    db_session.flush()
     db_session.refresh(user)
-    return admin_user
+    return user
 
 
 @pytest.fixture
@@ -68,17 +74,10 @@ def sample_notification(db_session: Session, admin_user_in_db):
         created_at=datetime.now(UTC),
     )
     db_session.add(notification)
-    db_session.commit()
+    db_session.flush()
     db_session.refresh(notification)
 
     yield notification
-
-    # Cleanup
-    try:
-        db_session.delete(notification)
-        db_session.commit()
-    except Exception:
-        pass
 
 
 @pytest.fixture
@@ -100,26 +99,53 @@ def multiple_notifications(db_session: Session, admin_user_in_db):
             created_at=datetime.now(UTC),
         )
         db_session.add(notification)
-        db_session.commit()
+        db_session.flush()
         db_session.refresh(notification)
         notifications.append(notification)
 
     yield notifications
 
-    # Cleanup
-    for notification in notifications:
-        try:
-            db_session.delete(notification)
-            db_session.commit()
-        except Exception:
-            pass
-
 
 @pytest.fixture
-def admin_user_headers(client, admin_user):
-    """管理员用户认证头"""
-    # client fixture already bypasses authentication
-    return {}
+def admin_user_headers(client, admin_user_in_db, monkeypatch):
+    """管理员用户认证头 - 并更新 Mock 用户以匹配 admin_user_in_db"""
+    from unittest.mock import MagicMock
+    from src.middleware import auth as auth_module
+    from src.main import app
+    from src.middleware.auth import (
+        get_current_active_user,
+        get_current_user,
+        get_current_user_from_cookie,
+        require_admin,
+    )
+
+    # Update the mock user in auth module to match the DB user
+    mock_user = MagicMock()
+    mock_user.id = admin_user_in_db.id
+    mock_user.username = admin_user_in_db.username
+    mock_user.email = admin_user_in_db.email
+    mock_user.role = "admin"
+    mock_user.is_active = True
+
+    def mock_get_user():
+        return mock_user
+
+    # Update dependency overrides to ensure FastAPI uses our mock user
+    # Note: We must iterate keys because client fixture monkeypatches the module,
+    # so importing get_current_active_user here might give us the mock, not the original function key.
+    for key in list(app.dependency_overrides.keys()):
+        if getattr(key, "__name__", "") in [
+            "get_current_active_user",
+            "get_current_user",
+            "get_current_user_from_cookie",
+            "require_admin",
+        ]:
+            app.dependency_overrides[key] = mock_get_user
+
+    monkeypatch.setattr(auth_module, "get_current_user", mock_get_user)
+    monkeypatch.setattr(auth_module, "get_current_active_user", mock_get_user)
+
+    return {"Authorization": "Bearer mock_token"}
 
 
 # ============================================================================

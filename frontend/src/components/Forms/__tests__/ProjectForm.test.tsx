@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { createMockProject } from '@/test-utils/factories';
-import type { Project } from '@/types/project';
 
 vi.mock('@/services/projectService', () => ({
   projectService: {

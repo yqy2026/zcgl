@@ -72,7 +72,7 @@ const ContractDetailPage: React.FC = () => {
     return (
       <div style={{ padding: '24px' }}>
         <Alert
-          message="数据加载失败"
+          title="数据加载失败"
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon
@@ -85,7 +85,7 @@ const ContractDetailPage: React.FC = () => {
   if (!contract) {
     return (
       <div style={{ padding: '24px' }}>
-        <Alert message="合同不存在" description="未找到指定的合同信息" type="warning" showIcon />
+        <Alert title="合同不存在" description="未找到指定的合同信息" type="warning" showIcon />
       </div>
     );
   }

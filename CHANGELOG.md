@@ -17,6 +17,30 @@
 - **Excel 导出临时文件清理** (Excel Export Temp File Cleanup)
   - 异步导出文件统一落盘到 `temp_uploads/excel_exports`
   - 任务删除或清理过期任务时回收导出文件
+- **Excel 异步任务状态修复** (Excel Async Task Status Fix)
+  - 异步导入/导出任务改用 `TaskService` 更新状态与历史记录
+  - 后台任务独立创建数据库会话，避免请求结束后的会话失效
+- **Excel 配置创建修复** (Excel Config Create Fix)
+  - Excel 配置创建时补齐 `task_type` 与格式配置，避免字段不匹配导致创建失败
+  - 默认配置切换时自动取消同类型默认值，避免多默认配置
+- **任务访问控制修复** (Task Access Control Fix)
+  - 任务列表/详情/更新/删除/历史仅允许任务创建者或管理员访问
+  - Excel 任务状态与导出下载接口需要认证并校验任务归属
+  - 过期任务清理接口限制为管理员调用
+- **租金台账更新逻辑修复** (Rent Ledger Update Logic Fix)
+  - 单条台账更新改为服务层处理，自动计算逾期金额与服务费
+  - 统一与批量更新的衍生字段逻辑，避免直接 CRUD 导致数据不一致
+- **Excel 历史分页修复** (Excel History Pagination Fix)
+  - 修复 Excel 操作历史接口返回总数错误的问题
+  - 现在返回真实总数以匹配分页数据
+- **租金合同 Excel 服务补齐** (Rent Contract Excel Service Restoration)
+  - 恢复租金合同模板下载、导入与导出服务，避免模块缺失导致接口不可用
+  - 支持合同/条款/台账多表导出与基础导入
+- **运行依赖补齐** (Runtime Dependency Completion)
+  - 添加 `cryptography` 与 `httpx` 到后端核心依赖，避免运行期导入失败
+- **租金合同删除逻辑修复** (Rent Contract Delete Logic Fix)
+  - 删除合同改为服务层软删除并记录历史，避免历史/关联表外键导致的删除失败
+  - 租金合同查询默认排除已删除数据
 
 #### Changed / 变更
 
@@ -40,6 +64,9 @@
   - 整合 `config/environments/backend.env` 到 `backend/.env`
   - 创建标准 `frontend/.env` 文件
   - 统一使用项目根目录的 `.env` 文件，符合工具链最佳实践
+- **配置验证去重** (Config Validation Deduplication)
+  - 环境覆盖逻辑移入 `Settings` 校验阶段，避免运行时二次修改
+  - 移除重复的 SECRET_KEY/Redis 校验，保留 DATABASE_URL 必填检查
 
 #### Removed / 删除
 
@@ -154,6 +181,18 @@
 - `backend/docs/API_DOCUMENTATION_ANALYSIS.md` - API 文档分析报告占位与生成说明
 - `backend/docs/COVERAGE_IMPROVEMENT_REPORT.md` - 覆盖率报告占位与生成指引
 - `docs/tooling/assistant-metadata.md` - 根目录工具元数据说明
+- `docs/guides/components.md` - 前端组件导航与入口说明
+- `frontend/src/components/index.ts` - 组件统一入口命名空间导出
+- `frontend/src/components/Analytics/index.ts` - 分析模块统一入口
+- `frontend/src/components/Common/index.ts` - 通用组件统一入口
+- `frontend/src/components/Monitoring/index.ts` - 监控模块统一入口
+- `frontend/src/components/Router/index.ts` - 路由模块统一入口
+- `frontend/src/components/System/index.ts` - 系统管理模块统一入口
+- `frontend/src/components/Auth/index.ts` - 认证模块统一入口
+- `frontend/src/components/Dashboard/index.ts` - 仪表盘模块统一入口
+- `frontend/src/components/Ownership/index.ts` - 权属方模块统一入口
+- `frontend/src/components/Project/index.ts` - 项目模块统一入口
+- `frontend/src/components/Rental/index.ts` - 租赁模块统一入口
 
 #### Changed / 变更
 
@@ -161,8 +200,17 @@
   - `backend/docs/enhanced_database_guide.md`
   - `frontend/docs/type-safety-fix-summary.md`
   - `scripts/README.md`
+- 更新文档入口与前端指南组件导航链接:
+  - `docs/index.md`
+  - `docs/guides/frontend.md`
+- 更新组件导航表，补充 Auth/Dashboard/Ownership/Project/Rental/Router/Monitoring/System 入口:
+  - `docs/guides/components.md`
+- 修正组件入口导出冲突与默认导出错误:
+  - `frontend/src/components/Analytics/index.ts`
+  - `frontend/src/components/Common/index.ts`
 - `backend/debug_import.py` 迁移至 `backend/scripts/dev/debug_import.py` 并补充路径初始化
 - `.gitignore` 允许 `backend/docs` 下的分析/报告占位文档被追踪
+- `.gitignore` 忽略前端测试输出文件（`frontend/test-results.txt`、`frontend/test_output.txt`、`frontend/vitest_stdout.txt`）
 
 ### 🗑️ 文档站点移除 (Docs Site Removal)
 

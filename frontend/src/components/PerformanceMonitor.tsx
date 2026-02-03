@@ -234,7 +234,7 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
       >
         {!isMonitoring && (
           <Alert
-            message="性能监控未启动"
+            title="性能监控未启动"
             description="点击开始监控按钮开始收集性能数据"
             type="info"
             action={
@@ -253,7 +253,7 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="FCP"
                   value={metrics.fcp ? metrics.fcp.toFixed(0) : '-'}
                   suffix="ms"
-                  valueStyle={{ color: getPerformanceScore(metrics.fcp || 0, [1800, 3000]).color }}
+                  styles={{ content: { color: getPerformanceScore(metrics.fcp || 0, [1800, 3000]).color } }}
                 />
               </Col>
               <Col span={6}>
@@ -261,7 +261,7 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="LCP"
                   value={metrics.lcp ? metrics.lcp.toFixed(0) : '-'}
                   suffix="ms"
-                  valueStyle={{ color: getPerformanceScore(metrics.lcp || 0, [2500, 4000]).color }}
+                  styles={{ content: { color: getPerformanceScore(metrics.lcp || 0, [2500, 4000]).color } }}
                 />
               </Col>
               <Col span={6}>
@@ -269,14 +269,14 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="FID"
                   value={metrics.fid ? metrics.fid.toFixed(0) : '-'}
                   suffix="ms"
-                  valueStyle={{ color: getPerformanceScore(metrics.fid || 0, [100, 300]).color }}
+                  styles={{ content: { color: getPerformanceScore(metrics.fid || 0, [100, 300]).color } }}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
                   title="CLS"
                   value={metrics.cls ? metrics.cls.toFixed(3) : '-'}
-                  valueStyle={{ color: getPerformanceScore(metrics.cls || 0, [0.1, 0.25]).color }}
+                  styles={{ content: { color: getPerformanceScore(metrics.cls || 0, [0.1, 0.25]).color } }}
                 />
               </Col>
             </Row>
@@ -313,7 +313,7 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
               getPerformanceAdvice().map(advice => (
                 <Alert
                   key={advice}
-                  message={advice}
+                  title={advice}
                   type="warning"
                   showIcon
                   icon={<WarningOutlined />}
@@ -321,7 +321,7 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                 />
               ))
             ) : (
-              <Alert message="性能表现良好" type="success" showIcon />
+              <Alert title="性能表现良好" type="success" showIcon />
             )}
           </Card>
 

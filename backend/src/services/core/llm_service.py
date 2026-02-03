@@ -170,7 +170,11 @@ class BaseOpenAILLM(LLMServiceInterface):
                 )
 
         except Exception as e:
-            logger.error(f"LLM Request Failed ({self._provider.value}): {e}")
+            message = f"LLM Request Failed ({self._provider.value}): {e}"
+            if logger.disabled or not logger.propagate:
+                logging.getLogger().error(message)
+            else:
+                logger.error(message)
             raise
 
 

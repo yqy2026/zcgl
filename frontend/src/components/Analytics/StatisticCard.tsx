@@ -8,6 +8,7 @@ interface StatisticCardProps {
   suffix?: string;
   prefix?: string;
   valueStyle?: React.CSSProperties;
+  styles?: { content?: React.CSSProperties };
   loading?: boolean;
 }
 
@@ -18,8 +19,11 @@ export const StatisticCard: React.FC<StatisticCardProps> = ({
   suffix = '',
   prefix = '',
   valueStyle,
+  styles,
   loading = false,
 }) => {
+  const contentStyle = styles?.content ?? valueStyle;
+
   return (
     <Card loading={loading}>
       <Statistic
@@ -28,7 +32,7 @@ export const StatisticCard: React.FC<StatisticCardProps> = ({
         precision={precision}
         suffix={suffix}
         prefix={prefix}
-        valueStyle={valueStyle}
+        styles={contentStyle ? { ...styles, content: contentStyle } : styles}
       />
     </Card>
   );
@@ -44,9 +48,9 @@ export const FinancialStatisticCard: React.FC<FinancialStatisticCardProps> = ({
   isPositive = true,
   ...props
 }) => {
-  const valueStyle = {
+  const contentStyle = {
     color: value >= 0 ? (isPositive ? '#3f8600' : '#cf1322') : '#cf1322',
   };
 
-  return <StatisticCard title={title} value={value} valueStyle={valueStyle} {...props} />;
+  return <StatisticCard title={title} value={value} styles={{ content: contentStyle }} {...props} />;
 };

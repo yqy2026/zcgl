@@ -52,7 +52,7 @@ const MobileMenu: React.FC = () => {
         placement="left"
         onClose={hideMenu}
         open={visible}
-        width={280}
+        size={280}
         styles={{
           body: { padding: 0 },
         }}

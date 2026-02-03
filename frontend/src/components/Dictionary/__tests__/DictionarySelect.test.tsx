@@ -10,8 +10,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@/test/utils/test-helpers';
-import type { DictionaryOption } from '../../services/dictionary';
-
 import DictionarySelect from '../DictionarySelect';
 import { useDictionary } from '../../hooks/useDictionary';
 import { dictionaryService } from '../../services/dictionary';

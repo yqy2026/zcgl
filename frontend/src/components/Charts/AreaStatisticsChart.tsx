@@ -255,7 +255,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
   if (error !== undefined && error !== null) {
     return (
       <Alert
-        message="数据加载失败"
+        title="数据加载失败"
         description="无法加载面积统计数据，请稍后重试"
         type="error"
         showIcon
@@ -275,7 +275,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<BuildOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -288,7 +288,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<HomeOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -301,7 +301,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<ShopOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -313,7 +313,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               value={data?.total_statistics?.total_rented_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -325,7 +325,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               value={data?.total_statistics?.total_vacant_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
@@ -337,7 +337,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
               value={data?.total_statistics?.total_non_commercial_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              valueStyle={{ color: '#8c8c8c' }}
+              styles={{ content: { color: '#8c8c8c' } }}
             />
           </Card>
         </Col>

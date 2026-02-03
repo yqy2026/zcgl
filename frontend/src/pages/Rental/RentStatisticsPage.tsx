@@ -578,7 +578,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: COLORS.primary }}
+                  styles={{ content: { color: COLORS.primary } }}
                 />
               </Card>
             </Col>
@@ -590,7 +590,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: COLORS.success }}
+                  styles={{ content: { color: COLORS.success } }}
                 />
               </Card>
             </Col>
@@ -602,10 +602,10 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{
+                  styles={{ content: {
                     color:
                       Number(overviewData.total_overdue || 0) > 0 ? COLORS.error : COLORS.success,
-                  }}
+                  } }}
                 />
               </Card>
             </Col>
@@ -617,12 +617,12 @@ const RentStatisticsPage: React.FC = () => {
                   precision={1}
                   prefix={<RiseOutlined />}
                   suffix="%"
-                  valueStyle={{
+                  styles={{ content: {
                     color:
                       Number(overviewData.payment_rate || 0) >= 90
                         ? COLORS.success
                         : COLORS.warning,
-                  }}
+                  } }}
                 />
               </Card>
             </Col>
@@ -644,7 +644,7 @@ const RentStatisticsPage: React.FC = () => {
                     precision={2}
                     prefix={<DollarOutlined />}
                     suffix="元/㎡/月"
-                    valueStyle={{ color: COLORS.primary }}
+                    styles={{ content: { color: COLORS.primary } }}
                   />
                 </Card>
               </Col>
@@ -656,7 +656,7 @@ const RentStatisticsPage: React.FC = () => {
                     precision={1}
                     prefix={<ReloadOutlined />}
                     suffix="%"
-                    valueStyle={{ color: COLORS.success }}
+                    styles={{ content: { color: COLORS.success } }}
                   />
                 </Card>
               </Col>

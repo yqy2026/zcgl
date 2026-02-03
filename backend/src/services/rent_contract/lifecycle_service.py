@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -163,6 +163,40 @@ class RentContractLifecycleService(RentContractHelperMixin):
         )
 
         return db_obj
+
+    def delete_contract(
+        self,
+        db: Session,
+        *,
+        contract_id: str,
+        operator: str | None = None,
+        operator_id: str | None = None,
+    ) -> bool:
+        """删除合同（软删除，记录历史）"""
+        contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+        if not contract:
+            return False
+
+        old_data = model_to_dict(contract)
+        contract.data_status = "已删除"
+        contract.contract_status = ContractStatus.TERMINATED
+        contract.updated_at = datetime.now(UTC)
+        db.add(contract)
+        db.commit()
+        db.refresh(contract)
+
+        self._create_history(
+            db,
+            contract_id=contract.id,
+            change_type="删除",
+            change_description="删除合同",
+            old_data=old_data,
+            new_data=model_to_dict(contract),
+            operator=operator,
+            operator_id=operator_id,
+        )
+
+        return True
 
     def renew_contract(
         self,

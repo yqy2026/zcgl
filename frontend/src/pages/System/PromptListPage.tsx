@@ -432,7 +432,7 @@ const PromptListPage: React.FC = () => {
                   )?.count ?? 0
                 }
                 prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Card>
           </Col>
@@ -442,9 +442,9 @@ const PromptListPage: React.FC = () => {
                 title="平均准确率"
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{
+                styles={{ content: {
                   color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
-                }}
+                } }}
               />
             </Card>
           </Col>
@@ -454,10 +454,10 @@ const PromptListPage: React.FC = () => {
                 title="平均置信度"
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{
+                styles={{ content: {
                   color:
                     statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
-                }}
+                } }}
               />
             </Card>
           </Col>

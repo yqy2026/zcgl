@@ -11,7 +11,7 @@ export class DiagnosticReporter {
   private reportDir: string;
   private timestamp: string;
 
-  constructor(reportDir: string = 'frontend/diagnostics') {
+  constructor(reportDir: string = path.resolve(__dirname, '../../..', 'test-results', 'frontend', 'diagnostics')) {
     this.reportDir = reportDir;
     this.timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 

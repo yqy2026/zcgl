@@ -70,25 +70,19 @@ export interface AuthState {
   error: string | null;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-export interface LoginResponse {
+/** @deprecated Cookie 认证不再在响应体返回 Token。 */
+export interface CookieAuthResponse {
   user: User;
-  tokens?: TokenResponse;
+  permissions: Permission[];
   message: string;
+  auth_mode: 'cookie';
 }
 
 export interface AuthResponse {
   user: User;
   permissions: Permission[];
-  tokens?: TokenResponse;
   message?: string;
-  auth_mode?: string;
+  auth_mode?: 'cookie';
 }
 
 export interface ErrorResponse {

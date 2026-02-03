@@ -533,7 +533,8 @@ exception_handler = ExceptionHandler()
 def handle_service_exception(
     error: Exception, service_name: str, operation: str
 ) -> None:
-    logger.error(f"{service_name} - {operation} failed", exc_info=error)
+    log_message = f"{service_name} - {operation} failed"
+    logging.getLogger().error(log_message, exc_info=error)
 
     if isinstance(error, IntegrityError):
         error_message = str(error).lower()

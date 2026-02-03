@@ -12,6 +12,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const artifactsRoot = path.resolve(__dirname, '../test-results/frontend');
+const reportsRoot = path.join(artifactsRoot, 'reports');
+const coverageRoot = path.join(artifactsRoot, 'coverage');
+
 export default defineConfig({
   plugins: [react()],
 
@@ -41,13 +45,13 @@ export default defineConfig({
     // 报告器
     reporters: ['verbose', 'json', 'html'],
     outputFile: {
-      json: './coverage/test-results.json',
-      html: './coverage/test-report.html',
+      json: path.join(reportsRoot, 'vitest-results.json'),
+      html: path.join(reportsRoot, 'vitest-report.html'),
     },
 
     // 监听模式
     watch: {
-      ignore: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
+      ignore: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**'],
     },
 
     // =============================================================================
@@ -55,7 +59,7 @@ export default defineConfig({
     // =============================================================================
     coverage: {
       provider: 'v8',
-      reportsDirectory: './coverage',
+      reportsDirectory: coverageRoot,
 
       // 报告格式
       reporter: [

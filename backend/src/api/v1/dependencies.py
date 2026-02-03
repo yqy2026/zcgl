@@ -6,6 +6,8 @@ class PDFProcessingServiceProtocol(Protocol):
 
     async def process(self, file_path: str) -> dict[str, object]: ...
 
+    async def extract_text_from_pdf(self, pdf_path: str) -> dict[str, object]: ...
+
 
 class PDFSessionServiceProtocol(Protocol):
     """Protocol for PDF session service"""

@@ -466,19 +466,29 @@ class AuditLogCRUD:
 
         start_date = datetime.now() - timedelta(days=days)
 
-        base_query = self._audit_query(db).filter(
-            AuditLog.action == "user_login",
-            AuditLog.created_at >= start_date,
+        total_logins = (
+            db.query(func.count(AuditLog.id))
+            .filter(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+            )
+            .scalar()
         )
-        total_logins = base_query.with_entities(func.count(AuditLog.id)).scalar()
         successful_logins = (
-            base_query.filter(AuditLog.response_status == 200)
-            .with_entities(func.count(AuditLog.id))
+            db.query(func.count(AuditLog.id))
+            .filter(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+                AuditLog.response_status == 200,
+            )
             .scalar()
         )
 
+        total_logins = int(total_logins or 0)
+        successful_logins = int(successful_logins or 0)
+
         # 失败登录次数
-        failed_logins = total_logins - successful_logins
+        failed_logins = max(total_logins - successful_logins, 0)
 
         return {
             "total_logins": total_logins,

@@ -53,6 +53,7 @@ export const useListData = <T, TFilters extends object>(
 
   const filtersRef = useRef(filters);
   const paginationRef = useRef(pagination);
+  const onErrorRef = useRef(onError);
 
   useEffect(() => {
     filtersRef.current = filters;
@@ -61,6 +62,10 @@ export const useListData = <T, TFilters extends object>(
   useEffect(() => {
     paginationRef.current = pagination;
   }, [pagination]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const loadList = useCallback(
     async (loadOptions?: LoadListOptions<TFilters>) => {
@@ -99,14 +104,14 @@ export const useListData = <T, TFilters extends object>(
       } catch (error) {
         setData([]);
         setError(error);
-        if (onError != null) {
-          onError(error);
+        if (onErrorRef.current != null) {
+          onErrorRef.current(error);
         }
       } finally {
         setLoading(false);
       }
     },
-    [fetcher, onError, setFilters]
+    [fetcher, setFilters]
   );
 
   const applyFilters = useCallback(

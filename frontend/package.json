@@ -107,7 +107,7 @@
     "diagnose": "node scripts/diagnose/run-diagnostics.js",
     "diagnose:headful": "HEADLESS=false pnpm diagnose",
     "diagnose:routes": "PAGES=/dashboard,/assets/list,/rental/contracts pnpm diagnose",
-    "diagnose:report": "start frontend/diagnostics/diagnostic-report-*.html"
+    "diagnose:report": "start ../test-results/frontend/diagnostics/diagnostic-report-*.html"
   },
   "typeCoverage": {
     "atLeast": 95,

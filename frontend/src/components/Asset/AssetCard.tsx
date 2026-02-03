@@ -136,7 +136,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ fontSize: '14px' }}
+              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -145,7 +145,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ fontSize: '14px' }}
+              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -154,7 +154,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.rentable_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ fontSize: '14px' }}
+              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -163,7 +163,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.rented_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ fontSize: '14px' }}
+              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
         </Row>

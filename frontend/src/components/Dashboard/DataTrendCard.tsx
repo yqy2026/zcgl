@@ -72,10 +72,12 @@ const DataTrendCard: React.FC<DataTrendCardProps> = ({
           value={value}
           precision={precision}
           suffix={suffix}
-          valueStyle={{
-            fontSize: size === 'large' ? 28 : size === 'small' ? 20 : 24,
-            fontWeight: 600,
-            color: color === 'default' ? COLORS.textPrimary : undefined,
+          styles={{
+            content: {
+              fontSize: size === 'large' ? 28 : size === 'small' ? 20 : 24,
+              fontWeight: 600,
+              color: color === 'default' ? COLORS.textPrimary : undefined,
+            },
           }}
         />
 

@@ -572,7 +572,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="枚举类型总数"
               value={statistics?.total_types ?? 0}
-              valueStyle={{ color: COLORS.primary }}
+              styles={{ content: { color: COLORS.primary } }}
             />
           </Card>
         </Col>
@@ -581,7 +581,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="启用类型"
               value={statistics?.active_types ?? 0}
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Card>
         </Col>
@@ -590,7 +590,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="枚举值总数"
               value={statistics?.total_values ?? 0}
-              valueStyle={{ color: COLORS.primary }}
+              styles={{ content: { color: COLORS.primary } }}
             />
           </Card>
         </Col>
@@ -599,7 +599,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="使用次数"
               value={statistics?.usage_count ?? 0}
-              valueStyle={{ color: COLORS.warning }}
+              styles={{ content: { color: COLORS.warning } }}
             />
           </Card>
         </Col>

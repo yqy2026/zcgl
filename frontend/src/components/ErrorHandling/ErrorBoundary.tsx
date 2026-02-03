@@ -262,7 +262,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
         title={getErrorTitle()}
         subTitle={getErrorDescription()}
         extra={[
-          <Space key="actions" direction="vertical" size="middle">
+          <Space key="actions" orientation="vertical" size="middle">
             <Space>
               {canRetry && (
                 <Button type="primary" onClick={onRetry}>
@@ -278,7 +278,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
 
             {isChunkLoadError && (
               <Alert
-                message="提示"
+                title="提示"
                 description="如果您经常遇到此错误，请尝试清除浏览器缓存或联系技术支持。"
                 type="info"
                 showIcon

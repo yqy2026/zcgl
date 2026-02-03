@@ -201,7 +201,7 @@ export class OwnershipService {
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
     try {
       const result = await apiClient.put<Ownership>(
-        `${this.baseUrl}/${id}/status`,
+        `${this.baseUrl}/${id}/toggle-status`,
         {},
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -225,7 +225,7 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     try {
-      const result = await apiClient.get<OwnershipStatisticsResponse>(`${this.baseUrl}/stats/overview`, {
+      const result = await apiClient.get<OwnershipStatisticsResponse>(`${this.baseUrl}/statistics/summary`, {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,

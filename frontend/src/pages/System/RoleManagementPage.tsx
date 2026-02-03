@@ -508,6 +508,7 @@ const RoleManagementPage: React.FC = () => {
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
               disabled={record.is_system}
+              aria-label="编辑"
             />
           </Tooltip>
           <Tooltip title="权限配置">
@@ -516,6 +517,7 @@ const RoleManagementPage: React.FC = () => {
               size="small"
               icon={<KeyOutlined />}
               onClick={() => handleManagePermissions(record)}
+              aria-label="权限配置"
             />
           </Tooltip>
           <Tooltip title={record.status === 'active' ? '停用' : '启用'}>
@@ -524,6 +526,7 @@ const RoleManagementPage: React.FC = () => {
               checked={record.status === 'active'}
               onChange={checked => handleToggleStatus(record, checked ? 'active' : 'inactive')}
               disabled={record.is_system}
+              aria-label={record.status === 'active' ? '停用' : '启用'}
             />
           </Tooltip>
           <Popconfirm
@@ -540,6 +543,7 @@ const RoleManagementPage: React.FC = () => {
                 danger
                 icon={<DeleteOutlined />}
                 disabled={record.is_system}
+                aria-label="删除"
               />
             </Tooltip>
           </Popconfirm>
@@ -572,7 +576,7 @@ const RoleManagementPage: React.FC = () => {
                   title="启用角色"
                   value={statistics.active}
                   prefix={<SafetyOutlined />}
-                  valueStyle={{ color: COLORS.success }}
+                  styles={{ content: { color: COLORS.success } }}
                 />
               </Card>
             </Col>
@@ -582,7 +586,7 @@ const RoleManagementPage: React.FC = () => {
                   title="系统角色"
                   value={statistics.system}
                   prefix={<SettingOutlined />}
-                  valueStyle={{ color: COLORS.primary }}
+                  styles={{ content: { color: COLORS.primary } }}
                 />
               </Card>
             </Col>

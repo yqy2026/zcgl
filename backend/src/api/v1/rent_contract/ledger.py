@@ -202,17 +202,15 @@ def update_rent_ledger(
     """
     更新租金台账信息（支付状态等）
     """
-    ledger = rent_ledger.get(db, id=ledger_id)
-    if not ledger:
-        raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
-
     if ledger_in.payment_status is not None:
         valid_statuses = [s.value for s in PaymentStatus]
         if ledger_in.payment_status not in valid_statuses:
             raise validation_error(f"支付状态必须是: {', '.join(valid_statuses)}")
 
     try:
-        updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
+        updated_ledger = rent_contract_service.update_ledger(
+            db=db, ledger_id=ledger_id, update_data=ledger_in
+        )
         return updated_ledger
     except Exception as e:
         if isinstance(e, BaseBusinessError):

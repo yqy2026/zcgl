@@ -359,7 +359,7 @@ const OptimizedAssetImport: React.FC = () => {
         {currentStep === 0 && (
           <div>
             <Alert
-              message="导入说明"
+              title="导入说明"
               description={
                 <div>
                   <p>• 支持Excel文件批量导入资产数据</p>
@@ -381,7 +381,7 @@ const OptimizedAssetImport: React.FC = () => {
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={12}>
                 <Card size="small" title="第一步：下载模板">
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" style={{ width: '100%' }}>
                     <Text>下载标准的Excel导入模板</Text>
                     <Button
                       type="primary"
@@ -397,7 +397,7 @@ const OptimizedAssetImport: React.FC = () => {
 
               <Col xs={24} sm={12}>
                 <Card size="small" title="第二步：上传文件">
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" style={{ width: '100%' }}>
                     <Text>选择填写好的Excel文件</Text>
                     <Upload.Dragger {...uploadProps}>
                       <p className="ant-upload-drag-icon">
@@ -546,7 +546,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="成功记录"
                     value={importResult.success}
-                    valueStyle={{ color: '#3f8600' }}
+                    styles={{ content: { color: '#3f8600' } }}
                   />
                 </Card>
               </Col>
@@ -555,7 +555,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="失败记录"
                     value={importResult.failed}
-                    valueStyle={{ color: importResult.failed > 0 ? '#cf1322' : '#d9d9d9' }}
+                    styles={{ content: { color: importResult.failed > 0 ? '#cf1322' : '#d9d9d9' } }}
                   />
                 </Card>
               </Col>
@@ -564,7 +564,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="总计"
                     value={importResult.total}
-                    valueStyle={{ color: COLORS.primary }}
+                    styles={{ content: { color: COLORS.primary } }}
                   />
                 </Card>
               </Col>

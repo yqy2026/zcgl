@@ -20,6 +20,7 @@ from ...models.asset import Asset
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
     PropertyCertificateCreate,
+    PropertyCertificateUpdate,
     PropertyOwnerCreate,
 )
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
@@ -43,6 +44,38 @@ class PropertyCertificateService:
         """
         self.db = db
         self.extractor = PropertyCertAdapter()
+
+    def list_certificates(
+        self, *, skip: int = 0, limit: int = 100
+    ) -> list[PropertyCertificate]:
+        """获取产权证列表"""
+        return property_certificate_crud.get_multi(
+            self.db, skip=skip, limit=limit
+        )
+
+    def get_certificate(self, certificate_id: str) -> PropertyCertificate | None:
+        """获取单个产权证"""
+        return property_certificate_crud.get(self.db, certificate_id)
+
+    def create_certificate(
+        self, certificate: PropertyCertificateCreate
+    ) -> PropertyCertificate:
+        """创建产权证"""
+        return property_certificate_crud.create(self.db, obj_in=certificate)
+
+    def update_certificate(
+        self,
+        certificate: PropertyCertificate,
+        update: PropertyCertificateUpdate,
+    ) -> PropertyCertificate:
+        """更新产权证"""
+        return property_certificate_crud.update(
+            self.db, db_obj=certificate, obj_in=update
+        )
+
+    def delete_certificate(self, certificate_id: str) -> None:
+        """删除产权证"""
+        property_certificate_crud.remove(self.db, id=certificate_id)
 
     async def extract_from_file(self, file_path: str, filename: str) -> dict[str, Any]:
         """

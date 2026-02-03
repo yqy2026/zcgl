@@ -1,6 +1,7 @@
 from datetime import date
 from typing import Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..crud.asset import SensitiveDataHandler
@@ -50,7 +51,17 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
     def get(self, db: Session, id: Any, use_cache: bool = True) -> RentContract | None:
         """获取合同 - 解密敏感字段"""
-        result = super().get(db=db, id=id, use_cache=use_cache)
+        result = (
+            db.query(RentContract)
+            .filter(
+                RentContract.id == id,
+                or_(
+                    RentContract.data_status.is_(None),
+                    RentContract.data_status != "已删除",
+                ),
+            )
+            .first()
+        )
         if result is not None:
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
@@ -65,9 +76,18 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         **kwargs: Any,
     ) -> list[RentContract]:
         """获取多个合同 - 解密敏感字段"""
-        results = super().get_multi(
-            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
+        query = (
+            db.query(RentContract)
+            .filter(
+                or_(
+                    RentContract.data_status.is_(None),
+                    RentContract.data_status != "已删除",
+                )
+            )
+            .offset(skip)
+            .limit(limit)
         )
+        results = query.all()
         for item in results:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
         return results
@@ -109,7 +129,13 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         return (
             db.query(RentContract)
             .join(Ownership, RentContract.ownership_id == Ownership.id, isouter=True)
-            .filter(RentContract.id == id)
+            .filter(
+                RentContract.id == id,
+                or_(
+                    RentContract.data_status.is_(None),
+                    RentContract.data_status != "已删除",
+                ),
+            )
             .first()
         )
 
@@ -185,6 +211,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         end_date: date | None,
     ):
         """应用合同筛选条件（用于列表与统计）"""
+        query = query.filter(
+            or_(RentContract.data_status.is_(None), RentContract.data_status != "已删除")
+        )
         if asset_id:
             query = query.join(
                 rent_contract_assets,

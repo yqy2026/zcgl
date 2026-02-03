@@ -62,9 +62,9 @@ const SystemMonitoringDetails: React.FC<SystemMonitoringDetailsProps> = ({
                 value={application?.error_rate ?? 0}
                 suffix="%"
                 precision={2}
-                valueStyle={{
+                styles={{ content: {
                   color: getStatusColor((application?.error_rate ?? 0) > 5 ? 'critical' : 'normal'),
-                }}
+                } }}
               />
             </Col>
             <Col span={12}>

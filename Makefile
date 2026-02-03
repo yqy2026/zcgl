@@ -68,7 +68,8 @@ backend-org-cov:
 			--cov=src.crud.organization --cov-report=term-missing -v
 
 secrets:
-	@python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32)); print('DATA_ENCRYPTION_KEY=\"%s\"' % secrets.token_urlsafe(32))"
+	@python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32))"
+	@cd backend && python -m src.core.encryption
 
 migrate:
 	cd backend && alembic upgrade head

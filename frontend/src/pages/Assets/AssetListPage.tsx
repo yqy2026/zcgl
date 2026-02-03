@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Typography, Button, Space, Row, Col, Alert } from 'antd';
+import { Typography, Button, Space, Alert } from 'antd';
 import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { useQuery } from '@tanstack/react-query';
@@ -249,7 +249,7 @@ const AssetListPage: React.FC = () => {
     return (
       <PageContainer>
         <Alert
-          message="数据加载失败"
+          title="数据加载失败"
           description={
             error instanceof Error && error.message.includes('Network Error')
               ? '无法连接到服务器，请检查后端服务是否正常运行'
@@ -270,35 +270,35 @@ const AssetListPage: React.FC = () => {
   return (
     <PageContainer>
       <ContentSection spacing="lg">
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              资产列表
-            </Title>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate('/assets/new')}
-              >
-                新增资产
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Title level={2} style={{ margin: 0 }}>
+            资产列表
+          </Title>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/assets/new')}>
+              新增资产
+            </Button>
+            <Button icon={<ImportOutlined />} onClick={() => navigate('/assets/import')}>
+              导入资产
+            </Button>
+            <Button icon={<ExportOutlined />} onClick={handleExportAll}>
+              导出全部
+            </Button>
+            {selectedRowKeys.length > 0 && (
+              <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
+                导出选中 ({selectedRowKeys.length})
               </Button>
-              <Button icon={<ImportOutlined />} onClick={() => navigate('/assets/import')}>
-                导入资产
-              </Button>
-              <Button icon={<ExportOutlined />} onClick={handleExportAll}>
-                导出全部
-              </Button>
-              {selectedRowKeys.length > 0 && (
-                <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
-                  导出选中 ({selectedRowKeys.length})
-                </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
+            )}
+          </Space>
+        </div>
       </ContentSection>
 
       {/* 搜索组件 */}

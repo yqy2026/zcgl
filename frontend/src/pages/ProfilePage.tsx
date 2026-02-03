@@ -230,7 +230,7 @@ const ProfilePage: React.FC = () => {
               </Space>
             }
           >
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="large" style={{ width: '100%' }}>
               <div
                 style={{
                   padding: '16px',

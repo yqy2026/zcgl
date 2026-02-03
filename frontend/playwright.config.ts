@@ -6,6 +6,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 
+const artifactsRoot = path.resolve(__dirname, '../test-results/frontend/playwright');
+const reportRoot = path.join(artifactsRoot, 'reports');
+const outputRoot = path.join(artifactsRoot, 'output');
+
 // 测试配置
 const config = defineConfig({
   // 测试目录
@@ -33,27 +37,27 @@ const config = defineConfig({
     [
       'html',
       {
-        outputFolder: './tests/e2e/reports/html',
+        outputFolder: path.join(reportRoot, 'html'),
         open: process.env.CI ? 'never' : 'on-failure',
       },
     ],
     [
       'json',
       {
-        outputFile: './tests/e2e/reports/test-results.json',
+        outputFile: path.join(reportRoot, 'test-results.json'),
       },
     ],
     [
       'junit',
       {
-        outputFile: './tests/e2e/reports/junit.xml',
+        outputFile: path.join(reportRoot, 'junit.xml'),
       },
     ],
     process.env.CI ? ['github'] : ['list'],
   ],
 
   // 输出目录
-  outputDir: './tests/e2e/test-results',
+  outputDir: outputRoot,
 
   // 测试文件匹配模式
   testMatch: ['**/*.spec.ts', '**/*.e2e.ts', '**/*.test.ts'],

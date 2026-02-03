@@ -114,7 +114,7 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
         title={config.title}
         subTitle={config.subtitle}
         extra={
-          <Space direction="vertical" size="middle">
+          <Space orientation="vertical" size="middle">
             <Space wrap>
               {onRetry && (
                 <Button type="primary" icon={<ReloadOutlined />} onClick={onRetry}>
@@ -130,10 +130,10 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
 
             {showDetails && (
               <Alert
-                message="详细错误信息"
+                title="详细错误信息"
                 description={
                   <div style={{ textAlign: 'left', marginTop: '16px' }}>
-                    <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                       {error?.status !== null && error?.status !== undefined && (
                         <div>
                           <Text strong>状态码:</Text> {error.status}

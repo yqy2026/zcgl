@@ -84,7 +84,7 @@ const DictionaryPage: React.FC = () => {
       category: 'all',
     },
     initialPageSize: 10,
-    filterFn: (items, filters) => {
+    filterFn: useCallback((items, filters) => {
       const trimmedKeyword = filters.keyword.trim().toLowerCase();
       return items.filter(item => {
         if (filters.category !== 'all' && item.type.category !== filters.category) {
@@ -111,7 +111,7 @@ const DictionaryPage: React.FC = () => {
 
         return typeMatch || valueMatch;
       });
-    },
+    }, []),
   });
 
   const handleDetailError = useCallback((error: unknown) => {

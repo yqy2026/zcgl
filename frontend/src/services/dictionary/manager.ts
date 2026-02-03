@@ -172,6 +172,10 @@ class DictionaryManagerService {
   private readonly baseUrl = '/enum-fields';
   private readonly DEFAULT_TIMEOUT = 10000; // 默认超时时间
   private readonly BATCH_SIZE = 50; // 批量操作大小
+  private readonly enumTypeCacheTtlMs = 5 * 60 * 1000;
+  private enumTypeIdByCode = new Map<string, string>();
+  private enumTypeCodeById = new Map<string, string>();
+  private enumTypeCacheAt: number | null = null;
 
   /**
    * 获取所有枚举类型（用于管理界面）
@@ -216,17 +220,23 @@ class DictionaryManagerService {
           }
         );
 
+        this.refreshEnumTypeCache(enumTypes);
+
         return enumTypes;
       }
 
       // 如果不是字符串数组，直接返回
-      return Array.isArray(data) ? data : [];
+      const normalized = Array.isArray(data) ? data : [];
+      this.refreshEnumTypeCache(normalized);
+      return normalized;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       dictLogger.error('获取枚举类型失败:', undefined, { error: enhancedError.message });
 
       // 返回基于配置的备用数据
-      return this.getFallbackEnumFieldTypes();
+      const fallback = this.getFallbackEnumFieldTypes();
+      this.refreshEnumTypeCache(fallback);
+      return fallback;
     }
   }
 
@@ -250,13 +260,78 @@ class DictionaryManagerService {
     }));
   }
 
+  private refreshEnumTypeCache(types: EnumFieldType[]): void {
+    this.enumTypeIdByCode.clear();
+    this.enumTypeCodeById.clear();
+
+    for (const type of types) {
+      if (type.code !== undefined && type.code !== null && type.code !== '') {
+        this.enumTypeIdByCode.set(type.code, type.id);
+      }
+      if (type.id !== undefined && type.id !== null && type.id !== '') {
+        this.enumTypeCodeById.set(type.id, type.code);
+      }
+    }
+
+    this.enumTypeCacheAt = Date.now();
+  }
+
+  private isEnumTypeCacheFresh(): boolean {
+    if (this.enumTypeCacheAt === null) {
+      return false;
+    }
+
+    return Date.now() - this.enumTypeCacheAt < this.enumTypeCacheTtlMs;
+  }
+
+  private async resolveEnumTypeInfo(
+    typeIdOrCode: string
+  ): Promise<{ id: string; code?: string }> {
+    if (typeIdOrCode === '') {
+      return { id: typeIdOrCode };
+    }
+
+    const cachedId = this.enumTypeIdByCode.get(typeIdOrCode);
+    if (cachedId !== undefined) {
+      return { id: cachedId, code: typeIdOrCode };
+    }
+
+    const cachedCode = this.enumTypeCodeById.get(typeIdOrCode);
+    if (cachedCode !== undefined) {
+      return { id: typeIdOrCode, code: cachedCode };
+    }
+
+    if (this.isEnumTypeCacheFresh() === false) {
+      const types = await this.getEnumFieldTypes();
+      const matchByCode = types.find(type => type.code === typeIdOrCode);
+      if (matchByCode !== undefined) {
+        return { id: matchByCode.id, code: matchByCode.code };
+      }
+
+      const matchById = types.find(type => type.id === typeIdOrCode);
+      if (matchById !== undefined) {
+        return { id: matchById.id, code: matchById.code };
+      }
+    }
+
+    return { id: typeIdOrCode };
+  }
+
   /**
    * 获取特定类型的枚举值
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
+    const resolved = await this.resolveEnumTypeInfo(typeId);
+    const requestTypeId = resolved.id;
+    const requestTypeCode = resolved.code ?? typeId;
+
+    if (requestTypeId === '') {
+      return [];
+    }
+
     try {
       const result = await apiClient.get<EnumFieldValue[]>(
-        `${this.baseUrl}/${typeId}/options`,
+        `${this.baseUrl}/types/${requestTypeId}/values`,
         {
           cache: true,
           timeout: this.DEFAULT_TIMEOUT,
@@ -278,6 +353,10 @@ class DictionaryManagerService {
       const mappedData = dataArray.map((rawOption: unknown, index: number) => {
         const option = rawOption as Record<string, unknown>;
         const id = typeof option.id === 'string' ? option.id : undefined;
+        const enumTypeId =
+          typeof option.enum_type_id === 'string' && option.enum_type_id !== ''
+            ? option.enum_type_id
+            : requestTypeId;
         const label =
           (typeof option.label === 'string' && option.label !== '' ? option.label : undefined) ??
           (typeof option.name === 'string' && option.name !== '' ? option.name : undefined) ??
@@ -302,7 +381,7 @@ class DictionaryManagerService {
 
         return {
           id: id ?? `dict-${typeId}-${index}`,
-          enum_type_id: typeId,
+          enum_type_id: enumTypeId,
           label,
           value,
           code,
@@ -324,12 +403,12 @@ class DictionaryManagerService {
       dictLogger.error(`获取枚举值失败 [${typeId}]:`, undefined, { error: enhancedError.message });
 
       // 尝试从配置中获取备用数据
-      const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeId);
+      const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === requestTypeCode);
       if (config) {
         return config.fallbackOptions.map((option, index) => {
           return {
-            id: `fallback-${typeId}-${index}`,
-            enum_type_id: typeId,
+            id: `fallback-${requestTypeCode}-${index}`,
+            enum_type_id: requestTypeId,
             label: option.label,
             value: option.value,
             code: option.code,
@@ -518,8 +597,9 @@ class DictionaryManagerService {
     data: CreateEnumFieldValueRequest
   ): Promise<EnumFieldValue | null> {
     try {
+      const resolved = await this.resolveEnumTypeInfo(typeId);
       const result = await apiClient.post<EnumFieldValue>(
-        `${this.baseUrl}/${typeId}/values`,
+        `${this.baseUrl}/types/${resolved.id}/values`,
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -549,7 +629,7 @@ class DictionaryManagerService {
   ): Promise<EnumFieldValue | null> {
     try {
       const result = await apiClient.put<EnumFieldValue>(
-        `${this.baseUrl}/${typeId}/values/${valueId}`,
+        `${this.baseUrl}/values/${valueId}`,
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -564,7 +644,7 @@ class DictionaryManagerService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      dictLogger.error('更新枚举值失败:', undefined, { error: enhancedError.message });
+      dictLogger.error('更新枚举值失败:', undefined, { error: enhancedError.message, typeId });
       return null;
     }
   }
@@ -575,7 +655,7 @@ class DictionaryManagerService {
   async deleteEnumFieldValue(typeId: string, valueId: string): Promise<boolean> {
     try {
       const result = await apiClient.delete<{ success: boolean; message: string }>(
-        `${this.baseUrl}/${typeId}/values/${valueId}`,
+        `${this.baseUrl}/values/${valueId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -589,7 +669,7 @@ class DictionaryManagerService {
       return result.data!.success;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      dictLogger.error('删除枚举值失败:', undefined, { error: enhancedError.message });
+      dictLogger.error('删除枚举值失败:', undefined, { error: enhancedError.message, typeId });
       return false;
     }
   }
@@ -599,28 +679,50 @@ class DictionaryManagerService {
    */
   async getEnumFieldUsageStats(typeId: string): Promise<DictionaryUsageStats> {
     try {
-      const result = await apiClient.get<DictionaryUsageStats>(
-        `${this.baseUrl}/${typeId}/usage`,
-        {
-          cache: true,
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const resolved = typeId !== '' ? await this.resolveEnumTypeInfo(typeId) : { id: '' };
+      const params: Record<string, string> = {};
+      if (resolved.id !== '') {
+        params.enum_type_id = resolved.id;
+      }
+
+      const result = await apiClient.get<unknown>(`${this.baseUrl}/usage`, {
+        params,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (result.success === false) {
         throw new Error(`获取枚举字段使用统计失败: ${result.error}`);
       }
 
-      const data = result.data!;
+      const data = result.data;
+      const usageRecords = Array.isArray(data) ? data : [];
+      const usageByField: Record<string, number> = {};
+      let activeCount = 0;
+
+      usageRecords.forEach(record => {
+        const usage = record as Record<string, unknown>;
+        const fieldName = typeof usage.field_name === 'string' ? usage.field_name : '';
+        const tableName = typeof usage.table_name === 'string' ? usage.table_name : '';
+        const key = tableName !== '' ? `${tableName}.${fieldName}` : fieldName;
+
+        if (key !== '') {
+          usageByField[key] = (usageByField[key] ?? 0) + 1;
+        }
+
+        if (usage.is_active === true) {
+          activeCount += 1;
+        }
+      });
 
       // 确保返回完整的统计信息
       return {
-        total_records: data.total_records ?? 0,
-        active_records: data.active_records ?? 0,
-        usage_by_field: data.usage_by_field ?? {},
+        total_records: usageRecords.length,
+        active_records: activeCount,
+        usage_by_field: usageByField,
         last_updated: new Date().toISOString(),
-        popular_values: data.popular_values ?? [],
+        popular_values: [],
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

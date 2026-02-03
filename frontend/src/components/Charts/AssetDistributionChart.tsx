@@ -268,7 +268,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   if (error !== undefined && error !== null) {
     return (
       <Alert
-        message="数据加载失败"
+        title="数据加载失败"
         description="无法加载资产分布统计数据，请稍后重试"
         type="error"
         showIcon
@@ -287,7 +287,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
               value={data?.total_assets ?? 0}
               suffix="个"
               prefix={<HomeOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -299,7 +299,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
               value={data?.summary?.total_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -311,7 +311,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
               value={data?.by_ownership_entity?.length ?? 0}
               suffix="个"
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -323,7 +323,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
               value={data?.summary?.commercial_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>

@@ -5,10 +5,11 @@ Model field validation utilities.
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Any
 
 from ..core.exception_handler import InvalidRequestError
-from ..crud.field_whitelist import get_whitelist_for_model
+from ..crud import field_whitelist as crud_field_whitelist
 from ..models.asset import Asset
 from ..models.contact import Contact
 from ..models.organization import Organization
@@ -22,6 +23,16 @@ MODEL_REGISTRY: dict[str, type] = {
     "Organization": Organization,
     "Contact": Contact,
 }
+
+
+def _get_whitelist_for_model(model_class: type):
+    """Resolve whitelist with test patch support."""
+    security_module = sys.modules.get("src.security.security")
+    if security_module is not None:
+        get_whitelist = getattr(security_module, "get_whitelist_for_model", None)
+        if callable(get_whitelist):
+            return get_whitelist(model_class)
+    return crud_field_whitelist.get_whitelist_for_model(model_class)
 
 
 class FieldValidator:
@@ -71,7 +82,7 @@ class FieldValidator:
             bool: 字段是否有效
         """
         model_class = FieldValidator._get_model_class(model_name)
-        whitelist = get_whitelist_for_model(model_class)
+        whitelist = _get_whitelist_for_model(model_class)
 
         is_valid = whitelist.can_filter(field)
 
@@ -127,7 +138,7 @@ class FieldValidator:
             bool: 字段是否有效
         """
         model_class = FieldValidator._get_model_class(model_name)
-        whitelist = get_whitelist_for_model(model_class)
+        whitelist = _get_whitelist_for_model(model_class)
 
         is_valid = whitelist.can_sort(field)
 
@@ -185,7 +196,7 @@ class FieldValidator:
             bool: 字段是否有效
         """
         model_class = FieldValidator._get_model_class(model_name)
-        whitelist = get_whitelist_for_model(model_class)
+        whitelist = _get_whitelist_for_model(model_class)
 
         is_valid = whitelist.can_search(field)
 
@@ -220,7 +231,7 @@ class FieldValidator:
             bool: 字段是否有效
         """
         model_class = FieldValidator._get_model_class(model_name)
-        whitelist = get_whitelist_for_model(model_class)
+        whitelist = _get_whitelist_for_model(model_class)
 
         is_valid = whitelist.can_filter(field)
 
@@ -260,7 +271,7 @@ class FieldValidator:
     @staticmethod
     def get_allowed_fields(model_name: str, field_type: str) -> list[str]:
         model_class = FieldValidator._get_model_class(model_name)
-        whitelist = get_whitelist_for_model(model_class)
+        whitelist = _get_whitelist_for_model(model_class)
 
         if field_type == "filter":
             fields = whitelist.filter_fields

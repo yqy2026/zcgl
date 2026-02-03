@@ -91,7 +91,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 24 }}>
-        <Alert type="error" message="加载失败" />
+        <Alert type="error" title="加载失败" />
       </div>
     );
   }
@@ -99,7 +99,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
   if (!certificate) {
     return (
       <div style={{ padding: 24 }}>
-        <Alert type="warning" message="未找到产权证信息" />
+        <Alert type="warning" title="未找到产权证信息" />
       </div>
     );
   }
@@ -236,7 +236,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
             返回列表
@@ -357,7 +357,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
                   ))}
                 </Space>
               ) : (
-                <Alert type="info" message="暂无关联资产" />
+                <Alert type="info" title="暂无关联资产" />
               )}
             </Card>
           </Col>

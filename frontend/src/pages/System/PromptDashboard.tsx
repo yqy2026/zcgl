@@ -305,7 +305,7 @@ const PromptDashboard: React.FC = () => {
     if (suggestions.length === 0) {
       return (
         <Alert
-          message="表现优秀！"
+          title="表现优秀！"
           description="当前 Prompt 性能表现良好，暂无明显优化建议。"
           type="success"
           showIcon
@@ -314,11 +314,11 @@ const PromptDashboard: React.FC = () => {
     }
 
     return (
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {suggestions.map(s => (
           <Alert
             key={`${s.field_name}-${s.priority}`}
-            message={
+            title={
               <Space>
                 <span>
                   <Tag
@@ -462,7 +462,7 @@ const PromptDashboard: React.FC = () => {
         <Alert
           style={{ marginBottom: 24 }}
           type="error"
-          message="数据加载失败"
+          title="数据加载失败"
           description={errorMessage ?? '请稍后重试'}
           showIcon
         />
@@ -485,7 +485,7 @@ const PromptDashboard: React.FC = () => {
               <Statistic
                 title="活跃 Prompt"
                 value={statistics.status_distribution.find(s => s.status === 'ACTIVE')?.count ?? 0}
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
                 suffix={<span style={{ fontSize: 14 }}>/ {statistics.total_prompts}</span>}
               />
             </Card>
@@ -496,9 +496,9 @@ const PromptDashboard: React.FC = () => {
                 title="平均准确率"
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{
+                styles={{ content: {
                   color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
-                }}
+                } }}
                 prefix={
                   accuracyTrend === 'up' ? (
                     <RiseOutlined />
@@ -515,9 +515,9 @@ const PromptDashboard: React.FC = () => {
                 title="平均置信度"
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                valueStyle={{
+                styles={{ content: {
                   color: statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
-                }}
+                } }}
                 prefix={
                   confidenceTrend === 'up' ? (
                     <RiseOutlined />
@@ -555,14 +555,14 @@ const PromptDashboard: React.FC = () => {
                     title="平均准确率"
                     value={(selectedPrompt.avg_accuracy * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{
+                    styles={{ content: {
                       color:
                         selectedPrompt.avg_accuracy >= 0.85
                           ? COLORS.success
                           : selectedPrompt.avg_accuracy >= 0.75
                             ? COLORS.warning
                             : COLORS.error,
-                    }}
+                    } }}
                   />
                 </Col>
                 <Col span={6}>
@@ -570,14 +570,14 @@ const PromptDashboard: React.FC = () => {
                     title="平均置信度"
                     value={(selectedPrompt.avg_confidence * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{
+                    styles={{ content: {
                       color:
                         selectedPrompt.avg_confidence >= 0.8
                           ? COLORS.success
                           : selectedPrompt.avg_confidence >= 0.7
                             ? COLORS.warning
                             : COLORS.error,
-                    }}
+                    } }}
                   />
                 </Col>
                 <Col span={6}>

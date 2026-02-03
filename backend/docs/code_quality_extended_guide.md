@@ -809,7 +809,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        file: backend/coverage.xml
+        file: test-results/backend/coverage/coverage.xml
 ```
 
 ## 📊 质量指标监控
@@ -921,7 +921,7 @@ def generate_coverage_report():
         json.dump(report, f, indent=2)
 
     # 生成HTML报告
-    cov.html_report(directory="htmlcov")
+    cov.html_report(directory="test-results/backend/coverage/html")
 
     return report
 ```

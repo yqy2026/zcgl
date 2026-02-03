@@ -4,14 +4,15 @@ from functools import wraps
 from typing import Any, cast
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exception_handler import forbidden, internal_error, unauthorized
-from ..database import get_db
+from ..database import get_async_db
 from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user
 from ..models.auth import User
 from ..services import RBACService
+from ..utils.async_db import AsyncServiceClassAdapter
 
 
 class AssetNotFoundError(Exception):
@@ -59,11 +60,11 @@ def permission_required[**P, R](
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
-            db = cast(Session, db)
+            db = cast(AsyncSession, db)
 
             try:
                 # 初始化RBAC服务
-                rbac_service = RBACService(db)
+                rbac_service = AsyncServiceClassAdapter(db, RBACService)
 
                 # 检查基础权限
                 user_id_value: str = str(getattr(current_user, "id", ""))
@@ -141,11 +142,11 @@ def role_required[**P, R](
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
-            db = cast(Session, db)
+            db = cast(AsyncSession, db)
 
-            rbac_service = RBACService(db)
+            rbac_service = AsyncServiceClassAdapter(db, RBACService)
             user_id_value: str = str(getattr(current_user, "id", ""))
-            roles = rbac_service.get_user_roles(user_id_value)
+            roles = await rbac_service.get_user_roles(user_id_value)
             role_names = {role.name for role in roles}
             current_role = getattr(current_user, "role", None)
             if current_role is not None:
@@ -182,7 +183,7 @@ def organization_required[**P, R](
             db = kwargs.get("db")
             if not db:
                 raise internal_error("数据库会话未找到")
-            db = cast(Session, db)
+            db = cast(AsyncSession, db)
 
             # 获取目标组织ID
             target_org_id = kwargs.get(organization_id_param)
@@ -191,7 +192,7 @@ def organization_required[**P, R](
             target_org_id_value = str(target_org_id)
 
             # 检查组织访问权限
-            rbac_service = RBACService(db)
+            rbac_service = AsyncServiceClassAdapter(db, RBACService)
             has_access = await rbac_service.check_organization_access(
                 user_id=str(current_user.id), organization_id=target_org_id_value
             )
@@ -209,18 +210,19 @@ def organization_required[**P, R](
 # 权限依赖工厂函数
 def get_current_user_with_permissions(
     resource: str, action: str
-) -> Callable[[User, Session], Any]:
+) -> Callable[[User, AsyncSession], Any]:
     """
     获取具有特定权限的当前用户
     """
 
     async def dependency(
-        current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_db),
     ) -> User:
         if not current_user:
             raise unauthorized("未认证用户")
 
-        rbac_service = RBACService(db)
+        rbac_service = AsyncServiceClassAdapter(db, RBACService)
         user_id_value: str = str(getattr(current_user, "id", ""))
         has_permission = await rbac_service.check_user_permission(
             user_id=user_id_value, resource=resource, action=action
@@ -235,35 +237,35 @@ def get_current_user_with_permissions(
 
 
 # 预定义权限依赖
-def require_asset_view() -> Callable[[User, Session], Any]:
+def require_asset_view() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "view")
 
 
-def require_asset_create() -> Callable[[User, Session], Any]:
+def require_asset_create() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "create")
 
 
-def require_asset_edit() -> Callable[[User, Session], Any]:
+def require_asset_edit() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "edit")
 
 
-def require_asset_delete() -> Callable[[User, Session], Any]:
+def require_asset_delete() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "delete")
 
 
-def require_user_management() -> Callable[[User, Session], Any]:
+def require_user_management() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("user", "view")
 
 
-def require_role_management() -> Callable[[User, Session], Any]:
+def require_role_management() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("role", "view")
 
 
-def require_system_logs() -> Callable[[User, Session], Any]:
+def require_system_logs() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("system", "logs")
 
 
-def require_organization_management() -> Callable[[User, Session], Any]:
+def require_organization_management() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("organization", "view")
 
 
@@ -271,10 +273,10 @@ def require_organization_management() -> Callable[[User, Session], Any]:
 class PermissionChecker:
     """权限检查工具类"""
 
-    def __init__(self, db: Session, user: User):
+    def __init__(self, db: AsyncSession, user: User):
         self.db = db
         self.user = user
-        self.rbac_service = RBACService(db)
+        self.rbac_service = AsyncServiceClassAdapter(db, RBACService)
 
     async def has_permission(self, resource: str, action: str) -> bool:
         """检查用户是否具有指定权限"""
@@ -302,19 +304,19 @@ class PermissionChecker:
             user_id=user_id_value, organization_id=organization_id
         )
 
-    def has_role(self, role_code: str) -> bool:
+    async def has_role(self, role_code: str) -> bool:
         """检查用户是否具有指定角色"""
         user_id_value: str = getattr(self.user, "id", "")
-        roles = self.rbac_service.get_user_roles(user_id_value)
+        roles = await self.rbac_service.get_user_roles(user_id_value)
         role_names = {role.name for role in roles}
         current_role = getattr(self.user, "role", None)
         if current_role is not None:
             role_names.add(str(current_role))
         return role_code in role_names
 
-    def is_admin(self) -> bool:
+    async def is_admin(self) -> bool:
         """检查用户是否是管理员"""
-        return self.has_role("admin")
+        return await self.has_role("admin")
 
 
 # 便捷权限检查装饰器

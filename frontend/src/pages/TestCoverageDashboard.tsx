@@ -420,7 +420,7 @@ const TestCoverageDashboard: React.FC = () => {
         <Alert
           style={{ marginBottom: 24 }}
           type={qualityGate.passed ? 'success' : 'error'}
-          message={
+          title={
             qualityGate.passed
               ? '✅ 质量门禁通过 - 所有覆盖率指标都达到要求'
               : '❌ 质量门禁失败 - 存在不达标的覆盖率指标'
@@ -448,12 +448,12 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.total_coverage ?? 0}
               precision={1}
               suffix="%"
-              valueStyle={{
+              styles={{ content: {
                 color:
                   (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75)
                     ? COLORS.success
                     : COLORS.error,
-              }}
+              } }}
               prefix={
                 (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? (
                   <RiseOutlined />
@@ -476,12 +476,12 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.backend_coverage ?? 0}
               precision={1}
               suffix="%"
-              valueStyle={{
+              styles={{ content: {
                 color:
                   (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80)
                     ? COLORS.success
                     : COLORS.error,
-              }}
+              } }}
               prefix={
                 (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? (
                   <CheckCircleOutlined />
@@ -504,12 +504,12 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.frontend_coverage ?? 0}
               precision={1}
               suffix="%"
-              valueStyle={{
+              styles={{ content: {
                 color:
                   (coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70)
                     ? COLORS.success
                     : COLORS.error,
-              }}
+              } }}
               prefix={
                 (coverageReport?.frontend_coverage ?? 0) >=
                 (thresholds?.frontend_threshold ?? 70) ? (

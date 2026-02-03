@@ -241,7 +241,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             <Statistic
               title="签订日期"
               value={new Date(contract.sign_date).toLocaleDateString('zh-CN')}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Col>
 
@@ -249,7 +249,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             <Statistic
               title="租期开始"
               value={new Date(contract.start_date).toLocaleDateString('zh-CN')}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Col>
 
@@ -257,7 +257,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             <Statistic
               title="租期结束"
               value={new Date(contract.end_date).toLocaleDateString('zh-CN')}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Col>
 
@@ -266,7 +266,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               title="总押金"
               value={contract.total_deposit}
               prefix="¥"
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Col>
 
@@ -276,7 +276,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               value={stats.avgMonthlyRent}
               prefix="¥"
               precision={2}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Col>
 
@@ -288,7 +288,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
                 contract.payment_cycle ||
                 '按月'
               }
-              valueStyle={{ color: '#13c2c2' }}
+              styles={{ content: { color: '#13c2c2' } }}
             />
           </Col>
         </Row>

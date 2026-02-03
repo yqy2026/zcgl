@@ -28,7 +28,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '权属类别',
     category: '资产属性',
     description: '资产权属类别分类',
-    apiEndpoint: '/dictionaries/ownership_category/options',
+    apiEndpoint: '/system/dictionaries/ownership_category/options',
     fallbackOptions: [
       { label: '国有资产', value: 'state_owned', code: 'state_owned', sort_order: 1 },
       { label: '集体资产', value: 'collective', code: 'collective', sort_order: 2 },
@@ -43,7 +43,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '物业性质',
     category: '资产属性',
     description: '物业性质分类',
-    apiEndpoint: '/dictionaries/property_nature/options',
+    apiEndpoint: '/system/dictionaries/property_nature/options',
     fallbackOptions: [
       { label: '经营性', value: 'commercial', code: 'commercial', sort_order: 1 },
       { label: '非经营性', value: 'non_commercial', code: 'non_commercial', sort_order: 2 },
@@ -55,7 +55,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '使用状态',
     category: '资产状态',
     description: '资产使用状态分类',
-    apiEndpoint: '/dictionaries/usage_status/options',
+    apiEndpoint: '/system/dictionaries/usage_status/options',
     fallbackOptions: [
       { label: '出租', value: 'rented', code: 'rented', sort_order: 1 },
       { label: '空置', value: 'vacant', code: 'vacant', sort_order: 2 },
@@ -72,7 +72,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '权属状态',
     category: '资产状态',
     description: '资产权属状态分类',
-    apiEndpoint: '/dictionaries/ownership_status/options',
+    apiEndpoint: '/system/dictionaries/ownership_status/options',
     fallbackOptions: [
       { label: '已确权', value: 'confirmed', code: 'confirmed', sort_order: 1 },
       { label: '未确权', value: 'unconfirmed', code: 'unconfirmed', sort_order: 2 },
@@ -85,7 +85,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '业态分类',
     category: '资产分类',
     description: '资产业态分类',
-    apiEndpoint: '/dictionaries/business_category/options',
+    apiEndpoint: '/system/dictionaries/business_category/options',
     fallbackOptions: [
       { label: '商业', value: 'commercial', code: 'commercial', sort_order: 1 },
       { label: '办公', value: 'office', code: 'office', sort_order: 2 },
@@ -101,7 +101,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '证载用途',
     category: '资产用途',
     description: '证载用途分类',
-    apiEndpoint: '/dictionaries/certificated_usage/options',
+    apiEndpoint: '/system/dictionaries/certificated_usage/options',
     fallbackOptions: [
       { label: '商业', value: 'commercial', code: 'commercial', sort_order: 1 },
       { label: '办公', value: 'office', code: 'office', sort_order: 2 },
@@ -116,7 +116,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '实际用途',
     category: '资产用途',
     description: '实际用途分类',
-    apiEndpoint: '/dictionaries/actual_usage/options',
+    apiEndpoint: '/system/dictionaries/actual_usage/options',
     fallbackOptions: [
       { label: '商业', value: 'commercial', code: 'commercial', sort_order: 1 },
       { label: '办公', value: 'office', code: 'office', sort_order: 2 },
@@ -131,7 +131,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '租户类型',
     category: '租赁信息',
     description: '租户类型分类',
-    apiEndpoint: '/dictionaries/tenant_type/options',
+    apiEndpoint: '/system/dictionaries/tenant_type/options',
     fallbackOptions: [
       { label: '个人', value: 'individual', code: 'individual', sort_order: 1 },
       { label: '企业', value: 'enterprise', code: 'enterprise', sort_order: 2 },
@@ -145,7 +145,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '合同状态',
     category: '租赁信息',
     description: '合同状态分类',
-    apiEndpoint: '/dictionaries/contract_status/options',
+    apiEndpoint: '/system/dictionaries/contract_status/options',
     fallbackOptions: [
       { label: '生效中', value: 'active', code: 'active', sort_order: 1 },
       { label: '已到期', value: 'expired', code: 'expired', sort_order: 2 },
@@ -159,7 +159,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '经营模式',
     category: '经营信息',
     description: '经营模式分类',
-    apiEndpoint: '/dictionaries/business_model/options',
+    apiEndpoint: '/system/dictionaries/business_model/options',
     fallbackOptions: [
       { label: '承租转租', value: 'sublease', code: 'sublease', sort_order: 1 },
       { label: '委托经营', value: 'entrusted', code: 'entrusted', sort_order: 2 },
@@ -173,7 +173,7 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     name: '经营状态',
     category: '经营信息',
     description: '经营状态分类',
-    apiEndpoint: '/dictionaries/operation_status/options',
+    apiEndpoint: '/system/dictionaries/operation_status/options',
     fallbackOptions: [
       { label: '正常经营', value: 'normal', code: 'normal', sort_order: 1 },
       { label: '停业整顿', value: 'suspended', code: 'suspended', sort_order: 2 },

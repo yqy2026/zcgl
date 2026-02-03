@@ -125,17 +125,25 @@ async def upload_pdf_file(
         organization_id=organization_id,
         processing_options=processing_options,
     )
+    resolved_session_id = session_id
+    session_session_id = getattr(session, "session_id", None)
+    if isinstance(session_session_id, str) and session_session_id.strip() != "":
+        resolved_session_id = session_session_id
+    resolved_processing_options = processing_options
+    session_processing_options = getattr(session, "processing_options", None)
+    if isinstance(session_processing_options, dict) and session_processing_options:
+        resolved_processing_options = session_processing_options
 
     # 开始处理
     try:
         await pdf_service.process_pdf_file(
             db=db,
-            session_id=session.session_id,
+            session_id=resolved_session_id,
             organization_id=organization_id,
             file_size=total_size,
             file_path=str(temp_file_path),
             content_type=file.content_type or "application/pdf",
-            processing_options=session.processing_options or {},
+            processing_options=resolved_processing_options,
         )
     except Exception as e:
         logger.error("PDF处理失败: %s", e)
@@ -144,7 +152,7 @@ async def upload_pdf_file(
     return FileUploadResponse(
         success=True,
         message="PDF文件上传成功，正在处理中",
-        session_id=session.session_id,
+        session_id=resolved_session_id,
         estimated_time="30-60秒",
     )
 
@@ -166,11 +174,6 @@ async def upload_and_extract_pdf_v1_compatible(
     if file.content_type != "application/pdf":
         raise bad_request("只支持PDF文件上传")
 
-    max_size = DEFAULT_MAX_FILE_SIZE
-    file_content = await file.read()
-    if len(file_content) > max_size:
-        raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
-
     if pdf_processing_service is None:
         return ExtractionResponse(
             success=False,
@@ -179,15 +182,31 @@ async def upload_and_extract_pdf_v1_compatible(
             real_data_verified=False,
         )
 
+    max_size = DEFAULT_MAX_FILE_SIZE
+    temp_dir = Path("temp_uploads")
+    temp_dir.mkdir(exist_ok=True)
+    file_id = str(uuid.uuid4())
+    safe_filename = generate_safe_filename(
+        file.filename or "uploaded_file.pdf", prefix=file_id
+    )
+    temp_file_path = temp_dir / safe_filename
+
+    total_size = 0
+    chunk_size = 64 * 1024
+
     try:
-        pdf_import_service_instance = PDFImportService()
-        filename = file.filename or "uploaded_file.pdf"
-        file_info = await pdf_import_service_instance.upload_file(
-            file_content, filename
-        )
+        with open(temp_file_path, "wb") as temp_file:
+            while chunk := await file.read(chunk_size):
+                total_size += len(chunk)
+                if total_size > max_size:
+                    temp_file_path.unlink(missing_ok=True)
+                    raise bad_request(
+                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
+                    )
+                temp_file.write(chunk)
 
         text_result = await pdf_processing_service.extract_text_from_pdf(
-            file_info["file_path"]
+            str(temp_file_path)
         )
 
         if not text_result.get("success"):
@@ -235,6 +254,8 @@ async def upload_and_extract_pdf_v1_compatible(
             real_data_verified=False,
         )
 
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error("V1兼容模式PDF处理异常: %s", e)
         return ExtractionResponse(
@@ -243,6 +264,8 @@ async def upload_and_extract_pdf_v1_compatible(
             processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
             real_data_verified=False,
         )
+    finally:
+        temp_file_path.unlink(missing_ok=True)
 
 
 def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str, Any]:

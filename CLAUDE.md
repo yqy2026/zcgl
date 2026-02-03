@@ -153,4 +153,4 @@ When working with Python, invoke the relevant /astral:<skill> for uv, ty, and ru
   - E2E 测试 (10%): 全真实 - 关键流程
 
 # 维护文档
-CHANGELOG.md
+每次修改后请更新CHANGELOG.md

@@ -15,12 +15,12 @@ from sqlalchemy.orm import Session
 from src.core.config import settings
 from src.exceptions import BusinessLogicError
 from src.models.auth import User, UserSession
-from src.schemas.auth import TokenResponse
 from src.services.core.authentication_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
     REFRESH_TOKEN_EXPIRE_DAYS,
     SECRET_KEY,
+    TokenPair,
     AuthenticationService,
 )
 
@@ -291,9 +291,9 @@ class TestCreateTokens:
     """Tests for JWT token creation"""
 
     def test_create_tokens_returns_valid_response(self, auth_service, mock_user):
-        """Test that create_tokens returns valid TokenResponse"""
+        """Test that create_tokens returns valid TokenPair"""
         tokens = auth_service.create_tokens(mock_user)
-        assert isinstance(tokens, TokenResponse)
+        assert isinstance(tokens, TokenPair)
         assert tokens.access_token is not None
         assert tokens.refresh_token is not None
         assert tokens.token_type == "bearer"

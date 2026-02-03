@@ -250,7 +250,10 @@ class TestFileTypeValidation:
         """Create a mock file"""
         file = Mock(spec=UploadFile)
         file.filename = "test.pdf"
-        file.file = io.BytesIO(b"%PDF-1.4\n%fake content")
+        file.file = Mock()
+        file.file.read.return_value = b"%PDF-1.4\n%fake content"
+        file.file.tell.return_value = 0
+        file.file.seek = Mock()
         return file
 
     def test_valid_file_extension(self, validator, mock_file):

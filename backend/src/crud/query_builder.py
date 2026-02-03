@@ -30,7 +30,7 @@ class QueryBuilder[ModelType]:
 
         # Log if using empty whitelist (no fields allowed)
         if isinstance(self.whitelist, EmptyWhitelist):
-            logger.info(
+            logging.getLogger().info(
                 f"QueryBuilder using EMPTY whitelist for {model.__name__}. "
                 "No fields allowed for filtering/searching/sorting. "
                 "Define explicit whitelist to enable field access."

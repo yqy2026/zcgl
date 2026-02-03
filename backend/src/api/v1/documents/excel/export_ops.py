@@ -4,7 +4,7 @@ Excel导出操作模块 - 同步与异步导出
 
 import logging
 import os
-import tempfile
+from pathlib import Path
 from collections.abc import Generator
 from datetime import datetime
 from typing import Any
@@ -23,13 +23,15 @@ from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import bad_request, not_found
 from src.crud.task import task_crud
-from src.database import get_db
+from src.database import get_db, get_session_factory
 from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelExportRequest
 from src.schemas.task import TaskCreate, TaskUpdate
 from src.services.excel import ExcelExportService
+from src.services.task import task_service
+from src.services.task.access import ensure_task_access
 
 logger = logging.getLogger(__name__)
 
@@ -160,14 +162,13 @@ def export_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    task = task_crud.create(db=db, obj_in=task_in)
+    task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
 
     # 添加后台任务
     background_tasks.add_task(
         _process_excel_export_async,
         task_id=str(task.id),
         request=request,
-        db_session=db,
     )
 
     return {
@@ -179,28 +180,28 @@ def export_excel_async(
 
 
 async def _process_excel_export_async(
-    task_id: str, request: ExcelExportRequest, db_session: Session
+    task_id: str, request: ExcelExportRequest
 ) -> None:
     """
     后台处理Excel导出任务
     """
+    session_factory = get_session_factory()
+    db_session: Session | None = None
     try:
+        db_session = session_factory()
         # 更新任务状态为运行中
-        db_obj = task_crud.get(db=db_session, id=task_id)
-        if db_obj is not None:
-            task_crud.update(
-                db=db_session,
-                db_obj=db_obj,
-                obj_in=TaskUpdate(
-                    status=TaskStatus.RUNNING,
-                    progress=0,
-                    processed_items=0,
-                    failed_items=0,
-                    error_message=None,
-                    result_data=None,
-                ),
-            )
-        db_session.commit()
+        task_service.update_task(
+            db=db_session,
+            task_id=task_id,
+            obj_in=TaskUpdate(
+                status=TaskStatus.RUNNING,
+                progress=0,
+                processed_items=0,
+                failed_items=0,
+                error_message=None,
+                result_data=None,
+            ),
+        )
 
         # 使用ExcelExportService进行导出
         service = ExcelExportService(db_session)
@@ -213,8 +214,9 @@ async def _process_excel_export_async(
         filename = f"assets_export_{timestamp}.{request.export_format}"
 
         # 保存到临时文件
-        temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, filename)
+        temp_dir = Path("temp_uploads") / "excel_exports"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        file_path = str(temp_dir / filename)
 
         # 执行导出到文件
         result_info: dict[str, Any] = service.export_assets_to_file(
@@ -227,24 +229,21 @@ async def _process_excel_export_async(
         )
 
         # 更新任务完成状态
-        db_obj = task_crud.get(db=db_session, id=task_id)
-        if db_obj is not None:
-            task_crud.update(
-                db=db_session,
-                db_obj=db_obj,
-                obj_in=TaskUpdate(
-                    status=TaskStatus.COMPLETED,
-                    progress=100,
-                    processed_items=0,
-                    failed_items=0,
-                    error_message=None,
-                    result_data={
-                        **result_info,
-                        "download_url": f"/api/v1/excel/download/{task_id}",
-                    },
-                ),
-            )
-        db_session.commit()
+        task_service.update_task(
+            db=db_session,
+            task_id=task_id,
+            obj_in=TaskUpdate(
+                status=TaskStatus.COMPLETED,
+                progress=100,
+                processed_items=0,
+                failed_items=0,
+                error_message=None,
+                result_data={
+                    **result_info,
+                    "download_url": f"/api/v1/excel/download/{task_id}",
+                },
+            ),
+        )
 
     except Exception as e:
         # 记录关键错误到监控系统
@@ -261,11 +260,11 @@ async def _process_excel_export_async(
 
         # 更新任务失败状态
         try:
-            db_obj = task_crud.get(db=db_session, id=task_id)
-            if db_obj is not None:
-                task_crud.update(
+            if db_session is not None:
+                db_session.rollback()
+                task_service.update_task(
                     db=db_session,
-                    db_obj=db_obj,
+                    task_id=task_id,
                     obj_in=TaskUpdate(
                         status=TaskStatus.FAILED,
                         error_message=str(e),
@@ -275,7 +274,6 @@ async def _process_excel_export_async(
                         result_data=None,
                     ),
                 )
-            db_session.commit()
         except Exception as commit_error:
             logger.error(
                 f"无法更新任务失败状态: task_id={task_id}",
@@ -288,11 +286,16 @@ async def _process_excel_export_async(
                 },
             )
             # 不抛出异常 - 让原始异常传播
+    finally:
+        if db_session is not None:
+            db_session.close()
 
 
 @router.get("/download/{task_id}", summary="下载导出文件")
 def download_export_file(
-    task_id: str, db: Session = Depends(get_db)
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> StreamingResponse:
     """
     下载异步导出的文件
@@ -301,6 +304,7 @@ def download_export_file(
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
 
     if task.status != TaskStatus.COMPLETED:
         raise bad_request("任务尚未完成")

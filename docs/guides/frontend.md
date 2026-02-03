@@ -14,7 +14,7 @@
 - 常见问题解决
 
 ## ✅ Status
-**当前状态**: Active (2026-01-15 更新)
+**当前状态**: Active (2026-02-03 更新)
 **适用版本**: v2.0.0
 **技术栈**: React 19 + TypeScript + Vite 6 + Ant Design 6
 
@@ -134,6 +134,11 @@ components/
 │   ├── index.ts                # 导出文件
 │   └── types.ts                # 类型定义
 ```
+
+### 组件导航入口
+- [组件导航](components.md)
+- 统一入口：`@/components`（按模块命名空间导出）
+- 模块入口：`@/components/<Module>`（目录内 `index.ts`）
 
 ### 组件开发模板
 

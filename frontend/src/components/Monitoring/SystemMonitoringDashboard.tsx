@@ -72,7 +72,7 @@ const SystemMonitoringDashboard: React.FC = () => {
   if (error != null) {
     return (
       <Alert
-        message="监控数据加载失败"
+        title="监控数据加载失败"
         description="无法获取系统监控数据，请检查网络连接或联系管理员"
         type="error"
         showIcon

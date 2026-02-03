@@ -12,9 +12,13 @@ import jwt
 from jwt import ExpiredSignatureError
 from jwt import PyJWTError as JWTError
 
-from ..core.config import settings
-
 logger = logging.getLogger(__name__)
+
+
+def _get_settings():
+    from ..core.config import settings as current_settings
+
+    return current_settings
 
 
 class JWTSecurityConfig:
@@ -54,7 +58,7 @@ class JWTSecurityConfig:
             result["issues"].append(f"密钥长度不足{cls.MIN_SECRET_KEY_LENGTH}字符")
         else:
             result["strength_score"] += min(
-                len(secret_key) - cls.MIN_SECRET_KEY_LENGTH, 3
+                len(secret_key) - cls.MIN_SECRET_KEY_LENGTH, 2
             )
 
         # 检查是否为默认密钥
@@ -74,7 +78,7 @@ class JWTSecurityConfig:
         has_upper = any(c.isupper() for c in secret_key)
         has_lower = any(c.islower() for c in secret_key)
         has_digit = any(c.isdigit() for c in secret_key)
-        has_special = any(c in "-._~" for c in secret_key)
+        has_special = any(not c.isalnum() for c in secret_key)
 
         complexity_score = sum([has_upper, has_lower, has_digit, has_special])
         result["strength_score"] += complexity_score
@@ -133,10 +137,11 @@ class JWTSecurityConfig:
         full_payload = {**standard_claims, **payload}
 
         # 创建令牌
+        current_settings = _get_settings()
         token: str = jwt.encode(
             full_payload,
-            settings.SECRET_KEY,
-            algorithm=getattr(settings, "ALGORITHM", "HS256"),
+            current_settings.SECRET_KEY,
+            algorithm=getattr(current_settings, "ALGORITHM", "HS256"),
         )
 
         logger.debug(f"Created {token_type} token with JTI: {full_payload['jti']}")
@@ -158,10 +163,11 @@ class JWTSecurityConfig:
         """
         try:
             # 解码令牌
+            current_settings = _get_settings()
             payload = jwt.decode(
                 token,
-                settings.SECRET_KEY,
-                algorithms=[getattr(settings, "ALGORITHM", "HS256")],
+                current_settings.SECRET_KEY,
+                algorithms=[getattr(current_settings, "ALGORITHM", "HS256")],
             )
 
             # 验证标准声明
@@ -220,11 +226,12 @@ class JWTSecurityConfig:
         """
         try:
             # 不验证签名，仅解析payload - 需要提供key参数
+            current_settings = _get_settings()
             payload = jwt.decode(
                 token,
-                settings.SECRET_KEY,
+                current_settings.SECRET_KEY,
                 options={"verify_signature": False, "verify_exp": False},
-                algorithms=[getattr(settings, "ALGORITHM", "HS256")],
+                algorithms=[getattr(current_settings, "ALGORITHM", "HS256")],
             )
 
             now = datetime.now(UTC)
@@ -269,20 +276,25 @@ def validate_current_jwt_config() -> dict[str, Any]:
     Returns:
         配置验证结果
     """
+    current_settings = _get_settings()
     result: dict[str, Any] = {
         "config_valid": True,
         "issues": [],
         "recommendations": [],
-        "secret_key_analysis": jwt_security.validate_secret_key(settings.SECRET_KEY),
+        "secret_key_analysis": jwt_security.validate_secret_key(
+            current_settings.SECRET_KEY
+        ),
     }
 
     # 检查算法 - 使用安全访问避免属性错误
-    algorithm = getattr(settings, "ALGORITHM", "HS256")
+    algorithm = getattr(current_settings, "ALGORITHM", "HS256")
     if algorithm not in jwt_security.RECOMMENDED_ALGORITHMS:
         result["issues"].append(f"使用的算法 {algorithm} 不在推荐列表中")
 
     # 检查令牌有效期 - 使用安全访问避免属性错误
-    access_token_minutes = getattr(settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 30)
+    access_token_minutes = getattr(
+        current_settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 30
+    )
     if access_token_minutes > 60:  # 超过1小时
         result["recommendations"].append("访问令牌有效期建议不超过60分钟")
 

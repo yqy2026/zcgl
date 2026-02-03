@@ -14,7 +14,11 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....crud.task import excel_task_config_crud, task_crud
 from ....database import get_db
 from ....enums.task import TaskStatus
-from ....middleware.auth import get_current_active_user, require_permission
+from ....middleware.auth import (
+    get_current_active_user,
+    require_admin,
+    require_permission,
+)
 from ....models.auth import User
 from ....schemas.task import (
     ExcelTaskConfigCreate,
@@ -27,6 +31,7 @@ from ....schemas.task import (
     TaskUpdate,
 )
 from ....services.task import task_service
+from ....services.task.access import ensure_task_access, resolve_task_user_filter
 
 
 class BusinessLogicError(Exception):
@@ -90,13 +95,14 @@ def get_tasks(
             created_before_dt = datetime.fromisoformat(created_before)
 
         skip = (page - 1) * page_size
+        effective_user_id = resolve_task_user_filter(user_id, current_user)
         tasks = task_crud.get_multi(
             db=db,
             skip=skip,
             limit=page_size,
             task_type=task_type,
             status=status,
-            user_id=user_id,
+            user_id=effective_user_id,
             created_after=created_after_dt,
             created_before=created_before_dt,
             order_by=order_by,
@@ -108,7 +114,7 @@ def get_tasks(
             db=db,
             task_type=task_type,
             status=status,
-            user_id=user_id,
+            user_id=effective_user_id,
             created_after=created_after_dt,
             created_before=created_before_dt,
         )
@@ -139,6 +145,7 @@ def get_task(
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
     result: TaskResponse = TaskResponse.model_validate(task)
     return result
 
@@ -153,6 +160,10 @@ def update_task(
     """
     更新任务信息
     """
+    task = task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
     try:
         updated_task = task_service.update_task(db=db, task_id=task_id, obj_in=task_in)
         return TaskResponse.model_validate(updated_task)
@@ -172,6 +183,10 @@ def cancel_task(
     """
     取消正在运行的任务
     """
+    task = task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
     try:
         updated_task = task_service.cancel_task(
             db=db,
@@ -194,6 +209,10 @@ def delete_task(
     """
     删除任务（软删除）
     """
+    task = task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
     try:
         task_service.delete_task(db=db, task_id=task_id)
         return {"message": "任务删除成功"}
@@ -219,6 +238,7 @@ def get_task_history(
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    ensure_task_access(task, current_user)
 
     try:
         history = task_crud.get_history(db=db, task_id=task_id)
@@ -241,7 +261,8 @@ def get_task_statistics(
     获取任务统计信息
     """
     try:
-        stats = task_service.get_statistics(db=db, user_id=user_id)
+        effective_user_id = resolve_task_user_filter(user_id, current_user)
+        stats = task_service.get_statistics(db=db, user_id=effective_user_id)
         return TaskStatistics.model_validate(stats)
     except Exception as e:
         raise internal_error(f"获取任务统计失败: {str(e)}")
@@ -256,10 +277,12 @@ def get_running_tasks(
     获取当前正在运行的所有任务
     """
     try:
+        effective_user_id = resolve_task_user_filter(None, current_user)
         tasks = task_crud.get_multi(
             db=db,
             limit=100,
             status=TaskStatus.RUNNING.value,
+            user_id=effective_user_id,
             order_by="started_at",
             order_dir="asc",
         )
@@ -279,7 +302,11 @@ def get_recent_tasks(
     """
     try:
         tasks = task_crud.get_multi(
-            db=db, limit=page_size, order_by="created_at", order_dir="desc"
+            db=db,
+            limit=page_size,
+            user_id=resolve_task_user_filter(None, current_user),
+            order_by="created_at",
+            order_dir="desc",
         )
         return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
@@ -443,7 +470,7 @@ def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
     is_dry_run: bool = Query(False, description="是否为试运行"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_admin),
 ) -> dict[str, Any]:
     """
     清理过期的任务记录

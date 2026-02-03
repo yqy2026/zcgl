@@ -350,7 +350,7 @@ const OperationLogPage: React.FC = () => {
       key: 'user_info',
       width: 150,
       render: (_, record) => (
-        <Space direction="vertical" size="small">
+        <Space orientation="vertical" size="small">
           <div style={{ fontWeight: 500 }}>{record.user_name ?? record.username ?? '-'}</div>
           <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             @{record.username ?? '-'}
@@ -450,7 +450,7 @@ const OperationLogPage: React.FC = () => {
                 title="今日操作"
                 value={statistics.today}
                 prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.success }}
+                styles={{ content: { color: COLORS.success } }}
               />
             </Card>
           </Col>
@@ -460,7 +460,7 @@ const OperationLogPage: React.FC = () => {
                 title="本周操作"
                 value={statistics.this_week}
                 prefix={<SettingOutlined />}
-                valueStyle={{ color: COLORS.primary }}
+                styles={{ content: { color: COLORS.primary } }}
               />
             </Card>
           </Col>
@@ -470,7 +470,7 @@ const OperationLogPage: React.FC = () => {
                 title="错误数量"
                 value={statistics.error_count}
                 prefix={<ExclamationCircleOutlined />}
-                valueStyle={{ color: COLORS.error }}
+                styles={{ content: { color: COLORS.error } }}
               />
             </Card>
           </Col>
@@ -481,14 +481,14 @@ const OperationLogPage: React.FC = () => {
                 value={statistics.avg_response_time}
                 suffix="ms"
                 prefix={<SettingOutlined />}
-                valueStyle={{
+                styles={{ content: {
                   color:
                     statistics.avg_response_time > 1000
                       ? COLORS.error
                       : statistics.avg_response_time > 500
                         ? COLORS.warning
                         : COLORS.success,
-                }}
+                } }}
               />
             </Card>
           </Col>
@@ -624,7 +624,7 @@ const OperationLogPage: React.FC = () => {
         placement="right"
         onClose={() => setDetailDrawerVisible(false)}
         open={detailDrawerVisible}
-        width={800}
+        size={800}
       >
         {selectedLog && (
           <div>

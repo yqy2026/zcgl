@@ -97,11 +97,18 @@ except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("document.pdf_import_service.PDFImportService")
 
 try:
-    from .document.excel_export import ExcelExportService as ExcelExportService
+    from .excel.excel_export_service import ExcelExportService as ExcelExportService
 
     __all__.append("ExcelExportService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("document.excel_export.ExcelExportService")
+    _log_import_error("excel.excel_export_service.ExcelExportService")
+
+try:
+    from .excel.excel_import_service import ExcelImportService as ExcelImportService
+
+    __all__.append("ExcelImportService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("excel.excel_import_service.ExcelImportService")
 
 # Data analysis services
 try:

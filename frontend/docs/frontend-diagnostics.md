@@ -35,9 +35,9 @@ cd frontend && pnpm diagnose
 
 **输出:**
 - 终端显示实时进度
-- 生成 JSON 报告: `frontend/diagnostics/diagnostic-report-*.json`
-- 生成 HTML 报告: `frontend/diagnostics/diagnostic-report-*.html`
-- 保存页面截图: `frontend/diagnostics/screenshots/`
+- 生成 JSON 报告: `test-results/frontend/diagnostics/diagnostic-report-*.json`
+- 生成 HTML 报告: `test-results/frontend/diagnostics/diagnostic-report-*.html`
+- 保存页面截图: `test-results/frontend/diagnostics/screenshots/`
 
 ### 2. 可视化模式（调试用）
 
@@ -252,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: diagnostic-reports
-          path: frontend/diagnostics/
+          path: test-results/frontend/diagnostics/
 ```
 
 ### 3. 监控生产环境
@@ -349,10 +349,10 @@ pnpm audit:ui && pnpm diagnose
 
 ```bash
 # 创建报告存档目录
-mkdir -p frontend/diagnostics/archive/$(date +%Y-%m-%d)
+mkdir -p test-results/frontend/diagnostics/archive/$(date +%Y-%m-%d)
 
 # 移动旧报告
-mv frontend/diagnostics/*.json frontend/diagnostics/archive/$(date +%Y-%m-%d)/
+mv test-results/frontend/diagnostics/*.json test-results/frontend/diagnostics/archive/$(date +%Y-%m-%d)/
 ```
 
 ### 3. 设置性能基准
@@ -416,7 +416,7 @@ TIMEOUT=60000 pnpm diagnose
 ```bash
 # Windows: 以管理员身份运行
 # Linux/Mac:
-chmod -R 755 frontend/diagnostics
+chmod -R 755 test-results/frontend/diagnostics
 ```
 
 ## 相关资源

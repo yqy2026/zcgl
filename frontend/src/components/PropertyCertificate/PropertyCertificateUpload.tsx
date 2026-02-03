@@ -60,9 +60,9 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
 
   return (
     <Card>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Alert
-          message="上传产权证扫描件"
+          title="上传产权证扫描件"
           description="支持 PDF、JPG、PNG 格式，最大 10MB。系统将自动提取产权证信息。"
           type="info"
           showIcon
@@ -78,7 +78,7 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
 
         {(uploading || loading) && (
           <Alert
-            message="正在处理..."
+            title="正在处理..."
             description="AI 正在分析文件并提取信息，请稍候..."
             type="info"
             showIcon

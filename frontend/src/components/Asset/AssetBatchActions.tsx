@@ -233,7 +233,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
         width={600}
       >
         <Alert
-          message="批量编辑说明"
+          title="批量编辑说明"
           description="只有填写的字段会被更新，空字段将保持原值不变"
           type="info"
           showIcon

@@ -162,7 +162,7 @@ const ProjectDetailPage: React.FC = () => {
     return (
       <div style={{ padding: '24px' }}>
         <Alert
-          message="数据加载失败"
+          title="数据加载失败"
           description={`错误详情: ${projectError instanceof Error ? projectError.message : '未知错误'}`}
           type="error"
           showIcon
@@ -175,7 +175,7 @@ const ProjectDetailPage: React.FC = () => {
   if (!project) {
     return (
       <div style={{ padding: '24px' }}>
-        <Alert message="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
+        <Alert title="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
       </div>
     );
   }
@@ -247,14 +247,14 @@ const ProjectDetailPage: React.FC = () => {
               value={occupancyRate}
               precision={1}
               suffix="%"
-              valueStyle={{
+              styles={{ content: {
                 color:
                   parseFloat(occupancyRate) >= 80
                     ? COLORS.success
                     : parseFloat(occupancyRate) >= 50
                       ? COLORS.warning
                       : COLORS.error,
-              }}
+              } }}
             />
           </Card>
         </Col>

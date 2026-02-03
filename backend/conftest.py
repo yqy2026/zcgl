@@ -23,6 +23,7 @@ sys.path.insert(0, str(backend_root))
 # 设置测试模式环境变量（在导入app之前）
 os.environ["TESTING_MODE"] = "true"
 os.environ["ENVIRONMENT"] = "testing"
+os.environ["DEBUG"] = "true"  # 启用调试模式以允许访问调试端点
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 if TEST_DATABASE_URL:
@@ -46,6 +47,14 @@ if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ[
         "test-encryption-key-for-testing-only-min-32-chars-long"
     )
 
+# 确保测试产物目录存在
+def pytest_configure(config):
+    artifacts_root = backend_root.parent / "test-results" / "backend"
+    coverage_root = artifacts_root / "coverage"
+    junit_root = artifacts_root / "junit"
+    for directory in (coverage_root, coverage_root / "html", junit_root):
+        directory.mkdir(parents=True, exist_ok=True)
+
 # =============================================================================
 # 数据库Fixtures
 # =============================================================================
@@ -64,7 +73,11 @@ def test_engine():
     engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
     Base.metadata.create_all(bind=engine)
     yield engine
-    Base.metadata.drop_all(bind=engine)
+    try:
+        Base.metadata.drop_all(bind=engine)
+    except Exception:
+        # Ignore errors during teardown (e.g. circular dependencies)
+        pass
     engine.dispose()
 
 
@@ -106,7 +119,7 @@ async def test_client(test_db, test_user):
     app.dependency_overrides[get_current_active_user] = override_get_auth
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
         yield client
 
     app.dependency_overrides.clear()
@@ -128,7 +141,7 @@ async def test_client_no_auth(test_db):
     app.dependency_overrides[get_db] = override_get_db
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
         yield client
 
     app.dependency_overrides.clear()
@@ -215,8 +228,8 @@ def auth_headers(test_user):
         "exp": int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
         "jti": str(test_user.id),  # JWT ID
-        "aud": "land-property-system",  # audience
-        "iss": "land-property-auth",  # issuer
+        "aud": settings.JWT_AUDIENCE,  # audience
+        "iss": settings.JWT_ISSUER,  # issuer
     }
     # 使用应用的SECRET_KEY
     token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")

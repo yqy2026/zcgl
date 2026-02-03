@@ -440,7 +440,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           </Form.Item>
         ) : (
           <Alert
-            message="未找到匹配的资产"
+            title="未找到匹配的资产"
             description="请手动选择或创建新的资产记录"
             type="warning"
             showIcon
@@ -496,7 +496,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           </Form.Item>
         ) : (
           <Alert
-            message="未找到匹配的权属方"
+            title="未找到匹配的权属方"
             description="请手动选择或创建新的权属方记录"
             type="warning"
             showIcon
@@ -550,7 +550,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               value={result.summary.extraction_confidence}
               precision={2}
               suffix="%"
-              valueStyle={{ color: getConfidenceColor(result.summary.extraction_confidence) }}
+              styles={{ content: { color: getConfidenceColor(result.summary.extraction_confidence) } }}
             />
           </Col>
           <Col span={6}>
@@ -559,7 +559,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               value={result.summary.validation_score}
               precision={2}
               suffix="%"
-              valueStyle={{ color: getConfidenceColor(result.summary.validation_score) }}
+              styles={{ content: { color: getConfidenceColor(result.summary.validation_score) } }}
             />
           </Col>
           <Col span={6}>
@@ -568,7 +568,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               value={result.summary.match_confidence}
               precision={2}
               suffix="%"
-              valueStyle={{ color: getConfidenceColor(result.summary.match_confidence) }}
+              styles={{ content: { color: getConfidenceColor(result.summary.match_confidence) } }}
             />
           </Col>
           <Col span={6}>
@@ -577,7 +577,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               value={result.summary.total_confidence}
               precision={2}
               suffix="%"
-              valueStyle={{ color: getConfidenceColor(result.summary.total_confidence) }}
+              styles={{ content: { color: getConfidenceColor(result.summary.total_confidence) } }}
             />
           </Col>
         </Row>
@@ -586,7 +586,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       {/* 建议信息 */}
       {result.recommendations.length > 0 && (
         <Alert
-          message="系统建议"
+          title="系统建议"
           description={
             <ul>
               {result.recommendations.map(recommendation => (
@@ -603,7 +603,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       {/* 验证错误和警告 */}
       {result.validation_result.errors.length > 0 && (
         <Alert
-          message="验证错误"
+          title="验证错误"
           description={
             <ul>
               {result.validation_result.errors.map(error => (
@@ -619,7 +619,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
       {result.validation_result.warnings.length > 0 && (
         <Alert
-          message="验证警告"
+          title="验证警告"
           description={
             <ul>
               {result.validation_result.warnings.map(warning => (

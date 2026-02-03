@@ -3,6 +3,8 @@
  * 验证 Puppeteer 是否正确安装并能够启动浏览器
  */
 
+import fs from 'fs';
+import path from 'path';
 import puppeteer from 'puppeteer';
 
 async function testPuppeteer() {
@@ -32,8 +34,17 @@ async function testPuppeteer() {
     console.log(`   标题: ${title}`);
 
     console.log('\n5️⃣ 截图测试...');
-    await page.screenshot({ path: 'frontend/diagnostics/test-screenshot.png' });
-    console.log('✅ 截图保存成功: frontend/diagnostics/test-screenshot.png');
+    const screenshotPath = path.resolve(
+      __dirname,
+      '../../..',
+      'test-results',
+      'frontend',
+      'diagnostics',
+      'test-screenshot.png'
+    );
+    fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
+    await page.screenshot({ path: screenshotPath });
+    console.log(`✅ 截图保存成功: ${screenshotPath}`);
 
     console.log('\n6️⃣ 监听控制台...');
     page.on('console', (msg) => {

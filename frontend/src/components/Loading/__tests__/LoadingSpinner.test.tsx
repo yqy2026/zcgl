@@ -8,7 +8,7 @@
  * - 保持测试覆盖范围不变
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@/test/utils/test-helpers';
 
 import LoadingSpinner from '../LoadingSpinner';

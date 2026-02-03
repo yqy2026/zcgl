@@ -72,19 +72,13 @@ import { User } from './auth';
  */
 export interface AuthResponse {
   user: User;
-  tokens?: {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-    expires_in: number;
-  };
   permissions: Array<{
     resource: string;
     action: string;
     description?: string;
   }>;
   message?: string;
-  auth_mode?: string;
+  auth_mode?: 'cookie';
 }
 
 /**

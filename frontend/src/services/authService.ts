@@ -47,12 +47,9 @@ export class AuthService {
 
       const responseData = result.data as Record<string, unknown> & {
         user?: User;
-        tokens?: AuthResponse['tokens'];
-        token?: string;
+        permissions?: AuthResponse['permissions'];
         message?: string;
         data?: {
-          access_token?: string;
-          refresh_token?: string;
           permissions?: Array<{
             resource: string;
             action: string;
@@ -77,26 +74,11 @@ export class AuthService {
 
       logger.debug('用户数据解析成功', { user });
 
-      const tokenPayload =
-        (responseData.tokens ?? responseData.data) as
-          | (AuthResponse['tokens'] & { permissions?: AuthResponse['permissions'] })
-          | undefined;
-
-      const accessToken =
-        tokenPayload?.access_token ??
-        (typeof responseData.token === 'string' && responseData.token !== ''
-          ? responseData.token
-          : undefined);
-      const refreshToken = tokenPayload?.refresh_token;
       const permissions = (Array.isArray(responseData.permissions)
         ? responseData.permissions
-        : Array.isArray(tokenPayload?.permissions)
-          ? tokenPayload?.permissions
+        : Array.isArray(responseData.data?.permissions)
+          ? responseData.data?.permissions
           : []) as AuthResponse['permissions'];
-      const hasAccessToken =
-        accessToken != null && typeof accessToken === 'string' && accessToken !== '';
-      const hasRefreshToken =
-        refreshToken != null && typeof refreshToken === 'string' && refreshToken !== '';
 
       // Store user/permissions locally (tokens stay in httpOnly cookies)
       AuthStorage.setAuthData({ user, permissions });
@@ -105,15 +87,6 @@ export class AuthService {
         success: true,
         data: {
           user,
-          tokens:
-            hasAccessToken && hasRefreshToken
-              ? {
-                  access_token: accessToken,
-                  refresh_token: refreshToken,
-                  token_type: tokenPayload?.token_type ?? 'Bearer',
-                  expires_in: tokenPayload?.expires_in ?? 3600,
-                }
-              : undefined,
           permissions,
         },
         message: (responseData.message as string) || '登录成功',

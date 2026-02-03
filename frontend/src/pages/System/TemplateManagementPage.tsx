@@ -263,7 +263,7 @@ const TemplateManagementPage: React.FC = () => {
               title="可用模板"
               value={templates.filter(t => t.status === 'active').length}
               suffix="个"
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Card>
         </Col>

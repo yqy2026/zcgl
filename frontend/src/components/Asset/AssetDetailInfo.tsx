@@ -163,7 +163,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ color: COLORS.primary }}
+              styles={{ content: { color: COLORS.primary } }}
             />
           </Col>
 
@@ -173,7 +173,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ color: COLORS.success }}
+              styles={{ content: { color: COLORS.success } }}
             />
           </Col>
 
@@ -185,7 +185,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.rentable_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: COLORS.warning }}
+                  styles={{ content: { color: COLORS.warning } }}
                 />
               </Col>
 
@@ -195,7 +195,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.rented_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: COLORS.success }}
+                  styles={{ content: { color: COLORS.success } }}
                 />
               </Col>
 
@@ -205,7 +205,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.unrented_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: COLORS.error }}
+                  styles={{ content: { color: COLORS.error } }}
                 />
               </Col>
             </>
@@ -220,7 +220,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.non_commercial_area}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: COLORS.primary }}
+                  styles={{ content: { color: COLORS.primary } }}
                 />
               </Col>
             )}

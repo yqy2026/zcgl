@@ -240,7 +240,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 
   return (
     <div className={`filename-validator ${className}`}>
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="small" style={{ width: '100%' }}>
         {/* 状态显示 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {getStatusIcon()}
@@ -312,7 +312,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
               <Alert
                 type={validationResult.severity === 'high' ? 'error' : 'warning'}
                 showIcon
-                message="发现以下问题:"
+                title="发现以下问题:"
                 description={
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
                     {validationResult.issues.map(issue => (

@@ -55,14 +55,17 @@ try:
 except ImportError as e:
     logging.warning(f"PDF batch routes not available: {e}")
 
+import sys
 # 尝试导入系统设置路由，如果不存在则跳过
 system_settings_router: APIRouter | None = None
 try:
     from .system.system_settings import router as system_settings_router
-except ImportError:  # pragma: no cover
+except ImportError as e:
     logging.getLogger(__name__).debug(
         "系统设置路由模块不存在，跳过"
-    )  # pragma: no cover
+    )
+    # Print to stderr for debugging in tests
+    sys.stderr.write(f"DEBUG: Failed to import system_settings_router: {e}\n")
 
 # 创建统一API路由器 - 版本化架构
 api_router = APIRouter()
@@ -113,9 +116,13 @@ api_router.include_router(analytics_router, prefix="/analytics", tags=["综合�
 
 # 条件注册系统设置路由
 if system_settings_router is not None:
+    logging.getLogger(__name__).info("Registering system_settings_router")
+    sys.stderr.write("DEBUG: Registering system_settings_router\n")
     api_router.include_router(
         system_settings_router, prefix="/system", tags=["系统设置"]
     )
+else:
+    logging.getLogger(__name__).warning("system_settings_router is None, NOT registering")
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 
 # 注册新创建的统一路由模块

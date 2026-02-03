@@ -145,7 +145,7 @@ class TestAnalyticsService:
 
         result = analytics_service.get_cache_stats()
 
-        assert result["cache_type"] == "analytics_cache"
+        assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == mock_stats
 
     @patch(

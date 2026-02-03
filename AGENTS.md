@@ -1,6 +1,7 @@
 # AGENTS.md
 
 本文件为 AI Coding Agents 提供项目上下文与执行约束，确保修改一致、可验证。
+每次修改后请更新CHANGELOG.md
 
 **Last Updated**: 2026-02-01
 
@@ -336,7 +337,9 @@ VITE_API_TIMEOUT=30000
 ```bash
 make secrets
 # 或
-python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32)); print('DATA_ENCRYPTION_KEY=\"%s\"' % secrets.token_urlsafe(32))"
+python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32))"
+# DATA_ENCRYPTION_KEY 需要标准 Base64 + 版本号（避免 Incorrect padding）:
+# cd backend && python -m src.core.encryption
 ```
 
 ---
@@ -477,15 +480,6 @@ docker-compose up -d
 ---
 
 ## 变更记录
-
-| 日期 | 版本 | 变更内容 |
-|------|------|---------|
-| 2026-02-01 | v2.0 | 全面重构 AGENTS.md，更新技术栈至 React 19 + FastAPI 0.104+ |
-| 2026-01-15 | v1.4 | React 19 + Ant Design 6 + pnpm 迁移 |
-| 2026-01-08 | v1.3 | 更新后端 API 端点统计 |
-| 2025-12-23 | v1.2 | 新增前端/后端开发指南 |
-| 2025-12-22 | v1.0 | 初始版本 |
-
----
+每次修改后请更新CHANGELOG.md
 
 **注意**：本文档应与代码同步更新。任何架构变更、新工具引入或流程调整都应同步更新此文档。

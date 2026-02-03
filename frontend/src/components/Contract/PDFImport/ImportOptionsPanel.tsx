@@ -43,7 +43,7 @@ const ImportOptionsPanel: React.FC = () => {
     >
       <Row gutter={16}>
         <Col span={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <div>
               <Typography.Text strong>置信度阈值</Typography.Text>
               <input
@@ -67,7 +67,7 @@ const ImportOptionsPanel: React.FC = () => {
           </Space>
         </Col>
         <Col span={12}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Switch
               checked={processingOptions.enable_multi_engine_fusion}
               onChange={checked =>

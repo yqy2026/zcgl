@@ -186,12 +186,17 @@ def delete_contract(
     if current_user.role != UserRole.ADMIN:
         raise forbidden("权限不足: 只有管理员可以删除合同")
 
-    contract = rent_contract.get(db, id=contract_id)
-    if not contract:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
     try:
-        rent_contract.remove(db, id=contract_id)
+        deleted = rent_contract_service.delete_contract(
+            db=db,
+            contract_id=contract_id,
+            operator=current_user.username,
+            operator_id=str(current_user.id),
+        )
+        if not deleted:
+            raise not_found(
+                "合同不存在", resource_type="contract", resource_id=contract_id
+            )
         return {"message": "合同删除成功"}
     except Exception as e:
         if isinstance(e, BaseBusinessError):

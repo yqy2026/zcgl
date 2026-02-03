@@ -52,7 +52,7 @@ const AssetAnalyticsPage: React.FC = () => {
     return (
       <div style={{ padding: '24px' }}>
         <Alert
-          message="数据加载失败"
+          title="数据加载失败"
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon

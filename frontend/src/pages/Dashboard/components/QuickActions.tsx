@@ -63,7 +63,7 @@ const QuickActions: React.FC = () => {
             bodyStyle={{ padding: '16px' }}
             onClick={action.onClick}
           >
-            <Space direction="vertical" size="small">
+            <Space orientation="vertical" size="small">
               {action.icon}
               <div>
                 <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{action.title}</div>

@@ -189,7 +189,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   if (loadError) {
     return (
       <Alert
-        message="加载失败"
+        title="加载失败"
         description="无法加载变更历史，请稍后重试"
         type="error"
         showIcon
