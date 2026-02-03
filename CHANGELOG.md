@@ -1,6 +1,36 @@
 # 变更日志 (Changelog)
 
-## [Unreleased] - 2026-01-18
+## [Unreleased] - 2026-02-03
+
+### 🛡️ 稳定性与架构修复 (Stability & Architecture Fixes)
+
+#### Fixed / 修复
+
+- **PDF V1上传内存风险** (PDF V1 Upload Memory Risk)
+  - V1 兼容上传改为流式写入并严格限制大小，避免一次性读入内存
+  - 上传临时文件处理完成后自动清理
+- **PDF 导入临时文件清理** (PDF Import Temp File Cleanup)
+  - 处理结果/失败后自动清理 `temp_uploads` 与系统临时目录下的源文件
+- **PDF 批量上传内存风险** (PDF Batch Upload Memory Risk)
+  - 批量上传改为流式写入 `temp_uploads`，避免一次性读取到内存
+  - 超限/空文件即时清理，失败时回收临时文件
+- **Excel 导出临时文件清理** (Excel Export Temp File Cleanup)
+  - 异步导出文件统一落盘到 `temp_uploads/excel_exports`
+  - 任务删除或清理过期任务时回收导出文件
+
+#### Changed / 变更
+
+- **产权证 API 层依赖规范化** (Property Certificate API Layer Normalization)
+  - API 端点改为通过 `PropertyCertificateService` 访问 CRUD
+
+#### Added / 新增
+
+- **缺失的 CRUD 类补齐** (Missing CRUD Classes Added)
+  - 新增 `collection_crud`、`dynamic_permission_crud`、`prompt_template_crud`
+- **白名单补齐** (Field Whitelist Coverage)
+  - 为 `CollectionRecord`、`DynamicPermission`、`PromptTemplate` 增加字段白名单
+  - 为 `Project`、`Organization`、`PropertyCertificate`、`PropertyOwner`、`RentTerm`、`RentLedger`、`UserRoleAssignment`、`ResourcePermission`、`PermissionAuditLog` 增加字段白名单
+  - 为 `AsyncTask`、`ExcelTaskConfig` 增加字段白名单
 
 ### ⚙️ 配置管理优化 (Configuration Management Optimization)
 
@@ -79,8 +109,72 @@
 - [架构重构分析](docs/architecture-refactoring.md)
 - [测试标准](docs/TESTING_STANDARDS.md)
 
----
+### 🧹 文档清理 (Documentation Cleanup)
 
+#### Removed / 删除
+
+- 删除过期/未引用的阶段性报告与计划文档:
+  - `docs/project-comprehensive-analysis-2026-02-02.md`
+  - `docs/project-issues-report-2026-02-02.md`
+  - `docs/test-coverage-improvement-phase1-report.md`
+  - `docs/test-coverage-improvement-plan.md`
+  - `docs/todo-debt-plan.md`
+  - `docs/property-certificate-feature-plan.md`
+  - `docs/property-certificate-implementation-summary.md`
+
+### 🧩 文档补全 (Documentation Completion)
+
+#### Added / 新增
+
+- 新增缺失的文档与模板，补齐文档树结构:
+  - `docs/index.md`
+  - `docs/guides/getting-started.md`
+  - `docs/guides/deployment.md`
+  - `docs/integrations/api-overview.md`
+  - `docs/integrations/auth-api.md`
+  - `docs/integrations/assets-api.md`
+  - `docs/integrations/pdf-processing.md`
+  - `docs/features/prd-asset-management.md`
+  - `docs/features/prd-rental-management.md`
+  - `docs/features/spec-data-models.md`
+  - `docs/features/spec-user-permissions.md`
+  - `docs/incidents/incident-template.md`
+  - `docs/testing/v2-test-cases.md`
+  - `docs/v2_upgrade_plan.md`
+  - `docs/architecture-refactoring.md`
+
+#### Fixed / 修复
+
+- 修复文档锚点与引用错误，确保内部链接有效
+
+### 🧾 文档与工具维护 (Docs & Tooling Maintenance)
+
+#### Added / 新增
+
+- `backend/docs/API_DOCUMENTATION_ANALYSIS.md` - API 文档分析报告占位与生成说明
+- `backend/docs/COVERAGE_IMPROVEMENT_REPORT.md` - 覆盖率报告占位与生成指引
+- `docs/tooling/assistant-metadata.md` - 根目录工具元数据说明
+
+#### Changed / 变更
+
+- 修复文档引用路径:
+  - `backend/docs/enhanced_database_guide.md`
+  - `frontend/docs/type-safety-fix-summary.md`
+  - `scripts/README.md`
+- `backend/debug_import.py` 迁移至 `backend/scripts/dev/debug_import.py` 并补充路径初始化
+- `.gitignore` 允许 `backend/docs` 下的分析/报告占位文档被追踪
+
+### 🗑️ 文档站点移除 (Docs Site Removal)
+
+#### Removed / 删除
+
+- 移除 MkDocs 站点构建相关配置与依赖:
+  - `backend/mkdocs.yml`
+  - `docs/includes/mkdocs.md`
+  - `backend/pyproject.toml` 中的 docs 可选依赖
+  - `backend/uv.lock` 中的 mkdocs 相关锁定项
+
+---
 ## [1.0.0] - 2026-01-15
 
 ### 初始版本 (Initial Release)

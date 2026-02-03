@@ -94,7 +94,7 @@ pip install pre-commit
 pre-commit install
 ```
 
-详细文档请参考：[CONTRIBUTING.md - Automated File Naming Checks](../CONTRIBUTING.md#automated-file-naming-checks)
+详细文档请参考：[命名规范 - 文件命名规范](../docs/guides/NAMING_CONVENTIONS.md#9-文件命名规范)
 
 ---
 

@@ -291,7 +291,7 @@ $ npm test
 - [ESLint Rule: strict-boolean-expressions](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/strict-boolean-expressions.md)
 - [TypeScript 可选链](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#optional-chaining)
 - [空值合并运算符](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#nullish-coalescing)
-- [前端开发指南](../frontend/CLAUDE.md)
+- [前端开发指南](../CLAUDE.md)
 
 ---
 
