@@ -263,9 +263,7 @@ class QueryOptimizer:
             return (
                 self.db.query(Asset)
                 .filter(Asset.id.in_(asset_ids))
-                .update(
-                    cast(dict[Any, Any], update_data), synchronize_session=False
-                )
+                .update(cast(dict[Any, Any], update_data), synchronize_session=False)
             )
 
     def optimize_statistics_query(self) -> Any:

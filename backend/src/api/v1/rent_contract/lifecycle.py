@@ -7,10 +7,11 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, internal_error
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.rent_contract import RentContractCreate, RentContractResponse
@@ -24,10 +25,10 @@ router = APIRouter()
     response_model=RentContractResponse,
     summary="V2: 合同续签",
 )
-def renew_contract(
+async def renew_contract(
     contract_id: str,
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     new_contract_data: RentContractCreate,
     should_transfer_deposit: bool = True,
     current_user: User = Depends(get_current_active_user),
@@ -35,20 +36,25 @@ def renew_contract(
     """
     合同续签：创建新合同，结束原合同，转移押金
     """
-    try:
-        new_contract = rent_contract_service.renew_contract(
-            db=db,
-            original_contract_id=contract_id,
-            new_contract_data=new_contract_data,
-            should_transfer_deposit=should_transfer_deposit,
-            operator=current_user.username if current_user else None,
-            operator_id=current_user.id if current_user else None,
-        )
-        return new_contract
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"合同续签失败: {str(e)}")
+
+    def _sync(sync_db: Session) -> object:
+        db = sync_db
+        try:
+            new_contract = rent_contract_service.renew_contract(
+                db=db,
+                original_contract_id=contract_id,
+                new_contract_data=new_contract_data,
+                should_transfer_deposit=should_transfer_deposit,
+                operator=current_user.username if current_user else None,
+                operator_id=current_user.id if current_user else None,
+            )
+            return new_contract
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"合同续签失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.post(
@@ -56,10 +62,10 @@ def renew_contract(
     response_model=RentContractResponse,
     summary="V2: 合同终止",
 )
-def terminate_contract(
+async def terminate_contract(
     contract_id: str,
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     termination_date: date,
     should_refund_deposit: bool = True,
     deduction_amount: float = 0.0,
@@ -69,19 +75,24 @@ def terminate_contract(
     """
     合同终止：提前结束合同，处理押金退还/抵扣
     """
-    try:
-        contract = rent_contract_service.terminate_contract(
-            db=db,
-            contract_id=contract_id,
-            termination_date=termination_date,
-            should_refund_deposit=should_refund_deposit,
-            deduction_amount=Decimal(str(deduction_amount)),
-            termination_reason=termination_reason,
-            operator=current_user.username if current_user else None,
-            operator_id=current_user.id if current_user else None,
-        )
-        return contract
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"合同终止失败: {str(e)}")
+
+    def _sync(sync_db: Session) -> object:
+        db = sync_db
+        try:
+            contract = rent_contract_service.terminate_contract(
+                db=db,
+                contract_id=contract_id,
+                termination_date=termination_date,
+                should_refund_deposit=should_refund_deposit,
+                deduction_amount=Decimal(str(deduction_amount)),
+                termination_reason=termination_reason,
+                operator=current_user.username if current_user else None,
+                operator_id=current_user.id if current_user else None,
+            )
+            return contract
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"合同终止失败: {str(e)}")
+
+    return await db.run_sync(_sync)

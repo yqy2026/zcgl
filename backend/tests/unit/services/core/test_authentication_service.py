@@ -20,8 +20,8 @@ from src.services.core.authentication_service import (
     ALGORITHM,
     REFRESH_TOKEN_EXPIRE_DAYS,
     SECRET_KEY,
-    TokenPair,
     AuthenticationService,
+    TokenPair,
 )
 
 # ============================================================================

@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
 from ..core.exception_handler import InvalidRequestError
 from ..crud import field_whitelist as crud_field_whitelist
+from ..crud.field_whitelist import ModelFieldWhitelist
 from ..models.asset import Asset
 from ..models.contact import Contact
 from ..models.organization import Organization
@@ -25,13 +26,13 @@ MODEL_REGISTRY: dict[str, type] = {
 }
 
 
-def _get_whitelist_for_model(model_class: type):
+def _get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
     """Resolve whitelist with test patch support."""
     security_module = sys.modules.get("src.security.security")
     if security_module is not None:
         get_whitelist = getattr(security_module, "get_whitelist_for_model", None)
         if callable(get_whitelist):
-            return get_whitelist(model_class)
+            return cast(ModelFieldWhitelist, get_whitelist(model_class))
     return crud_field_whitelist.get_whitelist_for_model(model_class)
 
 

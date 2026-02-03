@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 import os
-
 from typing import Literal, cast
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
@@ -66,9 +65,7 @@ class SecuritySettings(BaseModel):
     )
 
     # CSRF 配置
-    CSRF_ENABLED: bool = Field(
-        default=True, json_schema_extra={"env": "CSRF_ENABLED"}
-    )
+    CSRF_ENABLED: bool = Field(default=True, json_schema_extra={"env": "CSRF_ENABLED"})
     CSRF_COOKIE_NAME: str = Field(
         default="csrf_token", json_schema_extra={"env": "CSRF_COOKIE_NAME"}
     )
@@ -103,7 +100,8 @@ class SecuritySettings(BaseModel):
         default=True, json_schema_extra={"env": "SECURITY_ANALYZER_ENABLE_IP_BLOCK"}
     )
     SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS: int = Field(
-        default=5, json_schema_extra={"env": "SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"}
+        default=5,
+        json_schema_extra={"env": "SECURITY_ANALYZER_MAX_SUSPICIOUS_REQUESTS"},
     )
     SECURITY_ANALYZER_BLOCK_DURATION: int = Field(
         default=3600, json_schema_extra={"env": "SECURITY_ANALYZER_BLOCK_DURATION"}

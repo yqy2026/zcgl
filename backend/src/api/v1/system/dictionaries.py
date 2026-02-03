@@ -14,9 +14,10 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.dictionary import (
@@ -35,10 +36,10 @@ router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
 
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])
 @handle_api_errors
-def get_dictionary_options(
+async def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
     is_active: bool = Query(True, description="是否只返回启用的选项"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> list[DictionaryOptionResponse]:
     """
     获取字典选项（统一接口）
@@ -46,18 +47,23 @@ def get_dictionary_options(
 
     重构：业务逻辑已下沉至 Service 层
     """
-    result: list[DictionaryOptionResponse] = (
-        common_dictionary_service.get_combined_options(db, dict_type, is_active)
-    )
-    return result
+
+    def _sync(sync_db: Session) -> list[DictionaryOptionResponse]:
+        db = sync_db
+        result: list[DictionaryOptionResponse] = (
+            common_dictionary_service.get_combined_options(db, dict_type, is_active)
+        )
+        return result
+
+    return await db.run_sync(_sync)
 
 
 @router.post("/{dict_type}/quick-create")
 @handle_api_errors
-def quick_create_dictionary(
+async def quick_create_dictionary(
     dict_type: str = Path(..., description="字典类型"),
     dictionary_data: SimpleDictionaryCreate = Body(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
@@ -69,31 +75,40 @@ def quick_create_dictionary(
     - 操作人从当前用户获取，不再硬编码
     - 使用类型安全的 Schema
     """
-    operator = getattr(current_user, "full_name", None)
-    if not isinstance(operator, str) or not operator:
-        operator = "系统"
-    result = common_dictionary_service.quick_create_enum_dictionary(
-        db, dict_type, dictionary_data, operator=operator
-    )
-    return JSONResponse(status_code=200, content=result)
+
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        operator = getattr(current_user, "full_name", None)
+        if not isinstance(operator, str) or not operator:
+            operator = "系统"
+        result = common_dictionary_service.quick_create_enum_dictionary(
+            db, dict_type, dictionary_data, operator=operator
+        )
+        return JSONResponse(status_code=200, content=result)
+
+    return await db.run_sync(_sync)
 
 
 @router.get("/types", response_model=list[str])
 @handle_api_errors
-def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
+async def get_dictionary_types(db: AsyncSession = Depends(get_async_db)) -> list[str]:
     """
     获取所有字典类型列表
 
     注意：已废弃旧的system_dictionaries表，统一使用enum_field表
     """
-    return common_dictionary_service.get_all_dictionary_types(db)
+    def _sync(sync_db: Session) -> list[str]:
+        db = sync_db
+        return common_dictionary_service.get_all_dictionary_types(db)
+
+    return await db.run_sync(_sync)
 
 
 @router.get("/validation/stats", summary="获取枚举验证统计信息")
 @handle_api_errors
-def get_validation_statistics(
+async def get_validation_statistics(
     enum_type: str | None = Query(None, description="枚举类型编码（可选）"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> JSONResponse:
     """
     获取枚举验证统计信息
@@ -111,41 +126,46 @@ def get_validation_statistics(
     - 某个用户经常提交无效值，可能需要培训
     - 某个API端点频繁失败，可能需要前端修复
     """
-    from ....services.enum_validation_service import get_enum_validation_service
 
-    enum_service = get_enum_validation_service(db)
-    stats = enum_service.get_validation_stats(enum_type)
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        from ....services.enum_validation_service import get_enum_validation_service
 
-    # 添加计算字段
-    result: dict[str, dict[str, Any]] = {}
-    for enum_code, stat_data in stats.items():
-        failure_rate = (
-            (stat_data["failures"] / stat_data["total_validations"] * 100)
-            if stat_data["total_validations"] > 0
-            else 0
+        enum_service = get_enum_validation_service(db)
+        stats = enum_service.get_validation_stats(enum_type)
+
+        # 添加计算字段
+        result: dict[str, dict[str, Any]] = {}
+        for enum_code, stat_data in stats.items():
+            failure_rate = (
+                (stat_data["failures"] / stat_data["total_validations"] * 100)
+                if stat_data["total_validations"] > 0
+                else 0
+            )
+
+            result[enum_code] = {
+                **stat_data,
+                "failure_rate": round(failure_rate, 2),
+            }
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "data": result,
+                "total_enum_types": len(result),
+            },
         )
 
-        result[enum_code] = {
-            **stat_data,
-            "failure_rate": round(failure_rate, 2),
-        }
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "data": result,
-            "total_enum_types": len(result),
-        },
-    )
+    return await db.run_sync(_sync)
 
 
 @router.post("/{dict_type}/values")
 @handle_api_errors
-def add_dictionary_value(
+async def add_dictionary_value(
     dict_type: str = Path(..., description="字典类型"),
     value_data: DictionaryValueCreate = Body(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
@@ -156,20 +176,25 @@ def add_dictionary_value(
     - 使用类型安全的 Schema
     - 操作人从当前用户获取
     """
-    operator = getattr(current_user, "full_name", None)
-    if not isinstance(operator, str) or not operator:
-        operator = "系统"
-    result = common_dictionary_service.add_dictionary_value(
-        db, dict_type, value_data, operator=operator
-    )
-    return JSONResponse(status_code=200, content=result)
+
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        operator = getattr(current_user, "full_name", None)
+        if not isinstance(operator, str) or not operator:
+            operator = "系统"
+        result = common_dictionary_service.add_dictionary_value(
+            db, dict_type, value_data, operator=operator
+        )
+        return JSONResponse(status_code=200, content=result)
+
+    return await db.run_sync(_sync)
 
 
 @router.delete("/{dict_type}")
 @handle_api_errors
-def delete_dictionary_type(
+async def delete_dictionary_type(
     dict_type: str = Path(..., description="字典类型"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
@@ -177,10 +202,15 @@ def delete_dictionary_type(
 
     重构：业务逻辑已下沉至 Service 层
     """
-    operator = getattr(current_user, "full_name", None)
-    if not isinstance(operator, str) or not operator:
-        operator = "系统"
-    result = common_dictionary_service.delete_dictionary_type(
-        db, dict_type, operator=operator
-    )
-    return JSONResponse(status_code=200, content=result)
+
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        operator = getattr(current_user, "full_name", None)
+        if not isinstance(operator, str) or not operator:
+            operator = "系统"
+        result = common_dictionary_service.delete_dictionary_type(
+            db, dict_type, operator=operator
+        )
+        return JSONResponse(status_code=200, content=result)
+
+    return await db.run_sync(_sync)

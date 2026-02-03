@@ -12,11 +12,14 @@ Created: 2026-01-20
 Task: Integrate Security Event Logging into Permission Middleware (Issue #5)
 """
 
+from datetime import UTC
+
+import pytest
 from sqlalchemy.orm import Session
 
 from src.models.security_event import SecurityEvent
 from src.security.audit_logger import SecurityEventLogger, SecurityEventType
-import pytest
+
 
 @pytest.fixture(autouse=True)
 def cleanup_security_events(test_db: Session):
@@ -26,6 +29,7 @@ def cleanup_security_events(test_db: Session):
     yield
     test_db.query(SecurityEvent).delete()
     test_db.commit()
+
 
 class TestPermissionDeniedLogging:
     """Test permission denied event logging in middleware"""
@@ -176,17 +180,19 @@ class TestPermissionDeniedLogging:
 class TestSecurityAlertsEndpoint:
     """Test /security/alerts/test endpoint"""
 
-    async def test_security_alerts_test_requires_admin(self, test_client_no_auth, test_admin):
+    async def test_security_alerts_test_requires_admin(
+        self, test_client_no_auth, test_admin
+    ):
         """Test that /security/alerts/test requires admin role"""
         # Create auth headers for admin
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
         from src.core.config import settings
         from src.security.cookie_manager import cookie_manager
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -228,14 +234,14 @@ class TestSecurityAlertsEndpoint:
         initial_count = test_db.query(SecurityEvent).count()
 
         # Create auth headers for admin
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
         from src.core.config import settings
         from src.security.cookie_manager import cookie_manager
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -270,10 +276,12 @@ class TestSecurityAlertsEndpoint:
         final_count = test_db.query(SecurityEvent).count()
         assert final_count >= initial_count + 12
 
-    async def test_security_alerts_test_non_admin_forbidden(self, test_client_no_auth, test_user):
+    async def test_security_alerts_test_non_admin_forbidden(
+        self, test_client_no_auth, test_user
+    ):
         """Test that non-admin users cannot access /security/alerts/test"""
         # Create auth headers for regular user
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
@@ -283,7 +291,7 @@ class TestSecurityAlertsEndpoint:
         # Change user role to non-admin
         test_user.role = "user"
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_user.id),
             "user_id": str(test_user.id),
@@ -326,16 +334,18 @@ class TestSecurityAlertsEndpoint:
 class TestSecurityEventsEndpoint:
     """Test /security/events endpoint"""
 
-    async def test_security_events_requires_admin(self, test_client_no_auth, test_admin):
+    async def test_security_events_requires_admin(
+        self, test_client_no_auth, test_admin
+    ):
         """Test that /security/events requires admin role"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
         from src.core.config import settings
         from src.security.cookie_manager import cookie_manager
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -373,7 +383,7 @@ class TestSecurityEventsEndpoint:
     ):
         """Test that /security/events returns paginated results"""
         # Create some events
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
@@ -394,7 +404,7 @@ class TestSecurityEventsEndpoint:
         test_db.commit()
 
         # Create auth token
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -433,7 +443,7 @@ class TestSecurityEventsEndpoint:
         self, test_client_no_auth, test_admin, test_db: Session
     ):
         """Test that /security/events response includes event details"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
@@ -454,7 +464,7 @@ class TestSecurityEventsEndpoint:
         test_db.commit()
 
         # Create auth token
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -480,7 +490,7 @@ class TestSecurityEventsEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        
+
         # Find our event
         found_event = next(
             (e for e in data["events"] if e["user_id"] == "test_attacker"), None
@@ -490,9 +500,11 @@ class TestSecurityEventsEndpoint:
         assert found_event["severity"] == "high"
         assert found_event["ip"] == "10.0.0.1"
 
-    async def test_security_events_non_admin_forbidden(self, test_client_no_auth, test_user):
+    async def test_security_events_non_admin_forbidden(
+        self, test_client_no_auth, test_user
+    ):
         """Test that non-admin users cannot access /security/events"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
@@ -502,7 +514,7 @@ class TestSecurityEventsEndpoint:
         # Change role to user
         test_user.role = "user"
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_user.id),
             "user_id": str(test_user.id),
@@ -532,7 +544,7 @@ class TestSecurityEventsEndpoint:
         self, test_client_no_auth, test_admin, test_db: Session
     ):
         """Test that /security/events are ordered by created_at desc"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import jwt
 
@@ -556,7 +568,7 @@ class TestSecurityEventsEndpoint:
         test_db.commit()
 
         # Create auth token
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token_data = {
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
@@ -582,14 +594,16 @@ class TestSecurityEventsEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        
+
         # Verify order
         items = data["events"]
         assert len(items) >= 3
         # Just check the first few items
-        event_ids = [item["user_id"] for item in items if item["user_id"].startswith("user_")]
+        event_ids = [
+            item["user_id"] for item in items if item["user_id"].startswith("user_")
+        ]
         if len(event_ids) >= 3:
-             # user_2 (newest) should be first
-             assert event_ids[0] == "user_2"
-             assert event_ids[1] == "user_1"
-             assert event_ids[2] == "user_0"
+            # user_2 (newest) should be first
+            assert event_ids[0] == "user_2"
+            assert event_ids[1] == "user_1"
+            assert event_ids[2] == "user_0"

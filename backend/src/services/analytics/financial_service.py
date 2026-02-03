@@ -23,7 +23,9 @@ class FinancialService:
     def __init__(self, db: Session):
         self.db = db
 
-    def calculate_summary(self, filters: dict[str, Any] | None = None) -> dict[str, Any]:
+    def calculate_summary(
+        self, filters: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         计算财务汇总数据
 

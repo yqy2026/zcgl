@@ -61,7 +61,11 @@ class AnalyticsService:
         # 尝试从缓存获取
         cache_key = self._generate_cache_key(validated_filters)
         if should_use_cache:
-            cached_result = self.cache.get(cache_key)
+            try:
+                cached_result = self.cache.get(cache_key)
+            except Exception as e:
+                logger.warning(f"��������ȡʧ�ܣ����Ի���: {e}", exc_info=True)
+                cached_result = None
             if cached_result is not None:
                 logger.info(f"从缓存返回分析结果: {cache_key}")
                 return cast(dict[str, Any], cached_result)
@@ -71,7 +75,10 @@ class AnalyticsService:
 
         # 存入缓存
         if should_use_cache:
-            self.cache.set(cache_key, result, ttl=3600)  # 1小时缓存
+            try:
+                self.cache.set(cache_key, result, ttl=3600)  # 1小时缓存
+            except Exception as e:
+                logger.warning(f"����д��ʧ�ܣ����Ի���: {e}", exc_info=True)
 
         return result
 

@@ -1,12 +1,15 @@
-from typing import Any, Optional, Set
+from typing import Any, cast
 
 from src.models.rent_contract import RentContract, RentLedger, RentTerm
+
 from .ledger_service import RentContractLedgerService
 from .lifecycle_service import RentContractLifecycleService
 from .statistics_service import RentContractStatisticsService
 
 
-def model_to_dict(model: Any, exclude: Optional[Set[str]] = None) -> dict:
+def model_to_dict(
+    model: Any, exclude: set[str] | None = None
+) -> dict[str, Any]:
     """
     将 SQLAlchemy 模型或 Pydantic 模型转换为字典
 
@@ -21,11 +24,11 @@ def model_to_dict(model: Any, exclude: Optional[Set[str]] = None) -> dict:
         return {}
 
     # Pydantic v2 模型
-    if hasattr(model, 'model_dump'):
-        return model.model_dump(exclude=exclude)
+    if hasattr(model, "model_dump"):
+        return cast(dict[str, Any], model.model_dump(exclude=exclude))
 
     # SQLAlchemy 模型
-    if hasattr(model, '__table__'):
+    if hasattr(model, "__table__"):
         columns = model.__table__.columns.keys()
         return {
             col: getattr(model, col)
@@ -34,7 +37,7 @@ def model_to_dict(model: Any, exclude: Optional[Set[str]] = None) -> dict:
         }
 
     # 其他对象，尝试转换为 dict
-    return dict(model)
+    return cast(dict[str, Any], dict(model))
 
 
 class RentContractService(

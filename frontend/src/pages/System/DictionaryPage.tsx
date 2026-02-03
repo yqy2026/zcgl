@@ -84,7 +84,7 @@ const DictionaryPage: React.FC = () => {
       category: 'all',
     },
     initialPageSize: 10,
-    filterFn: useCallback((items, filters) => {
+    filterFn: useCallback((items: EnumFieldWithType[], filters: OverviewFilters) => {
       const trimmedKeyword = filters.keyword.trim().toLowerCase();
       return items.filter(item => {
         if (filters.category !== 'all' && item.type.category !== filters.category) {

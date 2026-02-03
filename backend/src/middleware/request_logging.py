@@ -185,9 +185,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 if not resolved_username and user_id:
                     user_obj = await db.run_sync(
                         lambda sync_db: (
-                            sync_db.query(User)
-                            .filter(User.id == user_id)
-                            .first()
+                            sync_db.query(User).filter(User.id == user_id).first()
                         )
                     )
                     if user_obj:

@@ -3,20 +3,20 @@ Analytics API 测试
 测试综合分析 API 端点
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db():
@@ -39,6 +39,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+
     def override_get_db():
         yield mock_db
 
@@ -90,6 +91,7 @@ def sample_analytics_data():
 # =============================================================================
 # 综合分析 API 测试
 # =============================================================================
+
 
 class TestComprehensiveAnalytics:
     """综合统计分析 API 测试"""
@@ -177,6 +179,7 @@ class TestComprehensiveAnalytics:
 # 缓存管理 API 测试
 # =============================================================================
 
+
 class TestCacheManagement:
     """缓存管理 API 测试"""
 
@@ -234,6 +237,7 @@ class TestCacheManagement:
 # 趋势分析 API 测试
 # =============================================================================
 
+
 class TestTrendAnalysis:
     """趋势分析 API 测试"""
 
@@ -274,6 +278,7 @@ class TestTrendAnalysis:
 # 分布分析 API 测试
 # =============================================================================
 
+
 class TestDistributionAnalysis:
     """分布分析 API 测试"""
 
@@ -297,7 +302,9 @@ class TestDistributionAnalysis:
             }
 
             # Act
-            response = client.get("/api/v1/analytics/distribution?distribution_type=property_nature")
+            response = client.get(
+                "/api/v1/analytics/distribution?distribution_type=property_nature"
+            )
 
             # Assert
             assert response.status_code == 200
@@ -325,7 +332,9 @@ class TestDistributionAnalysis:
             }
 
             # Act
-            response = client.get("/api/v1/analytics/distribution?distribution_type=usage_status")
+            response = client.get(
+                "/api/v1/analytics/distribution?distribution_type=usage_status"
+            )
 
             # Assert
             assert response.status_code == 200
@@ -334,6 +343,7 @@ class TestDistributionAnalysis:
 # =============================================================================
 # 数据导出 API 测试
 # =============================================================================
+
 
 class TestDataExport:
     """数据导出 API 测试"""
@@ -363,6 +373,7 @@ class TestDataExport:
 # =============================================================================
 # 错误处理测试
 # =============================================================================
+
 
 class TestErrorHandling:
     """错误处理测试"""
@@ -413,9 +424,7 @@ class TestErrorHandling:
         Then: 返回 500 错误（服务层不验证日期格式）
         """
         # Act
-        response = client.get(
-            "/api/v1/analytics/comprehensive?date_from=invalid-date"
-        )
+        response = client.get("/api/v1/analytics/comprehensive?date_from=invalid-date")
 
         # Assert - 服务层可能不验证日期，返回 500
         assert response.status_code == 500
@@ -424,6 +433,7 @@ class TestErrorHandling:
 # =============================================================================
 # 性能测试
 # =============================================================================
+
 
 class TestPerformance:
     """性能测试"""
@@ -451,4 +461,3 @@ class TestPerformance:
             assert response1.status_code == 200
             assert response2.status_code == 200
             # 第二次调用应该使用缓存（实际测试中需要测量时间）
-

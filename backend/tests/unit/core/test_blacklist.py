@@ -188,7 +188,9 @@ class TestMiddlewareIntegration:
         import src.middleware.auth as auth
 
         monkeypatch.setattr(auth, "is_production", lambda: True)
-        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: False)
+        monkeypatch.setattr(
+            auth._token_blacklist_circuit, "allow_request", lambda: False
+        )
 
         assert auth._is_token_blacklisted("fail-closed-token") is True
 
@@ -197,7 +199,9 @@ class TestMiddlewareIntegration:
         import src.middleware.auth as auth
 
         monkeypatch.setattr(auth, "is_production", lambda: False)
-        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: False)
+        monkeypatch.setattr(
+            auth._token_blacklist_circuit, "allow_request", lambda: False
+        )
 
         assert auth._is_token_blacklisted("fail-open-token") is False
 
@@ -210,7 +214,11 @@ class TestMiddlewareIntegration:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(auth, "is_production", lambda: True)
-        monkeypatch.setattr(auth._token_blacklist_circuit, "allow_request", lambda: True)
-        monkeypatch.setattr(token_blacklist.blacklist_manager, "is_blacklisted", raise_error)
+        monkeypatch.setattr(
+            auth._token_blacklist_circuit, "allow_request", lambda: True
+        )
+        monkeypatch.setattr(
+            token_blacklist.blacklist_manager, "is_blacklisted", raise_error
+        )
 
         assert auth._is_token_blacklisted("exception-token") is True

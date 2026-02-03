@@ -101,7 +101,9 @@ class TestNotificationSchemas:
             created_at=datetime(2024, 1, 1, 12, 0, 0),
             updated_at=datetime(2024, 1, 1, 12, 0, 0),
         )
-        response = NotificationListResponse(items=[item], total=1, page=1, page_size=10, pages=1)
+        response = NotificationListResponse(
+            items=[item], total=1, page=1, page_size=10, pages=1
+        )
         assert response.total == 1
         assert response.items[0].id == "n1"
 
@@ -110,5 +112,7 @@ class TestNotificationSchemas:
         assert req.notification_ids == ["n1", "n2"]
 
     def test_notification_summary(self):
-        summary = NotificationSummary(total_count=10, unread_count=2, urgent_count=1, today_count=3)
+        summary = NotificationSummary(
+            total_count=10, unread_count=2, urgent_count=1, today_count=3
+        )
         assert summary.unread_count == 2

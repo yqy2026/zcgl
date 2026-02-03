@@ -5,12 +5,13 @@ This is a stub implementation to allow tests to run.
 The actual security service implementation should be created in a future task.
 """
 
-from typing import Any, Dict
+from typing import Any
+
 
 class SecurityService:
     """Security service stub"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize security service"""
         pass
 
@@ -30,9 +31,10 @@ class SecurityService:
         """Generate authentication token"""
         return f"token_{user_id}"
 
-    def validate_token(self, token: str) -> Dict[str, Any]:
+    def validate_token(self, token: str) -> dict[str, Any]:
         """Validate and decode token"""
         return {"user_id": token.replace("token_", ""), "valid": True}
+
 
 # Singleton instance
 security_service = SecurityService()

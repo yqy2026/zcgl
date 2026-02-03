@@ -191,9 +191,7 @@ class TestRolesAuthentication:
         """测试普通用户无法创建角色"""
         role_data = {"name": "unauthorized_role"}
         role_data["display_name"] = "Unauthorized Role"
-        response = client_normal_user.post(
-            "/api/v1/roles/", json=role_data
-        )
+        response = client_normal_user.post("/api/v1/roles/", json=role_data)
         # 普通用户应该被拒绝
         assert response.status_code in [
             status.HTTP_403_FORBIDDEN,
@@ -201,4 +199,3 @@ class TestRolesAuthentication:
             status.HTTP_404_NOT_FOUND,
             status.HTTP_400_BAD_REQUEST,
         ]
-

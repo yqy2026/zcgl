@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -19,7 +20,7 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.rbac import permission_crud, role_crud
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user, require_admin
 from ....models.auth import User
 from ....schemas.rbac import (
@@ -87,14 +88,14 @@ class RoleUserListResponse(BaseModel):
 @router.get(
     "", response_model=APIResponse[PaginatedData[RoleResponse]], summary="获取角色列表"
 )
-def get_roles(
+async def get_roles(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     search: str | None = Query(None, description="搜索关键词"),
     category: str | None = Query(None, description="角色类别"),
     is_active: bool | None = Query(None, description="是否激活"),
     organization_id: str | None = Query(None, description="组织ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
@@ -107,29 +108,34 @@ def get_roles(
     - **is_active**: 按激活状态筛选
     - **organization_id**: 按组织筛选
     """
-    try:
-        skip = (page - 1) * page_size
 
-        # Using CRUD for read operations
-        roles, total = role_crud.get_multi_with_filters(
-            db=db,
-            skip=skip,
-            limit=page_size,
-            search=search,
-            category=category,
-            is_active=is_active,
-            organization_id=organization_id,
-        )
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        try:
+            skip = (page - 1) * page_size
 
-        return ResponseHandler.paginated(
-            data=[RoleResponse.model_validate(role) for role in roles],
-            page=page,
-            page_size=page_size,
-            total=total,
-            message="获取角色列表成功",
-        )
-    except Exception as e:
-        raise internal_error(str(e))
+            # Using CRUD for read operations
+            roles, total = role_crud.get_multi_with_filters(
+                db=db,
+                skip=skip,
+                limit=page_size,
+                search=search,
+                category=category,
+                is_active=is_active,
+                organization_id=organization_id,
+            )
+
+            return ResponseHandler.paginated(
+                data=[RoleResponse.model_validate(role) for role in roles],
+                page=page,
+                page_size=page_size,
+                total=total,
+                message="获取角色列表成功",
+            )
+        except Exception as e:
+            raise internal_error(str(e))
+
+    return await db.run_sync(_sync)
 
 
 @router.post(
@@ -138,9 +144,9 @@ def get_roles(
     status_code=status.HTTP_201_CREATED,
     summary="创建角色",
 )
-def create_role(
+async def create_role(
     role_data: RoleCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> RoleDetailResponse:
     """
@@ -151,45 +157,54 @@ def create_role(
     - **description**: 描述（可选）
     - **level**: 角色级别（可选，默认1）
     """
-    try:
-        new_role = rbac_service.create_role(
-            db=db,
-            obj_in=role_data,
-            created_by=str(current_user.id),
-        )
 
-        return RoleDetailResponse.model_validate(new_role)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise bad_request(str(e))
+    def _sync(sync_db: Session) -> RoleDetailResponse:
+        db = sync_db
+        try:
+            new_role = rbac_service.create_role(
+                db=db,
+                obj_in=role_data,
+                created_by=str(current_user.id),
+            )
+
+            return RoleDetailResponse.model_validate(new_role)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise bad_request(str(e))
+
+    return await db.run_sync(_sync)
 
 
 @router.get("/{role_id}", response_model=RoleDetailResponse, summary="获取角色详情")
-def get_role(
+async def get_role(
     role_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> RoleDetailResponse:
     """获取角色详情及其关联的权限和用户"""
-    try:
-        role = role_crud.get(db, id=role_id)
+    def _sync(sync_db: Session) -> RoleDetailResponse:
+        db = sync_db
+        try:
+            role = role_crud.get(db, id=role_id)
 
-        if not role:
-            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
+            if not role:
+                raise not_found("角色不存在", resource_type="role", resource_id=role_id)
 
-        return RoleDetailResponse.model_validate(role)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(str(e))
+            return RoleDetailResponse.model_validate(role)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(str(e))
+
+    return await db.run_sync(_sync)
 
 
 @router.put("/{role_id}", response_model=RoleDetailResponse, summary="更新角色")
-def update_role(
+async def update_role(
     role_id: str,
     role_data: RoleUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> RoleDetailResponse:
     """
@@ -198,25 +213,30 @@ def update_role(
     - 系统角色无法修改
     - 只能修改非系统内置的角色
     """
-    try:
-        updated_role = rbac_service.update_role(
-            db=db,
-            role_id=role_id,
-            obj_in=role_data,
-            updated_by=str(current_user.id),
-        )
 
-        return RoleDetailResponse.model_validate(updated_role)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise bad_request(str(e))
+    def _sync(sync_db: Session) -> RoleDetailResponse:
+        db = sync_db
+        try:
+            updated_role = rbac_service.update_role(
+                db=db,
+                role_id=role_id,
+                obj_in=role_data,
+                updated_by=str(current_user.id),
+            )
+
+            return RoleDetailResponse.model_validate(updated_role)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise bad_request(str(e))
+
+    return await db.run_sync(_sync)
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, summary="删除角色")
-def delete_role(
+async def delete_role(
     role_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> None:
     """
@@ -225,57 +245,64 @@ def delete_role(
     - 系统角色无法删除
     - 如果角色正在被用户使用，无法删除
     """
-    try:
-        success = rbac_service.delete_role(
-            db=db, role_id=role_id, deleted_by=str(current_user.id)
-        )
 
-        if not success:
-            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise bad_request(str(e))
+    def _sync(sync_db: Session) -> None:
+        db = sync_db
+        try:
+            success = rbac_service.delete_role(
+                db=db, role_id=role_id, deleted_by=str(current_user.id)
+            )
 
+            if not success:
+                raise not_found("角色不存在", resource_type="role", resource_id=role_id)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise bad_request(str(e))
 
-# ==================== 权限管理端点 ====================
+    # ==================== 权限管理端点 ====================
+
+    return await db.run_sync(_sync)
 
 
 @router.get("/permissions/list", response_model=dict[str, Any], summary="获取所有权限")
-def get_all_permissions(
-    db: Session = Depends(get_db),
+async def get_all_permissions(
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """获取系统中所有可用权限，按资源分组"""
-    try:
-        # Use simple get_multi from generic CRUD since no complex filters needed here
-        # or use get_multi_with_filters
-        permissions: list[Any] = permission_crud.get_multi(db, skip=0, limit=10000)
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        try:
+            permissions: list[Any] = permission_crud.get_multi(
+                db, skip=0, limit=10000
+            )
 
-        # 按资源类型分组
-        grouped: dict[str, list[PermissionResponse]] = {}
-        for perm in permissions:
-            resource = perm.resource
-            if resource not in grouped:
-                grouped[resource] = []
-            grouped[resource].append(PermissionResponse.model_validate(perm))
+            grouped: dict[str, list[PermissionResponse]] = {}
+            for perm in permissions:
+                resource = perm.resource
+                if resource not in grouped:
+                    grouped[resource] = []
+                grouped[resource].append(PermissionResponse.model_validate(perm))
 
-        return {
-            "success": True,
-            "data": grouped,
-            "total": len(permissions),
-        }
-    except Exception as e:
-        raise internal_error(str(e))
+            return {
+                "success": True,
+                "data": grouped,
+                "total": len(permissions),
+            }
+        except Exception as e:
+            raise internal_error(str(e))
+
+    return await db.run_sync(_sync)
 
 
 @router.put(
     "/{role_id}/permissions", response_model=dict[str, Any], summary="设置角色权限"
 )
-def set_role_permissions(
+async def set_role_permissions(
     role_id: str,
     request: RolePermissionUpdateRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> dict[str, Any]:
     """
@@ -283,32 +310,36 @@ def set_role_permissions(
 
     - 替换角色的所有权限为新的权限列表
     """
-    try:
-        rbac_service.update_role_permissions(
-            db=db,
-            role_id=role_id,
-            permission_ids=request.permission_ids,
-            updated_by=str(current_user.id),
-        )
 
-        # Get count for response
-        role = role_crud.get(db, role_id)
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        try:
+            rbac_service.update_role_permissions(
+                db=db,
+                role_id=role_id,
+                permission_ids=request.permission_ids,
+                updated_by=str(current_user.id),
+            )
 
-        return {
-            "success": True,
-            "message": "权限更新成功",
-            "data": {
-                "role_id": role_id,
-                "permission_count": len(role.permissions) if role else 0,
-            },
-        }
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise bad_request(str(e))
+            # Get count for response
+            role = role_crud.get(db, role_id)
 
+            return {
+                "success": True,
+                "message": "权限更新成功",
+                "data": {
+                    "role_id": role_id,
+                    "permission_count": len(role.permissions) if role else 0,
+                },
+            }
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise bad_request(str(e))
 
-# ==================== 角色用户关联端点 ====================
+    # ==================== 角色用户关联端点 ====================
+
+    return await db.run_sync(_sync)
 
 
 @router.get(
@@ -316,50 +347,46 @@ def set_role_permissions(
     response_model=APIResponse[PaginatedData[dict[str, Any]]],
     summary="获取角色的用户列表",
 )
-def get_role_users(
+async def get_role_users(
     role_id: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """获取拥有某个角色的所有用户"""
-    try:
-        role = role_crud.get(db, id=role_id)
+    def _sync(sync_db: Session) -> JSONResponse:
+        db = sync_db
+        try:
+            role = role_crud.get(db, id=role_id)
 
-        if not role:
-            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
+            if not role:
+                raise not_found(
+                    "角色不存在", resource_type="role", resource_id=role_id
+                )
 
-        from ....crud.auth import UserCRUD
-        # Assuming UserCRUD is compatible or we should use UserRoleAssignmentCRUD?
-        # The original code invoked UserCRUD.get_users_by_role (which might use join).
-        # Let's verify if that exists or if we should use assignments.
-        # Ideally we use assignment CRUD to get user_ids then get users.
+            from ....crud.auth import UserCRUD
 
-        # Original: user_crud.get_users_by_role(db, role_id, skip, limit)
-        # If UserCRUD wasn't refactored, it still works.
-        # But let's try to stick to new structure if possible.
-        # Using UserCRUD for now to minimize risk if I don't see it.
-        # But wait, I see `d:\ccode\zcgl\backend\src\crud\auth.py` in file list.
-        # Let's assume it works.
+            user_crud = UserCRUD()
+            skip = (page - 1) * page_size
+            users, total = user_crud.get_users_by_role(db, role_id, skip, page_size)
 
-        user_crud = UserCRUD()
-        skip = (page - 1) * page_size
-        users, total = user_crud.get_users_by_role(db, role_id, skip, page_size)
+            return ResponseHandler.paginated(
+                data=[
+                    {"id": u.id, "username": u.username, "email": u.email}
+                    for u in users
+                ],
+                page=page,
+                page_size=page_size,
+                total=total,
+                message="获取角色用户列表成功",
+            )
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(str(e))
 
-        return ResponseHandler.paginated(
-            data=[
-                {"id": u.id, "username": u.username, "email": u.email} for u in users
-            ],
-            page=page,
-            page_size=page_size,
-            total=total,
-            message="获取角色用户列表成功",
-        )
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(str(e))
+    return await db.run_sync(_sync)
 
 
 # ==================== 统计端点 ====================
@@ -368,24 +395,28 @@ def get_role_users(
 @router.get(
     "/statistics/summary", response_model=dict[str, Any], summary="获取角色统计信息"
 )
-def get_role_statistics(
-    db: Session = Depends(get_db),
+async def get_role_statistics(
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """获取角色相关的统计数据"""
-    try:
-        by_category = role_crud.count_by_category(db)
-        counts = role_crud.count_by_flags(db)
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        try:
+            by_category = role_crud.count_by_category(db)
+            counts = role_crud.count_by_flags(db)
 
-        return {
-            "success": True,
-            "data": {
-                "total_roles": counts["total"],
-                "active_roles": counts["active"],
-                "system_roles": counts["system"],
-                "custom_roles": counts["custom"],
-                "by_category": by_category,
-            },
-        }
-    except Exception as e:
-        raise internal_error(str(e))
+            return {
+                "success": True,
+                "data": {
+                    "total_roles": counts["total"],
+                    "active_roles": counts["active"],
+                    "system_roles": counts["system"],
+                    "custom_roles": counts["custom"],
+                    "by_category": by_category,
+                },
+            }
+        except Exception as e:
+            raise internal_error(str(e))
+
+    return await db.run_sync(_sync)

@@ -20,7 +20,9 @@ try:
 except ImportError:
     magic = None
     MAGIC_AVAILABLE = False
-    logging.getLogger(__name__).warning("python-magic模块不可用，文件类型检测功能将受限")
+    logging.getLogger(__name__).warning(
+        "python-magic模块不可用，文件类型检测功能将受限"
+    )
 
 from fastapi import UploadFile
 
@@ -54,6 +56,7 @@ def _get_magic_module() -> Any | None:
         if security_magic is not None:
             return security_magic
     return magic
+
 
 class FileValidationConfig:
     """文件验证配置"""

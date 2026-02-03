@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 """
 枚举字段管理CRUD操作
@@ -32,15 +32,15 @@ def _set_attr(obj: Any, attr: str, value: Any) -> None:
 class EnumFieldTypeCRUD:
     """枚举字段类型CRUD操作"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def _type_query(self):
+    def _type_query(self) -> Any:
         return self.db.query(EnumFieldType).filter(EnumFieldType.is_deleted.is_(False))
 
     def _value_query(
         self, *, enum_type_id: str, is_active: bool | None = None
-    ):
+    ) -> Any:
         query = self.db.query(EnumFieldValue).filter(
             and_(
                 EnumFieldValue.enum_type_id == enum_type_id,
@@ -52,16 +52,18 @@ class EnumFieldTypeCRUD:
         return query
 
     def _load_enum_values(self, enum_type: EnumFieldType) -> None:
-        enum_type.enum_values = (
+        enum_type.enum_values = cast(
+            list[EnumFieldValue],
             self._value_query(enum_type_id=str(enum_type.id), is_active=True)
             .order_by(EnumFieldValue.sort_order.asc())
-            .all()
+            .all(),
         )
 
     def get(self, enum_type_id: str) -> EnumFieldType | None:
         """根据ID获取枚举类型"""
-        enum_type = (
-            self._type_query().filter(EnumFieldType.id == enum_type_id).first()
+        enum_type = cast(
+            EnumFieldType | None,
+            self._type_query().filter(EnumFieldType.id == enum_type_id).first(),
         )
 
         if enum_type:
@@ -72,7 +74,10 @@ class EnumFieldTypeCRUD:
 
     def get_by_code(self, code: str) -> EnumFieldType | None:
         """根据编码获取枚举类型"""
-        return self._type_query().filter(EnumFieldType.code == code).first()
+        return cast(
+            EnumFieldType | None,
+            self._type_query().filter(EnumFieldType.code == code).first(),
+        )
 
     def get_multi(
         self,
@@ -104,11 +109,12 @@ class EnumFieldTypeCRUD:
                 )
             )
 
-        enum_types = (
+        enum_types = cast(
+            list[EnumFieldType],
             query.order_by(EnumFieldType.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .all()
+            .all(),
         )
 
         # 为每个枚举类型加载关联的枚举值
@@ -172,9 +178,7 @@ class EnumFieldTypeCRUD:
             return False
 
         # 检查是否有关联的枚举值
-        value_count = (
-            self._value_query(enum_type_id=enum_type_id).count()
-        )
+        value_count = self._value_query(enum_type_id=enum_type_id).count()
 
         if value_count > 0:
             raise OperationNotAllowedError("无法删除包含枚举值的枚举类型")
@@ -273,10 +277,10 @@ class EnumFieldTypeCRUD:
 class EnumFieldValueCRUD:
     """枚举字段值CRUD操作"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def _value_query(self):
+    def _value_query(self) -> Any:
         return self.db.query(EnumFieldValue).filter(
             EnumFieldValue.is_deleted.is_(False)
         )
@@ -286,20 +290,22 @@ class EnumFieldValueCRUD:
 
     def count_active(self) -> int:
         return int(
-            self._value_query()
-            .filter(EnumFieldValue.is_active.is_(True))
-            .count()
+            self._value_query().filter(EnumFieldValue.is_active.is_(True)).count()
         )
 
     def get(self, enum_value_id: str) -> EnumFieldValue | None:
         """根据ID获取枚举值"""
-        return self._value_query().filter(EnumFieldValue.id == enum_value_id).first()
+        return cast(
+            EnumFieldValue | None,
+            self._value_query().filter(EnumFieldValue.id == enum_value_id).first(),
+        )
 
     def get_by_type_and_value(
         self, enum_type_id: str, value: str
     ) -> EnumFieldValue | None:
         """根据类型ID和值获取枚举值"""
-        return (
+        return cast(
+            EnumFieldValue | None,
             self._value_query()
             .filter(
                 and_(
@@ -307,7 +313,7 @@ class EnumFieldValueCRUD:
                     EnumFieldValue.value == value,
                 )
             )
-            .first()
+            .first(),
         )
 
     def get_by_type(
@@ -328,9 +334,10 @@ class EnumFieldValueCRUD:
         if is_active is not None:
             query = query.filter(EnumFieldValue.is_active == is_active)
 
-        return query.order_by(
-            EnumFieldValue.sort_order, EnumFieldValue.created_at
-        ).all()
+        return cast(
+            list[EnumFieldValue],
+            query.order_by(EnumFieldValue.sort_order, EnumFieldValue.created_at).all(),
+        )
 
     def get_tree(self, enum_type_id: str) -> list[EnumFieldValue]:
         """获取枚举值树形结构"""
@@ -428,11 +435,7 @@ class EnumFieldValueCRUD:
 
     def delete(self, enum_value_id: str, deleted_by: str | None = None) -> bool:
         """软删除枚举值"""
-        db_obj = (
-            self._value_query()
-            .filter(EnumFieldValue.id == enum_value_id)
-            .first()
-        )
+        db_obj = self._value_query().filter(EnumFieldValue.id == enum_value_id).first()
         if not db_obj:
             return False
 
@@ -507,26 +510,28 @@ class EnumFieldValueCRUD:
 class EnumFieldUsageCRUD:
     """枚举字段使用记录CRUD操作"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def _usage_query(self):
+    def _usage_query(self) -> Any:
         return self.db.query(EnumFieldUsage)
 
     def count_active(self) -> int:
         return int(
-            self._usage_query()
-            .filter(EnumFieldUsage.is_active.is_(True))
-            .count()
+            self._usage_query().filter(EnumFieldUsage.is_active.is_(True)).count()
         )
 
     def get(self, usage_id: str) -> EnumFieldUsage | None:
         """根据ID获取使用记录"""
-        return self._usage_query().filter(EnumFieldUsage.id == usage_id).first()
+        return cast(
+            EnumFieldUsage | None,
+            self._usage_query().filter(EnumFieldUsage.id == usage_id).first(),
+        )
 
     def get_by_field(self, table_name: str, field_name: str) -> EnumFieldUsage | None:
         """根据表名和字段名获取使用记录"""
-        return (
+        return cast(
+            EnumFieldUsage | None,
             self._usage_query()
             .filter(
                 and_(
@@ -534,15 +539,16 @@ class EnumFieldUsageCRUD:
                     EnumFieldUsage.field_name == field_name,
                 )
             )
-            .first()
+            .first(),
         )
 
     def get_by_enum_type(self, enum_type_id: str) -> list[EnumFieldUsage]:
         """根据枚举类型ID获取使用记录"""
-        return (
+        return cast(
+            list[EnumFieldUsage],
             self._usage_query()
             .filter(EnumFieldUsage.enum_type_id == enum_type_id)
-            .all()
+            .all(),
         )
 
     def create(self, obj_in: EnumFieldUsageCreate) -> EnumFieldUsage:
@@ -579,10 +585,10 @@ class EnumFieldUsageCRUD:
 class EnumFieldHistoryCRUD:
     """枚举字段历史记录CRUD操作"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def _history_query(self):
+    def _history_query(self) -> Any:
         return self.db.query(EnumFieldHistory)
 
     def get_multi(
@@ -598,11 +604,12 @@ class EnumFieldHistoryCRUD:
             query = query.filter(EnumFieldHistory.enum_type_id == enum_type_id)
         if enum_value_id:
             query = query.filter(EnumFieldHistory.enum_value_id == enum_value_id)
-        return (
+        return cast(
+            list[EnumFieldHistory],
             query.order_by(EnumFieldHistory.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .all()
+            .all(),
         )
 
 

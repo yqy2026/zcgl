@@ -3,19 +3,20 @@ Statistics API 测试
 测试统计分析 API 端点（模块化架构）- 修复版
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db():
@@ -38,6 +39,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+
     def override_get_db():
         yield mock_db
 
@@ -56,6 +58,7 @@ def client(mock_db, mock_user):
 # =============================================================================
 # 基础统计 API 测试
 # =============================================================================
+
 
 class TestBasicStatistics:
     """基础统计 API 测试"""
@@ -101,6 +104,7 @@ class TestBasicStatistics:
 # 面积统计 API 测试
 # =============================================================================
 
+
 class TestAreaStatistics:
     """面积统计 API 测试"""
 
@@ -140,7 +144,9 @@ class TestAreaStatistics:
         Then: 返回面积摘要数据
         """
         # Arrange - Mock AreaService.calculate_summary_with_aggregation
-        with patch("src.services.analytics.area_service.AreaService.calculate_summary_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.area_service.AreaService.calculate_summary_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "total_land_area": 50000.0,
                 "total_rentable_area": 45000.0,
@@ -160,6 +166,7 @@ class TestAreaStatistics:
 # 财务统计 API 测试
 # =============================================================================
 
+
 class TestFinancialStatistics:
     """财务统计 API 测试"""
 
@@ -172,7 +179,9 @@ class TestFinancialStatistics:
         Then: 返回财务摘要数据
         """
         # Arrange - Mock FinancialService.calculate_summary
-        with patch("src.services.analytics.financial_service.FinancialService.calculate_summary") as mock_calc:
+        with patch(
+            "src.services.analytics.financial_service.FinancialService.calculate_summary"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "total_assets": 100,
                 "total_annual_income": 1000000.0,
@@ -196,6 +205,7 @@ class TestFinancialStatistics:
 # 出租率统计 API 测试
 # =============================================================================
 
+
 class TestOccupancyStatistics:
     """出租率统计 API 测试"""
 
@@ -208,7 +218,9 @@ class TestOccupancyStatistics:
         Then: 返回出租率统计数据
         """
         # Arrange - Mock OccupancyService.calculate_with_aggregation
-        with patch("src.services.analytics.occupancy_service.OccupancyService.calculate_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.occupancy_service.OccupancyService.calculate_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "overall_rate": 85.5,
                 "total_rentable_area": 45000.0,
@@ -233,7 +245,9 @@ class TestOccupancyStatistics:
         Then: 返回按类别分组的出租率数据
         """
         # Arrange - Mock OccupancyService.calculate_category_with_aggregation
-        with patch("src.services.analytics.occupancy_service.OccupancyService.calculate_category_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.occupancy_service.OccupancyService.calculate_category_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "商业": {
                     "overall_rate": 90.0,
@@ -250,7 +264,9 @@ class TestOccupancyStatistics:
             }
 
             # Act
-            response = client.get("/api/v1/statistics/occupancy-rate/by-category?category_field=business_category")
+            response = client.get(
+                "/api/v1/statistics/occupancy-rate/by-category?category_field=business_category"
+            )
 
             # Assert
             assert response.status_code == 200
@@ -259,6 +275,7 @@ class TestOccupancyStatistics:
 # =============================================================================
 # 错误处理测试
 # =============================================================================
+
 
 class TestErrorHandling:
     """错误处理测试"""
@@ -301,6 +318,7 @@ class TestErrorHandling:
 # 性能测试
 # =============================================================================
 
+
 class TestPerformance:
     """性能测试"""
 
@@ -322,4 +340,3 @@ class TestPerformance:
 
             # Assert
             assert response.status_code == 200
-

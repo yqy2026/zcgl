@@ -15,7 +15,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
 
     def _apply_task_filters(
         self,
-        query,
+        query: Any,
         *,
         task_type: str | None = None,
         status: str | None = None,
@@ -23,7 +23,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         created_after: datetime | None = None,
         created_before: datetime | None = None,
         filters: dict[str, Any] | None = None,
-    ):
+    ) -> Any:
         """应用任务筛选条件（用于列表与统计）"""
         if filters:
             for field, value in filters.items():

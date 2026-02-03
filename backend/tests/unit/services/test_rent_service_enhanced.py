@@ -22,11 +22,11 @@ class TestRentContractServiceBusinessLogic:
     def test_get_contract_by_id(self, rent_service, mock_db):
         """测试获取合同详情"""
         mock_contract = MagicMock(spec=RentContract)
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_contract
-
-        result = rent_service.get_contract_by_id(
-            mock_db, contract_id="contract_123"
+        mock_db.query.return_value.filter.return_value.first.return_value = (
+            mock_contract
         )
+
+        result = rent_service.get_contract_by_id(mock_db, contract_id="contract_123")
 
         assert result is mock_contract
 
@@ -37,9 +37,7 @@ class TestRentContractServiceBusinessLogic:
             mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value
         ) = [mock_ledger]
 
-        result = rent_service.get_deposit_ledger(
-            mock_db, contract_id="contract_123"
-        )
+        result = rent_service.get_deposit_ledger(mock_db, contract_id="contract_123")
 
         assert result == [mock_ledger]
 

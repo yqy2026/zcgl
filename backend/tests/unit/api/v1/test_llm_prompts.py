@@ -190,4 +190,3 @@ class TestLLMPromptsAuthentication:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_422_UNPROCESSABLE_ENTITY,
         }
-

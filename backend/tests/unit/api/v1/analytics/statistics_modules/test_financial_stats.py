@@ -3,12 +3,13 @@ Financial Stats Module 测试 (修复版)
 测试财务统计模块的端点 - 匹配实际 API 实现
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 
@@ -57,7 +58,9 @@ class TestFinancialStatistics:
         Then: 返回财务汇总数据
         """
         # Arrange - Mock FinancialService.calculate_summary
-        with patch("src.services.analytics.financial_service.FinancialService.calculate_summary") as mock_calc:
+        with patch(
+            "src.services.analytics.financial_service.FinancialService.calculate_summary"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "total_assets": 100,
                 "total_annual_income": 1000000.0,
@@ -85,7 +88,9 @@ class TestFinancialStatistics:
         Then: 返回包含已删除数据的财务汇总
         """
         # Arrange - 确保提供所有必需字段
-        with patch("src.services.analytics.financial_service.FinancialService.calculate_summary") as mock_calc:
+        with patch(
+            "src.services.analytics.financial_service.FinancialService.calculate_summary"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "total_assets": 120,
                 "total_annual_income": 1200000.0,
@@ -96,8 +101,9 @@ class TestFinancialStatistics:
             }
 
             # Act
-            response = client.get("/api/v1/statistics/financial-summary?should_include_deleted=true")
+            response = client.get(
+                "/api/v1/statistics/financial-summary?should_include_deleted=true"
+            )
 
             # Assert
             assert response.status_code == 200
-

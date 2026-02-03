@@ -1000,4 +1000,3 @@ class TestMonitoringEdgeCases:
 
         # Clean up
         _active_alerts.clear()
-

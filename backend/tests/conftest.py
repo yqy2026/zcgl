@@ -223,6 +223,7 @@ def reset_encryption_key(monkeypatch):
 # Mock Factory Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_factory():
     """
@@ -230,6 +231,7 @@ def mock_factory():
     提供统一的 Mock 对象创建方法
     """
     from tests.factories.mock_factory import MockFactory
+
     return MockFactory
 
 
@@ -289,4 +291,5 @@ def test_data_generator():
     使用 Faker 生成真实的测试数据
     """
     from tests.fixtures.test_data_generator import TestDataGenerator
+
     return TestDataGenerator

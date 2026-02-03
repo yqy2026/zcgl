@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import status
+
 from src.services.property_certificate.service import PropertyCertificateService
 
 # ============================================================================
@@ -61,7 +62,9 @@ class TestUploadCertificate:
                 "confidence": 0.88,
             }
 
-        monkeypatch.setattr(PropertyCertificateService, "extract_from_file", fake_extract)
+        monkeypatch.setattr(
+            PropertyCertificateService, "extract_from_file", fake_extract
+        )
         monkeypatch.setattr(PropertyCertificateService, "match_assets", lambda *_: [])
 
         response = client.post(
@@ -347,4 +350,3 @@ class TestPropertyCertificateEdgeCases:
         if response.status_code == status.HTTP_200_OK:
             data = response.json()
             assert isinstance(data, list) or "items" in data or "results" in data
-

@@ -17,7 +17,9 @@ class TestSafeImport:
 
     def test_safe_import_missing_returns_fallback(self):
         fallback = object()
-        result = import_utils.safe_import("missing_module_123", fallback=fallback, silent=True)
+        result = import_utils.safe_import(
+            "missing_module_123", fallback=fallback, silent=True
+        )
         assert result is fallback
 
     def test_safe_import_missing_uses_mock_factory(self):
@@ -28,7 +30,9 @@ class TestSafeImport:
             called["value"] = True
             return sentinel
 
-        result = import_utils.safe_import("missing_module_456", mock_factory=factory, silent=True)
+        result = import_utils.safe_import(
+            "missing_module_456", mock_factory=factory, silent=True
+        )
         assert result is sentinel
         assert called["value"] is True
 
@@ -39,10 +43,14 @@ class TestSafeImport:
 
     def test_safe_import_critical_strict_returns_fallback(self, monkeypatch):
         monkeypatch.setattr(import_utils, "is_production", lambda: False)
-        monkeypatch.setattr(import_utils, "get_dependency_policy", lambda: DependencyPolicy.STRICT)
+        monkeypatch.setattr(
+            import_utils, "get_dependency_policy", lambda: DependencyPolicy.STRICT
+        )
         fallback = object()
 
-        result = import_utils.safe_import("missing_module_000", critical=True, fallback=fallback)
+        result = import_utils.safe_import(
+            "missing_module_000", critical=True, fallback=fallback
+        )
         assert result is fallback
 
     def test_safe_import_non_import_error_is_raised(self, monkeypatch):
@@ -62,7 +70,9 @@ class TestSafeImportFrom:
 
     def test_safe_import_from_missing_attribute_returns_fallback(self):
         fallback = object()
-        result = import_utils.safe_import_from("math", "missing_attr", fallback=fallback, silent=True)
+        result = import_utils.safe_import_from(
+            "math", "missing_attr", fallback=fallback, silent=True
+        )
         assert result is fallback
 
     def test_safe_import_from_critical_production_raises(self, monkeypatch):

@@ -481,9 +481,7 @@ class TestUpdateExcelConfig:
 
     @patch("src.crud.task.excel_task_config_crud")
     @pytest.mark.asyncio
-    async def test_update_config_not_found(
-        self, mock_crud, mock_db, mock_current_user
-    ):
+    async def test_update_config_not_found(self, mock_crud, mock_db, mock_current_user):
         """Test updating non-existent configuration"""
         from src.api.v1.documents.excel.config import update_excel_config
 
@@ -1305,9 +1303,7 @@ class TestGetExcelTaskStatus:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_success(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    async def test_get_status_success(self, mock_task_crud, mock_db, mock_current_user):
         """Test successful task status retrieval"""
         from src.api.v1.documents.excel.status import get_excel_task_status
         from src.enums.task import TaskStatus
@@ -1368,9 +1364,7 @@ class TestGetExcelTaskStatus:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_status_failed(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    async def test_get_status_failed(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting status of failed task"""
         from src.api.v1.documents.excel.status import get_excel_task_status
         from src.enums.task import TaskStatus
@@ -1548,9 +1542,7 @@ class TestGetExcelHistory:
 
     @patch("src.api.v1.documents.excel.status.task_crud")
     @pytest.mark.asyncio
-    async def test_get_history_empty(
-        self, mock_task_crud, mock_db, mock_current_user
-    ):
+    async def test_get_history_empty(self, mock_task_crud, mock_db, mock_current_user):
         """Test history when no tasks exist"""
         from src.api.v1.documents.excel.status import get_excel_history
 
@@ -1835,4 +1827,3 @@ class TestProcessExcelExportAsync:
         # Verify task was updated to failed
         calls = mock_task_crud.update.call_args_list
         assert any(call for call in calls if "FAILED" in str(call))
-

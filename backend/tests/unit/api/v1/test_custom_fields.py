@@ -997,4 +997,3 @@ class TestBatchSetCustomFieldValues:
         assert len(result["results"]) == 1
         assert result["results"][0]["success"] is False
         assert "error" in result["results"][0]
-

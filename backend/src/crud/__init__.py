@@ -8,8 +8,12 @@ from ..models.dynamic_permission import DynamicPermission
 from ..models.llm_prompt import PromptTemplate
 from ..models.organization import Organization
 from ..models.property_certificate import PropertyCertificate, PropertyOwner
-from ..models.rbac import PermissionAuditLog, ResourcePermission, UserRoleAssignment
-from ..models.rbac import Permission
+from ..models.rbac import (
+    Permission,
+    PermissionAuditLog,
+    ResourcePermission,
+    UserRoleAssignment,
+)
 from ..models.rent_contract import RentContract, RentLedger, RentTerm
 from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
@@ -20,29 +24,29 @@ from .dynamic_permission import dynamic_permission_crud
 from .field_whitelist import (
     AssetCustomFieldWhitelist,
     AssetWhitelist,
+    AsyncTaskWhitelist,
     CollectionRecordWhitelist,
     DynamicPermissionWhitelist,
     ExcelTaskConfigWhitelist,
     OrganizationWhitelist,
     OwnershipWhitelist,
-    AsyncTaskWhitelist,
-    PermissionWhitelist,
     PermissionAuditLogWhitelist,
+    PermissionWhitelist,
     ProjectWhitelist,
     PromptTemplateWhitelist,
     PropertyCertificateWhitelist,
     PropertyOwnerWhitelist,
+    RentContractWhitelist,
     RentLedgerWhitelist,
     RentTermWhitelist,
     ResourcePermissionWhitelist,
-    RentContractWhitelist,
     SystemDictionaryWhitelist,
     UserRoleAssignmentWhitelist,
     register_whitelist,
 )
+from .llm_prompt import prompt_template_crud
 from .project import project_crud
 from .rent_contract import rent_contract, rent_ledger, rent_term
-from .llm_prompt import prompt_template_crud
 
 # Register whitelists for each model to prevent unauthorized field access
 register_whitelist(Asset, AssetWhitelist())

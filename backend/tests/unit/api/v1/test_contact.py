@@ -641,4 +641,3 @@ class TestContactAPIEdgeCases:
             status.HTTP_200_OK,
             *AUTH_FAILURE_STATUSES,
         ]
-

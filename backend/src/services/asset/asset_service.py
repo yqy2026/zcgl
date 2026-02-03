@@ -1,6 +1,6 @@
 from collections.abc import Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -26,7 +26,7 @@ _DEFAULT_ASSET_CRUD: object = object()
 asset_crud: Any = _DEFAULT_ASSET_CRUD
 
 
-def _get_asset_crud():
+def _get_asset_crud() -> Any:
     if asset_crud is not _DEFAULT_ASSET_CRUD:
         return asset_crud
 
@@ -110,7 +110,10 @@ class AssetService:
 
     def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
         asset_crud = _get_asset_crud()
-        asset = asset_crud.get(db=self.db, id=asset_id, use_cache=use_cache)
+        asset = cast(
+            Asset | None,
+            asset_crud.get(db=self.db, id=asset_id, use_cache=use_cache),
+        )
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
@@ -169,14 +172,17 @@ class AssetService:
                 )
 
             calculated_asset_in = AssetCreate(**final_data)
-            asset = asset_crud.create_with_history(
-                db=self.db,
-                obj_in=calculated_asset_in,
-                commit=False,
-                operator=str(operator) if operator is not None else None,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                session_id=session_id,
+            asset = cast(
+                Asset,
+                asset_crud.create_with_history(
+                    db=self.db,
+                    obj_in=calculated_asset_in,
+                    commit=False,
+                    operator=str(operator) if operator is not None else None,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    session_id=session_id,
+                ),
             )
             return asset
 
@@ -260,15 +266,18 @@ class AssetService:
                 }
                 calculated_asset_in = AssetUpdate(**final_update)
 
-                updated = asset_crud.update_with_history(
-                    db=self.db,
-                    db_obj=asset,
-                    obj_in=calculated_asset_in,
-                    commit=False,
-                    operator=str(operator) if operator is not None else None,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    session_id=session_id,
+                updated = cast(
+                    Asset,
+                    asset_crud.update_with_history(
+                        db=self.db,
+                        db_obj=asset,
+                        obj_in=calculated_asset_in,
+                        commit=False,
+                        operator=str(operator) if operator is not None else None,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        session_id=session_id,
+                    ),
                 )
                 return updated
         except StaleDataError as exc:
@@ -327,21 +336,27 @@ class AsyncAssetService:
         include_relations: bool = False,
     ) -> tuple[list[Asset], int]:
         asset_crud = _get_asset_crud()
-        result = await asset_crud.get_multi_with_search_async(
-            self.db,
-            skip=skip,
-            limit=limit,
-            search=search,
-            filters=filters,
-            sort_field=sort_field,
-            sort_order=sort_order,
-            include_relations=include_relations,
+        result = cast(
+            tuple[list[Asset], int],
+            await asset_crud.get_multi_with_search_async(
+                self.db,
+                skip=skip,
+                limit=limit,
+                search=search,
+                filters=filters,
+                sort_field=sort_field,
+                sort_order=sort_order,
+                include_relations=include_relations,
+            ),
         )
         return result
 
     async def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
         asset_crud = _get_asset_crud()
-        asset = await asset_crud.get_async(db=self.db, id=asset_id)
+        asset = cast(
+            Asset | None,
+            await asset_crud.get_async(db=self.db, id=asset_id),
+        )
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
@@ -398,14 +413,17 @@ class AsyncAssetService:
                 )
 
             calculated_asset_in = AssetCreate(**final_data)
-            asset = await asset_crud.create_with_history_async(
-                db=self.db,
-                obj_in=calculated_asset_in,
-                commit=False,
-                operator=str(operator) if operator is not None else None,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                session_id=session_id,
+            asset = cast(
+                Asset,
+                await asset_crud.create_with_history_async(
+                    db=self.db,
+                    obj_in=calculated_asset_in,
+                    commit=False,
+                    operator=str(operator) if operator is not None else None,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    session_id=session_id,
+                ),
             )
             return asset
 
@@ -501,7 +519,9 @@ class AsyncAssetService:
                 }
                 calculated_asset_in = AssetUpdate(**final_update)
 
-                updated = await asset_crud.update_with_history_async(
+                updated = cast(
+                    Asset,
+                    await asset_crud.update_with_history_async(
                     db=self.db,
                     db_obj=asset,
                     obj_in=calculated_asset_in,
@@ -510,6 +530,7 @@ class AsyncAssetService:
                     ip_address=ip_address,
                     user_agent=user_agent,
                     session_id=session_id,
+                    ),
                 )
                 return updated
         except StaleDataError as exc:

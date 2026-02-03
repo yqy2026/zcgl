@@ -8,7 +8,7 @@ import secrets
 import time
 from collections import defaultdict
 from ipaddress import ip_address, ip_network
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -22,13 +22,13 @@ from ..constants.file_size_constants import (
 )
 from ..constants.message_constants import ErrorMessages
 from ..core.circuit_breaker import CircuitBreaker
+from ..core.config import settings
 from ..core.exception_handler import (
     BusinessValidationError,
     PermissionDeniedError,
     RateLimitError,
 )
 from ..core.rate_limit_strategy import RateLimitConfig, RateLimitStrategy
-from ..core.config import settings
 from ..security.cookie_manager import cookie_manager
 from ..security.ip_whitelist import ip_whitelist
 from ..security.logging_security import security_auditor
@@ -40,7 +40,12 @@ if TYPE_CHECKING:
 adaptive_limiter: "AdaptiveRateLimiter | None"
 
 try:
-    from ..security.security import AdaptiveRateLimiter, adaptive_limiter as _adaptive_limiter
+    from ..security.security import (
+        AdaptiveRateLimiter,
+    )
+    from ..security.security import (
+        adaptive_limiter as _adaptive_limiter,
+    )
 
     adaptive_limiter = _adaptive_limiter
     ADAPTIVE_LIMITER_AVAILABLE = True
@@ -57,6 +62,7 @@ _DEFAULT_TRUSTED_PROXY_NETWORKS = [
     ip_network("127.0.0.1/32"),
     ip_network("::1/128"),
 ]
+
 
 def _is_valid_ip_value(ip: str) -> bool:
     try:

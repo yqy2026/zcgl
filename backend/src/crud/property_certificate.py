@@ -3,7 +3,8 @@ Property Certificate CRUD Operations
 产权证CRUD操作
 """
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,9 @@ from ..schemas.property_certificate import (
 )
 from .asset import SensitiveDataHandler
 from .base import CRUDBase
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class CRUDPropertyOwner(
@@ -213,14 +217,18 @@ class CRUDPropertyCertificate(
         Returns:
             PropertyCertificate: 创建的产权证对象
         """
-        def _safe_call(method, *args):
+
+        def _safe_call(
+            method: Callable[P, R], *args: P.args, **kwargs: P.kwargs
+        ) -> R:
             if hasattr(method, "_mock_wraps") and method._mock_wraps is not None:
                 original_wraps = method._mock_wraps
                 method._mock_wraps = None
-                method(*args)
+                result = method(*args, **kwargs)
                 method._mock_wraps = original_wraps
+                return result
             else:
-                method(*args)
+                return method(*args, **kwargs)
 
         db_obj = PropertyCertificate(**obj_in.model_dump())
         _safe_call(db.add, db_obj)

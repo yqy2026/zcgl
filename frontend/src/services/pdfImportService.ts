@@ -846,7 +846,7 @@ export class PDFImportService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('processing_options', JSON.stringify(defaultOptions));
-    if (defaultOptions.force_method != null && defaultOptions.force_method !== '') {
+    if (defaultOptions.force_method != null) {
       formData.append('force_method', defaultOptions.force_method);
     }
 

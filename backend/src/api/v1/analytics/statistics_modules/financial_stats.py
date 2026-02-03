@@ -11,10 +11,11 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.constants.cache_constants import CACHE_TTL_MEDIUM_SECONDS
-from src.database import get_db
+from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.statistics import FinancialSummaryResponse
@@ -29,9 +30,9 @@ router = APIRouter()
 
 @cache_statistics(expire=CACHE_TTL_MEDIUM_SECONDS)  # 30分钟缓存
 @router.get("/financial-summary", response_model=FinancialSummaryResponse)
-def get_financial_summary(
+async def get_financial_summary(
     should_include_deleted: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> FinancialSummaryResponse:
     """
@@ -48,19 +49,24 @@ def get_financial_summary(
     Returns:
         财务汇总统计信息
     """
-    # 获取所有资产
-    filters: dict[str, Any] = {}
-    if not should_include_deleted:
-        filters["data_status"] = "正常"
 
-    service = FinancialService(db)
-    summary = service.calculate_summary(filters)
+    def _sync(sync_db: Session) -> FinancialSummaryResponse:
+        db = sync_db
+        # 获取所有资产
+        filters: dict[str, Any] = {}
+        if not should_include_deleted:
+            filters["data_status"] = "正常"
 
-    return FinancialSummaryResponse(
-        total_assets=int(summary["total_assets"]),
-        total_annual_income=summary["total_annual_income"],
-        total_annual_expense=summary["total_annual_expense"],
-        net_annual_income=summary["net_annual_income"],
-        income_per_sqm=summary["income_per_sqm"],
-        expense_per_sqm=summary["expense_per_sqm"],
-    )
+        service = FinancialService(db)
+        summary = service.calculate_summary(filters)
+
+        return FinancialSummaryResponse(
+            total_assets=int(summary["total_assets"]),
+            total_annual_income=summary["total_annual_income"],
+            total_annual_expense=summary["total_annual_expense"],
+            net_annual_income=summary["net_annual_income"],
+            income_per_sqm=summary["income_per_sqm"],
+            expense_per_sqm=summary["expense_per_sqm"],
+        )
+
+    return await db.run_sync(_sync)

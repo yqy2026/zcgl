@@ -171,6 +171,14 @@ class TestIpBlacklistConfiguration:
                 os.environ["SECRET_KEY"] = original_key
             elif "SECRET_KEY" in os.environ:
                 del os.environ["SECRET_KEY"]
+            if original_env:
+                os.environ["ENVIRONMENT"] = original_env
+            elif "ENVIRONMENT" in os.environ:
+                del os.environ["ENVIRONMENT"]
+            if original_blacklist is not None:
+                os.environ["IP_BLACKLIST"] = original_blacklist
+            elif "IP_BLACKLIST" in os.environ:
+                del os.environ["IP_BLACKLIST"]
 
 
 class TestSecurityAnalyzerConfiguration:

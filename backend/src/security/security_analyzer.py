@@ -40,9 +40,7 @@ class SecurityAnalyzer:
         patterns_value = self.config.get("suspicious_patterns", [])
         if isinstance(patterns_value, str):
             self.suspicious_patterns = [
-                item.strip()
-                for item in patterns_value.split(",")
-                if item.strip()
+                item.strip() for item in patterns_value.split(",") if item.strip()
             ]
         elif isinstance(patterns_value, list):
             self.suspicious_patterns = [

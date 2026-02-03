@@ -206,4 +206,3 @@ class TestAdminAPIEdgeCases:
 
         # 所有请求都应该成功
         assert all(status_code == status.HTTP_200_OK for status_code in results)
-

@@ -42,6 +42,7 @@ def engine(test_database_url):
 def db_tables(engine):
     """Create database tables using Alembic migrations when available."""
     import importlib
+
     from alembic.config import Config
 
     from src.database import Base

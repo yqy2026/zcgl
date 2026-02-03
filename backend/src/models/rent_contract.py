@@ -247,12 +247,9 @@ class RentContract(Base):
             else:
                 kwargs.pop("assets", None)
         ownership_id = kwargs.get("ownership_id")
-        if (
-            ownership_id in (None, "")
-            and all(
-                field in kwargs
-                for field in ("tenant_name", "sign_date", "start_date", "end_date")
-            )
+        if ownership_id in (None, "") and all(
+            field in kwargs
+            for field in ("tenant_name", "sign_date", "start_date", "end_date")
         ):
             raise ValueError("ownership_id is required")
         if kwargs.get("id") in (None, ""):

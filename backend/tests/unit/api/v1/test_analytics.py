@@ -313,4 +313,3 @@ class TestAnalyticsResponseStructure:
         assert "success" in data
         assert "data" in data
         assert data["success"] is True
-

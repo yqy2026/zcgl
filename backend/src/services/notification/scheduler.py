@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 from ...constants.business_constants import DataStatusValues
 from ...constants.rent_contract_constants import PaymentStatus
 from ...core.enums import ContractStatus
-from ...database import get_db
+from ...database import get_session_factory
+
 logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
 from ...models.rent_contract import RentContract, RentLedger
@@ -385,7 +386,8 @@ class NotificationSchedulerService:
 
 def run_notification_tasks() -> dict[str, Any]:
     """运行所有通知任务"""
-    db = next(get_db())
+    session_factory = get_session_factory()
+    db = session_factory()
     try:
         service = NotificationSchedulerService(db)
 

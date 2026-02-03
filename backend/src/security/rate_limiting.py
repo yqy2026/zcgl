@@ -9,8 +9,8 @@ from threading import Lock
 from time import time
 from typing import Any
 
-from .logging_security import security_auditor
 from ..core.config import settings
+from .logging_security import security_auditor
 
 
 class RateLimitConfig:
@@ -83,8 +83,12 @@ class RateLimiter:
             # 获取限制配置
             if max_requests is None or time_window is None:
                 limit_config = self._get_limit_config(endpoint)
-                max_requests = limit_config["requests"] if max_requests is None else max_requests
-                time_window = limit_config["window"] if time_window is None else time_window
+                max_requests = (
+                    limit_config["requests"] if max_requests is None else max_requests
+                )
+                time_window = (
+                    limit_config["window"] if time_window is None else time_window
+                )
 
             if max_requests <= 0 or time_window <= 0:
                 return False
@@ -125,7 +129,9 @@ class RateLimiter:
         """获取剩余可用请求数"""
         if max_requests is None or time_window is None:
             limit_config = self._get_limit_config(endpoint)
-            max_requests = limit_config["requests"] if max_requests is None else max_requests
+            max_requests = (
+                limit_config["requests"] if max_requests is None else max_requests
+            )
             time_window = limit_config["window"] if time_window is None else time_window
 
         if max_requests <= 0 or time_window <= 0:
@@ -268,6 +274,7 @@ class RequestLimiter:
             request_info["count"] += 1
 
             return request_info["count"] <= self.max_requests_per_minute
+
 
 token_bucket_limiter = TokenBucketRateLimiter()
 adaptive_limiter = AdaptiveRateLimiter()

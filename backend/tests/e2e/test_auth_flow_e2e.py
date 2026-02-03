@@ -205,14 +205,11 @@ def test_token_refresh_flow(
     assert me_response.status_code == 200
 
     # Refresh token
-    csrf_token = (
-        login_response.cookies.get("csrf_token")
-        or client.cookies.get("csrf_token")
+    csrf_token = login_response.cookies.get("csrf_token") or client.cookies.get(
+        "csrf_token"
     )
     refresh_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
-    refresh_response = client.post(
-        "/api/v1/auth/refresh", headers=refresh_headers
-    )
+    refresh_response = client.post("/api/v1/auth/refresh", headers=refresh_headers)
 
     # Verify refresh works (if implemented)
     if refresh_response.status_code == 200:
@@ -301,7 +298,7 @@ def test_permission_enforcement(
     user_client = TestClient(client.app)
 
     # Login as admin and verify admin access
-    admin_login = admin_client.post(
+    admin_client.post(
         "/api/v1/auth/login",
         json={"username": "perm_admin", "password": "AdminPerm123!"},
     )
@@ -313,7 +310,7 @@ def test_permission_enforcement(
     assert admin_list_response.status_code in [200, 206]
 
     # Login as regular user
-    user_login = user_client.post(
+    user_client.post(
         "/api/v1/auth/login", json={"username": "perm_user", "password": "UserPerm123!"}
     )
 

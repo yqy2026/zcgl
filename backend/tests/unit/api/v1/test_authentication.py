@@ -104,9 +104,7 @@ def mock_user_model():
     return user
 
 
-def test_login_success_security_check(
-    mock_request, mock_user_model, mock_regular_user
-):
+def test_login_success_security_check(mock_request, mock_user_model, mock_regular_user):
     """
     Test login security requirements:
     1. HttpOnly cookies must be set
@@ -117,17 +115,20 @@ def test_login_success_security_check(
 
     # Mock dependencies
     mock_db = MagicMock()
-    
+
     # Mock auth/session services
-    with patch(
-        "src.api.v1.auth.auth_modules.authentication.AuthenticationService"
-    ) as MockAuthService, patch(
-        "src.api.v1.auth.auth_modules.authentication.SessionService"
-    ) as MockSessionService:
-        auth_service_instance = MockAuthService.return_value
+    with (
+        patch(
+            "src.api.v1.auth.auth_modules.authentication.AuthenticationService"
+        ) as mock_auth_service,
+        patch(
+            "src.api.v1.auth.auth_modules.authentication.SessionService"
+        ) as mock_session_service,
+    ):
+        auth_service_instance = mock_auth_service.return_value
         auth_service_instance.authenticate_user.return_value = mock_user_model
-        MockSessionService.return_value.create_user_session.return_value = None
-        
+        mock_session_service.return_value.create_user_session.return_value = None
+
         # Mock tokens
         mock_tokens = MagicMock()
         mock_tokens.access_token = "access-token-123"
@@ -138,36 +139,41 @@ def test_login_success_security_check(
         auth_service_instance.create_tokens.return_value = mock_tokens
 
         # Mock cookie manager
-        with patch("src.api.v1.auth.auth_modules.authentication.cookie_manager") as mock_cookie_manager:
+        with patch(
+            "src.api.v1.auth.auth_modules.authentication.cookie_manager"
+        ) as mock_cookie_manager:
             # Mock RBAC service
-                from src.services import RBACService
-                with patch("src.api.v1.auth.auth_modules.authentication.RBACService") as MockRBAC:
-                    rbac_instance = MockRBAC.return_value
-                    rbac_instance.get_user_permissions_summary.return_value.permissions = []
 
-                    # Execute
-                    credentials = LoginRequest(username="testuser", password="password")
-                    mock_response = MagicMock(spec=Response)
-                    
-                    result = login(mock_request, credentials, mock_response, mock_db)
+            with patch(
+                "src.api.v1.auth.auth_modules.authentication.RBACService"
+            ) as mock_rbac:
+                rbac_instance = mock_rbac.return_value
+                rbac_instance.get_user_permissions_summary.return_value.permissions = []
 
-                # Assertions
-                
-                # 1. Verify response body DOES NOT contain tokens
-                assert "access_token" not in result
-                assert "refresh_token" not in result
-                assert "tokens" not in result
-                assert result["auth_mode"] == "cookie"
-                assert result["user"]["username"] == "testuser"
+                # Execute
+                credentials = LoginRequest(username="testuser", password="password")
+                mock_response = MagicMock(spec=Response)
 
-                # 2. Verify cookies were set
-                mock_cookie_manager.set_auth_cookie.assert_called_once_with(
-                    mock_response, "access-token-123"
-                )
-                mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
-                    mock_response, "refresh-token-123"
-                )
-                mock_cookie_manager.set_csrf_cookie.assert_called_once()
+                result = login(mock_request, credentials, mock_response, mock_db)
+
+            # Assertions
+
+            # 1. Verify response body DOES NOT contain tokens
+            assert "access_token" not in result
+            assert "refresh_token" not in result
+            assert "tokens" not in result
+            assert result["auth_mode"] == "cookie"
+            assert result["user"]["username"] == "testuser"
+
+            # 2. Verify cookies were set
+            mock_cookie_manager.set_auth_cookie.assert_called_once_with(
+                mock_response, "access-token-123"
+            )
+            mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
+                mock_response, "refresh-token-123"
+            )
+            mock_cookie_manager.set_csrf_cookie.assert_called_once()
+
 
 @pytest.fixture
 def mock_tokens():
@@ -584,9 +590,7 @@ class TestLogout:
             "iat": 1736996400,
         }
         valid_token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
-        mock_request.headers["cookie"] = (
-            f"{cookie_manager.cookie_name}={valid_token}"
-        )
+        mock_request.headers["cookie"] = f"{cookie_manager.cookie_name}={valid_token}"
 
         mock_session_service = MagicMock()
         mock_session_service.revoke_all_user_sessions.return_value = 1
@@ -1248,4 +1252,3 @@ class TestTestMeDebug:
         assert result["is_admin"] is True
         assert result["session_status"] == "active"
         assert "timestamp" in result
-

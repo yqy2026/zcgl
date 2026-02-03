@@ -35,8 +35,11 @@ def debug_only[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         import sys
+
         if not is_debug_mode():
-            sys.stderr.write(f"DEBUG: debug_only blocked access to {func.__name__}, DEBUG={os.getenv('DEBUG')}\n")
+            sys.stderr.write(
+                f"DEBUG: debug_only blocked access to {func.__name__}, DEBUG={os.getenv('DEBUG')}\n"
+            )
             raise not_found("Not Found")  # 故意模糊响应，不暴露端点存在
         return await func(*args, **kwargs)
 

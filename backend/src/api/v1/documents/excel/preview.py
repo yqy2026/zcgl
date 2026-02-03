@@ -1,5 +1,5 @@
 """
-Excel预览模块
+Excel 预览模块
 """
 
 from datetime import UTC, datetime
@@ -14,7 +14,11 @@ from src.core.exception_handler import BusinessValidationError
 from src.database import get_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-from src.schemas.excel_advanced import ExcelPreviewRequest, ExcelPreviewResponse
+from src.schemas.excel_advanced import (
+    ExcelFieldMapping,
+    ExcelPreviewRequest,
+    ExcelPreviewResponse,
+)
 from src.security.logging_security import security_auditor
 from src.security.security import security_middleware
 from src.services.excel import ExcelPreviewService
@@ -32,11 +36,7 @@ async def preview_excel_advanced(
 ) -> ExcelPreviewResponse:
     """
     高级Excel文件预览，支持字段映射检测
-
-    - **file**: Excel文件
-    - **request**: 预览配置参数
     """
-    # 安全验证文件
     await security_middleware.validate_file_upload(
         file,
         allowed_types=[
@@ -46,13 +46,11 @@ async def preview_excel_advanced(
         max_size=DEFAULT_MAX_FILE_SIZE,
     )
 
-    # 创建验证结果
     validation_result = {
         "hash": f"computed_hash_{file.filename}",
         "validation_time": datetime.now(UTC).isoformat(),
     }
 
-    # 记录文件验证成功
     security_auditor.log_security_event(
         event_type="FILE_UPLOAD_VALIDATED",
         message=f"Excel file validated successfully: {file.filename}",
@@ -64,20 +62,25 @@ async def preview_excel_advanced(
         },
     )
 
-    # 读取文件内容
     content = await file.read()
 
     total, columns, preview_data, detected_mapping = await run_in_threadpool(
         ExcelPreviewService.build_preview_advanced, content, request.max_rows
     )
 
+    detected_field_mapping = (
+        [ExcelFieldMapping.model_validate(item) for item in detected_mapping]
+        if detected_mapping is not None
+        else None
+    )
+
     return ExcelPreviewResponse(
         file_name=file.filename or "unknown.xlsx",
-        sheet_names=[f"Sheet{i + 1}" for i in range(1)],  # 简化处理
+        sheet_names=[f"Sheet{i + 1}" for i in range(1)],
         total_rows=total,
         columns=columns,
         preview_data=preview_data,
-        detected_field_mapping=None,
+        detected_field_mapping=detected_field_mapping,
     )
 
 
@@ -90,7 +93,6 @@ async def preview_excel(
     """
     预览Excel文件内容，用于导入前确认
     """
-    # 安全验证文件
     await security_middleware.validate_file_upload(
         file,
         allowed_types=[
@@ -100,11 +102,9 @@ async def preview_excel(
         max_size=DEFAULT_MAX_FILE_SIZE,
     )
 
-    # 验证文件类型（额外检查）
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
         raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
-    # 读取文件内容
     content = await file.read()
 
     total, columns, preview_data = await run_in_threadpool(

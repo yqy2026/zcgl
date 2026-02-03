@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 """
 认证相关CRUD操作
@@ -21,7 +21,7 @@ from ..schemas.auth import UserCreate, UserUpdate
 class UserCRUD:
     """用户CRUD操作"""
 
-    def _count_query(self, db: Session):
+    def _count_query(self, db: Session) -> Any:
         return db.query(User)
 
     def get(self, db: Session, user_id: str) -> User | None:
@@ -45,11 +45,7 @@ class UserCRUD:
         user_id_list = list(user_ids)
         if not user_id_list:
             return {}
-        rows = (
-            db.query(User.id, User.username)
-            .filter(User.id.in_(user_id_list))
-            .all()
-        )
+        rows = db.query(User.id, User.username).filter(User.id.in_(user_id_list)).all()
         return {str(user_id): username for user_id, username in rows}
 
     def get_multi_with_filters(
@@ -231,7 +227,7 @@ class UserCRUD:
 class UserSessionCRUD:
     """用户会话CRUD操作"""
 
-    def _session_query(self, db: Session):
+    def _session_query(self, db: Session) -> Any:
         return db.query(UserSession)
 
     def get(self, db: Session, session_id: str) -> UserSession | None:
@@ -291,7 +287,7 @@ class UserSessionCRUD:
 
     def deactivate_by_user(self, db: Session, user_id: str) -> int:
         """停用用户的所有会话"""
-        count = (
+        count = int(
             self._session_query(db)
             .filter(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .update({AuthFields.IS_ACTIVE: False})
@@ -301,7 +297,7 @@ class UserSessionCRUD:
 
     def cleanup_expired_sessions(self, db: Session) -> int:
         """清理过期会话"""
-        count = (
+        count = int(
             self._session_query(db)
             .filter(
                 UserSession.expires_at < datetime.now(),
@@ -326,7 +322,7 @@ class UserSessionCRUD:
 class AuditLogCRUD:
     """审计日志CRUD操作"""
 
-    def _audit_query(self, db: Session):
+    def _audit_query(self, db: Session) -> Any:
         return db.query(AuditLog)
 
     def _apply_audit_filters(
@@ -355,7 +351,10 @@ class AuditLogCRUD:
 
     def get(self, db: Session, log_id: str) -> AuditLog | None:
         """根据ID获取审计日志"""
-        return self._audit_query(db).filter(AuditLog.id == log_id).first()
+        return cast(
+            AuditLog | None,
+            self._audit_query(db).filter(AuditLog.id == log_id).first(),
+        )
 
     def get_multi(
         self,

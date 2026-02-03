@@ -128,16 +128,13 @@ class OccupancyRateCalculator:
                 }
 
             # 使用数据库聚合计算，避免在内存中加载所有数据
-            from collections.abc import Generator
-
             from sqlalchemy import func
             from sqlalchemy.orm import Session
 
-            from ...database import get_db
+            from ...database import get_session_factory
 
-            # 获取数据库连接
-            db_gen: Generator[Session, None, None] = get_db()
-            db: Session = next(db_gen)
+            session_factory = get_session_factory()
+            db: Session = session_factory()
 
             try:
                 from sqlalchemy import case

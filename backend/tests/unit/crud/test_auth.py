@@ -520,7 +520,6 @@ class TestUserSessionCRUD:
         mock_query.update.assert_called_once()
         mock_db.commit.assert_called_once()
 
-
         mock_query.filter.assert_called_once()
 
     def test_count_active_sessions_none(self, session_crud, mock_db):

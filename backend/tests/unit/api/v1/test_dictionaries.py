@@ -159,4 +159,3 @@ class TestDictionariesAPI:
         )
 
         assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-

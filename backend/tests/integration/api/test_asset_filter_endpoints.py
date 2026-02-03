@@ -126,4 +126,3 @@ class TestAssetFilterEndpoints:
             assert data == sorted(data)
             # All values should be unique
             assert len(data) == len(set(data))
-

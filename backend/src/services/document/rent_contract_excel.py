@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from ...core.enums import ContractStatus
 from ...core.exception_handler import BusinessValidationError
 from ...crud.rent_contract import rent_contract as rent_contract_crud
-from ...database import get_db
+from ...database import get_session_factory
 from ...models.rent_contract import RentContract, RentLedger, RentTerm
 from ...schemas.rent_contract import (
     ContractType,
@@ -31,6 +31,7 @@ from ...schemas.rent_contract import (
     RentContractCreate,
     RentContractUpdate,
     RentTermCreate,
+    RentTermUpdate,
 )
 from ...services.rent_contract import rent_contract_service
 from ...utils.file_security import validate_file_path
@@ -130,9 +131,16 @@ def _parse_date(value: Any) -> date | None:
     if isinstance(value, date):
         return value
     try:
-        return pd.to_datetime(value).date()
+        parsed = pd.to_datetime(value, errors="coerce")
     except Exception:
         return None
+    if _is_nan(parsed):
+        return None
+    if isinstance(parsed, datetime):
+        return parsed.date()
+    if isinstance(parsed, date):
+        return parsed
+    return None
 
 
 def _parse_decimal(value: Any, default: Decimal | None = None) -> Decimal | None:
@@ -251,13 +259,15 @@ class RentContractExcelService:
             except Exception:
                 warnings.append("未找到租金条款表，已按基础月租金生成默认条款。")
 
-        db_gen = get_db()
-        db: Session = next(db_gen)
+        session_factory = get_session_factory()
+        db: Session = session_factory()
         try:
             for index, row in contracts_df.iterrows():
                 row_data = {k: row[k] for k in contracts_df.columns}
                 contract_number_raw = row_data.get("contract_number")
-                contract_number = str(contract_number_raw).strip() if contract_number_raw else ""
+                contract_number = (
+                    str(contract_number_raw).strip() if contract_number_raw else ""
+                )
                 ownership_id_raw = row_data.get("ownership_id")
                 ownership_id = str(ownership_id_raw).strip() if ownership_id_raw else ""
                 tenant_name_raw = row_data.get("tenant_name")
@@ -287,29 +297,41 @@ class RentContractExcelService:
                     )
                     continue
                 try:
-                    contract_type = _normalize_enum(
-                        row_data.get("contract_type"),
-                        CONTRACT_TYPE_ALIASES,
-                        ContractType.LEASE_DOWNSTREAM.value,
+                    assert sign_date is not None
+                    assert start_date is not None
+                    assert end_date is not None
+
+                    contract_type = ContractType(
+                        _normalize_enum(
+                            row_data.get("contract_type"),
+                            CONTRACT_TYPE_ALIASES,
+                            ContractType.LEASE_DOWNSTREAM.value,
+                        )
                     )
-                    payment_cycle = _normalize_enum(
-                        row_data.get("payment_cycle"),
-                        PAYMENT_CYCLE_ALIASES,
-                        PaymentCycle.MONTHLY.value,
+                    payment_cycle = PaymentCycle(
+                        _normalize_enum(
+                            row_data.get("payment_cycle"),
+                            PAYMENT_CYCLE_ALIASES,
+                            PaymentCycle.MONTHLY.value,
+                        )
                     )
-                    contract_status = _normalize_enum(
-                        row_data.get("contract_status"),
-                        CONTRACT_STATUS_ALIASES,
-                        ContractStatus.ACTIVE.value,
+                    contract_status = ContractStatus(
+                        _normalize_enum(
+                            row_data.get("contract_status"),
+                            CONTRACT_STATUS_ALIASES,
+                            ContractStatus.ACTIVE.value,
+                        )
                     )
 
                     asset_ids = _parse_asset_ids(row_data.get("asset_ids"))
 
-                    base_rent = _parse_decimal(
-                        row_data.get("monthly_rent_base"), Decimal("0")
+                    base_rent = (
+                        _parse_decimal(row_data.get("monthly_rent_base"), Decimal("0"))
+                        or Decimal("0")
                     )
-                    total_deposit = _parse_decimal(
-                        row_data.get("total_deposit"), Decimal("0")
+                    total_deposit = (
+                        _parse_decimal(row_data.get("total_deposit"), Decimal("0"))
+                        or Decimal("0")
                     )
                     service_fee_rate = _parse_decimal(row_data.get("service_fee_rate"))
 
@@ -324,14 +346,23 @@ class RentContractExcelService:
                             term = RentTermCreate(
                                 start_date=term_start,
                                 end_date=term_end,
-                                monthly_rent=_parse_decimal(
-                                    term_row.get("monthly_rent"), Decimal("0")
+                                monthly_rent=(
+                                    _parse_decimal(
+                                        term_row.get("monthly_rent"), Decimal("0")
+                                    )
+                                    or Decimal("0")
                                 ),
-                                management_fee=_parse_decimal(
-                                    term_row.get("management_fee"), Decimal("0")
+                                management_fee=(
+                                    _parse_decimal(
+                                        term_row.get("management_fee"), Decimal("0")
+                                    )
+                                    or Decimal("0")
                                 ),
-                                other_fees=_parse_decimal(
-                                    term_row.get("other_fees"), Decimal("0")
+                                other_fees=(
+                                    _parse_decimal(
+                                        term_row.get("other_fees"), Decimal("0")
+                                    )
+                                    or Decimal("0")
                                 ),
                                 total_monthly_amount=_parse_decimal(
                                     term_row.get("total_monthly_amount")
@@ -349,7 +380,7 @@ class RentContractExcelService:
                             RentTermCreate(
                                 start_date=start_date,
                                 end_date=end_date,
-                                monthly_rent=base_rent or Decimal("0"),
+                                monthly_rent=base_rent,
                                 management_fee=Decimal("0"),
                                 other_fees=Decimal("0"),
                                 total_monthly_amount=None,
@@ -368,7 +399,7 @@ class RentContractExcelService:
                         sign_date=sign_date,
                         start_date=start_date,
                         end_date=end_date,
-                        total_deposit=total_deposit or Decimal("0"),
+                        total_deposit=total_deposit,
                         monthly_rent_base=base_rent,
                         payment_cycle=payment_cycle,
                         contract_status=contract_status,
@@ -439,12 +470,16 @@ class RentContractExcelService:
                         update_data = RentContractUpdate(
                             **contract_data.model_dump(exclude={"rent_terms"})
                         )
-                        update_data.rent_terms = terms
+                        update_data.rent_terms = [
+                            RentTermUpdate(**term.model_dump()) for term in terms
+                        ]
                         rent_contract_service.update_contract(
                             db=db, db_obj=existing, obj_in=update_data
                         )
                     else:
-                        rent_contract_service.create_contract(db=db, obj_in=contract_data)
+                        rent_contract_service.create_contract(
+                            db=db, obj_in=contract_data
+                        )
 
                     imported_contracts += 1
                     imported_terms += len(terms)
@@ -482,8 +517,8 @@ class RentContractExcelService:
         file_name = f"rent_contract_export_{uuid.uuid4().hex[:8]}.xlsx"
         file_path = export_dir / file_name
 
-        db_gen = get_db()
-        db: Session = next(db_gen)
+        session_factory = get_session_factory()
+        db: Session = session_factory()
         try:
             query = db.query(RentContract)
             if contract_ids:
@@ -495,7 +530,9 @@ class RentContractExcelService:
 
             contracts = query.order_by(RentContract.created_at.desc()).all()
             for contract in contracts:
-                rent_contract_crud.sensitive_data_handler.decrypt_data(contract.__dict__)
+                rent_contract_crud.sensitive_data_handler.decrypt_data(
+                    contract.__dict__
+                )
 
             contract_rows: list[dict[str, Any]] = []
             for contract in contracts:
@@ -512,9 +549,13 @@ class RentContractExcelService:
                         CONTRACT_COLUMNS["start_date"]: contract.start_date,
                         CONTRACT_COLUMNS["end_date"]: contract.end_date,
                         CONTRACT_COLUMNS["total_deposit"]: contract.total_deposit,
-                        CONTRACT_COLUMNS["monthly_rent_base"]: contract.monthly_rent_base,
+                        CONTRACT_COLUMNS[
+                            "monthly_rent_base"
+                        ]: contract.monthly_rent_base,
                         CONTRACT_COLUMNS["payment_cycle"]: str(contract.payment_cycle),
-                        CONTRACT_COLUMNS["contract_status"]: str(contract.contract_status),
+                        CONTRACT_COLUMNS["contract_status"]: str(
+                            contract.contract_status
+                        ),
                         CONTRACT_COLUMNS["asset_ids"]: ",".join(assets),
                         CONTRACT_COLUMNS["tenant_contact"]: contract.tenant_contact,
                         CONTRACT_COLUMNS["tenant_phone"]: contract.tenant_phone,
@@ -526,7 +567,9 @@ class RentContractExcelService:
                         CONTRACT_COLUMNS["service_fee_rate"]: contract.service_fee_rate,
                         CONTRACT_COLUMNS["payment_terms"]: contract.payment_terms,
                         CONTRACT_COLUMNS["contract_notes"]: contract.contract_notes,
-                        CONTRACT_COLUMNS["upstream_contract_id"]: contract.upstream_contract_id,
+                        CONTRACT_COLUMNS[
+                            "upstream_contract_id"
+                        ]: contract.upstream_contract_id,
                     }
                 )
 
@@ -554,7 +597,9 @@ class RentContractExcelService:
                             TERM_COLUMNS["monthly_rent"]: term.monthly_rent,
                             TERM_COLUMNS["management_fee"]: term.management_fee,
                             TERM_COLUMNS["other_fees"]: term.other_fees,
-                            TERM_COLUMNS["total_monthly_amount"]: term.total_monthly_amount,
+                            TERM_COLUMNS[
+                                "total_monthly_amount"
+                            ]: term.total_monthly_amount,
                             TERM_COLUMNS["rent_description"]: term.rent_description,
                         }
                     )
@@ -581,15 +626,17 @@ class RentContractExcelService:
                             ),
                             LEDGER_COLUMNS["year_month"]: ledger.year_month,
                             LEDGER_COLUMNS["due_date"]: ledger.due_date,
-                            LEDGER_COLUMNS["amount_due"]: ledger.amount_due,
+                            LEDGER_COLUMNS["amount_due"]: ledger.due_amount,
                             LEDGER_COLUMNS["payment_status"]: ledger.payment_status,
-                            LEDGER_COLUMNS["paid_date"]: ledger.paid_date,
-                            LEDGER_COLUMNS["remarks"]: ledger.remarks,
+                            LEDGER_COLUMNS["paid_date"]: ledger.payment_date,
+                            LEDGER_COLUMNS["remarks"]: ledger.notes,
                         }
                     )
                 ledger_df = pd.DataFrame(ledger_rows)
 
-            contracts_df = pd.DataFrame(contract_rows, columns=list(CONTRACT_COLUMNS.values()))
+            contracts_df = pd.DataFrame(
+                contract_rows, columns=list(CONTRACT_COLUMNS.values())
+            )
             with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
                 contracts_df.to_excel(writer, sheet_name=CONTRACT_SHEET, index=False)
                 if include_terms:

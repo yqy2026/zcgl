@@ -3,10 +3,10 @@ Mock 对象工厂
 提供统一的 Mock 对象创建方法，减少重复代码并提高测试一致性
 """
 
-from unittest.mock import MagicMock
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List, Any
+from typing import Any
+from unittest.mock import MagicMock
 
 
 class MockFactory:
@@ -14,9 +14,7 @@ class MockFactory:
 
     @staticmethod
     def create_mock_user(
-        user_id: str = "test_user_001",
-        username: str = "testuser",
-        role: str = "admin"
+        user_id: str = "test_user_001", username: str = "testuser", role: str = "admin"
     ) -> MagicMock:
         """
         创建 Mock 用户对象
@@ -81,10 +79,10 @@ class MockFactory:
     def create_mock_asset(
         asset_id: int = 1,
         name: str = "测试资产",
-        code: Optional[str] = None,
+        code: str | None = None,
         area: float = 1000.0,
         location: str = "测试地点",
-        status: str = "active"
+        status: str = "active",
     ) -> MagicMock:
         """
         创建 Mock 资产对象
@@ -115,11 +113,11 @@ class MockFactory:
     @staticmethod
     def create_mock_contract(
         contract_id: int = 1,
-        contract_no: Optional[str] = None,
+        contract_no: str | None = None,
         contract_name: str = "测试合同",
         contract_type: str = "lease",
         status: str = "active",
-        total_rent: float = 100000.0
+        total_rent: float = 100000.0,
     ) -> MagicMock:
         """
         创建 Mock 合同对象
@@ -137,7 +135,9 @@ class MockFactory:
         """
         contract = MagicMock()
         contract.id = contract_id
-        contract.contract_no = contract_no or f"HT-2024-{str(contract_id).padStart(3, '0')}"
+        contract.contract_no = (
+            contract_no or f"HT-2024-{str(contract_id).padStart(3, '0')}"
+        )
         contract.contract_name = contract_name
         contract.contract_type = contract_type
         contract.status = status
@@ -157,7 +157,7 @@ class MockFactory:
         ownership_id: int = 1,
         asset_id: int = 1,
         organization_name: str = "测试单位",
-        ownership_ratio: float = 100.0
+        ownership_ratio: float = 100.0,
     ) -> MagicMock:
         """
         创建 Mock 权属对象
@@ -184,9 +184,7 @@ class MockFactory:
 
     @staticmethod
     def create_mock_organization(
-        organization_id: int = 1,
-        name: str = "测试单位",
-        code: Optional[str] = None
+        organization_id: int = 1, name: str = "测试单位", code: str | None = None
     ) -> MagicMock:
         """
         创建 Mock 组织机构对象
@@ -210,9 +208,7 @@ class MockFactory:
 
     @staticmethod
     def create_mock_response(
-        data: Any = None,
-        success: bool = True,
-        message: str = "操作成功"
+        data: Any = None, success: bool = True, message: str = "操作成功"
     ) -> dict:
         """
         创建标准的 API 响应对象
@@ -229,15 +225,12 @@ class MockFactory:
             "success": success,
             "message": message,
             "data": data if data is not None else {},
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     @staticmethod
     def create_mock_pagination_response(
-        items: List[Any],
-        total: int,
-        page: int = 1,
-        page_size: int = 10
+        items: list[Any], total: int, page: int = 1, page_size: int = 10
     ) -> dict:
         """
         创建分页响应对象
@@ -259,13 +252,12 @@ class MockFactory:
             "page_size": page_size,
             "total_pages": total_pages,
             "has_next": page < total_pages,
-            "has_prev": page > 1
+            "has_prev": page > 1,
         }
 
     @staticmethod
     def create_mock_query_result(
-        data: List[Any],
-        count: Optional[int] = None
+        data: list[Any], count: int | None = None
     ) -> MagicMock:
         """
         创建 Mock 查询结果

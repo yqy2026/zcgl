@@ -23,11 +23,14 @@ def test_require_organization_access_denies_without_permission():
     )
     db = MagicMock()
 
-    with patch(
-        "src.middleware.organization_permission.OrganizationPermissionService"
-    ) as mock_service, patch(
-        "src.middleware.organization_permission.SecurityEventLogger"
-    ) as mock_logger:
+    with (
+        patch(
+            "src.middleware.organization_permission.OrganizationPermissionService"
+        ) as mock_service,
+        patch(
+            "src.middleware.organization_permission.SecurityEventLogger"
+        ) as mock_logger,
+    ):
         mock_service.return_value.check_organization_access.return_value = False
         mock_logger.return_value.should_alert.return_value = False
 
@@ -54,11 +57,14 @@ def test_require_organization_access_allows_with_permission():
     )
     db = MagicMock()
 
-    with patch(
-        "src.middleware.organization_permission.OrganizationPermissionService"
-    ) as mock_service, patch(
-        "src.middleware.organization_permission.SecurityEventLogger"
-    ) as mock_logger:
+    with (
+        patch(
+            "src.middleware.organization_permission.OrganizationPermissionService"
+        ) as mock_service,
+        patch(
+            "src.middleware.organization_permission.SecurityEventLogger"
+        ) as mock_logger,
+    ):
         mock_service.return_value.check_organization_access.return_value = True
 
         result = dependency(

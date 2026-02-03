@@ -127,12 +127,11 @@ class TestBatchUploadPdfs:
         mock_current_user,
     ):
         """Test successful batch upload with multiple PDFs"""
-        from src.api.v1.documents.pdf_batch_routes import batch_upload_pdfs
 
         # Setup tracker mock
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {"active_batches": 0, "total_batches": 0}
-        
+
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
@@ -158,7 +157,7 @@ class TestBatchUploadPdfs:
 
         # Patch asyncio.create_task to avoid running background tasks
         with patch("src.api.v1.documents.pdf_batch_routes.asyncio.create_task"):
-             await batch_upload_pdfs(
+            await batch_upload_pdfs(
                 db=mock_db,
                 files=mock_pdf_files,
                 organization_id=1,
@@ -171,7 +170,7 @@ class TestBatchUploadPdfs:
         # Verify create_import_session is called for each file
         # Note: We provided 3 mock files
         assert mock_service.create_import_session.call_count == 3
-        
+
         # Verify the arguments of the first call
         args, kwargs = mock_service.create_import_session.call_args_list[0]
         assert kwargs["original_filename"] == "test_0.pdf"
@@ -479,7 +478,9 @@ class TestGetBatchStatus:
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
     @pytest.mark.asyncio
-    async def test_get_batch_status_success(self, mock_crud_class, mock_get_tracker, mock_db):
+    async def test_get_batch_status_success(
+        self, mock_crud_class, mock_get_tracker, mock_db
+    ):
         """Test successful batch status retrieval"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
         from src.models.pdf_import_session import SessionStatus
@@ -698,7 +699,12 @@ class TestCancelBatch:
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
     @pytest.mark.asyncio
     async def test_cancel_batch_success(
-        self, mock_crud_class, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+        self,
+        mock_crud_class,
+        mock_service_class,
+        mock_update_status,
+        mock_get_tracker,
+        mock_db,
     ):
         """Test successful batch cancellation"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
@@ -717,7 +723,7 @@ class TestCancelBatch:
         # Mock CRUD and sessions
         mock_crud = MagicMock()
         mock_crud_class.return_value = mock_crud
-        
+
         mock_sessions = {}
         for i in range(2):
             session_id = f"session-{i + 1}"
@@ -784,7 +790,12 @@ class TestCancelBatch:
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
     @pytest.mark.asyncio
     async def test_cancel_batch_no_processing_sessions(
-        self, mock_crud_class, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+        self,
+        mock_crud_class,
+        mock_service_class,
+        mock_update_status,
+        mock_get_tracker,
+        mock_db,
     ):
         """Test cancelling batch with no processing sessions"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
@@ -1177,4 +1188,3 @@ class TestEdgeCases:
 
         assert exc_info.value.status_code == 400
         assert "没有有效的 PDF 文件" in exc_info.value.message
-

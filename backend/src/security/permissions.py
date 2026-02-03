@@ -281,8 +281,10 @@ class PermissionChecker:
     async def has_permission(self, resource: str, action: str) -> bool:
         """检查用户是否具有指定权限"""
         user_id_value: str = getattr(self.user, "id", "")
-        return await self.rbac_service.check_user_permission(
-            user_id=user_id_value, resource=resource, action=action
+        return bool(
+            await self.rbac_service.check_user_permission(
+                user_id=user_id_value, resource=resource, action=action
+            )
         )
 
     async def can_access_resource(
@@ -290,18 +292,22 @@ class PermissionChecker:
     ) -> bool:
         """检查用户是否可以访问特定资源"""
         user_id_value: str = getattr(self.user, "id", "")
-        return await self.rbac_service.check_resource_access(
-            user_id=user_id_value,
-            resource=resource,
-            resource_id=resource_id,
-            action=action,
+        return bool(
+            await self.rbac_service.check_resource_access(
+                user_id=user_id_value,
+                resource=resource,
+                resource_id=resource_id,
+                action=action,
+            )
         )
 
     async def can_access_organization(self, organization_id: str) -> bool:
         """检查用户是否可以访问组织"""
         user_id_value: str = getattr(self.user, "id", "")
-        return await self.rbac_service.check_organization_access(
-            user_id=user_id_value, organization_id=organization_id
+        return bool(
+            await self.rbac_service.check_organization_access(
+                user_id=user_id_value, organization_id=organization_id
+            )
         )
 
     async def has_role(self, role_code: str) -> bool:

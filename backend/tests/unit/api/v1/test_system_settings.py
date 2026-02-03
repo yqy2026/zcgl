@@ -96,4 +96,3 @@ def normal_user_headers(client, normal_user):
 
     client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
     return {}
-

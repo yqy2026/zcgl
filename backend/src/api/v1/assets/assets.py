@@ -39,7 +39,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....database import get_async_db, get_db
+from ....database import get_async_db
 from ....middleware.auth import (
     audit_action,
     get_current_active_user,
@@ -71,6 +71,16 @@ router.include_router(asset_attachments.router, tags=["资产附件"])
 
 _asset_response_list_adapter = TypeAdapter(list[AssetResponse])
 _asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
+
+
+async def _get_distinct_values(
+    db: AsyncSession,
+    field_name: str,
+) -> list[str]:
+    def _sync(sync_db: Session) -> list[str]:
+        return AssetService(sync_db).get_distinct_field_values(field_name)
+
+    return await db.run_sync(_sync)
 
 
 @router.get(
@@ -159,64 +169,50 @@ async def get_assets(
 
 
 @router.get("/ownership-entities", response_model=list[str], summary="获取权属方列表")
-def get_ownership_entities(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+async def get_ownership_entities(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
-    asset_service = AssetService(db)
-    return [
-        str(value)
-        for value in asset_service.get_distinct_field_values("ownership_entity")
-    ]
+    return await _get_distinct_values(db, "ownership_entity")
 
 
 @router.get(
     "/business-categories", response_model=list[str], summary="获取业态类别列表"
 )
-def get_business_categories(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+async def get_business_categories(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
-    asset_service = AssetService(db)
-    return [
-        str(value)
-        for value in asset_service.get_distinct_field_values("business_category")
-    ]
+    return await _get_distinct_values(db, "business_category")
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
-def get_usage_statuses(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+async def get_usage_statuses(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
-    asset_service = AssetService(db)
-    return [
-        str(value) for value in asset_service.get_distinct_field_values("usage_status")
-    ]
+    return await _get_distinct_values(db, "usage_status")
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
-def get_property_natures(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+async def get_property_natures(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
-    asset_service = AssetService(db)
-    return [
-        str(value)
-        for value in asset_service.get_distinct_field_values("property_nature")
-    ]
+    return await _get_distinct_values(db, "property_nature")
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
-def get_ownership_statuses(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+async def get_ownership_statuses(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
-    asset_service = AssetService(db)
-    return [
-        str(value)
-        for value in asset_service.get_distinct_field_values("ownership_status")
-    ]
+    return await _get_distinct_values(db, "ownership_status")
 
 
 # ===== 单个资产操作接口 =====
@@ -317,9 +313,9 @@ async def delete_asset(
 
 
 @router.get("/{asset_id}/history", summary="获取资产历史")
-def get_asset_history(
+async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """
@@ -327,6 +323,11 @@ def get_asset_history(
 
     - **asset_id**: 资产ID
     """
-    asset_service = AssetService(db)
-    history_records = asset_service.get_asset_history(asset_id)
-    return {"asset_id": asset_id, "history": history_records}
+
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        asset_service = AssetService(db)
+        history_records = asset_service.get_asset_history(asset_id)
+        return {"asset_id": asset_id, "history": history_records}
+
+    return await db.run_sync(_sync)

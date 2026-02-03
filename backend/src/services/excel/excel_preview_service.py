@@ -34,7 +34,9 @@ class ExcelPreviewService:
                     row_dict[col] = None
                 else:
                     row_dict[col] = (
-                        str(value) if not isinstance(value, (str, int, float)) else value
+                        str(value)
+                        if not isinstance(value, (str, int, float))
+                        else value
                     )
             preview_data.append(row_dict)
 

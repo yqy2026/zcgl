@@ -7,7 +7,7 @@ import os
 import tempfile
 import uuid
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -28,10 +28,17 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# 尝试导入Excel服务
-try:
-    from ....services.document.rent_contract_excel import rent_contract_excel_service
+if TYPE_CHECKING:
+    from ....services.document.rent_contract_excel import RentContractExcelService
 
+# 尝试导入Excel服务
+rent_contract_excel_service: "RentContractExcelService | None"
+try:
+    from ....services.document.rent_contract_excel import (
+        rent_contract_excel_service as _rent_contract_excel_service,
+    )
+
+    rent_contract_excel_service = _rent_contract_excel_service
     EXCEL_SERVICE_AVAILABLE = True
 except ImportError as e:
     logger.error(
@@ -62,8 +69,9 @@ def download_excel_template(
     """
     下载租金合同Excel导入模板
     """
-    if not EXCEL_SERVICE_AVAILABLE:
+    if not EXCEL_SERVICE_AVAILABLE or rent_contract_excel_service is None:
         raise service_unavailable("Excel服务不可用")
+    assert rent_contract_excel_service is not None
 
     try:
         result = rent_contract_excel_service.download_contract_template()
@@ -101,10 +109,9 @@ def import_contracts_from_excel(
     """
     从Excel文件导入租金合同数据
     """
-    if not EXCEL_SERVICE_AVAILABLE:
+    if not EXCEL_SERVICE_AVAILABLE or rent_contract_excel_service is None:
         raise service_unavailable("Excel服务不可用")
-
-    from typing import cast
+    assert rent_contract_excel_service is not None
 
     try:
         temp_dir = tempfile.gettempdir()
@@ -132,7 +139,7 @@ def import_contracts_from_excel(
 
         rent_contract_excel_service.cleanup_file(file_path)
 
-        return cast(dict[str, Any], result)
+        return result
 
     except BaseBusinessError:
         raise
@@ -161,8 +168,9 @@ def export_contracts_to_excel(
     """
     导出租金合同数据到Excel文件
     """
-    if not EXCEL_SERVICE_AVAILABLE:
+    if not EXCEL_SERVICE_AVAILABLE or rent_contract_excel_service is None:
         raise service_unavailable("Excel服务不可用")
+    assert rent_contract_excel_service is not None
 
     try:
         result = rent_contract_excel_service.export_contracts_to_excel(

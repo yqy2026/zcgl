@@ -37,7 +37,7 @@ class ContactCRUD:
         is_active: bool | None = True,
         is_primary: bool | None = None,
         contact_type: ContactType | None = None,
-    ):
+    ) -> Any:
         query = db.query(Contact).filter(Contact.entity_type == entity_type)
 
         if entity_id is not None:
@@ -102,16 +102,13 @@ class ContactCRUD:
         self, db: Session, entity_type: str, entity_id: str
     ) -> Contact | None:
         """获取指定实体的主要联系人 - 解密敏感字段"""
-        obj = (
-            self._build_entity_query(
-                db,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                is_active=True,
-                is_primary=True,
-            )
-            .first()
-        )
+        obj = self._build_entity_query(
+            db,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            is_active=True,
+            is_primary=True,
+        ).first()
         return self._decrypt_contact(obj)
 
     def create(self, db: Session, obj_in: dict[str, Any]) -> Contact:

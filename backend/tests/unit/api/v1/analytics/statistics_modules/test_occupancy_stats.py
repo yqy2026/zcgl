@@ -3,12 +3,13 @@ Occupancy Stats Module 测试 (修复版)
 测试出租率统计模块的端点 - 匹配实际 API 实现
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 
@@ -57,7 +58,9 @@ class TestOccupancyStatistics:
         Then: 返回出租率统计数据
         """
         # Arrange - Mock OccupancyService.calculate_with_aggregation
-        with patch("src.services.analytics.occupancy_service.OccupancyService.calculate_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.occupancy_service.OccupancyService.calculate_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "overall_rate": 85.5,
                 "total_rentable_area": 45000.0,
@@ -82,7 +85,9 @@ class TestOccupancyStatistics:
         Then: 返回按类别分组的出租率数据
         """
         # Arrange - Mock OccupancyService.calculate_category_with_aggregation
-        with patch("src.services.analytics.occupancy_service.OccupancyService.calculate_category_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.occupancy_service.OccupancyService.calculate_category_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "商业": {
                     "overall_rate": 90.0,
@@ -99,7 +104,9 @@ class TestOccupancyStatistics:
             }
 
             # Act
-            response = client.get("/api/v1/statistics/occupancy-rate/by-category?category_field=business_category")
+            response = client.get(
+                "/api/v1/statistics/occupancy-rate/by-category?category_field=business_category"
+            )
 
             # Assert
             assert response.status_code == 200
@@ -118,4 +125,3 @@ class TestOccupancyStatistics:
 
         # Assert - 端点可能不存在，返回 404 或 200
         assert response.status_code in [200, 404]
-

@@ -3,20 +3,21 @@ Basic Stats Module 测试
 测试基础统计模块的端点
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db():
@@ -39,6 +40,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+
     def override_get_db():
         yield mock_db
 
@@ -61,7 +63,9 @@ def mock_assets():
     for i in range(100):
         asset = Mock()
         # API 检查的是中文字符串
-        asset.ownership_status = "已确权" if i < 70 else "未确权" if i < 90 else "部分确权"
+        asset.ownership_status = (
+            "已确权" if i < 70 else "未确权" if i < 90 else "部分确权"
+        )
         asset.property_nature = "经营性" if i < 60 else "非经营性"
         asset.usage_status = "出租" if i < 55 else "自用" if i < 80 else "空置"
         assets.append(asset)
@@ -71,6 +75,7 @@ def mock_assets():
 # =============================================================================
 # 基础统计端点测试
 # =============================================================================
+
 
 class TestGetBasicStatistics:
     """获取基础统计数据测试"""
@@ -158,7 +163,8 @@ class TestGetBasicStatistics:
         """
         # Arrange
         filtered_assets = [
-            a for a in mock_assets
+            a
+            for a in mock_assets
             if a.ownership_status == "confirmed" and a.usage_status == "rented"
         ]
 
@@ -248,6 +254,7 @@ class TestGetComprehensiveStatistics:
 # 缓存管理测试
 # =============================================================================
 
+
 class TestCacheManagement:
     """缓存管理测试"""
 
@@ -283,6 +290,7 @@ class TestCacheManagement:
 # =============================================================================
 # 错误处理测试
 # =============================================================================
+
 
 class TestErrorHandling:
     """错误处理测试"""
@@ -326,6 +334,7 @@ class TestErrorHandling:
 # =============================================================================
 # 数据验证测试
 # =============================================================================
+
 
 class TestDataValidation:
     """数据验证测试"""
@@ -372,4 +381,3 @@ class TestDataValidation:
             data = response.json()
             assert "filters_applied" in data
             assert data["filters_applied"]["ownership_status"] == "confirmed"
-

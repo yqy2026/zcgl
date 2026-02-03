@@ -3,12 +3,13 @@ Area Stats Module 测试 (修复版)
 测试面积统计模块的端点 - 匹配实际 API 实现
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 
@@ -33,6 +34,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+
     def override_get_db():
         yield mock_db
 
@@ -60,7 +62,9 @@ class TestAreaStatistics:
         Then: 返回面积摘要数据
         """
         # Arrange - Mock AreaService.calculate_summary_with_aggregation
-        with patch("src.services.analytics.area_service.AreaService.calculate_summary_with_aggregation") as mock_calc:
+        with patch(
+            "src.services.analytics.area_service.AreaService.calculate_summary_with_aggregation"
+        ) as mock_calc:
             mock_calc.return_value = {
                 "total_land_area": 50000.0,
                 "total_rentable_area": 45000.0,
@@ -118,8 +122,9 @@ class TestAreaStatistics:
             mock_get.return_value = ([Mock()] * 5, 5)
 
             # Act
-            response = client.get("/api/v1/statistics/area-statistics?ownership_status=confirmed")
+            response = client.get(
+                "/api/v1/statistics/area-statistics?ownership_status=confirmed"
+            )
 
             # Assert
             assert response.status_code == 200
-

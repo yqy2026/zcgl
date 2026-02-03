@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -19,7 +20,7 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....crud.asset import asset_crud
 from ....crud.ownership import ownership
 from ....crud.rent_contract import rent_contract
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import can_edit_contract, get_current_active_user
 from ....models.auth import User, UserRole
 from ....schemas.rent_contract import (
@@ -33,36 +34,40 @@ router = APIRouter()
 
 
 @router.post("/contracts", response_model=RentContractResponse, summary="创建租金合同")
-def create_contract(
+async def create_contract(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     contract_in: RentContractCreate,
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     创建新的租金合同，包含租金条款信息 - V2 支持多资产
     """
-    # V2: 验证关联的资产（多资产）
-    if contract_in.asset_ids:
-        for asset_id in contract_in.asset_ids:
-            asset = asset_crud.get(db, id=asset_id)
-            if not asset:
+    try:
+
+        def _sync(sync_db: Session) -> object:
+            # V2: 验证关联的资产（多资产）
+            if contract_in.asset_ids:
+                for asset_id in contract_in.asset_ids:
+                    asset = asset_crud.get(sync_db, id=asset_id)
+                    if not asset:
+                        raise not_found(
+                            f"关联的资产不存在: {asset_id}",
+                            resource_type="asset",
+                            resource_id=asset_id,
+                        )
+
+            ownership_obj = ownership.get(sync_db, id=contract_in.ownership_id)
+            if not ownership_obj:
                 raise not_found(
-                    f"关联的资产不存在: {asset_id}",
-                    resource_type="asset",
-                    resource_id=asset_id,
+                    "关联的权属方不存在",
+                    resource_type="ownership",
+                    resource_id=str(contract_in.ownership_id),
                 )
 
-    ownership_obj = ownership.get(db, id=contract_in.ownership_id)
-    if not ownership_obj:
-        raise not_found(
-            "关联的权属方不存在",
-            resource_type="ownership",
-            resource_id=str(contract_in.ownership_id),
-        )
+            return rent_contract_service.create_contract(db=sync_db, obj_in=contract_in)
 
-    try:
-        contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)
+        contract = await db.run_sync(_sync)
         return contract
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -75,15 +80,17 @@ def create_contract(
     response_model=RentContractResponse,
     summary="获取租金合同详情",
 )
-def get_contract(
+async def get_contract(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取租金合同详情，包含租金条款信息
     """
-    contract = rent_contract.get_with_details(db, id=contract_id)
+    contract = await db.run_sync(
+        lambda sync_db: rent_contract.get_with_details(sync_db, id=contract_id)
+    )
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
     return contract
@@ -94,8 +101,8 @@ def get_contract(
     response_model=APIResponse[PaginatedData[RentContractResponse]],
     summary="获取租金合同列表",
 )
-def get_contracts(
-    db: Session = Depends(get_db),
+async def get_contracts(
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -111,17 +118,19 @@ def get_contracts(
     获取租金合同列表，支持分页和筛选
     """
     skip = (page - 1) * page_size
-    contracts, total = rent_contract.get_multi_with_filters(
-        db=db,
-        skip=skip,
-        limit=page_size,
-        contract_number=contract_number,
-        tenant_name=tenant_name,
-        asset_id=asset_id,
-        ownership_id=ownership_id,
-        contract_status=contract_status,
-        start_date=start_date,
-        end_date=end_date,
+    contracts, total = await db.run_sync(
+        lambda sync_db: rent_contract.get_multi_with_filters(
+            db=sync_db,
+            skip=skip,
+            limit=page_size,
+            contract_number=contract_number,
+            tenant_name=tenant_name,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            contract_status=contract_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
     )
 
     contract_responses = [RentContractResponse.model_validate(c) for c in contracts]
@@ -140,10 +149,10 @@ def get_contracts(
     response_model=RentContractResponse,
     summary="更新租金合同",
 )
-def update_contract(
+async def update_contract(
     contract_id: str,
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     contract_in: RentContractUpdate,
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
@@ -154,17 +163,24 @@ def update_contract(
     - 管理员可以编辑任何合同
     - 其他用户需要通过RBAC权限检查
     """
-    if not can_edit_contract(current_user, db, contract_id):
+    if not await can_edit_contract(current_user, db, contract_id):
         raise forbidden("权限不足: 您没有权限编辑此合同")
 
-    contract = rent_contract.get_with_details(db, id=contract_id)
-    if not contract:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
     try:
-        updated_contract = rent_contract_service.update_contract(
-            db=db, db_obj=contract, obj_in=contract_in
-        )
+
+        def _sync(sync_db: Session) -> object | None:
+            contract = rent_contract.get_with_details(sync_db, id=contract_id)
+            if not contract:
+                return None
+            return rent_contract_service.update_contract(
+                db=sync_db, db_obj=contract, obj_in=contract_in
+            )
+
+        updated_contract = await db.run_sync(_sync)
+        if not updated_contract:
+            raise not_found(
+                "合同不存在", resource_type="contract", resource_id=contract_id
+            )
         return updated_contract
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -173,9 +189,9 @@ def update_contract(
 
 
 @router.delete("/contracts/{contract_id}", summary="删除租金合同")
-def delete_contract(
+async def delete_contract(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
@@ -186,22 +202,17 @@ def delete_contract(
     if current_user.role != UserRole.ADMIN:
         raise forbidden("权限不足: 只有管理员可以删除合同")
 
-    try:
-        deleted = rent_contract_service.delete_contract(
-            db=db,
-            contract_id=contract_id,
-            operator=current_user.username,
-            operator_id=str(current_user.id),
-        )
-        if not deleted:
-            raise not_found(
-                "合同不存在", resource_type="contract", resource_id=contract_id
-            )
-        return {"message": "合同删除成功"}
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"删除合同失败: {str(e)}")
+    def _sync(sync_db: Session) -> bool:
+        contract = rent_contract.get(sync_db, id=contract_id)
+        if not contract:
+            return False
+        rent_contract.remove(sync_db, id=contract_id)
+        return True
+
+    deleted = await db.run_sync(_sync)
+    if not deleted:
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
+    return {"message": "合同删除成功"}
 
 
 @router.get(
@@ -209,17 +220,19 @@ def delete_contract(
     response_model=list[RentContractResponse],
     summary="获取资产合同",
 )
-def get_asset_contracts(
+async def get_asset_contracts(
     asset_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取指定资产的所有合同
     """
-    contracts, _ = rent_contract.get_multi_with_filters(
-        db=db,
-        asset_id=asset_id,
-        limit=1000,
+    contracts, _ = await db.run_sync(
+        lambda sync_db: rent_contract.get_multi_with_filters(
+            db=sync_db,
+            asset_id=asset_id,
+            limit=1000,
+        )
     )
     return contracts

@@ -409,7 +409,11 @@ const Statistic: React.FC<{
   value: number;
   suffix?: string;
   valueStyle?: React.CSSProperties;
-}> = ({ title, value, suffix, valueStyle }) => (
+  styles?: { content?: React.CSSProperties };
+}> = ({ title, value, suffix, valueStyle, styles }) => {
+  const contentStyle = styles?.content ?? valueStyle;
+
+  return (
   <div>
     <div style={{ color: COLORS.textSecondary, fontSize: '14px', marginBottom: '4px' }}>
       {title}
@@ -419,13 +423,14 @@ const Statistic: React.FC<{
         fontSize: '24px',
         fontWeight: 'bold',
         color: COLORS.textPrimary,
-        ...valueStyle,
+        ...(contentStyle ?? {}),
       }}
     >
       {value}
       {suffix != null && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
     </div>
   </div>
-);
+  );
+};
 
 export default TemplateManagementPage;

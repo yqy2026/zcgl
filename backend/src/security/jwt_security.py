@@ -6,7 +6,7 @@ JWT安全配置和最佳实践
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
 from jwt import ExpiredSignatureError
@@ -14,8 +14,11 @@ from jwt import PyJWTError as JWTError
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from ..core.config import Settings
 
-def _get_settings():
+
+def _get_settings() -> "Settings":
     from ..core.config import settings as current_settings
 
     return current_settings
@@ -292,9 +295,7 @@ def validate_current_jwt_config() -> dict[str, Any]:
         result["issues"].append(f"使用的算法 {algorithm} 不在推荐列表中")
 
     # 检查令牌有效期 - 使用安全访问避免属性错误
-    access_token_minutes = getattr(
-        current_settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 30
-    )
+    access_token_minutes = getattr(current_settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 30)
     if access_token_minutes > 60:  # 超过1小时
         result["recommendations"].append("访问令牌有效期建议不超过60分钟")
 

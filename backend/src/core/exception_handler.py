@@ -1,4 +1,5 @@
-from typing import Any, Awaitable, Callable, NoReturn, TypeVar, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, NoReturn, TypeVar, cast
 
 """
 统一异常处理机制
@@ -658,10 +659,20 @@ def setup_exception_handlers(app: Any) -> None:
     """设置应用异常处理器"""
 
     TExc = TypeVar("TExc", bound=BaseException)
-    Handler = Callable[[Request, TExc], Awaitable[JSONResponse]]
 
-    def register_handler(exc_type: type[TExc]) -> Callable[[Handler[TExc]], Handler[TExc]]:
-        return cast(Callable[[Handler[TExc]], Handler[TExc]], app.exception_handler(exc_type))
+    def register_handler(
+        exc_type: type[TExc],
+    ) -> Callable[
+        [Callable[[Request, TExc], Awaitable[JSONResponse]]],
+        Callable[[Request, TExc], Awaitable[JSONResponse]],
+    ]:
+        return cast(
+            Callable[
+                [Callable[[Request, TExc], Awaitable[JSONResponse]]],
+                Callable[[Request, TExc], Awaitable[JSONResponse]],
+            ],
+            app.exception_handler(exc_type),
+        )
 
     # 业务异常处理器
     @register_handler(BaseBusinessError)

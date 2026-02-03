@@ -7,7 +7,8 @@ Provides simple concurrency for processing multiple PDF files.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from .pdf_processing_service import PDFProcessingService
 

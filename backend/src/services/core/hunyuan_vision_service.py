@@ -76,11 +76,11 @@ class HunyuanVisionService:
 
                 self.api_key = env_api_key or settings.HUNYUAN_API_KEY
                 self.base_url = (
-                    env_base_url
-                    or settings.HUNYUAN_BASE_URL
-                    or self.DEFAULT_BASE_URL
+                    env_base_url or settings.HUNYUAN_BASE_URL or self.DEFAULT_BASE_URL
                 )
-                self.model = env_model or settings.HUNYUAN_VISION_MODEL or "hunyuan-vision"
+                self.model = (
+                    env_model or settings.HUNYUAN_VISION_MODEL or "hunyuan-vision"
+                )
             except ImportError:
                 # Fallback for standalone usage
                 self.api_key = env_api_key

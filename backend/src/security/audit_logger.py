@@ -381,9 +381,7 @@ class SecurityEventLogger:
                 should_close = True
 
             try:
-                count = self._count_events_in_window(
-                    db, ip=ip, event_type=event_type
-                )
+                count = self._count_events_in_window(db, ip=ip, event_type=event_type)
                 return count >= threshold
 
             finally:
@@ -426,9 +424,7 @@ class SecurityEventLogger:
                 should_close = True
 
             try:
-                return self._count_events_in_window(
-                    db, ip=ip, event_type=event_type
-                )
+                return self._count_events_in_window(db, ip=ip, event_type=event_type)
 
             finally:
                 if should_close:

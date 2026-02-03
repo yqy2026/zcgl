@@ -9,12 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from ....core.exception_handler import BaseBusinessError
-from ....core.router_registry import route_registry
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import require_permission
 from ....models.auth import User
 from ....schemas.property_certificate import (
@@ -36,7 +35,7 @@ router = APIRouter(prefix="/property-certificates", tags=["Property Certificates
 async def upload_certificate(
     request: Request,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "create")),
 ) -> PropertyCertificateUploadResponse:
     """
@@ -119,7 +118,7 @@ async def upload_certificate(
         # Extract information from file
         result = await service.extract_from_file(str(temp_file_path), safe_filename)
 
-        asset_matches = service.match_assets(result.get("data", {}))
+        asset_matches = await service.match_assets(result.get("data", {}))
 
         # Transform result to response model
         response = PropertyCertificateUploadResponse(
@@ -153,7 +152,7 @@ async def upload_certificate(
 @router.post("/confirm-import")
 async def confirm_import(
     data: CertificateImportConfirm,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "create")),
 ) -> dict[str, Any]:
     """
@@ -189,10 +188,10 @@ async def confirm_import(
 
 
 @router.get("/", response_model=list[PropertyCertificateResponse])
-def list_certificates(
+async def list_certificates(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "read")),
 ) -> list[PropertyCertificateResponse]:
     """
@@ -208,7 +207,7 @@ def list_certificates(
     """
     try:
         service = PropertyCertificateService(db)
-        certificates = service.list_certificates(skip=skip, limit=limit)
+        certificates = await service.list_certificates(skip=skip, limit=limit)
         logger.debug(
             "Retrieved %d certificates (skip=%d, limit=%d)",
             len(certificates),
@@ -228,9 +227,9 @@ def list_certificates(
 
 
 @router.get("/{certificate_id}", response_model=PropertyCertificateResponse)
-def get_certificate(
+async def get_certificate(
     certificate_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "read")),
 ) -> PropertyCertificateResponse:
     """
@@ -248,7 +247,7 @@ def get_certificate(
     """
     try:
         service = PropertyCertificateService(db)
-        cert = service.get_certificate(certificate_id)
+        cert = await service.get_certificate(certificate_id)
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
@@ -268,9 +267,9 @@ def get_certificate(
 
 
 @router.post("/", response_model=PropertyCertificateResponse)
-def create_certificate(
+async def create_certificate(
     certificate: PropertyCertificateCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "create")),
 ) -> PropertyCertificateResponse:
     """
@@ -308,7 +307,7 @@ def create_certificate(
             )
 
         service = PropertyCertificateService(db)
-        result = service.create_certificate(certificate)
+        result = await service.create_certificate(certificate)
         logger.info(
             "Created certificate %s (number: %r)",
             result.id,
@@ -326,10 +325,10 @@ def create_certificate(
 
 
 @router.put("/{certificate_id}", response_model=PropertyCertificateResponse)
-def update_certificate(
+async def update_certificate(
     certificate_id: str,
     certificate: PropertyCertificateUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "update")),
 ) -> PropertyCertificateResponse:
     """
@@ -344,21 +343,21 @@ def update_certificate(
         PropertyCertificateResponse: 更新后的产权证
 
     Raises:
-        HTTPException: 产权证不存在或更新失败
+        HTTPException: 更新失败
     """
     try:
         service = PropertyCertificateService(db)
-        cert = service.get_certificate(certificate_id)
+        cert = await service.get_certificate(certificate_id)
         if not cert:
-            logger.warning(f"Certificate not found for update: {certificate_id}")
+            logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="产权证不存在",
             )
 
-        result = service.update_certificate(cert, certificate)
-        logger.info(f"Updated certificate {certificate_id}")
-        return PropertyCertificateResponse.model_validate(result)
+        updated = await service.update_certificate(cert, certificate)
+        logger.info("Updated certificate %s", certificate_id)
+        return PropertyCertificateResponse.model_validate(updated)
     except HTTPException:
         raise
     except Exception as e:
@@ -370,9 +369,9 @@ def update_certificate(
 
 
 @router.delete("/{certificate_id}")
-def delete_certificate(
+async def delete_certificate(
     certificate_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("property_certificate", "delete")),
 ) -> dict[str, str]:
     """
@@ -386,21 +385,21 @@ def delete_certificate(
         dict: 删除结果
 
     Raises:
-        HTTPException: 产权证不存在或删除失败
+        HTTPException: 删除失败
     """
     try:
         service = PropertyCertificateService(db)
-        cert = service.get_certificate(certificate_id)
+        cert = await service.get_certificate(certificate_id)
         if not cert:
-            logger.warning(f"Certificate not found for deletion: {certificate_id}")
+            logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="产权证不存在",
             )
 
-        service.delete_certificate(certificate_id)
-        logger.info(f"Deleted certificate {certificate_id}")
-        return {"status": "deleted"}
+        await service.delete_certificate(certificate_id)
+        logger.info("Deleted certificate %s", certificate_id)
+        return {"message": "删除成功"}
     except HTTPException:
         raise
     except Exception as e:
@@ -409,9 +408,3 @@ def delete_certificate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除产权证失败: {str(e)}",
         )
-
-
-# Register router
-route_registry.register_router(
-    router, prefix="/api/v1", tags=["Property Certificates"], version="v1"
-)

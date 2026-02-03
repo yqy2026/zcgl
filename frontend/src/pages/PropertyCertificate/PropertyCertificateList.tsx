@@ -37,7 +37,7 @@ export const PropertyCertificateList: React.FC = () => {
       keyword: '',
     },
     initialPageSize: 10,
-    filterFn: useCallback((items, nextFilters) => {
+    filterFn: useCallback((items: PropertyCertificate[], nextFilters: CertificateFilters) => {
       const trimmedKeyword = nextFilters.keyword.trim().toLowerCase();
       if (trimmedKeyword === '') {
         return items;

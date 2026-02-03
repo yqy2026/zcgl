@@ -15,7 +15,8 @@ from datetime import UTC, date
 from pathlib import Path
 from typing import Any, cast
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as SyncSession
 
 from ...core.exception_handler import (
     BaseBusinessError,
@@ -94,9 +95,9 @@ class PDFImportService:
             "file_size": len(file_content),
         }
 
-    def create_import_session(
+    async def create_import_session(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         session_id: str,
         original_filename: str,
@@ -107,23 +108,53 @@ class PDFImportService:
         processing_options: dict[str, Any] | None = None,
     ) -> PDFImportSession:
         """创建PDF导入会话并持久化"""
-        session = PDFImportSession()
-        session.session_id = session_id
-        session.original_filename = original_filename
-        session.file_size = file_size
-        session.file_path = file_path
-        session.content_type = content_type
-        session.organization_id = organization_id
-        session.status = SessionStatus.UPLOADED
-        session.current_step = ProcessingStep.FILE_UPLOAD
-        session.progress_percentage = 0.0
-        if processing_options is not None:
-            session.processing_options = processing_options
 
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-        return session
+        def _sync(sync_db: SyncSession) -> PDFImportSession:
+            session = PDFImportSession()
+            session.session_id = session_id
+            session.original_filename = original_filename
+            session.file_size = file_size
+            session.file_path = file_path
+            session.content_type = content_type
+            session.organization_id = organization_id
+            session.status = SessionStatus.UPLOADED
+            session.current_step = ProcessingStep.FILE_UPLOAD
+            session.progress_percentage = 0.0
+            if processing_options is not None:
+                session.processing_options = processing_options
+
+            sync_db.add(session)
+            sync_db.commit()
+            sync_db.refresh(session)
+            return session
+
+        return await db.run_sync(_sync)
+
+    def _parse_date(self, date_str: str | None) -> date | None:
+        """
+        解析日期字符串
+
+        Args:
+            date_str: 日期字符串 (格式: YYYY-MM-DD 或 YYYY/MM/DD)
+
+        Returns:
+            date | None: 解析后的日期对象
+        """
+        if not date_str:
+            return None
+
+        from datetime import datetime
+
+        # 尝试常见日期格式
+        formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt).date()
+            except ValueError:
+                continue
+
+        logger.warning(f"无法解析日期: {date_str}")
+        return None
 
     @classmethod
     def get_available_slots(cls) -> int:
@@ -136,7 +167,9 @@ class PDFImportService:
         """获取当前正在处理的任务数"""
         return cls._active_tasks
 
-    async def get_session_status(self, db: Session, session_id: str) -> dict[str, Any]:
+    async def get_session_status(
+        self, db: AsyncSession, session_id: str
+    ) -> dict[str, Any]:
         """
         获取会话状态
 
@@ -147,30 +180,34 @@ class PDFImportService:
         Returns:
             会话状态信息
         """
-        session = (
-            db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
-        )
-        if not session:
-            return {"success": False, "error": "Session not found"}
 
-        return {
-            "success": True,
-            "session_status": {
-                "status": session.status.value,
-                "progress": session.progress_percentage,
-                "error": session.error_message,
-                "result": session.processing_result,
-                "current_step": session.current_step.value
-                if session.current_step
-                else None,
-            },
-        }
+        def _sync(sync_db: SyncSession) -> dict[str, Any]:
+            session = (
+                sync_db.query(PDFImportSession)
+                .filter(PDFImportSession.session_id == session_id)
+                .first()
+            )
+            if not session:
+                return {"success": False, "error": "Session not found"}
+
+            return {
+                "success": True,
+                "session_status": {
+                    "status": session.status.value,
+                    "progress": session.progress_percentage,
+                    "error": session.error_message,
+                    "result": session.processing_result,
+                    "current_step": session.current_step.value
+                    if session.current_step
+                    else None,
+                },
+            }
+
+        return await db.run_sync(_sync)
 
     async def process_pdf_file(
         self,
-        db: Session,
+        db: AsyncSession,
         session_id: str,
         organization_id: int | None,
         file_size: int,
@@ -195,17 +232,20 @@ class PDFImportService:
         Returns:
             处理启动结果
         """
-        # 更新会话状态为处理中
-        session = (
-            db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
-        )
-        if session:
-            session.status = SessionStatus.PROCESSING
-            session.current_step = ProcessingStep.FILE_UPLOAD
-            session.progress_percentage = 0.0
-            db.commit()
+
+        def _sync_update(sync_db: SyncSession) -> None:
+            session = (
+                sync_db.query(PDFImportSession)
+                .filter(PDFImportSession.session_id == session_id)
+                .first()
+            )
+            if session:
+                session.status = SessionStatus.PROCESSING
+                session.current_step = ProcessingStep.FILE_UPLOAD
+                session.progress_percentage = 0.0
+                sync_db.commit()
+
+        await db.run_sync(_sync_update)
 
         # 创建带异常追踪的后台任务
         task = asyncio.create_task(
@@ -387,14 +427,13 @@ class PDFImportService:
             result: 处理结果
             processing_time_ms: 处理耗时（毫秒）
         """
-        from ...database import _get_database_manager
+        from ...database import async_session_scope
 
-        db_manager = _get_database_manager()
+        async with async_session_scope() as db:
 
-        with db_manager.get_session() as db:
-            try:
+            def _sync(sync_db: SyncSession) -> None:
                 session = (
-                    db.query(PDFImportSession)
+                    sync_db.query(PDFImportSession)
                     .filter(PDFImportSession.session_id == session_id)
                     .first()
                 )
@@ -435,15 +474,17 @@ class PDFImportService:
 
                     session.completed_at = datetime.now(UTC)
 
-                    db.commit()
+                    sync_db.commit()
                     logger.info(f"Persisted processing result for session {session_id}")
                     cleaned = self._cleanup_source_file(
                         session.file_path, session.processing_options
                     )
                     if cleaned:
                         session.file_path = None
-                        db.commit()
+                        sync_db.commit()
 
+            try:
+                await db.run_sync(_sync)
             except Exception as e:
                 logger.error(
                     f"Failed to persist processing result for {session_id}: {e}",
@@ -453,7 +494,7 @@ class PDFImportService:
                         "session_id": session_id,
                     },
                 )
-                db.rollback()
+                await db.run_sync(lambda sync_db: sync_db.rollback())
                 raise
 
     async def _persist_processing_error(
@@ -466,14 +507,13 @@ class PDFImportService:
             session_id: 会话 ID
             error_result: 错误结果
         """
-        from ...database import _get_database_manager
+        from ...database import async_session_scope
 
-        db_manager = _get_database_manager()
+        async with async_session_scope() as db:
 
-        with db_manager.get_session() as db:
-            try:
+            def _sync(sync_db: SyncSession) -> None:
                 session = (
-                    db.query(PDFImportSession)
+                    sync_db.query(PDFImportSession)
                     .filter(PDFImportSession.session_id == session_id)
                     .first()
                 )
@@ -490,15 +530,17 @@ class PDFImportService:
 
                     session.completed_at = datetime.now(UTC)
 
-                    db.commit()
+                    sync_db.commit()
                     logger.info(f"Persisted processing error for session {session_id}")
                     cleaned = self._cleanup_source_file(
                         session.file_path, session.processing_options
                     )
                     if cleaned:
                         session.file_path = None
-                        db.commit()
+                        sync_db.commit()
 
+            try:
+                await db.run_sync(_sync)
             except Exception as e:
                 logger.error(
                     f"Failed to persist processing error for {session_id}: {e}",
@@ -508,7 +550,7 @@ class PDFImportService:
                         "session_id": session_id,
                     },
                 )
-                db.rollback()
+                await db.run_sync(lambda sync_db: sync_db.rollback())
                 raise
 
     def _cleanup_source_file(
@@ -677,7 +719,7 @@ class PDFImportService:
 
     async def confirm_import(
         self,
-        db: Session,
+        db: AsyncSession,
         session_id: str,
         confirmed_data: dict[str, Any],
         user_id: int,
@@ -694,215 +736,199 @@ class PDFImportService:
         Returns:
             创建结果
         """
-        try:
-            # 获取导入会话
-            import_session = (
-                db.query(PDFImportSession)
-                .filter(PDFImportSession.session_id == session_id)
-                .first()
-            )
 
-            if not import_session:
-                return {"success": False, "error": "Import session not found"}
+        def _sync(sync_db: SyncSession) -> dict[str, Any]:
+            try:
+                # 获取导入会话
+                import_session = (
+                    sync_db.query(PDFImportSession)
+                    .filter(PDFImportSession.session_id == session_id)
+                    .first()
+                )
 
-            # 提取合同数据
-            contract_data = confirmed_data.get("contract_data", {})
-            # 注意: asset_data 将在未来版本中用于关联资产
-            # 目前只创建合同记录，资产关联逻辑待实现
+                if not import_session:
+                    return {"success": False, "error": "Import session not found"}
 
-            # 验证必填字段
-            required_fields = [
-                "contract_number",
-                "tenant_name",
-                "start_date",
-                "end_date",
-            ]
-            missing_fields = [f for f in required_fields if not contract_data.get(f)]
-            if missing_fields:
+                # 提取合同数据
+                contract_data = confirmed_data.get("contract_data", {})
+                # 注意: asset_data 将在未来版本中用于关联资产
+                # 目前只创建合同记录，资产关联逻辑待实现
+
+                # 验证必填字段
+                required_fields = [
+                    "contract_number",
+                    "tenant_name",
+                    "start_date",
+                    "end_date",
+                ]
+                missing_fields = [
+                    f for f in required_fields if not contract_data.get(f)
+                ]
+                if missing_fields:
+                    return {
+                        "success": False,
+                        "error": f"Missing required fields: {', '.join(missing_fields)}",
+                    }
+
+                # 确定合同类型
+                contract_type_str = contract_data.get(
+                    "contract_type", "lease_downstream"
+                )
+                contract_type_map = {
+                    "lease_upstream": ContractType.LEASE_UPSTREAM,
+                    "lease_downstream": ContractType.LEASE_DOWNSTREAM,
+                    "entrusted": ContractType.ENTRUSTED,
+                }
+                contract_type = contract_type_map.get(
+                    contract_type_str, ContractType.LEASE_DOWNSTREAM
+                )
+
+                # 确定付款周期
+                payment_cycle_str = contract_data.get("payment_cycle", "monthly")
+                payment_cycle_map = {
+                    "monthly": PaymentCycle.MONTHLY,
+                    "quarterly": PaymentCycle.QUARTERLY,
+                    "semi_annual": PaymentCycle.SEMI_ANNUAL,
+                    "annual": PaymentCycle.ANNUAL,
+                }
+                payment_cycle = payment_cycle_map.get(
+                    payment_cycle_str, PaymentCycle.MONTHLY
+                )
+
+                # 创建合同记录
+                contract = RentContract()
+                contract.contract_number = contract_data["contract_number"]
+                contract.ownership_id = contract_data.get("ownership_id", "")
+                contract.contract_type = contract_type
+                contract.tenant_name = contract_data["tenant_name"]
+                contract.tenant_contact = contract_data.get("tenant_contact")
+                contract.tenant_phone = contract_data.get("tenant_phone")
+                contract.tenant_address = contract_data.get("tenant_address")
+                contract.tenant_usage = contract_data.get("tenant_usage")
+                contract.sign_date = (
+                    self._parse_date(contract_data.get("sign_date")) or date.today()
+                )
+                start_date = self._parse_date(contract_data.get("start_date"))
+                end_date = self._parse_date(contract_data.get("end_date"))
+                if start_date is None or end_date is None:
+                    raise BusinessValidationError(
+                        "Invalid date format for start_date or end_date",
+                        field_errors={
+                            "start_date": ["invalid_date_format"],
+                            "end_date": ["invalid_date_format"],
+                        },
+                    )
+                contract.start_date = start_date
+                contract.end_date = end_date
+                contract.total_deposit = contract_data.get("total_deposit", 0)
+                contract.monthly_rent_base = contract_data.get("monthly_rent", 0)
+                contract.payment_cycle = payment_cycle
+                contract.payment_terms = contract_data.get("payment_terms")
+                contract.contract_notes = contract_data.get("contract_notes")
+                contract.service_fee_rate = contract_data.get("service_fee_rate")
+                contract.source_session_id = session_id
+
+                sync_db.add(contract)
+                sync_db.flush()  # 获取 ID 但不提交
+
+                # 更新导入会话状态
+                import_session.status = SessionStatus.CONFIRMED
+                import_session.extracted_data = confirmed_data
+                sync_db.commit()
+
+                logger.info(
+                    f"Created contract {contract.id} from PDF import session {session_id}"
+                )
+
                 return {
-                    "success": False,
-                    "error": f"Missing required fields: {', '.join(missing_fields)}",
+                    "success": True,
+                    "contract_id": contract.id,
+                    "contract_number": contract.contract_number,
+                    "message": "Contract created successfully",
                 }
 
-            # 确定合同类型
-            contract_type_str = contract_data.get("contract_type", "lease_downstream")
-            contract_type_map = {
-                "lease_upstream": ContractType.LEASE_UPSTREAM,
-                "lease_downstream": ContractType.LEASE_DOWNSTREAM,
-                "entrusted": ContractType.ENTRUSTED,
-            }
-            contract_type = contract_type_map.get(
-                contract_type_str, ContractType.LEASE_DOWNSTREAM
-            )
-
-            # 确定付款周期
-            payment_cycle_str = contract_data.get("payment_cycle", "monthly")
-            payment_cycle_map = {
-                "monthly": PaymentCycle.MONTHLY,
-                "quarterly": PaymentCycle.QUARTERLY,
-                "semi_annual": PaymentCycle.SEMI_ANNUAL,
-                "annual": PaymentCycle.ANNUAL,
-            }
-            payment_cycle = payment_cycle_map.get(
-                payment_cycle_str, PaymentCycle.MONTHLY
-            )
-
-            # 创建合同记录
-            from datetime import date
-
-            contract = RentContract()
-            contract.contract_number = contract_data["contract_number"]
-            contract.ownership_id = contract_data.get("ownership_id", "")
-            contract.contract_type = contract_type
-            contract.tenant_name = contract_data["tenant_name"]
-            contract.tenant_contact = contract_data.get("tenant_contact")
-            contract.tenant_phone = contract_data.get("tenant_phone")
-            contract.tenant_address = contract_data.get("tenant_address")
-            contract.tenant_usage = contract_data.get("tenant_usage")
-            contract.sign_date = (
-                self._parse_date(contract_data.get("sign_date")) or date.today()
-            )
-            start_date = self._parse_date(contract_data["start_date"])
-            end_date = self._parse_date(contract_data["end_date"])
-            if start_date is None or end_date is None:
-                raise BusinessValidationError(
-                    "Invalid date format for start_date or end_date",
-                    field_errors={
-                        "start_date": ["invalid_date_format"],
-                        "end_date": ["invalid_date_format"],
-                    },
-                )
-            contract.start_date = start_date
-            contract.end_date = end_date
-            contract.total_deposit = contract_data.get("total_deposit", 0)
-            contract.monthly_rent_base = contract_data.get("monthly_rent", 0)
-            contract.payment_cycle = payment_cycle
-            contract.payment_terms = contract_data.get("payment_terms")
-            contract.contract_notes = contract_data.get("contract_notes")
-            contract.service_fee_rate = contract_data.get("service_fee_rate")
-            contract.source_session_id = session_id
-
-            db.add(contract)
-            db.flush()  # 获取 ID 但不提交
-
-            # 更新导入会话状态
-            import_session.status = SessionStatus.CONFIRMED
-            import_session.extracted_data = confirmed_data
-            db.commit()
-
-            logger.info(
-                f"Created contract {contract.id} from PDF import session {session_id}"
-            )
-
-            return {
-                "success": True,
-                "contract_id": contract.id,
-                "contract_number": contract.contract_number,
-                "message": "Contract created successfully",
-            }
-
-        except BaseBusinessError as e:
-            # 用户输入验证错误 - 用户可修复
-            db.rollback()
-            logger.info(
-                f"Validation failed for session {session_id}: {e}",
-                extra={
-                    "error_id": "CONTRACT_VALIDATION_ERROR",
-                    "session_id": session_id,
-                },
-            )
-            return {
-                "success": False,
-                "error": str(e),
-                "error_type": e.code,
-                "error_category": "USER_ERROR",
-            }
-        except Exception as e:
-            # 导入 SQLAlchemy 异常类型
-            from sqlalchemy.exc import IntegrityError, OperationalError
-
-            if isinstance(e, IntegrityError):
-                # 数据库约束冲突 - 用户可能需要修复数据
-                db.rollback()
-                logger.error(
-                    f"Database constraint violation creating contract: {e}",
+            except BaseBusinessError as e:
+                # 用户输入验证错误 - 用户可修复
+                sync_db.rollback()
+                logger.info(
+                    f"Validation failed for session {session_id}: {e}",
                     extra={
-                        "error_id": "CONTRACT_INTEGRITY_ERROR",
+                        "error_id": "CONTRACT_VALIDATION_ERROR",
                         "session_id": session_id,
                     },
                 )
                 return {
                     "success": False,
-                    "error": "Cannot create contract: data conflicts with existing records",
-                    "error_type": "INTEGRITY_ERROR",
+                    "error": str(e),
+                    "error_type": e.code,
                     "error_category": "USER_ERROR",
-                    "suggested_action": "Check if contract number already exists or review data for duplicates",
                 }
-            elif isinstance(e, OperationalError):
-                # 数据库操作错误 - 系统问题
-                db.rollback()
-                logger.error(
-                    f"Database operation failed creating contract: {e}",
-                    exc_info=True,
-                    extra={"error_id": "CONTRACT_DB_ERROR", "session_id": session_id},
-                )
-                # 重新抛出 - 这是服务器错误，不是用户错误
-                raise InternalServerError(
-                    message="Database error creating contract",
-                    original_error=e,
-                    details={
-                        "error_id": "CONTRACT_DB_ERROR",
-                        "session_id": session_id,
-                    },
-                ) from e
-            else:
-                # 其他未预期错误 - 系统问题
-                db.rollback()
-                logger.error(
-                    f"Unexpected error creating contract from session {session_id}: {e}",
-                    exc_info=True,
-                    extra={
-                        "error_id": "CONTRACT_CREATE_ERROR",
-                        "session_id": session_id,
-                    },
-                )
-                # 重新抛出未预期错误，不要静默处理
-                raise InternalServerError(
-                    message="Unexpected error creating contract",
-                    original_error=e,
-                    details={
-                        "error_id": "CONTRACT_CREATE_ERROR",
-                        "session_id": session_id,
-                    },
-                ) from e
+            except Exception as e:
+                # 导入 SQLAlchemy 异常类型
+                from sqlalchemy.exc import IntegrityError, OperationalError
 
-    def _parse_date(self, date_value: Any) -> date | None:
-        """
-        解析日期值
+                if isinstance(e, IntegrityError):
+                    # 数据库约束冲突 - 用户可能需要修复数据
+                    sync_db.rollback()
+                    logger.error(
+                        f"Database constraint violation creating contract: {e}",
+                        extra={
+                            "error_id": "CONTRACT_INTEGRITY_ERROR",
+                            "session_id": session_id,
+                        },
+                    )
+                    return {
+                        "success": False,
+                        "error": "Cannot create contract: data conflicts with existing records",
+                        "error_type": "INTEGRITY_ERROR",
+                        "error_category": "USER_ERROR",
+                        "suggested_action": "Check if contract number already exists or review data for duplicates",
+                    }
+                elif isinstance(e, OperationalError):
+                    # 数据库操作错误 - 系统问题
+                    sync_db.rollback()
+                    logger.error(
+                        f"Database operation failed creating contract: {e}",
+                        exc_info=True,
+                        extra={
+                            "error_id": "CONTRACT_DB_ERROR",
+                            "session_id": session_id,
+                        },
+                    )
+                    # 重新抛出 - 这是服务器错误，不是用户错误
+                    raise InternalServerError(
+                        message="Database error creating contract",
+                        original_error=e,
+                        details={
+                            "error_id": "CONTRACT_DB_ERROR",
+                            "session_id": session_id,
+                        },
+                    ) from e
+                else:
+                    # 其他未预期错误 - 系统问题
+                    sync_db.rollback()
+                    logger.error(
+                        f"Unexpected error creating contract from session {session_id}: {e}",
+                        exc_info=True,
+                        extra={
+                            "error_id": "CONTRACT_CREATE_ERROR",
+                            "session_id": session_id,
+                        },
+                    )
+                    # 重新抛出未预期错误，不要静默处理
+                    raise InternalServerError(
+                        message="Unexpected error creating contract",
+                        original_error=e,
+                        details={
+                            "error_id": "CONTRACT_CREATE_ERROR",
+                            "session_id": session_id,
+                        },
+                    ) from e
 
-        Args:
-            date_value: 日期值（字符串、date对象等）
-
-        Returns:
-            解析后的日期对象
-        """
-        if isinstance(date_value, date):
-            return date_value
-
-        if isinstance(date_value, str):
-            # 尝试常见格式
-            for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%Y年%m月%d日"):
-                try:
-                    from datetime import datetime
-
-                    return datetime.strptime(date_value, fmt).date()
-                except ValueError:
-                    continue
-
-        return None
+        return await db.run_sync(_sync)
 
     async def cancel_processing(
-        self, db: Session, session_id: str, reason: str
+        self, db: AsyncSession, session_id: str, reason: str
     ) -> dict[str, Any]:
         """
         取消处理
@@ -915,15 +941,19 @@ class PDFImportService:
         Returns:
             取消结果
         """
-        session = (
-            db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
-        )
 
-        if session and session.is_processing:
-            session.status = SessionStatus.CANCELLED
-            session.error_message = f"Cancelled: {reason}"
-            db.commit()
+        def _sync(sync_db: SyncSession) -> None:
+            session = (
+                sync_db.query(PDFImportSession)
+                .filter(PDFImportSession.session_id == session_id)
+                .first()
+            )
+
+            if session and session.is_processing:
+                session.status = SessionStatus.CANCELLED
+                session.error_message = f"Cancelled: {reason}"
+                sync_db.commit()
+
+        await db.run_sync(_sync)
 
         return {"success": True, "message": "Session cancelled"}

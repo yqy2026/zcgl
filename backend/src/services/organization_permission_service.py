@@ -58,9 +58,9 @@ class OrganizationPermissionService:
         if RoleNormalizer.is_admin(user.role):
             return True
 
-        if self._has_global_permission(user_id, "update") or self._has_global_permission(
-            user_id, "delete"
-        ):
+        if self._has_global_permission(
+            user_id, "update"
+        ) or self._has_global_permission(user_id, "delete"):
             return True
 
         if self._has_resource_permission(user_id, organization_id, "update"):
@@ -100,9 +100,7 @@ class OrganizationPermissionService:
 
         if user.employee_id:
             employee = (
-                self.db.query(Employee)
-                .filter(Employee.id == user.employee_id)
-                .first()
+                self.db.query(Employee).filter(Employee.id == user.employee_id).first()
             )
             if employee and employee.organization_id:
                 org_ids.add(str(employee.organization_id))
@@ -198,9 +196,7 @@ class OrganizationPermissionService:
         target_org = user.default_organization_id
         if user.employee_id and not target_org:
             employee = (
-                self.db.query(Employee)
-                .filter(Employee.id == user.employee_id)
-                .first()
+                self.db.query(Employee).filter(Employee.id == user.employee_id).first()
             )
             target_org = employee.organization_id if employee else None
 
@@ -251,7 +247,7 @@ class OrganizationPermissionService:
     def _get_all_organization_ids(self) -> list[str]:
         return [
             str(org_id)
-            for org_id, in self.db.query(Organization.id)
+            for (org_id,) in self.db.query(Organization.id)
             .filter(Organization.is_deleted.is_(False))
             .all()
         ]
@@ -275,7 +271,9 @@ class OrganizationPermissionService:
         else:
             return []
 
-        results = self.db.query(ResourcePermission.resource_id).filter(and_(*conditions))
+        results = self.db.query(ResourcePermission.resource_id).filter(
+            and_(*conditions)
+        )
         return [str(item[0]) for item in results.all()]
 
     def _has_global_permission(self, user_id: str, action: str) -> bool:

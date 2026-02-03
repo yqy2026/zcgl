@@ -1142,4 +1142,3 @@ class TestAssetAttachmentsEdgeCases:
         assert len(result["success"]) == 2
         assert len(result["failed"]) == 1
         assert "成功上传 2 个文件，失败 1 个文件" in result["message"]
-

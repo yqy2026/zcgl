@@ -1,19 +1,16 @@
 """
-系统字典管理API路由
+系统字典管理 API 路由
 """
 
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from ....core.exception_handler import (
-    BaseBusinessError,
-    internal_error,
-    not_found,
-)
+from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....crud.system_dictionary import system_dictionary_crud
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import require_admin
 from ....models.auth import User
 from ....schemas.asset import (
@@ -23,24 +20,17 @@ from ....schemas.asset import (
 )
 from ....services.system_dictionary import system_dictionary_service
 
-# 创建系统字典路由器
 router = APIRouter()
 
 
 @router.get(
     "/", response_model=list[SystemDictionaryResponse], summary="获取系统字典列表"
 )
-def get_system_dictionaries(
+async def get_system_dictionaries(
     dict_type: str | None = Query(None, description="字典类型筛选"),
     is_active: bool | None = Query(None, description="是否启用筛选"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> list[SystemDictionaryResponse]:
-    """
-    获取系统字典列表，支持按类型和状态筛选
-
-    - **dict_type**: 字典类型
-    - **is_active**: 是否启用
-    """
     try:
         filters: dict[str, Any] = {}
         if dict_type:
@@ -48,13 +38,12 @@ def get_system_dictionaries(
         if is_active is not None:
             filters["is_active"] = is_active
 
-        # FastAPI will convert SystemDictionary to SystemDictionaryResponse via response_model
-        dictionaries = system_dictionary_crud.get_multi_with_filters(
-            db=db, filters=filters
+        dictionaries = await db.run_sync(
+            lambda sync_db: system_dictionary_crud.get_multi_with_filters(
+                db=sync_db, filters=filters
+            )
         )
-        # Use explicit conversion to satisfy mypy's invariance check
         return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
-
     except Exception as e:
         raise internal_error(f"获取系统字典列表失败: {str(e)}")
 
@@ -64,19 +53,13 @@ def get_system_dictionaries(
     response_model=SystemDictionaryResponse,
     summary="获取系统字典详情",
 )
-def get_system_dictionary(
-    dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
+async def get_system_dictionary(
+    dictionary_id: str = Path(..., description="字典ID"),
+    db: AsyncSession = Depends(get_async_db),
 ) -> SystemDictionaryResponse:
-    """
-    根据ID获取单个系统字典的详细信息
-
-    - **dictionary_id**: 字典ID
-    """
     try:
-        from ....models.asset import SystemDictionary
-
-        dictionary: SystemDictionary | None = system_dictionary_crud.get(
-            db=db, id=dictionary_id
+        dictionary = await db.run_sync(
+            lambda sync_db: system_dictionary_crud.get(db=sync_db, id=dictionary_id)
         )
         if not dictionary:
             raise not_found(
@@ -85,7 +68,6 @@ def get_system_dictionary(
                 resource_id=dictionary_id,
             )
         return SystemDictionaryResponse.model_validate(dictionary)
-
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -98,19 +80,16 @@ def get_system_dictionary(
     summary="创建系统字典",
     status_code=201,
 )
-def create_system_dictionary(
+async def create_system_dictionary(
     dictionary_in: SystemDictionaryCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
-    """
-    创建新的系统字典项
-
-    - **dictionary_in**: 字典创建数据
-    """
     try:
-        dictionary = system_dictionary_service.create_dictionary(
-            db=db, obj_in=dictionary_in
+        dictionary = await db.run_sync(
+            lambda sync_db: system_dictionary_service.create_dictionary(
+                db=sync_db, obj_in=dictionary_in
+            )
         )
         return SystemDictionaryResponse.model_validate(dictionary)
     except Exception as e:
@@ -122,21 +101,17 @@ def create_system_dictionary(
 @router.put(
     "/{dictionary_id}", response_model=SystemDictionaryResponse, summary="更新系统字典"
 )
-def update_system_dictionary(
+async def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
-    """
-    更新系统字典信息
-
-    - **dictionary_id**: 字典ID
-    - **dictionary_in**: 字典更新数据
-    """
     try:
-        updated_dictionary = system_dictionary_service.update_dictionary(
-            db=db, id=dictionary_id, obj_in=dictionary_in
+        updated_dictionary = await db.run_sync(
+            lambda sync_db: system_dictionary_service.update_dictionary(
+                db=sync_db, id=dictionary_id, obj_in=dictionary_in
+            )
         )
         return SystemDictionaryResponse.model_validate(updated_dictionary)
     except Exception as e:
@@ -146,18 +121,17 @@ def update_system_dictionary(
 
 
 @router.delete("/{dictionary_id}", summary="删除系统字典")
-def delete_system_dictionary(
+async def delete_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> dict[str, str]:
-    """
-    删除系统字典项
-
-    - **dictionary_id**: 字典ID
-    """
     try:
-        system_dictionary_service.delete_dictionary(db=db, id=dictionary_id)
+        await db.run_sync(
+            lambda sync_db: system_dictionary_service.delete_dictionary(
+                db=sync_db, id=dictionary_id
+            )
+        )
         return {"message": f"字典 {dictionary_id} 已成功删除"}
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -170,60 +144,46 @@ def delete_system_dictionary(
     response_model=list[SystemDictionaryResponse],
     summary="批量更新系统字典",
 )
-def batch_update_system_dictionaries(
+async def batch_update_system_dictionaries(
     updates: list[dict[str, Any]],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
 ) -> list[SystemDictionaryResponse]:
-    """
-    批量更新系统字典
-
-    - **updates**: 更新数据列表，格式: [{"id": "xxx", "data": {...}}]
-    - 注意：此端点原逻辑是混合更新，现在主要用于排序。
-    - 如果需要通用批量更新，应该拆分或明确用途。
-    - 原有系统似乎用于排序：`update_sort_orders` in CRUD was specific.
-    - 但 `system_dictionaries.py` line 186-213 was generic update.
-    - Let's keep it generic using service loop or specific batch method if needed.
-    - If strictly existing logic: it was looping and updating.
-    - I can forward to a loop in Service or keep loop here calling update.
-    """
     try:
-        updated_dictionaries: list[SystemDictionaryResponse] = []
 
-        for update in updates:
-            dictionary_id = update.get("id")
-            update_data = update.get("data", {})
+        def _sync(sync_db: Session) -> list[SystemDictionaryResponse]:
+            updated_dictionaries: list[SystemDictionaryResponse] = []
+            for update in updates:
+                dictionary_id = update.get("id")
+                update_data = update.get("data", {})
+                if not dictionary_id:
+                    continue
+                try:
+                    updated = system_dictionary_service.update_dictionary(
+                        db=sync_db,
+                        id=dictionary_id,
+                        obj_in=SystemDictionaryUpdate(**update_data),
+                    )
+                    updated_dictionaries.append(
+                        SystemDictionaryResponse.model_validate(updated)
+                    )
+                except BaseBusinessError:
+                    continue
+            return updated_dictionaries
 
-            if not dictionary_id:
-                continue
-
-            # Calling service update for each
-            try:
-                updated = system_dictionary_service.update_dictionary(
-                    db=db,
-                    id=dictionary_id,
-                    obj_in=SystemDictionaryUpdate(**update_data),
-                )
-                updated_dictionaries.append(
-                    SystemDictionaryResponse.model_validate(updated)
-                )
-            except BaseBusinessError:
-                continue
-
-        return updated_dictionaries
-
+        return await db.run_sync(_sync)
     except Exception as e:
         raise internal_error(f"批量更新系统字典失败: {str(e)}")
 
 
-@router.get("/types/list[Any]", summary="获取字典类型列表")
-def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[str]]:
-    """
-    获取所有字典类型列表
-    """
+@router.get("/types/list", summary="获取字典类型列表")
+async def get_dictionary_types(
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, list[str]]:
     try:
-        types = system_dictionary_crud.get_types(db=db)
+        types = await db.run_sync(
+            lambda sync_db: system_dictionary_crud.get_types(db=sync_db)
+        )
         return {"types": types}
-
     except Exception as e:
         raise internal_error(f"获取字典类型失败: {str(e)}")

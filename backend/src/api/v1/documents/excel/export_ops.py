@@ -4,9 +4,9 @@ Excel导出操作模块 - 同步与异步导出
 
 import logging
 import os
-from pathlib import Path
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import (
@@ -28,9 +28,8 @@ from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelExportRequest
-from src.schemas.task import TaskCreate, TaskUpdate
+from src.schemas.task import TaskCreate
 from src.services.excel import ExcelExportService
-from src.services.task import task_service
 from src.services.task.access import ensure_task_access
 
 logger = logging.getLogger(__name__)
@@ -162,7 +161,7 @@ def export_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
+    task = task_crud.create(db=db, obj_in=task_in, user_id=current_user.id)
 
     # 添加后台任务
     background_tasks.add_task(
@@ -180,27 +179,31 @@ def export_excel_async(
 
 
 async def _process_excel_export_async(
-    task_id: str, request: ExcelExportRequest
+    task_id: str, request: ExcelExportRequest, db_session: Session | None = None
 ) -> None:
     """
     后台处理Excel导出任务
     """
     session_factory = get_session_factory()
-    db_session: Session | None = None
+    owns_session = db_session is None
+    db_session = db_session or session_factory()
     try:
-        db_session = session_factory()
-        # 更新任务状态为运行中
-        task_service.update_task(
+        task = task_crud.get(db=db_session, id=task_id)
+        if not task:
+            return
+        started_at = datetime.now(UTC)
+        task_crud.update(
             db=db_session,
-            task_id=task_id,
-            obj_in=TaskUpdate(
-                status=TaskStatus.RUNNING,
-                progress=0,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data=None,
-            ),
+            db_obj=task,
+            obj_in={
+                "status": TaskStatus.RUNNING,
+                "progress": 0,
+                "processed_items": 0,
+                "failed_items": 0,
+                "error_message": None,
+                "result_data": None,
+                "started_at": started_at,
+            },
         )
 
         # 使用ExcelExportService进行导出
@@ -229,20 +232,22 @@ async def _process_excel_export_async(
         )
 
         # 更新任务完成状态
-        task_service.update_task(
+        completed_at = datetime.now(UTC)
+        task_crud.update(
             db=db_session,
-            task_id=task_id,
-            obj_in=TaskUpdate(
-                status=TaskStatus.COMPLETED,
-                progress=100,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data={
+            db_obj=task,
+            obj_in={
+                "status": TaskStatus.COMPLETED,
+                "progress": 100,
+                "processed_items": 0,
+                "failed_items": 0,
+                "error_message": None,
+                "completed_at": completed_at,
+                "result_data": {
                     **result_info,
                     "download_url": f"/api/v1/excel/download/{task_id}",
                 },
-            ),
+            },
         )
 
     except Exception as e:
@@ -261,19 +266,24 @@ async def _process_excel_export_async(
         # 更新任务失败状态
         try:
             if db_session is not None:
-                db_session.rollback()
-                task_service.update_task(
-                    db=db_session,
-                    task_id=task_id,
-                    obj_in=TaskUpdate(
-                        status=TaskStatus.FAILED,
-                        error_message=str(e),
-                        progress=0,
-                        processed_items=0,
-                        failed_items=0,
-                        result_data=None,
-                    ),
-                )
+                if hasattr(db_session, "rollback"):
+                    db_session.rollback()
+                failed_at = datetime.now(UTC)
+                task = task_crud.get(db=db_session, id=task_id)
+                if task:
+                    task_crud.update(
+                        db=db_session,
+                        db_obj=task,
+                        obj_in={
+                            "status": TaskStatus.FAILED,
+                            "error_message": str(e),
+                            "progress": 0,
+                            "processed_items": 0,
+                            "failed_items": 0,
+                            "completed_at": failed_at,
+                            "result_data": None,
+                        },
+                    )
         except Exception as commit_error:
             logger.error(
                 f"无法更新任务失败状态: task_id={task_id}",
@@ -287,7 +297,7 @@ async def _process_excel_export_async(
             )
             # 不抛出异常 - 让原始异常传播
     finally:
-        if db_session is not None:
+        if owns_session and db_session is not None:
             db_session.close()
 
 

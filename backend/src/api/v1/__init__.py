@@ -56,14 +56,13 @@ except ImportError as e:
     logging.warning(f"PDF batch routes not available: {e}")
 
 import sys
+
 # 尝试导入系统设置路由，如果不存在则跳过
 system_settings_router: APIRouter | None = None
 try:
     from .system.system_settings import router as system_settings_router
 except ImportError as e:
-    logging.getLogger(__name__).debug(
-        "系统设置路由模块不存在，跳过"
-    )
+    logging.getLogger(__name__).debug("系统设置路由模块不存在，跳过")
     # Print to stderr for debugging in tests
     sys.stderr.write(f"DEBUG: Failed to import system_settings_router: {e}\n")
 
@@ -122,13 +121,19 @@ if system_settings_router is not None:
         system_settings_router, prefix="/system", tags=["系统设置"]
     )
 else:
-    logging.getLogger(__name__).warning("system_settings_router is None, NOT registering")
+    logging.getLogger(__name__).warning(
+        "system_settings_router is None, NOT registering"
+    )
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
 api_router.include_router(backup_router, prefix="/system/backup", tags=["数据备份"])
 api_router.include_router(pdf_import_router, prefix="/pdf-import", tags=["PDF智能导入"])
+# Backward-compatible PDF import route (legacy /documents prefix)
+api_router.include_router(
+    pdf_import_router, prefix="/documents/pdf-import", tags=["PDF智能导入"]
+)
 if pdf_batch_router is not None:
     api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])
 api_router.include_router(

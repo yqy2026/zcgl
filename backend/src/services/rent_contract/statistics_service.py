@@ -169,8 +169,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                     "active_contracts": result.contract_count,
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
-                    "total_overdue_amount": result.total_overdue_amount
-                    or Decimal("0"),
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
                     "occupancy_rate": payment_rate,
                 }
             )
@@ -227,8 +226,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                     "contract_count": result.contract_count,
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
-                    "total_overdue_amount": result.total_overdue_amount
-                    or Decimal("0"),
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
                     "payment_rate": payment_rate,
                 }
             )
@@ -282,8 +280,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                     "total_contracts": result.total_contracts,
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
-                    "total_overdue_amount": result.total_overdue_amount
-                    or Decimal("0"),
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
                     "payment_rate": payment_rate,
                 }
             )

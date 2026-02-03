@@ -394,7 +394,9 @@ class TestFieldEncryptor:
         # Then, load both v1 and v2 keys and ensure old ciphertext decrypts
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_multi)
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", key_multi)
-        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", key_multi)
+        monkeypatch.setattr(
+            encryption_module.settings, "DATA_ENCRYPTION_KEY", key_multi
+        )
 
         manager_multi = EncryptionKeyManager()
         encryptor_multi = FieldEncryptor(manager_multi)

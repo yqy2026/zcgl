@@ -37,10 +37,10 @@ from ...schemas.rbac import (
     PermissionCheckResponse,
     PermissionCreate,
     PermissionResponse,
+    ResourcePermissionResponse,
     RoleCreate,
     RoleResponse,
     RoleUpdate,
-    ResourcePermissionResponse,
     UserPermissionSummary,
     UserRoleAssignmentCreate,
 )

@@ -1526,7 +1526,9 @@ class TestParseDate:
 class TestMatchAssets:
     """测试match_assets方法"""
 
-    def test_match_assets_returns_empty_when_no_data(self, property_certificate_service):
+    def test_match_assets_returns_empty_when_no_data(
+        self, property_certificate_service
+    ):
         """TC-PCS-061: 无提取字段时返回空列表"""
         result = property_certificate_service.match_assets({})
         assert result == []
@@ -1564,7 +1566,9 @@ class TestMatchAssets:
             return_value=[asset]
         )
 
-        result = property_certificate_service.match_assets({"owner_name": "广州示例公司"})
+        result = property_certificate_service.match_assets(
+            {"owner_name": "广州示例公司"}
+        )
 
         assert len(result) == 1
         assert result[0]["asset_id"] == "asset-002"

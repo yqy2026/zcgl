@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
@@ -200,7 +200,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
     def _apply_contract_filters(
         self,
-        query,
+        query: Query[RentContract],
         *,
         contract_number: str | None,
         tenant_name: str | None,
@@ -209,10 +209,12 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_status: str | None,
         start_date: date | None,
         end_date: date | None,
-    ):
+    ) -> Query[RentContract]:
         """应用合同筛选条件（用于列表与统计）"""
         query = query.filter(
-            or_(RentContract.data_status.is_(None), RentContract.data_status != "已删除")
+            or_(
+                RentContract.data_status.is_(None), RentContract.data_status != "已删除"
+            )
         )
         if asset_id:
             query = query.join(
@@ -318,7 +320,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def _apply_ledger_filters(
         self,
-        query,
+        query: Query[RentLedger],
         *,
         contract_id: str | None,
         asset_id: str | None,
@@ -327,7 +329,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         payment_status: str | None,
         start_date: date | None,
         end_date: date | None,
-    ):
+    ) -> Query[RentLedger]:
         """应用台账筛选条件（用于列表与统计）"""
         if contract_id:
             query = query.filter(RentLedger.contract_id == contract_id)

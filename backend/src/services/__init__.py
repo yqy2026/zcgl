@@ -11,6 +11,7 @@ Refactored service layer organized by business domain:
 
 # Optional service imports; log failures for visibility during startup.
 import logging
+from typing import Any
 
 # Import core services with error handling for gradual migration
 __all__: list[str] = []
@@ -55,21 +56,22 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("core.audit_service.AuditService")
 
+ErrorRecoveryEngine: type[Any]
 try:
     from .core.error_recovery_service import (
-        ErrorRecoveryEngine as ErrorRecoveryEngine,
+        ErrorRecoveryEngine as _ImportedErrorRecoveryEngine,
     )
-
-    __all__.append("ErrorRecoveryEngine")
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("core.error_recovery_service.ErrorRecoveryEngine")
 
-    class _ErrorRecoveryEngine:
+    class _FallbackErrorRecoveryEngine:
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-    ErrorRecoveryEngine = _ErrorRecoveryEngine
-    __all__.append("ErrorRecoveryEngine")
+    ErrorRecoveryEngine = _FallbackErrorRecoveryEngine
+else:
+    ErrorRecoveryEngine = _ImportedErrorRecoveryEngine
+__all__.append("ErrorRecoveryEngine")
 
 # Asset services
 try:

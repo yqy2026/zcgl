@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 # Optional PyMuPDF dependency
 try:  # pragma: no cover - exercised when dependency is installed
-    import fitz  # type: ignore
+    import fitz
 
     PYMUPDF_AVAILABLE = True
 except ImportError:  # pragma: no cover - fallback for missing dependency
-    fitz = None  # type: ignore
+    fitz = None
     PYMUPDF_AVAILABLE = False
     logger.warning("PyMuPDF not installed. PDF text extraction will be unavailable.")
 
@@ -48,7 +48,7 @@ class PDFProcessingService:
         page_limit = max_pages if max_pages is not None else self.max_pages
 
         try:
-            with fitz.open(str(path)) as doc:  # type: ignore[attr-defined]
+            with fitz.open(str(path)) as doc:
                 page_count = len(doc)
                 if page_limit is None:
                     page_limit = page_count

@@ -4,8 +4,6 @@ Unit tests for encoding_utils
 
 import logging
 
-import pytest
-
 from src.core import encoding_utils
 
 
@@ -77,7 +75,13 @@ class TestEncodingUtils:
         handler = encoding_utils.EncodingSafeHandler()
         handler.setFormatter(logging.Formatter("%(message)s"))
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname=__file__, lineno=1, msg="Hi ✅", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=1,
+            msg="Hi ✅",
+            args=(),
+            exc_info=None,
         )
 
         handler.emit(record)

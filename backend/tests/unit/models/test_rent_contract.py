@@ -4,10 +4,10 @@ RentContract Model Tests
 Tests for the RentContract model - core contract management entity.
 """
 
+import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import Enum
-import uuid
 
 import pytest
 
@@ -19,18 +19,16 @@ from src.models.rent_contract import (
 )
 
 
-
-
 # Helper function to create a complete RentContract for testing
 def _create_complete_contract(**kwargs):
     """Create a RentContract with all required defaults for unit tests"""
     now = datetime.now(UTC)
     defaults = {
-        'id': str(uuid.uuid4()),
-        'contract_type': ContractType.LEASE_DOWNSTREAM,
-        'contract_status': 'draft',
-        'created_at': now,
-        'updated_at': now,
+        "id": str(uuid.uuid4()),
+        "contract_type": ContractType.LEASE_DOWNSTREAM,
+        "contract_status": "draft",
+        "created_at": now,
+        "updated_at": now,
     }
     defaults.update(kwargs)
     return RentContract(**defaults)

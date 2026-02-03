@@ -113,8 +113,10 @@ class TestCRUDAssetGetMulti:
     def test_get_multi_with_pagination(self, crud, mock_db):
         """测试分页参数"""
         mock_assets = [MagicMock(spec=Asset)]
-        with patch.object(crud.__class__.__bases__[0], "get_multi", return_value=mock_assets) as mock_get_multi:
-            result = crud.get_multi(mock_db, skip=10, limit=20)
+        with patch.object(
+            crud.__class__.__bases__[0], "get_multi", return_value=mock_assets
+        ) as mock_get_multi:
+            crud.get_multi(mock_db, skip=10, limit=20)
 
         # Verify parent get_multi was called with correct params
         mock_get_multi.assert_called_once_with(
@@ -225,10 +227,12 @@ class TestCRUDAssetSearch:
     def test_search_with_filters(self, crud, mock_db):
         """测试带筛选条件的搜索"""
         mock_assets = [MagicMock(spec=Asset)]
-        with patch.object(crud.__class__.__bases__[0], "get_multi", return_value=mock_assets) as mock_get_multi:
+        with patch.object(
+            crud.__class__.__bases__[0], "get_multi", return_value=mock_assets
+        ) as mock_get_multi:
             # 模拟搜索
             filters = {"ownership_entity": "公司A"}
-            result = crud.get_multi(mock_db, filters=filters)
+            crud.get_multi(mock_db, filters=filters)
 
         # Verify parent get_multi was called with filters
         mock_get_multi.assert_called_once()

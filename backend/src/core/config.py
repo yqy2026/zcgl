@@ -68,6 +68,7 @@ class Settings(
 
 settings = Settings()  # type: ignore[call-arg]
 
+
 # 验证必要配置
 def validate_config() -> None:
     """验证配置是否正确"""

@@ -1428,4 +1428,3 @@ class TestErrorRecoveryEdgeCases:
             result = response
             assert "1 条历史记录" in result["message"]
             assert len(mock_error_recovery_engine.recovery_history) == 1
-

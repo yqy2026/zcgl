@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....constants.rent_contract_constants import PaymentStatus
@@ -18,7 +19,7 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.rent_contract import rent_ledger
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.rent_contract import (
@@ -40,19 +41,29 @@ router = APIRouter()
     response_model=list[DepositLedgerResponse],
     summary="获取合同押金变动记录",
 )
-def get_contract_deposit_ledger(
+async def get_contract_deposit_ledger(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[DepositLedgerResponse]:
     """
     获取指定合同的押金变动记录
     """
-    contract = rent_contract_service.get_contract_by_id(db, contract_id=contract_id)
+
+    def _sync(sync_db: Session) -> tuple[object | None, list[Any]]:
+        contract = rent_contract_service.get_contract_by_id(
+            sync_db, contract_id=contract_id
+        )
+        if not contract:
+            return None, []
+        ledgers = rent_contract_service.get_deposit_ledger(
+            sync_db, contract_id=contract_id
+        )
+        return contract, ledgers
+
+    contract, ledgers = await db.run_sync(_sync)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
-    ledgers = rent_contract_service.get_deposit_ledger(db, contract_id=contract_id)
     return [DepositLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
@@ -62,34 +73,48 @@ def get_contract_deposit_ledger(
     response_model=list[ServiceFeeLedgerResponse],
     summary="获取合同服务费台账",
 )
-def get_contract_service_fee_ledger(
+async def get_contract_service_fee_ledger(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[ServiceFeeLedgerResponse]:
     """
     获取指定合同的服务费台账记录
     """
-    contract = rent_contract_service.get_contract_by_id(db, contract_id=contract_id)
+
+    def _sync(sync_db: Session) -> tuple[object | None, list[Any]]:
+        contract = rent_contract_service.get_contract_by_id(
+            sync_db, contract_id=contract_id
+        )
+        if not contract:
+            return None, []
+        ledgers = rent_contract_service.get_service_fee_ledger(
+            sync_db, contract_id=contract_id
+        )
+        return contract, ledgers
+
+    contract, ledgers = await db.run_sync(_sync)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
-    ledgers = rent_contract_service.get_service_fee_ledger(db, contract_id=contract_id)
     return [ServiceFeeLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
 # 租金台账CRUD
 @router.post("/ledger/generate", summary="生成月度台账")
-def generate_monthly_ledger(
+async def generate_monthly_ledger(
     request: GenerateLedgerRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     根据合同信息生成月度租金台账
     """
     try:
-        ledgers = rent_contract_service.generate_monthly_ledger(db=db, request=request)
+        ledgers = await db.run_sync(
+            lambda sync_db: rent_contract_service.generate_monthly_ledger(
+                db=sync_db, request=request
+            )
+        )
         ledger_responses = [
             RentLedgerResponse.model_validate(ledger) for ledger in ledgers
         ]
@@ -108,8 +133,8 @@ def generate_monthly_ledger(
     response_model=APIResponse[PaginatedData[RentLedgerResponse]],
     summary="获取租金台账列表",
 )
-def get_rent_ledger(
-    db: Session = Depends(get_db),
+async def get_rent_ledger(
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -125,17 +150,19 @@ def get_rent_ledger(
     获取租金台账列表，支持分页和筛选
     """
     skip = (page - 1) * page_size
-    ledgers, total = rent_ledger.get_multi_with_filters(
-        db=db,
-        skip=skip,
-        limit=page_size,
-        contract_id=contract_id,
-        asset_id=asset_id,
-        ownership_id=ownership_id,
-        year_month=year_month,
-        payment_status=payment_status,
-        start_date=start_date,
-        end_date=end_date,
+    ledgers, total = await db.run_sync(
+        lambda sync_db: rent_ledger.get_multi_with_filters(
+            db=sync_db,
+            skip=skip,
+            limit=page_size,
+            contract_id=contract_id,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            year_month=year_month,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
     )
 
     ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
@@ -152,31 +179,35 @@ def get_rent_ledger(
 @router.get(
     "/ledger/{ledger_id}", response_model=RentLedgerResponse, summary="获取租金台账详情"
 )
-def get_rent_ledger_detail(
+async def get_rent_ledger_detail(
     ledger_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取租金台账详情
     """
-    ledger = rent_ledger.get(db, id=ledger_id)
+    ledger = await db.run_sync(lambda sync_db: rent_ledger.get(sync_db, id=ledger_id))
     if not ledger:
         raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
     return ledger
 
 
 @router.put("/ledger/batch", summary="批量更新租金台账")
-def batch_update_rent_ledger(
+async def batch_update_rent_ledger(
     request: RentLedgerBatchUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     批量更新租金台账支付状态
     """
     try:
-        ledgers = rent_contract_service.batch_update_payment(db=db, request=request)
+        ledgers = await db.run_sync(
+            lambda sync_db: rent_contract_service.batch_update_payment(
+                db=sync_db, request=request
+            )
+        )
         ledger_responses = [
             RentLedgerResponse.model_validate(ledger) for ledger in ledgers
         ]
@@ -193,10 +224,10 @@ def batch_update_rent_ledger(
 @router.put(
     "/ledger/{ledger_id}", response_model=RentLedgerResponse, summary="更新租金台账"
 )
-def update_rent_ledger(
+async def update_rent_ledger(
     ledger_id: str,
     ledger_in: RentLedgerUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
@@ -208,8 +239,10 @@ def update_rent_ledger(
             raise validation_error(f"支付状态必须是: {', '.join(valid_statuses)}")
 
     try:
-        updated_ledger = rent_contract_service.update_ledger(
-            db=db, ledger_id=ledger_id, update_data=ledger_in
+        updated_ledger = await db.run_sync(
+            lambda sync_db: rent_contract_service.update_ledger(
+                db=sync_db, ledger_id=ledger_id, update_data=ledger_in
+            )
         )
         return updated_ledger
     except Exception as e:
@@ -223,17 +256,19 @@ def update_rent_ledger(
     response_model=list[RentLedgerResponse],
     summary="获取合同台账",
 )
-def get_contract_ledger(
+async def get_contract_ledger(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取指定合同的所有台账记录
     """
-    ledgers, _ = rent_ledger.get_multi_with_filters(
-        db=db,
-        contract_id=contract_id,
-        limit=1000,
+    ledgers, _ = await db.run_sync(
+        lambda sync_db: rent_ledger.get_multi_with_filters(
+            db=sync_db,
+            contract_id=contract_id,
+            limit=1000,
+        )
     )
     return ledgers

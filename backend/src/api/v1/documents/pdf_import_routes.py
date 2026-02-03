@@ -22,7 +22,12 @@ def get_pdf_import_info() -> JSONResponse:
         data={  # pragma: no cover
             "supported_formats": [".pdf"],  # pragma: no cover
             "max_file_size": DEFAULT_MAX_FILE_SIZE,  # pragma: no cover
-            "vision_providers": ["glm", "qwen", "deepseek", "hunyuan"],  # pragma: no cover
+            "vision_providers": [
+                "glm",
+                "qwen",
+                "deepseek",
+                "hunyuan",
+            ],  # pragma: no cover
             "processing_status": "available",  # pragma: no cover
         },  # pragma: no cover
         message="PDF导入系统信息获取成功",  # pragma: no cover

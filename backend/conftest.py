@@ -47,6 +47,7 @@ if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ[
         "test-encryption-key-for-testing-only-min-32-chars-long"
     )
 
+
 # 确保测试产物目录存在
 def pytest_configure(config):
     artifacts_root = backend_root.parent / "test-results" / "backend"
@@ -54,6 +55,7 @@ def pytest_configure(config):
     junit_root = artifacts_root / "junit"
     for directory in (coverage_root, coverage_root / "html", junit_root):
         directory.mkdir(parents=True, exist_ok=True)
+
 
 # =============================================================================
 # 数据库Fixtures

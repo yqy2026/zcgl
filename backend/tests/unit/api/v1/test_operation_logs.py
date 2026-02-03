@@ -78,4 +78,3 @@ class TestOperationLogsAPI:
             status.HTTP_404_NOT_FOUND,
             *AUTH_FAILURE_STATUSES,
         }
-

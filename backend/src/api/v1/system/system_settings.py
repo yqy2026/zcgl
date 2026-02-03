@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -22,6 +23,7 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.constants.message_constants import ErrorIDs
@@ -29,15 +31,15 @@ from src.constants.message_constants import ErrorIDs
 from ....core.config import settings
 from ....core.exception_handler import BaseBusinessError, InternalServerError
 from ....core.observability import send_security_alert
-from ....core.router_registry import route_registry
 from ....crud.auth import AuditLogCRUD
 from ....crud.security_event import security_event_crud
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.roles import RoleNormalizer
 from ....security.route_guards import debug_only, require_localhost
+from ....utils.async_db import AsyncServiceClassAdapter
 
 # 创建系统设置路由器
 router = APIRouter()
@@ -313,7 +315,7 @@ if settings.ENVIRONMENT == "testing":
     dependencies = []
 
 
-def no_op_decorator(func):
+def no_op_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
@@ -329,7 +331,7 @@ if settings.ENVIRONMENT == "testing":
 )
 @debug_decorator
 async def test_security_alert(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
 ) -> dict[str, Any]:
     """
@@ -348,23 +350,25 @@ async def test_security_alert(
 
     from ....security.audit_logger import SecurityEventLogger
 
-    logger_instance = SecurityEventLogger(db)
+    logger_instance = AsyncServiceClassAdapter(db, SecurityEventLogger)
 
     # Simulate security events
     for i in range(12):  # Exceed threshold
-        logger_instance.log_auth_failure(
+        await logger_instance.log_auth_failure(
             ip=f"192.168.1.{i}", username="testuser", reason="test_alert"
         )
 
     return {
         "message": "Generated 12 test security events",
-        "should_alert": logger_instance.should_alert(ip="192.168.1.1", threshold=10),
+        "should_alert": await logger_instance.should_alert(
+            ip="192.168.1.1", threshold=10
+        ),
     }
 
 
 @router.get("/security/events", summary="获取安全事件日志")
-def get_security_events(
-    db: Annotated[Session, Depends(get_db)],
+async def get_security_events(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     skip: int = 0,
     page_size: int = 100,
@@ -378,31 +382,36 @@ def get_security_events(
     - 支持分页 (skip/limit)
     - 返回事件类型、用户ID、IP地址、严重程度等信息
     """
-    # Verify admin access
-    if not RoleNormalizer.is_admin(current_user.role):
-        raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    events, total = security_event_crud.get_multi_with_count(
-        db, skip=skip, limit=page_size
-    )
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        # Verify admin access
+        if not RoleNormalizer.is_admin(current_user.role):
+            raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    return {
-        "total": total,
-        "skip": skip,
-        "page_size": page_size,
-        "events": [
-            {
-                "id": e.id,
-                "type": e.event_type,
-                "user_id": e.user_id,
-                "ip": e.ip_address,
-                "severity": e.severity,
-                "metadata": e.event_metadata,
-                "created_at": e.created_at.isoformat(),
-            }
-            for e in events
-        ],
-    }
+        events, total = security_event_crud.get_multi_with_count(
+            db, skip=skip, limit=page_size
+        )
+
+        return {
+            "total": total,
+            "skip": skip,
+            "page_size": page_size,
+            "events": [
+                {
+                    "id": e.id,
+                    "type": e.event_type,
+                    "user_id": e.user_id,
+                    "ip": e.ip_address,
+                    "severity": e.severity,
+                    "metadata": e.event_metadata,
+                    "created_at": e.created_at.isoformat(),
+                }
+                for e in events
+            ],
+        }
+
+    return await db.run_sync(_sync)
 
 
 class SystemSettings(BaseModel):
@@ -471,8 +480,8 @@ _system_settings = SystemSettings()
 
 
 @router.get("/settings", summary="获取系统设置", response_model=SystemSettingsResponse)
-def get_system_settings(
-    db: Annotated[Session, Depends(get_db)],
+async def get_system_settings(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
 ) -> SystemSettingsResponse:
     """
@@ -480,36 +489,40 @@ def get_system_settings(
 
     返回当前系统的所有设置项
     """
-    try:
-        return SystemSettingsResponse(
-            success=True,
-            data=_system_settings,
-            timestamp=datetime.now().isoformat(),
-        )
-    except (ValueError, TypeError, AttributeError) as e:
-        # 预期的验证/格式化错误
-        logger.error(
-            f"系统设置验证错误: {e}",
-            extra={"error_id": ErrorIDs.SystemSettings.VALIDATION_ERROR},
-        )
-        raise HTTPException(
-            status_code=500, detail=f"获取系统设置失败: {str(e)}"
-        ) from e
-    except Exception as e:
-        # 未预期的错误 - 记录完整详情并重新抛出
-        logger.critical(
-            f"系统设置未知错误: {e}",
-            exc_info=True,
-            extra={"error_id": ErrorIDs.SystemSettings.UNEXPECTED_ERROR},
-        )
-        # 不捕获系统错误 - 让中间件处理
-        raise
+
+    def _sync(sync_db: Session) -> SystemSettingsResponse:
+        try:
+            return SystemSettingsResponse(
+                success=True,
+                data=_system_settings,
+                timestamp=datetime.now().isoformat(),
+            )
+        except (ValueError, TypeError, AttributeError) as e:
+            # 预期的验证/格式化错误
+            logger.error(
+                f"系统设置验证错误: {e}",
+                extra={"error_id": ErrorIDs.SystemSettings.VALIDATION_ERROR},
+            )
+            raise HTTPException(
+                status_code=500, detail=f"获取系统设置失败: {str(e)}"
+            ) from e
+        except Exception as e:
+            # 未预期的错误 - 记录完整详情并重新抛出
+            logger.critical(
+                f"系统设置未知错误: {e}",
+                exc_info=True,
+                extra={"error_id": ErrorIDs.SystemSettings.UNEXPECTED_ERROR},
+            )
+            # 不捕获系统错误 - 让中间件处理
+            raise
+
+    return await db.run_sync(_sync)
 
 
 @router.put("/settings", summary="更新系统设置", response_model=SystemSettingsResponse)
-def update_system_settings(
+async def update_system_settings(
     settings: SystemSettings,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
 ) -> SystemSettingsResponse:
@@ -518,32 +531,37 @@ def update_system_settings(
 
     - **settings**: 系统设置数据
     """
-    try:
-        global _system_settings
-        _system_settings = settings
 
-        # 使用统一的审计日志处理函数
-        create_audit_log_with_fallback(
-            db=db,
-            current_user=current_user,
-            action="UPDATE_SYSTEM_SETTINGS",
-            resource_type="system_settings",
-            request=request,
-            updated_settings=settings.model_dump(),
-        )
+    def _sync(sync_db: Session) -> SystemSettingsResponse:
+        db = sync_db
+        try:
+            global _system_settings
+            _system_settings = settings
 
-        return SystemSettingsResponse(
-            success=True,
-            data=_system_settings,
-            timestamp=datetime.now().isoformat(),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
+            # 使用统一的审计日志处理函数
+            create_audit_log_with_fallback(
+                db=db,
+                current_user=current_user,
+                action="UPDATE_SYSTEM_SETTINGS",
+                resource_type="system_settings",
+                request=request,
+                updated_settings=settings.model_dump(),
+            )
+
+            return SystemSettingsResponse(
+                success=True,
+                data=_system_settings,
+                timestamp=datetime.now().isoformat(),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.get("/info", summary="获取系统信息", response_model=SystemInfoResponse)
-def get_system_info(
-    db: Annotated[Session, Depends(get_db)],
+async def get_system_info(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
 ) -> SystemInfoResponse:
     """
@@ -551,47 +569,52 @@ def get_system_info(
 
     返回系统的基本信息和状态
     """
-    try:
-        # 检查数据库连接
+
+    def _sync(sync_db: Session) -> SystemInfoResponse:
+        db = sync_db
         try:
-            db.execute(text("SELECT 1"))
-            database_status: str = "connected"
-        except SQLAlchemyError as db_error:
-            database_status = "disconnected"
-            logger.error(
-                "数据库连接检查失败",
-                exc_info=True,
-                extra={
-                    "error_type": type(db_error).__name__,
-                    "database_status": "disconnected",
-                },
+            # 检查数据库连接
+            try:
+                db.execute(text("SELECT 1"))
+                database_status: str = "connected"
+            except SQLAlchemyError as db_error:
+                database_status = "disconnected"
+                logger.error(
+                    "数据库连接检查失败",
+                    exc_info=True,
+                    extra={
+                        "error_type": type(db_error).__name__,
+                        "database_status": "disconnected",
+                    },
+                )
+
+            # 获取环境变量
+            environment = os.getenv("ENVIRONMENT", "development")
+
+            # 模拟构建时间
+            build_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            system_info = SystemInfo(
+                build_time=build_time,
+                database_status=database_status,
+                environment=environment,
             )
 
-        # 获取环境变量
-        environment = os.getenv("ENVIRONMENT", "development")
+            return SystemInfoResponse(
+                success=True,
+                data=system_info,
+                timestamp=datetime.now().isoformat(),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
 
-        # 模拟构建时间
-        build_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        system_info = SystemInfo(
-            build_time=build_time,
-            database_status=database_status,
-            environment=environment,
-        )
-
-        return SystemInfoResponse(
-            success=True,
-            data=system_info,
-            timestamp=datetime.now().isoformat(),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
+    return await db.run_sync(_sync)
 
 
 @router.post("/backup", summary="备份系统数据", response_model=SystemBackupResponse)
-def backup_system(
+async def backup_system(
     background_tasks: BackgroundTasks,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
 ) -> SystemBackupResponse:
@@ -600,42 +623,47 @@ def backup_system(
 
     创建系统数据的完整备份
     """
-    try:
-        # 这里可以实现真正的数据备份逻辑
-        # 目前返回模拟的备份数据
 
-        backup_data: dict[str, Any] = {
-            "backup_time": datetime.now().isoformat(),
-            "backup_user": current_user.username,
-            "system_settings": _system_settings.model_dump(),
-            "backup_type": "full",
-            "version": "2.0.0",
-        }
+    def _sync(sync_db: Session) -> SystemBackupResponse:
+        db = sync_db
+        try:
+            # 这里可以实现真正的数据备份逻辑
+            # 目前返回模拟的备份数据
 
-        # 使用统一的审计日志处理函数
-        create_audit_log_with_fallback(
-            db=db,
-            current_user=current_user,
-            action="SYSTEM_BACKUP",
-            resource_type="system",
-            request=request,
-            backup_time=backup_data["backup_time"],
-        )
+            backup_data: dict[str, Any] = {
+                "backup_time": datetime.now().isoformat(),
+                "backup_user": current_user.username,
+                "system_settings": _system_settings.model_dump(),
+                "backup_type": "full",
+                "version": "2.0.0",
+            }
 
-        return SystemBackupResponse(
-            success=True,
-            message="系统数据备份成功",
-            data=backup_data,
-            timestamp=datetime.now().isoformat(),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
+            # 使用统一的审计日志处理函数
+            create_audit_log_with_fallback(
+                db=db,
+                current_user=current_user,
+                action="SYSTEM_BACKUP",
+                resource_type="system",
+                request=request,
+                backup_time=backup_data["backup_time"],
+            )
+
+            return SystemBackupResponse(
+                success=True,
+                message="系统数据备份成功",
+                data=backup_data,
+                timestamp=datetime.now().isoformat(),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.post("/restore", summary="恢复系统数据", response_model=SystemRestoreResponse)
 async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
 ) -> SystemRestoreResponse:
@@ -671,15 +699,17 @@ async def restore_system(
             _system_settings = SystemSettings(**backup_data["system_settings"])
 
         # 使用统一的审计日志处理函数
-        create_audit_log_with_fallback(
-            db=db,
-            current_user=current_user,
-            action="SYSTEM_RESTORE",
-            resource_type="system",
-            request=request,
-            backup_time=backup_data.get("backup_time"),
-            backup_file=filename,
-            restored_settings=backup_data.get("system_settings", {}),
+        await db.run_sync(
+            lambda sync_db: create_audit_log_with_fallback(
+                db=sync_db,
+                current_user=current_user,
+                action="SYSTEM_RESTORE",
+                resource_type="system",
+                request=request,
+                backup_time=backup_data.get("backup_time"),
+                backup_file=filename,
+                restored_settings=backup_data.get("system_settings", {}),
+            )
         )
 
         return SystemRestoreResponse(

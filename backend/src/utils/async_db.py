@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-T = TypeVar("T")
-S = TypeVar("S")
 
+class SupportsDBInit(Protocol):
+    def __init__(self, db: Session, *args: Any, **kwargs: Any) -> None: ...
 
-async def run_sync(db: AsyncSession, func: Callable[[Session], T]) -> T:
+async def run_sync[T](db: AsyncSession, func: Callable[[Session], T]) -> T:
     """
     Run sync DB logic against an AsyncSession without blocking the event loop.
 
@@ -19,7 +19,7 @@ async def run_sync(db: AsyncSession, func: Callable[[Session], T]) -> T:
     return await db.run_sync(func)
 
 
-class AsyncDBMethodAdapter(Generic[S]):
+class AsyncDBMethodAdapter[S]:
     """
     Adapt sync methods that expect (db: Session, ...) into awaitable calls.
 
@@ -38,12 +38,14 @@ class AsyncDBMethodAdapter(Generic[S]):
             return attr
 
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await self._db.run_sync(lambda sync_db: attr(sync_db, *args, **kwargs))
+            return await self._db.run_sync(
+                lambda sync_db: attr(sync_db, *args, **kwargs)
+            )
 
         return wrapper
 
 
-class AsyncServiceClassAdapter(Generic[S]):
+class AsyncServiceClassAdapter[ServiceT: SupportsDBInit]:
     """
     Adapt sync service classes that accept (db: Session) in the constructor.
 
@@ -52,7 +54,9 @@ class AsyncServiceClassAdapter(Generic[S]):
         result = await service.check_user_permission(...)
     """
 
-    def __init__(self, db: AsyncSession, service_cls: type[S], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, db: AsyncSession, service_cls: type[ServiceT], *args: Any, **kwargs: Any
+    ) -> None:
         self._db = db
         self._service_cls = service_cls
         self._args = args

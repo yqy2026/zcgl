@@ -10,12 +10,13 @@ from typing import Any
 
 from fastapi import UploadFile
 
+# Import for test compatibility
+from src.crud.field_whitelist import get_whitelist_for_model
+
+from ..middleware.auth import get_current_user as get_current_user
 from .field_validation import MODEL_REGISTRY, FieldValidator
 from .file_validation import MAGIC_AVAILABLE, FileValidationConfig, FileValidator, magic
 from .ip_blacklist import IPBlacklistManager
-
-# Import for test compatibility
-from src.crud.field_whitelist import get_whitelist_for_model
 from .rate_limiting import (
     AdaptiveRateLimiter,
     RateLimitConfig,
@@ -28,7 +29,6 @@ from .rate_limiting import (
 from .request_security import RequestSecurity
 from .security_analyzer import SecurityAnalyzer
 from .security_middleware import SecurityMiddleware
-from ..middleware.auth import get_current_user as get_current_user
 
 __all__ = [
     "MAGIC_AVAILABLE",

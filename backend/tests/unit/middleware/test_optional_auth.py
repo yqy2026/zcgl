@@ -85,7 +85,7 @@ def test_optional_auth_cookie_priority():
     # Create two different users
     db, cookie_user = _mock_db_with_user("user-cookie")
     _, header_user = _mock_db_with_user("user-header")
-    
+
     # Mock DB query to return correct user based on ID in token
     def mock_query_first(self):
         # We need to inspect the filter criteria which is hard with this simple mock

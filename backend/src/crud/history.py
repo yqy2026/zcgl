@@ -2,7 +2,7 @@
 资产历史CRUD操作
 """
 
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -30,12 +30,13 @@ class HistoryCRUD:
         self, db: Session, skip: int = 0, limit: int = 100
     ) -> list[AssetHistory]:
         """获取多个历史记录"""
-        return (
+        return cast(
+            list[AssetHistory],
             self._apply_history_filters(db.query(AssetHistory))
             .order_by(desc(AssetHistory.operation_time))
             .offset(skip)
             .limit(limit)
-            .all()
+            .all(),
         )
 
     def get_multi_with_count(
@@ -49,17 +50,16 @@ class HistoryCRUD:
         """获取历史记录列表与总数"""
         query = self._apply_history_filters(db.query(AssetHistory), asset_id=asset_id)
         total = query.count()
-        items = (
+        items = cast(
+            list[AssetHistory],
             query.order_by(desc(AssetHistory.operation_time))
             .offset(skip)
             .limit(limit)
-            .all()
+            .all(),
         )
         return items, total
 
-    def _apply_history_filters(
-        self, query: Any, *, asset_id: str | None = None
-    ) -> Any:
+    def _apply_history_filters(self, query: Any, *, asset_id: str | None = None) -> Any:
         if asset_id:
             query = query.filter(AssetHistory.asset_id == asset_id)
         return query

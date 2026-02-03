@@ -1180,4 +1180,3 @@ class TestUsersEdgeCases:
             get_user_statistics(db=mock_db, current_user=mock_admin_user)
 
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-

@@ -155,9 +155,7 @@ class OrganizationDataFilter:
 
     async def filter_assets_query(self, query: Any) -> Any:
         """过滤资产查询"""
-        return await self.org_service.filter_assets_by_organization(
-            self.user_id, query
-        )
+        return await self.org_service.filter_assets_by_organization(self.user_id, query)
 
     async def filter_projects_query(self, query: Any) -> Any:
         """过滤项目查询"""
@@ -299,12 +297,14 @@ class OrganizationPermissionChecker:
                 raise forbidden("无权访问该组织的数据")
 
         # Check if user has any organization access permissions
-        org_service = OrganizationPermissionService(db)
-        accessible_orgs = org_service.get_user_accessible_organizations(current_user.id)
+        org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
+        accessible_orgs = await org_service.get_user_accessible_organizations(
+            current_user.id
+        )
 
         if not accessible_orgs:
             # Log permission denied event
-            security_logger = SecurityEventLogger(db)
+            security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
 
             # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
@@ -313,7 +313,7 @@ class OrganizationPermissionChecker:
             except ValueError:
                 client_ip = "unknown"
 
-            security_logger.log_permission_denied(
+            await security_logger.log_permission_denied(
                 user_id=str(current_user.id),
                 resource="organizations",
                 action="access",
@@ -321,7 +321,7 @@ class OrganizationPermissionChecker:
             )
 
             # Check for alert threshold
-            if security_logger.should_alert(ip=client_ip):
+            if await security_logger.should_alert(ip=client_ip):
                 # Log security alert when threshold exceeded
                 import logging
 

@@ -87,4 +87,3 @@ class TestSystemAPI:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
         ]
-

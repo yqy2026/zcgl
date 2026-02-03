@@ -62,10 +62,17 @@ def upload_asset_attachments(
                 continue
 
             try:
-                file.file.seek(0, 2)
-                file_size = file.file.tell()
-                file.file.seek(0)
+                file_obj = getattr(file, "file", None)
+                if file_obj is None:
+                    raise ValueError("文件对象缺失")
+                try:
+                    file_obj.seek(0)
+                except Exception:
+                    pass
+                content = file_obj.read()
+                file_size = len(content)
             except Exception:
+                content = b""
                 file_size = 0
 
             validation = file_security.validate_upload_file(
@@ -85,9 +92,8 @@ def upload_asset_attachments(
             file_path = upload_dir / safe_filename
 
             try:
-                file.file.seek(0)
                 with open(file_path, "wb") as target:
-                    target.write(file.file.read())
+                    target.write(content)
                 success.append(safe_filename)
             except Exception as e:
                 failed.append(str(e))
@@ -129,7 +135,7 @@ def get_asset_attachments(
         for filename in os.listdir(base_dir):
             if not filename.lower().endswith(".pdf"):
                 continue
-            file_path = base_dir / filename
+            file_path = os.path.join(base_dir, filename)
             stat = os.stat(file_path)
             attachments.append(
                 {

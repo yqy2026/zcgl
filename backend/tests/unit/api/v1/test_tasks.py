@@ -1339,4 +1339,3 @@ class TestCleanupOldTasks:
 
         assert exc_info.value.status_code == 500
         assert "清理任务失败" in exc_info.value.message
-

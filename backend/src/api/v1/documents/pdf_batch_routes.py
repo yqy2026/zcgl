@@ -13,7 +13,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from ....core.config import settings
@@ -25,7 +25,7 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import success_response
 from ....crud.pdf_import_session import PDFImportSessionCRUD
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....services.document.pdf_import_service import PDFImportService
@@ -143,7 +143,7 @@ def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
 
 @router.post("/upload")
 async def batch_upload_pdfs(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     files: Annotated[list[UploadFile], File(...)],
     organization_id: Annotated[int | None, Form()] = None,
     force_method: Annotated[str | None, Form()] = None,
@@ -256,7 +256,10 @@ async def batch_upload_pdfs(
     # 初始化批处理状态（使用 BatchStatusTracker）
     sanitized_force_method = force_method.strip() if force_method else None
     allowed_methods = {"text", "vision", "smart"}
-    if sanitized_force_method is not None and sanitized_force_method not in allowed_methods:
+    if (
+        sanitized_force_method is not None
+        and sanitized_force_method not in allowed_methods
+    ):
         raise bad_request("force_method 仅支持: text, vision, smart")
 
     if sanitized_force_method is None and prefer_vision:
@@ -276,13 +279,12 @@ async def batch_upload_pdfs(
 
     for original_filename, temp_path, file_size in valid_files:
         try:
-            # 创建导入会话
             session_id = f"session-{uuid.uuid4().hex[:12]}"
             processing_options: dict[str, Any] = {
                 "force_method": sanitized_force_method,
                 "auto_confirm": auto_confirm,
             }
-            service.create_import_session(
+            await service.create_import_session(
                 db,
                 session_id=session_id,
                 original_filename=original_filename,
@@ -315,11 +317,9 @@ async def batch_upload_pdfs(
             tracker.update_progress(batch_id, failed=1)
             continue
 
-    # 更新批处理状态为处理中
     tracker.set_status(batch_id, BatchStatus.PROCESSING)
 
-    # 启动后台监控任务（带异常处理）
-    monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id, db))
+    monitor_task = asyncio.create_task(_monitor_batch_progress(batch_id))
     _track_monitor_task(batch_id, monitor_task)
     monitor_task.add_done_callback(lambda t: _on_monitor_task_done(t, batch_id))
 
@@ -337,9 +337,9 @@ async def batch_upload_pdfs(
 
 
 @router.get("/status/{batch_id}")
-def get_batch_status(
+async def get_batch_status(
     batch_id: str,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ) -> JSONResponse:
     """
     查询批处理状态
@@ -377,11 +377,12 @@ def get_batch_status(
     if not batch:
         raise not_found("批处理任务不存在", resource_id=batch_id)
 
-    # 获取各会话状态
     session_crud = PDFImportSessionCRUD()
     session_statuses: list[dict[str, Any]] = []
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = session_crud.get_session_map(db, session_ids)
+    session_map = await db.run_sync(
+        lambda sync_db: session_crud.get_session_map(sync_db, session_ids)
+    )
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session:
@@ -395,7 +396,6 @@ def get_batch_status(
                 }
             )
 
-    # 计算进度
     progress_info = _calculate_batch_progress(batch_id)
     total = progress_info["total"]
     completed = progress_info["completed"]
@@ -475,7 +475,7 @@ def list_batches(
 @router.post("/cancel/{batch_id}")
 async def cancel_batch(
     batch_id: str,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ) -> JSONResponse:
     """
     取消批处理任务
@@ -503,13 +503,14 @@ async def cancel_batch(
     ]:
         raise bad_request("批处理任务已完成或已取消，无法取消")
 
-    # 取消所有处理中的会话
     service = PDFImportService()
     session_crud = PDFImportSessionCRUD()
     cancelled_count = 0
 
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = session_crud.get_session_map(db, session_ids)
+    session_map = await db.run_sync(
+        lambda sync_db: session_crud.get_session_map(sync_db, session_ids)
+    )
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session and session.is_processing:
@@ -520,7 +521,6 @@ async def cancel_batch(
             )
             cancelled_count += 1
 
-    # 更新批处理状态
     _update_batch_status(batch_id, BatchStatus.CANCELLED)
 
     monitor_task = _monitor_tasks.get(batch_id)
@@ -602,7 +602,7 @@ def _handle_task_exception(task: asyncio.Task[None], batch_id: str) -> None:
         logger.error(f"Error handling task exception for batch {batch_id}: {e}")
 
 
-async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
+async def _monitor_batch_progress(batch_id: str) -> None:
     """
     监控批处理进度
 
@@ -610,10 +610,9 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 
     注意: db 参数仅用于创建新的会话上下文，不直接使用传入的会话
     """
-    from ....database import _get_database_manager
+    from ....database import async_session_scope
 
     service = PDFImportService()
-    db_manager = _get_database_manager()
     tracker = _get_batch_tracker()
 
     while True:
@@ -628,7 +627,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
         pending = 0
 
         # 使用独立的数据库会话进行查询
-        with db_manager.get_session() as session:
+        async with async_session_scope() as session:
             for session_id in batch.get("session_ids", []):
                 status_result = await service.get_session_status(session, session_id)
                 if status_result.get("success"):

@@ -98,21 +98,14 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         """按激活/系统/自定义统计角色数量"""
         from sqlalchemy import case, func
 
-        result = (
-            db.query(
-                func.count(Role.id).label("total"),
-                func.sum(
-                    case((Role.is_active.is_(True), 1), else_=0)
-                ).label("active"),
-                func.sum(
-                    case((Role.is_system_role.is_(True), 1), else_=0)
-                ).label("system"),
-                func.sum(
-                    case((Role.is_system_role.is_(False), 1), else_=0)
-                ).label("custom"),
-            )
-            .one()
-        )
+        result = db.query(
+            func.count(Role.id).label("total"),
+            func.sum(case((Role.is_active.is_(True), 1), else_=0)).label("active"),
+            func.sum(case((Role.is_system_role.is_(True), 1), else_=0)).label("system"),
+            func.sum(case((Role.is_system_role.is_(False), 1), else_=0)).label(
+                "custom"
+            ),
+        ).one()
 
         return {
             "total": int(result.total or 0),

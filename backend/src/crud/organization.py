@@ -99,7 +99,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         *,
         parent_id: str | None = None,
         keyword: str | None = None,
-    ):
+    ) -> Any:
         query = db.query(Organization).filter(Organization.is_deleted.is_(False))
 
         if parent_id:
@@ -125,9 +125,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         keyword: str | None = None,
     ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
-        query = self._build_filtered_query(
-            db, parent_id=parent_id, keyword=keyword
-        )
+        query = self._build_filtered_query(db, parent_id=parent_id, keyword=keyword)
 
         # Apply sorting
         query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
@@ -145,23 +143,34 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         self,
         db: Session,
         *,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        search_fields: list[str] | None = None,
+        search_conditions: list[Any] | None = None,
         skip: int = 0,
         limit: int = 100,
+        order_by: str | None = None,
+        order_desc: bool = True,
         parent_id: str | None = None,
         keyword: str | None = None,
     ) -> tuple[list[Organization], int]:
         """获取组织列表与总数 - 解密敏感字段"""
-        query = self._build_filtered_query(
-            db, parent_id=parent_id, keyword=keyword
-        )
+        if filters:
+            parent_id = parent_id or filters.get("parent_id")
+            keyword = keyword or filters.get("keyword")
+        if search:
+            keyword = keyword or search
+
+        query = self._build_filtered_query(db, parent_id=parent_id, keyword=keyword)
 
         total = query.count()
-        items = (
-            query.order_by(Organization.level.asc(), Organization.sort_order.asc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        if order_by and hasattr(Organization, order_by):
+            order_column = getattr(Organization, order_by)
+            query = query.order_by(order_column.desc() if order_desc else order_column.asc())
+        else:
+            query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
+
+        items = query.offset(skip).limit(limit).all()
 
         for item in items:
             self.sensitive_data_handler.decrypt_data(item.__dict__)

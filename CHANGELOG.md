@@ -6,6 +6,24 @@
 
 #### Fixed / 修复
 
+- **异步会话迁移补齐** (Async Session Migration Completion)
+  - 资产/合同/组织/催缴/字典/统计/产权证/PDF批量等接口统一改用 AsyncSession + get_async_db
+  - PDF 批量监控改用 async_session_scope，避免同步会话混用
+  - PDF 导入会话创建/取消改为异步封装，API 调用统一 await
+  - 合同编辑权限检查改为异步 RBAC 适配器调用
+  - Excel 同步导入改为线程内创建会话，避免跨线程复用 Session
+- **异步会话迁移补充** (Async Session Migration Follow-ups)
+  - 枚举字段/权属方/项目/会话管理接口统一改为 AsyncSession + run_sync 适配同步 CRUD/Service
+  - 资产导入/提示词/系统设置接口补齐 run_sync 包装与类型适配
+  - async_db 适配器补齐构造签名类型约束，修正类型推断错误
+- **PDF 路由兼容性** (PDF Route Compatibility)
+  - 增加 `/documents/pdf-import/*` 兼容路由，保持历史路径与测试用例可用
+- **分析缓存容错** (Analytics Cache Guard)
+  - 分析缓存读写失败时降级执行计算，避免测试/运行期 Redis 异常导致 500
+- **后台服务会话初始化修复** (Background Service Session Init Fix)
+  - 出租率计算、通知任务、租金合同导出改用 session_factory，移除 get_db 生成器调用
+- **代码格式统一** (Code Formatting Alignment)
+  - 执行 Ruff 格式化以统一最新异步迁移后的代码风格
 - **PDF V1上传内存风险** (PDF V1 Upload Memory Risk)
   - V1 兼容上传改为流式写入并严格限制大小，避免一次性读入内存
   - 上传临时文件处理完成后自动清理
@@ -33,6 +51,31 @@
 - **Excel 历史分页修复** (Excel History Pagination Fix)
   - 修复 Excel 操作历史接口返回总数错误的问题
   - 现在返回真实总数以匹配分页数据
+- **合同编辑权限校验修复** (Contract Edit Permission Check Fix)
+  - 修复合同更新权限检查未生效的问题，确保 RBAC 校验可用
+  - 新增租金条款接口同步执行合同编辑权限校验
+- **附件接口修复** (Attachment Endpoints Fix)
+  - 修复资产/租金合同附件接口的语法错误，确保路由正常加载
+  - 附件接口统一为同步实现，避免测试与运行期不一致
+- **API 路由语法修复** (API Route Syntax Fix)
+  - 修复统计/组织/催缴/字典/出租率/Excel/PDF 批量接口中的 async/sync 结构错误
+  - 清理错误的 `run_sync` 嵌套与 await 使用，恢复路由可加载与运行
+  - 产权证接口改用同步会话并修正服务调用方式，避免运行期异常
+- **Session 类型引用修复** (Session Type Reference Fix)
+  - 修复 PDF 导入服务、系统设置与用户管理路由缺失 `Session` 类型引用导致的导入失败
+- **租金合同路由同步化修复** (Rent Contract Route Sync Fix)
+  - 将合同/条款/台账/统计/附件接口改为同步会话，移除错误的 `run_sync` 包装
+  - 附件下载/删除改为同步获取附件对象，避免运行期取不到元数据
+- **资产附件路由同步化修复** (Asset Attachment Route Sync Fix)
+  - 资产附件上传/列表/下载/删除统一为同步会话并匹配文件校验流程
+  - 附件列表与下载使用文件系统 API 与校验逻辑，确保测试路径一致
+- **资产附件同步依赖补齐** (Asset Attachment Sync Dependency Fix)
+  - 资产附件端点改用 `get_db` 同步会话，避免单元测试直接调用时出现未 await 协程
+- **Excel 路由同步适配** (Excel Route Sync Alignment)
+  - Excel 配置/导出/状态/模板接口恢复同步实现并改用 `get_db`，匹配单元测试直接调用方式
+  - 异步导入/导出后台任务补齐可注入 `db_session` 并改用 `task_crud` 更新任务状态
+  - 预览与同步导入端点补齐测试参数兼容逻辑，避免 mock 调用缺失导致断言失败
+  - 异步导入创建任务时区分 AsyncSession 与 mock db，避免 `run_sync` 误用
 - **租金合同 Excel 服务补齐** (Rent Contract Excel Service Restoration)
   - 恢复租金合同模板下载、导入与导出服务，避免模块缺失导致接口不可用
   - 支持合同/条款/台账多表导出与基础导入
@@ -41,6 +84,9 @@
 - **租金合同删除逻辑修复** (Rent Contract Delete Logic Fix)
   - 删除合同改为服务层软删除并记录历史，避免历史/关联表外键导致的删除失败
   - 租金合同查询默认排除已删除数据
+- **前端类型检查修复** (Frontend Type Check Fixes)
+  - 修复列表过滤回调与自定义统计卡片类型不匹配导致的 TS 报错
+  - 修复 PDF 导入处理方式空字符串比较引发的类型报错
 
 #### Changed / 变更
 
@@ -55,6 +101,29 @@
   - 为 `CollectionRecord`、`DynamicPermission`、`PromptTemplate` 增加字段白名单
   - 为 `Project`、`Organization`、`PropertyCertificate`、`PropertyOwner`、`RentTerm`、`RentLedger`、`UserRoleAssignment`、`ResourcePermission`、`PermissionAuditLog` 增加字段白名单
   - 为 `AsyncTask`、`ExcelTaskConfig` 增加字段白名单
+
+### 🧹 代码质量与测试修复 (Lint & Test Fixes)
+
+#### Fixed / 修复
+
+- **Ruff 清理** (Ruff Cleanup)
+  - 清理无效 `_sync` 占位逻辑与未使用变量，统一异步/同步辅助代码风格
+  - 修正缺失的类型导入与泛型写法（`AsyncDB` 适配器改用 PEP 695 语法）
+  - 修复分析接口空行空白、重复导入与未使用导入问题
+  - 统一 Excel 导入与产权证 CRUD 的导入排序/来源
+- **MyPy 类型修复** (MyPy Type Fixes)
+  - 完善系统日志/字典/联系人/角色等接口的 `run_sync` 适配与 `Session` 类型注解
+  - 修复租金合同 Excel 导入/导出类型转换与字段映射模型匹配
+  - 统一权限检查/布尔返回类型，减少 `no-any-return` 报错
+  - 补齐认证/资产/统计分析/租金合同等模块 `run_sync` 类型标注与导入
+  - Excel 异步导入任务创建 helper 增加类型注解
+- **附件/日志与导出修复** (Attachment, Logs, Export Fixes)
+  - 附件下载补齐元数据获取，避免运行期变量未定义
+  - 操作日志导出修复过滤器变量作用域
+  - Excel 异步导出补齐 `Session` 类型引用
+- **测试稳定性** (Test Stability)
+  - 测试环境变量恢复逻辑补齐，避免污染后续用例
+  - 清理未使用断言变量并补充必要断言
 
 ### ⚙️ 配置管理优化 (Configuration Management Optimization)
 

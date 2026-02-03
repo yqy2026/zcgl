@@ -11,7 +11,8 @@ import logging
 from datetime import date
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as SyncSession
 
 from ...core.exception_handler import BusinessValidationError
 from ...crud.asset import asset_crud
@@ -35,7 +36,7 @@ class PropertyCertificateService:
     负责产权证文件的AI提取和导入流程
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         初始化服务
 
@@ -45,37 +46,49 @@ class PropertyCertificateService:
         self.db = db
         self.extractor = PropertyCertAdapter()
 
-    def list_certificates(
+    async def list_certificates(
         self, *, skip: int = 0, limit: int = 100
     ) -> list[PropertyCertificate]:
         """获取产权证列表"""
-        return property_certificate_crud.get_multi(
-            self.db, skip=skip, limit=limit
+        return await self.db.run_sync(
+            lambda sync_db: property_certificate_crud.get_multi(
+                sync_db, skip=skip, limit=limit
+            )
         )
 
-    def get_certificate(self, certificate_id: str) -> PropertyCertificate | None:
+    async def get_certificate(self, certificate_id: str) -> PropertyCertificate | None:
         """获取单个产权证"""
-        return property_certificate_crud.get(self.db, certificate_id)
+        return await self.db.run_sync(
+            lambda sync_db: property_certificate_crud.get(sync_db, certificate_id)
+        )
 
-    def create_certificate(
+    async def create_certificate(
         self, certificate: PropertyCertificateCreate
     ) -> PropertyCertificate:
         """创建产权证"""
-        return property_certificate_crud.create(self.db, obj_in=certificate)
+        return await self.db.run_sync(
+            lambda sync_db: property_certificate_crud.create(
+                sync_db, obj_in=certificate
+            )
+        )
 
-    def update_certificate(
+    async def update_certificate(
         self,
         certificate: PropertyCertificate,
         update: PropertyCertificateUpdate,
     ) -> PropertyCertificate:
         """更新产权证"""
-        return property_certificate_crud.update(
-            self.db, db_obj=certificate, obj_in=update
+        return await self.db.run_sync(
+            lambda sync_db: property_certificate_crud.update(
+                sync_db, db_obj=certificate, obj_in=update
+            )
         )
 
-    def delete_certificate(self, certificate_id: str) -> None:
+    async def delete_certificate(self, certificate_id: str) -> None:
         """删除产权证"""
-        property_certificate_crud.remove(self.db, id=certificate_id)
+        await self.db.run_sync(
+            lambda sync_db: property_certificate_crud.remove(sync_db, id=certificate_id)
+        )
 
     async def extract_from_file(self, file_path: str, filename: str) -> dict[str, Any]:
         """
@@ -138,25 +151,25 @@ class PropertyCertificateService:
             ValueError: 数据验证失败
             Exception: 数据库操作失败
         """
-        try:
-            # 提取数据
-            certificate_number = data.get("certificate_number")
-            extraction_data = data.get("extraction_data", {})
-            owners_data = data.get("owners", [])
+        # 提取数据
+        certificate_number = data.get("certificate_number")
+        extraction_data = data.get("extraction_data", {})
+        owners_data = data.get("owners", [])
 
-            if not certificate_number:
-                raise BusinessValidationError(
-                    "缺少证书编号",
-                    field_errors={"certificate_number": ["缺少证书编号"]},
-                )
+        if not certificate_number:
+            raise BusinessValidationError(
+                "缺少证书编号",
+                field_errors={"certificate_number": ["缺少证书编号"]},
+            )
 
-            logger.info(f"确认导入产权证: {certificate_number}")
+        logger.info(f"确认导入产权证: {certificate_number}")
 
+        def _sync(sync_db: SyncSession) -> PropertyCertificate:
             # 🔒 功能修复: 实现实际的数据库持久化
 
             # 1. 检查证书是否已存在
             existing = property_certificate_crud.get_by_certificate_number(
-                self.db, certificate_number
+                sync_db, certificate_number
             )
             if existing:
                 logger.warning(f"产权证已存在: {certificate_number}")
@@ -207,13 +220,13 @@ class PropertyCertificateService:
                 )
 
                 # 🔒 安全修复: 使用property_owner_crud创建权利人（自动加密PII）
-                owner = property_owner_crud.create(self.db, obj_in=owner_create_data)
+                owner = property_owner_crud.create(sync_db, obj_in=owner_create_data)
                 owner_ids.append(owner.id)
 
             # 4. 创建产权证记录
             certificate_create = PropertyCertificateCreate(**certificate_create_data)
             certificate = property_certificate_crud.create_with_owners(
-                self.db,
+                sync_db,
                 obj_in=certificate_create,
                 owner_ids=owner_ids if owner_ids else None,
             )
@@ -221,6 +234,8 @@ class PropertyCertificateService:
             logger.info(f"产权证创建成功: {certificate.id} - {certificate_number}")
             return certificate
 
+        try:
+            return await self.db.run_sync(_sync)
         except BusinessValidationError as e:
             logger.error(f"数据验证失败: {str(e)}")
             raise
@@ -256,7 +271,7 @@ class PropertyCertificateService:
         logger.warning(f"无法解析日期: {date_str}")
         return None
 
-    def match_assets(
+    async def match_assets(
         self, extracted_data: dict[str, Any], limit: int = 5
     ) -> list[dict[str, Any]]:
         """
@@ -269,78 +284,86 @@ class PropertyCertificateService:
         Returns:
             list[dict[str, Any]]: 匹配结果列表
         """
-        address_raw = extracted_data.get("property_address")
-        owner_raw = extracted_data.get("owner_name")
 
-        address = self._normalize_match_value(address_raw)
-        owner_name = self._normalize_match_value(owner_raw)
+        def _sync(sync_db: SyncSession) -> list[dict[str, Any]]:
+            address_raw = extracted_data.get("property_address")
+            owner_raw = extracted_data.get("owner_name")
 
-        if not address and not owner_name:
-            return []
+            address = self._normalize_match_value(address_raw)
+            owner_name = self._normalize_match_value(owner_raw)
 
-        candidates: dict[str, dict[str, Any]] = {}
-        candidate_limit = max(limit * 4, 10)
+            if not address and not owner_name:
+                return []
 
-        if address:
-            for asset in self._fetch_assets_by_field(
-                "address", address_raw, limit=candidate_limit
-            ):
-                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
-                entry["fields"].add("address")
+            candidates: dict[str, dict[str, Any]] = {}
+            candidate_limit = max(limit * 4, 10)
 
-        if owner_name:
-            for asset in self._fetch_assets_by_field(
-                "ownership_entity", owner_raw, limit=candidate_limit
-            ):
-                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
-                entry["fields"].add("ownership_entity")
-
-        matches: list[dict[str, Any]] = []
-        for entry in candidates.values():
-            asset = entry["asset"]
-            fields = entry["fields"]
-
-            address_quality = None
-            owner_quality = None
-            match_reasons: list[str] = []
-
-            if "address" in fields and address:
-                address_quality = (
-                    self._match_quality(address, getattr(asset, "address", None))
-                    or "exact"
-                )
-                match_reasons.append("地址匹配")
-
-            if "ownership_entity" in fields and owner_name:
-                owner_quality = (
-                    self._match_quality(
-                        owner_name, getattr(asset, "ownership_entity", None)
+            if address:
+                for asset in self._fetch_assets_by_field(
+                    sync_db, "address", address_raw, limit=candidate_limit
+                ):
+                    entry = candidates.setdefault(
+                        asset.id, {"asset": asset, "fields": set()}
                     )
-                    or "exact"
+                    entry["fields"].add("address")
+
+            if owner_name:
+                for asset in self._fetch_assets_by_field(
+                    sync_db, "ownership_entity", owner_raw, limit=candidate_limit
+                ):
+                    entry = candidates.setdefault(
+                        asset.id, {"asset": asset, "fields": set()}
+                    )
+                    entry["fields"].add("ownership_entity")
+
+            matches: list[dict[str, Any]] = []
+            for entry in candidates.values():
+                asset = entry["asset"]
+                fields = entry["fields"]
+
+                address_quality = None
+                owner_quality = None
+                match_reasons: list[str] = []
+
+                if "address" in fields and address:
+                    address_quality = (
+                        self._match_quality(address, getattr(asset, "address", None))
+                        or "exact"
+                    )
+                    match_reasons.append("地址匹配")
+
+                if "ownership_entity" in fields and owner_name:
+                    owner_quality = (
+                        self._match_quality(
+                            owner_name, getattr(asset, "ownership_entity", None)
+                        )
+                        or "exact"
+                    )
+                    match_reasons.append("权属方匹配")
+
+                confidence = self._calculate_match_confidence(
+                    address_quality, owner_quality
                 )
-                match_reasons.append("权属方匹配")
+                if confidence <= 0:
+                    continue
 
-            confidence = self._calculate_match_confidence(
-                address_quality, owner_quality
-            )
-            if confidence <= 0:
-                continue
+                matches.append(
+                    {
+                        "asset_id": asset.id,
+                        "name": getattr(asset, "property_name", "") or "",
+                        "address": getattr(asset, "address", "") or "",
+                        "confidence": confidence,
+                        "match_reasons": match_reasons,
+                    }
+                )
 
-            matches.append(
-                {
-                    "asset_id": asset.id,
-                    "name": getattr(asset, "property_name", "") or "",
-                    "address": getattr(asset, "address", "") or "",
-                    "confidence": confidence,
-                    "match_reasons": match_reasons,
-                }
-            )
+            matches.sort(key=lambda item: item["confidence"], reverse=True)
+            return matches[:limit]
 
-        matches.sort(key=lambda item: item["confidence"], reverse=True)
-        return matches[:limit]
+        return await self.db.run_sync(_sync)
 
     def _fetch_assets_by_field(
-        self, field_name: str, raw_value: Any, limit: int = 20
+        self, db: SyncSession, field_name: str, raw_value: Any, limit: int = 20
     ) -> list[Asset]:
         """
         根据字段值获取资产列表（处理加密字段）
@@ -360,12 +383,12 @@ class PropertyCertificateService:
                     encrypted_candidates.append(encrypted)
             if not encrypted_candidates:
                 return []
-            query = self.db.query(Asset).filter(
+            query = db.query(Asset).filter(
                 model_field.in_(list(dict.fromkeys(encrypted_candidates)))
             )
         else:
             query_value = candidates[0]
-            query = self.db.query(Asset).filter(model_field.ilike(f"%{query_value}%"))
+            query = db.query(Asset).filter(model_field.ilike(f"%{query_value}%"))
 
         assets = query.limit(limit).all()
         for asset in assets:

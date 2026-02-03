@@ -2,7 +2,7 @@
 Unit tests for core.validators
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 

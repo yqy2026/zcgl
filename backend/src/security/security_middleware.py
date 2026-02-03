@@ -9,8 +9,8 @@ from typing import Any
 
 from fastapi import Request, UploadFile
 
-from ..core.exception_handler import PermissionDeniedError, RateLimitError
 from ..core.config import settings
+from ..core.exception_handler import PermissionDeniedError, RateLimitError
 from .file_validation import FileValidator
 from .logging_security import security_auditor
 from .rate_limiting import RateLimiter
@@ -34,27 +34,19 @@ class SecurityMiddleware:
 
         self.config = base_config
         self.enabled = bool(self.config.get("enabled", True))
-        self.ip_blacklist_enabled = bool(
-            self.config.get("ip_blacklist_enabled", True)
-        )
-        self.rate_limit_enabled = bool(
-            self.config.get("rate_limit_enabled", True)
-        )
+        self.ip_blacklist_enabled = bool(self.config.get("ip_blacklist_enabled", True))
+        self.rate_limit_enabled = bool(self.config.get("rate_limit_enabled", True))
         self.user_agent_check_enabled = bool(
             self.config.get("user_agent_check_enabled", True)
         )
-        self.user_agent_min_length = int(
-            self.config.get("user_agent_min_length", 10)
-        )
+        self.user_agent_min_length = int(self.config.get("user_agent_min_length", 10))
         self.ip_blacklist = self._normalize_ip_blacklist(
             self.config.get("ip_blacklist", [])
         )
 
         rate_limits = self.config.get("rate_limits")
         self.rate_limiter = (
-            RateLimiter(rate_limits)
-            if isinstance(rate_limits, dict)
-            else RateLimiter()
+            RateLimiter(rate_limits) if isinstance(rate_limits, dict) else RateLimiter()
         )
         self.file_validator = FileValidator()
         self.logger = logging.getLogger(__name__)

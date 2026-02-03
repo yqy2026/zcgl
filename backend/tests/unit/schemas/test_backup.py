@@ -52,7 +52,9 @@ class TestBackupSchemas:
             backup_type="manual",
             original_size=None,
         )
-        response = BackupListResponse(is_success=True, message="ok", backups=[info], total_count=1)
+        response = BackupListResponse(
+            is_success=True, message="ok", backups=[info], total_count=1
+        )
         assert response.total_count == 1
 
     def test_restore_request_defaults(self):
@@ -60,7 +62,9 @@ class TestBackupSchemas:
         assert req.should_confirm is False
 
     def test_restore_response(self):
-        resp = RestoreResponse(is_success=True, message="ok", is_restored=True, safety_backup=None)
+        resp = RestoreResponse(
+            is_success=True, message="ok", is_restored=True, safety_backup=None
+        )
         assert resp.is_restored is True
 
     def test_backup_config(self):

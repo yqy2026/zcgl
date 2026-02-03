@@ -1,4 +1,3 @@
-
 import sys
 import traceback
 from pathlib import Path
@@ -8,7 +7,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 try:
-    from src.api.v1.system.system_settings import router
+
     print("Import successful")
 except Exception:
     traceback.print_exc()

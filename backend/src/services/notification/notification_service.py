@@ -55,14 +55,11 @@ class NotificationService:
         require_unread: bool = False,
         created_since: date | datetime | None = None,
     ) -> Notification | None:
-        query = (
-            db.query(Notification)
-            .filter(
-                Notification.recipient_id == recipient_id,
-                Notification.related_entity_type == related_entity_type,
-                Notification.related_entity_id == related_entity_id,
-                Notification.type == notification_type,
-            )
+        query = db.query(Notification).filter(
+            Notification.recipient_id == recipient_id,
+            Notification.related_entity_type == related_entity_type,
+            Notification.related_entity_id == related_entity_id,
+            Notification.type == notification_type,
         )
 
         if require_unread:

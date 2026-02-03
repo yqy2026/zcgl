@@ -24,11 +24,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.pdf_import import ExtractionResponse, FileUploadResponse
@@ -48,7 +48,7 @@ async def upload_pdf_file(
     prefer_markitdown: bool = Form(default=False),
     force_method: str | None = Form(default=None),
     organization_id: int | None = Form(default=None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     pdf_service: PDFImportService = Depends(get_pdf_import_service),
     optional: Any = Depends(get_optional_services),
     current_user: User = Depends(get_current_active_user),
@@ -99,10 +99,11 @@ async def upload_pdf_file(
 
     sanitized_force_method = force_method.strip() if force_method else None
     allowed_methods = {"text", "vision", "smart"}
-    if sanitized_force_method is not None and sanitized_force_method not in allowed_methods:
-        raise bad_request(
-            "force_method 仅支持: text, vision, smart"
-        )
+    if (
+        sanitized_force_method is not None
+        and sanitized_force_method not in allowed_methods
+    ):
+        raise bad_request("force_method 仅支持: text, vision, smart")
 
     session_id = f"session-{uuid.uuid4().hex[:12]}"
     processing_options = {
@@ -115,7 +116,7 @@ async def upload_pdf_file(
         "enable_ownership_matching": True,
         "enable_duplicate_check": True,
     }
-    session = pdf_service.create_import_session(
+    session = await pdf_service.create_import_session(
         db,
         session_id=session_id,
         original_filename=file.filename or "upload.pdf",

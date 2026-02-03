@@ -5,6 +5,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
@@ -14,7 +15,7 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....crud.ownership import ownership
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.asset import Ownership
 from ....models.auth import User
@@ -32,141 +33,162 @@ router = APIRouter()
 
 
 @router.get("/dropdown-options", summary="获取权属方选项列表")
-def get_ownership_dropdown_options(
+async def get_ownership_dropdown_options(
     current_user: Annotated[User, Depends(get_current_active_user)],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     is_active: bool | None = Query(True, description="是否启用"),
 ) -> list[OwnershipResponse]:
     """获取权属方选项列表（用于下拉选择等）- V2修复is_active过滤"""
-    try:
-        # 调用服务层获取下拉选项
-        dropdown_data = ownership_service.get_ownership_dropdown_options(
-            db, is_active=is_active
-        )
-
-        # 转换为响应格式
-        responses = []
-        for item_data in dropdown_data:
-            # 创建临时Ownership对象以便model_validate使用
-            temp_ownership = Ownership(
-                **{
-                    k: v
-                    for k, v in item_data.items()
-                    if k not in ["asset_count", "project_count"]
-                }
+    def _sync(sync_db: Session) -> list[OwnershipResponse]:
+        try:
+            # 调用服务层获取下拉选项
+            dropdown_data = ownership_service.get_ownership_dropdown_options(
+                sync_db, is_active=is_active
             )
-            response = OwnershipResponse.model_validate(temp_ownership)
-            # 设置额外的计数字段
-            response.asset_count = item_data["asset_count"]
-            response.project_count = item_data["project_count"]
-            responses.append(response)
-        return responses
-    except Exception as e:
-        raise internal_error(f"获取权属方选项失败: {str(e)}")
+
+            # 转换为响应格式
+            responses: list[OwnershipResponse] = []
+            for item_data in dropdown_data:
+                # 创建临时Ownership对象以便model_validate使用
+                temp_ownership = Ownership(
+                    **{
+                        k: v
+                        for k, v in item_data.items()
+                        if k not in ["asset_count", "project_count"]
+                    }
+                )
+                response = OwnershipResponse.model_validate(temp_ownership)
+                # 设置额外的计数字段
+                response.asset_count = item_data["asset_count"]
+                response.project_count = item_data["project_count"]
+                responses.append(response)
+            return responses
+        except Exception as e:
+            raise internal_error(f"获取权属方选项失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
-def create_ownership(
+async def create_ownership(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     ownership_in: OwnershipCreate,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """创建新权属方"""
-    try:
-        db_ownership = ownership_service.create_ownership(db, obj_in=ownership_in)
-        return OwnershipResponse.model_validate(db_ownership)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"创建权属方失败: {str(e)}")
+    def _sync(sync_db: Session) -> OwnershipResponse:
+        try:
+            db_ownership = ownership_service.create_ownership(
+                sync_db, obj_in=ownership_in
+            )
+            return OwnershipResponse.model_validate(db_ownership)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"创建权属方失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
-def update_ownership(
+async def update_ownership(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     ownership_id: str,
     ownership_in: OwnershipUpdate,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """更新权属方信息"""
-    db_ownership = ownership.get(db, id=ownership_id)
-    if not db_ownership:
-        raise not_found(
-            "权属方不存在", resource_type="ownership", resource_id=ownership_id
-        )
+    def _sync(sync_db: Session) -> OwnershipResponse:
+        db_ownership = ownership.get(sync_db, id=ownership_id)
+        if not db_ownership:
+            raise not_found(
+                "权属方不存在", resource_type="ownership", resource_id=ownership_id
+            )
 
-    try:
-        updated_ownership = ownership_service.update_ownership(
-            db, db_obj=db_ownership, obj_in=ownership_in
-        )
-        return OwnershipResponse.model_validate(updated_ownership)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"更新权属方失败: {str(e)}")
+        try:
+            updated_ownership = ownership_service.update_ownership(
+                sync_db, db_obj=db_ownership, obj_in=ownership_in
+            )
+            return OwnershipResponse.model_validate(updated_ownership)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"更新权属方失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.put("/{ownership_id}/projects", summary="更新权属方关联项目")
-def update_ownership_projects(
+async def update_ownership_projects(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     ownership_id: str,
     project_ids: list[str] = Body(..., description="关联项目ID列表"),
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """更新权属方的关联项目"""
-    db_ownership = ownership.get(db, id=ownership_id)
-    if not db_ownership:
-        raise not_found(
-            "权属方不存在", resource_type="ownership", resource_id=ownership_id
-        )
+    def _sync(sync_db: Session) -> OwnershipResponse:
+        db_ownership = ownership.get(sync_db, id=ownership_id)
+        if not db_ownership:
+            raise not_found(
+                "权属方不存在", resource_type="ownership", resource_id=ownership_id
+            )
 
-    try:
-        # 更新关联项目
-        ownership_service.update_related_projects(
-            db, ownership_id=ownership_id, project_ids=project_ids
-        )
+        try:
+            # 更新关联项目
+            ownership_service.update_related_projects(
+                sync_db, ownership_id=ownership_id, project_ids=project_ids
+            )
 
-        # 返回更新后的权属方信息
-        updated_ownership = ownership.get(db, id=ownership_id)
-        response = OwnershipResponse.model_validate(updated_ownership)
+            # 返回更新后的权属方信息
+            updated_ownership = ownership.get(sync_db, id=ownership_id)
+            response = OwnershipResponse.model_validate(updated_ownership)
 
-        # 获取实际的项目计数
-        actual_project_count = ownership_service.get_project_count(db, ownership_id)
-        response.project_count = actual_project_count
-        return response
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"更新关联项目失败: {str(e)}")
+            # 获取实际的项目计数
+            actual_project_count = ownership_service.get_project_count(
+                sync_db, ownership_id
+            )
+            response.project_count = actual_project_count
+            return response
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"更新关联项目失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.delete(
     "/{ownership_id}", response_model=OwnershipDeleteResponse, summary="删除权属方"
 )
-def delete_ownership(
+async def delete_ownership(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     ownership_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipDeleteResponse:
     """删除权属方"""
-    try:
-        # 先检查关联资产数量
-        asset_count = ownership_service.get_asset_count(db, ownership_id)
+    def _sync(sync_db: Session) -> OwnershipDeleteResponse:
+        try:
+            # 先检查关联资产数量
+            asset_count = ownership_service.get_asset_count(sync_db, ownership_id)
 
-        deleted_ownership = ownership_service.delete_ownership(db, id=ownership_id)
-        return OwnershipDeleteResponse(
-            message="权属方删除成功",
-            id=deleted_ownership.id,
-            affected_assets=asset_count,
-        )
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"删除权属方失败: {str(e)}")
+            deleted_ownership = ownership_service.delete_ownership(
+                sync_db, id=ownership_id
+            )
+            return OwnershipDeleteResponse(
+                message="权属方删除成功",
+                id=deleted_ownership.id,
+                affected_assets=asset_count,
+            )
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"删除权属方失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.get(
@@ -179,9 +201,9 @@ def delete_ownership(
     response_model=APIResponse[PaginatedData[OwnershipResponse]],
     summary="获取权属方列表",
 )
-def get_ownerships(
+async def get_ownerships(
     current_user: Annotated[User, Depends(get_current_active_user)],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     keyword: str | None = Query(None, description="搜索关键词"),
@@ -192,25 +214,30 @@ def get_ownerships(
         page=page, page_size=page_size, keyword=keyword, is_active=is_active
     )
 
-    result = ownership.search(db, search_params)
+    def _sync(sync_db: Session) -> Any:
+        result = ownership.search(sync_db, search_params)
 
-    # 转换为响应格式，并添加关联计数
-    items = []
-    for item in result["items"]:
-        response = OwnershipResponse.model_validate(item)
-        # 获取关联资产数量
-        response.asset_count = ownership_service.get_asset_count(db, item.id)
-        # 获取关联项目数量
-        response.project_count = ownership_service.get_project_count(db, item.id)
-        items.append(response)
+        # 转换为响应格式，并添加关联计数
+        items: list[OwnershipResponse] = []
+        for item in result["items"]:
+            response = OwnershipResponse.model_validate(item)
+            # 获取关联资产数量
+            response.asset_count = ownership_service.get_asset_count(sync_db, item.id)
+            # 获取关联项目数量
+            response.project_count = ownership_service.get_project_count(
+                sync_db, item.id
+            )
+            items.append(response)
 
-    return ResponseHandler.paginated(
-        data=items,
-        page=result["page"],
-        page_size=result["page_size"],
-        total=result["total"],
-        message="获取权属方列表成功",
-    )
+        return ResponseHandler.paginated(
+            data=items,
+            page=result["page"],
+            page_size=result["page_size"],
+            total=result["total"],
+            message="获取权属方列表成功",
+        )
+
+    return await db.run_sync(_sync)
 
 
 @router.post(
@@ -218,32 +245,37 @@ def get_ownerships(
     response_model=APIResponse[PaginatedData[OwnershipResponse]],
     summary="搜索权属方",
 )
-def search_ownerships(
+async def search_ownerships(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     search_params: OwnershipSearchRequest,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> Any:
     """搜索权属方"""
-    result = ownership.search(db, search_params)
+    def _sync(sync_db: Session) -> Any:
+        result = ownership.search(sync_db, search_params)
 
-    # 转换为响应格式，并添加关联计数
-    items = []
-    for item in result["items"]:
-        response = OwnershipResponse.model_validate(item)
-        # 获取关联资产数量
-        response.asset_count = ownership_service.get_asset_count(db, item.id)
-        # 获取关联项目数量
-        response.project_count = ownership_service.get_project_count(db, item.id)
-        items.append(response)
+        # 转换为响应格式，并添加关联计数
+        items: list[OwnershipResponse] = []
+        for item in result["items"]:
+            response = OwnershipResponse.model_validate(item)
+            # 获取关联资产数量
+            response.asset_count = ownership_service.get_asset_count(sync_db, item.id)
+            # 获取关联项目数量
+            response.project_count = ownership_service.get_project_count(
+                sync_db, item.id
+            )
+            items.append(response)
 
-    return ResponseHandler.paginated(
-        data=items,
-        page=result["page"],
-        page_size=result["page_size"],
-        total=result["total"],
-        message="搜索权属方成功",
-    )
+        return ResponseHandler.paginated(
+            data=items,
+            page=result["page"],
+            page_size=result["page_size"],
+            total=result["total"],
+            message="搜索权属方成功",
+        )
+
+    return await db.run_sync(_sync)
 
 
 @router.get(
@@ -251,24 +283,27 @@ def search_ownerships(
     response_model=OwnershipStatisticsResponse,
     summary="获取权属方统计",
 )
-def get_ownership_statistics(
-    db: Annotated[Session, Depends(get_db)],
+async def get_ownership_statistics(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipStatisticsResponse:
     """获取权属方统计信息"""
-    stats = ownership_service.get_statistics(db)
+    def _sync(sync_db: Session) -> OwnershipStatisticsResponse:
+        stats = ownership_service.get_statistics(sync_db)
 
-    # 转换最近创建的权属方
-    recent_created = [
-        OwnershipResponse.model_validate(item) for item in stats["recent_created"]
-    ]
+        # 转换最近创建的权属方
+        recent_created = [
+            OwnershipResponse.model_validate(item) for item in stats["recent_created"]
+        ]
 
-    return OwnershipStatisticsResponse(
-        total_count=stats["total_count"],
-        active_count=stats["active_count"],
-        inactive_count=stats["inactive_count"],
-        recent_created=recent_created,
-    )
+        return OwnershipStatisticsResponse(
+            total_count=stats["total_count"],
+            active_count=stats["active_count"],
+            inactive_count=stats["inactive_count"],
+            recent_created=recent_created,
+        )
+
+    return await db.run_sync(_sync)
 
 
 @router.post(
@@ -276,29 +311,32 @@ def get_ownership_statistics(
     response_model=OwnershipResponse,
     summary="切换权属方状态",
 )
-def toggle_ownership_status(
+async def toggle_ownership_status(
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     ownership_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """切换权属方启用/禁用状态"""
-    try:
-        db_ownership = ownership_service.toggle_status(db, id=ownership_id)
-        return OwnershipResponse.model_validate(db_ownership)
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"切换状态失败: {str(e)}")
+    def _sync(sync_db: Session) -> OwnershipResponse:
+        try:
+            db_ownership = ownership_service.toggle_status(sync_db, id=ownership_id)
+            return OwnershipResponse.model_validate(db_ownership)
+        except Exception as e:
+            if isinstance(e, BaseBusinessError):
+                raise
+            raise internal_error(f"切换状态失败: {str(e)}")
+
+    return await db.run_sync(_sync)
 
 
 @router.get(
     "/{ownership_id}/financial-summary",
     summary="获取权属方收支汇总",
 )
-def get_ownership_financial_summary(
+async def get_ownership_financial_summary(
     ownership_id: str,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, Any]:
     """
@@ -310,21 +348,28 @@ def get_ownership_financial_summary(
     - 应收未收金额
     - 已收金额
     """
-    from ....services.asset.ownership_financial_service import OwnershipFinancialService
 
-    # 验证权属方是否存在
-    ownership_obj = ownership.get(db, id=ownership_id)
-    if not ownership_obj:
-        raise not_found(
-            "权属方不存在", resource_type="ownership", resource_id=ownership_id
+    def _sync(sync_db: Session) -> dict[str, Any]:
+        db = sync_db
+        from ....services.asset.ownership_financial_service import (
+            OwnershipFinancialService,
         )
 
-    # 使用 Service 层计算财务汇总
-    service = OwnershipFinancialService()
-    result = service.get_financial_summary(
-        db,
-        ownership_id=ownership_id,
-        ownership_name=ownership_obj.name,
-    )
+        # 验证权属方是否存在
+        ownership_obj = ownership.get(db, id=ownership_id)
+        if not ownership_obj:
+            raise not_found(
+                "权属方不存在", resource_type="ownership", resource_id=ownership_id
+            )
 
-    return result.to_dict()
+        # 使用 Service 层计算财务汇总
+        service = OwnershipFinancialService()
+        result = service.get_financial_summary(
+            db,
+            ownership_id=ownership_id,
+            ownership_name=ownership_obj.name,
+        )
+
+        return result.to_dict()
+
+    return await db.run_sync(_sync)

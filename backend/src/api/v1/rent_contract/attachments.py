@@ -9,12 +9,13 @@ from typing import Any as AnyType
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....crud.rent_contract import rent_contract
 from ....crud.rent_contract_attachment import rent_contract_attachment_crud
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....services.rent_contract import rent_contract_service
@@ -28,13 +29,13 @@ logger = logging.getLogger(__name__)
     response_model=dict[str, AnyType],
     summary="上传合同附件",
 )
-def upload_contract_attachment(
+async def upload_contract_attachment(
     contract_id: str,
     file: UploadFile = File(..., description="附件文件"),
     file_type: str = Form("other", description="文件类型: contract_scan/id_card/other"),
     description: str | None = Form(None, description="附件描述"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, AnyType]:
     """
     上传合同附件
@@ -44,15 +45,18 @@ def upload_contract_attachment(
     - 图片 (.jpg, .jpeg, .png)
     - Word文档 (.doc, .docx)
     """
+
     try:
-        result = rent_contract_service.upload_contract_attachment(
-            db,
-            contract_id=contract_id,
-            file=file,
-            file_type=file_type,
-            description=description,
-            uploader_id=current_user.id,
-            uploader_name=current_user.full_name or current_user.username,
+        result = await db.run_sync(
+            lambda sync_db: rent_contract_service.upload_contract_attachment(
+                sync_db,
+                contract_id=contract_id,
+                file=file,
+                file_type=file_type,
+                description=description,
+                uploader_id=current_user.id,
+                uploader_name=current_user.full_name or current_user.username,
+            )
         )
         return result
     except Exception as e:
@@ -62,23 +66,31 @@ def upload_contract_attachment(
 
 
 @router.get(
-    "/{contract_id}/attachments", response_model=list[Any], summary="获取合同附件列表"
+    "/{contract_id}/attachments",
+    response_model=list[Any],
+    summary="获取合同附件列表",
 )
-def get_contract_attachments(
+async def get_contract_attachments(
     contract_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
     """
     获取指定合同的所有附件
     """
-    contract = rent_contract.get(db, id=contract_id)
+
+    def _sync(sync_db: Session) -> tuple[object | None, list[Any]]:
+        contract = rent_contract.get(sync_db, id=contract_id)
+        if not contract:
+            return None, []
+        attachments = rent_contract_attachment_crud.get_by_contract(
+            sync_db, contract_id=contract_id
+        )
+        return contract, attachments
+
+    contract, attachments = await db.run_sync(_sync)
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-
-    attachments = rent_contract_attachment_crud.get_by_contract(
-        db, contract_id=contract_id
-    )
 
     return [
         {
@@ -96,34 +108,45 @@ def get_contract_attachments(
 
 
 @router.get(
-    "/{contract_id}/attachments/{attachment_id}/download", summary="下载合同附件"
+    "/{contract_id}/attachments/{attachment_id}/download",
+    summary="下载合同附件",
 )
-def download_contract_attachment(
+async def download_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> FileResponse:
     """
     下载指定的合同附件
     """
-    attachment = rent_contract_attachment_crud.get(
-        db, attachment_id=attachment_id, contract_id=contract_id
-    )
 
-    if not attachment:
+    def _sync_get_attachment(sync_db: Session) -> dict[str, Any] | None:
+        attachment = rent_contract_attachment_crud.get(
+            sync_db, attachment_id=attachment_id, contract_id=contract_id
+        )
+        if not attachment:
+            return None
+        return {
+            "file_path": attachment.file_path,
+            "file_name": attachment.file_name,
+            "mime_type": attachment.mime_type,
+        }
+
+    attachment_data = await db.run_sync(_sync_get_attachment)
+    if not attachment_data:
         raise not_found(
             "附件不存在", resource_type="attachment", resource_id=attachment_id
         )
 
-    file_path = Path(attachment.file_path)
+    file_path = Path(attachment_data["file_path"])
     if not file_path.exists():
         raise not_found("文件不存在", resource_type="file", resource_id=str(file_path))
 
     return FileResponse(
         path=str(file_path),
-        filename=attachment.file_name,
-        media_type=attachment.mime_type or "application/octet-stream",
+        filename=attachment_data["file_name"],
+        media_type=attachment_data["mime_type"] or "application/octet-stream",
     )
 
 
@@ -132,32 +155,44 @@ def download_contract_attachment(
     response_model=dict[str, Any],
     summary="删除合同附件",
 )
-def delete_contract_attachment(
+async def delete_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, str]:
     """
     删除指定的合同附件
     """
-    attachment = rent_contract_attachment_crud.get(
-        db, attachment_id=attachment_id, contract_id=contract_id
-    )
 
-    if not attachment:
+    def _sync_get_path(sync_db: Session) -> str | None:
+        attachment = rent_contract_attachment_crud.get(
+            sync_db, attachment_id=attachment_id, contract_id=contract_id
+        )
+        return attachment.file_path if attachment else None
+
+    attachment_path = await db.run_sync(_sync_get_path)
+    if not attachment_path:
         raise not_found(
             "附件不存在", resource_type="attachment", resource_id=attachment_id
         )
 
-    file_path = Path(attachment.file_path)
+    file_path = Path(attachment_path)
     if file_path.exists():
         try:
             file_path.unlink()
         except Exception as e:
             logger.warning(f"Failed to delete file {file_path}: {e}")
 
-    db.delete(attachment)
-    db.commit()
+    def _sync_delete(sync_db: Session) -> None:
+        attachment = rent_contract_attachment_crud.get(
+            sync_db, attachment_id=attachment_id, contract_id=contract_id
+        )
+        if not attachment:
+            return
+        sync_db.delete(attachment)
+        sync_db.commit()
+
+    await db.run_sync(_sync_delete)
 
     return {"message": "附件已删除"}

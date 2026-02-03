@@ -38,7 +38,9 @@ def admin_user_in_db(db_session: Session, admin_user):
         return existing
 
     # Check by username to avoid unique constraint violations
-    existing_by_name = db_session.query(User).filter(User.username == admin_user.username).first()
+    existing_by_name = (
+        db_session.query(User).filter(User.username == admin_user.username).first()
+    )
     if existing_by_name:
         return existing_by_name
 
@@ -110,14 +112,9 @@ def multiple_notifications(db_session: Session, admin_user_in_db):
 def admin_user_headers(client, admin_user_in_db, monkeypatch):
     """管理员用户认证头 - 并更新 Mock 用户以匹配 admin_user_in_db"""
     from unittest.mock import MagicMock
-    from src.middleware import auth as auth_module
+
     from src.main import app
-    from src.middleware.auth import (
-        get_current_active_user,
-        get_current_user,
-        get_current_user_from_cookie,
-        require_admin,
-    )
+    from src.middleware import auth as auth_module
 
     # Update the mock user in auth module to match the DB user
     mock_user = MagicMock()
@@ -554,6 +551,6 @@ class TestNotificationsEdgeCases:
         if len(data["data"]["items"]) > 1:
             for i in range(len(data["data"]["items"]) - 1):
                 assert (
-                    data["data"]["items"][i]["created_at"] >= data["data"]["items"][i + 1]["created_at"]
+                    data["data"]["items"][i]["created_at"]
+                    >= data["data"]["items"][i + 1]["created_at"]
                 )
-

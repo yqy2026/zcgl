@@ -1,3 +1,4 @@
+
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ from ..models.security_event import SecurityEvent
 class SecurityEventCRUD:
     """安全事件CRUD操作"""
 
-    def _base_query(self, db: Session):
+    def _base_query(self, db: Session) -> Any:
         return db.query(SecurityEvent)
 
     def get_multi_with_count(

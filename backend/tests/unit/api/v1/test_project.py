@@ -439,4 +439,3 @@ class TestSearchProjects:
             f"/api/v1/projects/{project.id}", headers=admin_user_headers
         )
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
-

@@ -81,9 +81,7 @@ def _record_token_blacklist_degraded(
         and now - _last_degrade_alert_ts >= TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS
     ):
         _last_degrade_alert_ts = now
-        logger.warning(
-            "Token blacklist degraded frequently in the last window."
-        )
+        logger.warning("Token blacklist degraded frequently in the last window.")
         security_monitor.record_event(
             "token_blacklist_degraded_frequent",
             count=recent,
@@ -277,7 +275,6 @@ def safe_role_compare(role_value: Any, target_role: Any) -> bool:
     return bool(role_value == target_role)
 
 
-
 async def get_current_user(
     request: Request,
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
@@ -309,14 +306,12 @@ async def get_current_user(
     # 使用共享的JWT验证逻辑
     try:
         token_data = _validate_jwt_token(token)
-    except Exception as e:
+    except Exception:
         raise credentials_exception
 
     # Get user from database
     user = await db.run_sync(
-        lambda sync_db: sync_db.query(User)
-        .filter(User.id == token_data.sub)
-        .first()
+        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
     )
     if user is None:
         raise credentials_exception
@@ -364,9 +359,7 @@ async def get_current_user_from_cookie(
 
     # Get user from database
     user = await db.run_sync(
-        lambda sync_db: sync_db.query(User)
-        .filter(User.id == token_data.sub)
-        .first()
+        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
     )
     if user is None:
         raise unauthorized("Invalid authentication credentials")
@@ -415,9 +408,7 @@ async def get_optional_current_user(
         return None
 
     user = await db.run_sync(
-        lambda sync_db: sync_db.query(User)
-        .filter(User.id == token_data.sub)
-        .first()
+        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
     )
     if user and user.is_active and not user.is_locked_now():
         return user
@@ -777,14 +768,11 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
     - 管理员可以编辑任何合同
     - 其他角色需要通过RBAC服务检查特定权限
     """
-    if user.role == UserRole.ADMIN:
+    if safe_role_compare(user.role, UserRole.ADMIN):
         return True
 
     # 使用RBAC服务进行细粒度权限检查
     try:
-        from ..schemas.rbac import PermissionCheckRequest
-        from ..services.permission.rbac_service import RBACService
-
         rbac_service = AsyncServiceClassAdapter(db, RBACService)
         permission_request = PermissionCheckRequest(
             resource="rent_contract",
@@ -794,7 +782,7 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
         )
 
         result = await rbac_service.check_permission(user.id, permission_request)
-        return result.has_permission
+        return bool(result.has_permission)
     except Exception:
         # 如果RBAC检查失败，默认拒绝权限（安全优先）
         return False

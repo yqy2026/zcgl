@@ -263,4 +263,3 @@ class TestCalculateOverallHealthScore:
 
         result = calculate_overall_health_score(components)
         assert result == 0.0
-

@@ -3,19 +3,20 @@ PDF Import Routes 测试
 测试 PDF 导入路由的端点
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
 from src.database import get_db
+from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db():
@@ -37,6 +38,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+
     def override_get_db():
         yield mock_db
 
@@ -66,6 +68,7 @@ def sample_pdf_import_info():
 # =============================================================================
 # PDF 导入信息 API 测试
 # =============================================================================
+
 
 class TestPDFImportInfo:
     """PDF 导入信息 API 测试"""
@@ -119,6 +122,7 @@ class TestPDFImportInfo:
 # PDF 导入会话 API 测试
 # =============================================================================
 
+
 class TestPDFImportSessions:
     """PDF 导入会话 API 测试"""
 
@@ -140,7 +144,9 @@ class TestPDFImportSessions:
         assert data["data"]["items"] == []
         assert "获取成功" in data["message"]
 
-    @pytest.mark.skip(reason="pdf_session_service module not implemented - requires integration test")
+    @pytest.mark.skip(
+        reason="pdf_session_service module not implemented - requires integration test"
+    )
     def test_get_pdf_import_sessions_with_data(self, client):
         """
         测试获取包含数据的 PDF 导入会话列表
@@ -150,7 +156,9 @@ class TestPDFImportSessions:
         Then: 返回会话列表
         """
         # Arrange
-        with patch("src.services.document.pdf_session_service.get_sessions") as mock_get:
+        with patch(
+            "src.services.document.pdf_session_service.get_sessions"
+        ) as mock_get:
             mock_get.return_value = [
                 {
                     "session_id": "session_001",
@@ -173,10 +181,13 @@ class TestPDFImportSessions:
 # PDF 上传 API 测试
 # =============================================================================
 
+
 class TestPDFUpload:
     """PDF 上传 API 测试"""
 
-    @pytest.mark.skip(reason="PDF upload requires file handling and PDF processing service - integration test")
+    @pytest.mark.skip(
+        reason="PDF upload requires file handling and PDF processing service - integration test"
+    )
     def test_upload_pdf_for_import(self, client):
         """
         测试上传 PDF 进行智能导入
@@ -269,10 +280,13 @@ class TestPDFUpload:
 # 错误处理测试
 # =============================================================================
 
+
 class TestErrorHandling:
     """错误处理测试"""
 
-    @pytest.mark.skip(reason="Test client fixture bypasses auth - requires proper auth test setup")
+    @pytest.mark.skip(
+        reason="Test client fixture bypasses auth - requires proper auth test setup"
+    )
     def test_unauthorized_access(self, client):
         """
         测试未授权访问
@@ -299,7 +313,9 @@ class TestErrorHandling:
         Then: 返回 500 错误
         """
         # Arrange
-        with patch("src.constants.file_size_constants.DEFAULT_MAX_FILE_SIZE") as mock_size:
+        with patch(
+            "src.constants.file_size_constants.DEFAULT_MAX_FILE_SIZE"
+        ) as mock_size:
             mock_size.side_effect = Exception("Configuration error")
 
             # Act
@@ -308,11 +324,13 @@ class TestErrorHandling:
             # Assert
             # 应该返回 200，因为这是简单的配置读取
             # 如果有数据库操作，可能会返回 500
+            assert response.status_code == 200
 
 
 # =============================================================================
 # 集成测试
 # =============================================================================
+
 
 class TestIntegration:
     """集成测试"""
@@ -343,4 +361,3 @@ class TestIntegration:
         # Step 3: 查询会话列表
         sessions_response = client.get("/api/v1/documents/pdf-import/sessions")
         assert sessions_response.status_code == 200
-
