@@ -6,14 +6,13 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from .....core.exception_handler import internal_error, not_found
 from .....crud.auth import UserSessionCRUD
 from .....database import get_async_db
 from .....middleware.auth import get_current_active_user
 from .....schemas.auth import UserResponse, UserSessionResponse
-from .....services.core.session_service import SessionService
+from .....services.core.session_service import AsyncSessionService
 
 router = APIRouter(prefix="/sessions", tags=["会话管理"])
 
@@ -24,12 +23,9 @@ async def get_user_sessions(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> list[UserSessionResponse]:
     """获取当前用户的所有会话"""
-    def _sync(sync_db: Session) -> list[UserSessionResponse]:
-        session_crud = UserSessionCRUD()
-        sessions = session_crud.get_user_sessions(sync_db, current_user.id)
-        return [UserSessionResponse.model_validate(session) for session in sessions]
-
-    return await db.run_sync(_sync)
+    session_crud = UserSessionCRUD()
+    sessions = await session_crud.get_user_sessions_async(db, current_user.id)
+    return [UserSessionResponse.model_validate(session) for session in sessions]
 
 
 @router.delete("/{session_id}", summary="撤销会话")
@@ -39,19 +35,18 @@ async def revoke_session(
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, str]:
     """撤销指定会话"""
-    def _sync(sync_db: Session) -> dict[str, str]:
-        session_service = SessionService(sync_db)
-        session_crud = UserSessionCRUD()
+    session_service = AsyncSessionService(db)
+    session_crud = UserSessionCRUD()
 
-        # 获取会话记录
-        session = session_crud.get(sync_db, session_id)
-        if not session or str(session.user_id) != str(current_user.id):
-            raise not_found("会话不存在", resource_type="session", resource_id=session_id)
+    session = await session_crud.get_async(db, session_id)
+    if not session or str(session.user_id) != str(current_user.id):
+        raise not_found("会话不存在", resource_type="session", resource_id=session_id)
 
-        # 使用refresh_token撤销会话（API修复：传递refresh_token而非session_id）
-        success = session_service.revoke_session(session.refresh_token)
-        if success:
-            return {"message": "会话已撤销"}
+    refresh_token = getattr(session, "refresh_token", None)
+    if not refresh_token:
         raise internal_error("撤销会话失败")
 
-    return await db.run_sync(_sync)
+    success = await session_service.revoke_session(refresh_token)
+    if success:
+        return {"message": "会话已撤销"}
+    raise internal_error("撤销会话失败")

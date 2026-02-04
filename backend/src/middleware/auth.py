@@ -13,7 +13,6 @@ from fastapi import Cookie, Depends, Request
 from jwt import PyJWTError as JWTError
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ..constants.security_constants import (
     TOKEN_BLACKLIST_DEGRADE_THRESHOLD,
@@ -25,6 +24,7 @@ from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
 from ..core.environment import is_production
 from ..core.exception_handler import bad_request, forbidden, unauthorized
+from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
@@ -309,9 +309,8 @@ async def get_current_user(
         raise credentials_exception
 
     # Get user from database
-    user = await db.run_sync(
-        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
-    )
+    user_stmt = select(User).where(User.id == token_data.sub)
+    user = (await db.execute(user_stmt)).scalars().first()
     if user is None:
         raise credentials_exception
 
@@ -357,9 +356,8 @@ async def get_current_user_from_cookie(
         raise unauthorized("Invalid token")
 
     # Get user from database
-    user = await db.run_sync(
-        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
-    )
+    user_stmt = select(User).where(User.id == token_data.sub)
+    user = (await db.execute(user_stmt)).scalars().first()
     if user is None:
         raise unauthorized("Invalid authentication credentials")
 
@@ -406,9 +404,8 @@ async def get_optional_current_user(
     except Exception:
         return None
 
-    user = await db.run_sync(
-        lambda sync_db: sync_db.query(User).filter(User.id == token_data.sub).first()
-    )
+    user_stmt = select(User).where(User.id == token_data.sub)
+    user = (await db.execute(user_stmt)).scalars().first()
     if user and user.is_active and not user.is_locked_now():
         return user
 
@@ -510,24 +507,22 @@ class AuditLogger:
             user_agent = request.headers.get("user-agent", "")
             request_params = str(request.query_params) if request.query_params else None
 
-            await db.run_sync(
-                lambda sync_db: self.log_action(
-                    db=sync_db,
-                    user=current_user,
-                    api_endpoint=request.url.path,
-                    http_method=request.method,
-                    request_params=request_params,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                )
+            await self.log_action(
+                db=db,
+                user=current_user,
+                api_endpoint=request.url.path,
+                http_method=request.method,
+                request_params=request_params,
+                ip_address=ip_address,
+                user_agent=user_agent,
             )
         except Exception as e:
             logger.warning(f"审计日志记录失败: {e}")
         return current_user
 
-    def log_action(
+    async def log_action(
         self,
-        db: Session,
+        db: AsyncSession,
         user: User,
         resource_id: str | None = None,
         resource_name: str | None = None,
@@ -541,11 +536,8 @@ class AuditLogger:
         user_agent: str | None = None,
         session_id: str | None = None,
     ) -> None:
-        """记录操作日志"""
-        from ..crud.auth import AuditLogCRUD
-
         audit_crud = AuditLogCRUD()
-        audit_crud.create(
+        await audit_crud.create_async(
             db=db,
             user_id=user.id,
             action=self.action,

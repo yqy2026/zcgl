@@ -12,15 +12,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....schemas.auth import UserResponse
 from ....security.route_guards import debug_only, require_localhost
-from ....services.core.authentication_service import AuthenticationService
+from ....services.core.authentication_service import AsyncAuthenticationService
 from ....services.core.password_service import PasswordService
-from ....services.core.user_management_service import UserManagementService
+from ....services.core.user_management_service import AsyncUserManagementService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Auth Debug"], dependencies=[Depends(require_localhost)])
@@ -41,79 +40,69 @@ async def test_features() -> dict[str, Any]:
 @debug_only
 async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]:
     """调试认证流程，测试各个步骤"""
+    try:
+        test_username = os.getenv("DEBUG_AUTH_USERNAME", "admin")
+        test_password = os.getenv("DEBUG_AUTH_PASSWORD")
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            # 从环境变量获取测试凭据
-            test_username = os.getenv("DEBUG_AUTH_USERNAME", "admin")
-            test_password = os.getenv("DEBUG_AUTH_PASSWORD")
-
-            if not test_password:
-                return {
-                    "error": "Test credentials not configured",
-                    "hint": "Set DEBUG_AUTH_PASSWORD environment variable for debug endpoint",
-                }
-
-            auth_service = AuthenticationService(db)
-            user_service = UserManagementService(db)
-            password_service = PasswordService()
-
-            # 1. 测试用户查询
-            admin_user = user_service.get_user_by_username(test_username)
-            if not admin_user:
-                return {"error": f"Test user '{test_username}' not found"}
-
-            # 2. 测试密码验证
-            password_valid = password_service.verify_password(
-                test_password, admin_user.password_hash
-            )
-
-            # 3. 测试用户认证
-            auth_error_debug: str | None = None
-            authenticated_user = None
-            try:
-                authenticated_user = auth_service.authenticate_user(
-                    test_username, test_password
-                )
-                auth_success = authenticated_user is not None
-            except Exception as auth_exc:
-                auth_success = False
-                auth_error_debug = str(auth_exc)
-
-            # 4. 测试token创建
-            token_error: str | None = None
-            try:
-                if authenticated_user:
-                    tokens = auth_service.create_tokens(authenticated_user)
-                    token_success = True
-                    access_token_length = (
-                        len(tokens.access_token) if tokens.access_token else 0
-                    )
-                else:
-                    token_success = False
-                    access_token_length = 0
-            except Exception as e:
-                token_success = False
-                access_token_length = 0
-                token_error = str(e)
-
+        if not test_password:
             return {
-                "admin_user_found": admin_user is not None,
-                "admin_username": admin_user.username if admin_user else None,
-                "admin_role": admin_user.role if admin_user else None,
-                "password_valid": password_valid,
-                "auth_success": auth_success,
-                "auth_error": auth_error_debug,
-                "token_success": token_success,
-                "token_error": token_error,
-                "access_token_length": access_token_length,
+                "error": "Test credentials not configured",
+                "hint": "Set DEBUG_AUTH_PASSWORD environment variable for debug endpoint",
             }
 
-        except Exception as e:
-            return {"error": f"Debug endpoint error: {str(e)}"}
+        auth_service = AsyncAuthenticationService(db)
+        user_service = AsyncUserManagementService(db)
+        password_service = PasswordService()
 
-    return await db.run_sync(_sync)
+        admin_user = await user_service.get_user_by_username(test_username)
+        if not admin_user:
+            return {"error": f"Test user '{test_username}' not found"}
+
+        password_valid = password_service.verify_password(
+            test_password, admin_user.password_hash
+        )
+
+        auth_error_debug: str | None = None
+        authenticated_user = None
+        try:
+            authenticated_user = await auth_service.authenticate_user(
+                test_username, test_password
+            )
+            auth_success = authenticated_user is not None
+        except Exception as auth_exc:
+            auth_success = False
+            auth_error_debug = str(auth_exc)
+
+        token_error: str | None = None
+        try:
+            if authenticated_user:
+                tokens = auth_service.create_tokens(authenticated_user)
+                token_success = True
+                access_token_length = (
+                    len(tokens.access_token) if tokens.access_token else 0
+                )
+            else:
+                token_success = False
+                access_token_length = 0
+        except Exception as e:
+            token_success = False
+            access_token_length = 0
+            token_error = str(e)
+
+        return {
+            "admin_user_found": admin_user is not None,
+            "admin_username": admin_user.username if admin_user else None,
+            "admin_role": admin_user.role if admin_user else None,
+            "password_valid": password_valid,
+            "auth_success": auth_success,
+            "auth_error": auth_error_debug,
+            "token_success": token_success,
+            "token_error": token_error,
+            "access_token_length": access_token_length,
+        }
+
+    except Exception as e:
+        return {"error": f"Debug endpoint error: {str(e)}"}
 
 
 @router.get("/me", summary="调试ME端点")

@@ -11,7 +11,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from .....core.exception_handler import (
     BaseBusinessError,
@@ -45,7 +44,7 @@ from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
 from .....services.core.password_service import PasswordService
-from .....services.core.user_management_service import UserManagementService
+from .....services.core.user_management_service import AsyncUserManagementService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
@@ -74,30 +73,25 @@ async def get_users(
     - 支持关键词搜索
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        user_crud = UserCRUD()
+    user_crud = UserCRUD()
 
-        # 获取用户列表
-        users, total = user_crud.get_multi_with_filters(
-            db=db,
-            skip=(params.page - 1) * params.page_size,
-            limit=params.page_size,
-            search=params.search,
-            role=params.role,
-            is_active=params.is_active,
-            organization_id=params.organization_id,
-        )
+    users, total = await user_crud.get_multi_with_filters_async(
+        db=db,
+        skip=(params.page - 1) * params.page_size,
+        limit=params.page_size,
+        search=params.search,
+        role=params.role,
+        is_active=params.is_active,
+        organization_id=params.organization_id,
+    )
 
-        return ResponseHandler.paginated(
-            data=[UserResponse.model_validate(user) for user in users],
-            page=params.page,
-            page_size=params.page_size,
-            total=total,
-            message="获取用户列表成功",
-        )
-
-    return await db.run_sync(_sync)
+    return ResponseHandler.paginated(
+        data=[UserResponse.model_validate(user) for user in users],
+        page=params.page,
+        page_size=params.page_size,
+        total=total,
+        message="获取用户列表成功",
+    )
 
 
 @router.post("", response_model=UserResponse, summary="创建用户")
@@ -113,16 +107,12 @@ async def create_user(
     - 自动哈希密码
     """
 
-    def _sync(sync_db: Session) -> UserResponse:
-        db = sync_db
-        try:
-            user_crud = UserCRUD()
-            user = user_crud.create(db, user_data)
-            return UserResponse.model_validate(user)
-        except BusinessLogicError as e:
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
+    try:
+        user_crud = UserCRUD()
+        user = await user_crud.create_async(db, user_data)
+        return UserResponse.model_validate(user)
+    except BusinessLogicError as e:
+        raise bad_request(str(e))
 
 
 @router.get("/{user_id}", response_model=UserResponse, summary="获取用户详情")
@@ -138,23 +128,18 @@ async def get_user(
     - 普通用户只能查看自己的信息
     """
 
-    def _sync(sync_db: Session) -> UserResponse:
-        db = sync_db
-        user_crud = UserCRUD()
+    user_crud = UserCRUD()
 
-        # 权限检查
-        if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
-            current_user.id != user_id
-        ):
-            raise forbidden("无权访问该用户信息")
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
+        raise forbidden("无权访问该用户信息")
 
-        user = user_crud.get(db, user_id)
-        if not user:
-            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+    user = await user_crud.get_async(db, user_id)
+    if not user:
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-        return UserResponse.model_validate(user)
-
-    return await db.run_sync(_sync)
+    return UserResponse.model_validate(user)
 
 
 @router.put("/{user_id}", response_model=UserResponse, summary="更新用户")
@@ -172,26 +157,21 @@ async def update_user(
     - 密码更新需要当前密码验证
     """
 
-    def _sync(sync_db: Session) -> UserResponse:
-        db = sync_db
-        user_crud = UserCRUD()
+    user_crud = UserCRUD()
 
-        # 权限检查
-        if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
-            current_user.id != user_id
-        ):
-            raise forbidden("无权修改该用户信息")
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
+        raise forbidden("无权修改该用户信息")
 
-        try:
-            existing_user = user_crud.get(db, str(user_id))
-            if not existing_user:
-                raise not_found("用户不存在", resource_type="user", resource_id=user_id)
-            user = user_crud.update(db, existing_user, user_data)
-            return UserResponse.model_validate(user)
-        except BusinessLogicError as e:
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
+    try:
+        existing_user = await user_crud.get_async(db, str(user_id))
+        if not existing_user:
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+        user = await user_crud.update_async(db, existing_user, user_data)
+        return UserResponse.model_validate(user)
+    except BusinessLogicError as e:
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/change-password", summary="修改密码")
@@ -209,43 +189,37 @@ async def change_password(
     - 需要验证当前密码
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        user_service = UserManagementService(db)
-        user_crud = UserCRUD()
-
-        # 权限检查
-        if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
-            current_user.id != user_id
-        ):
-            raise forbidden("无权修改该用户密码")
-
-        user = user_crud.get(db, user_id)
-        if not user:
-            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
-
-        try:
-            success = user_service.change_password(
-                user=user,
-                current_password=password_data.current_password,
-                new_password=password_data.new_password,
-            )
-            if success:
-                return {"message": "密码修改成功"}
-            else:
-                raise internal_error("密码修改失败")
-        except BusinessLogicError as e:
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
-
-
-def _deactivate_user(user_id: str, db: Session) -> dict[str, str]:
+    user_service = AsyncUserManagementService(db)
     user_crud = UserCRUD()
 
-    user = user_crud.get(db, str(user_id))
+    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+        current_user.id != user_id
+    ):
+        raise forbidden("无权修改该用户密码")
+
+    user = await user_crud.get_async(db, user_id)
+    if not user:
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+
+    try:
+        success = await user_service.change_password(
+            user=user,
+            current_password=password_data.current_password,
+            new_password=password_data.new_password,
+        )
+        if success:
+            return {"message": "密码修改成功"}
+        raise internal_error("密码修改失败")
+    except BusinessLogicError as e:
+        raise bad_request(str(e))
+
+
+async def _deactivate_user(user_id: str, db: AsyncSession) -> dict[str, str]:
+    user_crud = UserCRUD()
+
+    user = await user_crud.get_async(db, str(user_id))
     if user:
-        success = user_crud.delete(db, str(user_id))
+        success = await user_crud.delete_async(db, str(user_id))
     else:
         success = False
     if not success:
@@ -267,11 +241,7 @@ async def deactivate_user(
     - 撤销所有会话
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        return _deactivate_user(user_id=user_id, db=db)
-
-    return await db.run_sync(_sync)
+    return await _deactivate_user(user_id=user_id, db=db)
 
 
 @router.delete("/{user_id}", summary="删除用户")
@@ -287,11 +257,7 @@ async def delete_user(
     - 撤销所有会话
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        return _deactivate_user(user_id=user_id, db=db)
-
-    return await db.run_sync(_sync)
+    return await _deactivate_user(user_id=user_id, db=db)
 
 
 @router.post("/{user_id}/activate", summary="激活用户")
@@ -307,19 +273,13 @@ async def activate_user(
     - 解除账户锁定
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        user_service = UserManagementService(db)
+    user_service = AsyncUserManagementService(db)
 
-        success = user_service.activate_user(user_id)
-        if not success:
-            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+    success = await user_service.activate_user(user_id)
+    if not success:
+        raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-        return {"message": "用户已激活"}
-
-    # ==================== User Account Management Endpoints ====================
-
-    return await db.run_sync(_sync)
+    return {"message": "用户已激活"}
 
 
 @router.post("/{user_id}/lock", summary="锁定用户")
@@ -335,40 +295,35 @@ async def lock_user(
     锁定后用户无法登录
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            user_crud = UserCRUD()
-            user = user_crud.get(db, user_id)
+    try:
+        user_crud = UserCRUD()
+        user = await user_crud.get_async(db, user_id)
 
-            if not user:
-                raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+        if not user:
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-            setattr(user, "is_locked", True)
-            setattr(user, "updated_at", datetime.now(UTC))
-            db.commit()
-            db.refresh(user)
+        setattr(user, "is_locked", True)
+        setattr(user, "updated_at", datetime.now(UTC))
+        await db.commit()
+        await db.refresh(user)
 
-            # 记录审计日志
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db=db,
-                user_id=current_user.id,
-                action="user_locked",
-                resource_type="user",
-                resource_id=user_id,
-                ip_address=get_client_ip(request),
-                user_agent=request.headers.get("user-agent", ""),
-            )
+        audit_crud = AuditLogCRUD()
+        await audit_crud.create_async(
+            db=db,
+            user_id=current_user.id,
+            action="user_locked",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
+        )
 
-            return {"success": True, "message": f"用户 {user.username} 已锁定"}
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            db.rollback()
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
+        return {"success": True, "message": f"用户 {user.username} 已锁定"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        await db.rollback()
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/unlock", summary="解锁用户账户")
@@ -387,40 +342,35 @@ async def unlock_user_account(
     The GET version at line 661 has been removed to avoid duplicate endpoints.
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            user_crud = UserCRUD()
-            user = user_crud.get(db, user_id)
+    try:
+        user_crud = UserCRUD()
+        user = await user_crud.get_async(db, user_id)
 
-            if not user:
-                raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+        if not user:
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-            setattr(user, "is_locked", False)
-            setattr(user, "updated_at", datetime.now(UTC))
-            db.commit()
-            db.refresh(user)
+        setattr(user, "is_locked", False)
+        setattr(user, "updated_at", datetime.now(UTC))
+        await db.commit()
+        await db.refresh(user)
 
-            # 记录审计日志
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db=db,
-                user_id=current_user.id,
-                action="user_unlocked",
-                resource_type="user",
-                resource_id=user_id,
-                ip_address=get_client_ip(request),
-                user_agent=request.headers.get("user-agent", ""),
-            )
+        audit_crud = AuditLogCRUD()
+        await audit_crud.create_async(
+            db=db,
+            user_id=current_user.id,
+            action="user_unlocked",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
+        )
 
-            return {"success": True, "message": f"用户 {user.username} 已解锁"}
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            db.rollback()
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
+        return {"success": True, "message": f"用户 {user.username} 已解锁"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        await db.rollback()
+        raise bad_request(str(e))
 
 
 @router.post("/{user_id}/reset-password", summary="重置用户密码")
@@ -438,52 +388,46 @@ async def reset_user_password(
     - 适用于用户忘记密码等情况
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            reset_request = password_data
+    try:
+        reset_request = password_data
 
-            user_crud = UserCRUD()
-            password_service = PasswordService()
+        user_crud = UserCRUD()
+        password_service = PasswordService()
 
-            user = user_crud.get(db, user_id)
-            if not user:
-                raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+        user = await user_crud.get_async(db, user_id)
+        if not user:
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-            # 设置新密码
-            setattr(
-                user,
-                "password_hash",
-                password_service.get_password_hash(reset_request.new_password),
-            )
-            setattr(user, "updated_at", datetime.now(UTC))
-            db.commit()
-            db.refresh(user)
+        setattr(
+            user,
+            "password_hash",
+            password_service.get_password_hash(reset_request.new_password),
+        )
+        setattr(user, "updated_at", datetime.now(UTC))
+        await db.commit()
+        await db.refresh(user)
 
-            # 记录审计日志
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db=db,
-                user_id=current_user.id,
-                action="password_reset",
-                resource_type="user",
-                resource_id=user_id,
-                ip_address=get_client_ip(request),
-                user_agent=request.headers.get("user-agent", ""),
-            )
+        audit_crud = AuditLogCRUD()
+        await audit_crud.create_async(
+            db=db,
+            user_id=current_user.id,
+            action="password_reset",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent", ""),
+        )
 
-            return {
-                "success": True,
-                "message": f"用户 {user.username} 密码已重置",
-                "user_id": user_id,
-            }
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            db.rollback()
-            raise bad_request(str(e))
-
-    return await db.run_sync(_sync)
+        return {
+            "success": True,
+            "message": f"用户 {user.username} 密码已重置",
+            "user_id": user_id,
+        }
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        await db.rollback()
+        raise bad_request(str(e))
 
 
 @router.get(
@@ -497,19 +441,13 @@ async def get_user_statistics(
     获取用户相关统计数据（仅管理员）
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            from .....services.core.user_management_service import UserManagementService
+    try:
+        user_service = AsyncUserManagementService(db)
+        stats = await user_service.get_statistics()
 
-            user_service = UserManagementService(db)
-            stats = user_service.get_statistics()
-
-            return {
-                "success": True,
-                "data": stats,
-            }
-        except Exception as e:
-            raise internal_error(str(e))
-
-    return await db.run_sync(_sync)
+        return {
+            "success": True,
+            "data": stats,
+        }
+    except Exception as e:
+        raise internal_error(str(e))

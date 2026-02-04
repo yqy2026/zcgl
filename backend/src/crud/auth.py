@@ -10,7 +10,7 @@ from typing import Any, cast
 from datetime import datetime, timedelta
 
 import bcrypt
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -25,17 +25,63 @@ class UserCRUD:
     def _count_query(self, db: Session) -> Any:
         return db.query(User)
 
+    def _apply_user_filters_stmt(
+        self,
+        stmt: Any,
+        *,
+        search: str | None = None,
+        role: UserRole | str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> Any:
+        if search:
+            search_filter = or_(
+                User.username.ilike(f"%{search}%"),
+                User.email.ilike(f"%{search}%"),
+                User.full_name.ilike(f"%{search}%"),
+            )
+            stmt = stmt.where(search_filter)
+
+        if role is not None:
+            stmt = stmt.where(User.role == role)
+
+        if is_active is not None:
+            stmt = stmt.where(User.is_active == is_active)
+
+        if organization_id is not None:
+            stmt = stmt.where(
+                or_(
+                    User.default_organization_id == organization_id,
+                )
+            )
+
+        return stmt
+
     def get(self, db: Session, user_id: str) -> User | None:
         """根据ID获取用户"""
         return db.query(User).filter(User.id == user_id).first()
+
+    async def get_async(self, db: AsyncSession, user_id: str) -> User | None:
+        stmt = select(User).where(User.id == user_id)
+        return (await db.execute(stmt)).scalars().first()
 
     def get_by_username(self, db: Session, username: str) -> User | None:
         """根据用户名获取用户"""
         return db.query(User).filter(User.username == username).first()
 
+    async def get_by_username_async(
+        self, db: AsyncSession, username: str
+    ) -> User | None:
+        stmt = select(User).where(User.username == username)
+        return (await db.execute(stmt)).scalars().first()
+
     def get_by_email(self, db: Session, email: str) -> User | None:
         """根据邮箱获取用户"""
         return db.query(User).filter(User.email == email).first()
+
+    async def get_by_email_async(self, db: AsyncSession, email: str) -> User | None:
+        stmt = select(User).where(User.email == email)
+        return (await db.execute(stmt)).scalars().first()
 
     def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> list[User]:
         """获取用户列表"""
@@ -74,6 +120,30 @@ class UserCRUD:
         # 分页
         users = query.offset(skip).limit(limit).all()
 
+        return users, total
+
+    async def get_multi_with_filters_async(
+        self,
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        role: UserRole | str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> tuple[list[User], int]:
+        stmt = select(User)
+        stmt = self._apply_user_filters_stmt(
+            stmt,
+            search=search,
+            role=role,
+            is_active=is_active,
+            organization_id=organization_id,
+        )
+        total_stmt = select(func.count()).select_from(stmt.subquery())
+        total = int((await db.execute(total_stmt)).scalar() or 0)
+        result = await db.execute(stmt.offset(skip).limit(limit))
+        users = list(result.scalars().all())
         return users, total
 
     def _apply_user_filters(
@@ -148,6 +218,28 @@ class UserCRUD:
         db.refresh(db_user)
         return db_user
 
+    async def create_async(self, db: AsyncSession, obj_in: UserCreate) -> User:
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(obj_in.password.encode("utf-8"), salt).decode(
+            "utf-8"
+        )
+
+        role_value = obj_in.role.value if hasattr(obj_in.role, "value") else obj_in.role
+
+        db_user = User()
+        db_user.username = obj_in.username
+        db_user.email = obj_in.email
+        db_user.full_name = obj_in.full_name
+        db_user.password_hash = hashed_password
+        db_user.role = role_value
+        db_user.employee_id = obj_in.employee_id
+        db_user.default_organization_id = obj_in.default_organization_id
+
+        db.add(db_user)
+        await db.commit()
+        await db.refresh(db_user)
+        return db_user
+
     def update(self, db: Session, db_obj: User, obj_in: UserUpdate) -> User:
         """
         更新用户 (纯CRUD操作)
@@ -167,6 +259,20 @@ class UserCRUD:
         db.refresh(db_obj)
         return db_obj
 
+    async def update_async(
+        self, db: AsyncSession, db_obj: User, obj_in: UserUpdate
+    ) -> User:
+        update_data = obj_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == "role" and value is not None:
+                value = value.value if hasattr(value, "value") else value
+            setattr(db_obj, field, value)
+
+        db_obj.updated_at = datetime.now()
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
     def delete(self, db: Session, user_id: str) -> bool:
         """删除用户（软删除）"""
         user = self.get(db, user_id)
@@ -176,6 +282,15 @@ class UserCRUD:
         # 软删除
         user.is_active = False
         db.commit()
+        return True
+
+    async def delete_async(self, db: AsyncSession, user_id: str) -> bool:
+        user = await self.get_async(db, user_id)
+        if not user:
+            return False
+
+        user.is_active = False
+        await db.commit()
         return True
 
     def count(self, db: Session) -> int:
@@ -235,6 +350,12 @@ class UserSessionCRUD:
         """根据ID获取会话"""
         return db.query(UserSession).filter(UserSession.id == session_id).first()
 
+    async def get_async(
+        self, db: AsyncSession, session_id: str
+    ) -> UserSession | None:
+        stmt = select(UserSession).where(UserSession.id == session_id)
+        return (await db.execute(stmt)).scalars().first()
+
     def get_by_refresh_token(
         self, db: Session, refresh_token: str
     ) -> UserSession | None:
@@ -245,6 +366,12 @@ class UserSessionCRUD:
             .first()
         )
 
+    async def get_by_refresh_token_async(
+        self, db: AsyncSession, refresh_token: str
+    ) -> UserSession | None:
+        stmt = select(UserSession).where(UserSession.refresh_token == refresh_token)
+        return (await db.execute(stmt)).scalars().first()
+
     def get_user_sessions(
         self, db: Session, user_id: str, active_only: bool = True
     ) -> list[UserSession]:
@@ -253,6 +380,15 @@ class UserSessionCRUD:
         if active_only:
             query = query.filter(UserSession.is_active)
         return query.order_by(desc(UserSession.created_at)).all()
+
+    async def get_user_sessions_async(
+        self, db: AsyncSession, user_id: str, active_only: bool = True
+    ) -> list[UserSession]:
+        stmt = select(UserSession).where(UserSession.user_id == user_id)
+        if active_only:
+            stmt = stmt.where(UserSession.is_active)
+        result = await db.execute(stmt.order_by(desc(UserSession.created_at)))
+        return list(result.scalars().all())
 
     def create(
         self,
@@ -276,6 +412,27 @@ class UserSessionCRUD:
         db.refresh(user_session)
         return user_session
 
+    async def create_async(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        refresh_token: str,
+        device_info: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession:
+        user_session = UserSession()
+        user_session.user_id = user_id
+        user_session.refresh_token = refresh_token
+        user_session.device_info = device_info
+        user_session.ip_address = ip_address
+        user_session.user_agent = user_agent
+        user_session.expires_at = datetime.now() + timedelta(days=7)
+        db.add(user_session)
+        await db.commit()
+        await db.refresh(user_session)
+        return user_session
+
     def deactivate(self, db: Session, session_id: str) -> bool:
         """停用会话"""
         session = self.get(db, session_id)
@@ -284,6 +441,15 @@ class UserSessionCRUD:
 
         session.is_active = False
         db.commit()
+        return True
+
+    async def deactivate_async(self, db: AsyncSession, session_id: str) -> bool:
+        session = await self.get_async(db, session_id)
+        if not session:
+            return False
+
+        session.is_active = False
+        await db.commit()
         return True
 
     def deactivate_by_user(self, db: Session, user_id: str) -> int:
@@ -295,6 +461,15 @@ class UserSessionCRUD:
         )
         db.commit()
         return count
+
+    async def deactivate_by_user_async(self, db: AsyncSession, user_id: str) -> int:
+        result = await db.execute(
+            update(UserSession)
+            .where(UserSession.user_id == user_id, UserSession.is_active.is_(True))
+            .values({AuthFields.IS_ACTIVE: False})
+        )
+        await db.commit()
+        return int(result.rowcount or 0)
 
     def cleanup_expired_sessions(self, db: Session) -> int:
         """清理过期会话"""
@@ -357,6 +532,10 @@ class AuditLogCRUD:
             self._audit_query(db).filter(AuditLog.id == log_id).first(),
         )
 
+    async def get_async(self, db: AsyncSession, log_id: str) -> AuditLog | None:
+        stmt = select(AuditLog).where(AuditLog.id == log_id)
+        return (await db.execute(stmt)).scalars().first()
+
     def get_multi(
         self,
         db: Session,
@@ -384,6 +563,37 @@ class AuditLogCRUD:
         # 分页
         logs = query.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit).all()
 
+        return logs, total
+
+    async def get_multi_async(
+        self,
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100,
+        user_id: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> tuple[list[AuditLog], int]:
+        stmt = select(AuditLog)
+        if user_id:
+            stmt = stmt.where(AuditLog.user_id == user_id)
+        if action:
+            stmt = stmt.where(AuditLog.action.ilike(f"%{action}%"))
+        if resource_type:
+            stmt = stmt.where(AuditLog.resource_type == resource_type)
+        if start_date:
+            stmt = stmt.where(AuditLog.created_at >= start_date)
+        if end_date:
+            stmt = stmt.where(AuditLog.created_at <= end_date)
+
+        total_stmt = select(func.count()).select_from(stmt.subquery())
+        total = int((await db.execute(total_stmt)).scalar() or 0)
+        result = await db.execute(
+            stmt.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit)
+        )
+        logs = list(result.scalars().all())
         return logs, total
 
     def create(
@@ -440,6 +650,54 @@ class AuditLogCRUD:
         db.refresh(audit_log)
         return audit_log
 
+    async def create_async(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        action: str,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        resource_name: str | None = None,
+        api_endpoint: str | None = None,
+        http_method: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
+        response_status: int | None = None,
+        response_message: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> AuditLog | None:
+        user_stmt = select(User).where(User.id == user_id)
+        user = (await db.execute(user_stmt)).scalars().first()
+        if not user:
+            return None
+
+        audit_log = AuditLog()
+        audit_log.user_id = user_id
+        audit_log.username = user.username
+        audit_log.user_role = (
+            user.role.value if hasattr(user.role, "value") else user.role
+        )
+        audit_log.action = action
+        audit_log.resource_type = resource_type
+        audit_log.resource_id = resource_id
+        audit_log.resource_name = resource_name
+        audit_log.api_endpoint = api_endpoint
+        audit_log.http_method = http_method
+        audit_log.request_params = request_params
+        audit_log.request_body = request_body
+        audit_log.response_status = response_status
+        audit_log.response_message = response_message
+        audit_log.ip_address = ip_address
+        audit_log.user_agent = user_agent
+        audit_log.session_id = session_id
+
+        db.add(audit_log)
+        await db.commit()
+        await db.refresh(audit_log)
+        return audit_log
+
     def count(self, db: Session) -> int:
         """审计日志总数"""
         result = self._audit_query(db).with_entities(func.count(AuditLog.id)).scalar()
@@ -488,6 +746,42 @@ class AuditLogCRUD:
         successful_logins = int(successful_logins or 0)
 
         # 失败登录次数
+        failed_logins = max(total_logins - successful_logins, 0)
+
+        return {
+            "total_logins": total_logins,
+            "successful_logins": successful_logins,
+            "failed_logins": failed_logins,
+            "success_rate": round(successful_logins / total_logins * 100, 2)
+            if total_logins > 0
+            else 0,
+        }
+
+    async def get_login_statistics_async(
+        self, db: AsyncSession, days: int = 7
+    ) -> dict[str, Any]:
+        from datetime import datetime, timedelta
+
+        start_date = datetime.now() - timedelta(days=days)
+        total_stmt = (
+            select(func.count(AuditLog.id))
+            .where(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+            )
+            .select_from(AuditLog)
+        )
+        success_stmt = (
+            select(func.count(AuditLog.id))
+            .where(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+                AuditLog.response_status == 200,
+            )
+            .select_from(AuditLog)
+        )
+        total_logins = int((await db.execute(total_stmt)).scalar() or 0)
+        successful_logins = int((await db.execute(success_stmt)).scalar() or 0)
         failed_logins = max(total_logins - successful_logins, 0)
 
         return {

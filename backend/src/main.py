@@ -57,6 +57,13 @@ env = get_environment()
 logger.info(f"当前环境: {env.value}")
 logger.info(f"依赖策略: {get_dependency_policy().value}")
 allow_mock_registry = settings.ALLOW_MOCK_REGISTRY or is_testing()
+if is_production() and settings.ALLOW_MOCK_REGISTRY:
+    raise ConfigurationError(
+        "生产环境禁止启用 ALLOW_MOCK_REGISTRY",
+        config_key="ALLOW_MOCK_REGISTRY",
+    )
+if is_production():
+    allow_mock_registry = False
 
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
@@ -70,6 +77,11 @@ if hasattr(router_registry_module, "route_registry"):
 elif allow_mock_registry:
     route_registry = create_mock_registry()
 else:
+    if is_production():
+        raise ConfigurationError(
+            "缺少 route_registry（生产环境禁止降级）",
+            config_key="route_registry",
+        )
     raise ConfigurationError(
         "缺少 route_registry 且未启用 ALLOW_MOCK_REGISTRY",
         config_key="ALLOW_MOCK_REGISTRY",
@@ -80,6 +92,11 @@ if hasattr(router_registry_module, "register_api_routes"):
 elif allow_mock_registry:
     register_api_routes = create_lambda_none
 else:
+    if is_production():
+        raise ConfigurationError(
+            "缺少 register_api_routes（生产环境禁止降级）",
+            config_key="register_api_routes",
+        )
     raise ConfigurationError(
         "缺少 register_api_routes 且未启用 ALLOW_MOCK_REGISTRY",
         config_key="ALLOW_MOCK_REGISTRY",

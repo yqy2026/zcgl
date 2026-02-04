@@ -81,6 +81,9 @@
   - 支持合同/条款/台账多表导出与基础导入
 - **运行依赖补齐** (Runtime Dependency Completion)
   - 添加 `cryptography` 与 `httpx` 到后端核心依赖，避免运行期导入失败
+- **生产环境路由注册器防降级** (Production Router Registry Guard)
+  - 生产环境禁止启用 `ALLOW_MOCK_REGISTRY`，缺失注册器属性时直接报错
+  - 新增单元测试覆盖生产环境 Mock 降级保护
 - **租金合同删除逻辑修复** (Rent Contract Delete Logic Fix)
   - 删除合同改为服务层软删除并记录历史，避免历史/关联表外键导致的删除失败
   - 租金合同查询默认排除已删除数据
@@ -90,6 +93,9 @@
 - **角色管理端点异步化** (Role API Async Migration)
   - 角色 CRUD、权限分配、统计与用户列表端点移除 run_sync 适配
   - 角色用户列表查询改为 AsyncSession 直连查询
+- **认证会话接口异步化** (Auth Session Async Migration)
+  - 会话查询/撤销与可选认证中间件移除 run_sync，改用 AsyncSession 查询
+  - 调试认证端点改为 AsyncAuthenticationService 与 AsyncUserManagementService
 
 #### Changed / 变更
 

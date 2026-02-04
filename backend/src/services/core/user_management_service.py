@@ -1,13 +1,15 @@
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ...exceptions import BusinessLogicError
 from ...models.auth import User
 from ...schemas.auth import UserCreate, UserUpdate
 from .password_service import PasswordService
-from .session_service import SessionService
+from .session_service import AsyncSessionService, SessionService
 
 
 class UserManagementService:
@@ -210,5 +212,188 @@ class UserManagementService:
 
         # 撤销所有会话，强制重新登录
         self.session_service.revoke_all_user_sessions(user.id)
+
+        return True
+
+
+class AsyncUserManagementService:
+    """用户管理服务"""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.password_service = PasswordService()
+        self.session_service = AsyncSessionService(db)
+
+    async def get_user_by_id(self, user_id: str) -> User | None:
+        stmt = select(User).where(User.id == user_id)
+        return (await self.db.execute(stmt)).scalars().first()
+
+    async def get_user_by_username(self, username: str) -> User | None:
+        stmt = select(User).where(User.username == username)
+        return (await self.db.execute(stmt)).scalars().first()
+
+    async def get_user_by_email(self, email: str) -> User | None:
+        stmt = select(User).where(User.email == email)
+        return (await self.db.execute(stmt)).scalars().first()
+
+    async def create_user(self, user_data: UserCreate) -> User:
+        stmt = select(User).where(
+            or_(User.username == user_data.username, User.email == user_data.email)
+        )
+        existing_user = (await self.db.execute(stmt)).scalars().first()
+        if existing_user:
+            if existing_user.username == user_data.username:
+                raise BusinessLogicError("用户名已存在")
+            raise BusinessLogicError("邮箱已存在")
+
+        if not self.password_service.validate_password_strength(user_data.password):
+            raise BusinessLogicError("密码不符合安全要求")
+
+        hashed_password = self.password_service.get_password_hash(user_data.password)
+        role_value = (
+            user_data.role.value if hasattr(user_data.role, "value") else user_data.role
+        )
+        db_user = User()
+        db_user.username = user_data.username
+        db_user.email = user_data.email
+        db_user.full_name = user_data.full_name
+        db_user.password_hash = hashed_password
+        db_user.role = role_value
+        db_user.employee_id = user_data.employee_id
+        db_user.default_organization_id = user_data.default_organization_id
+
+        self.password_service.add_password_to_history(db_user, hashed_password)
+
+        self.db.add(db_user)
+        await self.db.commit()
+        await self.db.refresh(db_user)
+
+        return db_user
+
+    async def update_user(self, user_id: str, user_data: UserUpdate) -> User | None:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        if user_data.email and user_data.email != user.email:
+            existing_user = await self.get_user_by_email(user_data.email)
+            if existing_user:
+                raise BusinessLogicError("邮箱已被其他用户使用")
+
+        username = getattr(user_data, "username", None)
+        if username and username != user.username:
+            existing_user = await self.get_user_by_username(username)
+            if existing_user:
+                raise BusinessLogicError("用户名已被其他用户使用")
+
+        update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == "role" and value is not None:
+                value = value.value if hasattr(value, "value") else value
+            setattr(user, field, value)
+
+        user.updated_at = datetime.now()
+        await self.db.commit()
+        await self.db.refresh(user)
+
+        return user
+
+    async def deactivate_user(self, user_id: str) -> bool:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return False
+
+        user.is_active = False
+        user.updated_at = datetime.now()
+
+        await self.session_service.revoke_all_user_sessions(user_id)
+
+        await self.db.commit()
+        return True
+
+    async def activate_user(self, user_id: str) -> bool:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return False
+
+        user.is_active = True
+        user.is_locked = False
+        user.locked_until = None
+        user.failed_login_attempts = 0
+        user.updated_at = datetime.now()
+
+        await self.db.commit()
+        return True
+
+    async def unlock_user(self, user_id: str) -> bool:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return False
+
+        user.is_locked = False
+        user.locked_until = None
+        user.failed_login_attempts = 0
+        user.updated_at = datetime.now()
+
+        await self.db.commit()
+        return True
+
+    async def get_statistics(self) -> dict[str, Any]:
+        total_users = int((await self.db.execute(select(func.count(User.id)))).scalar() or 0)
+        active_users = int(
+            (
+                await self.db.execute(
+                    select(func.count(User.id)).where(User.is_active.is_(True))
+                )
+            ).scalar()
+            or 0
+        )
+        locked_users = int(
+            (
+                await self.db.execute(
+                    select(func.count(User.id)).where(User.is_locked.is_(True))
+                )
+            ).scalar()
+            or 0
+        )
+        inactive_users = int(
+            (
+                await self.db.execute(
+                    select(func.count(User.id)).where(User.is_active.is_(False))
+                )
+            ).scalar()
+            or 0
+        )
+
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "locked_users": locked_users,
+            "inactive_users": inactive_users,
+            "online_users": 0,
+        }
+
+    async def change_password(
+        self, user: User, current_password: str, new_password: str
+    ) -> bool:
+        if not self.password_service.verify_password(
+            current_password, user.password_hash
+        ):
+            raise BusinessLogicError("当前密码不正确")
+
+        if not self.password_service.validate_password_strength(new_password):
+            raise BusinessLogicError("新密码不符合安全要求")
+
+        if self.password_service.is_password_in_history(user, new_password):
+            raise BusinessLogicError("新密码不能与最近使用过的密码相同")
+
+        new_password_hash = self.password_service.get_password_hash(new_password)
+        user.password_hash = new_password_hash
+
+        self.password_service.add_password_to_history(user, new_password_hash)
+
+        await self.db.commit()
+
+        await self.session_service.revoke_all_user_sessions(user.id)
 
         return True
