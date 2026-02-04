@@ -1,6 +1,7 @@
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.base import CRUDBase
 from ..models.asset import Ownership
@@ -10,26 +11,30 @@ from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
     """权属方CRUD操作类"""
 
-    def get(self, db: Session, id: Any, use_cache: bool = True) -> Ownership | None:
+    async def get(
+        self, db: AsyncSession, id: Any, use_cache: bool = True
+    ) -> Ownership | None:
         """获取单个权属方"""
-        ownership_obj = super().get(db, id=id)
+        ownership_obj = await super().get(db, id=id)
         if ownership_obj:
             # 临时禁用项目关联数据查询
             setattr(ownership_obj, "project_relations_data", [])
 
         return ownership_obj
 
-    def get_by_name(self, db: Session, name: str) -> Ownership | None:
+    async def get_by_name(self, db: AsyncSession, name: str) -> Ownership | None:
         """通过名称获取权属方"""
-        return db.query(Ownership).filter(Ownership.name == name).first()
+        stmt = select(Ownership).where(Ownership.name == name)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_by_code(self, db: Session, code: str) -> Ownership | None:
+    async def get_by_code(self, db: AsyncSession, code: str) -> Ownership | None:
         """通过编码获取权属方"""
-        return db.query(Ownership).filter(Ownership.code == code).first()
+        stmt = select(Ownership).where(Ownership.code == code)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_multi_with_filters(
+    async def get_multi_with_filters(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -55,16 +60,16 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         )
 
         # 执行查询
-        result = db.execute(stmt)
-        items = result.scalars().all()
+        result = (await db.execute(stmt)).scalars().all()
+        items = list(result)
 
         # 临时禁用项目关联数据查询
         for item in items:
             item.project_relations_data = []
 
-        return list(items)
+        return items
 
-    def search(self, db: Session, search_params: Any) -> dict[str, Any]:
+    async def search(self, db: AsyncSession, search_params: Any) -> dict[str, Any]:
         """搜索权属方"""
         # 使用QueryBuilder通过get_multi_with_filters逻辑，或直接构建查询
         # 这里为了兼容性保持返回 dict 结构
@@ -77,7 +82,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         if search_params.is_active is not None:
             filters["is_active"] = search_params.is_active
 
-        items, total = self.get_multi_with_count(
+        items, total = await self.get_multi_with_count(
             db,
             filters=filters,
             search=search_params.keyword,

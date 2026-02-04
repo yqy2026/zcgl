@@ -87,6 +87,9 @@
 - **前端类型检查修复** (Frontend Type Check Fixes)
   - 修复列表过滤回调与自定义统计卡片类型不匹配导致的 TS 报错
   - 修复 PDF 导入处理方式空字符串比较引发的类型报错
+- **角色管理端点异步化** (Role API Async Migration)
+  - 角色 CRUD、权限分配、统计与用户列表端点移除 run_sync 适配
+  - 角色用户列表查询改为 AsyncSession 直连查询
 
 #### Changed / 变更
 

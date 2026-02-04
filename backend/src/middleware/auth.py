@@ -11,7 +11,7 @@ from typing import Any
 import jwt
 from fastapi import Cookie, Depends, Request
 from jwt import PyJWTError as JWTError
-from sqlalchemy import and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -32,7 +32,6 @@ from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..security.logging_security import security_monitor
 from ..services import RBACService
-from ..utils.async_db import AsyncServiceClassAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -642,7 +641,7 @@ class RBACPermissionChecker:
             return current_user
 
         # 使用RBAC服务检查权限
-        rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
             resource=self.resource,
             action=self.action,
@@ -688,18 +687,15 @@ class ResourcePermissionChecker:
         # 检查是否有对应的资源权限
         from ..models.rbac import ResourcePermission
 
-        resource_permission = await db.run_sync(
-            lambda sync_db: sync_db.query(ResourcePermission)
-            .filter(
-                and_(
-                    ResourcePermission.user_id == current_user.id,
-                    ResourcePermission.resource_type == self.resource_type,
-                    ResourcePermission.resource_id == resource_id,
-                    ResourcePermission.is_active,
-                )
+        stmt = select(ResourcePermission).where(
+            and_(
+                ResourcePermission.user_id == current_user.id,
+                ResourcePermission.resource_type == self.resource_type,
+                ResourcePermission.resource_id == resource_id,
+                ResourcePermission.is_active,
             )
-            .first()
         )
+        resource_permission = (await db.execute(stmt)).scalars().first()
 
         if not resource_permission:
             raise forbidden(f"无权访问此{self.resource_type}资源")
@@ -743,7 +739,7 @@ class RoleBasedAccessChecker:
             return current_user
 
         # 获取用户角色
-        rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        rbac_service = RBACService(db)
         user_roles = await rbac_service.get_user_roles(current_user.id)
 
         user_role_names = [role.name for role in user_roles]
@@ -773,7 +769,7 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
 
     # 使用RBAC服务进行细粒度权限检查
     try:
-        rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
             resource="rent_contract",
             action="edit",
@@ -796,7 +792,7 @@ async def get_user_rbac_permissions(
     if current_user.role == UserRole.ADMIN:
         return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
 
-    rbac_service = AsyncServiceClassAdapter(db, RBACService)
+    rbac_service = RBACService(db)
     permissions_summary = await rbac_service.get_user_permissions_summary(
         current_user.id
     )

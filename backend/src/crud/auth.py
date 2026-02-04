@@ -10,7 +10,8 @@ from typing import Any, cast
 from datetime import datetime, timedelta
 
 import bcrypt
-from sqlalchemy import desc, func, or_
+from sqlalchemy import desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from ..constants.validation_constants import AuthFields
@@ -212,15 +213,15 @@ class UserCRUD:
             .all()
         )
 
-    def get_users_by_role(
-        self, db: Session, role_id: str, skip: int = 0, limit: int = 100
+    async def get_users_by_role(
+        self, db: AsyncSession, role_id: str, skip: int = 0, limit: int = 100
     ) -> tuple[list[User], int]:
         """根据角色ID获取用户列表"""
-        # Note: This implementation assumes role_id is a UserRole enum value
-        # If you need role-based filtering by Role model ID, this needs adjustment
-        query = self._apply_user_filters(db.query(User), role=role_id)
-        total = query.count()
-        users = query.offset(skip).limit(limit).all()
+        stmt = select(User).where(User.role == role_id).offset(skip).limit(limit)
+        count_stmt = select(func.count(User.id)).where(User.role == role_id)
+
+        users = list((await db.execute(stmt)).scalars().all())
+        total = int((await db.execute(count_stmt)).scalar() or 0)
         return users, total
 
 

@@ -1,16 +1,15 @@
-from typing import Any, Literal, Protocol, TypeVar, cast
-
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
 """
 
 import logging
 import time
+from typing import Any, Literal, Protocol, TypeVar, cast
 
-from sqlalchemy import Select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.orm import Session
 
 from ..constants.performance_constants import CacheLimits, CacheTTL
 from ..core.exception_handler import (
@@ -90,7 +89,9 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             return ResponseHandler.database_error(error, f"{operation}失败")
         return error
 
-    def get(self, db: Session, id: Any, use_cache: bool = True) -> ModelType | None:
+    async def get(
+        self, db: AsyncSession, id: Any, use_cache: bool = True
+    ) -> ModelType | None:
         """根据ID获取单个记录（支持缓存）"""
         cache_key = self._get_cache_key("get", id=id)
 
@@ -100,18 +101,17 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 return cast(ModelType, cached_result)
 
         try:
-            result = (
-                db.query(self.model).filter(getattr(self.model, "id") == id).first()
-            )
+            stmt = select(self.model).where(getattr(self.model, "id") == id)
+            result = (await db.execute(stmt)).scalars().first()
             if use_cache and result is not None:  # pragma: no cover
                 self._set_cache(cache_key, result)  # pragma: no cover
             return result
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录")  # pragma: no cover
 
-    def get_multi(
+    async def get_multi(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -130,8 +130,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             if cached_result is not None:  # pragma: no cover
                 return cast(list[ModelType], cached_result)
         try:
-            query = db.query(self.model).offset(skip).limit(limit)
-            result = query.all()
+            stmt = select(self.model).offset(skip).limit(limit)
+            result = (await db.execute(stmt)).scalars().all()
 
             if use_cache and limit <= 50:
                 self._set_cache(cache_key, result)  # pragma: no cover
@@ -139,9 +139,9 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
-    def create(
+    async def create(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         obj_in: CreateSchemaType | dict[str, Any],
         commit: bool = True,
@@ -161,11 +161,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             db_obj = self.model(**obj_in_data)
             db.add(db_obj)
             if commit:
-                db.commit()
-                db.refresh(db_obj)
+                await db.commit()
+                await db.refresh(db_obj)
             else:
-                db.flush()
-                db.refresh(db_obj)
+                await db.flush()
+                await db.refresh(db_obj)
 
             # 清除相关缓存
             self._clear_cache_pattern("get_multi")
@@ -176,12 +176,12 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             return db_obj
         except Exception as e:  # pragma: no cover
             if commit:
-                db.rollback()
+                await db.rollback()
             raise self._handle_database_error(e, "创建记录")  # pragma: no cover
 
-    def update(
+    async def update(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
@@ -204,11 +204,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
             db.add(db_obj)
             if commit:
-                db.commit()
-                db.refresh(db_obj)
+                await db.commit()
+                await db.refresh(db_obj)
             else:
-                db.flush()
-                db.refresh(db_obj)
+                await db.flush()
+                await db.refresh(db_obj)
 
             # 清除相关缓存
             cache_key = self._get_cache_key("get", id=getattr(db_obj, "id", None))
@@ -222,21 +222,23 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             return db_obj
         except Exception as e:  # pragma: no cover
             if commit:
-                db.rollback()
+                await db.rollback()
             raise self._handle_database_error(e, "更新记录")  # pragma: no cover
 
-    def remove(self, db: Session, *, id: Any, commit: bool = True) -> ModelType:
+    async def remove(
+        self, db: AsyncSession, *, id: Any, commit: bool = True
+    ) -> ModelType:
         """删除记录（支持事务回滚和缓存清理）"""
         try:
-            obj = db.query(self.model).get(id)
+            obj = await db.get(self.model, id)
             if obj is None:
                 raise ResourceNotFoundError(self.model.__name__, str(id))
 
-            db.delete(obj)
+            await db.delete(obj)
             if commit:
-                db.commit()
+                await db.commit()
             else:
-                db.flush()
+                await db.flush()
 
             # 清除相关缓存
             cache_key = self._get_cache_key("get", id=id)
@@ -252,11 +254,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             raise
         except Exception as e:  # pragma: no cover
             if commit:
-                db.rollback()
+                await db.rollback()
             raise self._handle_database_error(e, "删除记录")  # pragma: no cover
 
-    def count(
-        self, db: Session, filters: dict[str, Any] | None = None, **kwargs: Any
+    async def count(
+        self, db: AsyncSession, filters: dict[str, Any] | None = None, **kwargs: Any
     ) -> int:
         """获取记录总数（支持筛选条件）
 
@@ -264,18 +266,19 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             task_crud.count(db, task_type="import")
         """
         try:
-            query = db.query(self.model)
+            stmt = select(func.count()).select_from(self.model)
             if filters:
                 for field, value in filters.items():
                     if hasattr(self.model, field) and value is not None:
-                        query = query.filter(getattr(self.model, field) == value)
-            return query.count()
+                        stmt = stmt.where(getattr(self.model, field) == value)
+            result = await db.execute(stmt)
+            return int(result.scalar() or 0)
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "统计记录数")  # pragma: no cover
 
-    def get_with_filters(
+    async def get_with_filters(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
         search: str | None = None,
@@ -303,14 +306,14 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 limit=limit,
                 base_query=base_query,
             )
-            result = db.execute(query).scalars().all()
+            result = (await db.execute(query)).scalars().all()
             return list(result)
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
-    def get_multi_with_count(
+    async def get_multi_with_count(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
         search: str | None = None,
@@ -340,14 +343,14 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 search_conditions=search_conditions,
             )
 
-            result = db.execute(stmt).scalars().all()
-            total = int(db.execute(count_stmt).scalar() or 0)
+            result = (await db.execute(stmt)).scalars().all()
+            total = int((await db.execute(count_stmt)).scalar() or 0)
             return list(result), total
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询统计")  # pragma: no cover
 
-    def bulk_create(
-        self, db: Session, *, objects_in: list[CreateSchemaType | dict[str, Any]]
+    async def bulk_create(
+        self, db: AsyncSession, *, objects_in: list[CreateSchemaType | dict[str, Any]]
     ) -> list[ModelType]:
         """批量创建记录"""
         try:
@@ -363,11 +366,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)
-            db.commit()
+            await db.commit()
 
             # 刷新所有对象以获取数据库生成的值
             for obj in db_objects:
-                db.refresh(obj)
+                await db.refresh(obj)
 
             # 清除缓存
             self._clear_cache_pattern("get_multi")
@@ -377,7 +380,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             )
             return db_objects
         except Exception as e:  # pragma: no cover
-            db.rollback()  # pragma: no cover
+            await db.rollback()  # pragma: no cover
             raise self._handle_database_error(e, "批量创建记录")  # pragma: no cover
 
     def _clear_cache_pattern(self, pattern: str) -> None:
@@ -405,9 +408,9 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             "cache_timeout": self._cache_timeout,
         }
 
-    def get_distinct_field_values(
+    async def get_distinct_field_values(
         self,
-        db: Session,
+        db: AsyncSession,
         field_name: str,
         *,
         filters: dict[str, Any] | None = None,
@@ -473,29 +476,27 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
         # 构建查询
         field_attr = getattr(self.model, field_name)
-        query = db.query(field_attr)
+        stmt = select(field_attr)
 
         # 应用空值筛选
         if exclude_empty:
-            query = query.filter(field_attr.isnot(None), field_attr != "")
+            stmt = stmt.where(field_attr.isnot(None), field_attr != "")
 
         # 应用额外筛选条件
         if filters:
             for filter_key, filter_value in filters.items():
                 if hasattr(self.model, filter_key):
-                    query = query.filter(
-                        getattr(self.model, filter_key) == filter_value
-                    )
+                    stmt = stmt.where(getattr(self.model, filter_key) == filter_value)
 
         # 应用去重和排序
-        query = query.distinct()
+        stmt = stmt.distinct()
         if sort_order == "asc":
-            query = query.order_by(field_attr.asc())
+            stmt = stmt.order_by(field_attr.asc())
         else:
-            query = query.order_by(field_attr.desc())
+            stmt = stmt.order_by(field_attr.desc())
 
         # 执行查询
-        result = query.all()
+        result = (await db.execute(stmt)).all()
 
         # 从结果元组中提取值
         values = [row[0] for row in result if row[0]]

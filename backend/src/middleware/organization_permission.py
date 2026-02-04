@@ -42,10 +42,8 @@ def require_organization_access(
         if organization_id is None:
             raise bad_request("组织ID不能为空")
 
-        org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
-        if not await org_service.check_organization_access(
-            current_user.id, organization_id
-        ):
+        org_service = OrganizationPermissionService(db)
+        if not await org_service.check_organization_access(current_user.id, organization_id):
             # Log permission denied event
             security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
 
@@ -103,10 +101,8 @@ def require_organization_management(
         if organization_id is None:
             raise bad_request("组织ID不能为空")
 
-        org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
-        if not await org_service.can_manage_organization(
-            current_user.id, organization_id
-        ):
+        org_service = OrganizationPermissionService(db)
+        if not await org_service.can_manage_organization(current_user.id, organization_id):
             # Log permission denied event
             security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
 
@@ -151,7 +147,7 @@ class OrganizationDataFilter:
     def __init__(self, db: AsyncSession, user_id: str):
         self.db = db
         self.user_id = user_id
-        self.org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
+        self.org_service = OrganizationPermissionService(db)
 
     async def filter_assets_query(self, query: Any) -> Any:
         """过滤资产查询"""
@@ -209,10 +205,8 @@ async def get_accessible_organizations(
     """
     获取用户可访问的组织列表
     """
-    org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
-    result = await org_service.get_user_accessible_organizations_with_details(
-        current_user.id
-    )
+    org_service = OrganizationPermissionService(db)
+    result = await org_service.get_user_accessible_organizations_with_details(current_user.id)
     assert isinstance(result, list)  # nosec B101  # Defensive type check
     return result
 
@@ -224,7 +218,7 @@ async def get_user_organization_role(
     """
     获取用户在组织中的角色
     """
-    org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
+    org_service = OrganizationPermissionService(db)
     result = await org_service.get_user_organization_role(current_user.id)
     # The result might already be str | None, but we need to ensure it matches the return type
     if result is None or isinstance(result, str):
@@ -265,10 +259,8 @@ class OrganizationPermissionChecker:
             if organization_id is None:
                 raise bad_request("组织ID不能为空")
 
-            org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
-            if not await org_service.check_organization_access(
-                current_user.id, organization_id
-            ):
+            org_service = OrganizationPermissionService(db)
+            if not await org_service.check_organization_access(current_user.id, organization_id):
                 # Log permission denied event
                 security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
 
@@ -297,10 +289,8 @@ class OrganizationPermissionChecker:
                 raise forbidden("无权访问该组织的数据")
 
         # Check if user has any organization access permissions
-        org_service = AsyncServiceClassAdapter(db, OrganizationPermissionService)
-        accessible_orgs = await org_service.get_user_accessible_organizations(
-            current_user.id
-        )
+        org_service = OrganizationPermissionService(db)
+        accessible_orgs = await org_service.get_user_accessible_organizations(current_user.id)
 
         if not accessible_orgs:
             # Log permission denied event

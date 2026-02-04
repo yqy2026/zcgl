@@ -1,7 +1,7 @@
 from typing import Any
 
-from sqlalchemy import and_, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.base import CRUDBase
 from ..models.rbac import (
@@ -26,9 +26,9 @@ from ..schemas.rbac import (
 class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
     """角色CRUD操作"""
 
-    def create(
+    async def create(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         obj_in: RoleCreate | dict[str, Any],
         commit: bool = True,
@@ -43,15 +43,16 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         # 移除permission_ids字段（这不是Role模型的字段）
         obj_in_data.pop("permission_ids", None)
 
-        return super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
+        return await super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
 
-    def get_by_name(self, db: Session, name: str) -> Role | None:
+    async def get_by_name(self, db: AsyncSession, name: str) -> Role | None:
         """根据名称获取角色"""
-        return db.query(Role).filter(Role.name == name).first()
+        stmt = select(Role).where(Role.name == name)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_multi_with_filters(
+    async def get_multi_with_filters(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -70,7 +71,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         if organization_id:
             filters["organization_id"] = organization_id
 
-        return self.get_multi_with_count(
+        return await self.get_multi_with_count(
             db,
             filters=filters,
             search=search,
@@ -85,27 +86,21 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
     # But for standard counts, CRUDBase.count works if filters aligned.
     # Here we keep custom count_by_category logic.
 
-    def count_by_category(self, db: Session) -> dict[str, Any]:
+    async def count_by_category(self, db: AsyncSession) -> dict[str, Any]:
         """按类别统计角色数"""
-        from sqlalchemy import func
-
-        result = (
-            db.query(Role.category, func.count(Role.id)).group_by(Role.category).all()
-        )
+        stmt = select(Role.category, func.count(Role.id)).group_by(Role.category)
+        result = (await db.execute(stmt)).all()
         return {category: count for category, count in result if category}
 
-    def count_by_flags(self, db: Session) -> dict[str, int]:
+    async def count_by_flags(self, db: AsyncSession) -> dict[str, int]:
         """按激活/系统/自定义统计角色数量"""
-        from sqlalchemy import case, func
-
-        result = db.query(
+        stmt = select(
             func.count(Role.id).label("total"),
             func.sum(case((Role.is_active.is_(True), 1), else_=0)).label("active"),
             func.sum(case((Role.is_system_role.is_(True), 1), else_=0)).label("system"),
-            func.sum(case((Role.is_system_role.is_(False), 1), else_=0)).label(
-                "custom"
-            ),
-        ).one()
+            func.sum(case((Role.is_system_role.is_(False), 1), else_=0)).label("custom"),
+        )
+        result = (await db.execute(stmt)).one()
 
         return {
             "total": int(result.total or 0),
@@ -118,9 +113,9 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
     """权限CRUD操作"""
 
-    def get_multi_with_filters(
+    async def get_multi_with_filters(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -148,18 +143,15 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             limit=limit,
         )
 
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+        result = (await db.execute(stmt)).scalars().all()
+        return list(result)
 
-    def count_by_resource(self, db: Session) -> dict[str, Any]:
+    async def count_by_resource(self, db: AsyncSession) -> dict[str, Any]:
         """按资源统计权限数"""
-        from sqlalchemy import func
-
-        result = (
-            db.query(Permission.resource, func.count(Permission.id))
-            .group_by(Permission.resource)
-            .all()
+        stmt = select(Permission.resource, func.count(Permission.id)).group_by(
+            Permission.resource
         )
+        result = (await db.execute(stmt)).all()
         return {resource: count for resource, count in result if resource}
 
 
@@ -168,48 +160,38 @@ class CRUDUserRoleAssignment(
 ):
     """用户角色分配CRUD"""
 
-    def get_by_user_and_role(
-        self, db: Session, user_id: str, role_id: str
+    async def get_by_user_and_role(
+        self, db: AsyncSession, user_id: str, role_id: str
     ) -> UserRoleAssignment | None:
-        return (
-            db.query(UserRoleAssignment)
-            .filter(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.role_id == role_id,
-            )
-            .first()
+        stmt = select(UserRoleAssignment).where(
+            UserRoleAssignment.user_id == user_id,
+            UserRoleAssignment.role_id == role_id,
         )
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_user_active_assignments(
-        self, db: Session, user_id: str
+    async def get_user_active_assignments(
+        self, db: AsyncSession, user_id: str
     ) -> list[UserRoleAssignment]:
         """获取用户活跃角色"""
-        from sqlalchemy import func
-
-        return (
-            db.query(UserRoleAssignment)
-            .filter(
-                and_(
-                    UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active,
-                    or_(
-                        UserRoleAssignment.expires_at.is_(None),
-                        UserRoleAssignment.expires_at > func.now(),
-                    ),
-                )
+        stmt = select(UserRoleAssignment).where(
+            and_(
+                UserRoleAssignment.user_id == user_id,
+                UserRoleAssignment.is_active,
+                or_(
+                    UserRoleAssignment.expires_at.is_(None),
+                    UserRoleAssignment.expires_at > func.now(),
+                ),
             )
-            .all()
         )
+        return list((await db.execute(stmt)).scalars().all())
 
-    def count_by_role(self, db: Session, role_id: str) -> int:
-        return (
-            db.query(UserRoleAssignment)
-            .filter(
-                UserRoleAssignment.role_id == role_id,
-                UserRoleAssignment.is_active.is_(True),
-            )
-            .count()
+    async def count_by_role(self, db: AsyncSession, role_id: str) -> int:
+        stmt = select(func.count(UserRoleAssignment.id)).where(
+            UserRoleAssignment.role_id == role_id,
+            UserRoleAssignment.is_active.is_(True),
         )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
 
 
 class CRUDResourcePermission(

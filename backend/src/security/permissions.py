@@ -12,7 +12,6 @@ from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user
 from ..models.auth import User
 from ..services import RBACService
-from ..utils.async_db import AsyncServiceClassAdapter
 
 
 class AssetNotFoundError(Exception):
@@ -64,7 +63,7 @@ def permission_required[**P, R](
 
             try:
                 # 初始化RBAC服务
-                rbac_service = AsyncServiceClassAdapter(db, RBACService)
+                rbac_service = RBACService(db)
 
                 # 检查基础权限
                 user_id_value: str = str(getattr(current_user, "id", ""))
@@ -144,7 +143,7 @@ def role_required[**P, R](
                 raise internal_error("数据库会话未找到")
             db = cast(AsyncSession, db)
 
-            rbac_service = AsyncServiceClassAdapter(db, RBACService)
+            rbac_service = RBACService(db)
             user_id_value: str = str(getattr(current_user, "id", ""))
             roles = await rbac_service.get_user_roles(user_id_value)
             role_names = {role.name for role in roles}
@@ -192,7 +191,7 @@ def organization_required[**P, R](
             target_org_id_value = str(target_org_id)
 
             # 检查组织访问权限
-            rbac_service = AsyncServiceClassAdapter(db, RBACService)
+            rbac_service = RBACService(db)
             has_access = await rbac_service.check_organization_access(
                 user_id=str(current_user.id), organization_id=target_org_id_value
             )
@@ -222,7 +221,7 @@ def get_current_user_with_permissions(
         if not current_user:
             raise unauthorized("未认证用户")
 
-        rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        rbac_service = RBACService(db)
         user_id_value: str = str(getattr(current_user, "id", ""))
         has_permission = await rbac_service.check_user_permission(
             user_id=user_id_value, resource=resource, action=action
@@ -276,7 +275,7 @@ class PermissionChecker:
     def __init__(self, db: AsyncSession, user: User):
         self.db = db
         self.user = user
-        self.rbac_service = AsyncServiceClassAdapter(db, RBACService)
+        self.rbac_service = RBACService(db)
 
     async def has_permission(self, resource: str, action: str) -> bool:
         """检查用户是否具有指定权限"""
