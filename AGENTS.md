@@ -503,6 +503,23 @@ docker-compose up -d
 
 ---
 
+## 启动与排查经验
+
+- 后端开发请使用项目虚拟环境 `backend/.venv`（避免系统/Anaconda 导致 `.env` 不生效或 CORS/依赖异常）
+- 后端启动建议：`cd backend && .\\.venv\\Scripts\\python.exe run_dev.py`
+- 若 8002 被占用可临时切换端口（例如 8003），需要同步调整前端代理或 API_BASE_URL
+- 前端推荐保持 `VITE_API_BASE_URL=/api/v1` + Vite 代理，避免跨域
+- `/system/users` 报错常见原因：
+- CORS 预检未允许 `Authorization` 头，需在后端 CORS 允许头中加入 `Authorization`
+- CORS 中间件需包裹错误响应（放在中间件链最外层）
+- `/api/v1/roles` 的 `MissingGreenlet` 多由角色权限懒加载触发，需在 role CRUD 用 `selectinload(Role.permissions)` 预加载
+- `/api/v1/auth/users` 若使用 `DISTINCT` 包含 JSON 列会触发 Postgres “json 无等号”错误，应改为 `distinct(User.id)` 并独立 count
+- RBAC 初始化脚本：`backend/scripts/setup/init_rbac_data.py` 可反复执行并补齐权限（包含 `property_certificate`）
+- 若数据库仍存在遗留列 `users.role` 或 `assets.ownership_entity`，先执行 `alembic upgrade head` 移除后再初始化 RBAC
+- Playwright 调试建议使用 `npx --yes @playwright/cli`，产物统一放在 `output/playwright/`
+
+---
+
 ## 文档参考
 
 - [环境配置指南](docs/guides/environment-setup.md)

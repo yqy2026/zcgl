@@ -45,6 +45,7 @@
 
 - 明确说明 `SecurityService` 已移除，并指向 `PasswordService`/`AuthenticationService` 作为安全替代路径
 - AGENTS.md 增加提示：后端测试应使用项目 `backend/.venv`，避免 `.env` 不生效
+- AGENTS.md 增补启动/登录/排查经验与常见故障定位要点
 
 ### 🛡️ 稳定性与架构修复 (Stability & Architecture Fixes)
 
