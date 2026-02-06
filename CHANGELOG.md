@@ -12,6 +12,12 @@
 #### Fixed / 修复
 
 - 开发启动脚本限制 Uvicorn reload 监听目录为 `backend/src`，并支持 `RELOAD` 环境变量关闭重载，避免非源码变更触发重启
+- 修复 RBAC 初始化脚本可重复执行并补齐 `property_certificate` 权限，遇到遗留 `users.role` 约束时跳过测试用户创建以保证初始化可完成
+- 修复 RBAC 初始化脚本动态权限示例的 `assigned_by` 外键错误，避免插入失败并保持幂等
+- RBAC 初始化脚本在测试用户已存在时仍会确保角色分配，并在输出中明确已存在数量
+- 修复角色列表/详情接口未预加载权限导致的 `MissingGreenlet` 500 错误
+- 调整 CORS 中间件顺序，确保错误响应也包含 CORS 头，避免前端 `system/users` 报 CORS 拒绝
+- CORS 允许 `Authorization` 请求头，修复携带登录令牌的预检请求被拒绝
 
 #### Removed / 删除
 
@@ -33,6 +39,11 @@
 
 #### Fixed / 修复
 
+- 修复 `core/performance.py` 查询优化器缩进错误导致后端启动失败的问题
+- 将数据库初始化移动到应用生命周期中，避免启动时 `asyncio.run()` 在事件循环中触发错误
+- 修复通知任务端点异步定义与依赖注入，避免路由注册时报 `await` 语法错误
+- 修复 RBAC 角色有效期比较使用时区感知时间导致的数据库错误
+- 修复登录接口在权限读取成功时未初始化角色汇总导致的异常
 - **RBAC 角色单一来源** (Single Source of Truth for Roles)
   - 认证响应与用户信息统一使用 RBAC 角色汇总（`role_id`/`role_name`/`role_ids`），移除旧 `role` 字段依赖
   - 统一测试与示例数据为 `role_id`，避免遗留角色字符串导致权限误判

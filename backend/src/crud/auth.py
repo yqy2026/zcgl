@@ -108,11 +108,18 @@ class UserCRUD:
             is_active=is_active,
             organization_id=organization_id,
         )
-        total_stmt = select(func.count(func.distinct(User.id))).select_from(
-            stmt.subquery()
+        count_stmt = select(func.count(func.distinct(User.id))).select_from(User)
+        count_stmt = self._apply_user_filters_stmt(
+            count_stmt,
+            search=search,
+            role_id=role_id,
+            is_active=is_active,
+            organization_id=organization_id,
         )
-        total = int((await db.execute(total_stmt)).scalar() or 0)
-        result = await db.execute(stmt.distinct().offset(skip).limit(limit))
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        result = await db.execute(
+            stmt.distinct(User.id).offset(skip).limit(limit)
+        )
         users = list(result.scalars().all())
         return users, total
 
@@ -194,7 +201,7 @@ class UserCRUD:
                     UserRoleAssignment.expires_at > func.now(),
                 ),
             )
-            .distinct()
+            .distinct(User.id)
             .offset(skip)
             .limit(limit)
         )

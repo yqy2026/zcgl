@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from src.database import async_session_scope
 from src.models.auth import User
@@ -28,6 +28,11 @@ async def create_basic_permissions(db):
         ("asset", "create", "创建资产", "创建新资产"),
         ("asset", "update", "更新资产", "更新资产信息"),
         ("asset", "delete", "删除资产", "删除资产"),
+        # 产权证管理权限
+        ("property_certificate", "read", "查看产权证", "查看产权证信息"),
+        ("property_certificate", "create", "创建产权证", "创建新产权证"),
+        ("property_certificate", "update", "更新产权证", "更新产权证信息"),
+        ("property_certificate", "delete", "删除产权证", "删除产权证"),
         # 项目管理权限
         ("project", "read", "查看项目", "查看项目信息"),
         ("project", "create", "创建项目", "创建新项目"),
@@ -79,7 +84,8 @@ async def create_basic_permissions(db):
         ("audit", "export", "导出审计", "导出审计数据"),
     ]
 
-    created_permissions = []
+    created_permissions: list[Permission] = []
+    all_permissions: list[Permission] = []
     for resource, action, display_name, description in permissions_data:
         # 检查权限是否已存在
         existing_result = await db.execute(
@@ -89,22 +95,26 @@ async def create_basic_permissions(db):
         )
         existing = existing_result.scalars().first()
 
-        if not existing:
-            permission = Permission(
-                name=f"{resource}:{action}",
-                display_name=display_name,
-                description=description,
-                resource=resource,
-                action=action,
-                is_system_permission=True,
-                created_by="system",
-            )
-            db.add(permission)
-            created_permissions.append(permission)
+        if existing:
+            all_permissions.append(existing)
+            continue
+
+        permission = Permission(
+            name=f"{resource}:{action}",
+            display_name=display_name,
+            description=description,
+            resource=resource,
+            action=action,
+            is_system_permission=True,
+            created_by="system",
+        )
+        db.add(permission)
+        created_permissions.append(permission)
+        all_permissions.append(permission)
 
     await db.commit()
-    print(f"✅ 创建了 {len(created_permissions)} 个基础权限")
-    return created_permissions
+    print(f"[OK] 创建了 {len(created_permissions)} 个基础权限")
+    return all_permissions, len(created_permissions)
 
 
 async def create_basic_roles(db):
@@ -119,28 +129,33 @@ async def create_basic_roles(db):
         ("auditor", "审计员", "负责审计工作的专业人员", 2, "audit"),
     ]
 
-    created_roles = []
+    created_roles: list[Role] = []
+    all_roles: list[Role] = []
     for name, display_name, description, level, category in roles_data:
         # 检查角色是否已存在
         existing_result = await db.execute(select(Role).where(Role.name == name))
         existing = existing_result.scalars().first()
 
-        if not existing:
-            role = Role(
-                name=name,
-                display_name=display_name,
-                description=description,
-                level=level,
-                category=category,
-                is_system_role=True,
-                created_by="system",
-            )
-            db.add(role)
-            created_roles.append(role)
+        if existing:
+            all_roles.append(existing)
+            continue
+
+        role = Role(
+            name=name,
+            display_name=display_name,
+            description=description,
+            level=level,
+            category=category,
+            is_system_role=True,
+            created_by="system",
+        )
+        db.add(role)
+        created_roles.append(role)
+        all_roles.append(role)
 
     await db.commit()
-    print(f"✅ 创建了 {len(created_roles)} 个基础角色")
-    return created_roles
+    print(f"[OK] 创建了 {len(created_roles)} 个基础角色")
+    return all_roles, len(created_roles)
 
 
 async def create_admin_user(db):
@@ -181,7 +196,7 @@ async def create_admin_user(db):
             db.add(assignment)
             await db.commit()
 
-        print(f"✅ 创建了管理员用户: {admin_user.username}")
+        print(f"[OK] 创建了管理员用户: {admin_user.username}")
         return admin_user
     else:
         # Ensure admin role assignment exists
@@ -209,7 +224,7 @@ async def create_admin_user(db):
                 )
                 await db.commit()
 
-        print(f"⚠️ 管理员用户已存在: {existing_admin.username}")
+        print(f"[WARN] 管理员用户已存在: {existing_admin.username}")
         return existing_admin
 
 
@@ -262,11 +277,23 @@ async def assign_permissions_to_roles(db, roles, permissions):
                         )
                     )
 
-            print(f"✅ 为角色 '{role.display_name}' 分配了 {len(role_perms)} 个权限")
+            print(f"[OK] 为角色 '{role.display_name}' 分配了 {len(role_perms)} 个权限")
+    await db.commit()
 
 
-async def create_test_users(db):
+async def create_test_users(db) -> tuple[int, int]:
     """创建测试用户"""
+    # Legacy schema may still require users.role; skip seeding to avoid constraint errors.
+    role_column = await db.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'users' AND column_name = 'role' LIMIT 1"
+        )
+    )
+    if role_column.scalar() is not None:
+        print("[WARN] users.role column exists; skip test user seeding.")
+        return 0, 0
+
     test_users = [
         ("manager1", "manager1@example.com", "测试管理员", "USER"),
         ("user1", "user1@example.com", "测试用户1", "USER"),
@@ -274,7 +301,9 @@ async def create_test_users(db):
         ("viewer1", "viewer1@example.com", "测试查看者", "USER"),
     ]
 
-    for username, email, full_name, role in test_users:
+    created_count = 0
+    existing_count = 0
+    for username, email, full_name, _role in test_users:
         existing_result = await db.execute(
             select(User).where(User.username == username)
         )
@@ -285,17 +314,19 @@ async def create_test_users(db):
                 username=username,
                 email=email,
                 full_name=full_name,
-                role=role,
                 is_active=True,
-                is_verified=True,
                 password_hash="$2b$12$dummy_hash_for_user",  # 实际使用中应该设置真实的密码哈希
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
             db.add(user)
+            created_count += 1
+        else:
+            existing_count += 1
 
     await db.commit()
-    print(f"✅ 创建了 {len(test_users)} 个测试用户")
+    print(f"[OK] 创建了 {created_count} 个测试用户")
+    return created_count, existing_count
 
 
 async def assign_roles_to_users(db, roles, users):
@@ -342,10 +373,10 @@ async def assign_roles_to_users(db, roles, users):
                 db.add(assignment)
 
     await db.commit()
-    print("✅ 为测试用户分配了角色")
+    print("[OK] 为测试用户分配了角色")
 
 
-async def create_dynamic_permission_samples(db):
+async def create_dynamic_permission_samples(db) -> bool:
     """创建动态权限示例"""
     from src.models.dynamic_permission import DynamicPermission, TemporaryPermission
     from src.models.rbac import Permission
@@ -356,8 +387,14 @@ async def create_dynamic_permission_samples(db):
     )
     test_user = test_user_result.scalars().first()
     if not test_user:
-        print("⚠️ 测试用户不存在，跳过动态权限创建")
-        return
+        print("[WARN] 测试用户不存在，跳过动态权限创建")
+        return False
+
+    assigned_by_result = await db.execute(
+        select(User).where(User.username == "admin")
+    )
+    assigned_by_user = assigned_by_result.scalars().first()
+    assigned_by = assigned_by_user.id if assigned_by_user else test_user.id
 
     # 获取一个权限
     asset_perm_result = await db.execute(
@@ -368,37 +405,68 @@ async def create_dynamic_permission_samples(db):
     asset_create_perm = asset_perm_result.scalars().first()
 
     if asset_create_perm:
-        # 创建一个临时权限（有效期为7天）
-        temp_permission = TemporaryPermission(
-            id=str(uuid.uuid4()),
-            user_id=test_user.id,
-            permission_id=asset_create_perm.id,
-            scope="global",
-            expires_at=datetime.utcnow() + timedelta(days=7),
-            assigned_by="system",
-            assigned_at=datetime.utcnow(),
-            is_active=True,
-        )
-        db.add(temp_permission)
+        created_any = False
 
-        # 创建一个动态权限
-        dynamic_permission = DynamicPermission(
-            id=str(uuid.uuid4()),
-            user_id=test_user.id,
-            permission_id=asset_create_perm.id,
-            permission_type="user_specific",
-            scope="organization",
-            scope_id=None,  # 可以设置为具体的组织ID
-            conditions={"max_daily_operations": 10},  # 每天最多10次操作
-            expires_at=datetime.utcnow() + timedelta(days=30),
-            assigned_by="system",
-            assigned_at=datetime.utcnow(),
-            is_active=True,
-        )
-        db.add(dynamic_permission)
+        existing_temp = (
+            await db.execute(
+                select(TemporaryPermission).where(
+                    TemporaryPermission.user_id == test_user.id,
+                    TemporaryPermission.permission_id == asset_create_perm.id,
+                    TemporaryPermission.is_active.is_(True),
+                )
+            )
+        ).scalars().first()
+        if not existing_temp:
+            # 创建一个临时权限（有效期为7天）
+            temp_permission = TemporaryPermission(
+                id=str(uuid.uuid4()),
+                user_id=test_user.id,
+                permission_id=asset_create_perm.id,
+                scope="global",
+                expires_at=datetime.utcnow() + timedelta(days=7),
+                assigned_by=assigned_by,
+                assigned_at=datetime.utcnow(),
+                is_active=True,
+            )
+            db.add(temp_permission)
+            created_any = True
 
-        await db.commit()
-        print("✅ 创建了动态权限示例")
+        existing_dynamic = (
+            await db.execute(
+                select(DynamicPermission).where(
+                    DynamicPermission.user_id == test_user.id,
+                    DynamicPermission.permission_id == asset_create_perm.id,
+                    DynamicPermission.is_active.is_(True),
+                )
+            )
+        ).scalars().first()
+        if not existing_dynamic:
+            # 创建一个动态权限
+            dynamic_permission = DynamicPermission(
+                id=str(uuid.uuid4()),
+                user_id=test_user.id,
+                permission_id=asset_create_perm.id,
+                permission_type="user_specific",
+                scope="organization",
+                scope_id=None,  # 可以设置为具体的组织ID
+                conditions={"max_daily_operations": 10},  # 每天最多10次操作
+                expires_at=datetime.utcnow() + timedelta(days=30),
+                assigned_by=assigned_by,
+                assigned_at=datetime.utcnow(),
+                is_active=True,
+            )
+            db.add(dynamic_permission)
+            created_any = True
+
+        if created_any:
+            await db.commit()
+            print("[OK] 创建了动态权限示例")
+            return True
+
+        print("[WARN] 动态权限示例已存在，跳过创建")
+        return False
+
+    return False
 
 
 async def main():
@@ -408,10 +476,10 @@ async def main():
     try:
         async with async_session_scope() as db:
             # 1. 创建基础权限
-            permissions = await create_basic_permissions(db)
+            permissions, permissions_created = await create_basic_permissions(db)
 
             # 2. 创建基础角色
-            roles = await create_basic_roles(db)
+            roles, roles_created = await create_basic_roles(db)
 
             # 3. 创建管理员用户
             await create_admin_user(db)
@@ -420,25 +488,37 @@ async def main():
             await assign_permissions_to_roles(db, roles, permissions)
 
             # 5. 创建测试用户
-            await create_test_users(db)
+            test_users_created, test_users_existing = await create_test_users(db)
 
             # 6. 为测试用户分配角色
-            await assign_roles_to_users(db, roles, None)
+            if (test_users_created + test_users_existing) > 0:
+                await assign_roles_to_users(db, roles, None)
+            else:
+                print("[WARN] 未创建测试用户，跳过角色分配")
 
             # 7. 创建动态权限示例
-            await create_dynamic_permission_samples(db)
+            dynamic_permissions_created = await create_dynamic_permission_samples(db)
 
         print("\nRBAC系统初始化完成！")
         print("创建内容:")
-        print(f"   - {len(permissions)} 个基础权限")
-        print(f"   - {len(roles)} 个基础角色")
-        print("   - 1 个管理员用户")
-        print("   - 4 个测试用户")
-        print("   - 动态权限示例")
+        print(f"   - 基础权限新增: {permissions_created} (总数: {len(permissions)})")
+        print(f"   - 基础角色新增: {roles_created} (总数: {len(roles)})")
+        print("   - 管理员用户: 已确保存在")
+        print(
+            f"   - 测试用户新增: {test_users_created} (已存在: {test_users_existing})"
+        )
+        print(
+            "   - 动态权限示例: 已创建"
+            if dynamic_permissions_created
+            else "   - 动态权限示例: 跳过"
+        )
 
         print("\n默认登录信息:")
         print("   管理员用户名: admin")
-        print("   测试用户名: manager1, user1, user2, viewer1")
+        if (test_users_created + test_users_existing) > 0:
+            print("   测试用户名: manager1, user1, user2, viewer1")
+        else:
+            print("   测试用户名: 未创建")
         print("   (默认密码需要在实际部署时设置)")
 
     except Exception as e:

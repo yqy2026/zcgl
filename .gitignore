@@ -126,6 +126,7 @@ frontend/test_output.txt
 frontend/vitest_stdout.txt
 playwright-report/
 .playwright-mcp/
+.playwright-cli/
 
 # Package managers
 npm-debug.log*

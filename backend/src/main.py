@@ -241,6 +241,22 @@ async def lifespan(app: FastAPI) -> Any:
         except Exception as e:
             logger.warning(f"枚举数据初始化异常: {e}")
 
+    # 初始化数据库（跳过测试模式）
+    if not is_testing():
+        await init_db()
+
+        # 记录数据库状态
+        db_status = await get_database_status()
+        logger.info(f"数据库状态: {db_status}")
+
+        health_check = db_status.get("health_check", {})
+        if isinstance(health_check, dict) and health_check.get("healthy"):
+            logger.info("数据库健康检查通过")
+        else:
+            logger.info("数据库健康检查未通过或未返回状态")
+    else:
+        logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
+
     yield
 
     # 关闭异步缓存连接
@@ -265,32 +281,6 @@ app = FastAPI(
 # 初始化配置
 validate_config()
 
-# 设置CORS中间件
-cors_origins = settings.CORS_ORIGINS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=[
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS",
-    ],
-    allow_headers=[
-        "Content-Type",
-        "X-CSRF-Token",
-        "X-Requested-With",
-        "X-Request-ID",
-        "Accept",
-        "Origin",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-    ],
-)
-
 # 设置安全中间件
 if setup_security_middleware:
     setup_security_middleware(app)
@@ -308,6 +298,33 @@ if ErrorRecoveryMiddleware:
     app.add_middleware(ErrorRecoveryMiddleware)
 else:
     safe_print("Warning: Skipping error recovery middleware")
+
+# 设置CORS中间件（保持最外层以覆盖错误响应）
+cors_origins = settings.CORS_ORIGINS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Requested-With",
+        "X-Request-ID",
+        "Accept",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+    ],
+)
 
 # API架构说明：系统使用统一的版本化架构 /api/v1/*
 # 所有API端点都通过路由注册器统一管理
@@ -373,24 +390,5 @@ try:
     setup_logging_security()
 except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
-
-# 初始化数据库（跳过测试模式）
-if not is_testing():
-    import asyncio
-
-    # 初始化数据库
-    asyncio.run(init_db())
-
-    # 记录数据库状态
-    db_status = asyncio.run(get_database_status())
-    logger.info(f"数据库状态: {db_status}")
-
-    health_check = db_status.get("health_check", {})
-    if isinstance(health_check, dict) and health_check.get("healthy"):
-        logger.info("数据库健康检查通过")
-    else:
-        logger.info("数据库健康检查未通过或未返回状态")
-else:
-    logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
 
 logger.info("FastAPI应用启动完成")

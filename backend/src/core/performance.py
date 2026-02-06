@@ -194,8 +194,7 @@ class QueryOptimizer:
     def optimize_asset_query(self, should_include_related: bool = False) -> Any:
         """优化资产查询"""
         with self.query_with_monitoring("optimized_asset_query"):
-from ..models.asset import Asset
-from ..models.ownership import Ownership
+            from ..models.asset import Asset
 
             stmt = select(Asset)
             if should_include_related:
@@ -215,20 +214,21 @@ from ..models.ownership import Ownership
     ) -> Any:
         """优化资产列表查询"""
         from ..models.asset import Asset
+        from ..models.ownership import Ownership
 
         with self.query_with_monitoring("optimized_asset_list_query"):
             stmt = select(Asset)
 
             # 添加搜索条件
-                if search:
-                    search_conditions = [
-                        Asset.property_name.ilike(f"%{search}%"),
-                        Asset.address.ilike(f"%{search}%"),
-                        Ownership.name.ilike(f"%{search}%"),
-                    ]
-                    stmt = stmt.join(
-                        Ownership, Asset.ownership_id == Ownership.id, isouter=True
-                    ).where(*search_conditions)
+            if search:
+                search_conditions = [
+                    Asset.property_name.ilike(f"%{search}%"),
+                    Asset.address.ilike(f"%{search}%"),
+                    Ownership.name.ilike(f"%{search}%"),
+                ]
+                stmt = stmt.join(
+                    Ownership, Asset.ownership_id == Ownership.id, isouter=True
+                ).where(*search_conditions)
 
             # 添加筛选条件
             if filters:

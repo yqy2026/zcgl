@@ -2,6 +2,7 @@ from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..crud.base import CRUDBase
 from ..models.rbac import (
@@ -47,8 +48,25 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Role | None:
         """根据名称获取角色"""
-        stmt = select(Role).where(Role.name == name)
+        stmt = select(Role).where(Role.name == name).options(
+            selectinload(Role.permissions)
+        )
         return (await db.execute(stmt)).scalars().first()
+
+    async def get(
+        self, db: AsyncSession, id: Any, use_cache: bool = True
+    ) -> Role | None:
+        """根据ID获取单个记录（预加载权限）"""
+        stmt = (
+            select(Role)
+            .where(Role.id == id)
+            .options(selectinload(Role.permissions))
+        )
+        result = (await db.execute(stmt)).scalars().first()
+        if use_cache and result is not None:  # pragma: no cover
+            cache_key = self._get_cache_key("get", id=id)  # pragma: no cover
+            self._set_cache(cache_key, result)  # pragma: no cover
+        return result
 
     async def get_multi_with_filters(
         self,
@@ -71,16 +89,25 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         if organization_id:
             filters["organization_id"] = organization_id
 
-        return await self.get_multi_with_count(
-            db,
+        stmt = self.query_builder.build_query(
             filters=filters,
-            search=search,
+            search_query=search,
             search_fields=["name", "display_name", "description"],
-            order_by="level",
-            order_desc=False,
+            sort_by="level",
+            sort_desc=False,
             skip=skip,
             limit=limit,
+        ).options(selectinload(Role.permissions))
+
+        count_stmt = self.query_builder.build_count_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
         )
+
+        result = (await db.execute(stmt)).scalars().all()
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        return list(result), total
 
     # Override count to use QueryBuilder implicitly or keep custom if complex logic needed
     # But for standard counts, CRUDBase.count works if filters aligned.

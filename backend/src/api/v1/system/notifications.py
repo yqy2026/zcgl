@@ -187,9 +187,10 @@ async def delete_notification(
 
 
 @router.post("/run-tasks", response_model=dict)
-def run_notification_tasks_endpoint(
+async def run_notification_tasks_endpoint(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, str]:
     """
     手动触发通知任务（用于测试和管理）

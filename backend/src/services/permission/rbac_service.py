@@ -389,11 +389,12 @@ class RBACService:
         )
 
         if active_only:
+            now_naive = datetime.now(UTC).replace(tzinfo=None)
             stmt = stmt.where(UserRoleAssignment.is_active)
             stmt = stmt.where(
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.now(UTC),
+                    UserRoleAssignment.expires_at > now_naive,
                 )
             )
 

@@ -118,6 +118,18 @@ async def login(
         )
 
         rbac_service = RBACService(db)
+        role_summary = {
+            "roles": [],
+            "role_ids": [],
+            "primary_role_id": None,
+            "primary_role_name": None,
+            "is_admin": False,
+        }
+        try:
+            role_summary = await rbac_service.get_user_role_summary(str(user.id))
+        except Exception as e:
+            logger.warning(f"Failed to fetch role summary for user {user.id}: {e}")
+
         try:
             permission_summary = await rbac_service.get_user_permissions_summary(
                 str(user.id)
@@ -136,8 +148,6 @@ async def login(
         except Exception as e:
             logger.warning(f"Failed to fetch permissions for user {user.id}: {e}")
             permissions_list = []
-
-            role_summary = await rbac_service.get_user_role_summary(str(user.id))
 
         return {
             "user": {
