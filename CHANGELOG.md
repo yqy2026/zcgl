@@ -2,6 +2,50 @@
 
 ## [Unreleased] - 2026-02-06
 
+### 🎨 UI/UX 改进 (UI/UX Improvements)
+
+#### Added / 新增
+
+- **可访问性增强** (Accessibility Enhancement)
+  - 为 AssetList 组件的所有操作按钮添加 ARIA 标签（aria-label, title）
+  - 为表单字段添加可访问性属性（aria-required, aria-describedby, aria-label）
+  - 为 Modal 添加焦点管理（autoFocus, focusTriggerAfterClose）
+  - 为错误提示添加 role="alert" 和 aria-invalid 属性
+  - 影响 24+ 个交互元素，符合 WCAG 2.1 AA 级标准
+
+- **响应式设计优化** (Responsive Design)
+  - 实现表格响应式设计，移动端（< 768px）自动隐藏次要列
+  - 动态调整表格滚动配置和尺寸（移动端 y: 400px, 桌面端 y: 600px）
+  - 添加窗口 resize 监听，实时响应屏幕尺寸变化
+  - 移动端使用 size="small" 优化显示效果
+
+- **样式系统统一** (Style System Unification)
+  - 将 Layout.module.css 中 15+ 处硬编码颜色替换为 CSS 变量
+  - 统一使用 variables.css 定义的语义化变量
+  - 修复内容区域被固定导航栏遮挡的问题（添加适当的 padding-top）
+
+- **性能优化指南** (Performance Optimization Guide)
+  - 新增 `frontend/docs/performance-optimization.md` 文档
+  - 包含虚拟滚动方案、图片优化、搜索防抖等最佳实践
+  - 记录 Web Vitals 性能监控指标和目标
+
+#### Changed / 改进
+
+- AssetList 组件添加响应式状态管理（isMobile）
+- 表格列配置支持移动端自动隐藏
+- 表单输入框添加完整的可访问性属性
+- 按钮和交互元素添加描述性 ARIA 标签
+
+#### Fixed / 修复
+
+- 修复内容区域被固定导航栏遮挡（64px header + 56px breadcrumb）
+- 修复硬编码样式导致的主题切换不兼容问题
+
+#### 文档 (Documentation)
+
+- 新增 `frontend/docs/ui-ux-improvements-report.md` - UI/UX 改进实施报告
+- 新增 `frontend/docs/performance-optimization.md` - 性能优化指南
+
 ### 🧪 审核 (Audit)
 
 - **数据库异步化实施核查** (Async DB Migration Audit)

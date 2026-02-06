@@ -46,6 +46,7 @@ const FormCompletionProgress: React.FC = () => {
             percent={completionRate}
             size="small"
             strokeColor={completionRate === 100 ? COLORS.success : COLORS.primary}
+            showInfo={false}
           />
         </Col>
         <Col>
@@ -71,11 +72,27 @@ const FormActions: React.FC<FormActionsProps> = ({ isLoading, mode, onCancel, on
     <Card>
       <Row justify="end">
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={onReset}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={onReset}
+            aria-label="重置表单"
+            title="重置表单"
+          >
             重置
           </Button>
-          {onCancel && <Button onClick={onCancel}>取消</Button>}
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={isLoading}>
+          {onCancel && (
+            <Button onClick={onCancel} aria-label="取消操作" title="取消">
+              取消
+            </Button>
+          )}
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SaveOutlined />}
+            loading={isLoading}
+            aria-label={mode === 'create' ? '创建资产' : '保存修改'}
+            title={mode === 'create' ? '创建新资产' : '保存修改'}
+          >
             {mode === 'create' ? '创建资产' : '保存修改'}
           </Button>
         </Space>
