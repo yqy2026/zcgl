@@ -23,6 +23,17 @@
 
 - 删除根目录 `.venv`，统一使用 `backend/.venv` 以避免环境混淆
 
+### 🧹 清理 (Cleanup)
+
+#### Removed / 删除
+
+- **项目临时文件清理** (Project Cleanup)
+  - 删除测试输出、缓存目录和构建产物（释放 124.3 MB）
+  - 清理临时脚本、报告文档和日志文件
+  - 删除过期的 `package/` 目录和 playwright tarball 包
+  - 移除测试覆盖率脚本 `test_rent_contract_service_coverage.py`
+  - 总计清理 82 个文件，删除 1002 行代码
+
 ### 🔍 搜索 (Search)
 
 - **加密字段模糊搜索支持** (Blind Index for Encrypted Search)
