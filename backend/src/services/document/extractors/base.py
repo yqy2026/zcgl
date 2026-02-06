@@ -122,7 +122,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
         """
         Common extraction logic for all vision adapters.
         """
-        from ..pdf_to_images import cleanup_temp_images, pdf_to_images
+        from ..pdf_to_images import cleanup_temp_images, pdf_to_images_async
 
         if not self.vision_service.is_available:
             return {
@@ -134,7 +134,9 @@ class BaseVisionAdapter(ContractExtractorInterface):
         image_paths: list[str] = []
         try:
             logger.info(f"{self.provider_name}Adapter: Converting {file_path}")
-            image_paths = pdf_to_images(file_path, dpi=dpi, max_pages=max_pages)
+            image_paths = await pdf_to_images_async(
+                file_path, dpi=dpi, max_pages=max_pages
+            )
 
             if not image_paths:
                 return {"success": False, "error": "No images extracted from PDF"}
@@ -175,6 +177,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 }
 
             merged_data = self._merge_multi_page_results(all_results)
+            field_sources = {key: "vision" for key in merged_data.keys()}
 
             return {
                 "success": True,
@@ -184,6 +187,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 "extraction_method": f"vision_{self.provider_name}",
                 "pages_processed": total_pages,
                 "batches_processed": len(all_results),
+                "field_sources": field_sources,
                 "usage": self._aggregate_usage(all_results),
             }
 

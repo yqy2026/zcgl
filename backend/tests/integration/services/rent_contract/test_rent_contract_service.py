@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session
 
 from src.constants.rent_contract_constants import PaymentStatus
 from src.core.exception_handler import OperationNotAllowedError
-from src.models.asset import Asset, Ownership
+from src.models.asset import Asset
+from src.models.ownership import Ownership
 from src.models.rent_contract import (
     ContractType,
     DepositTransactionType,
@@ -48,7 +49,7 @@ class AssetTestDataFactory:
     def create_asset(**kwargs):
         """创建Asset实例"""
         default_data = {
-            "ownership_entity": "测试权属方",
+            "ownership_id": "ownership-default",
             "property_name": "测试资产",
             "address": "测试地址",
             "ownership_status": "已确权",
@@ -129,7 +130,7 @@ def test_ownership(db_session: Session):
 def test_asset(db_session: Session, test_ownership: Ownership):
     """测试用资产"""
     asset = Asset(
-        ownership_entity="权属方A",
+        ownership_id=test_ownership.id,
         property_name="测试资产1",
         address="北京市朝阳区",
     )
@@ -179,10 +180,10 @@ class TestContractCreation:
         """测试创建带资产的合同"""
         # 使用Asset工厂创建资产
         asset1 = AssetTestDataFactory.create_asset(
-            property_name="资产1", address="地址1"
+            property_name="资产1", address="地址1", ownership_id=self.ownership.id
         )
         asset2 = AssetTestDataFactory.create_asset(
-            property_name="资产2", address="地址2"
+            property_name="资产2", address="地址2", ownership_id=self.ownership.id
         )
         self.db.add_all([asset1, asset2])
         self.db.commit()
@@ -258,7 +259,9 @@ class TestContractCreation:
     def test_create_contract_detects_asset_conflict(self):
         """测试检测资产租金冲突"""
         asset = AssetTestDataFactory.create_asset(
-            property_name="冲突资产", address="地址1"
+            property_name="冲突资产",
+            address="地址1",
+            ownership_id=self.ownership.id,
         )
         self.db.add(asset)
         self.db.commit()
@@ -406,10 +409,14 @@ class TestContractUpdate:
     def test_update_contract_updates_assets(self):
         """测试更新关联资产"""
         asset1 = AssetTestDataFactory.create_asset(
-            property_name="新资产1", address="地址1"
+            property_name="新资产1",
+            address="地址1",
+            ownership_id=self.ownership.id,
         )
         asset2 = AssetTestDataFactory.create_asset(
-            property_name="新资产2", address="地址2"
+            property_name="新资产2",
+            address="地址2",
+            ownership_id=self.ownership.id,
         )
         self.db.add_all([asset1, asset2])
         self.db.commit()

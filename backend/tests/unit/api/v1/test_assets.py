@@ -69,6 +69,8 @@ def sample_asset_response():
         "area": 1000.0,
         "ownership_entity": "Test Owner",
         "management_entity": "Test Manager",
+        "operation_agreement_attachments": "receive-1.pdf,receive-2.pdf",
+        "terminal_contract_files": "terminal-1.pdf",
     }
 
 
@@ -108,7 +110,7 @@ class TestGetAssets:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -142,7 +144,7 @@ class TestGetAssets:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -174,7 +176,7 @@ class TestGetAssets:
             ownership_status="已确权",
             property_nature="商业",
             usage_status="在用",
-            ownership_entity="Test Owner",
+            ownership_id="ownership-123",
             management_entity=None,
             business_category=None,
             min_area=100.0,
@@ -205,7 +207,7 @@ class TestGetAssets:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -236,7 +238,7 @@ class TestGetAssets:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -299,17 +301,24 @@ class TestCreateAsset:
     ):
         """Test successful asset creation"""
         asset_data = {
+            "ownership_id": "ownership-001",
             "property_name": "New Property",
             "address": "456 New St",
             "ownership_status": "已确权",
             "property_nature": "办公",
             "usage_status": "空置",
             "area": 2000.0,
+            "operation_agreement_attachments": "receive-3.pdf",
+            "terminal_contract_files": "terminal-2.pdf",
         }
         mock_asset_service.create_asset.return_value = {
             **sample_asset_response,
             "property_name": asset_data["property_name"],
             "area": asset_data["area"],
+            "operation_agreement_attachments": asset_data[
+                "operation_agreement_attachments"
+            ],
+            "terminal_contract_files": asset_data["terminal_contract_files"],
         }
 
         result = mock_asset_service.create_asset(
@@ -318,6 +327,14 @@ class TestCreateAsset:
 
         assert result["property_name"] == "New Property"
         assert result["area"] == 2000.0
+        assert (
+            result["operation_agreement_attachments"]
+            == asset_data["operation_agreement_attachments"]
+        )
+        assert (
+            result["terminal_contract_files"]
+            == asset_data["terminal_contract_files"]
+        )
         mock_asset_service.create_asset.assert_called_once()
 
     @pytest.mark.asyncio
@@ -353,9 +370,15 @@ class TestUpdateAsset:
         mock_asset_service.update_asset.return_value = {
             **sample_asset_response,
             "property_name": "Updated Property",
+            "operation_agreement_attachments": "receive-4.pdf",
+            "terminal_contract_files": "terminal-3.pdf,terminal-4.pdf",
         }
 
-        update_data = {"property_name": "Updated Property"}
+        update_data = {
+            "property_name": "Updated Property",
+            "operation_agreement_attachments": "receive-4.pdf",
+            "terminal_contract_files": "terminal-3.pdf,terminal-4.pdf",
+        }
 
         result = mock_asset_service.update_asset(
             db=MagicMock(),
@@ -365,6 +388,8 @@ class TestUpdateAsset:
         )
 
         assert result["property_name"] == "Updated Property"
+        assert result["operation_agreement_attachments"] == "receive-4.pdf"
+        assert result["terminal_contract_files"] == "terminal-3.pdf,terminal-4.pdf"
         mock_asset_service.update_asset.assert_called_once()
 
     @pytest.mark.asyncio
@@ -488,7 +513,7 @@ class TestAssetAPIEdgeCases:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -520,7 +545,7 @@ class TestAssetAPIEdgeCases:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=None,
@@ -567,7 +592,7 @@ class TestAssetAPIEdgeCases:
             ownership_status=None,
             property_nature=None,
             usage_status=None,
-            ownership_entity=None,
+            ownership_id=None,
             management_entity=None,
             business_category=None,
             min_area=500.0,

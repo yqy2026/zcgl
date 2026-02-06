@@ -1,10 +1,10 @@
 import tempfile
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import and_
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.task import excel_task_config_crud, task_crud
@@ -38,11 +38,10 @@ class TaskService:
         except Exception:
             return False
 
-    def create_task(
-        self, db: Session, *, obj_in: TaskCreate, user_id: str | None = None
+    async def create_task(
+        self, db: AsyncSession, *, obj_in: TaskCreate, user_id: str | None = None
     ) -> AsyncTask:
         """创建新任务"""
-        # Logic moved from CRUD.create
         db_obj = AsyncTask(
             task_type=obj_in.task_type,
             title=obj_in.title,
@@ -55,13 +54,12 @@ class TaskService:
         )
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
 
-        # Log creation history
         task_id_value: str = getattr(db_obj, "id")
         user_id_value: str = user_id or ""
-        self.create_history(
+        await self.create_history(
             db=db,
             task_id=task_id_value,
             action="created",
@@ -71,9 +69,9 @@ class TaskService:
 
         return db_obj
 
-    def update_task_status(
+    async def update_task_status(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         task_id: str,
         status: TaskStatus,
@@ -81,7 +79,7 @@ class TaskService:
         error_message: str | None = None,
     ) -> AsyncTask:
         """更新任务状态"""
-        task: AsyncTask | None = task_crud.get(db, task_id)
+        task: AsyncTask | None = await task_crud.get(db, task_id)
         if not task:
             raise ResourceNotFoundError("任务", task_id)
 
@@ -89,14 +87,11 @@ class TaskService:
 
         update_data: dict[str, Any] = {"status": status}
 
-        # Logic moved from CRUD.update
-        # Start time
         if old_status == TaskStatus.PENDING and status == TaskStatus.RUNNING:
-            update_data["started_at"] = datetime.now(UTC)
+            update_data["started_at"] = datetime.utcnow()
 
-        # End time
         if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-            update_data["completed_at"] = datetime.now(UTC)
+            update_data["completed_at"] = datetime.utcnow()
             if status == TaskStatus.COMPLETED:
                 update_data["progress"] = 100
 
@@ -111,10 +106,9 @@ class TaskService:
             setattr(task, field, value)
 
         db.add(task)
-        db.commit()
-        db.refresh(task)
+        await db.commit()
+        await db.refresh(task)
 
-        # Log history
         if status != old_status:
             task_id_value: str = getattr(task, "id")
             task_user_id: str | None = getattr(task, "user_id", None)
@@ -122,7 +116,7 @@ class TaskService:
                 "old_status": old_status,
                 "new_status": status,
             }
-            self.create_history(
+            await self.create_history(
                 db=db,
                 task_id=task_id_value,
                 action="status_changed",
@@ -134,67 +128,63 @@ class TaskService:
 
         return task
 
-    def update_task(
-        self, db: Session, *, task_id: str, obj_in: TaskUpdate
+    async def update_task(
+        self, db: AsyncSession, *, task_id: str, obj_in: TaskUpdate
     ) -> AsyncTask:
         """通用更新任务"""
-        task: AsyncTask | None = task_crud.get(db, task_id)
+        task: AsyncTask | None = await task_crud.get(db, task_id)
         if not task:
             raise ResourceNotFoundError("任务", task_id)
 
-        # Check permissions/state logic if any (from API)
         if task.status in [
             TaskStatus.COMPLETED,
             TaskStatus.FAILED,
             TaskStatus.CANCELLED,
         ]:
-            # Only allow updating active tasks generally, unless specific fields?
-            # API says: "已完成的任务无法更新"
             raise OperationNotAllowedError(
                 "已完成的任务无法更新",
                 reason="task_status_final",
             )
 
-        # Reuse update_task_status logic if status changes, OR just generic update?
-        # If status is in obj_in, we should be careful.
-        # API logic was just CRUD update with status hooks in CRUD.
-        # Let's handle generic update here but delegate status specific logic blocks if needed.
-
         update_data: dict[str, Any] = obj_in.model_dump(exclude_unset=True)
+        old_status: TaskStatus | None = None
+        new_status: TaskStatus | None = None
         if "status" in update_data:
-            # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
-            new_status: TaskStatus = update_data["status"]
+            new_status = update_data["status"]
             old_status = task.status
 
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
-                update_data["started_at"] = datetime.now(UTC)
+                update_data["started_at"] = datetime.utcnow()
 
             if new_status in [
                 TaskStatus.COMPLETED,
                 TaskStatus.FAILED,
                 TaskStatus.CANCELLED,
             ]:
-                update_data["completed_at"] = datetime.now(UTC)
+                update_data["completed_at"] = datetime.utcnow()
                 if new_status == TaskStatus.COMPLETED:
                     update_data["progress"] = 100
-
-            # Log history later
 
         for field, value in update_data.items():
             setattr(task, field, value)
 
         db.add(task)
-        db.commit()
-        db.refresh(task)
+        await db.commit()
+        await db.refresh(task)
 
-        if "status" in update_data and update_data["status"] != old_status:
+        if (
+            "status" in update_data
+            and old_status is not None
+            and new_status is not None
+            and new_status != old_status
+        ):
             task_id_value: str = getattr(task, "id")
             task_user_id: str | None = getattr(task, "user_id", None)
             status_details: dict[str, Any] = {
                 "old_status": old_status,
                 "new_status": new_status,
             }
-            self.create_history(
+            await self.create_history(
                 db=db,
                 task_id=task_id_value,
                 action="status_changed",
@@ -205,11 +195,11 @@ class TaskService:
 
         return task
 
-    def cancel_task(
-        self, db: Session, *, task_id: str, reason: str | None = None
+    async def cancel_task(
+        self, db: AsyncSession, *, task_id: str, reason: str | None = None
     ) -> AsyncTask:
         """取消任务"""
-        task = task_crud.get(db, task_id)
+        task = await task_crud.get(db, task_id)
         if not task:
             raise ResourceNotFoundError("任务", task_id)
 
@@ -220,13 +210,13 @@ class TaskService:
             )
 
         error_msg = f"任务被取消: {reason if reason else '无原因'}"
-        return self.update_task_status(
+        return await self.update_task_status(
             db, task_id=task_id, status=TaskStatus.CANCELLED, error_message=error_msg
         )
 
-    def delete_task(self, db: Session, *, task_id: str) -> None:
+    async def delete_task(self, db: AsyncSession, *, task_id: str) -> None:
         """删除任务"""
-        task = task_crud.get(db, task_id)
+        task = await task_crud.get(db, task_id)
         if not task:
             raise ResourceNotFoundError("任务", task_id)
 
@@ -236,10 +226,10 @@ class TaskService:
 
         setattr(task, "is_active", False)
         db.add(task)
-        db.commit()
+        await db.commit()
 
         task_user_id: str | None = getattr(task, "user_id", None)
-        self.create_history(
+        await self.create_history(
             db=db,
             task_id=task_id,
             action="deleted",
@@ -247,9 +237,9 @@ class TaskService:
             user_id=task_user_id or "",
         )
 
-    def create_history(
+    async def create_history(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         task_id: str,
         action: str,
@@ -266,39 +256,33 @@ class TaskService:
             details=details or {},
         )
         db.add(history)
-        db.commit()  # Ensuring history is persisted
-        db.refresh(history)
+        await db.commit()
+        await db.refresh(history)
         return history
 
-    def get_statistics(
-        self, db: Session, *, user_id: str | None = None
+    async def get_statistics(
+        self, db: AsyncSession, *, user_id: str | None = None
     ) -> dict[str, Any]:
-        """获取统计信息 (Proxy to CRUD or implement here?) - Logic is reading DB, so keep in CRUD or move here? moving to service is fine for consistency"""
-        # Kept in CRUD for now as it's read-only aggregation.
-        return task_crud.get_statistics(db, user_id=user_id)
+        return await task_crud.get_statistics_async(db, user_id=user_id)
 
-    def cleanup_old_tasks(
-        self, db: Session, *, days: int, dry_run: bool
+    async def cleanup_old_tasks(
+        self, db: AsyncSession, *, days: int, dry_run: bool
     ) -> dict[str, Any]:
         """清理过期任务"""
-        # Moving logic from API
         from datetime import timedelta
 
-        cutoff_date = datetime.now(UTC) - timedelta(days=days)
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
 
-        old_tasks = (
-            db.query(AsyncTask)
-            .filter(
-                and_(
-                    AsyncTask.created_at < cutoff_date,
-                    AsyncTask.status.in_(
-                        [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
-                    ),
-                    AsyncTask.is_active.is_(True),
-                )
+        stmt = select(AsyncTask).filter(
+            and_(
+                AsyncTask.created_at < cutoff_date,
+                AsyncTask.status.in_(
+                    [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+                ),
+                AsyncTask.is_active.is_(True),
             )
-            .all()
         )
+        old_tasks = list((await db.execute(stmt)).scalars().all())
 
         if dry_run:
             dry_run_result: dict[str, Any] = {
@@ -318,7 +302,7 @@ class TaskService:
             setattr(task, "is_active", False)
             count += 1
 
-        db.commit()
+        await db.commit()
         cleanup_result: dict[str, Any] = {
             "message": f"成功清理 {count} 个过期任务",
             "cleanup_date": cutoff_date.isoformat(),
@@ -326,26 +310,30 @@ class TaskService:
         }
         return cleanup_result
 
-    # Excel Config Logic
-    def create_excel_config(
-        self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str | None = None
+    async def create_excel_config(
+        self,
+        db: AsyncSession,
+        *,
+        obj_in: ExcelTaskConfigCreate,
+        user_id: str | None = None,
     ) -> ExcelTaskConfig:
         if obj_in.is_default:
-            db.query(ExcelTaskConfig).filter(
-                and_(
-                    ExcelTaskConfig.config_type == obj_in.config_type,
-                    ExcelTaskConfig.task_type == obj_in.task_type,
-                    ExcelTaskConfig.is_default.is_(True),
+            stmt = (
+                update(ExcelTaskConfig)
+                .where(
+                    and_(
+                        ExcelTaskConfig.config_type == obj_in.config_type,
+                        ExcelTaskConfig.task_type == obj_in.task_type,
+                        ExcelTaskConfig.is_default.is_(True),
+                    )
                 )
-            ).update({"is_default": False})
+                .values(is_default=False)
+            )
+            await db.execute(stmt)
 
-        # Delegating actual creation to CRUD but handling transaction
-        config: ExcelTaskConfig = excel_task_config_crud.create(
+        config: ExcelTaskConfig = await excel_task_config_crud.create(
             db, obj_in=obj_in, user_id=user_id
         )
-        # Note: CRUD might flush, we commit here
-        db.commit()
-        db.refresh(config)
         return config
 
 

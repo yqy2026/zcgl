@@ -411,6 +411,32 @@ describe('ResponseExtractor - 便捷方法', () => {
 
 describe('ApiErrorHandler - 错误处理', () => {
   describe('handleError - Axios错误', () => {
+    it('应该提取AxiosError中的嵌套错误信息', () => {
+      const response = createMockResponse(
+        {
+          success: false,
+          message: '',
+          error: {
+            message: '资产租金冲突',
+          },
+        },
+        409
+      );
+
+      const axiosError = new AxiosError(
+        'Conflict',
+        'ERR_BAD_REQUEST',
+        response.config,
+        {},
+        response
+      );
+
+      const error = ApiErrorHandler.handleError(axiosError);
+
+      expect(error.message).toBe('资产租金冲突');
+      expect(error.statusCode).toBe(409);
+    });
+
     it('应该处理网络错误（需要真实AxiosError实例）', () => {
       // 注意：由于测试环境无法创建真正的AxiosError实例，
       // 这里的测试验证的是fallback到UNKNOWN_ERROR的逻辑

@@ -171,10 +171,10 @@ describe('PropertyCertificateService', () => {
         data: [],
       });
 
-      await propertyCertificateService.listCertificates({ skip: 10, page_size: 20 });
+      await propertyCertificateService.listCertificates({ skip: 10, limit: 20 });
 
       expect(apiClient.get).toHaveBeenCalledWith('/property-certificates/', {
-        params: { skip: 10, page_size: 20 },
+        params: { skip: 10, limit: 20 },
       });
     });
 

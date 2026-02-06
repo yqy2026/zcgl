@@ -5,20 +5,18 @@ Excel导入操作模块 - 同步与异步导入
 import logging
 import os
 import tempfile
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Query, UploadFile
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session as SyncSession
 
 from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.file_size_constants import DEFAULT_MAX_EXCEL_FILE_SIZE
 from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import BusinessValidationError
 from src.crud.task import task_crud
-from src.database import get_async_db, get_session_factory
+from src.database import async_session_scope, get_async_db
 from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
@@ -73,32 +71,15 @@ async def import_excel(
         tmp_file_path = tmp_file.name
 
     try:
-        if not isinstance(ExcelImportService, type):
-            import_service = ExcelImportService()
-            result = await import_service.import_assets_from_excel(
-                file_path=tmp_file_path,
-                sheet_name=sheet_name,
-                should_validate_data=True,
-                should_create_assets=True,
-                should_update_existing=False,
-                should_skip_errors=should_skip_errors,
-            )
-        else:
-            session_factory = get_session_factory()
-
-            def _run_import() -> dict[str, Any]:
-                sync_db = session_factory()
-                try:
-                    import_service = ExcelImportService(sync_db)
-                    return import_service._import_assets_from_excel_sync(
-                        file_path=tmp_file_path,
-                        sheet_name=sheet_name,
-                        should_skip_errors=should_skip_errors,
-                    )
-                finally:
-                    sync_db.close()
-
-            result = await run_in_threadpool(_run_import)
+        import_service = ExcelImportService(db)
+        result = await import_service.import_assets_from_excel(
+            file_path=tmp_file_path,
+            sheet_name=sheet_name,
+            should_validate_data=True,
+            should_create_assets=True,
+            should_update_existing=False,
+            should_skip_errors=should_skip_errors,
+        )
 
         return {
             "message": "导入完成",
@@ -162,13 +143,7 @@ async def import_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    def _create_task(sync_db: SyncSession) -> Any:
-        return task_crud.create(db=sync_db, obj_in=task_in, user_id=current_user.id)
-
-    if isinstance(db, AsyncSession):
-        task = await db.run_sync(_create_task)
-    else:
-        task = _create_task(db)
+    task = await task_crud.create_async(db=db, obj_in=task_in, user_id=current_user.id)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
         content = await file.read()
@@ -194,20 +169,26 @@ async def _process_excel_import_async(
     task_id: str,
     file_path: str,
     request: ExcelImportRequest,
-    db_session: SyncSession | None = None,
+    db_session: AsyncSession | None = None,
 ) -> None:
     """
     后台处理Excel导入任务
     """
-    session_factory = get_session_factory()
-    owns_session = db_session is None
-    db_session = db_session or session_factory()
+    if db_session is None:
+        async with async_session_scope() as session:
+            await _process_excel_import_async(
+                task_id=task_id,
+                file_path=file_path,
+                request=request,
+                db_session=session,
+            )
+        return
     try:
-        task = task_crud.get(db=db_session, id=task_id)
+        task = await task_crud.get(db=db_session, id=task_id)
         if not task:
             return
-        started_at = datetime.now(UTC)
-        task_crud.update(
+        started_at = datetime.utcnow()
+        await task_crud.update(
             db=db_session,
             db_obj=task,
             obj_in={
@@ -232,8 +213,8 @@ async def _process_excel_import_async(
             batch_size=request.batch_size,
         )
 
-        completed_at = datetime.now(UTC)
-        task_crud.update(
+        completed_at = datetime.utcnow()
+        await task_crud.update(
             db=db_session,
             db_obj=task,
             obj_in={
@@ -269,11 +250,11 @@ async def _process_excel_import_async(
         try:
             if db_session is not None:
                 if hasattr(db_session, "rollback"):
-                    db_session.rollback()
-                failed_at = datetime.now(UTC)
-                task = task_crud.get(db=db_session, id=task_id)
+                    await db_session.rollback()
+                failed_at = datetime.utcnow()
+                task = await task_crud.get(db=db_session, id=task_id)
                 if task:
-                    task_crud.update(
+                    await task_crud.update(
                         db=db_session,
                         db_obj=task,
                         obj_in={
@@ -298,8 +279,6 @@ async def _process_excel_import_async(
                 },
             )
     finally:
-        if owns_session and db_session is not None:
-            db_session.close()
         try:
             if os.path.exists(file_path):
                 os.unlink(file_path)

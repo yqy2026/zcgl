@@ -5,9 +5,9 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface AdvancedSearchFieldsProps {
-  ownershipEntities: string[];
+  ownershipOptions: Array<{ value: string; label: string }>;
   businessCategories: string[];
-  ownershipEntityLoading?: boolean;
+  ownershipLoading?: boolean;
   businessCategoryLoading?: boolean;
   areaRange: [number, number];
   onAreaMinChange: (value: number | null) => void;
@@ -15,22 +15,22 @@ interface AdvancedSearchFieldsProps {
 }
 
 export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
-  ownershipEntities,
+  ownershipOptions,
   businessCategories,
-  ownershipEntityLoading = false,
+  ownershipLoading = false,
   businessCategoryLoading = false,
   areaRange,
   onAreaMinChange,
   onAreaMaxChange,
 }: AdvancedSearchFieldsProps) {
-  const ownershipOptions = useMemo(
+  const ownershipOptionNodes = useMemo(
     () =>
-      ownershipEntities.map(entity => (
-        <Option key={entity} value={entity}>
-          {entity}
+      ownershipOptions.map(option => (
+        <Option key={option.value} value={option.value}>
+          {option.label}
         </Option>
       )),
-    [ownershipEntities]
+    [ownershipOptions]
   );
 
   const businessOptions = useMemo(
@@ -47,15 +47,15 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
     <>
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item name="ownership_entity" label="权属方">
+          <Form.Item name="ownership_id" label="权属方">
             <Select
               placeholder="选择权属方"
               allowClear
               showSearch
               optionFilterProp="children"
-              loading={ownershipEntityLoading}
+              loading={ownershipLoading}
             >
-              {ownershipOptions}
+              {ownershipOptionNodes}
             </Select>
           </Form.Item>
         </Col>

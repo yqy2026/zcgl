@@ -174,7 +174,7 @@ Asset CRUD operations tests
 """
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.asset import Asset
 from src.schemas.asset import AssetCreate
@@ -185,11 +185,12 @@ class TestAssetCRUD:
     """Test Asset CRUD operations"""
 
     @pytest.mark.unit
-    def test_create_asset_success(self, db_session: Session) -> None:
+    @pytest.mark.asyncio
+    async def test_create_asset_success(self, db_session: AsyncSession) -> None:
         """Test successful asset creation with valid data"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_entity="测试权属人",
+            ownership_id="ownership-001",
             property_name="测试物业",
             address="测试地址123号",
             actual_property_area=1000.0,
@@ -197,44 +198,46 @@ class TestAssetCRUD:
         )
 
         # Act
-        result = asset_crud.create(db_session, asset_data)
+        result = await asset_crud.create_async(db_session, obj_in=asset_data)
 
         # Assert
         assert result is not None
-        assert result.ownership_entity == "测试权属人"
+        assert result.ownership_id == "ownership-001"
         assert result.property_name == "测试物业"
         assert result.id is not None
 
     @pytest.mark.unit
-    def test_create_asset_duplicate_fails(self, db_session: Session) -> None:
+    @pytest.mark.asyncio
+    async def test_create_asset_duplicate_fails(self, db_session: AsyncSession) -> None:
         """Test that duplicate assets are rejected"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_entity="测试权属人",
+            ownership_id="ownership-001",
             property_name="唯一物业",
             address="测试地址",
         )
 
         # Act - Create first asset
-        asset_crud.create(db_session, asset_data)
+        await asset_crud.create_async(db_session, obj_in=asset_data)
 
         # Assert - Attempting to create duplicate should raise error
         with pytest.raises(ValueError, match="already exists"):
-            asset_crud.create(db_session, asset_data)
+            await asset_crud.create_async(db_session, obj_in=asset_data)
 
     @pytest.mark.integration
-    def test_get_asset_by_id_from_db(self, db_session: Session) -> None:
+    @pytest.mark.asyncio
+    async def test_get_asset_by_id_from_db(self, db_session: AsyncSession) -> None:
         """Test retrieving asset from database by ID"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_entity="测试权属人",
+            ownership_id="ownership-001",
             property_name="测试物业",
             address="测试地址",
         )
-        created = asset_crud.create(db_session, asset_data)
+        created = await asset_crud.create_async(db_session, obj_in=asset_data)
 
         # Act
-        retrieved = asset_crud.get(db_session, created.id)
+        retrieved = await asset_crud.get_async(db_session, created.id)
 
         # Assert
         assert retrieved is not None
@@ -247,38 +250,43 @@ class TestAssetCRUD:
 ```python
 # conftest.py
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.asset import Asset
 from src.factories.asset_factory import AssetFactory
 
 
 @pytest.fixture(scope="function")
-def db_session():
-    """Real database session for integration tests"""
-    from src.core.database import get_db
-    session = next(get_db())
-    yield session
-    session.rollback()
-    session.close()
+async def db_session() -> AsyncSession:
+    """Real database session for integration tests (async)"""
+    from src.database import get_async_db
+    async for session in get_async_db():
+        yield session
+        await session.rollback()
 
 
 @pytest.fixture(scope="function")
-def authenticated_client(db_session: Session):
+async def authenticated_client(db_session: AsyncSession):
     """API client with authentication token"""
-    from fastapi.testclient import TestClient
+    from httpx import ASGITransport, AsyncClient
     from src.main import app
 
     # Create test user and get token
     token = create_test_user_and_get_token(db_session)
 
-    return TestClient(app, headers={"Authorization": f"Bearer {token}"})
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers={"Authorization": f"Bearer {token}"},
+    ) as client:
+        yield client
 
 
 @pytest.fixture(scope="session")
 def sample_asset_data():
     """Sample asset data for testing"""
     return {
-        "ownership_entity": "测试权属人",
+        "ownership_id": "ownership-001",
         "management_entity": "测试管理人",
         "property_name": "测试物业",
         "address": "测试地址123号",
@@ -384,7 +392,7 @@ describe('AssetForm', () => {
     )
 
     // Fill in form fields
-    await user.type(screen.getByLabelText(/权属单位/), '测试权属人')
+    await user.type(screen.getByLabelText(/权属单位/), 'ownership-001')
     await user.type(screen.getByLabelText(/物业名称/), '测试物业')
     await user.type(screen.getByLabelText(/地址/), '测试地址123号')
     await user.type(screen.getByLabelText(/建筑面积/), '1000')
@@ -396,7 +404,7 @@ describe('AssetForm', () => {
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          ownership_entity: '测试权属人',
+          ownership_id: 'ownership-001',
           property_name: '测试物业',
           address: '测试地址123号',
           actual_property_area: 1000,
@@ -434,7 +442,7 @@ describe('AssetForm', () => {
     )
 
     // Fill and submit
-    await user.type(screen.getByLabelText(/权属单位/), '测试权属人')
+    await user.type(screen.getByLabelText(/权属单位/), 'ownership-001')
     await user.click(screen.getByRole('button', { name: /提交/ }))
 
     // Verify loading state
@@ -547,7 +555,7 @@ describe('assetService', () => {
   describe('createAsset', () => {
     it('creates a new asset successfully', async () => {
       const newAsset = {
-        ownership_entity: '测试权属人',
+        ownership_id: 'ownership-001',
         property_name: '新物业',
         address: '测试地址',
       }

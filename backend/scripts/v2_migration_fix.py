@@ -6,6 +6,7 @@ Purpose: fix existing contracts by setting default V2 fields (contract_type, pay
 
 import logging
 import sys
+import asyncio
 from pathlib import Path
 
 from sqlalchemy import text
@@ -24,7 +25,7 @@ from src.database import get_database_engine, get_database_url
 from src.models.rent_contract import ContractType, PaymentCycle
 
 
-def run_migration():
+async def run_migration():
     logger.info("Starting V2 Data Migration...")
 
     # Initialize the database engine explicitly
@@ -32,10 +33,10 @@ def run_migration():
     logger.info(f"Connecting to database: {db_url}")
     engine = get_database_engine()
 
-    with engine.begin() as conn:
+    async with engine.begin() as conn:
         # 1. Update contract_type to 'lease_downstream' where null
         logger.info("Migrating contract_type...")
-        result = conn.execute(
+        result = await conn.execute(
             text("""
                 UPDATE rent_contracts
                 SET contract_type = :default_type
@@ -47,7 +48,7 @@ def run_migration():
 
         # 2. Update payment_cycle to 'monthly' where null
         logger.info("Migrating payment_cycle...")
-        result = conn.execute(
+        result = await conn.execute(
             text("""
                 UPDATE rent_contracts
                 SET payment_cycle = :default_cycle
@@ -65,7 +66,7 @@ def run_migration():
 
 if __name__ == "__main__":
     try:
-        run_migration()
+        asyncio.run(run_migration())
     except Exception as e:
         logger.error(f"Migration failed: {e}")
         # traceback for easier debugging

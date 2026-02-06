@@ -12,7 +12,7 @@
 - 常见问题排除
 
 ## ✅ Status
-**当前状态**: Active (2026-01-27 更新)
+**当前状态**: Active (2026-02-04 更新)
 **适用版本**: v2.0.0
 **支持数据库**: PostgreSQL (开发/测试/生产)。SQLite 已移除。
 
@@ -87,7 +87,7 @@ export DATABASE_URL="postgresql+psycopg://zcgl_user:secure_password@localhost:54
 alembic upgrade head
 
 # 5. 验证连接
-python -c "from src.database import get_database_status; print(get_database_status())"
+python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
 ```
 
 ---
@@ -115,12 +115,23 @@ DATABASE_POOL_RECYCLE=3600
 DATABASE_POOL_PRE_PING=true
 ```
 
+### 驱动与异步连接
+- 同步访问使用 `psycopg`
+- 异步访问 (AsyncSession) 使用 `asyncpg`（已纳入核心依赖）
+- 若运行期提示缺少 `asyncpg`，请确认在虚拟环境内执行 `pip install -e .`
+
 **连接池说明**:
 - `pool_size`: 连接池大小（默认 20）
 - `max_overflow`: 最大溢出连接数（默认 30）
 - `pool_timeout`: 获取连接超时时间（秒）
 - `pool_recycle`: 连接回收时间（秒），防止连接过期
 - `pool_pre_ping`: 连接前测试可用性
+
+### 时间戳与时区约定
+- 数据库字段多为 `TIMESTAMP WITHOUT TIME ZONE`
+- 写库统一使用 naive UTC（`datetime.utcnow()`）
+- 如果已有带时区时间，写库前先转换为 naive UTC：
+  - `aware_dt.astimezone(timezone.utc).replace(tzinfo=None)`
 
 ## 🔄 Alembic 数据库迁移
 
@@ -241,10 +252,8 @@ python run_dev.py
 **证据来源**: `backend/src/main.py:309-312`
 ```python
 # 初始化数据库
-init_db()
-
-# 创建数据库表
-create_tables()
+import asyncio
+asyncio.run(init_db())
 ```
 
 ### 方式二：手动初始化
@@ -259,13 +268,13 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 
 # 3. 初始化数据库
-python -c "from src.database import init_db, create_tables; init_db(); create_tables()"
+python -c "import asyncio; from src.database import init_db; asyncio.run(init_db())"
 
 # 4. 运行迁移
 alembic upgrade head
 
 # 5. 验证初始化
-python -c "from src.database import get_database_status; print(get_database_status())"
+python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
 ```
 
 ### 方式三：使用 SQL 初始化脚本
@@ -458,7 +467,7 @@ alembic upgrade head
 **解决方案**:
 ```bash
 # 方案一：删除现有表（谨慎使用）
-python -c "from src.database import drop_tables; drop_tables()"
+python -c "import asyncio; from src.database import drop_tables; asyncio.run(drop_tables())"
 
 # 方案二：使用迁移
 alembic upgrade head
@@ -477,12 +486,20 @@ psql -d zcgl_db -c "\d+ ownerships"
 
 # 2. 检查数据完整性
 python -c "
-from src.database import SessionLocal
+import asyncio
+from sqlalchemy import select
+from src.database import async_session_scope
 from src.models import Asset, Ownership
-db = SessionLocal()
-# 检查孤立记录
-orphans = db.query(Ownership).filter(~Ownership.asset_id.in_(db.query(Asset.id))).all()
-print(f'Found {len(orphans)} orphaned ownerships')
+
+async def check_orphans():
+    async with async_session_scope() as db:
+        result = await db.execute(
+            select(Ownership).where(~Ownership.asset_id.in_(select(Asset.id)))
+        )
+        orphans = list(result.scalars().all())
+        print(f'Found {len(orphans)} orphaned ownerships')
+
+asyncio.run(check_orphans())
 "
 
 # 3. 清理孤立数据或修复关系
@@ -501,6 +518,20 @@ psql -d zcgl_db -c "SELECT pg_terminate_backend(<pid>);"
 
 # 3. 为应用设置锁超时（可选）
 psql -d zcgl_db -c "ALTER DATABASE zcgl_db SET lock_timeout = '5s';"
+```
+
+### Q7: 时间戳写入报错 (asyncpg DataError)
+**问题**: `asyncpg.exceptions.DataError` 或 `can't subtract offset-naive and offset-aware datetimes`
+
+**解决方案**:
+```python
+from datetime import datetime, timezone
+
+# 写库字段使用 naive UTC
+naive_utc = datetime.utcnow()
+
+# 如果已有带时区时间
+naive_utc = aware_dt.astimezone(timezone.utc).replace(tzinfo=None)
 ```
 
 ---

@@ -13,7 +13,8 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
-from src.models.asset import Asset, Ownership, Project
+from src.models.asset import Asset, Project
+from src.models.ownership import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
 
@@ -57,7 +58,6 @@ def mock_asset():
     asset = MagicMock(spec=Asset)
     asset.id = "asset_123"
     asset.ownership_id = "ownership_123"
-    asset.ownership_entity = "测试权属方"
     return asset
 
 

@@ -1,7 +1,7 @@
 from typing import Any
 
-from sqlalchemy import and_, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
@@ -24,60 +24,42 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             }
         )
 
-    def create(
-        self, db: Session, *, obj_in: OrganizationCreate | dict[str, Any], **kwargs: Any
+    async def create_async(
+        self,
+        db: AsyncSession,
+        *,
+        obj_in: OrganizationCreate | dict[str, Any],
+        **kwargs: Any,
     ) -> Organization:
-        """创建组织 - 加密敏感字段"""
         if isinstance(obj_in, dict):
             obj_in_data = obj_in
         else:
             obj_in_data = obj_in.model_dump()
-
-        # 加密敏感字段
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
-        return super().create(db=db, obj_in=encrypted_data, **kwargs)
+        return await super().create(db=db, obj_in=encrypted_data, **kwargs)
 
-    def get(self, db: Session, id: Any, use_cache: bool = True) -> Organization | None:
-        """获取组织 - 解密敏感字段"""
-        result = super().get(db=db, id=id, use_cache=use_cache)
+    async def get_async(
+        self, db: AsyncSession, id: Any, use_cache: bool = True
+    ) -> Organization | None:
+        result = await super().get(db=db, id=id, use_cache=use_cache)
         if result is not None:
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
 
-    def get_multi(
+    async def update_async(
         self,
-        db: Session,
-        *,
-        skip: int = 0,
-        limit: int = 100,
-        use_cache: bool = False,
-        **kwargs: Any,
-    ) -> list[Organization]:
-        """获取多个组织 - 解密敏感字段"""
-        results = super().get_multi(
-            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
-        )
-        for item in results:
-            self.sensitive_data_handler.decrypt_data(item.__dict__)
-        return results
-
-    def update(
-        self,
-        db: Session,
+        db: AsyncSession,
         *,
         db_obj: Organization,
         obj_in: OrganizationUpdate | dict[str, Any],
         commit: bool = True,
     ) -> Organization:
-        """更新组织 - 加密新的敏感字段值"""
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
-
-        # 加密敏感字段
         encrypted_data = self._encrypt_update_data(update_data)
-        return super().update(
+        return await super().update(
             db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
         )
 
@@ -93,55 +75,40 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
                 encrypted_data[field_name] = value
         return encrypted_data
 
-    def _build_filtered_query(
+    async def get_multi_with_filters_async(
         self,
-        db: Session,
-        *,
-        parent_id: str | None = None,
-        keyword: str | None = None,
-    ) -> Any:
-        query = db.query(Organization).filter(Organization.is_deleted.is_(False))
-
-        if parent_id:
-            query = query.filter(Organization.parent_id == parent_id)
-
-        if keyword:
-            query = query.filter(
-                or_(
-                    Organization.name.ilike(f"%{keyword}%"),
-                    Organization.description.ilike(f"%{keyword}%"),
-                )
-            )
-
-        return query
-
-    def get_multi_with_filters(
-        self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
         parent_id: str | None = None,
         keyword: str | None = None,
     ) -> list[Organization]:
-        """获取多个组织 - 解密敏感字段"""
-        query = self._build_filtered_query(db, parent_id=parent_id, keyword=keyword)
+        stmt = select(Organization).where(Organization.is_deleted.is_(False))
 
-        # Apply sorting
-        query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
+        if parent_id:
+            stmt = stmt.where(Organization.parent_id == parent_id)
 
-        # Apply pagination
-        result: list[Organization] = query.offset(skip).limit(limit).all()
+        if keyword:
+            stmt = stmt.where(
+                or_(
+                    Organization.name.ilike(f"%{keyword}%"),
+                    Organization.description.ilike(f"%{keyword}%"),
+                )
+            )
 
-        # 解密敏感字段
+        stmt = stmt.order_by(Organization.level.asc(), Organization.sort_order.asc())
+        stmt = stmt.offset(skip).limit(limit)
+        result = list((await db.execute(stmt)).scalars().all())
+
         for item in result:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         return result
 
-    def get_multi_with_count(
+    async def get_multi_with_count_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
         search: str | None = None,
@@ -154,96 +121,126 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         parent_id: str | None = None,
         keyword: str | None = None,
     ) -> tuple[list[Organization], int]:
-        """获取组织列表与总数 - 解密敏感字段"""
         if filters:
             parent_id = parent_id or filters.get("parent_id")
             keyword = keyword or filters.get("keyword")
         if search:
             keyword = keyword or search
 
-        query = self._build_filtered_query(db, parent_id=parent_id, keyword=keyword)
+        conditions: list[Any] = [Organization.is_deleted.is_(False)]
+        if parent_id:
+            conditions.append(Organization.parent_id == parent_id)
+        if keyword:
+            conditions.append(
+                or_(
+                    Organization.name.ilike(f"%{keyword}%"),
+                    Organization.description.ilike(f"%{keyword}%"),
+                )
+            )
 
-        total = query.count()
+        total_stmt = select(func.count(Organization.id)).where(*conditions)
+        total = int((await db.execute(total_stmt)).scalar() or 0)
+
+        stmt = select(Organization).where(*conditions)
         if order_by and hasattr(Organization, order_by):
             order_column = getattr(Organization, order_by)
-            query = query.order_by(order_column.desc() if order_desc else order_column.asc())
+            stmt = stmt.order_by(
+                order_column.desc() if order_desc else order_column.asc()
+            )
         else:
-            query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
+            stmt = stmt.order_by(
+                Organization.level.asc(), Organization.sort_order.asc()
+            )
 
-        items = query.offset(skip).limit(limit).all()
+        stmt = stmt.offset(skip).limit(limit)
+        items = list((await db.execute(stmt)).scalars().all())
 
         for item in items:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         return items, total
 
-    def get_tree(self, db: Session, parent_id: str | None = None) -> list[Organization]:
-        """获取组织树形结构 - 解密敏感字段"""
-        query = db.query(Organization).filter(
+    async def get_tree_async(
+        self, db: AsyncSession, parent_id: str | None = None
+    ) -> list[Organization]:
+        stmt = select(Organization).where(
             and_(
-                Organization.is_deleted.is_(False), Organization.parent_id == parent_id
+                Organization.is_deleted.is_(False),
+                Organization.parent_id == parent_id,
             )
         )
-        result: list[Organization] = query.order_by(
-            Organization.sort_order, Organization.name
-        ).all()
+        result = list(
+            (
+                await db.execute(
+                    stmt.order_by(Organization.sort_order, Organization.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
 
-        # 解密敏感字段
         for item in result:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         return result
 
-    def get_children(
-        self, db: Session, parent_id: str, recursive: bool = False
+    async def get_children_async(
+        self, db: AsyncSession, parent_id: str, recursive: bool = False
     ) -> list[Organization]:
-        """获取子组织 - 解密敏感字段"""
         if not recursive:
-            result = (
-                db.query(Organization)
-                .filter(
-                    and_(
-                        Organization.parent_id == parent_id,
-                        Organization.is_deleted.is_(False),
+            stmt = select(Organization).where(
+                and_(
+                    Organization.parent_id == parent_id,
+                    Organization.is_deleted.is_(False),
+                )
+            )
+            result = list(
+                (
+                    await db.execute(
+                        stmt.order_by(Organization.sort_order, Organization.name)
                     )
                 )
-                .order_by(Organization.sort_order, Organization.name)
+                .scalars()
                 .all()
             )
         else:
-            # 递归获取所有子组织
             recursive_result: list[Organization] = []
-            direct_children = self.get_children(db, parent_id, False)
+            direct_children = await self.get_children_async(db, parent_id, False)
             for child in direct_children:
                 recursive_result.append(child)
-                recursive_result.extend(self.get_children(db, str(child.id), True))
+                child_id = str(getattr(child, "id", ""))
+                if child_id:
+                    recursive_result.extend(
+                        await self.get_children_async(db, child_id, True)
+                    )
             result = recursive_result
 
-        # 解密敏感字段
         for item in result:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         return result
 
-    def get_path_to_root(self, db: Session, org_id: str) -> list[Organization]:
-        """获取到根节点的路径 - 已通过get()方法解密"""
+    async def get_path_to_root_async(
+        self, db: AsyncSession, org_id: str
+    ) -> list[Organization]:
         path: list[Organization] = []
-        current: Organization | None = self.get(db, id=org_id)
+        current: Organization | None = await self.get_async(db, id=org_id)
 
         while current:
             path.insert(0, current)
             if current.parent_id:
-                current = self.get(db, id=current.parent_id)
+                current = await self.get_async(db, id=current.parent_id)
             else:
                 break
 
         return path
 
-    def search(
-        self, db: Session, keyword: str, skip: int = 0, limit: int = 100
+    async def search_async(
+        self, db: AsyncSession, keyword: str, skip: int = 0, limit: int = 100
     ) -> list[Organization]:
-        """搜索组织 - 已通过get_multi_with_filters()解密"""
-        return self.get_multi_with_filters(db, skip=skip, limit=limit, keyword=keyword)
+        return await self.get_multi_with_filters_async(
+            db, skip=skip, limit=limit, keyword=keyword
+        )
 
 
 # 创建CRUD实例

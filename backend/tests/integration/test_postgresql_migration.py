@@ -20,10 +20,13 @@ from src.database import (
 )
 
 # Skip all tests in this module if not using PostgreSQL
-pytestmark = pytest.mark.skipif(
-    not os.getenv("DATABASE_URL", "").startswith("postgresql+psycopg://"),
-    reason="PostgreSQL tests require DATABASE_URL to be set to postgresql+psycopg://",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("DATABASE_URL", "").startswith("postgresql+psycopg://"),
+        reason="PostgreSQL tests require DATABASE_URL to be set to postgresql+psycopg://",
+    ),
+    pytest.mark.asyncio,
+]
 
 
 @pytest.mark.integration
@@ -31,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 class TestPostgreSQLConnection:
     """PostgreSQL数据库连接测试"""
 
-    def test_database_url_format(self):
+    async def test_database_url_format(self):
         """测试DATABASE_URL格式验证"""
         database_url = get_database_url()
 
@@ -49,40 +52,40 @@ class TestPostgreSQLConnection:
             "DATABASE_URL should contain database name"
         )
 
-    def test_database_manager_initialization(self):
+    async def test_database_manager_initialization(self):
         """测试DatabaseManager初始化"""
         mgr = DatabaseManager()
         assert mgr is not None
         assert mgr.config is not None
         assert mgr.metrics is not None
 
-    def test_database_engine_creation(self):
+    async def test_database_engine_creation(self):
         """测试数据库引擎创建"""
         mgr = DatabaseManager()
         database_url = get_database_url()
         engine = mgr.initialize_engine(database_url)
 
         assert engine is not None
-        assert engine.driver == "psycopg"
+        assert engine.url.drivername.startswith("postgresql+asyncpg")
         assert str(engine.url).startswith("postgresql")
 
-    def test_database_connection(self):
+    async def test_database_connection(self):
         """测试数据库连接"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 执行简单查询测试连接
-            result = session.execute(text("SELECT 1"))
+            result = await session.execute(text("SELECT 1"))
             value = result.scalar()
             assert value == 1
 
-    def test_postgresql_tables_exist(self):
+    async def test_postgresql_tables_exist(self):
         """测试PostgreSQL表是否正确创建"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 查询所有表
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.tables "
                     "WHERE table_schema = 'public'"
@@ -105,7 +108,7 @@ class TestPostgreSQLConnection:
             ]
 
             for table in key_tables:
-                result = session.execute(
+                result = await session.execute(
                     text(
                         "SELECT COUNT(*) FROM information_schema.tables "
                         "WHERE table_schema = 'public' AND table_name = :table_name"
@@ -121,10 +124,10 @@ class TestPostgreSQLConnection:
 class TestPostgreSQLHealthCheck:
     """PostgreSQL健康检查测试"""
 
-    def test_health_check_success(self):
+    async def test_health_check_success(self):
         """测试健康检查成功场景"""
         mgr = get_database_manager()
-        health_status = mgr.run_health_check()
+        health_status = await mgr.run_health_check()
 
         assert health_status["healthy"] is True
         assert "checks" in health_status
@@ -135,10 +138,10 @@ class TestPostgreSQLHealthCheck:
         checks = health_status["checks"]
         assert "basic_connection" in checks or "connection_test" in checks
 
-    def test_health_check_metrics(self):
+    async def test_health_check_metrics(self):
         """测试健康检查返回的指标"""
         mgr = get_database_manager()
-        health_status = mgr.run_health_check()
+        health_status = await mgr.run_health_check()
 
         metrics = health_status["metrics"]
         assert "active_connections" in metrics
@@ -154,7 +157,7 @@ class TestPostgreSQLHealthCheck:
 class TestPostgreSQLConnectionPool:
     """PostgreSQL连接池测试"""
 
-    def test_connection_pool_config(self):
+    async def test_connection_pool_config(self):
         """测试连接池配置"""
         mgr = get_database_manager()
         config = mgr.config
@@ -171,17 +174,17 @@ class TestPostgreSQLConnectionPool:
         # 检查pool类型
         from sqlalchemy.pool import QueuePool
 
-        assert isinstance(engine.pool, QueuePool), (
-            f"Expected QueuePool, got {type(engine.pool)}"
+        assert isinstance(engine.sync_engine.pool, QueuePool), (
+            f"Expected QueuePool, got {type(engine.sync_engine.pool)}"
         )
 
-    def test_connection_pool_metrics(self):
+    async def test_connection_pool_metrics(self):
         """测试连接池指标"""
         mgr = get_database_manager()
 
         # 执行一些查询以产生指标
-        with mgr.get_session() as session:
-            session.execute(text("SELECT 1"))
+        async with mgr.get_session() as session:
+            await session.execute(text("SELECT 1"))
 
         metrics = mgr.get_metrics()
         assert metrics.total_queries >= 1
@@ -192,13 +195,13 @@ class TestPostgreSQLConnectionPool:
 class TestPostgreSQLTransactionHandling:
     """PostgreSQL事务处理测试"""
 
-    def test_transaction_commit(self):
+    async def test_transaction_commit(self):
         """测试事务提交"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 执行查询
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.tables "
                     "WHERE table_schema = 'public'"
@@ -207,18 +210,18 @@ class TestPostgreSQLTransactionHandling:
             count = result.scalar()
             assert count >= 40
 
-    def test_transaction_rollback(self):
+    async def test_transaction_rollback(self):
         """测试事务回滚"""
         mgr = get_database_manager()
 
         with pytest.raises(Exception):
-            with mgr.get_session() as session:
+            async with mgr.get_session() as session:
                 # 故意执行无效SQL
-                session.execute(text("SELECT * FROM nonexistent_table_xyz"))
+                await session.execute(text("SELECT * FROM nonexistent_table_xyz"))
 
         # 验证会话已关闭且不影响后续操作
-        with mgr.get_session() as session:
-            result = session.execute(text("SELECT 1"))
+        async with mgr.get_session() as session:
+            result = await session.execute(text("SELECT 1"))
             assert result.scalar() == 1
 
 
@@ -227,13 +230,13 @@ class TestPostgreSQLTransactionHandling:
 class TestPostgreSQLDataTypes:
     """PostgreSQL数据类型测试"""
 
-    def test_json_data_type(self):
+    async def test_json_data_type(self):
         """测试JSON数据类型"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # PostgreSQL支持JSON类型
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE data_type IN ('json', 'jsonb') "
@@ -245,13 +248,13 @@ class TestPostgreSQLDataTypes:
             # 应该有JSON类型的列
             assert json_columns >= 0
 
-    def test_boolean_data_type(self):
+    async def test_boolean_data_type(self):
         """测试BOOLEAN数据类型"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # PostgreSQL原生支持BOOLEAN
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE data_type = 'boolean' "
@@ -269,18 +272,18 @@ class TestPostgreSQLDataTypes:
 class TestPostgreSQLErrorHandling:
     """PostgreSQL错误处理测试"""
 
-    def test_invalid_sql_error_handling(self):
+    async def test_invalid_sql_error_handling(self):
         """测试无效SQL的错误处理"""
         mgr = get_database_manager()
 
         with pytest.raises(Exception) as exc_info:
-            with mgr.get_session() as session:
-                session.execute(text("INVALID SQL STATEMENT"))
+            async with mgr.get_session() as session:
+                await session.execute(text("INVALID SQL STATEMENT"))
 
         # 验证异常类型
         assert exc_info is not None
 
-    def test_connection_error_handling(self):
+    async def test_connection_error_handling(self):
         """测试连接错误的处理"""
         # 使用无效的数据库URL
         invalid_url = "postgresql+psycopg://invalid:invalid@localhost:9999/invalid_db"
@@ -293,7 +296,7 @@ class TestPostgreSQLErrorHandling:
         error_msg = str(exc_info.value)
         assert "数据库连接失败" in error_msg or "connection" in error_msg.lower()
 
-    def test_database_url_validation(self):
+    async def test_database_url_validation(self):
         """测试DATABASE_URL验证"""
         from urllib.parse import urlparse
 
@@ -315,27 +318,13 @@ class TestPostgreSQLErrorHandling:
 class TestPostgreSQLAuditLogging:
     """PostgreSQL审计日志测试"""
 
-    def test_audit_log_failure_handling(self):
+    async def test_audit_log_failure_handling(self):
         """测试审计日志失败处理"""
         from src.crud.auth import AuditLogCRUD
-        from src.database import get_db
 
-        # 获取数据库会话
-        db_gen = get_db()
-        db = next(db_gen)
-
-        try:
-            # 尝试创建审计日志
-            audit_crud = AuditLogCRUD()
-            # 正常情况下应该成功
-            # 这里只验证方法存在且可调用
-            assert callable(audit_crud.create)
-        finally:
-            # 清理
-            try:
-                db.close()
-            except Exception:
-                pass
+        audit_crud = AuditLogCRUD()
+        # 这里只验证异步接口存在
+        assert callable(audit_crud.create_async)
 
 
 @pytest.mark.integration
@@ -343,17 +332,17 @@ class TestPostgreSQLAuditLogging:
 class TestPostgreSQLPerformance:
     """PostgreSQL性能测试"""
 
-    def test_query_performance(self):
+    async def test_query_performance(self):
         """测试查询性能"""
         import time
 
         mgr = get_database_manager()
 
         start_time = time.time()
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 执行多个查询
             for _ in range(10):
-                session.execute(text("SELECT 1"))
+                await session.execute(text("SELECT 1"))
         elapsed_time = time.time() - start_time
 
         # 10个简单查询应该在2秒内完成
@@ -361,7 +350,7 @@ class TestPostgreSQLPerformance:
             f"Query performance is slow: {elapsed_time:.2f}s for 10 queries"
         )
 
-    def test_connection_reuse(self):
+    async def test_connection_reuse(self):
         """测试连接复用"""
         mgr = get_database_manager()
 
@@ -369,9 +358,9 @@ class TestPostgreSQLPerformance:
         initial_metrics = mgr.get_metrics()
 
         # 执行多个查询
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             for _ in range(5):
-                session.execute(text("SELECT 1"))
+                await session.execute(text("SELECT 1"))
 
         # 获取最终指标
         final_metrics = mgr.get_metrics()
@@ -385,13 +374,13 @@ class TestPostgreSQLPerformance:
 class TestPostgreSQLMigrationCompleteness:
     """PostgreSQL迁移完整性测试"""
 
-    def test_all_tables_created(self):
+    async def test_all_tables_created(self):
         """测试所有必需的表都已创建"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 查询所有表
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT table_name FROM information_schema.tables "
                     "WHERE table_schema = 'public' "
@@ -424,13 +413,13 @@ class TestPostgreSQLMigrationCompleteness:
                     f"Required table '{table}' not found in database"
                 )
 
-    def test_alembic_version_table(self):
+    async def test_alembic_version_table(self):
         """测试Alembic版本表存在"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 检查alembic_version表
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.tables "
                     "WHERE table_schema = 'public' AND table_name = 'alembic_version'"
@@ -440,13 +429,13 @@ class TestPostgreSQLMigrationCompleteness:
 
             assert count == 1, "alembic_version table should exist"
 
-    def test_foreign_key_constraints(self):
+    async def test_foreign_key_constraints(self):
         """测试外键约束存在"""
         mgr = get_database_manager()
 
-        with mgr.get_session() as session:
+        async with mgr.get_session() as session:
             # 查询外键约束
-            result = session.execute(
+            result = await session.execute(
                 text(
                     "SELECT COUNT(*) FROM information_schema.table_constraints "
                     "WHERE constraint_schema = 'public' "

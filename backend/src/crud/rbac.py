@@ -98,7 +98,9 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             func.count(Role.id).label("total"),
             func.sum(case((Role.is_active.is_(True), 1), else_=0)).label("active"),
             func.sum(case((Role.is_system_role.is_(True), 1), else_=0)).label("system"),
-            func.sum(case((Role.is_system_role.is_(False), 1), else_=0)).label("custom"),
+            func.sum(case((Role.is_system_role.is_(False), 1), else_=0)).label(
+                "custom"
+            ),
         )
         result = (await db.execute(stmt)).one()
 
@@ -112,6 +114,11 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
 class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
     """权限CRUD操作"""
+
+    async def get_by_name(self, db: AsyncSession, name: str) -> Permission | None:
+        """根据名称获取权限"""
+        stmt = select(Permission).where(Permission.name == name)
+        return (await db.execute(stmt)).scalars().first()
 
     async def get_multi_with_filters(
         self,

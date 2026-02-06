@@ -561,6 +561,7 @@ export class ApiErrorHandler {
   private static handleAxiosError(error: AxiosError): ApiClientError {
     const statusCode = error.response?.status;
     const responseData = error.response?.data as ApiResponseData | undefined;
+    const extractedMessage = this.extractErrorMessage(responseData);
 
     // 网络错误
     if (error.response == null) {
@@ -579,8 +580,7 @@ export class ApiErrorHandler {
       return {
         type: this.getClientErrorType(statusCode),
         code: responseData?.code ?? `HTTP_${statusCode}`,
-        message:
-          responseData?.message ?? responseData?.error ?? this.getDefaultErrorMessage(statusCode),
+        message: extractedMessage ?? this.getDefaultErrorMessage(statusCode),
         details: responseData?.detail as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
@@ -594,7 +594,7 @@ export class ApiErrorHandler {
       return {
         type: ApiErrorType.SERVER_ERROR,
         code: responseData?.code ?? `HTTP_${statusCode}`,
-        message: responseData?.message ?? '服务器内部错误',
+        message: extractedMessage ?? '服务器内部错误',
         details: responseData?.detail as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
@@ -619,6 +619,42 @@ export class ApiErrorHandler {
       timestamp: new Date().toISOString(),
       originalError: error,
     };
+  }
+
+  private static extractErrorMessage(responseData?: ApiResponseData): string | undefined {
+    if (responseData == null) {
+      return undefined;
+    }
+
+    if (typeof responseData.message === 'string' && responseData.message.trim() !== '') {
+      return responseData.message;
+    }
+
+    if (typeof responseData.error === 'string' && responseData.error.trim() !== '') {
+      return responseData.error;
+    }
+
+    if (responseData.error != null && typeof responseData.error === 'object') {
+      const nested = responseData.error as Record<string, unknown>;
+      const nestedMessage = nested.message;
+      if (typeof nestedMessage === 'string' && nestedMessage.trim() !== '') {
+        return nestedMessage;
+      }
+      const nestedDetail = nested.detail;
+      if (typeof nestedDetail === 'string' && nestedDetail.trim() !== '') {
+        return nestedDetail;
+      }
+      const nestedDetails = nested.details;
+      if (typeof nestedDetails === 'string' && nestedDetails.trim() !== '') {
+        return nestedDetails;
+      }
+    }
+
+    if (typeof responseData.detail === 'string' && responseData.detail.trim() !== '') {
+      return responseData.detail;
+    }
+
+    return undefined;
   }
 
   /**

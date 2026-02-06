@@ -71,7 +71,7 @@ const AssetListPage: React.FC = () => {
   }, [loadList]);
 
   const analyticsFilters = useMemo(() => {
-    const { sort_by: _sort_by, sort_order: _sort_order, ...rest } = filters;
+    const { sort_by: _sort_by, sort_order: _sort_order, data_status: _dataStatus, ...rest } = filters;
     return rest;
   }, [filters]);
 
@@ -159,12 +159,35 @@ const AssetListPage: React.FC = () => {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await assetService.deleteAsset(id);
-      MessageManager.success('删除成功');
+      MessageManager.success('删除成功，已移入回收站');
       // 重新加载数据
       void loadList();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '删除失败';
       MessageManager.error(errorMessage);
+    }
+  }, [loadList]);
+
+  const handleRestore = useCallback(async (id: string) => {
+    try {
+      await assetService.restoreAsset(id);
+      MessageManager.success('恢复成功');
+      void loadList();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '恢复失败';
+      MessageManager.error(errorMessage);
+    }
+  }, [loadList]);
+
+  const handleHardDelete = useCallback(async (id: string) => {
+    try {
+      await assetService.hardDeleteAsset(id);
+      MessageManager.success('彻底删除成功');
+      void loadList();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '彻底删除失败';
+      MessageManager.error(errorMessage);
+      throw error;
     }
   }, [loadList]);
 
@@ -318,6 +341,8 @@ const AssetListPage: React.FC = () => {
         loading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onRestore={handleRestore}
+        onHardDelete={handleHardDelete}
         onView={handleView}
         onViewHistory={handleViewHistory}
         onTableChange={handleTableChange}

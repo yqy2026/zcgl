@@ -42,6 +42,13 @@ vi.mock('@/hooks/useSystemDictionary', () => ({
   })),
 }));
 
+vi.mock('@/hooks/usePermission', () => ({
+  __esModule: true,
+  default: () => ({
+    isAdmin: () => false,
+  }),
+}));
+
 // Mock TableWithPagination - 这个mock是必要的，避免测试子组件本身
 vi.mock('@/components/Common/TableWithPagination', () => ({
   TableWithPagination: ({
@@ -138,6 +145,8 @@ describe('AssetList - 基础渲染测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -154,6 +163,8 @@ describe('AssetList - 基础渲染测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -169,6 +180,8 @@ describe('AssetList - 基础渲染测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -245,6 +258,8 @@ describe('AssetList - 数据渲染测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -294,6 +309,8 @@ describe('AssetList - 交互操作测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -353,6 +370,8 @@ describe('AssetList - 行选择测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -378,6 +397,8 @@ describe('AssetList - 行选择测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -407,6 +428,8 @@ describe('AssetList - 分页测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -475,6 +498,8 @@ describe('AssetList - 汇总行测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -490,6 +515,8 @@ describe('AssetList - 汇总行测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),
@@ -528,6 +555,8 @@ describe('AssetList - 属性传递测试', () => {
     const mockHandlers = {
       onEdit: vi.fn(),
       onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
       onView: vi.fn(),
       onViewHistory: vi.fn(),
       onTableChange: vi.fn(),

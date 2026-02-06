@@ -24,7 +24,6 @@ def _log_import_error(service_name: str) -> None:
     logger.warning(f"Service import failed: {service_name}", exc_info=True)
 
 
-SecurityService: Any
 ErrorRecoveryEngine: Any
 
 # Import AuditService
@@ -35,22 +34,6 @@ try:
     __all__.append("AuditService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("core.audit_service.AuditService")
-
-try:
-    from .security_service import SecurityService as _SecurityService
-
-    SecurityService = _SecurityService
-
-    __all__.append("SecurityService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    # Provide a minimal stub to ensure import success
-    class _SecurityServiceStub:
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-    SecurityService = _SecurityServiceStub
-    __all__.append("SecurityService")
-    _log_import_error("core.security_service.SecurityService (stubbed)")
 
 try:
     from .error_recovery_service import ErrorRecoveryEngine as _ErrorRecoveryEngine

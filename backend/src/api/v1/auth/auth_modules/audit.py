@@ -8,7 +8,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from .....crud.auth import AuditLogCRUD
 from .....database import get_async_db
@@ -28,10 +27,5 @@ async def get_audit_statistics(
     获取审计日志统计（仅管理员）
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        audit_crud = AuditLogCRUD()
-        stats: dict[str, Any] = audit_crud.get_login_statistics(db, days)
-        return stats
-
-    return await db.run_sync(_sync)
+    audit_crud = AuditLogCRUD()
+    return await audit_crud.get_login_statistics_async(db, days)

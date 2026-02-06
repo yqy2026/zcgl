@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class PDFProcessingServiceProtocol(Protocol):
@@ -12,7 +12,18 @@ class PDFProcessingServiceProtocol(Protocol):
 class PDFSessionServiceProtocol(Protocol):
     """Protocol for PDF session service"""
 
-    def get_session(self, session_id: str) -> object: ...
+    async def get_session(self, session_id: str) -> object: ...
+    async def create_session(
+        self,
+        *,
+        session_id: str,
+        original_filename: str,
+        file_size: int,
+        file_path: str,
+        content_type: str,
+        organization_id: int | None,
+        processing_options: dict[str, Any] | None = None,
+    ) -> object: ...
 
 
 from ...core.performance import PerformanceMonitor

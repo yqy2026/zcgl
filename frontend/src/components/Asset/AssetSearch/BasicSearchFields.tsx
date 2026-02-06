@@ -1,6 +1,7 @@
 import React from 'react';
 import { Col, Form, Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import { DataStatus } from '@/types/asset';
 
 const { Option } = Select;
 
@@ -78,6 +79,17 @@ export const BasicSearchFields = React.memo(function BasicSearchFields({
             <Option value="待处置">待处置</Option>
             <Option value="待移交">待移交</Option>
             <Option value="闲置">闲置</Option>
+          </Select>
+        </Form.Item>
+      </Col>
+
+      <Col xs={24} sm={12} md={8} lg={6}>
+        <Form.Item name="data_status" label="资产状态">
+          <Select placeholder="选择资产状态" allowClear showSearch optionFilterProp="children">
+            <Option value={DataStatus.NORMAL}>正常</Option>
+            <Option value={DataStatus.DELETED}>回收站</Option>
+            <Option value={DataStatus.ARCHIVED}>已归档</Option>
+            <Option value={DataStatus.ABNORMAL}>异常</Option>
           </Select>
         </Form.Item>
       </Col>

@@ -7,9 +7,9 @@
 import logging
 from typing import Any
 
-from sqlalchemy import Float, case, func
+from sqlalchemy import Float, case, func, select
 from sqlalchemy import cast as sql_cast
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...utils.numeric import to_float
@@ -31,7 +31,7 @@ class AreaService:
     使用数据库聚合查询优化性能，支持降级到内存计算
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         初始化面积服务
 
@@ -40,7 +40,7 @@ class AreaService:
         """
         self.db = db
 
-    def calculate_summary_with_aggregation(
+    async def calculate_summary_with_aggregation(
         self, filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
@@ -64,16 +64,16 @@ class AreaService:
             from ...models.asset import Asset
 
             # 构建基础查询
-            query = self.db.query(Asset)
+            stmt = select(Asset)
 
             # 应用筛选条件
             if filters:
                 for key, value in filters.items():
                     if hasattr(Asset, key) and value is not None:
-                        query = query.filter(getattr(Asset, key) == value)
+                        stmt = stmt.where(getattr(Asset, key) == value)
 
             # 使用数据库聚合函数计算
-            result = query.with_entities(
+            agg_stmt = stmt.with_only_columns(
                 func.count(Asset.id).label("total_assets"),
                 sql_cast(func.sum(func.coalesce(Asset.land_area, 0)), Float).label(
                     "total_land_area"
@@ -90,7 +90,8 @@ class AreaService:
                 func.count(case((Asset.land_area.isnot(None), 1))).label(
                     "assets_with_area_data"
                 ),
-            ).first()
+            )
+            result = (await self.db.execute(agg_stmt)).first()
 
             # 提取并转换结果
             if result is None:
@@ -142,11 +143,11 @@ class AreaService:
         except Exception as e:
             logger.error(f"面积汇总数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            memory_result = self._calculate_summary_in_memory(filters)
+            memory_result = await self._calculate_summary_in_memory(filters)
             memory_result["calculation_method"] = "memory_fallback"
             return memory_result
 
-    def _calculate_summary_in_memory(
+    async def _calculate_summary_in_memory(
         self, filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
@@ -165,7 +166,7 @@ class AreaService:
             all_assets = []
 
             while True:
-                assets_batch, _ = asset_crud.get_multi_with_search(
+                assets_batch, _ = await asset_crud.get_multi_with_search_async(
                     db=self.db, skip=offset, limit=batch_size, filters=filters
                 )
 

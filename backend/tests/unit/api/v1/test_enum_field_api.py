@@ -28,7 +28,7 @@ Endpoints Tested:
 """
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -95,6 +95,43 @@ def mock_enum_value():
     return enum_value
 
 
+class EnumValueWithLazyChildren:
+    """Enum value mock that raises on children access until explicitly set."""
+
+    def __init__(self) -> None:
+        self.id = "lazy-value-id"
+        self.enum_type_id = "lazy-type-id"
+        self.label = "Lazy Label"
+        self.value = "lazy_value"
+        self.code = "lazy_code"
+        self.description = "Lazy value description"
+        self.parent_id = None
+        self.level = 1
+        self.sort_order = 0
+        self.color = "#00FF00"
+        self.icon = "lazy-icon"
+        self.extra_properties = None
+        self.is_active = True
+        self.is_default = False
+        self.is_deleted = False
+        self.path = None
+        self.created_at = datetime.now(UTC)
+        self.updated_at = datetime.now(UTC)
+        self.created_by = "test-user"
+        self.updated_by = None
+        self._children = None
+
+    @property
+    def children(self):  # type: ignore[override]
+        if self._children is None:
+            raise RuntimeError("children not loaded")
+        return self._children
+
+    @children.setter
+    def children(self, value):  # type: ignore[override]
+        self._children = value
+
+
 @pytest.fixture
 def mock_enum_usage():
     """Create mock enum field usage record"""
@@ -154,6 +191,19 @@ class TestDebugEndpoint:
 
 class TestGetEnumFieldTypes:
     """Tests for GET /api/v1/enum-fields/types endpoint"""
+
+    def test_strip_enum_children_uses_set_committed_value(self):
+        """Ensure _strip_enum_children sets children via set_committed_value."""
+        from src.api.v1.system.enum_field import _strip_enum_children
+
+        enum_value = MagicMock()
+
+        with patch(
+            "src.api.v1.system.enum_field.set_committed_value"
+        ) as mock_set_committed:
+            _strip_enum_children([enum_value])
+
+        mock_set_committed.assert_called_once_with(enum_value, "children", [])
 
     @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
     def test_get_enum_field_types_success(self, mock_get_crud, mock_db, mock_enum_type):
@@ -232,6 +282,51 @@ class TestGetEnumFieldTypes:
 
         assert len(result) == 0
 
+    @pytest.mark.asyncio
+    @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
+    async def test_get_enum_field_types_lazy_children_safe(self, mock_get_crud, mock_db):
+        """Ensure enum values children are stripped to avoid lazy-load errors."""
+        from src.api.v1.system.enum_field import get_enum_field_types
+
+        enum_value = EnumValueWithLazyChildren()
+        enum_type = MagicMock()
+        enum_type.id = "lazy-type-id"
+        enum_type.name = "Lazy Enum Type"
+        enum_type.code = "lazy_enum"
+        enum_type.category = None
+        enum_type.description = None
+        enum_type.is_system = False
+        enum_type.is_multiple = False
+        enum_type.is_hierarchical = False
+        enum_type.default_value = None
+        enum_type.validation_rules = None
+        enum_type.display_config = None
+        enum_type.status = "active"
+        enum_type.is_deleted = False
+        enum_type.created_at = datetime.now(UTC)
+        enum_type.updated_at = datetime.now(UTC)
+        enum_type.created_by = "test-user"
+        enum_type.updated_by = None
+        enum_type.enum_values = [enum_value]
+
+        mock_crud = MagicMock()
+        mock_crud.get_multi_async = AsyncMock(return_value=[enum_type])
+        mock_get_crud.return_value = mock_crud
+
+        result = await get_enum_field_types(
+            page=1,
+            page_size=100,
+            category=None,
+            status=None,
+            is_system=None,
+            keyword=None,
+            db=mock_db,
+        )
+
+        assert len(result) == 1
+        assert result[0].enum_values is not None
+        assert result[0].enum_values[0].children == []
+
 
 # ============================================================================
 # Test: GET /types/statistics - Get Enum Field Statistics
@@ -242,43 +337,41 @@ class TestGetEnumFieldStatistics:
     """Tests for GET /api/v1/enum-fields/types/statistics endpoint"""
 
     @patch("src.api.v1.system.enum_field.get_enum_field_type_crud")
-    def test_get_enum_field_statistics_success(self, mock_get_crud, mock_db):
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    @patch("src.api.v1.system.enum_field.get_enum_field_usage_crud")
+    @pytest.mark.asyncio
+    async def test_get_enum_field_statistics_success(
+        self, mock_usage_crud, mock_value_crud, mock_get_crud, mock_db
+    ):
         """Test getting enum field statistics successfully"""
         from src.api.v1.system.enum_field import get_enum_field_statistics
 
         mock_crud = MagicMock()
-        mock_crud.get_statistics.return_value = {
+        mock_crud.get_statistics_async = AsyncMock(
+            return_value={
             "total_types": 10,
             "active_types": 8,
             "categories": [{"category": "test", "count": 5}],
-        }
+            }
+        )
         mock_get_crud.return_value = mock_crud
 
-        # Mock database queries
-        mock_query = MagicMock()
+        mock_value = MagicMock()
+        mock_value.count_all_async = AsyncMock(return_value=20)
+        mock_value.count_active_async = AsyncMock(return_value=15)
+        mock_value_crud.return_value = mock_value
 
-        # Set up count to return different values on each call
-        count_values = [20, 15, 15]
+        mock_usage = MagicMock()
+        mock_usage.count_active_async = AsyncMock(return_value=15)
+        mock_usage_crud.return_value = mock_usage
 
-        def mock_count():
-            if count_values:
-                return count_values.pop(0)
-            return 0
-
-        mock_query.filter.return_value.filter.return_value.count.side_effect = (
-            mock_count
-        )
-        mock_query.filter.return_value.count.side_effect = lambda: 15
-        mock_db.query.return_value = mock_query
-
-        result = get_enum_field_statistics(db=mock_db)
+        result = await get_enum_field_statistics(db=mock_db)
 
         assert result.total_types == 10
         assert result.active_types == 8
-        # The actual values come from the mocked queries
-        assert result.total_values > 0
-        assert result.active_values > 0
-        assert result.usage_count > 0
+        assert result.total_values == 20
+        assert result.active_values == 15
+        assert result.usage_count == 15
         assert len(result.categories) == 1
 
 
@@ -580,6 +673,24 @@ class TestGetEnumFieldValues:
         mock_crud.get_by_type.assert_called_once_with(
             "test-type-id", parent_id=None, is_active=None
         )
+
+    @pytest.mark.asyncio
+    @patch("src.api.v1.system.enum_field.get_enum_field_value_crud")
+    async def test_get_enum_field_values_lazy_children_safe(self, mock_get_crud, mock_db):
+        """Ensure enum values list strips children to avoid lazy-load errors."""
+        from src.api.v1.system.enum_field import get_enum_field_values
+
+        enum_value = EnumValueWithLazyChildren()
+        mock_crud = MagicMock()
+        mock_crud.get_by_type_async = AsyncMock(return_value=[enum_value])
+        mock_get_crud.return_value = mock_crud
+
+        result = await get_enum_field_values(
+            type_id="lazy-type-id", parent_id=None, is_active=None, db=mock_db
+        )
+
+        assert len(result) == 1
+        assert result[0].children == []
 
 
 # ============================================================================

@@ -6,7 +6,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import not_found
 from ....crud.rent_contract import rent_contract, rent_term
@@ -31,9 +30,7 @@ async def get_contract_terms(
     """
     获取指定合同的所有租金条款
     """
-    terms = await db.run_sync(
-        lambda sync_db: rent_term.get_by_contract(sync_db, contract_id=contract_id)
-    )
+    terms = await rent_term.get_by_contract_async(db, contract_id=contract_id)
     return terms
 
 
@@ -53,15 +50,12 @@ async def add_rent_term(
     为合同添加新的租金条款
     """
 
-    def _sync(sync_db: Session) -> object | None:
-        contract = rent_contract.get(sync_db, id=contract_id)
-        if not contract:
-            return None
-        term_data = term_in.model_dump()
-        term_data["contract_id"] = contract_id
-        return rent_term.create(db=sync_db, obj_in=term_data)
-
-    term = await db.run_sync(_sync)
+    contract = await rent_contract.get_with_details_async(db, id=contract_id)
+    if not contract:
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
+    term_data = term_in.model_dump()
+    term_data["contract_id"] = contract_id
+    term = await rent_term.create(db=db, obj_in=term_data)
     if not term:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
     return term

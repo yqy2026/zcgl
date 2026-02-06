@@ -7,7 +7,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.enums import ContractStatus
 from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
@@ -54,10 +53,8 @@ async def get_rent_statistics(
     )
 
     try:
-        statistics = await db.run_sync(
-            lambda sync_db: rent_contract_service.get_statistics(
-                db=sync_db, query_params=query_params
-            )
+        statistics = await rent_contract_service.get_statistics_async(
+            db=db, query_params=query_params
         )
         return statistics
     except Exception as e:
@@ -82,13 +79,11 @@ async def get_ownership_statistics(
     按权属方统计租金情况
     """
     try:
-        statistics = await db.run_sync(
-            lambda sync_db: rent_contract_service.get_ownership_statistics(
-                db=sync_db,
-                start_date=start_date,
-                end_date=end_date,
-                ownership_ids=ownership_ids,
-            )
+        statistics = await rent_contract_service.get_ownership_statistics_async(
+            db=db,
+            start_date=start_date,
+            end_date=end_date,
+            ownership_ids=ownership_ids,
         )
         return statistics
     except Exception as e:
@@ -113,13 +108,11 @@ async def get_asset_statistics(
     按资产统计租金情况
     """
     try:
-        statistics = await db.run_sync(
-            lambda sync_db: rent_contract_service.get_asset_statistics(
-                db=sync_db,
-                start_date=start_date,
-                end_date=end_date,
-                asset_ids=asset_ids,
-            )
+        statistics = await rent_contract_service.get_asset_statistics_async(
+            db=db,
+            start_date=start_date,
+            end_date=end_date,
+            asset_ids=asset_ids,
         )
         return statistics
     except Exception as e:
@@ -144,10 +137,8 @@ async def get_monthly_statistics(
     获取月度租金统计
     """
     try:
-        statistics = await db.run_sync(
-            lambda sync_db: rent_contract_service.get_monthly_statistics(
-                db=sync_db, year=year, start_month=start_month, end_month=end_month
-            )
+        statistics = await rent_contract_service.get_monthly_statistics_async(
+            db=db, year=year, start_month=start_month, end_month=end_month
         )
         return statistics
     except Exception as e:
@@ -172,32 +163,26 @@ async def export_statistics(
 
         from ..services.excel_export import export_statistics_report
 
-        def _sync(sync_db: Session) -> tuple[Any, Any, Any, Any]:
-            overview_stats = rent_contract_service.get_statistics(
-                db=sync_db,
-                query_params=RentStatisticsQuery(
-                    start_date=start_date,
-                    end_date=end_date,
-                    ownership_ids=None,
-                    asset_ids=None,
-                    contract_status=None,
-                ),
-            )
-
-            ownership_stats = rent_contract_service.get_ownership_statistics(
-                db=sync_db, start_date=start_date, end_date=end_date
-            )
-
-            asset_stats = rent_contract_service.get_asset_statistics(
-                db=sync_db, start_date=start_date, end_date=end_date
-            )
-
-            monthly_stats = rent_contract_service.get_monthly_statistics(db=sync_db)
-            return overview_stats, ownership_stats, asset_stats, monthly_stats
-
-        overview_stats, ownership_stats, asset_stats, monthly_stats = await db.run_sync(
-            _sync
+        overview_stats = await rent_contract_service.get_statistics_async(
+            db=db,
+            query_params=RentStatisticsQuery(
+                start_date=start_date,
+                end_date=end_date,
+                ownership_ids=None,
+                asset_ids=None,
+                contract_status=None,
+            ),
         )
+
+        ownership_stats = await rent_contract_service.get_ownership_statistics_async(
+            db=db, start_date=start_date, end_date=end_date
+        )
+
+        asset_stats = await rent_contract_service.get_asset_statistics_async(
+            db=db, start_date=start_date, end_date=end_date
+        )
+
+        monthly_stats = await rent_contract_service.get_monthly_statistics_async(db=db)
 
         excel_data = export_statistics_report(
             overview_data=overview_stats,

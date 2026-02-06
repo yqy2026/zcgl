@@ -7,9 +7,7 @@ from .lifecycle_service import RentContractLifecycleService
 from .statistics_service import RentContractStatisticsService
 
 
-def model_to_dict(
-    model: Any, exclude: set[str] | None = None
-) -> dict[str, Any]:
+def model_to_dict(model: Any, exclude: set[str] | None = None) -> dict[str, Any]:
     """
     将 SQLAlchemy 模型或 Pydantic 模型转换为字典
 

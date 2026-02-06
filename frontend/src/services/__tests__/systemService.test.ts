@@ -105,8 +105,8 @@ describe('userService', () => {
         full_name: '新用户',
         password: 'password123',
         status: 'active' as const,
-        role: 'user',
-        organization_id: 'org_1',
+        role_id: 'role-user-id',
+        default_organization_id: 'org_1',
       };
 
       vi.mocked(apiClient.post).mockResolvedValue({

@@ -94,7 +94,9 @@ class TestAnalyticsAPIResponseStructure:
         """Mock AnalyticsService 返回数据"""
         from src.services.analytics.analytics_service import AnalyticsService
 
-        def mock_get_comprehensive(self, filters, use_cache=True, current_user=None):
+        async def mock_get_comprehensive(
+            self, filters, should_use_cache=True, current_user=None
+        ):
             return {
                 "total_assets": 100,
                 "timestamp": "2024-01-04T00:00:00",

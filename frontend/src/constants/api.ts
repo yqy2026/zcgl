@@ -60,6 +60,8 @@ export const ASSET_API = {
   CREATE: '/assets',
   UPDATE: (id: string) => `/assets/${id}`,
   DELETE: (id: string) => `/assets/${id}`,
+  RESTORE: (id: string) => `/assets/${id}/restore`,
+  HARD_DELETE: (id: string) => `/assets/${id}/hard-delete`,
 
   // 批量操作
   BATCH_CREATE: '/assets/batch',

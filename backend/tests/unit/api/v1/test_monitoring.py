@@ -38,7 +38,14 @@ def _mock_monitoring_dependencies(monkeypatch):
     permission_mock.permission_required = lambda *args, **kwargs: lambda f: f
     auth_mock = MagicMock()
     auth_mock.get_current_user = lambda: MagicMock(
-        id="admin-id", username="admin", role="admin", is_active=True
+        id="admin-id",
+        username="admin",
+        role_id="role-admin-id",
+        role_name="admin",
+        roles=["admin"],
+        role_ids=["role-admin-id"],
+        is_admin=True,
+        is_active=True,
     )
     monkeypatch.setitem(sys.modules, "src.security.permissions", permission_mock)
     monkeypatch.setitem(sys.modules, "src.middleware.auth", auth_mock)
@@ -61,7 +68,11 @@ def mock_admin_user():
     user = MagicMock()
     user.id = "admin-id"
     user.username = "admin"
-    user.role = "admin"
+    user.role_id = "role-admin-id"
+    user.role_name = "admin"
+    user.roles = ["admin"]
+    user.role_ids = ["role-admin-id"]
+    user.is_admin = True
     user.is_active = True
     user.is_locked = False
     return user

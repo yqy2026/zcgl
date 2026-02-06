@@ -7,7 +7,6 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
@@ -34,7 +33,7 @@ async def get_collection_summary(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> CollectionTaskSummary:
-    return await db.run_sync(lambda sync_db: collection_service.get_summary(sync_db))
+    return await collection_service.get_summary_async(db)
 
 
 @router.get(
@@ -51,15 +50,13 @@ async def list_collection_records(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> JSONResponse:
-    result = await db.run_sync(
-        lambda sync_db: collection_service.list_records(
-            sync_db,
-            ledger_id=ledger_id,
-            contract_id=contract_id,
-            collection_status=collection_status,
-            page=page,
-            page_size=page_size,
-        )
+    result = await collection_service.list_records_async(
+        db,
+        ledger_id=ledger_id,
+        contract_id=contract_id,
+        collection_status=collection_status,
+        page=page,
+        page_size=page_size,
     )
 
     items = [
@@ -85,9 +82,7 @@ async def get_collection_record(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> CollectionRecordResponse:
-    record = await db.run_sync(
-        lambda sync_db: collection_service.get_by_id(sync_db, record_id=record_id)
-    )
+    record = await collection_service.get_by_id_async(db, record_id=record_id)
     if not record:
         raise not_found(
             "催缴记录不存在",
@@ -106,13 +101,11 @@ async def create_collection_record(
     db: AsyncSession = Depends(get_async_db),
 ) -> CollectionRecordResponse:
     try:
-        record = await db.run_sync(
-            lambda sync_db: collection_service.create(
-                sync_db,
-                obj_in=record_data,
-                operator=str(current_user.username or current_user.email),
-                operator_id=str(current_user.id),
-            )
+        record = await collection_service.create_async(
+            db,
+            obj_in=record_data,
+            operator=str(current_user.username or current_user.email),
+            operator_id=str(current_user.id),
         )
     except BaseBusinessError:
         raise
@@ -131,13 +124,13 @@ async def update_collection_record(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> CollectionRecordResponse:
-    def _sync(sync_db: Session) -> object | None:
-        record = collection_service.get_by_id(sync_db, record_id=record_id)
-        if not record:
-            return None
-        return collection_service.update(sync_db, db_obj=record, obj_in=update_data)
-
-    updated_record = await db.run_sync(_sync)
+    record = await collection_service.get_by_id_async(db, record_id=record_id)
+    if not record:
+        updated_record = None
+    else:
+        updated_record = await collection_service.update_async(
+            db, db_obj=record, obj_in=update_data
+        )
     if not updated_record:
         raise not_found(
             "催缴记录不存在",
@@ -153,14 +146,12 @@ async def delete_collection_record(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, str]:
-    def _sync(sync_db: Session) -> bool:
-        record = collection_service.get_by_id(sync_db, record_id=record_id)
-        if not record:
-            return False
-        collection_service.delete(sync_db, db_obj=record)
-        return True
-
-    deleted = await db.run_sync(_sync)
+    record = await collection_service.get_by_id_async(db, record_id=record_id)
+    if not record:
+        deleted = False
+    else:
+        await collection_service.delete_async(db, db_obj=record)
+        deleted = True
     if not deleted:
         raise not_found(
             "催缴记录不存在",

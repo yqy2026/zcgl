@@ -14,7 +14,7 @@
 - 常见问题解决
 
 ## ✅ Status
-**当前状态**: Active (2026-01-08 更新)
+**当前状态**: Active (2026-02-04 更新)
 **适用版本**: v2.0.0
 **技术栈**: FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + PostgreSQL
 
@@ -30,6 +30,8 @@
 | **语言** | Python | 3.12+ | 编程语言 |
 | **ASGI 服务器** | Uvicorn | 0.38+ | 运行服务器 |
 | **ORM** | SQLAlchemy | 2.0+ | 数据库 ORM |
+| **数据库驱动 (sync)** | psycopg | 3.2+ | PostgreSQL 同步驱动 |
+| **数据库驱动 (async)** | asyncpg | 0.31+ | AsyncSession 异步驱动 |
 | **数据验证** | Pydantic | 2.12+ | 数据验证 |
 | **数据库迁移** | Alembic | 1.17+ | 数据库迁移 |
 | **认证** | Python-JOSE | 3.5+ | JWT 认证 |
@@ -125,6 +127,8 @@ alembic upgrade head
 python run_dev.py
 ```
 
+> 提示：确保 `python` 来自虚拟环境（如 `.venv` / `venv`），可用 `python -c "import sys; print(sys.executable)"` 检查，避免系统 Python 缺失依赖。
+
 ### 开发命令
 
 ```bash
@@ -161,10 +165,10 @@ alembic upgrade head
 ```python
 # src/api/v1/assets.py
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ...database import get_db
+from ...database import get_async_db
 from ...schemas.asset import AssetResponse, AssetCreate, AssetUpdate
 from ...services.asset_service import AssetService
 from ...middleware.auth import get_current_user
@@ -176,7 +180,7 @@ router = APIRouter(prefix="/assets", tags=["资产管理"])
 async def get_assets(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -193,7 +197,7 @@ async def get_assets(
 @router.post("", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset(
     data: AssetCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -215,7 +219,7 @@ async def create_asset(
 @router.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(
     asset_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
     """获取单个资产详情"""
@@ -375,8 +379,8 @@ class Asset(Base):
 ```python
 # src/crud/base.py
 from typing import Generic, TypeVar, Type, Optional, List
-from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import Base
 
@@ -385,35 +389,37 @@ CreateSchemaType = TypeVar("CreateSchemaType")
 UpdateSchemaType = TypeVar("UpdateSchemaType")
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    """CRUD 基类"""
+    """CRUD 基类（异步）"""
 
     def __init__(self, model: Type[ModelType]):
         self.model = model
 
-    def get(self, db: Session, id: str) -> Optional[ModelType]:
+    async def get_async(self, db: AsyncSession, id: str) -> Optional[ModelType]:
         """通过 ID 获取单个记录"""
-        return db.query(self.model).filter(self.model.id == id).first()
+        result = await db.execute(select(self.model).where(self.model.id == id))
+        return result.scalars().first()
 
-    def get_multi(
-        self, db: Session, skip: int = 0, limit: int = 100
+    async def get_multi_async(
+        self, db: AsyncSession, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         """获取多条记录（分页）"""
-        return db.query(self.model).offset(skip).limit(limit).all()
+        result = await db.execute(select(self.model).offset(skip).limit(limit))
+        return list(result.scalars().all())
 
-    def create(
-        self, db: Session, obj_in: CreateSchemaType
+    async def create_async(
+        self, db: AsyncSession, obj_in: CreateSchemaType
     ) -> ModelType:
         """创建新记录"""
         obj_in_data = obj_in.model_dump() if hasattr(obj_in, 'model_dump') else obj_in.dict()
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def update(
+    async def update_async(
         self,
-        db: Session,
+        db: AsyncSession,
         db_obj: ModelType,
         obj_in: UpdateSchemaType
     ) -> ModelType:
@@ -422,15 +428,15 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for field, value in obj_data.items():
             setattr(db_obj, field, value)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def delete(self, db: Session, id: str) -> ModelType:
+    async def delete_async(self, db: AsyncSession, id: str) -> ModelType:
         """删除记录"""
-        obj = self.get(db, id)
-        db.delete(obj)
-        db.commit()
+        obj = await self.get_async(db, id)
+        await db.delete(obj)
+        await db.commit()
         return obj
 ```
 
@@ -439,7 +445,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 ```python
 # src/crud/asset.py
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
 from ..schemas.asset import AssetCreate, AssetUpdate
@@ -448,31 +455,38 @@ from .base import CRUDBase
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产 CRUD 操作"""
 
-    def search(
+    async def search_async(
         self,
-        db: Session,
+        db: AsyncSession,
         keyword: str,
         skip: int = 0,
         limit: int = 100
     ) -> List[Asset]:
         """搜索资产"""
-        return db.query(Asset).filter(
-            Asset.property_name.contains(keyword)
-        ).offset(skip).limit(limit).all()
+        stmt = (
+            select(Asset)
+            .where(Asset.property_name.contains(keyword))
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
-    def get_by_ownership_status(
+    async def get_by_ownership_status_async(
         self,
-        db: Session,
+        db: AsyncSession,
         status: str
     ) -> List[Asset]:
         """按权属状态获取资产"""
-        return db.query(Asset).filter(
-            Asset.ownership_status == status
-        ).all()
+        stmt = select(Asset).where(Asset.ownership_status == status)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
-    def calculate_occupancy_rate(self, db: Session, asset_id: str) -> Optional[float]:
+    async def calculate_occupancy_rate_async(
+        self, db: AsyncSession, asset_id: str
+    ) -> Optional[float]:
         """计算出租率"""
-        asset = self.get(db, asset_id)
+        asset = await self.get_async(db, asset_id)
         if asset and asset.rentable_area and asset.rented_area:
             return (asset.rented_area / asset.rentable_area) * 100
         return None
@@ -487,6 +501,10 @@ asset_crud = AssetCRUD(Asset)
 
 ## 🔐 认证和权限控制
 
+> 注意：历史遗留 `SecurityService` 已移除，不再提供或导出。  
+> 如需密码哈希与强度校验，请使用 `backend/src/services/core/password_service.py`；  
+> 如需认证与令牌逻辑，请使用 `backend/src/services/core/authentication_service.py`。
+
 ### JWT 认证实现
 
 ```python
@@ -495,6 +513,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 
@@ -504,7 +523,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class AuthService:
     """认证服务"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.secret_key = settings.SECRET_KEY
         self.algorithm = settings.ALGORITHM
@@ -552,9 +571,9 @@ class AuthService:
 # src/middleware/auth.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db
+from ..database import get_async_db
 from ..models.user import User
 from ..crud.user import user_crud
 
@@ -562,7 +581,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db)
 ) -> User:
     """获取当前认证用户"""
     credentials_exception = HTTPException(
@@ -579,7 +598,7 @@ async def get_current_user(
         raise credentials_exception
 
     user_id: str = payload.get("sub")
-    user = user_crud.get(db, user_id)
+    user = await user_crud.get_async(db, user_id)
 
     if user is None:
         raise credentials_exception
@@ -657,7 +676,7 @@ async def delete_asset(
 ```python
 # 使用 async/await
 @router.get("/assets")
-async def get_assets_async(db: Session = Depends(get_db)):
+async def get_assets_async(db: AsyncSession = Depends(get_async_db)):
     """异步获取资产列表"""
     # SQLAlchemy 2.0 支持异步
     result = await db.execute(select(Asset).limit(100))
@@ -721,7 +740,7 @@ class CacheService:
 cache_service = CacheService()
 
 @router.get("/assets/{asset_id}")
-async def get_asset_cached(asset_id: str, db: Session = Depends(get_db)):
+async def get_asset_cached(asset_id: str, db: AsyncSession = Depends(get_async_db)):
     # 先查缓存
     cache_key = f"asset:{asset_id}"
     cached = await cache_service.get(cache_key)
@@ -730,7 +749,7 @@ async def get_asset_cached(asset_id: str, db: Session = Depends(get_db)):
         return cached
 
     # 缓存未命中，查数据库
-    asset = asset_crud.get(db, asset_id)
+    asset = await asset_crud.get_async(db, asset_id)
 
     if asset:
         # 写入缓存
@@ -765,50 +784,54 @@ tests/
 ```python
 # tests/test_api/test_assets.py
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.main import app
-from src.database import get_db
+from src.database import get_async_db
 from src.models.base import Base
 
 # 测试数据库
 SQLALCHEMY_TEST_DATABASE_URL = "postgresql+psycopg://user:password@localhost:5432/zcgl_test"
 # SQLite 已移除，测试环境请使用 PostgreSQL
-engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_async_engine(SQLALCHEMY_TEST_DATABASE_URL, pool_pre_ping=True)
+TestingSessionLocal = async_sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+)
+
+@pytest.fixture(scope="session", autouse=True)
+async def prepare_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 @pytest.fixture
-def db():
+async def db_session() -> AsyncSession:
     """测试数据库 fixture"""
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
+    async with TestingSessionLocal() as session:
+        yield session
 
 @pytest.fixture
-def client(db):
+async def client(db_session: AsyncSession):
     """测试客户端 fixture"""
-    def override_get_db():
-        try:
-            yield db
-        finally:
-            db.close()
+    async def override_get_db():
+        yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
+    app.dependency_overrides[get_async_db] = override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        yield client
     app.dependency_overrides.clear()
 
 class TestAssetsAPI:
     """资产 API 测试"""
 
-    def test_create_asset(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_create_asset(self, client: AsyncClient):
         """测试创建资产"""
-        response = client.post(
+        response = await client.post(
             "/api/v1/assets",
             json={
                 "property_name": "测试资产",
@@ -822,16 +845,18 @@ class TestAssetsAPI:
         data = response.json()
         assert data["data"]["property_name"] == "测试资产"
 
-    def test_get_assets(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_get_assets(self, client: AsyncClient):
         """测试获取资产列表"""
-        response = client.get("/api/v1/assets")
+        response = await client.get("/api/v1/assets")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data["data"], list)
 
-    def test_get_asset_not_found(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_get_asset_not_found(self, client: AsyncClient):
         """测试获取不存在的资产"""
-        response = client.get("/api/v1/assets/nonexistent")
+        response = await client.get("/api/v1/assets/nonexistent")
         assert response.status_code == 404
 ```
 
@@ -948,6 +973,11 @@ psql "$DATABASE_URL" -c "SELECT 1;"
 pip install -e .
 
 # 检查虚拟环境
+python -c "import sys; print(sys.executable)"
+
+# Windows:
+where python
+# macOS/Linux:
 which python
 
 # 检查 Python 路径
@@ -981,6 +1011,30 @@ alembic stamp head
 
 # 重新运行迁移
 alembic upgrade head
+```
+
+### Q5: asyncpg 导入失败 / AsyncSession 运行时报错
+**问题**: `ModuleNotFoundError: No module named 'asyncpg'` 或 `ImportError: asyncpg`
+**解决**:
+```bash
+# 确认使用虚拟环境
+python -c "import sys; print(sys.executable)"
+
+# 安装后端依赖（包含 asyncpg）
+pip install -e .
+```
+
+### Q6: 时间戳写入报错 (asyncpg DataError)
+**问题**: `asyncpg.exceptions.DataError` 或 `can't subtract offset-naive and offset-aware datetimes`
+**解决**:
+```python
+from datetime import datetime, timezone
+
+# 写库字段使用 naive UTC
+naive_utc = datetime.utcnow()
+
+# 如果已有带时区时间
+naive_utc = aware_dt.astimezone(timezone.utc).replace(tzinfo=None)
 ```
 
 ---

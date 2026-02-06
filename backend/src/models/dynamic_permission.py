@@ -3,7 +3,7 @@
 支持临时权限、条件权限和动态权限分配
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ class DynamicPermission(Base):
         String, ForeignKey("users.id"), nullable=False
     )
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
     )
 
     # 撤销信息
@@ -99,7 +99,7 @@ class TemporaryPermission(Base):
         String, ForeignKey("users.id"), nullable=False
     )
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
     )
 
     # 状态
@@ -140,7 +140,7 @@ class ConditionalPermission(Base):
         String, ForeignKey("users.id"), nullable=False
     )
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
     )
 
     # 状态
@@ -179,7 +179,7 @@ class PermissionTemplate(Base):
         String, ForeignKey("users.id"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
     )
 
     # 状态
@@ -227,7 +227,7 @@ class DynamicPermissionAudit(Base):
 
     # 操作时间
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True
+        DateTime, default=lambda: datetime.utcnow(), nullable=False, index=True
     )
 
     # 关系 - 暂时注释掉User关系引用
@@ -280,12 +280,12 @@ class PermissionRequest(Base):
 
     # 申请信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True
+        DateTime, default=lambda: datetime.utcnow(), nullable=False, index=True
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         nullable=False,
     )
 
@@ -316,7 +316,7 @@ class PermissionDelegation(Base):
 
     # 委托期限
     starts_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
+        DateTime, default=lambda: datetime.utcnow(), nullable=False
     )
     ends_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
@@ -333,7 +333,7 @@ class PermissionDelegation(Base):
 
     # 创建信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True
+        DateTime, default=lambda: datetime.utcnow(), nullable=False, index=True
     )
 
     # 关系 - 暂时注释掉User关系引用

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...utils.numeric import to_float
@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 class FinancialService:
     """财务汇总计算服务"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def calculate_summary(
+    async def calculate_summary(
         self, filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
@@ -35,7 +35,7 @@ class FinancialService:
         Returns:
             财务汇总统计结果
         """
-        assets, _ = asset_crud.get_multi_with_search(
+        assets, _ = await asset_crud.get_multi_with_search_async(
             db=self.db,
             skip=0,
             limit=10000,

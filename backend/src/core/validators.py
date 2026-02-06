@@ -27,7 +27,8 @@ class DuplicateAssetError(Exception):
 import re
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..constants.message_constants import EMPTY_STRING
 
@@ -164,8 +165,8 @@ class AssetValidator(BaseValidator):
         return errors
 
     @classmethod
-    def validate_asset_unique(
-        cls, db: Session, property_name: str, exclude_id: str | None = None
+    async def validate_asset_unique(
+        cls, db: AsyncSession, property_name: str, exclude_id: str | None = None
     ) -> list[str]:
         """
         验证资产唯一性
@@ -180,17 +181,15 @@ class AssetValidator(BaseValidator):
         """
         from ..models.asset import Asset  # pragma: no cover
 
-        query = db.query(Asset).filter(
-            Asset.property_name == property_name
-        )  # pragma: no cover
-        if exclude_id:  # pragma: no cover
-            query = query.filter(Asset.id != exclude_id)  # pragma: no cover
+        stmt = select(Asset).where(Asset.property_name == property_name)
+        if exclude_id:
+            stmt = stmt.where(Asset.id != exclude_id)
 
-        existing = query.first()  # pragma: no cover
-        if existing:  # pragma: no cover
-            return [f"物业名称 '{property_name}' 已存在"]  # pragma: no cover
+        existing = (await db.execute(stmt)).scalars().first()
+        if existing:
+            return [f"物业名称 '{property_name}' 已存在"]
 
-        return []  # pragma: no cover
+        return []
 
 
 class UserValidator(BaseValidator):
@@ -235,9 +234,9 @@ class UserValidator(BaseValidator):
         return errors
 
     @classmethod
-    def validate_user_unique(
+    async def validate_user_unique(
         cls,
-        db: Session,
+        db: AsyncSession,
         username: str | None = None,
         email: str | None = None,
         exclude_id: str | None = None,
@@ -256,23 +255,23 @@ class UserValidator(BaseValidator):
         """
         from ..models.auth import User  # pragma: no cover
 
-        errors = []  # pragma: no cover
+        errors: list[str] = []  # pragma: no cover
 
         if username:  # pragma: no cover
-            query = db.query(User).filter(User.username == username)  # pragma: no cover
+            stmt = select(User).where(User.username == username)  # pragma: no cover
             if exclude_id:  # pragma: no cover
-                query = query.filter(User.id != exclude_id)  # pragma: no cover
+                stmt = stmt.where(User.id != exclude_id)  # pragma: no cover
 
-            existing = query.first()  # pragma: no cover
+            existing = (await db.execute(stmt)).scalars().first()  # pragma: no cover
             if existing:  # pragma: no cover
                 errors.append(f"用户名 '{username}' 已存在")  # pragma: no cover
 
         if email:  # pragma: no cover
-            query = db.query(User).filter(User.email == email)  # pragma: no cover
+            stmt = select(User).where(User.email == email)  # pragma: no cover
             if exclude_id:  # pragma: no cover
-                query = query.filter(User.id != exclude_id)  # pragma: no cover
+                stmt = stmt.where(User.id != exclude_id)  # pragma: no cover
 
-            existing = query.first()  # pragma: no cover
+            existing = (await db.execute(stmt)).scalars().first()  # pragma: no cover
             if existing:  # pragma: no cover
                 errors.append(f"邮箱 '{email}' 已存在")  # pragma: no cover
 

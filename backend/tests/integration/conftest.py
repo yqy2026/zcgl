@@ -38,6 +38,37 @@ if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 
+class AsyncSessionAdapter:
+    """Provide async-compatible methods over a sync SQLAlchemy session."""
+
+    def __init__(self, session):  # noqa: ANN001 - test helper
+        self._session = session
+
+    async def execute(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.execute(*args, **kwargs)
+
+    async def commit(self):  # noqa: D401 - test helper
+        return self._session.commit()
+
+    async def refresh(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.refresh(*args, **kwargs)
+
+    async def flush(self):  # noqa: D401 - test helper
+        return self._session.flush()
+
+    async def rollback(self):  # noqa: D401 - test helper
+        return self._session.rollback()
+
+    def add(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.add(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.delete(*args, **kwargs)
+
+    def __getattr__(self, name: str):  # noqa: D401 - test helper
+        return getattr(self._session, name)
+
+
 @pytest.fixture(scope="session")
 def test_database_url():
     """
@@ -172,6 +203,7 @@ def test_data(db_session):
     # Import models needed for test data
     from src.models.auth import User
     from src.models.organization import Organization
+    from src.models.rbac import Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
     from src.services.enum_data_init import init_enum_data
 
@@ -192,11 +224,32 @@ def test_data(db_session):
         email="admin@test.com",
         full_name="Test Admin",
         password_hash=password_service.get_password_hash("Admin123!@#"),
-        role="admin",
         is_active=True,
         default_organization_id=test_org.id,
     )
     db_session.add(test_admin)
+    db_session.commit()
+    db_session.refresh(test_admin)
+
+    admin_role = db_session.query(Role).filter(Role.name == "admin").first()
+    if admin_role is None:
+        admin_role = Role(
+            name="admin",
+            display_name="管理员",
+            is_system_role=True,
+            is_active=True,
+        )
+        db_session.add(admin_role)
+        db_session.commit()
+        db_session.refresh(admin_role)
+
+    db_session.add(
+        UserRoleAssignment(
+            user_id=test_admin.id,
+            role_id=admin_role.id,
+            assigned_by="integration_test",
+        )
+    )
     db_session.commit()
 
     # Provide test data as a dictionary
@@ -215,17 +268,14 @@ def client(db_session):
     """
     from fastapi.testclient import TestClient
 
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
 
     # Override the database dependency
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(db_session)
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client

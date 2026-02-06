@@ -2,7 +2,8 @@
 CRUD操作模块
 """
 
-from ..models.asset import Asset, AssetCustomField, Ownership, Project, SystemDictionary
+from ..models.asset import Asset, AssetCustomField, Project, SystemDictionary
+from ..models.ownership import Ownership
 from ..models.collection import CollectionRecord
 from ..models.dynamic_permission import DynamicPermission
 from ..models.llm_prompt import PromptTemplate

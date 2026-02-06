@@ -12,14 +12,13 @@ from src.core.config import settings
 from src.security.token_blacklist import blacklist_manager
 
 
-def _build_access_token(user_id: str, username: str, role: str) -> tuple[str, str, int]:
+def _build_access_token(user_id: str, username: str) -> tuple[str, str, int]:
     now = datetime.now(UTC)
     exp = now + timedelta(hours=1)
     jti = f"test-{uuid4().hex}"
     payload = {
         "sub": str(user_id),
         "username": username,
-        "role": role,
         "exp": int(exp.timestamp()),
         "iat": int(now.timestamp()),
         "jti": jti,
@@ -40,7 +39,6 @@ class TestTokenBlacklistApi:
         token, jti, exp = _build_access_token(
             user_id=str(admin.id),
             username=admin.username,
-            role=str(admin.role),
         )
 
         # Sanity check: token should work before blacklisting

@@ -232,7 +232,11 @@ class APIDocGenerator:
                     "ownership_status": {"type": "string", "description": "确权状态"},
                     "property_nature": {"type": "string", "description": "物业性质"},
                     "usage_status": {"type": "string", "description": "使用状态"},
-                    "ownership_entity": {"type": "string", "description": "权属方"},
+                    "ownership_id": {"type": "string", "description": "权属方ID"},
+                    "ownership_entity": {
+                        "type": "string",
+                        "description": "权属方名称(只读)",
+                    },
                     "land_area": {"type": "number", "description": "土地面积"},
                     "actual_property_area": {
                         "type": "number",
@@ -313,6 +317,7 @@ class APIDocGenerator:
                 "ownership_status": "已确权",
                 "property_nature": "经营性",
                 "usage_status": "出租",
+                "ownership_id": "ownership-uuid",
                 "ownership_entity": "示例权属方",
                 "land_area": 1000.0,
                 "actual_property_area": 800.0,

@@ -22,6 +22,17 @@ load_dotenv()
 # 设置开发模式环境变量
 os.environ.setdefault("DEV_MODE", "true")
 
+def parse_bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "y", "on"}:
+        return True
+    if value in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
 if __name__ == "__main__":
     # 在启动前验证环境配置
     env_file = Path(".env")
@@ -76,4 +87,13 @@ if __name__ == "__main__":
     print("启动开发服务器 (DEV_MODE=true)")
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT") or os.getenv("PORT", "8002"))
-    uvicorn.run("src.main:app", host=host, port=port, reload=True, log_level="info")
+    reload_enabled = parse_bool_env("RELOAD", True)
+    reload_dirs = [str(Path(__file__).resolve().parent / "src")]
+    uvicorn.run(
+        "src.main:app",
+        host=host,
+        port=port,
+        reload=reload_enabled,
+        reload_dirs=reload_dirs if reload_enabled else None,
+        log_level="info",
+    )

@@ -8,7 +8,6 @@ import io
 import logging
 
 import pandas as pd
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +18,6 @@ class ExcelTemplateService:
 
     负责生成Excel导入模板文件
     """
-
-    def __init__(self, db: Session):
-        """
-        初始化模板服务
-
-        Args:
-            db: 数据库会话
-        """
-        self.db = db
 
     def generate_template(self) -> io.BytesIO:
         """

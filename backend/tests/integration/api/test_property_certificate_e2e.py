@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from src.models.asset import Asset
+from src.models.ownership import Ownership
 from src.services.property_certificate.service import PropertyCertificateService
 
 
@@ -111,14 +112,20 @@ def test_upload_returns_asset_matches(
         "usage_status": "出租",
     }
 
+    ownership = Ownership(name=asset_data["ownership_entity"], code="OWN-MATCH-001")
+    db_session.add(ownership)
+    db_session.commit()
+    db_session.refresh(ownership)
+
     asset = Asset(
-        ownership_entity=asset_data["ownership_entity"],
+        ownership_id=ownership.id,
         property_name=asset_data["property_name"],
         address=asset_data["address"],
         ownership_status=asset_data["ownership_status"],
         property_nature=asset_data["property_nature"],
         usage_status=asset_data["usage_status"],
     )
+    asset.ownership = ownership
     db_session.add(asset)
     db_session.commit()
     db_session.refresh(asset)
@@ -260,7 +267,16 @@ def test_certificate_with_asset_link(
         "usage_status": "出租",
     }
 
-    asset_response = client.post("/api/v1/assets", json=asset_data, headers=headers)
+    ownership = Ownership(name=asset_data["ownership_entity"], code="OWN-LINK-001")
+    db_session.add(ownership)
+    db_session.commit()
+    db_session.refresh(ownership)
+
+    asset_response = client.post(
+        "/api/v1/assets",
+        json={**asset_data, "ownership_id": ownership.id},
+        headers=headers,
+    )
     assert asset_response.status_code == 201
     asset = asset_response.json()
 

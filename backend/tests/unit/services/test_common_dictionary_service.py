@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,11 +10,16 @@ from src.schemas.dictionary import (
 )
 from src.services.common_dictionary_service import common_dictionary_service
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestCommonDictionaryService:
     @pytest.fixture
-    def mock_db(self, db_session):
-        return db_session
+    def mock_db(self):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock()
+        mock_db.flush = AsyncMock()
+        return mock_db
 
     @pytest.fixture
     def mock_enum_type_crud(self):
@@ -30,14 +35,14 @@ class TestCommonDictionaryService:
         ) as mock:
             yield mock.return_value
 
-    def test_get_combined_options_from_enum(
+    async def test_get_combined_options_from_enum(
         self, mock_db, mock_enum_type_crud, mock_enum_value_crud
     ):
         """Test getting options from enum field"""
         # Setup mock return values
         mock_type = MagicMock()
         mock_type.id = 1
-        mock_enum_type_crud.get_by_code.return_value = mock_type
+        mock_enum_type_crud.get_by_code_async = AsyncMock(return_value=mock_type)
 
         mock_value = MagicMock()
         mock_value.label = "Test Label"
@@ -46,32 +51,34 @@ class TestCommonDictionaryService:
         mock_value.sort_order = 1
         mock_value.color = "blue"
         mock_value.icon = "user"
-        mock_enum_value_crud.get_by_type.return_value = [mock_value]
+        mock_enum_value_crud.get_by_type_async = AsyncMock(return_value=[mock_value])
 
         # Call service
-        result = common_dictionary_service.get_combined_options(mock_db, "test_type")
+        result = await common_dictionary_service.get_combined_options_async(
+            mock_db, "test_type"
+        )
 
         # Verify results
         assert len(result) == 1
         assert result[0].label == "Test Label"
         assert result[0].value == "test_value"
         assert result[0].code == "TEST"
-        mock_enum_type_crud.get_by_code.assert_called_with("test_type")
-        mock_enum_value_crud.get_by_type.assert_called()
+        mock_enum_type_crud.get_by_code_async.assert_called_with(mock_db, "test_type")
+        mock_enum_value_crud.get_by_type_async.assert_called()
 
-    def test_quick_create_enum_dictionary_success(
+    async def test_quick_create_enum_dictionary_success(
         self, mock_db, mock_enum_type_crud, mock_enum_value_crud
     ):
         """Test successful dictionary creation"""
         # Setup mocks
-        mock_enum_type_crud.get_by_code.return_value = None  # Not existing
+        mock_enum_type_crud.get_by_code_async = AsyncMock(return_value=None)
 
         mock_created_type = MagicMock()
         mock_created_type.id = 1
-        mock_enum_type_crud.create.return_value = mock_created_type
+        mock_enum_type_crud.create_async = AsyncMock(return_value=mock_created_type)
 
         mock_created_value = MagicMock()
-        mock_enum_value_crud.create.return_value = mock_created_value
+        mock_enum_value_crud.create_async = AsyncMock(return_value=mock_created_value)
 
         # Input data
         data = SimpleDictionaryCreate(
@@ -80,63 +87,70 @@ class TestCommonDictionaryService:
         )
 
         # Call service
-        result = common_dictionary_service.quick_create_enum_dictionary(
+        result = await common_dictionary_service.quick_create_enum_dictionary_async(
             mock_db, "test_new_dict", data, "admin"
         )
 
         # Verify
         assert result["type_id"] == "1"
         assert result["values_count"] == 1
-        mock_enum_type_crud.create.assert_called_once()
-        mock_enum_value_crud.create.assert_called_once()
+        mock_enum_type_crud.create_async.assert_called_once()
+        mock_enum_value_crud.create_async.assert_called_once()
 
-    def test_quick_create_conflict(self, mock_db, mock_enum_type_crud):
+    async def test_quick_create_conflict(self, mock_db, mock_enum_type_crud):
         """Test creation when dictionary already exists"""
-        mock_enum_type_crud.get_by_code.return_value = MagicMock()  # Existing
+        mock_enum_type_crud.get_by_code_async = AsyncMock(return_value=MagicMock())
 
         data = SimpleDictionaryCreate(options=[])
 
         with pytest.raises(BaseBusinessError) as exc:
-            common_dictionary_service.quick_create_enum_dictionary(
+            await common_dictionary_service.quick_create_enum_dictionary_async(
                 mock_db, "existing_dict", data, "admin"
             )
 
         assert exc.value.status_code == 409
 
-    def test_add_dictionary_value_success(
+    async def test_add_dictionary_value_success(
         self, mock_db, mock_enum_type_crud, mock_enum_value_crud
     ):
         """Test adding a value to existing dictionary"""
         mock_type = MagicMock()
         mock_type.id = 1
-        mock_enum_type_crud.get_by_code.return_value = mock_type
+        mock_enum_type_crud.get_by_code_async = AsyncMock(return_value=mock_type)
 
-        mock_enum_value_crud.get_by_type_and_value.return_value = (
-            None  # Not existing value
-        )
+        mock_enum_value_crud.get_by_type_and_value_async = AsyncMock(return_value=None)
 
         mock_created = MagicMock()
         mock_created.id = 100
-        mock_enum_value_crud.create.return_value = mock_created
+        mock_enum_value_crud.create_async = AsyncMock(return_value=mock_created)
 
         value_data = DictionaryValueCreate(label="New Val", value="new_val")
 
-        result = common_dictionary_service.add_dictionary_value(
+        result = await common_dictionary_service.add_dictionary_value_async(
             mock_db, "test_dict", value_data, "admin"
         )
 
         assert result["value_id"] == "100"
-        mock_enum_value_crud.create.assert_called_once()
+        mock_enum_value_crud.create_async.assert_called_once()
 
-    def test_delete_dictionary_type(self, mock_db, mock_enum_type_crud):
+    async def test_delete_dictionary_type(self, mock_db, mock_enum_type_crud):
         """Test deleting dictionary type"""
+        mock_db.execute = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_result
+        mock_db.flush = AsyncMock()
+
         mock_type = MagicMock()
         mock_type.id = 1
-        mock_enum_type_crud.get_by_code.return_value = mock_type
+        mock_enum_type_crud.get_by_code_async = AsyncMock(return_value=mock_type)
+        mock_enum_type_crud.delete_async = AsyncMock(return_value=True)
 
-        result = common_dictionary_service.delete_dictionary_type(
+        result = await common_dictionary_service.delete_dictionary_type_async(
             mock_db, "test_dict", "admin"
         )
 
         assert "成功" in result["message"]
-        mock_enum_type_crud.delete.assert_called_with("1", deleted_by="admin")
+        mock_enum_type_crud.delete_async.assert_called_with(
+            mock_db, "1", deleted_by="admin"
+        )

@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..llm_prompt.prompt_manager import PromptManager
 from .extractors.factory import ExtractorFactory
 
 if TYPE_CHECKING:
@@ -142,6 +144,7 @@ class DocumentExtractionManager:
         self,
         file_path: str,
         doc_type: DocumentType | str | None = None,
+        db: AsyncSession | None = None,
     ) -> ExtractionResult:
         """
         统一提取入口
@@ -186,8 +189,17 @@ class DocumentExtractionManager:
             else:
                 extractor = self._contract_extractor
 
-            # 调用 LLM Vision 提取
-            result = await extractor.extract(file_path)
+            prompt = None
+            if detected_type == DocumentType.PROPERTY_CERT and db is not None:
+                prompt_manager = PromptManager()
+                prompt = await prompt_manager.get_active_prompt_async(
+                    db, doc_type="PROPERTY_CERT", provider="qwen"
+                )
+
+            if prompt is not None:
+                result = await extractor.extract(file_path, prompt=prompt)
+            else:
+                result = await extractor.extract(file_path)
 
             processing_time = (time.time() - start_time) * 1000
 
@@ -195,7 +207,7 @@ class DocumentExtractionManager:
                 success=result.get("success", False),
                 document_type=detected_type,
                 confidence_score=result.get("confidence", 0.0),
-                extracted_fields=result.get("data", {}),
+                extracted_fields=result.get("extracted_fields", result.get("data", {})),
                 extraction_method=result.get("extraction_method", "vision"),
                 processing_time_ms=processing_time,
                 warnings=result.get("warnings", []),

@@ -12,7 +12,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
@@ -51,52 +50,42 @@ async def get_trend_data(
         当前实现返回模拟数据，实际项目中应从历史数据表中查询真实趋势
     """
 
-    def _sync(sync_db: Session) -> TrendDataResponse:
-        # 简化实现，返回模拟数据
-        # 实际项目中可以根据时间周期和指标从历史数据中计算趋势
-        time_series: list[TimeSeriesDataPoint] = []
+    time_series: list[TimeSeriesDataPoint] = []
 
-        if metric == "occupancy_rate":
-            # 模拟最近6个月的出租率趋势
-            for i in range(6):
-                month_value = 75 + (i * 2) + (hash(f"{metric}_{i}") % 10)
-                time_series.append(
-                    TimeSeriesDataPoint(
-                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                        value=float(round(min(month_value, 95), 1)),
-                        label=f"2024-{i + 1:02d}",
-                    )
+    if metric == "occupancy_rate":
+        for i in range(6):
+            month_value = 75 + (i * 2) + (hash(f"{metric}_{i}") % 10)
+            time_series.append(
+                TimeSeriesDataPoint(
+                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                    value=float(round(min(month_value, 95), 1)),
+                    label=f"2024-{i + 1:02d}",
                 )
-        elif metric == "income":
-            # 模拟最近6个月的收入趋势
-            base_income = 1000000
-            for i in range(6):
-                month_income = (
-                    base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
+            )
+    elif metric == "income":
+        base_income = 1000000
+        for i in range(6):
+            month_income = base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
+            time_series.append(
+                TimeSeriesDataPoint(
+                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                    value=float(round(month_income, 2)),
+                    label=f"2024-{i + 1:02d}",
                 )
-                time_series.append(
-                    TimeSeriesDataPoint(
-                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                        value=float(round(month_income, 2)),
-                        label=f"2024-{i + 1:02d}",
-                    )
+            )
+    else:
+        for i in range(6):
+            time_series.append(
+                TimeSeriesDataPoint(
+                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                    value=float(100 + i * 10),
+                    label=f"2024-{i + 1:02d}",
                 )
-        else:
-            # 默认返回简单的趋势数据
-            for i in range(6):
-                time_series.append(
-                    TimeSeriesDataPoint(
-                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                        value=float(100 + i * 10),
-                        label=f"2024-{i + 1:02d}",
-                    )
-                )
+            )
 
-        return TrendDataResponse(
-            metric_name=metric,
-            time_series=time_series,
-            trend_direction="up" if metric == "income" else "stable",
-            change_percentage=5.0 if metric == "income" else None,
-        )
-
-    return await db.run_sync(_sync)
+    return TrendDataResponse(
+        metric_name=metric,
+        time_series=time_series,
+        trend_direction="up" if metric == "income" else "stable",
+        change_percentage=5.0 if metric == "income" else None,
+    )

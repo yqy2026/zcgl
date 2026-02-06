@@ -2,11 +2,23 @@
 测试 AreaService (面积汇总计算服务)
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.services.analytics.area_service import AreaCalculationError, AreaService
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.execute = AsyncMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.delete = MagicMock()
+    db.flush = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -23,7 +35,8 @@ class TestAreaService:
         service = AreaService(mock_db)
         assert service.db == mock_db
 
-    def test_calculate_summary_with_aggregation(self, area_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation(self, area_service, mock_db):
         """测试面积汇总聚合计算"""
         # Mock 查询结果
         mock_result = MagicMock()
@@ -34,12 +47,12 @@ class TestAreaService:
         mock_result.total_non_commercial_area = 500.0
         mock_result.assets_with_area_data = 8
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
         # 执行计算
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         # 验证结果
         assert result["total_assets"] == 10
@@ -51,7 +64,8 @@ class TestAreaService:
         assert result["assets_with_area_data"] == 8
         assert result["overall_occupancy_rate"] == 80.0  # 2400/3000*100
 
-    def test_calculate_summary_with_aggregation_with_filters(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_with_filters(
         self, area_service, mock_db
     ):
         """测试带筛选条件的面积汇总计算"""
@@ -63,21 +77,19 @@ class TestAreaService:
         mock_result.total_non_commercial_area = 250.0
         mock_result.assets_with_area_data = 4
 
-        mock_query = MagicMock()
-        mock_filtered = MagicMock()
-        mock_query.filter.return_value = mock_filtered
-        mock_filtered.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
         # 执行计算
         filters = {"data_status": "正常"}
-        result = area_service.calculate_summary_with_aggregation(filters=filters)
+        result = await area_service.calculate_summary_with_aggregation(filters=filters)
 
         # 验证结果和filter调用
         assert result["total_assets"] == 5
-        mock_query.filter.assert_called_once()
 
-    def test_calculate_summary_with_aggregation_zero_rentable_area(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_zero_rentable_area(
         self, area_service, mock_db
     ):
         """测试可出租面积为0的情况"""
@@ -89,39 +101,40 @@ class TestAreaService:
         mock_result.total_non_commercial_area = 0.0
         mock_result.assets_with_area_data = 0
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         # 验证出租率为0
         assert result["overall_occupancy_rate"] == 0.0
         assert result["total_unrented_area"] == 0.0
 
-    def test_calculate_summary_with_aggregation_fallback_to_memory(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_fallback_to_memory(
         self, area_service, mock_db
     ):
         """测试聚合查询失败时降级到内存计算"""
         # Mock 聚合查询抛出异常
-        mock_query = MagicMock()
-        mock_query.with_entities.side_effect = Exception("Database error")
-        mock_db.query.return_value = mock_query
+        mock_db.execute.side_effect = Exception("Database error")
 
         # Mock 内存计算
         with patch.object(
             area_service,
             "_calculate_summary_in_memory",
+            new_callable=AsyncMock,
             return_value={"total_assets": 10, "overall_occupancy_rate": 75.0},
         ) as mock_memory:
-            result = area_service.calculate_summary_with_aggregation(filters=None)
+            result = await area_service.calculate_summary_with_aggregation(filters=None)
 
             # 验证降级到内存计算
             mock_memory.assert_called_once_with(None)
             assert result["overall_occupancy_rate"] == 75.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory(self, mock_crud, area_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory(self, mock_crud, area_service, mock_db):
         """测试内存计算模式"""
         # Mock 资产数据
         mock_assets = [
@@ -140,12 +153,14 @@ class TestAreaService:
                 non_commercial_area=30.0,
             ),
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         # 验证结果
         assert result["total_assets"] == 2
@@ -158,7 +173,8 @@ class TestAreaService:
         assert result["overall_occupancy_rate"] == 80.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
         """测试内存计算处理部分数据缺失的情况"""
         # Mock 部分字段缺失的资产数据
         mock_assets = [
@@ -177,12 +193,14 @@ class TestAreaService:
                 non_commercial_area=30.0,
             ),
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         # 验证结果 - 只统计有数据的字段
         assert result["total_assets"] == 2
@@ -191,7 +209,8 @@ class TestAreaService:
         assert result["overall_occupancy_rate"] == 80.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_zero_rentable_area(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_zero_rentable_area(
         self, mock_crud, area_service
     ):
         """测试内存计算可出租面积为0的情况"""
@@ -204,29 +223,33 @@ class TestAreaService:
                 non_commercial_area=50.0,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         # 验证出租率为0
         assert result["overall_occupancy_rate"] == 0.0
 
-    def test_calculate_summary_in_memory_error(self, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_error(self, area_service):
         """测试内存计算失败时抛出异常"""
         with patch(
-            "src.services.analytics.area_service.asset_crud.get_multi_with_search",
+            "src.services.analytics.area_service.asset_crud.get_multi_with_search_async",
             side_effect=Exception("CRUD error"),
         ):
             with pytest.raises(AreaCalculationError) as excinfo:
-                area_service._calculate_summary_in_memory(filters=None)
+                await area_service._calculate_summary_in_memory(filters=None)
 
             assert "面积汇总计算失败" in str(excinfo.value)
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_rounding(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_rounding(self, mock_crud, area_service):
         """测试内存计算结果四舍五入"""
         mock_assets = [
             MagicMock(
@@ -237,12 +260,14 @@ class TestAreaService:
                 non_commercial_area=50.999,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         # 验证四舍五入到2位小数
         assert result["total_land_area"] == 500.12

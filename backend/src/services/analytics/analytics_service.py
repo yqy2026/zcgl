@@ -10,6 +10,7 @@ Analytics Service - 综合分析服务
 - 缓存管理
 """
 
+import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -18,7 +19,7 @@ from typing import TYPE_CHECKING, Any, cast
 if TYPE_CHECKING:
     from ...models.auth import User
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...constants.business_constants import DataStatusValues
 from ...core.cache_manager import analytics_cache
@@ -31,12 +32,12 @@ logger = logging.getLogger(__name__)
 class AnalyticsService:
     """综合分析服务 - 提供统计分析核心功能"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.cache = analytics_cache
         self.response_handler = ResponseHandler()
 
-    def get_comprehensive_analytics(
+    async def get_comprehensive_analytics(
         self,
         filters: dict[str, Any] | None = None,
         should_use_cache: bool = True,
@@ -62,7 +63,7 @@ class AnalyticsService:
         cache_key = self._generate_cache_key(validated_filters)
         if should_use_cache:
             try:
-                cached_result = self.cache.get(cache_key)
+                cached_result = await self._cache_get(cache_key)
             except Exception as e:
                 logger.warning(f"��������ȡʧ�ܣ����Ի���: {e}", exc_info=True)
                 cached_result = None
@@ -71,12 +72,12 @@ class AnalyticsService:
                 return cast(dict[str, Any], cached_result)
 
         # 执行分析计算
-        result = self._calculate_analytics(validated_filters)
+        result = await self._calculate_analytics(validated_filters)
 
         # 存入缓存
         if should_use_cache:
             try:
-                self.cache.set(cache_key, result, ttl=3600)  # 1小时缓存
+                await self._cache_set(cache_key, result, ttl=3600)
             except Exception as e:
                 logger.warning(f"����д��ʧ�ܣ����Ի���: {e}", exc_info=True)
 
@@ -107,7 +108,7 @@ class AnalyticsService:
         filter_str = json.dumps(filters, sort_keys=True)
         return f"analytics:{hashlib.md5(filter_str.encode(), usedforsecurity=False).hexdigest()}"
 
-    def _calculate_analytics(self, filters: dict[str, Any]) -> dict[str, Any]:
+    async def _calculate_analytics(self, filters: dict[str, Any]) -> dict[str, Any]:
         """
         执行核心分析计算
 
@@ -119,21 +120,17 @@ class AnalyticsService:
         - 分布数据
         """
         # 获取基础数据
-        query = self.db.query(Asset)
+        from ...crud.asset import asset_crud
+        query_filters: dict[str, Any] = {}
 
         # 应用筛选条件 - 使用 data_status 而不是 is_deleted
         if not filters.get("include_deleted", False):
             # 只获取状态为"正常"的资产
-            from sqlalchemy import or_
+            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
-            query = query.filter(
-                or_(
-                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
-                    Asset.data_status.is_(None),
-                )
-            )
-
-        assets: list[Asset] = query.all()
+        assets, _ = await asset_crud.get_multi_with_search_async(
+            db=self.db, skip=0, limit=10000, filters=query_filters
+        )
 
         # 计算各项统计
         stats = {
@@ -149,20 +146,20 @@ class AnalyticsService:
         occupancy_service = OccupancyService(self.db)
 
         # 面积汇总
-        area_stats = area_service.calculate_summary_with_aggregation(filters=filters)
+        area_stats = await area_service.calculate_summary_with_aggregation(filters=filters)
         stats["area_summary"] = area_stats
 
         # 出租率统计
-        occupancy_stats = occupancy_service.calculate_with_aggregation(filters=filters)
+        occupancy_stats = await occupancy_service.calculate_with_aggregation(filters=filters)
         stats["occupancy_rate"] = occupancy_stats
 
         return stats
 
-    def clear_cache(self) -> dict[str, Any]:
+    async def clear_cache(self) -> dict[str, Any]:
         """清除分析缓存"""
         # CacheManager 使用 clear() 方法，支持 pattern 参数
         try:
-            cleared = self.cache.clear(pattern="*")
+            cleared = await self._cache_clear("*")
             return {
                 "status": "success",
                 "cleared_keys": 1 if cleared else 0,
@@ -177,15 +174,29 @@ class AnalyticsService:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def get_cache_stats(self) -> dict[str, Any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         return {
             "cache_type": "analytics_cache_shared_backend",
-            "stats": self.cache.get_stats() if hasattr(self.cache, "get_stats") else {},
+            "stats": await self._cache_stats(),
             "timestamp": datetime.now().isoformat(),
         }
 
-    def calculate_trend(
+    async def _cache_get(self, key: str) -> Any:
+        return await asyncio.to_thread(self.cache.get, key)
+
+    async def _cache_set(self, key: str, value: Any, ttl: int) -> None:
+        await asyncio.to_thread(self.cache.set, key, value, ttl=ttl)
+
+    async def _cache_clear(self, pattern: str) -> Any:
+        return await asyncio.to_thread(self.cache.clear, pattern=pattern)
+
+    async def _cache_stats(self) -> dict[str, Any]:
+        if hasattr(self.cache, "get_stats"):
+            return await asyncio.to_thread(self.cache.get_stats)
+        return {}
+
+    async def calculate_trend(
         self,
         trend_type: str,
         time_dimension: str = "monthly",
@@ -203,20 +214,15 @@ class AnalyticsService:
             趋势数据列表
         """
         # 获取资产数据
-        query = self.db.query(Asset)
+        from ...crud.asset import asset_crud
 
+        query_filters: dict[str, Any] = {}
         if filters is not None and not filters.get("include_deleted", False):
-            # 使用 data_status 筛选
-            from sqlalchemy import or_
+            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
-            query = query.filter(
-                or_(
-                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
-                    Asset.data_status.is_(None),
-                )
-            )
-
-        assets: list[Asset] = query.all()
+        assets, _ = await asset_crud.get_multi_with_search_async(
+            db=self.db, skip=0, limit=10000, filters=query_filters
+        )
 
         # 根据趋势类型和维度生成数据
         if trend_type == "occupancy":
@@ -265,7 +271,7 @@ class AnalyticsService:
             },
         ]
 
-    def calculate_distribution(
+    async def calculate_distribution(
         self,
         distribution_type: str,
         filters: dict[str, Any] | None = None,
@@ -300,20 +306,15 @@ class AnalyticsService:
                 details=f"允许的类型: {', '.join(sorted(allowed_distribution_fields))}",
             )
 
-        query = self.db.query(Asset)
+        from ...crud.asset import asset_crud
 
+        query_filters: dict[str, Any] = {}
         if filters is not None and not filters.get("include_deleted", False):
-            # 使用 data_status 筛选
-            from sqlalchemy import or_
+            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
-            query = query.filter(
-                or_(
-                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
-                    Asset.data_status.is_(None),
-                )
-            )
-
-        assets: list[Asset] = query.all()
+        assets, _ = await asset_crud.get_multi_with_search_async(
+            db=self.db, skip=0, limit=10000, filters=query_filters
+        )
 
         # 统计分布
         distribution: defaultdict[str, dict[str, Any]] = defaultdict(

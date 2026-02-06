@@ -30,7 +30,7 @@ class TestRentContractServiceCoverage:
     def mock_asset(self):
         asset = Asset(
             id="asset_1",
-            ownership_entity="Test Owner",
+            ownership_id="owner_1",
             property_name="Test Asset",
             address="Test Address",
             ownership_status="已确权",

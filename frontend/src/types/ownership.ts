@@ -24,7 +24,7 @@ export interface Ownership {
 
 export interface OwnershipCreate {
   name: string;
-  code: string;
+  code?: string;
   short_name?: string;
 }
 

@@ -231,11 +231,11 @@ class TestCRUDAssetSearch:
             crud.__class__.__bases__[0], "get_multi", return_value=mock_assets
         ) as mock_get_multi:
             # 模拟搜索
-            filters = {"ownership_entity": "公司A"}
+            filters = {"ownership_id": "ownership-1"}
             crud.get_multi(mock_db, filters=filters)
 
         # Verify parent get_multi was called with filters
         mock_get_multi.assert_called_once()
         call_kwargs = mock_get_multi.call_args.kwargs
         assert "filters" in call_kwargs
-        assert call_kwargs["filters"] == {"ownership_entity": "公司A"}
+        assert call_kwargs["filters"] == {"ownership_id": "ownership-1"}

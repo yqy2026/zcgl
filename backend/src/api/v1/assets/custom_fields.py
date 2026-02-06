@@ -6,7 +6,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
@@ -49,27 +48,24 @@ async def get_custom_fields(
     - **is_active**: 是否启用
     """
 
-    def _sync(sync_db: Session) -> list[AssetCustomFieldResponse]:
-        db = sync_db
-        try:
-            filters: dict[str, Any] = {}
-            if asset_id:
-                filters["asset_id"] = asset_id
-            if field_type:
-                filters["field_type"] = field_type
-            if is_required is not None:
-                filters["is_required"] = str(is_required)
-            if is_active is not None:
-                filters["is_active"] = str(is_active)
+    try:
+        filters: dict[str, Any] = {}
+        if asset_id:
+            filters["asset_id"] = asset_id
+        if field_type:
+            filters["field_type"] = field_type
+        if is_required is not None:
+            filters["is_required"] = str(is_required)
+        if is_active is not None:
+            filters["is_active"] = str(is_active)
 
-            fields = custom_field_crud.get_multi_with_filters(db=db, filters=filters)
-            # Explicitly convert to response models
-            return [AssetCustomFieldResponse.model_validate(f) for f in fields]
+        fields = await custom_field_crud.get_multi_with_filters_async(
+            db=db, filters=filters
+        )
+        return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
-        except Exception as e:
-            raise internal_error(f"获取自定义字段列表失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        raise internal_error(f"获取自定义字段列表失败: {str(e)}")
 
 
 @router.get(
@@ -86,26 +82,22 @@ async def get_custom_field(
     - **field_id**: 字段ID
     """
 
-    def _sync(sync_db: Session) -> AssetCustomFieldResponse:
-        db = sync_db
-        try:
-            from ....models.asset import AssetCustomField
+    try:
+        from ....models.asset import AssetCustomField
 
-            field: AssetCustomField | None = custom_field_crud.get(db=db, id=field_id)
-            if not field:
-                raise not_found(
-                    f"字段 {field_id} 不存在",
-                    resource_type="custom_field",
-                    resource_id=field_id,
-                )
-            return AssetCustomFieldResponse.model_validate(field)
+        field: AssetCustomField | None = await custom_field_crud.get(db=db, id=field_id)
+        if not field:
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
+            )
+        return AssetCustomFieldResponse.model_validate(field)
 
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"获取自定义字段详情失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取自定义字段详情失败: {str(e)}")
 
 
 @router.post(
@@ -125,17 +117,15 @@ async def create_custom_field(
     - **field_in**: 字段创建数据
     """
 
-    def _sync(sync_db: Session) -> AssetCustomFieldResponse:
-        db = sync_db
-        try:
-            field = custom_field_service.create_custom_field(db=db, obj_in=field_in)
-            return AssetCustomFieldResponse.model_validate(field)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"创建自定义字段失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        field = await custom_field_service.create_custom_field_async(
+            db=db, obj_in=field_in
+        )
+        return AssetCustomFieldResponse.model_validate(field)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"创建自定义字段失败: {str(e)}")
 
 
 @router.put(
@@ -154,19 +144,15 @@ async def update_custom_field(
     - **field_in**: 字段更新数据
     """
 
-    def _sync(sync_db: Session) -> AssetCustomFieldResponse:
-        db = sync_db
-        try:
-            updated_field = custom_field_service.update_custom_field(
-                db=db, id=field_id, obj_in=field_in
-            )
-            return AssetCustomFieldResponse.model_validate(updated_field)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"更新自定义字段失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        updated_field = await custom_field_service.update_custom_field_async(
+            db=db, id=field_id, obj_in=field_in
+        )
+        return AssetCustomFieldResponse.model_validate(updated_field)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"更新自定义字段失败: {str(e)}")
 
 
 @router.delete("/{field_id}", summary="删除自定义字段")
@@ -181,17 +167,13 @@ async def delete_custom_field(
     - **field_id**: 字段ID
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        try:
-            custom_field_service.delete_custom_field(db=db, id=field_id)
-            return {"message": f"字段 {field_id} 已成功删除"}
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"删除自定义字段失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        await custom_field_service.delete_custom_field_async(db=db, id=field_id)
+        return {"message": f"字段 {field_id} 已成功删除"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"删除自定义字段失败: {str(e)}")
 
 
 @router.post("/validate", summary="验证自定义字段值")
@@ -208,34 +190,28 @@ async def validate_custom_field_value(
     - **value**: 字段值
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            # 获取字段配置
-            field = custom_field_crud.get(db=db, id=field_id)
-            if not field:
-                raise not_found(
-                    f"字段 {field_id} 不存在",
-                    resource_type="custom_field",
-                    resource_id=field_id,
-                )
-
-            # 验证字段值 (使用Service)
-            is_valid, error_message = custom_field_service.validate_field_value(
-                field, value
+    try:
+        field = await custom_field_crud.get(db=db, id=field_id)
+        if not field:
+            raise not_found(
+                f"字段 {field_id} 不存在",
+                resource_type="custom_field",
+                resource_id=field_id,
             )
 
-            if is_valid:
-                return {"valid": True, "message": "验证通过"}
-            else:
-                return {"valid": False, "error": error_message}
+        is_valid, error_message = custom_field_service.validate_field_value(
+            field, value
+        )
 
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"验证字段值失败: {str(e)}")
+        if is_valid:
+            return {"valid": True, "message": "验证通过"}
+        else:
+            return {"valid": False, "error": error_message}
 
-    return await db.run_sync(_sync)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"验证字段值失败: {str(e)}")
 
 
 @router.get("/types/list[Any]", summary="获取字段类型列表")
@@ -279,16 +255,14 @@ async def get_asset_custom_field_values(
     - **asset_id**: 资产ID
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            values = custom_field_crud.get_asset_field_values(db=db, asset_id=asset_id)
-            return {"asset_id": asset_id, "values": values}
+    try:
+        values = await custom_field_crud.get_asset_field_values_async(
+            db=db, asset_id=asset_id
+        )
+        return {"asset_id": asset_id, "values": values}
 
-        except Exception as e:
-            raise internal_error(f"获取资产自定义字段值失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        raise internal_error(f"获取资产自定义字段值失败: {str(e)}")
 
 
 @router.put("/assets/{asset_id}/values", summary="更新资产自定义字段值")
@@ -305,19 +279,15 @@ async def update_asset_custom_field_values(
     - **values_update**: 字段值更新数据
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            updated_values = custom_field_service.update_asset_field_values(
-                db=db, asset_id=asset_id, values=values_update.values
-            )
-            return {"asset_id": asset_id, "values": updated_values}
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"更新资产自定义字段值失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        updated_values = await custom_field_service.update_asset_field_values_async(
+            db=db, asset_id=asset_id, values=values_update.values
+        )
+        return {"asset_id": asset_id, "values": updated_values}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"更新资产自定义字段值失败: {str(e)}")
 
 
 @router.post("/assets/batch-values", summary="批量设置自定义字段值")
@@ -332,37 +302,33 @@ async def batch_set_custom_field_values(
     - **updates**: 更新数据列表，格式: [{"asset_id": "xxx", "values": [...]}]
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            results = []
+    try:
+        results = []
 
-            for update in updates:
-                asset_id = update.get("asset_id")
-                values = update.get("values", [])
+        for update in updates:
+            asset_id = update.get("asset_id")
+            values = update.get("values", [])
 
-                if not asset_id:
-                    continue
+            if not asset_id:
+                continue
 
-                try:
-                    updated_values = custom_field_service.update_asset_field_values(
-                        db=db, asset_id=asset_id, values=values
-                    )
-                    results.append(
-                        {
-                            "asset_id": asset_id,
-                            "success": True,
-                            "values": updated_values,
-                        }
-                    )
-                except Exception as e:
-                    results.append(
-                        {"asset_id": asset_id, "success": False, "error": str(e)}
-                    )
+            try:
+                updated_values = await custom_field_service.update_asset_field_values_async(
+                    db=db, asset_id=asset_id, values=values
+                )
+                results.append(
+                    {
+                        "asset_id": asset_id,
+                        "success": True,
+                        "values": updated_values,
+                    }
+                )
+            except Exception as e:
+                results.append(
+                    {"asset_id": asset_id, "success": False, "error": str(e)}
+                )
 
-            return {"results": results}
+        return {"results": results}
 
-        except Exception as e:
-            raise internal_error(f"批量设置自定义字段值失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        raise internal_error(f"批量设置自定义字段值失败: {str(e)}")

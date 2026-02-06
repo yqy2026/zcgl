@@ -11,7 +11,8 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 redis: Any | None
 try:
@@ -45,7 +46,7 @@ class ProcessingTracker:
     提供统一的接口来更新处理状态、记录日志和处理错误
     """
 
-    def __init__(self, db: Session, session_id: str):
+    def __init__(self, db: AsyncSession, session_id: str):
         """
         初始化追踪器
 
@@ -58,20 +59,19 @@ class ProcessingTracker:
         self._start_time = time.time()
         self._step_start_time: float | None = None
 
-    def get_session(self) -> PDFImportSession | None:
+    async def get_session(self) -> PDFImportSession | None:
         """
         获取 PDF 导入会话
 
         Returns:
             PDFImportSession 会话对象，如果不存在则返回 None
         """
-        return (
-            self.db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == self.session_id)
-            .first()
+        stmt = select(PDFImportSession).where(
+            PDFImportSession.session_id == self.session_id
         )
+        return (await self.db.execute(stmt)).scalars().first()
 
-    def update_progress(
+    async def update_progress(
         self,
         progress: int,
         status: SessionStatus | None = None,
@@ -91,7 +91,7 @@ class ProcessingTracker:
             bool: 是否更新成功
         """
         try:
-            session = self.get_session()
+            session = await self.get_session()
             if not session:
                 logger.warning(f"Session {self.session_id} not found")
                 return False
@@ -105,7 +105,7 @@ class ProcessingTracker:
             if step:
                 session.current_step = step
 
-            self.db.commit()
+            await self.db.commit()
 
             # 记录日志
             log_message = message or f"Progress: {progress}%"
@@ -115,10 +115,10 @@ class ProcessingTracker:
 
         except Exception as e:
             logger.error(f"Failed to update progress for {self.session_id}: {e}")
-            self.db.rollback()
+            await self.db.rollback()
             return False
 
-    def start_step(
+    async def start_step(
         self,
         step: ProcessingStep,
         message: str | None = None,
@@ -136,13 +136,13 @@ class ProcessingTracker:
         self._step_start_time = time.time()
 
         # 创建会话日志
-        return self._create_log(
+        return await self._create_log(
             step=step,
             status="started",
             message=message or f"Started {step.value}",
         )
 
-    def complete_step(
+    async def complete_step(
         self,
         step: ProcessingStep,
         message: str | None = None,
@@ -164,7 +164,7 @@ class ProcessingTracker:
             duration_ms = (time.time() - self._step_start_time) * 1000
             self._step_start_time = None
 
-        return self._create_log(
+        return await self._create_log(
             step=step,
             status="completed",
             message=message or f"Completed {step.value}",
@@ -172,7 +172,7 @@ class ProcessingTracker:
             duration_ms=duration_ms,
         )
 
-    def fail_step(
+    async def fail_step(
         self,
         step: ProcessingStep,
         error_message: str,
@@ -201,7 +201,7 @@ class ProcessingTracker:
         if error_code:
             error_details["error_code"] = error_code.value
 
-        return self._create_log(
+        return await self._create_log(
             step=step,
             status="failed",
             message=error_message,
@@ -209,7 +209,7 @@ class ProcessingTracker:
             duration_ms=duration_ms,
         )
 
-    def handle_failure(
+    async def handle_failure(
         self,
         error: Exception,
         step: ProcessingStep | None = None,
@@ -246,22 +246,22 @@ class ProcessingTracker:
         )
 
         # 更新会话状态为失败
-        session = self.get_session()
+        session = await self.get_session()
         if session:
             session.status = SessionStatus.FAILED
             session.error_message = error_message
             session.progress_percentage = 0.0
-            self.db.commit()
+            await self.db.commit()
 
         # 记录失败日志
         if step:
-            self.fail_step(
+            await self.fail_step(
                 step=step,
                 error_message=error_message,
                 details=error_details,
             )
 
-    def save_result(
+    async def save_result(
         self,
         result: ExtractionResult,
         step: ProcessingStep = ProcessingStep.INFO_EXTRACTION,
@@ -277,7 +277,7 @@ class ProcessingTracker:
             bool: 是否成功
         """
         try:
-            session = self.get_session()
+            session = await self.get_session()
             if not session:
                 return False
 
@@ -296,11 +296,11 @@ class ProcessingTracker:
             if not result.success and result.error:
                 session.error_message = result.error
 
-            self.db.commit()
+            await self.db.commit()
 
             # 记录完成日志
             if result.success:
-                self.complete_step(
+                await self.complete_step(
                     step=step,
                     message=f"Extraction completed with confidence {result.confidence:.2f}",
                     details={
@@ -314,7 +314,7 @@ class ProcessingTracker:
                     },
                 )
             else:
-                self.fail_step(
+                await self.fail_step(
                     step=step,
                     error_message=result.error or "Extraction failed",
                     details={
@@ -332,10 +332,10 @@ class ProcessingTracker:
 
         except Exception as e:
             logger.error(f"Failed to save result for {self.session_id}: {e}")
-            self.db.rollback()
+            await self.db.rollback()
             return False
 
-    def _create_log(
+    async def _create_log(
         self,
         step: ProcessingStep,
         status: str,
@@ -365,17 +365,17 @@ class ProcessingTracker:
             log.details = details
             log.duration_ms = duration_ms
             self.db.add(log)
-            self.db.commit()
+            await self.db.commit()
             return True
 
         except Exception as e:
             logger.error(f"Failed to create log for {self.session_id}: {e}")
-            self.db.rollback()
+            await self.db.rollback()
             return False
 
 
 def track_processing_step(
-    db: Session,
+    db: AsyncSession,
     session_id: str,
     step: ProcessingStep,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -401,7 +401,7 @@ def track_processing_step(
             tracker = ProcessingTracker(db, session_id)
 
             # 开始步骤
-            tracker.start_step(step)
+            await tracker.start_step(step)
 
             try:
                 # 执行处理函数
@@ -410,19 +410,21 @@ def track_processing_step(
                 # 完成步骤
                 if isinstance(result, ExtractionResult):
                     if result.success:
-                        tracker.complete_step(
+                        await tracker.complete_step(
                             step, details={"result": result.model_dump()}
                         )
                     else:
-                        tracker.fail_step(step, result.error or "Processing failed")
+                        await tracker.fail_step(
+                            step, result.error or "Processing failed"
+                        )
                 else:
-                    tracker.complete_step(step)
+                    await tracker.complete_step(step)
 
                 return result
 
             except Exception as e:
                 # 处理失败
-                tracker.handle_failure(e, step=step)
+                await tracker.handle_failure(e, step=step)
                 raise
 
         return wrapper
@@ -872,7 +874,7 @@ class TrackerProgressCallback:
         self.tracker = tracker
         self._current_progress = 0
 
-    def __call__(
+    async def __call__(
         self,
         progress: int,
         message: str,
@@ -887,7 +889,7 @@ class TrackerProgressCallback:
             stage: 当前阶段
         """
         self._current_progress = progress
-        self.tracker.update_progress(
+        await self.tracker.update_progress(
             progress=progress,
             message=message,
         )

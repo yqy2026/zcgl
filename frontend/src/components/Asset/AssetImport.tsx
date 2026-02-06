@@ -349,9 +349,9 @@ const OptimizedAssetImport: React.FC = () => {
           current={currentStep}
           style={{ marginBottom: '32px' }}
           items={[
-            { title: '选择文件', description: '上传Excel文件' },
-            { title: '执行导入', description: '处理数据' },
-            { title: '查看结果', description: '导入完成' },
+            { title: '选择文件', content: '上传Excel文件' },
+            { title: '执行导入', content: '处理数据' },
+            { title: '查看结果', content: '导入完成' },
           ]}
         />
 

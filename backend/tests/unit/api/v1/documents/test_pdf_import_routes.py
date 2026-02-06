@@ -3,12 +3,12 @@ PDF Import Routes 测试
 测试 PDF 导入路由的端点
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from src.database import get_db
+from src.database import get_async_db
 from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
@@ -21,7 +21,7 @@ from src.models.auth import User
 @pytest.fixture
 def mock_db():
     """Mock 数据库会话"""
-    return Mock()
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -30,7 +30,6 @@ def mock_user():
     user = Mock(spec=User)
     user.id = "test_user_001"
     user.username = "testuser"
-    user.role = "admin"
     user.is_active = True
     return user
 
@@ -39,13 +38,13 @@ def mock_user():
 def client(mock_db, mock_user):
     """测试客户端"""
 
-    def override_get_db():
+    async def override_get_db():
         yield mock_db
 
     def override_get_user():
         return mock_user
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
 
     with TestClient(app) as test_client:

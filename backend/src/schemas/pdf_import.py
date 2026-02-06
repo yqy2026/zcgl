@@ -69,6 +69,9 @@ class ExtractionResult(BaseModel):
     extraction_method: str = ""
     processed_fields: int = 0
     total_fields: int = 0
+    warnings: list[str] = []
+    field_evidence: dict[str, Any] | None = None
+    field_sources: dict[str, Any] | None = None
     error: str | None = None
 
 

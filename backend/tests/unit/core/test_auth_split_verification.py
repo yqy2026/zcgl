@@ -2,27 +2,47 @@
 测试认证服务拆分 (使用 Mock 避免数据库依赖)
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.core.authentication_service import AuthenticationService
-from src.services.core.user_management_service import UserManagementService
+from src.services.core.authentication_service import AsyncAuthenticationService
+from src.services.core.user_management_service import AsyncUserManagementService
 
 
 @pytest.fixture
 def auth_service(mock_db):
     """创建 AuthenticationService 实例"""
-    return AuthenticationService(mock_db)
+    return AsyncAuthenticationService(mock_db)
 
 
 @pytest.fixture
 def user_mgmt(mock_db):
     """创建 UserManagementService 实例"""
-    return UserManagementService(mock_db)
+    return AsyncUserManagementService(mock_db)
 
 
-def test_auth_services_split_verification(auth_service, user_mgmt, mock_db):
+@pytest.fixture
+def mock_db():
+    db = MagicMock(spec=AsyncSession)
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.add = MagicMock()
+    return db
+
+
+def _mock_execute_first(value):
+    result = MagicMock()
+    scalars = MagicMock()
+    scalars.first.return_value = value
+    result.scalars.return_value = scalars
+    return result
+
+
+@pytest.mark.asyncio
+async def test_auth_services_split_verification(auth_service, user_mgmt, mock_db):
     """测试认证服务拆分 - 简化版本"""
     # 这个测试主要验证服务可以正常实例化和调用
     # 具体的业务逻辑测试应该在集成测试中进行
@@ -36,19 +56,10 @@ def test_auth_services_split_verification(auth_service, user_mgmt, mock_db):
     assert hasattr(user_mgmt, "create_user")
     assert hasattr(user_mgmt, "get_user_by_username")
 
-    # 3. 验证mock数据库可以正常工作
-    mock_query = MagicMock()
-    mock_db.query.return_value = mock_query
-    assert mock_db.query.called is False  # 初始状态未调用
-
-    # 4. 测试认证失败场景（用户不存在）
-    mock_query.filter.return_value.first.return_value = None
-    result = auth_service.authenticate_user("nonexistent", "password")
+    mock_db.execute.return_value = _mock_execute_first(None)
+    result = await auth_service.authenticate_user("nonexistent", "password")
     assert result is None
 
-    # 5. 测试用户名/邮箱查找逻辑
-    mock_db.query.reset_mock()
-    mock_query.reset_mock()
-    mock_db.query.return_value = mock_query
-    # 验证query被调用且使用了User模型
-    mock_db.query.assert_not_called()  # 重置后未调用
+    mock_db.execute.return_value = _mock_execute_first(None)
+    user = await user_mgmt.get_user_by_username("nonexistent")
+    assert user is None

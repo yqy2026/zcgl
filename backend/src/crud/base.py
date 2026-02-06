@@ -437,11 +437,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             InvalidRequestError: 如果 sort_order 不是 'asc' 或 'desc'
 
         Examples:
-            >>> # 获取所有不重复的权属方
-            >>> values = asset_crud.get_distinct_field_values(db, "ownership_entity")
-            >>> # 降序排列的业态类别
+            >>> # 获取所有不重复的业态类别
+            >>> values = asset_crud.get_distinct_field_values(db, "business_category")
+            >>> # 降序排列的使用状态
             >>> values = asset_crud.get_distinct_field_values(
-            ...     db, "business_category", sort_order="desc"
+            ...     db, "usage_status", sort_order="desc"
             ... )
             >>> # 带额外筛选条件的使用状态
             >>> values = asset_crud.get_distinct_field_values(

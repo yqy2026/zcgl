@@ -318,7 +318,7 @@ export const createMockRouter = () => ({
  *
  * @example
  * ```tsx
- * const user = createMockUser({ role: 'admin' })
+ * const user = createMockUser({ role_name: 'admin', roles: ['admin'] })
  * ```
  */
 export const createMockUser = (overrides: Partial<API.User> = {}) => ({

@@ -4,14 +4,14 @@
 
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import Select, and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.asset import SensitiveDataHandler
 from ..models.contact import Contact, ContactType
 
 
 def _set_attr(obj: Any, attr: str, value: Any) -> None:
-    """安全地设置 ORM 对象属性，避免 mypy 类型错误"""
     object.__setattr__(obj, attr, value)
 
 
@@ -19,43 +19,12 @@ class ContactCRUD:
     """联系人 CRUD 操作类 - 支持敏感字段加密"""
 
     def __init__(self) -> None:
-        """初始化联系人CRUD - 配置敏感字段"""
         self.sensitive_data_handler = SensitiveDataHandler(
             searchable_fields={
-                "phone",  # 手机号码 - 敏感，需要搜索
-                "office_phone",  # 办公电话 - 敏感，需要搜索
+                "phone",
+                "office_phone",
             }
         )
-
-    def _build_entity_query(
-        self,
-        db: Session,
-        *,
-        entity_type: str,
-        entity_id: str | None = None,
-        entity_ids: list[str] | None = None,
-        is_active: bool | None = True,
-        is_primary: bool | None = None,
-        contact_type: ContactType | None = None,
-    ) -> Any:
-        query = db.query(Contact).filter(Contact.entity_type == entity_type)
-
-        if entity_id is not None:
-            query = query.filter(Contact.entity_id == entity_id)
-
-        if entity_ids is not None:
-            query = query.filter(Contact.entity_id.in_(entity_ids))
-
-        if is_active is not None:
-            query = query.filter(Contact.is_active.is_(is_active))
-
-        if is_primary is not None:
-            query = query.filter(Contact.is_primary.is_(is_primary))
-
-        if contact_type:
-            query = query.filter(Contact.contact_type == contact_type)
-
-        return query
 
     def _decrypt_contact(self, obj: Contact | None) -> Contact | None:
         if obj is not None:
@@ -67,76 +36,86 @@ class ContactCRUD:
             self.sensitive_data_handler.decrypt_data(contact.__dict__)
         return results
 
-    def get(self, db: Session, id: str) -> Contact | None:
-        """根据ID获取联系人 - 解密敏感字段"""
-        obj = db.query(Contact).filter(Contact.id == id).first()
+    async def get_async(self, db: AsyncSession, id: str) -> Contact | None:
+        result = await db.execute(select(Contact).where(Contact.id == id))
+        obj = result.scalars().first()
         return self._decrypt_contact(obj)
 
-    def get_multi(
+    async def get_multi_async(
         self,
-        db: Session,
+        db: AsyncSession,
         entity_type: str,
         entity_id: str,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Contact], int]:
-        """获取指定实体的所有联系人 - 解密敏感字段"""
-        query = self._build_entity_query(
-            db,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            is_active=True,
+        base: Select[Any] = select(Contact).where(
+            and_(
+                Contact.entity_type == entity_type,
+                Contact.entity_id == entity_id,
+                Contact.is_active.is_(True),
+            )
         )
-
-        total = query.count()
-        contacts = (
-            query.order_by(Contact.is_primary.desc(), Contact.created_at.desc())
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        list_stmt = (
+            base.order_by(Contact.is_primary.desc(), Contact.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .all()
         )
+        items = list((await db.execute(list_stmt)).scalars().all())
+        return self._decrypt_contacts(items), total
 
-        return self._decrypt_contacts(contacts), total
-
-    def get_primary(
-        self, db: Session, entity_type: str, entity_id: str
+    async def get_primary_async(
+        self, db: AsyncSession, entity_type: str, entity_id: str
     ) -> Contact | None:
-        """获取指定实体的主要联系人 - 解密敏感字段"""
-        obj = self._build_entity_query(
-            db,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            is_active=True,
-            is_primary=True,
-        ).first()
+        stmt = select(Contact).where(
+            and_(
+                Contact.entity_type == entity_type,
+                Contact.entity_id == entity_id,
+                Contact.is_active.is_(True),
+                Contact.is_primary.is_(True),
+            )
+        )
+        obj = (await db.execute(stmt)).scalars().first()
         return self._decrypt_contact(obj)
 
-    def create(self, db: Session, obj_in: dict[str, Any]) -> Contact:
-        """创建联系人 - 加密敏感字段"""
-        # 加密敏感字段
+    async def create_async(self, db: AsyncSession, obj_in: dict[str, Any]) -> Contact:
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in.copy())
-
-        # 如果设置为主要联系人，先取消该实体的其他主要联系人
         if encrypted_data.get("is_primary", False):
-            db.query(Contact).filter(
-                Contact.entity_type == encrypted_data["entity_type"],
-                Contact.entity_id == encrypted_data["entity_id"],
-                Contact.is_primary.is_(True),
-            ).update({"is_primary": False}, synchronize_session=False)
-
+            await db.execute(
+                select(Contact)
+                .where(
+                    and_(
+                        Contact.entity_type == encrypted_data["entity_type"],
+                        Contact.entity_id == encrypted_data["entity_id"],
+                        Contact.is_primary.is_(True),
+                    )
+                )
+                .with_for_update()
+            )
+            await db.execute(
+                Contact.__table__.update()
+                .where(
+                    and_(
+                        Contact.entity_type == encrypted_data["entity_type"],
+                        Contact.entity_id == encrypted_data["entity_id"],
+                        Contact.is_primary.is_(True),
+                    )
+                )
+                .values(is_primary=False)
+            )
         db_obj = Contact(**encrypted_data)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-
-        # 解密后返回
+        await db.commit()
+        await db.refresh(db_obj)
         self.sensitive_data_handler.decrypt_data(db_obj.__dict__)
         return db_obj
 
-    def update(self, db: Session, db_obj: Contact, obj_in: dict[str, Any]) -> Contact:
-        """更新联系人 - 加密新的敏感字段值"""
-        # 加密敏感字段
-        encrypted_data = {}
+    async def update_async(
+        self, db: AsyncSession, db_obj: Contact, obj_in: dict[str, Any]
+    ) -> Contact:
+        encrypted_data: dict[str, Any] = {}
         for field_name, value in obj_in.items():
             if field_name in self.sensitive_data_handler.ALL_PII_FIELDS:
                 encrypted_data[field_name] = self.sensitive_data_handler.encrypt_field(
@@ -144,51 +123,51 @@ class ContactCRUD:
                 )
             else:
                 encrypted_data[field_name] = value
-
-        # 如果设置为主要联系人，先取消其他主要联系人
         if encrypted_data.get("is_primary", False) and not db_obj.is_primary:
-            db.query(Contact).filter(
-                Contact.entity_type == db_obj.entity_type,
-                Contact.entity_id == db_obj.entity_id,
-                Contact.is_primary.is_(True),
-            ).update({"is_primary": False}, synchronize_session=False)
-
+            await db.execute(
+                Contact.__table__.update()
+                .where(
+                    and_(
+                        Contact.entity_type == db_obj.entity_type,
+                        Contact.entity_id == db_obj.entity_id,
+                        Contact.is_primary.is_(True),
+                    )
+                )
+                .values(is_primary=False)
+            )
         for field, value in encrypted_data.items():
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
-
-        db.commit()
-        db.refresh(db_obj)
-
-        # 解密后返回
+        await db.commit()
+        await db.refresh(db_obj)
         self.sensitive_data_handler.decrypt_data(db_obj.__dict__)
         return db_obj
 
-    def delete(self, db: Session, id: str) -> Contact | None:
-        """软删除联系人（设置is_active=False）"""
-        obj = self.get(db, id)
+    async def delete_async(self, db: AsyncSession, id: str) -> Contact | None:
+        obj = await self.get_async(db, id)
         if obj:
             _set_attr(obj, "is_active", False)
-            db.commit()
-            db.refresh(obj)
+            await db.commit()
+            await db.refresh(obj)
         return obj
 
-    def get_multi_by_type(
+    async def get_multi_by_type_async(
         self,
-        db: Session,
+        db: AsyncSession,
         entity_type: str,
         entity_ids: list[str],
         contact_type: ContactType | None = None,
     ) -> list[Contact]:
-        """批量获取联系人 - 解密敏感字段"""
-        query = self._build_entity_query(
-            db,
-            entity_type=entity_type,
-            entity_ids=entity_ids,
-            is_active=True,
-            contact_type=contact_type,
+        stmt = select(Contact).where(
+            and_(
+                Contact.entity_type == entity_type,
+                Contact.entity_id.in_(entity_ids),
+                Contact.is_active.is_(True),
+            )
         )
-        results = query.all()
+        if contact_type is not None:
+            stmt = stmt.where(Contact.contact_type == contact_type)
+        results = list((await db.execute(stmt)).scalars().all())
         return self._decrypt_contacts(results)
 
 

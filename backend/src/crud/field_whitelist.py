@@ -121,7 +121,6 @@ class AssetWhitelist(ModelFieldWhitelist):
     # Search fields (text fields for partial matching)
     search_fields: ClassVar[set[str]] = {
         "property_name",  # Primary identifier
-        "ownership_entity",  # Organization name (public info)
         "address",  # Address is public record for properties
         "project_name",  # Project names are public
         "notes",  # User's own notes
@@ -151,7 +150,6 @@ class AssetWhitelist(ModelFieldWhitelist):
         "deposit",
         # Alphabetic sorting
         "property_name",
-        "ownership_entity",
         "project_name",
         # Version tracking
         "version",
@@ -991,10 +989,10 @@ def _ensure_whitelists_registered() -> None:
         from ..models.asset import (
             Asset,
             AssetCustomField,
-            Ownership,
             Project,
             SystemDictionary,
         )
+        from ..models.ownership import Ownership
         from ..models.collection import CollectionRecord
         from ..models.dynamic_permission import DynamicPermission
         from ..models.llm_prompt import PromptTemplate

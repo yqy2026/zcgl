@@ -1,9 +1,12 @@
 import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
+from ...core.config import settings
 from .extractors.factory import get_llm_extractor
+from .ocr_extraction_service import OCRExtractionService
+from .pdf_analyzer import get_extraction_recommendation_async
+
+logger = logging.getLogger(__name__)
 
 
 class LLMContractExtractor:
@@ -14,6 +17,7 @@ class LLMContractExtractor:
 
     def __init__(self) -> None:
         self.adapter = get_llm_extractor()
+        self.ocr_extractor = OCRExtractionService()
 
     async def extract(self, markdown_content: str) -> dict[str, Any]:
         """
@@ -54,13 +58,33 @@ class LLMContractExtractor:
         """
         Smart extraction routing.
         """
-        # Use the adapter to extract
-        # The adapter interface is tailored for file-based extraction (Vision/Multi-modal)
+        force_method_normalized = force_method.lower() if force_method else None
+
+        if force_method_normalized == "ocr":
+            return await self._extract_with_ocr(pdf_path)
+
+        if (
+            settings.GLM_OCR_ENABLE
+            and settings.GLM_OCR_AUTO
+            and force_method_normalized in (None, "smart")
+        ):
+            recommendation = await get_extraction_recommendation_async(pdf_path)
+            if recommendation == "vision":
+                ocr_result = await self._extract_with_ocr(pdf_path)
+                if ocr_result.get("success"):
+                    return ocr_result
+
         try:
             return await self.adapter.extract(pdf_path, force_method=force_method)
         except Exception as e:
             logger.error(f"Smart extraction failed via adapter: {e}")
             return {"success": False, "error": str(e)}
+
+    async def _extract_with_ocr(self, pdf_path: str) -> dict[str, Any]:
+        ocr_result = await self.ocr_extractor.extract_contract(pdf_path)
+        if not ocr_result.get("success"):
+            logger.warning("OCR extraction failed, fallback to vision")
+        return ocr_result
 
 
 # Singleton getter (keeps existing API compatible)

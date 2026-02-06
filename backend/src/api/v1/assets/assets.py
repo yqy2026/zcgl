@@ -32,21 +32,24 @@ from fastapi import (
     Response,
 )
 from pydantic import TypeAdapter
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
+from ....crud.history import history_crud
 from ....database import get_async_db
 from ....middleware.auth import (
     audit_action,
     get_current_active_user,
+    require_admin,
     require_permission,
 )
 from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
+from ....models.ownership import Ownership
 from ....schemas.asset import (
     AssetCreate,
     AssetListItemResponse,
@@ -77,10 +80,7 @@ async def _get_distinct_values(
     db: AsyncSession,
     field_name: str,
 ) -> list[str]:
-    def _sync(sync_db: Session) -> list[str]:
-        return AssetService(sync_db).get_distinct_field_values(field_name)
-
-    return await db.run_sync(_sync)
+    return await AsyncAssetService(db).get_distinct_field_values(field_name)
 
 
 @router.get(
@@ -100,9 +100,10 @@ async def get_assets(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
-    ownership_entity: str | None = Query(None, description="权属方筛选"),
+    ownership_id: str | None = Query(None, description="权属方ID筛选"),
     management_entity: str | None = Query(None, description="经营管理方筛选"),
     business_category: str | None = Query(None, description="业态类别筛选"),
+    data_status: str | None = Query(None, description="数据状态筛选"),
     min_area: float | None = Query(None, ge=0, description="最小面积筛选"),
     max_area: float | None = Query(None, ge=0, description="最大面积筛选"),
     is_litigated: str | None = Query(None, description="是否涉诉筛选"),
@@ -121,7 +122,7 @@ async def get_assets(
     - **ownership_status**: 按确权状态筛选
     - **property_nature**: 按物业性质筛选
     - **usage_status**: 按使用状态筛选
-    - **ownership_entity**: 按权属方筛选
+    - **ownership_id**: 按权属方ID筛选
     - **sort_field**: 排序字段
     - **sort_order**: 排序方向（asc/desc）
     - **include_relations**: 是否加载关联数据（默认不加载）
@@ -130,9 +131,10 @@ async def get_assets(
         ownership_status=ownership_status,
         property_nature=property_nature,
         usage_status=usage_status,
-        ownership_entity=ownership_entity,
+        ownership_id=ownership_id,
         management_entity=management_entity,
         business_category=business_category,
+        data_status=data_status,
         min_area=min_area,
         max_area=max_area,
         is_litigated=is_litigated,
@@ -174,7 +176,9 @@ async def get_ownership_entities(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
-    return await _get_distinct_values(db, "ownership_entity")
+    stmt = select(Ownership.name).where(Ownership.data_status == "正常")
+    result = await db.execute(stmt)
+    return [str(name) for name in result.scalars().all()]
 
 
 @router.get(
@@ -312,6 +316,40 @@ async def delete_asset(
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 
+@router.post("/{asset_id}/restore", response_model=AssetResponse, summary="恢复资产")
+async def restore_asset(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+    audit_logger: Any = Depends(audit_action("asset_restore", "asset")),
+) -> AssetResponse:
+    """
+    恢复已删除的资产记录
+
+    - **asset_id**: 资产ID
+    """
+    asset_service = AsyncAssetService(db)
+    asset = await asset_service.restore_asset(asset_id, current_user)
+    return AssetResponse.model_validate(asset)
+
+
+@router.delete("/{asset_id}/hard-delete", summary="彻底删除资产")
+async def hard_delete_asset(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+    audit_logger: Any = Depends(audit_action("asset_hard_delete", "asset")),
+) -> Response:
+    """
+    彻底删除资产记录（物理删除）
+
+    - **asset_id**: 资产ID
+    """
+    asset_service = AsyncAssetService(db)
+    await asset_service.hard_delete_asset(asset_id, current_user)
+    return Response(status_code=HTTP_204_NO_CONTENT)
+
+
 @router.get("/{asset_id}/history", summary="获取资产历史")
 async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
@@ -323,11 +361,7 @@ async def get_asset_history(
 
     - **asset_id**: 资产ID
     """
-
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        asset_service = AssetService(db)
-        history_records = asset_service.get_asset_history(asset_id)
-        return {"asset_id": asset_id, "history": history_records}
-
-    return await db.run_sync(_sync)
+    asset_service = AsyncAssetService(db)
+    await asset_service.get_asset(asset_id)
+    history_records = await history_crud.get_by_asset_id_async(db, asset_id=asset_id)
+    return {"asset_id": asset_id, "history": history_records}

@@ -20,7 +20,7 @@ class TestGetDistinctFieldValues:
         """Test error handling for invalid sort order"""
         with pytest.raises(InvalidRequestError, match="sort_order must be"):
             asset_crud.get_distinct_field_values(
-                mock_db, "ownership_entity", sort_order="invalid"
+                mock_db, "ownership_id", sort_order="invalid"
             )
 
     def test_query_construction(self, mock_db: MagicMock):
@@ -36,7 +36,7 @@ class TestGetDistinctFieldValues:
         # Call the method
         result = asset_crud.get_distinct_field_values(
             mock_db,
-            "ownership_entity",
+            "ownership_id",
             sort_order="asc",
             use_cache=False,
             exclude_empty=True,
@@ -59,7 +59,7 @@ class TestGetDistinctFieldValues:
         # Call the method with filters
         asset_crud.get_distinct_field_values(
             mock_db,
-            "ownership_entity",
+            "ownership_id",
             filters={"is_active": True},
             use_cache=False,
         )
@@ -81,7 +81,7 @@ class TestGetDistinctFieldValues:
 
         # Call with descending sort
         asset_crud.get_distinct_field_values(
-            mock_db, "ownership_entity", sort_order="desc", use_cache=False
+            mock_db, "ownership_id", sort_order="desc", use_cache=False
         )
 
         # Verify order_by was called
@@ -99,7 +99,7 @@ class TestGetDistinctFieldValues:
 
         # Call with exclude_empty=False
         asset_crud.get_distinct_field_values(
-            mock_db, "ownership_entity", exclude_empty=True, use_cache=False
+            mock_db, "ownership_id", exclude_empty=True, use_cache=False
         )
 
         # Verify query was constructed
@@ -117,12 +117,12 @@ class TestGetDistinctFieldValues:
 
         # First call with cache enabled
         result1 = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_entity", use_cache=True
+            mock_db, "ownership_id", use_cache=True
         )
 
         # Second call should use cache (query should not be called again)
         result2 = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_entity", use_cache=True
+            mock_db, "ownership_id", use_cache=True
         )
 
         # Results should be the same
@@ -150,7 +150,7 @@ class TestGetDistinctFieldValues:
 
         # Call the method
         result = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_entity", use_cache=False
+            mock_db, "ownership_id", use_cache=False
         )
 
         # Verify empty values were filtered out

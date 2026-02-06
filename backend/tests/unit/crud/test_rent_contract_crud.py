@@ -5,7 +5,7 @@ V2 合同CRUD测试
 
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -162,6 +162,40 @@ class TestContractV2MultiAsset:
 
         # 验证count查询也包含了join和filter
         assert count == 5
+
+
+class TestContractAsyncRelations:
+    """测试异步查询时关系加载"""
+
+    @pytest.fixture
+    def anyio_backend(self):
+        return "asyncio"
+
+    @pytest.mark.anyio
+    async def test_get_multi_with_filters_async_uses_selectinload(self):
+        mock_db = AsyncMock()
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = []
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
+
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        from sqlalchemy.orm import selectinload as sa_selectinload
+
+        with patch("src.crud.rent_contract.selectinload", wraps=sa_selectinload) as selectinload_mock:
+            await rent_contract.get_multi_with_filters_async(
+                db=mock_db,
+                skip=0,
+                limit=10,
+            )
+
+            called_targets = [call.args[0] for call in selectinload_mock.call_args_list]
+            assert any(target is RentContract.assets for target in called_targets)
+            assert any(target is RentContract.rent_terms for target in called_targets)
 
 
 # ===================== V2 Contract Type Tests =====================

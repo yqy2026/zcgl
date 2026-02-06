@@ -2,10 +2,11 @@
 通知 CRUD 操作
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.notification import Notification
 
@@ -13,39 +14,39 @@ from ..models.notification import Notification
 class NotificationCRUD:
     """通知 CRUD 操作类"""
 
-    def _apply_filters(
+    def _apply_filters_stmt(
         self,
-        query: Any,
+        stmt: Any,
         *,
         recipient_id: str,
         is_read: bool | None = None,
         type: str | None = None,
     ) -> Any:
-        query = query.filter(Notification.recipient_id == recipient_id)
+        stmt = stmt.where(Notification.recipient_id == recipient_id)
 
         if is_read is not None:
-            query = query.filter(Notification.is_read == is_read)
+            stmt = stmt.where(Notification.is_read == is_read)
 
         if type is not None:
-            query = query.filter(Notification.type == type)
+            stmt = stmt.where(Notification.type == type)
 
-        return query
+        return stmt
 
-    def get(
+    async def get_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         notification_id: str,
         recipient_id: str | None = None,
     ) -> Notification | None:
-        query = db.query(Notification).filter(Notification.id == notification_id)
+        stmt = select(Notification).where(Notification.id == notification_id)
         if recipient_id is not None:
-            query = query.filter(Notification.recipient_id == recipient_id)
-        return query.first()
+            stmt = stmt.where(Notification.recipient_id == recipient_id)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_multi_with_filters(
+    async def get_multi_with_filters_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         recipient_id: str,
         skip: int = 0,
@@ -53,67 +54,72 @@ class NotificationCRUD:
         is_read: bool | None = None,
         type: str | None = None,
     ) -> tuple[list[Notification], int]:
-        query = self._apply_filters(
-            db.query(Notification),
+        base_stmt = self._apply_filters_stmt(
+            select(Notification),
             recipient_id=recipient_id,
             is_read=is_read,
             type=type,
         )
-
-        total = query.count()
-        items = (
-            query.order_by(Notification.created_at.desc())
+        count_stmt = select(func.count()).select_from(Notification)
+        count_stmt = self._apply_filters_stmt(
+            count_stmt, recipient_id=recipient_id, is_read=is_read, type=type
+        )
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        result = await db.execute(
+            base_stmt.order_by(Notification.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .all()
         )
+        items = list(result.scalars().all())
         return items, total
 
-    def count_unread(self, db: Session, *, recipient_id: str) -> int:
-        return (
-            db.query(Notification)
-            .filter(
-                Notification.recipient_id == recipient_id,
-                Notification.is_read.is_(False),
-            )
-            .count()
+    async def count_unread_async(self, db: AsyncSession, *, recipient_id: str) -> int:
+        stmt = select(func.count()).select_from(Notification).where(
+            Notification.recipient_id == recipient_id,
+            Notification.is_read.is_(False),
         )
+        return int((await db.execute(stmt)).scalar() or 0)
 
-    def mark_as_read(
-        self, db: Session, *, notification_id: str, recipient_id: str
+    async def mark_as_read_async(
+        self, db: AsyncSession, *, notification_id: str, recipient_id: str
     ) -> Notification | None:
-        notification = self.get(
+        notification = await self.get_async(
             db, notification_id=notification_id, recipient_id=recipient_id
         )
         if not notification:
             return None
 
         notification.mark_as_read()
-        db.commit()
-        db.refresh(notification)
+        await db.commit()
+        await db.refresh(notification)
         return notification
 
-    def mark_all_as_read(self, db: Session, *, recipient_id: str) -> int:
-        updated = (
-            db.query(Notification)
-            .filter(
+    async def mark_all_as_read_async(
+        self, db: AsyncSession, *, recipient_id: str
+    ) -> int:
+        stmt = (
+            update(Notification)
+            .where(
                 Notification.recipient_id == recipient_id,
                 Notification.is_read.is_(False),
             )
-            .update({"is_read": True, "read_at": datetime.now(UTC)})
+            .values(is_read=True, read_at=datetime.utcnow())
         )
-        db.commit()
-        return int(updated or 0)
+        result = await db.execute(stmt)
+        await db.commit()
+        return int(result.rowcount or 0)
 
-    def delete(self, db: Session, *, notification_id: str, recipient_id: str) -> bool:
-        notification = self.get(
+    async def delete_async(
+        self, db: AsyncSession, *, notification_id: str, recipient_id: str
+    ) -> bool:
+        notification = await self.get_async(
             db, notification_id=notification_id, recipient_id=recipient_id
         )
         if not notification:
             return False
 
-        db.delete(notification)
-        db.commit()
+        await db.delete(notification)
+        await db.commit()
         return True
 
 

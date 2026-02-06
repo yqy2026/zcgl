@@ -50,12 +50,41 @@ def admin_user_in_db(db_session: Session, admin_user):
         email=admin_user.email,
         full_name="Admin User",
         password_hash="test-hash",
-        role="admin",
         is_active=True,
     )
     db_session.add(user)
     db_session.flush()
     db_session.refresh(user)
+    from src.models.rbac import Role, UserRoleAssignment
+
+    role = db_session.query(Role).filter(Role.name == "admin").first()
+    if role is None:
+        role = Role(
+            name="admin",
+            display_name="管理员",
+            is_system_role=True,
+            is_active=True,
+        )
+        db_session.add(role)
+        db_session.flush()
+        db_session.refresh(role)
+
+    assignment = (
+        db_session.query(UserRoleAssignment)
+        .filter(
+            UserRoleAssignment.user_id == user.id,
+            UserRoleAssignment.role_id == role.id,
+        )
+        .first()
+    )
+    if assignment is None:
+        assignment = UserRoleAssignment(
+            user_id=user.id,
+            role_id=role.id,
+            assigned_by="test-fixture",
+        )
+        db_session.add(assignment)
+        db_session.flush()
     return user
 
 
@@ -121,7 +150,6 @@ def admin_user_headers(client, admin_user_in_db, monkeypatch):
     mock_user.id = admin_user_in_db.id
     mock_user.username = admin_user_in_db.username
     mock_user.email = admin_user_in_db.email
-    mock_user.role = "admin"
     mock_user.is_active = True
 
     def mock_get_user():

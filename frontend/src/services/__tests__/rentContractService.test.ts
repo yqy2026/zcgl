@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { AxiosError, AxiosResponse } from 'axios';
+import { ApiErrorType } from '@/types/apiResponse';
 import { RentContractService } from '../rentContractService';
 
 // Mock API client
@@ -157,6 +159,90 @@ describe('RentContractService', () => {
 
       expect(result.id).toBe('3');
       expect(result.contract_number).toBe('HT-003');
+    });
+
+    it('should avoid retry on 4xx responses', async () => {
+      const newContract = {
+        contract_number: 'HT-004',
+        tenant_name: '新租户2',
+        start_date: '2026-03-01',
+        end_date: '2027-02-28',
+        asset_ids: ['asset-2'],
+      };
+
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: { id: '4', ...newContract },
+      });
+
+      await service.createContract(newContract);
+
+      const config = vi.mocked(apiClient.post).mock.calls[0][2] as {
+        retry?: { retryCondition?: (error: unknown) => boolean };
+      };
+      const retryCondition = config.retry?.retryCondition;
+
+      expect(typeof retryCondition).toBe('function');
+
+      const conflictResponse: AxiosResponse = {
+        data: { success: false, message: '资产租金冲突' },
+        status: 409,
+        statusText: 'Conflict',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+      const conflictError = new AxiosError(
+        'Conflict',
+        'ERR_BAD_REQUEST',
+        conflictResponse.config,
+        {},
+        conflictResponse
+      );
+
+      const serverResponse: AxiosResponse = {
+        data: { success: false, message: '服务不可用' },
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+      const serverError = new AxiosError(
+        'Service Unavailable',
+        'ERR_BAD_RESPONSE',
+        serverResponse.config,
+        {},
+        serverResponse
+      );
+
+      const networkError = new AxiosError('Network Error', 'ERR_NETWORK');
+
+      const clientError = {
+        type: ApiErrorType.CLIENT_ERROR,
+        code: 'HTTP_409',
+        message: '资产租金冲突',
+        statusCode: 409,
+        timestamp: new Date().toISOString(),
+      };
+      const serverApiError = {
+        type: ApiErrorType.SERVER_ERROR,
+        code: 'HTTP_503',
+        message: '服务不可用',
+        statusCode: 503,
+        timestamp: new Date().toISOString(),
+      };
+      const networkApiError = {
+        type: ApiErrorType.NETWORK_ERROR,
+        code: 'NETWORK_ERROR',
+        message: '网络错误',
+        timestamp: new Date().toISOString(),
+      };
+
+      expect(retryCondition?.(conflictError)).toBe(false);
+      expect(retryCondition?.(serverError)).toBe(true);
+      expect(retryCondition?.(networkError)).toBe(true);
+      expect(retryCondition?.(clientError)).toBe(false);
+      expect(retryCondition?.(serverApiError)).toBe(true);
+      expect(retryCondition?.(networkApiError)).toBe(true);
     });
 
     it('should throw error on creation failure', async () => {

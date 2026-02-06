@@ -4,14 +4,17 @@ Update dictionary categories to match frontend configuration
 
 import os
 import sys
+import asyncio
 
 # Add project root directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from src.database import SessionLocal
+from sqlalchemy import select, update
+
+from src.database import async_session_scope
 
 
-def update_dictionary_categories():
+async def update_dictionary_categories():
     """Update dictionary categories to match frontend config"""
 
     # Category mapping from frontend config
@@ -29,44 +32,41 @@ def update_dictionary_categories():
         "actual_usage": "资产用途",
     }
 
-    db = SessionLocal()
     updated_count = 0
 
     try:
         from src.models.enum_field import EnumFieldType
 
-        for code, category in category_mapping.items():
-            # Update each enum field type category
-            result = (
-                db.query(EnumFieldType)
-                .filter(EnumFieldType.code == code)
-                .update({"category": category})
+        async with async_session_scope() as db:
+            for code, category in category_mapping.items():
+                result = await db.execute(
+                    update(EnumFieldType)
+                    .where(EnumFieldType.code == code)
+                    .values(category=category)
+                )
+                if (result.rowcount or 0) > 0:
+                    print(f"Updated {code}: {category}")
+                    updated_count += 1
+
+            await db.commit()
+            print(f"\nSuccessfully updated {updated_count} dictionary categories")
+
+            # Show updated categories
+            print("\n=== Updated Categories ===")
+            enum_types = list(
+                (await db.execute(select(EnumFieldType))).scalars().all()
             )
+            categories = set()
 
-            if result > 0:
-                print(f"Updated {code}: {category}")
-                updated_count += 1
+            for et in enum_types:
+                categories.add(et.category)
+                print(f"{et.code:20} | {et.name:15} | {et.category or '未分类':10}")
 
-        db.commit()
-        print(f"\nSuccessfully updated {updated_count} dictionary categories")
-
-        # Show updated categories
-        print("\n=== Updated Categories ===")
-        enum_types = db.query(EnumFieldType).all()
-        categories = set()
-
-        for et in enum_types:
-            categories.add(et.category)
-            print(f"{et.code:20} | {et.name:15} | {et.category or '未分类':10}")
-
-        print(f"\n=== All Categories: {sorted(list(categories))}")
+            print(f"\n=== All Categories: {sorted(list(categories))}")
 
     except Exception as e:
         print(f"Error updating categories: {e}")
-        db.rollback()
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":
-    update_dictionary_categories()
+    asyncio.run(update_dictionary_categories())

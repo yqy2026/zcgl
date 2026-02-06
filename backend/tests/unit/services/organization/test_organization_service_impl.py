@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -17,10 +17,29 @@ from src.services.organization.service import OrganizationService
 # ============================================================================
 
 
+class _ExecuteResult:
+    def __init__(self, scalar_value=None):
+        self._scalar_value = scalar_value
+
+    def scalar_one_or_none(self):
+        return self._scalar_value
+
+
 @pytest.fixture
 def org_service():
     """创建 OrganizationService 实例"""
     return OrganizationService()
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock(return_value=_ExecuteResult())
+    return db
 
 
 @pytest.fixture
@@ -57,7 +76,7 @@ def mock_parent():
 class TestCreateOrganization:
     """测试创建组织"""
 
-    def test_create_root_organization(self, org_service, mock_db):
+    async def test_create_root_organization(self, org_service, mock_db):
         """测试创建根组织（无上级）"""
         obj_in = OrganizationCreate(
             name="根组织",
@@ -71,15 +90,15 @@ class TestCreateOrganization:
         mock_db.flush.return_value = None
         mock_db.refresh.return_value = None
 
-        result = org_service.create_organization(mock_db, obj_in=obj_in)
+        result = await org_service.create_organization(mock_db, obj_in=obj_in)
 
         assert result is not None
         # add() is called twice: once for Organization, once for OrganizationHistory
         assert mock_db.add.call_count == 2
-        mock_db.flush.assert_called_once()
-        mock_db.commit.assert_called()
+        mock_db.flush.assert_awaited_once()
+        assert mock_db.commit.await_count >= 1
 
-    def test_create_child_organization(self, org_service, mock_db, mock_parent):
+    async def test_create_child_organization(self, org_service, mock_db, mock_parent):
         """测试创建子组织"""
         obj_in = OrganizationCreate(
             name="子组织",
@@ -90,24 +109,18 @@ class TestCreateOrganization:
             created_by="user_123",
         )
 
-        # Mock parent query
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = mock_parent
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        result = org_service.create_organization(mock_db, obj_in=obj_in)
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_parent),
+        ):
+            result = await org_service.create_organization(mock_db, obj_in=obj_in)
 
         assert result is not None
         # add() is called twice: once for Organization, once for OrganizationHistory
         assert mock_db.add.call_count == 2
-        mock_db.commit.assert_called()
+        assert mock_db.commit.await_count >= 1
 
-    def test_create_organization_parent_not_found(self, org_service, mock_db):
+    async def test_create_organization_parent_not_found(self, org_service, mock_db):
         """测试上级组织不存在"""
         obj_in = OrganizationCreate(
             name="子组织",
@@ -118,20 +131,14 @@ class TestCreateOrganization:
             created_by="user_123",
         )
 
-        # Mock parent query to return None
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = None
-                return mock_query
-            return MagicMock()
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=None),
+        ):
+            with pytest.raises(ResourceNotFoundError, match="组织"):
+                await org_service.create_organization(mock_db, obj_in=obj_in)
 
-        mock_db.query.side_effect = query_side_effect
-
-        with pytest.raises(ResourceNotFoundError, match="组织"):
-            org_service.create_organization(mock_db, obj_in=obj_in)
-
-    def test_create_organization_creates_history(self, org_service, mock_db):
+    async def test_create_organization_creates_history(self, org_service, mock_db):
         """测试创建组织时记录历史"""
         obj_in = OrganizationCreate(
             name="测试组织",
@@ -145,10 +152,10 @@ class TestCreateOrganization:
         mock_db.refresh.return_value = None
 
         with patch.object(
-            org_service, "_create_history", return_value=None
+            org_service, "_create_history", new=AsyncMock(return_value=None)
         ) as mock_history:
-            org_service.create_organization(mock_db, obj_in=obj_in)
-            mock_history.assert_called_once()
+            await org_service.create_organization(mock_db, obj_in=obj_in)
+            mock_history.assert_awaited_once()
 
 
 # ============================================================================
@@ -157,48 +164,39 @@ class TestCreateOrganization:
 class TestUpdateOrganization:
     """测试更新组织"""
 
-    def test_update_organization_basic(self, org_service, mock_db, mock_organization):
+    async def test_update_organization_basic(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试基本更新"""
         obj_in = OrganizationUpdate(
             name="新名称",
             updated_by="user_123",
         )
-
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = mock_organization
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        result = org_service.update_organization(
-            mock_db, org_id="org_123", obj_in=obj_in
-        )
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ):
+            result = await org_service.update_organization(
+                mock_db, org_id="org_123", obj_in=obj_in
+            )
 
         assert result is not None
-        mock_db.commit.assert_called()
+        assert mock_db.commit.await_count >= 1
 
-    def test_update_organization_not_found(self, org_service, mock_db):
+    async def test_update_organization_not_found(self, org_service, mock_db):
         """测试组织不存在"""
         obj_in = OrganizationUpdate(name="新名称")
 
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = None
-                return mock_query
-            return MagicMock()
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=None),
+        ):
+            with pytest.raises(ResourceNotFoundError, match="组织"):
+                await org_service.update_organization(
+                    mock_db, org_id="nonexistent", obj_in=obj_in
+                )
 
-        mock_db.query.side_effect = query_side_effect
-
-        with pytest.raises(ResourceNotFoundError, match="组织"):
-            org_service.update_organization(
-                mock_db, org_id="nonexistent", obj_in=obj_in
-            )
-
-    def test_update_organization_parent_cycle(self, org_service, mock_db):
+    async def test_update_organization_parent_cycle(self, org_service, mock_db):
         """测试更新上级组织时检测循环引用"""
         obj_in = OrganizationUpdate(
             parent_id="org_123",  # 尝试将组织设置为自己的子组织
@@ -209,25 +207,21 @@ class TestUpdateOrganization:
         org.id = "org_123"
         org.name = "测试组织"
         org.parent_id = "parent_123"
-
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = org
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        with patch.object(org_service, "_would_create_cycle", return_value=True):
-            with pytest.raises(
-                OperationNotAllowedError, match="不能将组织移动到其子组织下"
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=org),
+        ):
+            with patch.object(
+                org_service, "_would_create_cycle", new=AsyncMock(return_value=True)
             ):
-                org_service.update_organization(
-                    mock_db, org_id="org_123", obj_in=obj_in
-                )
+                with pytest.raises(
+                    OperationNotAllowedError, match="不能将组织移动到其子组织下"
+                ):
+                    await org_service.update_organization(
+                        mock_db, org_id="org_123", obj_in=obj_in
+                    )
 
-    def test_update_organization_changes_level_and_path(
+    async def test_update_organization_changes_level_and_path(
         self, org_service, mock_db, mock_parent
     ):
         """测试更新上级组织时更新层级和路径"""
@@ -241,33 +235,32 @@ class TestUpdateOrganization:
         org.name = "测试组织"
         org.parent_id = None
         org.level = 1
+        async def get_async_side_effect(db, org_id):
+            return org if org_id == "org_123" else mock_parent
 
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                # First call gets the org, second call gets the parent
-                if mock_query.filter.call_count == 1:
-                    mock_query.filter.return_value.first.return_value = org
-                else:
-                    mock_query.filter.return_value.first.return_value = mock_parent
-                return mock_query
-            return MagicMock()
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(side_effect=get_async_side_effect),
+        ):
+            with patch.object(
+                org_service, "_would_create_cycle", new=AsyncMock(return_value=False)
+            ):
+                with patch.object(
+                    org_service, "_update_children_path", new=AsyncMock()
+                ) as mock_update_children:
+                    result = await org_service.update_organization(
+                        mock_db, org_id="org_123", obj_in=obj_in
+                    )
 
-        mock_db.query.side_effect = query_side_effect
-
-        with patch.object(org_service, "_would_create_cycle", return_value=False):
-            result = org_service.update_organization(
-                mock_db, org_id="org_123", obj_in=obj_in
-            )
-
-            # Level and path update happens through object.__setattr__ in the actual code
-            # We just verify the method completed without error
-            assert result is not None
+                    # Level and path update happens through object.__setattr__ in the actual code
+                    # We just verify the method completed without error
+                    assert result is not None
+                    mock_update_children.assert_awaited()
 
     @pytest.mark.skip(
         reason="Mock attribute tracking is complex. History creation is better tested via integration tests."
     )
-    def test_update_organization_creates_history(
+    async def test_update_organization_creates_history(
         self, org_service, mock_db, mock_organization
     ):
         """测试更新时记录变更历史"""
@@ -282,93 +275,80 @@ class TestUpdateOrganization:
 class TestDeleteOrganization:
     """测试删除组织"""
 
-    def test_delete_organization_success(self, org_service, mock_db, mock_organization):
+    async def test_delete_organization_success(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试成功删除"""
-        with patch("src.crud.organization.organization.get_children", return_value=[]):
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ):
+            with patch(
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[]),
+            ):
+                # Configure mock to track setattr calls
+                mock_organization.is_deleted = False
 
-            def query_side_effect(model):
-                if model == Organization:
-                    mock_query = MagicMock()
-                    mock_query.filter.return_value.first.return_value = (
-                        mock_organization
-                    )
-                    return mock_query
-                return MagicMock()
+                result = await org_service.delete_organization(
+                    mock_db, org_id="org_123", deleted_by="user_123"
+                )
 
-            mock_db.query.side_effect = query_side_effect
+                assert result is True
+                # After deletion, is_deleted should be True
+                # Note: MagicMock doesn't actually update attributes, but setattr was called
+                assert mock_db.commit.await_count >= 1
 
-            # Configure mock to track setattr calls
-            mock_organization.is_deleted = False
-
-            result = org_service.delete_organization(
-                mock_db, org_id="org_123", deleted_by="user_123"
-            )
-
-            assert result is True
-            # After deletion, is_deleted should be True
-            # Note: MagicMock doesn't actually update attributes, but setattr was called
-            mock_db.commit.assert_called()
-
-    def test_delete_organization_not_found(self, org_service, mock_db):
+    async def test_delete_organization_not_found(self, org_service, mock_db):
         """测试组织不存在"""
-
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = None
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        result = org_service.delete_organization(mock_db, org_id="nonexistent")
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=None),
+        ):
+            result = await org_service.delete_organization(
+                mock_db, org_id="nonexistent"
+            )
 
         assert result is False
 
-    def test_delete_organization_with_children_fails(
+    async def test_delete_organization_with_children_fails(
         self, org_service, mock_db, mock_organization
     ):
         """测试有子组织时删除失败"""
         child = MagicMock(spec=Organization)
         child.id = "child_123"
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ):
+            with patch(
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[child]),
+            ):
+                with pytest.raises(
+                    OperationNotAllowedError, match="不能删除有子组织的组织"
+                ):
+                    await org_service.delete_organization(mock_db, org_id="org_123")
 
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = mock_organization
-                mock_query.filter.return_value.all.return_value = [
-                    child
-                ]  # Has children
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        with pytest.raises(OperationNotAllowedError, match="不能删除有子组织的组织"):
-            org_service.delete_organization(mock_db, org_id="org_123")
-
-    def test_delete_organization_creates_history(
+    async def test_delete_organization_creates_history(
         self, org_service, mock_db, mock_organization
     ):
         """测试删除时记录历史"""
-        with patch("src.crud.organization.organization.get_children", return_value=[]):
-
-            def query_side_effect(model):
-                if model == Organization:
-                    mock_query = MagicMock()
-                    mock_query.filter.return_value.first.return_value = (
-                        mock_organization
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ):
+            with patch(
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[]),
+            ):
+                with patch.object(
+                    org_service, "_create_history", new=AsyncMock()
+                ) as mock_history:
+                    await org_service.delete_organization(
+                        mock_db, org_id="org_123", deleted_by="user_123"
                     )
-                    return mock_query
-                return MagicMock()
-
-            mock_db.query.side_effect = query_side_effect
-
-            with patch.object(org_service, "_create_history") as mock_history:
-                org_service.delete_organization(
-                    mock_db, org_id="org_123", deleted_by="user_123"
-                )
-                mock_history.assert_called_once()
+                    mock_history.assert_awaited_once()
 
 
 # ============================================================================
@@ -377,17 +357,36 @@ class TestDeleteOrganization:
 class TestGetStatistics:
     """测试获取统计信息"""
 
-    def test_get_statistics_basic(self, org_service, mock_db):
+    async def test_get_statistics_basic(self, org_service, mock_db):
         """测试基本统计"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.count.return_value = 10
-        mock_query.filter.return_value.distinct.return_value.all.return_value = [
-            (1,),
-            (2,),
-        ]
-        mock_db.query.return_value = mock_query
+        class _ScalarsResult:
+            def __init__(self, values):
+                self._values = values
 
-        result = org_service.get_statistics(mock_db)
+            def all(self):
+                return self._values
+
+        class _ExecuteResult:
+            def __init__(self, scalar_value=None, scalars_values=None):
+                self._scalar_value = scalar_value
+                self._scalars_values = scalars_values
+
+            def scalar(self):
+                return self._scalar_value
+
+            def scalars(self):
+                return _ScalarsResult(self._scalars_values or [])
+
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _ExecuteResult(scalar_value=10),
+                _ExecuteResult(scalars_values=[1, 2]),
+                _ExecuteResult(scalar_value=6),
+                _ExecuteResult(scalar_value=4),
+            ]
+        )
+
+        result = await org_service.get_statistics(mock_db)
 
         assert "total" in result
         assert "active" in result
@@ -395,14 +394,34 @@ class TestGetStatistics:
         assert "by_level" in result
         assert result["total"] == 10
 
-    def test_get_statistics_empty(self, org_service, mock_db):
+    async def test_get_statistics_empty(self, org_service, mock_db):
         """测试空统计"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.count.return_value = 0
-        mock_query.filter.return_value.distinct.return_value.all.return_value = []
-        mock_db.query.return_value = mock_query
+        class _ScalarsResult:
+            def __init__(self, values):
+                self._values = values
 
-        result = org_service.get_statistics(mock_db)
+            def all(self):
+                return self._values
+
+        class _ExecuteResult:
+            def __init__(self, scalar_value=None, scalars_values=None):
+                self._scalar_value = scalar_value
+                self._scalars_values = scalars_values
+
+            def scalar(self):
+                return self._scalar_value
+
+            def scalars(self):
+                return _ScalarsResult(self._scalars_values or [])
+
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _ExecuteResult(scalar_value=0),
+                _ExecuteResult(scalars_values=[]),
+            ]
+        )
+
+        result = await org_service.get_statistics(mock_db)
 
         assert result["total"] == 0
         assert result["by_level"] == {}
@@ -414,44 +433,32 @@ class TestGetStatistics:
 class TestGetHistory:
     """测试获取历史"""
 
-    def test_get_history_basic(self, org_service, mock_db):
+    async def test_get_history_basic(self, org_service, mock_db):
         """测试基本历史查询"""
         mock_history1 = MagicMock(spec=OrganizationHistory)
         mock_history1.id = "hist_1"
         mock_history2 = MagicMock(spec=OrganizationHistory)
         mock_history2.id = "hist_2"
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
-            mock_history1,
-            mock_history2,
-        ]
-        mock_db.query.return_value = mock_query
-
-        result = org_service.get_history(mock_db, org_id="org_123")
+        with patch(
+            "src.crud.organization_history.OrganizationHistoryCRUD.get_multi_async",
+            new=AsyncMock(return_value=[mock_history1, mock_history2]),
+        ):
+            result = await org_service.get_history(mock_db, org_id="org_123")
 
         assert len(result) == 2
         assert result[0].id == "hist_1"
 
-    def test_get_history_with_pagination(self, org_service, mock_db):
+    async def test_get_history_with_pagination(self, org_service, mock_db):
         """测试分页查询"""
-        mock_query = MagicMock()
-        mock_filter = MagicMock()
-        mock_order = MagicMock()
-        mock_offset = MagicMock()
-        MagicMock()
-
-        mock_query.filter.return_value = mock_filter
-        mock_filter.order_by.return_value = mock_order
-        mock_order.offset.return_value = mock_offset
-        mock_offset.limit.return_value.all.return_value = []
-
-        mock_db.query.return_value = mock_query
-
-        org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
-
-        mock_order.offset.assert_called_with(10)
-        mock_offset.limit.assert_called_with(20)
+        with patch(
+            "src.crud.organization_history.OrganizationHistoryCRUD.get_multi_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_get_history:
+            await org_service.get_history(mock_db, org_id="org_123", skip=10, limit=20)
+            mock_get_history.assert_awaited_with(
+                db=mock_db, org_id="org_123", skip=10, limit=20
+            )
 
 
 # ============================================================================
@@ -460,43 +467,26 @@ class TestGetHistory:
 class TestWouldCreateCycle:
     """测试循环引用检测"""
 
-    def test_no_cycle(self, org_service, mock_db, mock_parent):
+    async def test_no_cycle(self, org_service, mock_db, mock_parent):
         """测试无循环引用"""
-        mock_parent.parent_id = None
-
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = mock_parent
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        result = org_service._would_create_cycle(mock_db, "org_123", "parent_123")
+        mock_db.execute = AsyncMock(return_value=_ExecuteResult(None))
+        result = await org_service._would_create_cycle(
+            mock_db, "org_123", "parent_123"
+        )
 
         assert result is False
 
-    def test_direct_cycle(self, org_service, mock_db, mock_organization):
+    async def test_direct_cycle(self, org_service, mock_db, mock_organization):
         """测试直接循环引用（自己作为自己的上级）"""
-
-        def query_side_effect(model):
-            if model == Organization:
-                mock_query = MagicMock()
-                mock_query.filter.return_value.first.return_value = mock_organization
-                return mock_query
-            return MagicMock()
-
-        mock_db.query.side_effect = query_side_effect
-
-        result = org_service._would_create_cycle(mock_db, "org_123", "org_123")
+        mock_db.execute = AsyncMock(return_value=_ExecuteResult("org_123"))
+        result = await org_service._would_create_cycle(mock_db, "org_123", "org_123")
 
         assert result is True
 
     @pytest.mark.skip(
         reason="Complex cycle detection requires proper mock chain setup. Better tested via integration tests."
     )
-    def test_indirect_cycle(self, org_service, mock_db):
+    async def test_indirect_cycle(self, org_service, mock_db):
         """测试间接循环引用"""
         # Skipped: Indirect cycle detection requires complex mock setup
         # This functionality is better tested through integration tests
@@ -509,61 +499,19 @@ class TestWouldCreateCycle:
 class TestUpdateChildrenPath:
     """测试更新子组织路径"""
 
-    def test_update_children_path_basic(self, org_service, mock_db, mock_organization):
+    async def test_update_children_path_basic(
+        self, org_service, mock_db, mock_organization
+    ):
         """测试基本更新"""
-        child = MagicMock(spec=Organization)
-        child.id = "child_123"
-        child.name = "子组织"
+        await org_service._update_children_path(mock_db, mock_organization)
+        mock_db.execute.assert_awaited_once()
 
-        call_count = [0]
-
-        def get_children_side_effect(db, org_id):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return [child]
-            else:
-                return []  # No grandchildren
-
-        with patch(
-            "src.crud.organization.organization.get_children",
-            side_effect=get_children_side_effect,
-        ):
-            org_service._update_children_path(mock_db, mock_organization)
-
-            # Verify the method completed (commit was called)
-            mock_db.commit.assert_called()
-
-    def test_update_children_path_recursive(
+    async def test_update_children_path_recursive(
         self, org_service, mock_db, mock_organization
     ):
         """测试递归更新"""
-        child = MagicMock(spec=Organization)
-        child.id = "child_123"
-        child.name = "子组织"
-
-        grandchild = MagicMock(spec=Organization)
-        grandchild.id = "grandchild_123"
-        grandchild.name = "孙组织"
-
-        call_count = [0]
-
-        def get_children_side_effect(db, org_id):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return [child]
-            elif call_count[0] == 2:
-                return [grandchild]
-            else:
-                return []
-
-        with patch(
-            "src.crud.organization.organization.get_children",
-            side_effect=get_children_side_effect,
-        ):
-            org_service._update_children_path(mock_db, mock_organization)
-
-            # Should have called get_children 3 times (child, grandchild, empty)
-            assert call_count[0] == 3
+        await org_service._update_children_path(mock_db, mock_organization)
+        mock_db.execute.assert_awaited_once()
 
 
 # ============================================================================
@@ -572,9 +520,9 @@ class TestUpdateChildrenPath:
 class TestCreateHistory:
     """测试创建历史"""
 
-    def test_create_history_basic(self, org_service, mock_db):
+    async def test_create_history_basic(self, org_service, mock_db):
         """测试基本历史创建"""
-        org_service._create_history(
+        await org_service._create_history(
             mock_db,
             org_id="org_123",
             action="update",
@@ -585,11 +533,11 @@ class TestCreateHistory:
         )
 
         mock_db.add.assert_called_once()
-        mock_db.commit.assert_called_once()
+        mock_db.commit.assert_awaited_once()
 
-    def test_create_history_without_field(self, org_service, mock_db):
+    async def test_create_history_without_field(self, org_service, mock_db):
         """测试创建历史（无字段）"""
-        org_service._create_history(
+        await org_service._create_history(
             mock_db,
             org_id="org_123",
             action="delete",
@@ -597,7 +545,7 @@ class TestCreateHistory:
         )
 
         mock_db.add.assert_called_once()
-        mock_db.commit.assert_called_once()
+        mock_db.commit.assert_awaited_once()
 
 
 # ============================================================================
@@ -625,7 +573,7 @@ class TestCreateHistory:
 ✓ 统计信息（总数、层级统计）
 ✓ 历史记录（基本查询、分页）
 ✓ 循环引用检测（直接、间接）
-✓ 递归更新子组织路径
+✓ 批量更新子组织路径
 ✓ 历史记录创建
 
 预期覆盖率：95%+

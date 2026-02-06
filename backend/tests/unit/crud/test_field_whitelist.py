@@ -80,13 +80,13 @@ class TestAssetWhitelist:
         whitelist = AssetWhitelist()
 
         assert whitelist.can_search("property_name")
-        assert whitelist.can_search("ownership_entity")
         assert whitelist.can_search("address")
         assert whitelist.can_search("project_name")
         assert whitelist.can_search("notes")
         assert whitelist.can_search("property_nature")
         assert whitelist.can_search("usage_status")
         assert whitelist.can_search("ownership_status")
+        assert not whitelist.can_search("ownership_entity")
 
     def test_pii_search_fields_blocked(self):
         """PII fields should not be searchable."""
@@ -118,8 +118,8 @@ class TestAssetWhitelist:
 
         # Alphabetic sorting
         assert whitelist.can_sort("property_name")
-        assert whitelist.can_sort("ownership_entity")
         assert whitelist.can_sort("project_name")
+        assert not whitelist.can_sort("ownership_entity")
 
     def test_blocked_sort_fields(self):
         """Audit trail and operational fields blocked for sorting."""

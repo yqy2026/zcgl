@@ -6,6 +6,7 @@ import type { Dayjs } from 'dayjs';
 
 import type { AssetSearchParams } from '@/types/asset';
 import { assetService } from '@/services/assetService';
+import { ownershipService } from '@/services/ownershipService';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { createLogger } from '@/utils/logger';
 import { MessageManager } from '@/utils/messageManager';
@@ -22,7 +23,8 @@ interface AssetSearchFormValues {
   ownership_status?: string;
   property_nature?: string;
   usage_status?: string;
-  ownership_entity?: string;
+  data_status?: string;
+  ownership_id?: string;
   business_category?: string;
   areaRange?: [number, number];
   dateRange?: [Dayjs, Dayjs];
@@ -75,11 +77,10 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
         queryKey: ['ownership-entities'],
         queryFn: async () => {
           try {
-            // 直接从专门的API获取
-            return await assetService.getOwnershipEntities();
+            return await ownershipService.getOwnershipSelectOptions();
           } catch (error) {
-            componentLogger.warn(`获取权属方失败，使用默认选项: ${String(error)}`);
-            return ['政府', '企业', '事业单位', '社会团体', '其他'];
+            componentLogger.warn(`获取权属方失败，返回空列表: ${String(error)}`);
+            return [];
           }
         },
         staleTime: 30 * 60 * 1000,
@@ -103,7 +104,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   });
 
   // 提取查询结果
-  const ownershipEntities = searchQueries[0].data ?? [];
+  const ownershipOptions = searchQueries[0].data ?? [];
   const businessCategories = searchQueries[1].data ?? [];
 
   const ownershipLoading = searchQueries[0].isLoading;
@@ -295,9 +296,9 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
         {expanded && (
           <AdvancedSearchFields
-            ownershipEntities={ownershipEntities}
+            ownershipOptions={ownershipOptions}
             businessCategories={businessCategories}
-            ownershipEntityLoading={ownershipLoading}
+            ownershipLoading={ownershipLoading}
             businessCategoryLoading={businessLoading}
             areaRange={areaRange}
             onAreaMinChange={handleAreaMinChange}

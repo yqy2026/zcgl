@@ -1,6 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+pytestmark = pytest.mark.asyncio
 
 from src.core.exception_handler import DuplicateResourceError
 from src.models.asset import AssetCustomField
@@ -16,40 +18,40 @@ def service():
 
 
 class TestCustomFieldService:
-    def test_create_custom_field(self, service, mock_db):
+    async def test_create_custom_field_async(self, service, mock_db):
         obj_in = AssetCustomFieldCreate(
             field_name="test_field", display_name="Test Field", field_type="text"
         )
 
         with patch(
-            "src.crud.custom_field.custom_field_crud.get_by_field_name",
-            return_value=None,
+            "src.crud.custom_field.custom_field_crud.get_by_field_name_async",
+            new=AsyncMock(return_value=None),
         ):
-            with patch("src.crud.custom_field.custom_field_crud.create") as mock_create:
+            with patch("src.crud.custom_field.custom_field_crud.create", new=AsyncMock()) as mock_create:
                 mock_create.return_value = AssetCustomField(
                     id=TEST_FIELD_ID, field_name="test_field"
                 )
 
-                result = service.create_custom_field(mock_db, obj_in=obj_in)
+                result = await service.create_custom_field_async(mock_db, obj_in=obj_in)
 
                 assert result.field_name == "test_field"
                 mock_create.assert_called()
 
-    def test_create_custom_field_duplicate(self, service, mock_db):
+    async def test_create_custom_field_duplicate(self, service, mock_db):
         obj_in = AssetCustomFieldCreate(
             field_name="test_field", display_name="Test Field", field_type="text"
         )
 
         with patch(
-            "src.crud.custom_field.custom_field_crud.get_by_field_name",
-            return_value=AssetCustomField(),
+            "src.crud.custom_field.custom_field_crud.get_by_field_name_async",
+            new=AsyncMock(return_value=AssetCustomField()),
         ):
             with pytest.raises(DuplicateResourceError) as excinfo:
-                service.create_custom_field(mock_db, obj_in=obj_in)
+                await service.create_custom_field_async(mock_db, obj_in=obj_in)
 
             assert "已存在" in str(excinfo.value)
 
-    def test_validate_field_value_text(self, service):
+    async def test_validate_field_value_text(self, service):
         field = AssetCustomField(field_type="text", display_name="Test")
 
         # Valid
@@ -61,7 +63,7 @@ class TestCustomFieldService:
         assert is_valid is False
         assert "必须为文本" in msg
 
-    def test_validate_field_value_number(self, service):
+    async def test_validate_field_value_number(self, service):
         field = AssetCustomField(field_type="number", display_name="Test")
 
         # Valid
@@ -73,7 +75,7 @@ class TestCustomFieldService:
         assert is_valid is False
         assert "必须为整数" in msg
 
-    def test_validate_field_value_required(self, service):
+    async def test_validate_field_value_required(self, service):
         field = AssetCustomField(
             field_type="text", display_name="Test", is_required=True
         )
@@ -83,11 +85,14 @@ class TestCustomFieldService:
         assert is_valid is False
         assert "必填" in msg
 
-    def test_toggle_active_status(self, service, mock_db):
+    async def test_toggle_active_status_async(self, service, mock_db):
         field = AssetCustomField(id=TEST_FIELD_ID, is_active=True)
 
-        with patch("src.crud.custom_field.custom_field_crud.get", return_value=field):
-            result = service.toggle_active_status(mock_db, id=TEST_FIELD_ID)
+        with patch("src.crud.custom_field.custom_field_crud.get", new=AsyncMock(return_value=field)):
+            mock_db.commit = AsyncMock()
+            mock_db.refresh = AsyncMock()
+
+            result = await service.toggle_active_status_async(mock_db, id=TEST_FIELD_ID)
 
             assert result.is_active is False
             mock_db.commit.assert_called()

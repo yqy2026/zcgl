@@ -162,7 +162,7 @@ async def batch_upload_pdfs(
     **Args**:
         - files: PDF 文件列表（最多 10 个）
         - organization_id: 所属组织 ID
-        - force_method: 强制使用 text/vision/smart
+        - force_method: 强制使用 text/vision/smart/ocr
         - prefer_vision: 优先使用视觉模型
         - auto_confirm: 自动确认（跳过人工验证）
 
@@ -255,12 +255,12 @@ async def batch_upload_pdfs(
 
     # 初始化批处理状态（使用 BatchStatusTracker）
     sanitized_force_method = force_method.strip() if force_method else None
-    allowed_methods = {"text", "vision", "smart"}
+    allowed_methods = {"text", "vision", "smart", "ocr"}
     if (
         sanitized_force_method is not None
         and sanitized_force_method not in allowed_methods
     ):
-        raise bad_request("force_method 仅支持: text, vision, smart")
+        raise bad_request("force_method 仅支持: text, vision, smart, ocr")
 
     if sanitized_force_method is None and prefer_vision:
         sanitized_force_method = "vision"
@@ -380,9 +380,7 @@ async def get_batch_status(
     session_crud = PDFImportSessionCRUD()
     session_statuses: list[dict[str, Any]] = []
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await db.run_sync(
-        lambda sync_db: session_crud.get_session_map(sync_db, session_ids)
-    )
+    session_map = await session_crud.get_session_map_async(db, session_ids)
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session:
@@ -508,9 +506,7 @@ async def cancel_batch(
     cancelled_count = 0
 
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await db.run_sync(
-        lambda sync_db: session_crud.get_session_map(sync_db, session_ids)
-    )
+    session_map = await session_crud.get_session_map_async(db, session_ids)
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session and session.is_processing:

@@ -6,11 +6,16 @@ import re
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+)
 from pydantic_core import PydanticCustomError
-
-from ..models.auth import UserRole
-
 
 # 用户相关模型
 class UserBase(BaseModel):
@@ -45,9 +50,16 @@ class UserCreate(UserBase):
     """用户创建模型"""
 
     password: str = Field(..., min_length=8, max_length=128, description="密码")
-    role: UserRole = Field(default=UserRole.USER, description="用户角色")
+    role_id: str | None = Field(None, description="主角色ID")
     employee_id: str | None = Field(None, description="关联员工ID")
-    default_organization_id: str | None = Field(None, description="默认组织ID")
+    default_organization_id: str | None = Field(
+        None,
+        description="默认组织ID",
+        validation_alias=AliasChoices(
+            "default_organization_id",
+            "organization_id",
+        ),
+    )
 
     @field_validator("password")
     @classmethod
@@ -85,10 +97,17 @@ class UserUpdate(BaseModel):
     full_name: str | None = Field(
         None, min_length=2, max_length=100, description="全名"
     )
-    role: UserRole | None = Field(None, description="用户角色")
+    role_id: str | None = Field(None, description="主角色ID")
     is_active: bool | None = Field(None, description="是否激活")
     employee_id: str | None = Field(None, description="关联员工ID")
-    default_organization_id: str | None = Field(None, description="默认组织ID")
+    default_organization_id: str | None = Field(
+        None,
+        description="默认组织ID",
+        validation_alias=AliasChoices(
+            "default_organization_id",
+            "organization_id",
+        ),
+    )
 
     @field_validator("full_name")
     @classmethod
@@ -102,7 +121,11 @@ class UserResponse(UserBase):
     """用户响应模型"""
 
     id: str
-    role: UserRole | str
+    role_id: str | None = Field(None, description="主角色ID")
+    role_name: str | None = Field(None, description="主角色名称")
+    roles: list[str] = Field(default_factory=list, description="角色编码列表")
+    role_ids: list[str] = Field(default_factory=list, description="角色ID列表")
+    is_admin: bool = Field(False, description="是否管理员")
     is_active: bool
     is_locked: bool
     last_login_at: datetime | str | None
@@ -113,13 +136,10 @@ class UserResponse(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @field_validator("role", mode="before")
-    @classmethod
-    def parse_role(cls, v: str | UserRole) -> str | UserRole:
-        """Parse role from string or enum"""
-        if isinstance(v, str):
-            return v
-        return v
+    @computed_field(return_type=str | None)
+    @property
+    def organization_id(self) -> str | None:
+        return self.default_organization_id
 
     @field_validator("is_active", "is_locked", mode="before")
     @classmethod
@@ -161,20 +181,7 @@ class TokenData(BaseModel):
 
     sub: str  # 用户ID
     username: str
-    role: UserRole | str  # 支持枚举或字符串
     exp: int | None = None
-
-    @field_validator("role", mode="before")
-    @classmethod
-    def validate_role(cls, v: Any) -> Any:
-        """验证角色字段，支持字符串和枚举"""
-        if isinstance(v, str):
-            try:
-                return UserRole(v)
-            except ValueError:
-                # 如果无法转换为枚举，返回原始字符串
-                return v
-        return v
 
 
 # Permission相关模式
@@ -299,7 +306,7 @@ class UserQueryParams(BaseModel):
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
     search: str | None = Field(None, description="搜索关键词")
-    role: UserRole | None = Field(None, description="角色筛选")
+    role_id: str | None = Field(None, description="角色筛选")
     is_active: bool | None = Field(None, description="是否激活")
     organization_id: str | None = Field(None, description="组织ID筛选")
 

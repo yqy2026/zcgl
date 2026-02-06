@@ -1,15 +1,19 @@
-from sqlalchemy.orm import Session
+from datetime import datetime
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models.auth import AuditLog, User
+from ...models.rbac import Role, UserRoleAssignment
 
 
 class AuditService:
     """审计日志服务"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def create_audit_log(
+    async def create_audit_log(
         self,
         user_id: str,
         action: str,
@@ -27,16 +31,27 @@ class AuditService:
         session_id: str | None = None,
     ) -> AuditLog | None:
         """创建审计日志"""
-        user = self.db.query(User).filter(User.id == user_id).first()
+        stmt = select(User).where(User.id == user_id)
+        user = (await self.db.execute(stmt)).scalars().first()
         if not user:
             return None
 
         audit_log = AuditLog()
         audit_log.user_id = user_id
         audit_log.username = user.username
-        audit_log.user_role = (
-            user.role.value if hasattr(user.role, "value") else user.role
+        role_stmt = (
+            select(Role.display_name)
+            .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
+            .where(
+                UserRoleAssignment.user_id == user_id,
+                UserRoleAssignment.is_active.is_(True),
+                UserRoleAssignment.expires_at.is_(None)
+                | (UserRoleAssignment.expires_at > datetime.utcnow()),
+            )
+            .order_by(Role.level.asc())
+            .limit(1)
         )
+        audit_log.user_role = (await self.db.execute(role_stmt)).scalar()
         audit_log.user_organization = getattr(user, "default_organization_id", None)
         audit_log.action = action
         audit_log.resource_type = resource_type
@@ -53,7 +68,7 @@ class AuditService:
         audit_log.session_id = session_id
 
         self.db.add(audit_log)
-        self.db.commit()
-        self.db.refresh(audit_log)
+        await self.db.commit()
+        await self.db.refresh(audit_log)
 
         return audit_log

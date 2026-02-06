@@ -6,7 +6,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....crud.system_dictionary import system_dictionary_crud
@@ -38,10 +37,8 @@ async def get_system_dictionaries(
         if is_active is not None:
             filters["is_active"] = is_active
 
-        dictionaries = await db.run_sync(
-            lambda sync_db: system_dictionary_crud.get_multi_with_filters(
-                db=sync_db, filters=filters
-            )
+        dictionaries = await system_dictionary_crud.get_multi_with_filters_async(
+            db=db, filters=filters
         )
         return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
     except Exception as e:
@@ -58,9 +55,7 @@ async def get_system_dictionary(
     db: AsyncSession = Depends(get_async_db),
 ) -> SystemDictionaryResponse:
     try:
-        dictionary = await db.run_sync(
-            lambda sync_db: system_dictionary_crud.get(db=sync_db, id=dictionary_id)
-        )
+        dictionary = await system_dictionary_crud.get(db=db, id=dictionary_id)
         if not dictionary:
             raise not_found(
                 f"字典 {dictionary_id} 不存在",
@@ -86,10 +81,8 @@ async def create_system_dictionary(
     current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
     try:
-        dictionary = await db.run_sync(
-            lambda sync_db: system_dictionary_service.create_dictionary(
-                db=sync_db, obj_in=dictionary_in
-            )
+        dictionary = await system_dictionary_service.create_dictionary_async(
+            db=db, obj_in=dictionary_in
         )
         return SystemDictionaryResponse.model_validate(dictionary)
     except Exception as e:
@@ -108,10 +101,8 @@ async def update_system_dictionary(
     current_user: User = Depends(require_admin),
 ) -> SystemDictionaryResponse:
     try:
-        updated_dictionary = await db.run_sync(
-            lambda sync_db: system_dictionary_service.update_dictionary(
-                db=sync_db, id=dictionary_id, obj_in=dictionary_in
-            )
+        updated_dictionary = await system_dictionary_service.update_dictionary_async(
+            db=db, id=dictionary_id, obj_in=dictionary_in
         )
         return SystemDictionaryResponse.model_validate(updated_dictionary)
     except Exception as e:
@@ -127,11 +118,7 @@ async def delete_system_dictionary(
     current_user: User = Depends(require_admin),
 ) -> dict[str, str]:
     try:
-        await db.run_sync(
-            lambda sync_db: system_dictionary_service.delete_dictionary(
-                db=sync_db, id=dictionary_id
-            )
-        )
+        await system_dictionary_service.delete_dictionary_async(db=db, id=dictionary_id)
         return {"message": f"字典 {dictionary_id} 已成功删除"}
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -151,27 +138,24 @@ async def batch_update_system_dictionaries(
 ) -> list[SystemDictionaryResponse]:
     try:
 
-        def _sync(sync_db: Session) -> list[SystemDictionaryResponse]:
-            updated_dictionaries: list[SystemDictionaryResponse] = []
-            for update in updates:
-                dictionary_id = update.get("id")
-                update_data = update.get("data", {})
-                if not dictionary_id:
-                    continue
-                try:
-                    updated = system_dictionary_service.update_dictionary(
-                        db=sync_db,
-                        id=dictionary_id,
-                        obj_in=SystemDictionaryUpdate(**update_data),
-                    )
-                    updated_dictionaries.append(
-                        SystemDictionaryResponse.model_validate(updated)
-                    )
-                except BaseBusinessError:
-                    continue
-            return updated_dictionaries
-
-        return await db.run_sync(_sync)
+        updated_dictionaries: list[SystemDictionaryResponse] = []
+        for update in updates:
+            dictionary_id = update.get("id")
+            update_data = update.get("data", {})
+            if not dictionary_id:
+                continue
+            try:
+                updated = await system_dictionary_service.update_dictionary_async(
+                    db=db,
+                    id=dictionary_id,
+                    obj_in=SystemDictionaryUpdate(**update_data),
+                )
+                updated_dictionaries.append(
+                    SystemDictionaryResponse.model_validate(updated)
+                )
+            except BaseBusinessError:
+                continue
+        return updated_dictionaries
     except Exception as e:
         raise internal_error(f"批量更新系统字典失败: {str(e)}")
 
@@ -181,9 +165,7 @@ async def get_dictionary_types(
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, list[str]]:
     try:
-        types = await db.run_sync(
-            lambda sync_db: system_dictionary_crud.get_types(db=sync_db)
-        )
+        types = await system_dictionary_crud.get_types_async(db=db)
         return {"types": types}
     except Exception as e:
         raise internal_error(f"获取字典类型失败: {str(e)}")

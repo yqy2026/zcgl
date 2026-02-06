@@ -23,9 +23,10 @@ Endpoints Tested:
 17. GET /api/v1/tasks/cleanup - Cleanup old tasks
 """
 
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
@@ -40,6 +41,10 @@ from src.schemas.task import (
 )
 
 pytestmark = pytest.mark.api
+
+
+def run(coro):
+    return asyncio.run(coro)
 
 
 # Helper functions
@@ -107,7 +112,6 @@ def mock_current_user():
     user.id = "test-user-id"
     user.username = "testuser"
     user.is_active = True
-    user.role = "user"
     return user
 
 
@@ -137,10 +141,10 @@ class TestCreateTask:
             parameters={"file_path": "/path/to/file.xlsx"},
         )
 
-        mock_task_service.create_task.return_value = mock_task
+        mock_task_service.create_task = AsyncMock(return_value=mock_task)
 
-        result = create_task(
-            task_in=task_data, db=mock_db, current_user=mock_current_user
+        result = run(
+            create_task(task_in=task_data, db=mock_db, current_user=mock_current_user)
         )
 
         assert result.task_type == TaskType.EXCEL_IMPORT.value
@@ -157,10 +161,10 @@ class TestCreateTask:
             title="Import Assets",
         )
 
-        mock_task_service.create_task.side_effect = Exception("Database error")
+        mock_task_service.create_task = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            create_task(task_in=task_data, db=mock_db, current_user=mock_current_user)
+            run(create_task(task_in=task_data, db=mock_db, current_user=mock_current_user))
 
         assert exc_info.value.status_code == 500
         assert "创建任务失败" in exc_info.value.message
@@ -183,21 +187,23 @@ class TestGetTasks:
             create_mock_task(id=f"task-{i}", title=f"Task {i}") for i in range(20)
         ]
 
-        mock_task_crud.get_multi.return_value = mock_tasks
-        mock_task_crud.count.return_value = 100
+        mock_task_crud.get_multi_async = AsyncMock(return_value=mock_tasks)
+        mock_task_crud.count_async = AsyncMock(return_value=100)
 
-        result = get_tasks(
-            page=1,
-            page_size=20,
-            task_type=None,
-            status=None,
-            user_id=None,
-            created_after=None,
-            created_before=None,
-            order_by="created_at",
-            order_dir="desc",
-            db=mock_db,
-            current_user=mock_current_user,
+        result = run(
+            get_tasks(
+                page=1,
+                page_size=20,
+                task_type=None,
+                status=None,
+                user_id=None,
+                created_after=None,
+                created_before=None,
+                order_by="created_at",
+                order_dir="desc",
+                db=mock_db,
+                current_user=mock_current_user,
+            )
         )
 
         payload = json.loads(result.body)
@@ -213,47 +219,53 @@ class TestGetTasks:
         """Test getting tasks with filters"""
         from src.api.v1.system.tasks import get_tasks
 
-        mock_task_crud.get_multi.return_value = []
-        mock_task_crud.count.return_value = 0
+        mock_task_crud.get_multi_async = AsyncMock(return_value=[])
+        mock_task_crud.count_async = AsyncMock(return_value=0)
 
-        result = get_tasks(
-            page=1,
-            page_size=20,
-            task_type=TaskType.EXCEL_IMPORT.value,
-            status=TaskStatus.PENDING.value,
-            user_id="test-user-id",
-            created_after="2026-01-01T00:00:00",
-            created_before="2026-12-31T23:59:59",
-            order_by="created_at",
-            order_dir="desc",
-            db=mock_db,
-            current_user=mock_current_user,
+        result = run(
+            get_tasks(
+                page=1,
+                page_size=20,
+                task_type=TaskType.EXCEL_IMPORT.value,
+                status=TaskStatus.PENDING.value,
+                user_id="test-user-id",
+                created_after="2026-01-01T00:00:00",
+                created_before="2026-12-31T23:59:59",
+                order_by="created_at",
+                order_dir="desc",
+                db=mock_db,
+                current_user=mock_current_user,
+            )
         )
 
         payload = json.loads(result.body)
         assert payload["data"]["pagination"]["total"] == 0
-        mock_task_crud.get_multi.assert_called_once()
+        mock_task_crud.get_multi_async.assert_awaited_once()
 
     @patch("src.api.v1.system.tasks.task_crud")
     def test_get_tasks_exception(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting tasks with exception"""
         from src.api.v1.system.tasks import get_tasks
 
-        mock_task_crud.get_multi.side_effect = Exception("Database error")
+        mock_task_crud.get_multi_async = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_tasks(
-                page=1,
-                page_size=20,
-                task_type=None,
-                status=None,
-                user_id=None,
-                created_after=None,
-                created_before=None,
-                order_by="created_at",
-                order_dir="desc",
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                get_tasks(
+                    page=1,
+                    page_size=20,
+                    task_type=None,
+                    status=None,
+                    user_id=None,
+                    created_after=None,
+                    created_before=None,
+                    order_by="created_at",
+                    order_dir="desc",
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -274,25 +286,25 @@ class TestGetTask:
         from src.api.v1.system.tasks import get_task
 
         mock_task = create_mock_task()
-        mock_task_crud.get.return_value = mock_task
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
 
-        result = get_task(
-            task_id="task-123", db=mock_db, current_user=mock_current_user
+        result = run(
+            get_task(task_id="task-123", db=mock_db, current_user=mock_current_user)
         )
 
         assert result.id == "task-123"
         assert result.title == "Test Task"
-        mock_task_crud.get.assert_called_once_with(db=mock_db, id="task-123")
+        mock_task_crud.get.assert_awaited_once_with(db=mock_db, id="task-123")
 
     @patch("src.api.v1.system.tasks.task_crud")
     def test_get_task_not_found(self, mock_task_crud, mock_db, mock_current_user):
         """Test getting non-existent task"""
         from src.api.v1.system.tasks import get_task
 
-        mock_task_crud.get.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_task(task_id="nonexistent", db=mock_db, current_user=mock_current_user)
+            run(get_task(task_id="nonexistent", db=mock_db, current_user=mock_current_user))
 
         assert exc_info.value.status_code == 404
         assert "不存在" in exc_info.value.message
@@ -323,15 +335,17 @@ class TestUpdateTask:
             processed_items=50,
             failed_items=0,
         )
-        mock_task_crud.get.return_value = mock_task
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
 
-        mock_task_service.update_task.return_value = mock_task
+        mock_task_service.update_task = AsyncMock(return_value=mock_task)
 
-        result = update_task(
-            task_id="task-123",
-            task_in=task_data,
-            db=mock_db,
-            current_user=mock_current_user,
+        result = run(
+            update_task(
+                task_id="task-123",
+                task_in=task_data,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
         )
 
         assert result.progress == 50
@@ -347,14 +361,16 @@ class TestUpdateTask:
 
         task_data = TaskUpdate(progress=50)
 
-        mock_task_crud.get.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            update_task(
-                task_id="nonexistent",
-                task_in=task_data,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                update_task(
+                    task_id="nonexistent",
+                    task_in=task_data,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -369,15 +385,19 @@ class TestUpdateTask:
 
         task_data = TaskUpdate(progress=50)
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.update_task.side_effect = ValueError("已完成的任务无法更新")
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.update_task = AsyncMock(
+            side_effect=ValueError("已完成的任务无法更新")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            update_task(
-                task_id="task-123",
-                task_in=task_data,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                update_task(
+                    task_id="task-123",
+                    task_in=task_data,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -392,15 +412,17 @@ class TestUpdateTask:
 
         task_data = TaskUpdate(progress=50)
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.update_task.side_effect = Exception("Database error")
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.update_task = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            update_task(
-                task_id="task-123",
-                task_in=task_data,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                update_task(
+                    task_id="task-123",
+                    task_in=task_data,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -430,20 +452,22 @@ class TestCancelTask:
             completed_at=datetime.now(UTC),
         )
 
-        mock_task_crud.get.return_value = mock_task
-        mock_task_service.cancel_task.return_value = mock_task
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
+        mock_task_service.cancel_task = AsyncMock(return_value=mock_task)
 
         cancel_request = TaskCancelRequest(reason="User requested")
 
-        result = cancel_task(
-            task_id="task-123",
-            cancel_request=cancel_request,
-            db=mock_db,
-            current_user=mock_current_user,
+        result = run(
+            cancel_task(
+                task_id="task-123",
+                cancel_request=cancel_request,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
         )
 
         assert result.status == TaskStatus.CANCELLED.value
-        mock_task_service.cancel_task.assert_called_once()
+        mock_task_service.cancel_task.assert_awaited_once()
 
     @patch("src.api.v1.system.tasks.task_crud")
     @patch("src.api.v1.system.tasks.task_service")
@@ -459,14 +483,16 @@ class TestCancelTask:
             completed_at=datetime.now(UTC),
         )
 
-        mock_task_crud.get.return_value = mock_task
-        mock_task_service.cancel_task.return_value = mock_task
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
+        mock_task_service.cancel_task = AsyncMock(return_value=mock_task)
 
-        result = cancel_task(
-            task_id="task-123",
-            cancel_request=None,
-            db=mock_db,
-            current_user=mock_current_user,
+        result = run(
+            cancel_task(
+                task_id="task-123",
+                cancel_request=None,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
         )
 
         assert result.status == TaskStatus.CANCELLED.value
@@ -479,16 +505,18 @@ class TestCancelTask:
         """Test cancelling non-existent task"""
         from src.api.v1.system.tasks import cancel_task
 
-        mock_task_crud.get.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=None)
 
         cancel_request = TaskCancelRequest(reason="Test")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            cancel_task(
-                task_id="nonexistent",
-                cancel_request=cancel_request,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                cancel_task(
+                    task_id="nonexistent",
+                    cancel_request=cancel_request,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -501,17 +529,21 @@ class TestCancelTask:
         """Test cancelling task that cannot be cancelled"""
         from src.api.v1.system.tasks import cancel_task
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.cancel_task.side_effect = ValueError("任务无法取消")
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.cancel_task = AsyncMock(
+            side_effect=ValueError("任务无法取消")
+        )
 
         cancel_request = TaskCancelRequest(reason="Test")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            cancel_task(
-                task_id="task-123",
-                cancel_request=cancel_request,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                cancel_task(
+                    task_id="task-123",
+                    cancel_request=cancel_request,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -524,17 +556,19 @@ class TestCancelTask:
         """Test cancelling task with exception"""
         from src.api.v1.system.tasks import cancel_task
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.cancel_task.side_effect = Exception("Database error")
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.cancel_task = AsyncMock(side_effect=Exception("Database error"))
 
         cancel_request = TaskCancelRequest(reason="Test")
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            cancel_task(
-                task_id="task-123",
-                cancel_request=cancel_request,
-                db=mock_db,
-                current_user=mock_current_user,
+            run(
+                cancel_task(
+                    task_id="task-123",
+                    cancel_request=cancel_request,
+                    db=mock_db,
+                    current_user=mock_current_user,
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -557,15 +591,15 @@ class TestDeleteTask:
         """Test deleting task successfully"""
         from src.api.v1.system.tasks import delete_task
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.delete_task.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.delete_task = AsyncMock(return_value=None)
 
-        result = delete_task(
-            task_id="task-123", db=mock_db, current_user=mock_current_user
+        result = run(
+            delete_task(task_id="task-123", db=mock_db, current_user=mock_current_user)
         )
 
         assert result["message"] == "任务删除成功"
-        mock_task_service.delete_task.assert_called_once_with(
+        mock_task_service.delete_task.assert_awaited_once_with(
             db=mock_db, task_id="task-123"
         )
 
@@ -577,11 +611,13 @@ class TestDeleteTask:
         """Test deleting non-existent task"""
         from src.api.v1.system.tasks import delete_task
 
-        mock_task_crud.get.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            delete_task(
-                task_id="nonexistent", db=mock_db, current_user=mock_current_user
+            run(
+                delete_task(
+                    task_id="nonexistent", db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -594,11 +630,17 @@ class TestDeleteTask:
         """Test deleting task with exception"""
         from src.api.v1.system.tasks import delete_task
 
-        mock_task_crud.get.return_value = create_mock_task()
-        mock_task_service.delete_task.side_effect = Exception("Database error")
+        mock_task_crud.get = AsyncMock(return_value=create_mock_task())
+        mock_task_service.delete_task = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            delete_task(task_id="task-123", db=mock_db, current_user=mock_current_user)
+            run(
+                delete_task(
+                    task_id="task-123", db=mock_db, current_user=mock_current_user
+                )
+            )
 
         assert exc_info.value.status_code == 500
         assert "删除任务失败" in exc_info.value.message
@@ -618,7 +660,7 @@ class TestGetTaskHistory:
         from src.api.v1.system.tasks import get_task_history
 
         mock_task = create_mock_task()
-        mock_task_crud.get.return_value = mock_task
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
 
         mock_history = []
         for i in range(5):
@@ -632,15 +674,17 @@ class TestGetTaskHistory:
             history.user_id = "test-user-id"
             mock_history.append(history)
 
-        mock_task_crud.get_history.return_value = mock_history
+        mock_task_crud.get_history_async = AsyncMock(return_value=mock_history)
 
-        result = get_task_history(
-            task_id="task-123", db=mock_db, current_user=mock_current_user
+        result = run(
+            get_task_history(
+                task_id="task-123", db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert len(result) == 5
-        mock_task_crud.get.assert_called_once_with(db=mock_db, id="task-123")
-        mock_task_crud.get_history.assert_called_once_with(
+        mock_task_crud.get.assert_awaited_once_with(db=mock_db, id="task-123")
+        mock_task_crud.get_history_async.assert_awaited_once_with(
             db=mock_db, task_id="task-123"
         )
 
@@ -651,11 +695,13 @@ class TestGetTaskHistory:
         """Test getting history for non-existent task"""
         from src.api.v1.system.tasks import get_task_history
 
-        mock_task_crud.get.return_value = None
+        mock_task_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_task_history(
-                task_id="nonexistent", db=mock_db, current_user=mock_current_user
+            run(
+                get_task_history(
+                    task_id="nonexistent", db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == 404
@@ -669,12 +715,16 @@ class TestGetTaskHistory:
         from src.api.v1.system.tasks import get_task_history
 
         mock_task = create_mock_task()
-        mock_task_crud.get.return_value = mock_task
-        mock_task_crud.get_history.side_effect = Exception("Database error")
+        mock_task_crud.get = AsyncMock(return_value=mock_task)
+        mock_task_crud.get_history_async = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_task_history(
-                task_id="task-123", db=mock_db, current_user=mock_current_user
+            run(
+                get_task_history(
+                    task_id="task-123", db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -714,10 +764,12 @@ class TestGetTaskStatistics:
             "avg_duration": 300.0,
         }
 
-        mock_task_service.get_statistics.return_value = mock_stats
+        mock_task_service.get_statistics = AsyncMock(return_value=mock_stats)
 
-        result = get_task_statistics(
-            user_id=None, db=mock_db, current_user=mock_current_user
+        result = run(
+            get_task_statistics(
+                user_id=None, db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert result.total_tasks == 100
@@ -743,14 +795,16 @@ class TestGetTaskStatistics:
             "avg_duration": 200.0,
         }
 
-        mock_task_service.get_statistics.return_value = mock_stats
+        mock_task_service.get_statistics = AsyncMock(return_value=mock_stats)
 
-        result = get_task_statistics(
-            user_id="test-user-id", db=mock_db, current_user=mock_current_user
+        result = run(
+            get_task_statistics(
+                user_id="test-user-id", db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert result.total_tasks == 10
-        mock_task_service.get_statistics.assert_called_once_with(
+        mock_task_service.get_statistics.assert_awaited_once_with(
             db=mock_db, user_id="test-user-id"
         )
 
@@ -761,11 +815,15 @@ class TestGetTaskStatistics:
         """Test getting statistics with exception"""
         from src.api.v1.system.tasks import get_task_statistics
 
-        mock_task_service.get_statistics.side_effect = Exception("Database error")
+        mock_task_service.get_statistics = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_task_statistics(
-                user_id=None, db=mock_db, current_user=mock_current_user
+            run(
+                get_task_statistics(
+                    user_id=None, db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -800,12 +858,12 @@ class TestGetRunningTasks:
             )
             mock_tasks.append(task)
 
-        mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.get_multi_async = AsyncMock(return_value=mock_tasks)
 
-        result = get_running_tasks(db=mock_db, current_user=mock_current_user)
+        result = run(get_running_tasks(db=mock_db, current_user=mock_current_user))
 
         assert len(result) == 5
-        mock_task_crud.get_multi.assert_called_once_with(
+        mock_task_crud.get_multi_async.assert_awaited_once_with(
             db=mock_db,
             limit=100,
             status=TaskStatus.RUNNING.value,
@@ -819,9 +877,9 @@ class TestGetRunningTasks:
         """Test getting running tasks when none are running"""
         from src.api.v1.system.tasks import get_running_tasks
 
-        mock_task_crud.get_multi.return_value = []
+        mock_task_crud.get_multi_async = AsyncMock(return_value=[])
 
-        result = get_running_tasks(db=mock_db, current_user=mock_current_user)
+        result = run(get_running_tasks(db=mock_db, current_user=mock_current_user))
 
         assert len(result) == 0
 
@@ -832,10 +890,12 @@ class TestGetRunningTasks:
         """Test getting running tasks with exception"""
         from src.api.v1.system.tasks import get_running_tasks
 
-        mock_task_crud.get_multi.side_effect = Exception("Database error")
+        mock_task_crud.get_multi_async = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_running_tasks(db=mock_db, current_user=mock_current_user)
+            run(get_running_tasks(db=mock_db, current_user=mock_current_user))
 
         assert exc_info.value.status_code == 500
         assert "获取运行任务失败" in exc_info.value.message
@@ -867,14 +927,14 @@ class TestGetRecentTasks:
             )
             mock_tasks.append(task)
 
-        mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.get_multi_async = AsyncMock(return_value=mock_tasks)
 
-        result = get_recent_tasks(
-            page_size=10, db=mock_db, current_user=mock_current_user
+        result = run(
+            get_recent_tasks(page_size=10, db=mock_db, current_user=mock_current_user)
         )
 
         assert len(result) == 10
-        mock_task_crud.get_multi.assert_called_once_with(
+        mock_task_crud.get_multi_async.assert_awaited_once_with(
             db=mock_db,
             limit=10,
             user_id="test-user-id",
@@ -890,14 +950,14 @@ class TestGetRecentTasks:
         from src.api.v1.system.tasks import get_recent_tasks
 
         mock_tasks = [create_mock_task(id=f"task-{i}") for i in range(5)]
-        mock_task_crud.get_multi.return_value = mock_tasks
+        mock_task_crud.get_multi_async = AsyncMock(return_value=mock_tasks)
 
-        result = get_recent_tasks(
-            page_size=5, db=mock_db, current_user=mock_current_user
+        result = run(
+            get_recent_tasks(page_size=5, db=mock_db, current_user=mock_current_user)
         )
 
         assert len(result) == 5
-        mock_task_crud.get_multi.assert_called_once_with(
+        mock_task_crud.get_multi_async.assert_awaited_once_with(
             db=mock_db,
             limit=5,
             user_id="test-user-id",
@@ -912,10 +972,12 @@ class TestGetRecentTasks:
         """Test getting recent tasks with exception"""
         from src.api.v1.system.tasks import get_recent_tasks
 
-        mock_task_crud.get_multi.side_effect = Exception("Database error")
+        mock_task_crud.get_multi_async = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_recent_tasks(page_size=10, db=mock_db, current_user=mock_current_user)
+            run(get_recent_tasks(page_size=10, db=mock_db, current_user=mock_current_user))
 
         assert exc_info.value.status_code == 500
         assert "获取最近任务失败" in exc_info.value.message
@@ -969,14 +1031,16 @@ class TestCreateExcelConfig:
             is_default=False,
         )
 
-        mock_task_service.create_excel_config.return_value = mock_config
+        mock_task_service.create_excel_config = AsyncMock(return_value=mock_config)
 
-        result = create_excel_config(
-            config_in=config_data, db=mock_db, current_user=mock_current_user
+        result = run(
+            create_excel_config(
+                config_in=config_data, db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert result.config_name == "Asset Import Config"
-        mock_task_service.create_excel_config.assert_called_once()
+        mock_task_service.create_excel_config.assert_awaited_once()
 
     @patch("src.api.v1.system.tasks.task_service")
     def test_create_excel_config_exception(
@@ -991,11 +1055,15 @@ class TestCreateExcelConfig:
             task_type=TaskType.EXCEL_IMPORT,
         )
 
-        mock_task_service.create_excel_config.side_effect = Exception("Database error")
+        mock_task_service.create_excel_config = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            create_excel_config(
-                config_in=config_data, db=mock_db, current_user=mock_current_user
+            run(
+                create_excel_config(
+                    config_in=config_data, db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -1032,12 +1100,14 @@ class TestGetExcelConfigs:
             )
             mock_configs.append(config)
 
-        mock_excel_crud.get_multi.return_value = mock_configs
+        mock_excel_crud.get_multi_async = AsyncMock(return_value=mock_configs)
 
-        result = get_excel_configs(config_type=None, task_type=None, db=mock_db)
+        result = run(
+            get_excel_configs(config_type=None, task_type=None, db=mock_db)
+        )
 
         assert len(result) == 10
-        mock_excel_crud.get_multi.assert_called_once_with(
+        mock_excel_crud.get_multi_async.assert_awaited_once_with(
             db=mock_db, limit=50, config_type=None, task_type=None
         )
 
@@ -1047,14 +1117,16 @@ class TestGetExcelConfigs:
         from src.api.v1.system.tasks import get_excel_configs
 
         mock_configs = [create_mock_excel_config(id=f"config-{i}") for i in range(3)]
-        mock_excel_crud.get_multi.return_value = mock_configs
+        mock_excel_crud.get_multi_async = AsyncMock(return_value=mock_configs)
 
-        result = get_excel_configs(
-            config_type="import", task_type=TaskType.EXCEL_IMPORT, db=mock_db
+        result = run(
+            get_excel_configs(
+                config_type="import", task_type=TaskType.EXCEL_IMPORT, db=mock_db
+            )
         )
 
         assert len(result) == 3
-        mock_excel_crud.get_multi.assert_called_once_with(
+        mock_excel_crud.get_multi_async.assert_awaited_once_with(
             db=mock_db, limit=50, config_type="import", task_type=TaskType.EXCEL_IMPORT
         )
 
@@ -1063,10 +1135,12 @@ class TestGetExcelConfigs:
         """Test getting Excel configs with exception"""
         from src.api.v1.system.tasks import get_excel_configs
 
-        mock_excel_crud.get_multi.side_effect = Exception("Database error")
+        mock_excel_crud.get_multi_async = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_excel_configs(config_type=None, task_type=None, db=mock_db)
+            run(get_excel_configs(config_type=None, task_type=None, db=mock_db))
 
         assert exc_info.value.status_code == 500
         assert "获取Excel配置失败" in exc_info.value.message
@@ -1086,17 +1160,19 @@ class TestGetDefaultExcelConfig:
         from src.api.v1.system.tasks import get_default_excel_config
 
         mock_config = create_mock_excel_config()
-        mock_excel_crud.get_default.return_value = mock_config
+        mock_excel_crud.get_default_async = AsyncMock(return_value=mock_config)
 
-        result = get_default_excel_config(
-            config_type="import",
-            task_type=TaskType.EXCEL_IMPORT,
-            db=mock_db,
+        result = run(
+            get_default_excel_config(
+                config_type="import",
+                task_type=TaskType.EXCEL_IMPORT,
+                db=mock_db,
+            )
         )
 
         assert result.config_name == "Test Config"
         assert result.is_default is True
-        mock_excel_crud.get_default.assert_called_once_with(
+        mock_excel_crud.get_default_async.assert_awaited_once_with(
             db=mock_db, config_type="import", task_type=TaskType.EXCEL_IMPORT
         )
 
@@ -1105,13 +1181,15 @@ class TestGetDefaultExcelConfig:
         """Test getting default Excel config when not found"""
         from src.api.v1.system.tasks import get_default_excel_config
 
-        mock_excel_crud.get_default.return_value = None
+        mock_excel_crud.get_default_async = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_default_excel_config(
-                config_type="nonexistent",
-                task_type=TaskType.EXCEL_IMPORT,
-                db=mock_db,
+            run(
+                get_default_excel_config(
+                    config_type="nonexistent",
+                    task_type=TaskType.EXCEL_IMPORT,
+                    db=mock_db,
+                )
             )
 
         assert exc_info.value.status_code == 404
@@ -1132,22 +1210,22 @@ class TestGetExcelConfig:
         from src.api.v1.system.tasks import get_excel_config
 
         mock_config = create_mock_excel_config()
-        mock_excel_crud.get.return_value = mock_config
+        mock_excel_crud.get = AsyncMock(return_value=mock_config)
 
-        result = get_excel_config(config_id="config-123", db=mock_db)
+        result = run(get_excel_config(config_id="config-123", db=mock_db))
 
         assert result.config_name == "Test Config"
-        mock_excel_crud.get.assert_called_once_with(db=mock_db, id="config-123")
+        mock_excel_crud.get.assert_awaited_once_with(db=mock_db, id="config-123")
 
     @patch("src.api.v1.system.tasks.excel_task_config_crud")
     def test_get_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test getting non-existent Excel config"""
         from src.api.v1.system.tasks import get_excel_config
 
-        mock_excel_crud.get.return_value = None
+        mock_excel_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_excel_config(config_id="nonexistent", db=mock_db)
+            run(get_excel_config(config_id="nonexistent", db=mock_db))
 
         assert exc_info.value.status_code == 404
         assert "不存在" in exc_info.value.message
@@ -1167,18 +1245,20 @@ class TestUpdateExcelConfig:
         from src.api.v1.system.tasks import update_excel_config
 
         mock_existing_config = create_mock_excel_config()
-        mock_excel_crud.get.return_value = mock_existing_config
+        mock_excel_crud.get = AsyncMock(return_value=mock_existing_config)
 
         updated_config = create_mock_excel_config(
             config_name="Updated Config",
             field_mapping={"new_field": "New Field"},
         )
-        mock_excel_crud.update.return_value = updated_config
+        mock_excel_crud.update = AsyncMock(return_value=updated_config)
 
         update_data = {"field_mapping": {"new_field": "New Field"}}
 
-        result = update_excel_config(
-            config_id="config-123", config_in=update_data, db=mock_db
+        result = run(
+            update_excel_config(
+                config_id="config-123", config_in=update_data, db=mock_db
+            )
         )
 
         assert result.config_name == "Updated Config"
@@ -1188,13 +1268,15 @@ class TestUpdateExcelConfig:
         """Test updating non-existent Excel config"""
         from src.api.v1.system.tasks import update_excel_config
 
-        mock_excel_crud.get.return_value = None
+        mock_excel_crud.get = AsyncMock(return_value=None)
 
         update_data = {"config_name": "Updated"}
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            update_excel_config(
-                config_id="nonexistent", config_in=update_data, db=mock_db
+            run(
+                update_excel_config(
+                    config_id="nonexistent", config_in=update_data, db=mock_db
+                )
             )
 
         assert exc_info.value.status_code == 404
@@ -1206,14 +1288,16 @@ class TestUpdateExcelConfig:
         from src.api.v1.system.tasks import update_excel_config
 
         mock_existing_config = create_mock_excel_config()
-        mock_excel_crud.get.return_value = mock_existing_config
-        mock_excel_crud.update.side_effect = Exception("Database error")
+        mock_excel_crud.get = AsyncMock(return_value=mock_existing_config)
+        mock_excel_crud.update = AsyncMock(side_effect=Exception("Database error"))
 
         update_data = {"config_name": "Updated"}
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            update_excel_config(
-                config_id="config-123", config_in=update_data, db=mock_db
+            run(
+                update_excel_config(
+                    config_id="config-123", config_in=update_data, db=mock_db
+                )
             )
 
         assert exc_info.value.status_code == 500
@@ -1234,22 +1318,22 @@ class TestDeleteExcelConfig:
         from src.api.v1.system.tasks import delete_excel_config
 
         mock_config = create_mock_excel_config()
-        mock_excel_crud.get.return_value = mock_config
+        mock_excel_crud.get = AsyncMock(return_value=mock_config)
 
-        result = delete_excel_config(config_id="config-123", db=mock_db)
+        result = run(delete_excel_config(config_id="config-123", db=mock_db))
 
         assert result["message"] == "Excel配置删除成功"
-        mock_excel_crud.update.assert_called_once()
+        mock_excel_crud.update.assert_awaited_once()
 
     @patch("src.api.v1.system.tasks.excel_task_config_crud")
     def test_delete_excel_config_not_found(self, mock_excel_crud, mock_db):
         """Test deleting non-existent Excel config"""
         from src.api.v1.system.tasks import delete_excel_config
 
-        mock_excel_crud.get.return_value = None
+        mock_excel_crud.get = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            delete_excel_config(config_id="nonexistent", db=mock_db)
+            run(delete_excel_config(config_id="nonexistent", db=mock_db))
 
         # 404 is raised inside try block but caught by outer except
         # The implementation has a bug where HTTPException is caught and converted to 500
@@ -1262,11 +1346,11 @@ class TestDeleteExcelConfig:
         from src.api.v1.system.tasks import delete_excel_config
 
         mock_config = create_mock_excel_config()
-        mock_excel_crud.get.return_value = mock_config
-        mock_excel_crud.update.side_effect = Exception("Database error")
+        mock_excel_crud.get = AsyncMock(return_value=mock_config)
+        mock_excel_crud.update = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            delete_excel_config(config_id="config-123", db=mock_db)
+            run(delete_excel_config(config_id="config-123", db=mock_db))
 
         assert exc_info.value.status_code == 500
         assert "删除Excel配置失败" in exc_info.value.message
@@ -1287,19 +1371,21 @@ class TestCleanupOldTasks:
         """Test cleanup old tasks in dry run mode"""
         from src.api.v1.system.tasks import cleanup_old_tasks
 
-        mock_task_service.cleanup_old_tasks.return_value = {
+        mock_task_service.cleanup_old_tasks = AsyncMock(return_value={
             "message": "试运行模式，发现 25 个可清理的任务",
             "cleanup_date": "2026-01-16T00:00:00",
             "task_count": 25,
-        }
+        })
 
-        result = cleanup_old_tasks(
-            days=30, is_dry_run=True, db=mock_db, current_user=mock_current_user
+        result = run(
+            cleanup_old_tasks(
+                days=30, is_dry_run=True, db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert result["task_count"] == 25
         assert "试运行模式" in result["message"]
-        mock_task_service.cleanup_old_tasks.assert_called_once_with(
+        mock_task_service.cleanup_old_tasks.assert_awaited_once_with(
             db=mock_db, days=30, dry_run=True
         )
 
@@ -1310,14 +1396,16 @@ class TestCleanupOldTasks:
         """Test actual cleanup of old tasks"""
         from src.api.v1.system.tasks import cleanup_old_tasks
 
-        mock_task_service.cleanup_old_tasks.return_value = {
+        mock_task_service.cleanup_old_tasks = AsyncMock(return_value={
             "message": "成功清理 25 个过期任务",
             "cleanup_date": "2026-01-16T00:00:00",
             "cleaned_count": 25,
-        }
+        })
 
-        result = cleanup_old_tasks(
-            days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
+        result = run(
+            cleanup_old_tasks(
+                days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
+            )
         )
 
         assert result["cleaned_count"] == 25
@@ -1330,11 +1418,15 @@ class TestCleanupOldTasks:
         """Test cleanup with exception"""
         from src.api.v1.system.tasks import cleanup_old_tasks
 
-        mock_task_service.cleanup_old_tasks.side_effect = Exception("Database error")
+        mock_task_service.cleanup_old_tasks = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            cleanup_old_tasks(
-                days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
+            run(
+                cleanup_old_tasks(
+                    days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
+                )
             )
 
         assert exc_info.value.status_code == 500

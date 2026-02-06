@@ -15,7 +15,6 @@ import { createLogger } from '@/utils/logger';
 const pageLogger = createLogger('SystemSettings');
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 const SystemSettingsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -148,195 +147,207 @@ const SystemSettingsPage: React.FC = () => {
     restoreMutation.mutate(file);
   };
 
+  const tabItems = [
+    {
+      key: 'settings',
+      label: '基本设置',
+      children: (
+        <Card
+          title="系统基本设置"
+          loading={isSettingsLoading || updateSettingsMutation.isPending}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSaveSettings}
+            initialValues={settings || undefined}
+          >
+            <Form.Item
+              label="站点名称"
+              name="site_name"
+              rules={[{ required: true, message: '请输入站点名称' }]}
+            >
+              <Input placeholder="请输入站点名称" />
+            </Form.Item>
+
+            <Form.Item label="站点描述" name="site_description">
+              <Input.TextArea rows={3} placeholder="请输入站点描述" />
+            </Form.Item>
+
+            <Form.Item label="允许用户注册" name="allow_registration" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              label="会话超时时间（分钟）"
+              name="session_timeout"
+              rules={[{ required: true, message: '请输入会话超时时间' }]}
+            >
+              <Input type="number" placeholder="请输入会话超时时间" />
+            </Form.Item>
+
+            <Divider titlePlacement="start">密码策略</Divider>
+
+            <Form.Item
+              label="最小密码长度"
+              name={['password_policy', 'min_length']}
+              rules={[{ required: true, message: '请输入最小密码长度' }]}
+            >
+              <Input type="number" placeholder="最小密码长度" />
+            </Form.Item>
+
+            <Form.Item
+              label="要求大写字母"
+              name={['password_policy', 'require_uppercase']}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              label="要求小写字母"
+              name={['password_policy', 'require_lowercase']}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              label="要求数字"
+              name={['password_policy', 'require_numbers']}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              label="要求特殊字符"
+              name={['password_policy', 'require_special_chars']}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={updateSettingsMutation.isPending}>
+                保存设置
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: 'info',
+      label: '系统信息',
+      children: (
+        <Card title="系统信息" loading={isInfoLoading}>
+          {systemInfo ? (
+            <div>
+              <Space orientation="vertical" style={{ width: '100%' }}>
+                <div>
+                  <strong>版本号：</strong>
+                  {systemInfo.version}
+                </div>
+                <div>
+                  <strong>构建时间：</strong>
+                  {systemInfo.build_time}
+                </div>
+                <div>
+                  <strong>数据库状态：</strong>
+                  <Text type={systemInfo.database_status === 'connected' ? 'success' : 'danger'}>
+                    {systemInfo.database_status === 'connected' ? '已连接' : '未连接'}
+                  </Text>
+                </div>
+                <div>
+                  <strong>API版本：</strong>
+                  {systemInfo.api_version}
+                </div>
+                <div>
+                  <strong>运行环境：</strong>
+                  {systemInfo.environment}
+                </div>
+              </Space>
+            </div>
+          ) : (
+            <Alert
+              title="无法获取系统信息"
+              description="请检查服务器连接状态"
+              type="warning"
+              showIcon
+            />
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: 'backup',
+      label: '数据备份',
+      children: (
+        <Card title="数据备份与恢复">
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            <Alert
+              title="备份说明"
+              description="定期备份数据是保障系统安全的重要措施。建议每周至少备份一次数据。"
+              type="info"
+              showIcon
+            />
+
+            <div>
+              <Title level={4}>
+                <DatabaseOutlined /> 数据备份
+              </Title>
+              <Button
+                type="primary"
+                icon={<CloudDownloadOutlined />}
+                onClick={handleBackup}
+                loading={backupMutation.isPending}
+              >
+                立即备份
+              </Button>
+              <Text type="secondary" style={{ marginLeft: 8 }}>
+                下载当前系统的完整数据备份
+              </Text>
+            </div>
+
+            <Divider />
+
+            <div>
+              <Title level={4}>
+                <CloudUploadOutlined /> 数据恢复
+              </Title>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleRestore}
+                style={{ display: 'none' }}
+                id="restore-file-input"
+              />
+              <Button
+                danger
+                icon={<CloudUploadOutlined />}
+                onClick={() => document.getElementById('restore-file-input')?.click()}
+                loading={restoreMutation.isPending}
+              >
+                选择备份文件恢复
+              </Button>
+              <Text type="secondary" style={{ marginLeft: 8 }}>
+                警告：恢复数据将覆盖当前所有数据，请谨慎操作！
+              </Text>
+            </div>
+          </Space>
+        </Card>
+      ),
+    },
+  ];
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <Title level={2}>
         <SettingOutlined /> 系统设置
       </Title>
 
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane tab="基本设置" key="settings">
-          <Card
-            title="系统基本设置"
-            loading={isSettingsLoading || updateSettingsMutation.isPending}
-          >
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSaveSettings}
-              initialValues={settings || undefined}
-            >
-              <Form.Item
-                label="站点名称"
-                name="site_name"
-                rules={[{ required: true, message: '请输入站点名称' }]}
-              >
-                <Input placeholder="请输入站点名称" />
-              </Form.Item>
-
-              <Form.Item label="站点描述" name="site_description">
-                <Input.TextArea rows={3} placeholder="请输入站点描述" />
-              </Form.Item>
-
-              <Form.Item label="允许用户注册" name="allow_registration" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-
-              <Form.Item
-                label="会话超时时间（分钟）"
-                name="session_timeout"
-                rules={[{ required: true, message: '请输入会话超时时间' }]}
-              >
-                <Input type="number" placeholder="请输入会话超时时间" />
-              </Form.Item>
-
-              <Divider titlePlacement="start">密码策略</Divider>
-
-              <Form.Item
-                label={['password_policy', 'min_length']}
-                name={['password_policy', 'min_length']}
-                rules={[{ required: true, message: '请输入最小密码长度' }]}
-              >
-                <Input type="number" placeholder="最小密码长度" />
-              </Form.Item>
-
-              <Form.Item
-                label={['password_policy', 'require_uppercase']}
-                name={['password_policy', 'require_uppercase']}
-                valuePropName="checked"
-              >
-                <Switch /> 要求大写字母
-              </Form.Item>
-
-              <Form.Item
-                label={['password_policy', 'require_lowercase']}
-                name={['password_policy', 'require_lowercase']}
-                valuePropName="checked"
-              >
-                <Switch /> 要求小写字母
-              </Form.Item>
-
-              <Form.Item
-                label={['password_policy', 'require_numbers']}
-                name={['password_policy', 'require_numbers']}
-                valuePropName="checked"
-              >
-                <Switch /> 要求数字
-              </Form.Item>
-
-              <Form.Item
-                label={['password_policy', 'require_special_chars']}
-                name={['password_policy', 'require_special_chars']}
-                valuePropName="checked"
-              >
-                <Switch /> 要求特殊字符
-              </Form.Item>
-
-              <Form.Item>
-                <Button type="primary" htmlType="submit" loading={updateSettingsMutation.isPending}>
-                  保存设置
-                </Button>
-              </Form.Item>
-            </Form>
-          </Card>
-        </TabPane>
-
-        <TabPane tab="系统信息" key="info">
-          <Card title="系统信息" loading={isInfoLoading}>
-            {systemInfo ? (
-              <div>
-                <Space orientation="vertical" style={{ width: '100%' }}>
-                  <div>
-                    <strong>版本号：</strong>
-                    {systemInfo.version}
-                  </div>
-                  <div>
-                    <strong>构建时间：</strong>
-                    {systemInfo.build_time}
-                  </div>
-                  <div>
-                    <strong>数据库状态：</strong>
-                    <Text type={systemInfo.database_status === 'connected' ? 'success' : 'danger'}>
-                      {systemInfo.database_status === 'connected' ? '已连接' : '未连接'}
-                    </Text>
-                  </div>
-                  <div>
-                    <strong>API版本：</strong>
-                    {systemInfo.api_version}
-                  </div>
-                  <div>
-                    <strong>运行环境：</strong>
-                    {systemInfo.environment}
-                  </div>
-                </Space>
-              </div>
-            ) : (
-              <Alert
-                title="无法获取系统信息"
-                description="请检查服务器连接状态"
-                type="warning"
-                showIcon
-              />
-            )}
-          </Card>
-        </TabPane>
-
-        <TabPane tab="数据备份" key="backup">
-          <Card title="数据备份与恢复">
-            <Space orientation="vertical" style={{ width: '100%' }}>
-              <Alert
-                title="备份说明"
-                description="定期备份数据是保障系统安全的重要措施。建议每周至少备份一次数据。"
-                type="info"
-                showIcon
-              />
-
-              <div>
-                <Title level={4}>
-                  <DatabaseOutlined /> 数据备份
-                </Title>
-                <Button
-                  type="primary"
-                  icon={<CloudDownloadOutlined />}
-                  onClick={handleBackup}
-                  loading={backupMutation.isPending}
-                >
-                  立即备份
-                </Button>
-                <Text type="secondary" style={{ marginLeft: 8 }}>
-                  下载当前系统的完整数据备份
-                </Text>
-              </div>
-
-              <Divider />
-
-              <div>
-                <Title level={4}>
-                  <CloudUploadOutlined /> 数据恢复
-                </Title>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleRestore}
-                  style={{ display: 'none' }}
-                  id="restore-file-input"
-                />
-                <Button
-                  danger
-                  icon={<CloudUploadOutlined />}
-                  onClick={() => document.getElementById('restore-file-input')?.click()}
-                  loading={restoreMutation.isPending}
-                >
-                  选择备份文件恢复
-                </Button>
-                <Text type="secondary" style={{ marginLeft: 8 }}>
-                  警告：恢复数据将覆盖当前所有数据，请谨慎操作！
-                </Text>
-              </div>
-            </Space>
-          </Card>
-        </TabPane>
-      </Tabs>
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
     </div>
   );
 };

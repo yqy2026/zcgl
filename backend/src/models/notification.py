@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
@@ -79,13 +79,13 @@ class Notification(Base):
     extra_data = Column(Text, comment="额外数据（JSON格式）")
 
     created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at = Column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -96,7 +96,7 @@ class Notification(Base):
         """标记通知为已读"""
         if not cast(bool, self.is_read):
             object.__setattr__(self, "is_read", True)
-            object.__setattr__(self, "read_at", datetime.now(UTC))
+            object.__setattr__(self, "read_at", datetime.utcnow())
 
     def mark_as_unread(self) -> None:
         """标记通知为未读"""

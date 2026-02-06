@@ -166,6 +166,10 @@ class EncryptionKeyManager:
         """获取当前密钥版本"""
         return self.version
 
+    def get_versions(self) -> list[int]:
+        """获取所有可用密钥版本（升序）"""
+        return sorted(self._keys.keys())
+
 
 # ============================================================================
 # 字段加密器

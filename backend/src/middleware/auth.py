@@ -26,7 +26,7 @@ from ..core.environment import is_production
 from ..core.exception_handler import bad_request, forbidden, unauthorized
 from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
-from ..models.auth import User, UserRole
+from ..models.auth import User
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
@@ -198,15 +198,14 @@ def _validate_jwt_token(token: str) -> TokenData:
 
         user_id: str | None = payload.get("sub")
         username: str | None = payload.get("username")
-        role: str | None = payload.get("role")
         exp: int | None = payload.get("exp")
         iat: int | None = payload.get("iat")
         jti: str | None = payload.get("jti")  # JWT ID for token tracking
 
         # 验证必需字段
-        if user_id is None or username is None or role is None:
+        if user_id is None or username is None:
             logger.warning(
-                f"JWT token missing required fields: sub={user_id}, username={username}, role={role}"
+                f"JWT token missing required fields: sub={user_id}, username={username}"
             )
             raise credentials_exception
 
@@ -225,30 +224,11 @@ def _validate_jwt_token(token: str) -> TokenData:
             logger.warning(f"JWT token {jti} is blacklisted")
             raise unauthorized("Token已失效")
 
-        # Handle both string and enum role types
-        role_enum = role
-        if isinstance(role, str):
-            try:
-                role_enum = UserRole(role)
-            except ValueError:
-                logger.warning(f"Invalid role value '{role}', defaulting to USER")
-                role_enum = UserRole.USER  # Default fallback
-        elif isinstance(role, UserRole):
-            # Already an enum, use as-is
-            pass
-        else:
-            # Unknown type, default to USER
-            logger.warning(
-                f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER"
-            )
-            role_enum = UserRole.USER
-
         # 使用标准的TokenData Pydantic模型
         try:
             token_data = TokenData(
                 sub=user_id,
                 username=username,
-                role=role_enum,
                 exp=payload.get("exp") if payload else None,
             )
         except Exception as e:
@@ -266,12 +246,6 @@ def _validate_jwt_token(token: str) -> TokenData:
 
     return token_data
 
-
-def safe_role_compare(role_value: Any, target_role: Any) -> bool:
-    """安全地比较角色值，支持字符串和枚举类型"""
-    if isinstance(role_value, str):
-        return bool(role_value == target_role.value)
-    return bool(role_value == target_role)
 
 
 async def get_current_user(
@@ -382,9 +356,13 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
     return current_user
 
 
-def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
+async def require_admin(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> User:
     """要求管理员权限"""
-    if not safe_role_compare(current_user.role, UserRole.ADMIN):
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id):
         raise forbidden("需要管理员权限")
     return current_user
 
@@ -418,30 +396,27 @@ class PermissionChecker:
     def __init__(self, required_permissions: list[str]):
         self.required_permissions = required_permissions
 
-    def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
+    async def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_async_db),
+    ) -> User:
         """检查用户权限"""
-        if not self._has_permission(current_user):
+        if not await self._has_permission(current_user, db):
             raise forbidden("权限不足")
         return current_user
 
-    def _has_permission(self, user: User) -> bool:
+    async def _has_permission(self, user: User, db: AsyncSession) -> bool:
         """检查用户是否有所需权限"""
-        # 管理员拥有所有权限
-        if safe_role_compare(user.role, UserRole.ADMIN):
-            return True
-
-        # 这里可以扩展为更复杂的权限检查逻辑
-        # 例如：检查用户角色对应的权限列表
-        user_permissions = self._get_user_permissions(user)
-        return any(perm in user_permissions for perm in self.required_permissions)
-
-    def _get_user_permissions(self, user: User) -> list[str]:
-        """获取用户权限列表"""
-        # 这里可以根据用户角色返回对应的权限列表
-        # 目前简化处理，管理员以外的用户只有基础权限
-        if user.role == UserRole.USER:
-            return ["read", "profile"]
-        return []
+        rbac_service = RBACService(db)
+        for permission_code in self.required_permissions:
+            if ":" in permission_code:
+                resource, action = permission_code.split(":", 1)
+            else:
+                resource, action = "system", permission_code
+            if await rbac_service.check_user_permission(user.id, resource, action):
+                return True
+        return False
 
 
 def require_permissions(required_permissions: list[str]) -> PermissionChecker:
@@ -455,16 +430,22 @@ class OrganizationPermissionChecker:
     def __init__(self, organization_id: str | None = None):
         self.organization_id = organization_id
 
-    def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
+    async def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_async_db),
+    ) -> User:
         """检查用户是否有访问指定组织的权限"""
-        if not self._can_access_organization(current_user):
+        if not await self._can_access_organization(current_user, db):
             raise forbidden("无权访问该组织的数据")
         return current_user
 
-    def _can_access_organization(self, user: User) -> bool:
+    async def _can_access_organization(
+        self, user: User, db: AsyncSession
+    ) -> bool:
         """检查用户是否可以访问组织"""
-        # 管理员可以访问所有组织
-        if safe_role_compare(user.role, UserRole.ADMIN):
+        rbac_service = RBACService(db)
+        if await rbac_service.is_admin(user.id):
             return True
 
         # 用户可以访问自己的默认组织
@@ -628,12 +609,11 @@ class RBACPermissionChecker:
         if current_user is None:
             raise unauthorized("需要认证")
 
-        # 管理员拥有所有权限
-        if safe_role_compare(current_user.role, UserRole.ADMIN):
+        rbac_service = RBACService(db)
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 使用RBAC服务检查权限
-        rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
             resource=self.resource,
             action=self.action,
@@ -672,8 +652,8 @@ class ResourcePermissionChecker:
         resource_id: str | None = None,
     ) -> User:
         """检查用户资源权限"""
-        # 管理员拥有所有权限
-        if safe_role_compare(current_user.role, UserRole.ADMIN):
+        rbac_service = RBACService(db)
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 检查是否有对应的资源权限
@@ -726,12 +706,11 @@ class RoleBasedAccessChecker:
         db: AsyncSession = Depends(get_async_db),
     ) -> User:
         """检查用户角色"""
-        # 管理员拥有所有权限
-        if safe_role_compare(current_user.role, UserRole.ADMIN):
+        rbac_service = RBACService(db)
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 获取用户角色
-        rbac_service = RBACService(db)
         user_roles = await rbac_service.get_user_roles(current_user.id)
 
         user_role_names = [role.name for role in user_roles]
@@ -756,12 +735,12 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
     - 管理员可以编辑任何合同
     - 其他角色需要通过RBAC服务检查特定权限
     """
-    if safe_role_compare(user.role, UserRole.ADMIN):
+    rbac_service = RBACService(db)
+    if await rbac_service.is_admin(user.id):
         return True
 
     # 使用RBAC服务进行细粒度权限检查
     try:
-        rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
             resource="rent_contract",
             action="edit",
@@ -781,10 +760,9 @@ async def get_user_rbac_permissions(
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """获取用户RBAC权限信息"""
-    if current_user.role == UserRole.ADMIN:
-        return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
-
     rbac_service = RBACService(db)
+    if await rbac_service.is_admin(current_user.id):
+        return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
     permissions_summary = await rbac_service.get_user_permissions_summary(
         current_user.id
     )

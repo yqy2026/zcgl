@@ -10,9 +10,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.api.v1.documents import pdf_batch_routes
-from src.database import get_db
-from src.main import app
-from src.models.pdf_import_session import SessionStatus
 from src.services.document.processing_tracker import BatchStatusTracker
 
 # ============================================================================
@@ -112,7 +109,7 @@ class TestBatchUploadEndpoint:
         )
 
         assert response.status_code == 400
-        assert "文件数量超过限制" in response.json()["error"]["message"]
+        assert "文件数量超过限制" in response.json()["message"]
 
     async def test_batch_upload_no_valid_files(self, test_client):
         """测试没有有效文件"""
@@ -173,33 +170,9 @@ class TestBatchStatusEndpoint:
     ):
         """测试获取批处理状态成功"""
         batch_tracker.create_batch("batch-abc123", total=3, user_id=1)
-
-        # Mock database query
-        app.dependency_overrides[get_db] = lambda: Mock(
-            query=Mock(
-                return_value=Mock(
-                    filter=Mock(
-                        return_value=Mock(
-                            first=Mock(
-                                return_value=Mock(
-                                    file_name="contract_1.pdf",
-                                    status=SessionStatus.COMPLETED,
-                                    progress_percentage=100.0,
-                                    error_message=None,
-                                )
-                            )
-                        )
-                    )
-                )
-            )
+        response = await test_client.get(
+            "/api/v1/pdf-import/batch/status/batch-abc123"
         )
-
-        try:
-            response = await test_client.get(
-                "/api/v1/pdf-import/batch/status/batch-abc123"
-            )
-        finally:
-            app.dependency_overrides.clear()
 
         assert response.status_code == 200
         data = response.json()
@@ -317,29 +290,9 @@ class TestBatchCancelEndpoint:
     ):
         """测试取消批处理成功"""
         batch_tracker.create_batch("batch-processing", total=2, user_id=1)
-
-        # Mock PDFImportService
-        mock_service = Mock()
-        mock_service.cancel_processing = AsyncMock(return_value={"success": True})
-
-        # Mock database
-        mock_session = Mock()
-        mock_session.is_processing = True
-        mock_query = Mock()
-        mock_query.filter = Mock(
-            return_value=Mock(first=Mock(return_value=mock_session))
+        response = await test_client.post(
+            "/api/v1/pdf-import/batch/cancel/batch-processing"
         )
-
-        app.dependency_overrides[get_db] = lambda: Mock(
-            query=Mock(return_value=mock_query)
-        )
-
-        try:
-            response = await test_client.post(
-                "/api/v1/pdf-import/batch/cancel/batch-processing"
-            )
-        finally:
-            app.dependency_overrides.clear()
 
         assert response.status_code == 200
         data = response.json()
@@ -438,28 +391,14 @@ class TestBatchAPIIntegrationScenarios:
         batch_tracker.set_status("batch-1", "processing")
         batch_tracker.create_batch("batch-2", total=2, user_id=1)
         batch_tracker.set_status("batch-2", "processing")
+        files = [
+            ("files", ("test.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))
+        ]
 
-        app.dependency_overrides[get_db] = lambda: Mock(
-            query=Mock(
-                return_value=Mock(
-                    filter=Mock(return_value=Mock(first=Mock(return_value=None)))
-                )
-            ),
-            add=Mock(),
-            commit=Mock(),
+        response = await test_client.post(
+            "/api/v1/pdf-import/batch/upload",
+            files=files,
+            data={"organization_id": 1},
         )
-
-        try:
-            files = [
-                ("files", ("test.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))
-            ]
-
-            response = await test_client.post(
-                "/api/v1/pdf-import/batch/upload",
-                files=files,
-                data={"organization_id": 1},
-            )
-        finally:
-            app.dependency_overrides.clear()
 
         assert response.status_code == 503

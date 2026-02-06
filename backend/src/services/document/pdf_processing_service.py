@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import anyio
+
 logger = logging.getLogger(__name__)
 
 # Optional PyMuPDF dependency
@@ -48,23 +50,28 @@ class PDFProcessingService:
         page_limit = max_pages if max_pages is not None else self.max_pages
 
         try:
-            with fitz.open(str(path)) as doc:
-                page_count = len(doc)
-                if page_limit is None:
-                    page_limit = page_count
-                page_limit = min(page_count, page_limit)
+            def _extract() -> tuple[str, int, int]:
+                with fitz.open(str(path)) as doc:
+                    page_count = len(doc)
+                    effective_limit = page_limit
+                    if effective_limit is None:
+                        effective_limit = page_count
+                    effective_limit = min(page_count, effective_limit)
 
-                texts: list[str] = []
-                for page_index in range(page_limit):
-                    page = doc[page_index]
-                    texts.append(page.get_text("text"))
+                    texts: list[str] = []
+                    for page_index in range(effective_limit):
+                        page = doc[page_index]
+                        texts.append(page.get_text("text"))
+                    
+                    return "\n".join(texts).strip(), page_count, effective_limit
 
-            text = "\n".join(texts).strip()
+            text, page_count, extracted_pages = await anyio.to_thread.run_sync(_extract)
+
             return {
                 "success": True,
                 "text": text,
                 "page_count": page_count,
-                "extracted_pages": page_limit,
+                "extracted_pages": extracted_pages,
             }
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("PDF text extraction failed: %s", exc, exc_info=True)

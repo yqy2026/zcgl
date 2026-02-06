@@ -9,25 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.models.auth import User, UserRole
-
-
-class TestUserRoleEnum:
-    """Test UserRole enumeration"""
-
-    def test_admin_role(self):
-        """Test ADMIN role value"""
-        assert UserRole.ADMIN == "admin"
-
-    def test_user_role(self):
-        """Test USER role value"""
-        assert UserRole.USER == "user"
-
-    def test_user_role_is_enum(self):
-        """Test UserRole is an Enum"""
-        from enum import Enum
-
-        assert isinstance(UserRole.USER, Enum)
+from src.models.auth import User
 
 
 class TestUserCreation:
@@ -42,7 +24,6 @@ class TestUserCreation:
             email="test@example.com",
             full_name="Test User",
             password_hash="hashed_password_123",
-            role=UserRole.USER.value,  # Explicitly set default
             is_active=True,  # Explicitly set default
             is_locked=False,  # Explicitly set default
         )
@@ -59,10 +40,6 @@ class TestUserCreation:
         # In unit tests without DB, we set it manually in fixture
         assert minimal_user.id is not None
         assert isinstance(minimal_user.id, str)
-
-    def test_default_role(self, minimal_user):
-        """Test default role is USER"""
-        assert minimal_user.role == UserRole.USER.value
 
     def test_default_is_active(self, minimal_user):
         """Test default is_active is True"""
@@ -119,7 +96,6 @@ class TestUserLoginTracking:
             email="login@example.com",
             full_name="Login User",
             password_hash="hash",
-            role=UserRole.USER.value,
             failed_login_attempts=0,  # Default value
             password_last_changed=now,  # Default value
             last_login_at=None,  # Initially None
@@ -214,7 +190,6 @@ class TestUserTimestamps:
             email="time@example.com",
             full_name="Time User",
             password_hash="hash",
-            role=UserRole.USER.value,
             created_at=now,
             updated_at=now,
             password_last_changed=now,
@@ -314,33 +289,6 @@ class TestUserValidation:
             password_hash="hash",
         )
         assert user.email == "invalid-email"
-
-
-class TestUserRoles:
-    """Test user role management"""
-
-    def test_admin_role(self):
-        """Test admin role assignment"""
-        user = User(
-            username="adminuser",
-            email="admin@example.com",
-            full_name="Admin User",
-            password_hash="hash",
-            role=UserRole.ADMIN.value,
-        )
-        assert user.role == UserRole.ADMIN.value
-
-    def test_default_role_is_user(self):
-        """Test default role is user"""
-        user = User(
-            id=str(uuid.uuid4()),
-            username="normaluser",
-            email="normal@example.com",
-            full_name="Normal User",
-            password_hash="hash",
-            role=UserRole.USER.value,  # Explicitly set default for unit test
-        )
-        assert user.role == UserRole.USER.value
 
 
 class TestUserAuditFields:

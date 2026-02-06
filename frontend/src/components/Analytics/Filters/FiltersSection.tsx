@@ -1,5 +1,7 @@
 import React from 'react';
 import { Row, Col, Typography, Select, Input } from 'antd';
+import { useQuery } from '@tanstack/react-query';
+import { ownershipService } from '@/services/ownershipService';
 import { useAnalyticsFiltersContext } from './FiltersContext';
 
 const { Text } = Typography;
@@ -10,6 +12,14 @@ const { Option } = Select;
  */
 const FiltersSection: React.FC = () => {
   const { localFilters, handleFilterChange, loading, showAdvanced } = useAnalyticsFiltersContext();
+  const {
+    data: ownershipOptions = [],
+    isLoading: ownershipLoading,
+  } = useQuery({
+    queryKey: ['ownership-select-options'],
+    queryFn: () => ownershipService.getOwnershipSelectOptions(),
+    staleTime: 30 * 60 * 1000,
+  });
 
   if (!showAdvanced) {
     return null;
@@ -125,16 +135,11 @@ const FiltersSection: React.FC = () => {
           style={{ width: '100%', marginTop: '8px' }}
           placeholder="请选择权属主体"
           allowClear
-          value={localFilters.ownership_entity}
-          onChange={value => handleFilterChange('ownership_entity', value)}
-          loading={loading}
+          value={localFilters.ownership_id}
+          onChange={value => handleFilterChange('ownership_id', value)}
+          loading={loading || ownershipLoading}
+          options={ownershipOptions}
         >
-          <Option value="政府">政府</Option>
-          <Option value="企业">企业</Option>
-          <Option value="事业单位">事业单位</Option>
-          <Option value="社会组织">社会组织</Option>
-          <Option value="个人">个人</Option>
-          <Option value="其他">其他</Option>
         </Select>
       </Col>
     </Row>

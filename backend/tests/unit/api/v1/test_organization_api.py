@@ -57,7 +57,6 @@ def mock_current_user():
     user.id = "test-user-id"
     user.username = "testuser"
     user.is_active = True
-    user.role = "admin"
     return user
 
 

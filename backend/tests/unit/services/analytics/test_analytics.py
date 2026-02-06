@@ -15,7 +15,7 @@ Coverage:
 - Performance with large datasets
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,6 +25,18 @@ from src.services.analytics.area_service import AreaCalculationError, AreaServic
 # =============================================================================
 # Fixtures
 # =============================================================================
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.execute = AsyncMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.delete = MagicMock()
+    db.flush = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -187,21 +199,23 @@ class TestAnalyticsServiceCacheManagement:
         assert key.startswith("analytics:")
         assert len(key.split(":")) == 2
 
-    def test_clear_cache_success(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_clear_cache_success(self, analytics_service):
         """Test successful cache clearing"""
         analytics_service.cache.clear = MagicMock(return_value=True)
 
-        result = analytics_service.clear_cache()
+        result = await analytics_service.clear_cache()
 
         assert result["status"] == "success"
         assert result["cleared_keys"] == 1
         assert "timestamp" in result
 
-    def test_clear_cache_failure(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_clear_cache_failure(self, analytics_service):
         """Test cache clearing with exception"""
         analytics_service.cache.clear = MagicMock(side_effect=Exception("Cache error"))
 
-        result = analytics_service.clear_cache()
+        result = await analytics_service.clear_cache()
 
         assert result["status"] == "failed"
         assert result["cleared_keys"] == 0
@@ -209,23 +223,25 @@ class TestAnalyticsServiceCacheManagement:
         assert "Cache error" in result["error"]
         assert "timestamp" in result
 
-    def test_get_cache_stats(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_get_cache_stats(self, analytics_service):
         """Test getting cache statistics"""
         mock_stats = {"hits": 100, "misses": 10, "keys": 5}
         analytics_service.cache.get_stats = MagicMock(return_value=mock_stats)
 
-        result = analytics_service.get_cache_stats()
+        result = await analytics_service.get_cache_stats()
 
         assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == mock_stats
         assert "timestamp" in result
 
-    def test_get_cache_stats_no_stats_method(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_get_cache_stats_no_stats_method(self, analytics_service):
         """Test cache stats when get_stats method returns empty dict"""
         # Mock cache without get_stats returning data
         analytics_service.cache.get_stats = MagicMock(return_value={})
 
-        result = analytics_service.get_cache_stats()
+        result = await analytics_service.get_cache_stats()
 
         assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == {}
@@ -234,7 +250,8 @@ class TestAnalyticsServiceCacheManagement:
 class TestAnalyticsServiceComprehensiveAnalytics:
     """Tests for comprehensive analytics calculation"""
 
-    def test_get_comprehensive_analytics_cache_hit(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_cache_hit(self, analytics_service):
         """Test analytics retrieval from cache"""
         mock_cache_data = {
             "total_assets": 100,
@@ -242,7 +259,7 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         }
         analytics_service.cache.get = MagicMock(return_value=mock_cache_data)
 
-        result = analytics_service.get_comprehensive_analytics(
+        result = await analytics_service.get_comprehensive_analytics(
             filters={}, should_use_cache=True
         )
 
@@ -250,7 +267,8 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
     @patch("src.services.analytics.area_service.AreaService")
     @patch("src.services.analytics.occupancy_service.OccupancyService")
-    def test_get_comprehensive_analytics_cache_miss(
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_cache_miss(
         self, mock_occupancy_cls, mock_area_cls, analytics_service
     ):
         """Test analytics calculation when cache miss"""
@@ -258,28 +276,31 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
         # Mock AreaService
         mock_area_service = MagicMock()
-        mock_area_service.calculate_summary_with_aggregation.return_value = {
+        mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+            return_value={
             "total_assets": 10,
             "total_land_area": 5000.0,
-        }
+            }
+        )
         mock_area_cls.return_value = mock_area_service
 
         # Mock OccupancyService
         mock_occupancy_service = MagicMock()
-        mock_occupancy_service.calculate_with_aggregation.return_value = {
-            "overall_rate": 80.0,
-        }
+        mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+            return_value={"overall_rate": 80.0}
+        )
         mock_occupancy_cls.return_value = mock_occupancy_service
 
-        # Mock database query
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.get_comprehensive_analytics(
-            filters={}, should_use_cache=True
-        )
+            result = await analytics_service.get_comprehensive_analytics(
+                filters={}, should_use_cache=True
+            )
 
         assert "total_assets" in result
         assert "timestamp" in result
@@ -288,84 +309,94 @@ class TestAnalyticsServiceComprehensiveAnalytics:
 
     @patch("src.services.analytics.area_service.AreaService")
     @patch("src.services.analytics.occupancy_service.OccupancyService")
-    def test_get_comprehensive_analytics_with_filters(
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_with_filters(
         self, mock_occupancy_cls, mock_area_cls, analytics_service
     ):
         """Test analytics with filters"""
         analytics_service.cache.get = MagicMock(return_value=None)
 
         mock_area_service = MagicMock()
-        mock_area_service.calculate_summary_with_aggregation.return_value = {
-            "total_assets": 5,
-        }
+        mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+            return_value={"total_assets": 5}
+        )
         mock_area_cls.return_value = mock_area_service
 
         mock_occupancy_service = MagicMock()
-        mock_occupancy_service.calculate_with_aggregation.return_value = {
-            "overall_rate": 75.0,
-        }
+        mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+            return_value={"overall_rate": 75.0}
+        )
         mock_occupancy_cls.return_value = mock_occupancy_service
 
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        filters = {"include_deleted": False, "date_from": "2024-01-01"}
-        result = analytics_service.get_comprehensive_analytics(
-            filters=filters, should_use_cache=False
-        )
+            filters = {"include_deleted": False, "date_from": "2024-01-01"}
+            result = await analytics_service.get_comprehensive_analytics(
+                filters=filters, should_use_cache=False
+            )
 
         assert "total_assets" in result
 
-    def test_get_comprehensive_analytics_with_deleted_assets(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_with_deleted_assets(self, analytics_service):
         """Test analytics including deleted assets"""
         analytics_service.cache.get = MagicMock(return_value=None)
 
         with patch("src.services.analytics.area_service.AreaService") as mock_area_cls:
             mock_area_service = MagicMock()
-            mock_area_service.calculate_summary_with_aggregation.return_value = {
-                "total_assets": 15,
-            }
+            mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 15}
+            )
             mock_area_cls.return_value = mock_area_service
 
             with patch(
                 "src.services.analytics.occupancy_service.OccupancyService"
             ) as mock_occupancy_cls:
                 mock_occupancy_service = MagicMock()
-                mock_occupancy_service.calculate_with_aggregation.return_value = {
-                    "overall_rate": 70.0,
-                }
+                mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+                    return_value={"overall_rate": 70.0}
+                )
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
-                # Mock query to return all assets (no filtering)
                 mock_assets = [
                     MagicMock(data_status="正常"),
                     MagicMock(data_status="已删除"),
                 ]
-                analytics_service.db.query.return_value.all.return_value = mock_assets
+                with patch(
+                    "src.crud.asset.asset_crud.get_multi_with_search_async",
+                    new_callable=AsyncMock,
+                ) as mock_get_assets:
+                    mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-                filters = {"include_deleted": True}
-                result = analytics_service.get_comprehensive_analytics(
-                    filters=filters, should_use_cache=False
-                )
+                    filters = {"include_deleted": True}
+                    result = await analytics_service.get_comprehensive_analytics(
+                        filters=filters, should_use_cache=False
+                    )
 
-                assert result["total_assets"] == 2
+                    assert result["total_assets"] == 2
 
 
 class TestAnalyticsServiceTrendCalculation:
     """Tests for trend calculation"""
 
-    def test_calculate_occupancy_trend_monthly(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_occupancy_trend_monthly(self, analytics_service):
         """Test monthly occupancy trend calculation"""
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="occupancy", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="occupancy", time_dimension="monthly", filters={}
+            )
 
         assert isinstance(result, list)
         assert len(result) > 0
@@ -373,16 +404,19 @@ class TestAnalyticsServiceTrendCalculation:
         assert "occupancy_rate" in result[0]
         assert "rented_area" in result[0]
 
-    def test_calculate_area_trend_monthly(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_area_trend_monthly(self, analytics_service):
         """Test monthly area trend calculation"""
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="area", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="area", time_dimension="monthly", filters={}
+            )
 
         assert isinstance(result, list)
         assert len(result) > 0
@@ -390,30 +424,36 @@ class TestAnalyticsServiceTrendCalculation:
         assert "total_land_area" in result[0]
         assert "total_rentable_area" in result[0]
 
-    def test_calculate_trend_unknown_type(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_trend_unknown_type(self, analytics_service):
         """Test trend calculation with unknown type"""
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="unknown_type", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="unknown_type", time_dimension="monthly", filters={}
+            )
 
         assert result == []
 
-    def test_calculate_trend_with_filters(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_trend_with_filters(self, analytics_service):
         """Test trend calculation with filters"""
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        filters = {"date_from": "2024-01-01"}
-        result = analytics_service.calculate_trend(
-            trend_type="occupancy", time_dimension="monthly", filters=filters
-        )
+            filters = {"date_from": "2024-01-01"}
+            result = await analytics_service.calculate_trend(
+                trend_type="occupancy", time_dimension="monthly", filters=filters
+            )
 
         assert isinstance(result, list)
 
@@ -421,20 +461,23 @@ class TestAnalyticsServiceTrendCalculation:
 class TestAnalyticsServiceDistributionCalculation:
     """Tests for distribution calculation"""
 
-    def test_calculate_distribution_by_property_nature(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_distribution_by_property_nature(self, analytics_service):
         """Test distribution by property nature"""
         mock_assets = [
             MagicMock(property_nature="商业", rentable_area=1000, data_status="正常"),
             MagicMock(property_nature="住宅", rentable_area=500, data_status="正常"),
             MagicMock(property_nature="商业", rentable_area=800, data_status="正常"),
         ]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_distribution(
-            distribution_type="property_nature", filters={}
-        )
+            result = await analytics_service.calculate_distribution(
+                distribution_type="property_nature", filters={}
+            )
 
         assert result["distribution_type"] == "property_nature"
         assert "data" in result
@@ -443,38 +486,44 @@ class TestAnalyticsServiceDistributionCalculation:
         assert result["data"]["商业"]["area"] == 1800
         assert result["data"]["住宅"]["count"] == 1
 
-    def test_calculate_distribution_by_business_category(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_distribution_by_business_category(self, analytics_service):
         """Test distribution by business category"""
         mock_assets = [
             MagicMock(business_category="零售", rentable_area=1000, data_status="正常"),
             MagicMock(business_category="办公", rentable_area=500, data_status="正常"),
             MagicMock(business_category="零售", rentable_area=800, data_status="正常"),
         ]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_distribution(
-            distribution_type="business_category", filters={}
-        )
+            result = await analytics_service.calculate_distribution(
+                distribution_type="business_category", filters={}
+            )
 
         assert result["distribution_type"] == "business_category"
         assert result["data"]["零售"]["count"] == 2
         assert result["data"]["零售"]["area"] == 1800
 
-    def test_calculate_distribution_with_null_values(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_distribution_with_null_values(self, analytics_service):
         """Test distribution with null values"""
         mock_assets = [
             MagicMock(property_nature="商业", rentable_area=1000, data_status="正常"),
             MagicMock(property_nature=None, rentable_area=500, data_status="正常"),
         ]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_distribution(
-            distribution_type="property_nature", filters={}
-        )
+            result = await analytics_service.calculate_distribution(
+                distribution_type="property_nature", filters={}
+            )
 
         # Should handle null values by converting to string "None"
         assert "data" in result
@@ -497,7 +546,8 @@ class TestAreaServiceInitialization:
 class TestAreaServiceAggregationCalculation:
     """Tests for area aggregation calculation"""
 
-    def test_calculate_summary_with_aggregation_basic(self, area_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_basic(self, area_service, mock_db):
         """Test basic area aggregation"""
         mock_result = MagicMock()
         mock_result.total_assets = 10
@@ -507,11 +557,11 @@ class TestAreaServiceAggregationCalculation:
         mock_result.total_non_commercial_area = 500.0
         mock_result.assets_with_area_data = 8
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         assert result["total_assets"] == 10
         assert result["total_land_area"] == 5000.0
@@ -523,7 +573,8 @@ class TestAreaServiceAggregationCalculation:
         assert result["overall_occupancy_rate"] == 80.0
         assert result["calculation_method"] == "aggregation"
 
-    def test_calculate_summary_with_aggregation_with_filters(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_with_filters(
         self, area_service, mock_db
     ):
         """Test aggregation with filters"""
@@ -535,19 +586,17 @@ class TestAreaServiceAggregationCalculation:
         mock_result.total_non_commercial_area = 250.0
         mock_result.assets_with_area_data = 4
 
-        mock_query = MagicMock()
-        mock_filtered = MagicMock()
-        mock_query.filter.return_value = mock_filtered
-        mock_filtered.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
         filters = {"data_status": "正常"}
-        result = area_service.calculate_summary_with_aggregation(filters=filters)
+        result = await area_service.calculate_summary_with_aggregation(filters=filters)
 
         assert result["total_assets"] == 5
-        mock_query.filter.assert_called_once()
 
-    def test_calculate_summary_with_aggregation_zero_values(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_zero_values(
         self, area_service, mock_db
     ):
         """Test aggregation with all zero values"""
@@ -559,31 +608,33 @@ class TestAreaServiceAggregationCalculation:
         mock_result.total_non_commercial_area = 0.0
         mock_result.assets_with_area_data = 0
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         assert result["total_assets"] == 0
         assert result["overall_occupancy_rate"] == 0.0
         assert result["total_unrented_area"] == 0.0
 
-    def test_calculate_summary_with_aggregation_null_result(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_null_result(
         self, area_service, mock_db
     ):
         """Test aggregation when result is None"""
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = None
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         assert result["total_assets"] == 0
         assert result["overall_occupancy_rate"] == 0.0
         assert result["calculation_method"] == "aggregation"
 
-    def test_calculate_summary_with_aggregation_occupancy_rate_division_by_zero(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_occupancy_rate_division_by_zero(
         self, area_service, mock_db
     ):
         """Test occupancy rate calculation handles division by zero"""
@@ -595,15 +646,16 @@ class TestAreaServiceAggregationCalculation:
         mock_result.total_non_commercial_area = 500.0
         mock_result.assets_with_area_data = 8
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         assert result["overall_occupancy_rate"] == 0.0
 
-    def test_calculate_summary_with_aggregation_unrented_area_calculation(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_unrented_area_calculation(
         self, area_service, mock_db
     ):
         """Test unrented area is calculated correctly"""
@@ -615,33 +667,33 @@ class TestAreaServiceAggregationCalculation:
         mock_result.total_non_commercial_area = 500.0
         mock_result.assets_with_area_area = 8
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         # Unrented should be max(0, rentable - rented) = max(0, 3000 - 3500) = 0
         assert result["total_unrented_area"] == 0.0
 
-    def test_calculate_summary_with_aggregation_fallback_to_memory(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_with_aggregation_fallback_to_memory(
         self, area_service, mock_db
     ):
         """Test fallback to memory calculation on exception"""
-        mock_query = MagicMock()
-        mock_query.with_entities.side_effect = Exception("Database error")
-        mock_db.query.return_value = mock_query
+        mock_db.execute.side_effect = Exception("Database error")
 
         with patch.object(
             area_service,
             "_calculate_summary_in_memory",
+            new_callable=AsyncMock,
             return_value={
                 "total_assets": 10,
                 "overall_occupancy_rate": 75.0,
                 "calculation_method": "memory",
             },
         ) as mock_memory:
-            result = area_service.calculate_summary_with_aggregation(filters=None)
+            result = await area_service.calculate_summary_with_aggregation(filters=None)
 
             mock_memory.assert_called_once_with(None)
             assert result["overall_occupancy_rate"] == 75.0
@@ -652,7 +704,8 @@ class TestAreaServiceMemoryCalculation:
     """Tests for memory-based calculation"""
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_basic(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_basic(self, mock_crud, area_service):
         """Test basic memory calculation"""
         mock_assets = [
             MagicMock(
@@ -670,12 +723,14 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=30.0,
             ),
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["total_assets"] == 2
         assert result["total_land_area"] == 1000.0
@@ -687,7 +742,8 @@ class TestAreaServiceMemoryCalculation:
         assert result["overall_occupancy_rate"] == 80.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
         """Test memory calculation with partial missing data"""
         mock_assets = [
             MagicMock(
@@ -705,12 +761,14 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=30.0,
             ),
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["total_assets"] == 2
         assert result["total_land_area"] == 500.0
@@ -719,7 +777,8 @@ class TestAreaServiceMemoryCalculation:
         assert result["total_non_commercial_area"] == 30.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_all_null_values(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_all_null_values(self, mock_crud, area_service):
         """Test memory calculation with all null values"""
         mock_assets = [
             MagicMock(
@@ -730,12 +789,14 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=None,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["total_assets"] == 1
         assert result["total_land_area"] == 0.0
@@ -743,7 +804,8 @@ class TestAreaServiceMemoryCalculation:
         assert result["overall_occupancy_rate"] == 0.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_zero_rentable_area(
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_zero_rentable_area(
         self, mock_crud, area_service
     ):
         """Test memory calculation with zero rentable area"""
@@ -756,17 +818,20 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=50.0,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["overall_occupancy_rate"] == 0.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_rounding(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_rounding(self, mock_crud, area_service):
         """Test memory calculation rounds to 2 decimal places"""
         mock_assets = [
             MagicMock(
@@ -777,12 +842,14 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=50.999,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["total_land_area"] == 500.12
         assert result["total_rentable_area"] == 300.46
@@ -790,26 +857,30 @@ class TestAreaServiceMemoryCalculation:
         assert result["total_non_commercial_area"] == 51.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_pagination(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_pagination(self, mock_crud, area_service):
         """Test memory calculation handles pagination correctly"""
         # Create 1500 assets to test pagination (batch_size=1000)
         mock_assets_batch1 = [MagicMock(land_area=100.0, rentable_area=50.0)] * 1000
         mock_assets_batch2 = [MagicMock(land_area=100.0, rentable_area=50.0)] * 500
 
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets_batch1, None),
             (mock_assets_batch2, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         assert result["total_assets"] == 1500
         assert result["total_land_area"] == 150000.0
         assert result["total_rentable_area"] == 75000.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_calculate_summary_in_memory_with_filters(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_with_filters(self, mock_crud, area_service):
         """Test memory calculation with filters"""
         mock_assets = [
             MagicMock(
@@ -820,27 +891,30 @@ class TestAreaServiceMemoryCalculation:
                 non_commercial_area=50.0,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
         filters = {"data_status": "正常"}
-        result = area_service._calculate_summary_in_memory(filters=filters)
+        result = await area_service._calculate_summary_in_memory(filters=filters)
 
-        mock_crud.get_multi_with_search.assert_called_with(
+        mock_crud.get_multi_with_search_async.assert_awaited_with(
             db=area_service.db, skip=0, limit=1000, filters=filters
         )
         assert result["total_assets"] == 1
 
-    def test_calculate_summary_in_memory_error(self, area_service):
+    @pytest.mark.asyncio
+    async def test_calculate_summary_in_memory_error(self, area_service):
         """Test memory calculation raises error on exception"""
         with patch(
-            "src.services.analytics.area_service.asset_crud.get_multi_with_search",
+            "src.services.analytics.area_service.asset_crud.get_multi_with_search_async",
             side_effect=Exception("CRUD error"),
         ):
             with pytest.raises(AreaCalculationError) as excinfo:
-                area_service._calculate_summary_in_memory(filters=None)
+                await area_service._calculate_summary_in_memory(filters=None)
 
             assert "面积汇总计算失败" in str(excinfo.value)
 
@@ -848,7 +922,8 @@ class TestAreaServiceMemoryCalculation:
 class TestAreaServiceEdgeCases:
     """Tests for edge cases and error handling"""
 
-    def test_aggregation_with_negative_values(self, area_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_aggregation_with_negative_values(self, area_service, mock_db):
         """Test aggregation handles negative values (edge case)"""
         mock_result = MagicMock()
         mock_result.total_assets = 5
@@ -858,17 +933,18 @@ class TestAreaServiceEdgeCases:
         mock_result.total_non_commercial_area = 500.0
         mock_result.assets_with_area_data = 4
 
-        mock_query = MagicMock()
-        mock_query.with_entities.return_value.first.return_value = mock_result
-        mock_db.query.return_value = mock_query
+        mock_exec_result = MagicMock()
+        mock_exec_result.first.return_value = mock_result
+        mock_db.execute.return_value = mock_exec_result
 
-        result = area_service.calculate_summary_with_aggregation(filters=None)
+        result = await area_service.calculate_summary_with_aggregation(filters=None)
 
         # Unrented = max(0, 3000 - (-100)) = max(0, 3100) = 3100
         assert result["total_unrented_area"] == 3100.0
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_memory_calculation_with_negative_values(self, mock_crud, area_service):
+    @pytest.mark.asyncio
+    async def test_memory_calculation_with_negative_values(self, mock_crud, area_service):
         """Test memory calculation handles negative values"""
         mock_assets = [
             MagicMock(
@@ -879,12 +955,14 @@ class TestAreaServiceEdgeCases:
                 non_commercial_area=50.0,
             )
         ]
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (mock_assets, None),
             ([], None),
-        ]
+            ]
+        )
 
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
 
         # Should still calculate, though values may be unusual
         assert "total_rented_area" in result
@@ -900,7 +978,8 @@ class TestServiceIntegration:
 
     @patch("src.services.analytics.area_service.AreaService")
     @patch("src.services.analytics.occupancy_service.OccupancyService")
-    def test_analytics_service_integration_with_area_and_occupancy(
+    @pytest.mark.asyncio
+    async def test_analytics_service_integration_with_area_and_occupancy(
         self, mock_occupancy_cls, mock_area_cls, analytics_service
     ):
         """Test AnalyticsService integrates correctly with Area and Occupancy services"""
@@ -908,33 +987,38 @@ class TestServiceIntegration:
 
         # Mock AreaService
         mock_area_service = MagicMock()
-        mock_area_service.calculate_summary_with_aggregation.return_value = {
-            "total_assets": 100,
-            "total_land_area": 50000.0,
-            "total_rentable_area": 30000.0,
-            "total_rented_area": 24000.0,
-            "overall_occupancy_rate": 80.0,
-        }
+        mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+            return_value={
+                "total_assets": 100,
+                "total_land_area": 50000.0,
+                "total_rentable_area": 30000.0,
+                "total_rented_area": 24000.0,
+                "overall_occupancy_rate": 80.0,
+            }
+        )
         mock_area_cls.return_value = mock_area_service
 
         # Mock OccupancyService
         mock_occupancy_service = MagicMock()
-        mock_occupancy_service.calculate_with_aggregation.return_value = {
-            "overall_rate": 80.0,
-            "total_rentable_area": 30000.0,
-            "total_rented_area": 24000.0,
-        }
+        mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+            return_value={
+                "overall_rate": 80.0,
+                "total_rentable_area": 30000.0,
+                "total_rented_area": 24000.0,
+            }
+        )
         mock_occupancy_cls.return_value = mock_occupancy_service
 
-        # Mock database query
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.get_comprehensive_analytics(
-            filters={}, should_use_cache=True
-        )
+            result = await analytics_service.get_comprehensive_analytics(
+                filters={}, should_use_cache=True
+            )
 
         # Verify integration
         mock_area_service.calculate_summary_with_aggregation.assert_called_once()
@@ -942,33 +1026,38 @@ class TestServiceIntegration:
         assert result["area_summary"]["overall_occupancy_rate"] == 80.0
         assert result["occupancy_rate"]["overall_rate"] == 80.0
 
-    def test_cache_set_after_calculation(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_cache_set_after_calculation(self, analytics_service):
         """Test cache is set after calculation"""
         analytics_service.cache.get = MagicMock(return_value=None)
         analytics_service.cache.set = MagicMock()
 
         with patch("src.services.analytics.area_service.AreaService") as mock_area_cls:
             mock_area_service = MagicMock()
-            mock_area_service.calculate_summary_with_aggregation.return_value = {
-                "total_assets": 10
-            }
+            mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 10}
+            )
             mock_area_cls.return_value = mock_area_service
 
             with patch(
                 "src.services.analytics.occupancy_service.OccupancyService"
             ) as mock_occupancy_cls:
                 mock_occupancy_service = MagicMock()
-                mock_occupancy_service.calculate_with_aggregation.return_value = {
-                    "overall_rate": 80.0
-                }
+                mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+                    return_value={"overall_rate": 80.0}
+                )
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
                 mock_assets = [MagicMock(data_status="正常")]
-                analytics_service.db.query.return_value.filter.return_value.all.return_value = mock_assets
+                with patch(
+                    "src.crud.asset.asset_crud.get_multi_with_search_async",
+                    new_callable=AsyncMock,
+                ) as mock_get_assets:
+                    mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-                result = analytics_service.get_comprehensive_analytics(
-                    filters={}, should_use_cache=True
-                )
+                    result = await analytics_service.get_comprehensive_analytics(
+                        filters={}, should_use_cache=True
+                    )
 
                 # Verify cache.set was called
                 assert analytics_service.cache.set.called
@@ -986,7 +1075,8 @@ class TestPerformance:
     """Tests for performance with large datasets"""
 
     @patch("src.services.analytics.area_service.asset_crud")
-    def test_area_service_large_dataset_memory_calculation(
+    @pytest.mark.asyncio
+    async def test_area_service_large_dataset_memory_calculation(
         self, mock_crud, area_service
     ):
         """Test area service handles large dataset efficiently"""
@@ -1002,15 +1092,17 @@ class TestPerformance:
             for _ in range(1000)
         ]
 
-        mock_crud.get_multi_with_search.side_effect = [
+        mock_crud.get_multi_with_search_async = AsyncMock(
+            side_effect=[
             (large_batch, None),
             ([], None),
-        ]
+            ]
+        )
 
         import time
 
         start_time = time.time()
-        result = area_service._calculate_summary_in_memory(filters=None)
+        result = await area_service._calculate_summary_in_memory(filters=None)
         end_time = time.time()
 
         assert result["total_assets"] == 1000
@@ -1018,7 +1110,8 @@ class TestPerformance:
         # Should complete in reasonable time (< 1 second for 1000 records)
         assert end_time - start_time < 1.0
 
-    def test_analytics_service_large_dataset_distribution(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_analytics_service_large_dataset_distribution(self, analytics_service):
         """Test analytics service distribution with large dataset"""
         # Create large dataset
         large_dataset = []
@@ -1031,23 +1124,25 @@ class TestPerformance:
                 )
             )
 
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            large_dataset
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (large_dataset, len(large_dataset))
 
-        import time
+            import time
 
-        start_time = time.time()
-        result = analytics_service.calculate_distribution(
-            distribution_type="property_nature", filters={}
-        )
-        end_time = time.time()
+            start_time = time.time()
+            result = await analytics_service.calculate_distribution(
+                distribution_type="property_nature", filters={}
+            )
+            end_time = time.time()
 
-        assert result["total"] == 2
-        assert result["data"]["商业"]["count"] == 500
-        assert result["data"]["住宅"]["count"] == 500
-        # Should complete in reasonable time
-        assert end_time - start_time < 1.0
+            assert result["total"] == 2
+            assert result["data"]["商业"]["count"] == 500
+            assert result["data"]["住宅"]["count"] == 500
+            # Should complete in reasonable time
+            assert end_time - start_time < 1.0
 
 
 # =============================================================================

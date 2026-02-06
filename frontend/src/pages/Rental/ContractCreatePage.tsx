@@ -65,7 +65,11 @@ const ContractCreatePage: React.FC = () => {
     },
     onError: error => {
       pageLogger.error('创建合同失败:', error as Error);
-      MessageManager.error('创建合同失败，请检查网络连接');
+      const errorMessage =
+        error instanceof Error && error.message.trim() !== ''
+          ? error.message
+          : '创建合同失败，请检查网络连接';
+      MessageManager.error(errorMessage);
     },
   });
 

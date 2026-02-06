@@ -5,12 +5,12 @@
 
 import logging
 from collections import Counter, defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
 from ...models.llm_prompt import (
@@ -39,7 +39,7 @@ class AutoOptimizer:
         self.accuracy_threshold = accuracy_threshold
         self.prompt_manager = PromptManager()
 
-    async def check_and_optimize_all(self, db: Session) -> list[dict[str, Any]]:
+    async def check_and_optimize_all(self, db: AsyncSession) -> list[dict[str, Any]]:
         """
         检查所有活跃的Prompt是否需要优化
 
@@ -47,11 +47,8 @@ class AutoOptimizer:
             db: 数据库会话
         """
         # 获取所有活跃的Prompt
-        active_prompts = (
-            db.query(PromptTemplate)
-            .filter(PromptTemplate.status == PromptStatus.ACTIVE)
-            .all()
-        )
+        stmt = select(PromptTemplate).where(PromptTemplate.status == PromptStatus.ACTIVE)
+        active_prompts = list((await db.execute(stmt)).scalars().all())
 
         logger.info(f"🔍 检查{len(active_prompts)}个活跃Prompt...")
 
@@ -75,7 +72,7 @@ class AutoOptimizer:
         return optimization_results
 
     async def _should_optimize(
-        self, db: Session, prompt: PromptTemplate
+        self, db: AsyncSession, prompt: PromptTemplate
     ) -> tuple[bool, str]:
         """
         判断Prompt是否需要优化
@@ -88,25 +85,21 @@ class AutoOptimizer:
             (是否需要优化, 原因)
         """
         # 1. 检查最近7天的反馈数量
-        week_ago = datetime.now(UTC) - timedelta(days=7)
-        feedback_count = (
-            db.query(ExtractionFeedback)
-            .filter(
-                ExtractionFeedback.template_id == prompt.id,
-                ExtractionFeedback.created_at >= week_ago,
-            )
-            .count()
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        feedback_count_stmt = select(func.count(ExtractionFeedback.id)).where(
+            ExtractionFeedback.template_id == prompt.id,
+            ExtractionFeedback.created_at >= week_ago,
         )
+        feedback_count = int((await db.execute(feedback_count_stmt)).scalar() or 0)
 
         if feedback_count >= self.min_feedback_count:
             return True, f"收集到{feedback_count}条反馈(≥{self.min_feedback_count})"
 
         # 2. 检查当前准确率
-        latest_metrics = (
-            db.query(func.avg(PromptTemplate.avg_accuracy))
-            .filter(PromptTemplate.id == prompt.id)
-            .scalar()
+        latest_metrics_stmt = select(func.avg(PromptTemplate.avg_accuracy)).where(
+            PromptTemplate.id == prompt.id
         )
+        latest_metrics = (await db.execute(latest_metrics_stmt)).scalar()
 
         if latest_metrics and latest_metrics < self.accuracy_threshold:
             return (
@@ -116,7 +109,7 @@ class AutoOptimizer:
 
         return False, "反馈数量和准确率均正常"
 
-    async def optimize_prompt(self, db: Session, template_id: str) -> dict[str, Any]:
+    async def optimize_prompt(self, db: AsyncSession, template_id: str) -> dict[str, Any]:
         """
         优化指定Prompt
 
@@ -128,13 +121,13 @@ class AutoOptimizer:
             优化结果字典
         """
         # 1. 收集反馈数据
-        feedbacks = (
-            db.query(ExtractionFeedback)
-            .filter(ExtractionFeedback.template_id == template_id)
+        feedbacks_stmt = (
+            select(ExtractionFeedback)
+            .where(ExtractionFeedback.template_id == template_id)
             .order_by(ExtractionFeedback.created_at.desc())
             .limit(100)
-            .all()
         )
+        feedbacks = list((await db.execute(feedbacks_stmt)).scalars().all())
 
         if not feedbacks:
             logger.warning(f"❌ Prompt {template_id} 没有足够反馈数据,跳过优化")
@@ -153,7 +146,7 @@ class AutoOptimizer:
             return {"success": False, "reason": "无明显错误模式"}
 
         # 4. 应用优化
-        template = db.query(PromptTemplate).get(template_id)
+        template = await db.get(PromptTemplate, template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
@@ -186,10 +179,10 @@ class AutoOptimizer:
         template.system_prompt = updated_system_prompt
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.now(UTC)
+        template.updated_at = datetime.utcnow()
 
         db.add(version_record)
-        db.commit()
+        await db.commit()
 
         logger.info(f"✨ Prompt '{template.name}' 已自动优化到版本 {new_version}")
 

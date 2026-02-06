@@ -6,10 +6,10 @@ from .asset import (  # noqa: F401
     Asset,
     AssetDocument,
     AssetHistory,
-    Ownership,
     Project,
     ProjectOwnershipRelation,
 )
+from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .collection import (  # noqa: F401
     CollectionMethod,
@@ -37,6 +37,7 @@ from .notification import (  # noqa: F401
     NotificationPriority,
     NotificationType,
 )
+from .ownership import Ownership  # noqa: F401
 from .organization import (  # noqa: F401
     Employee,
     Organization,
@@ -83,6 +84,7 @@ __all__ = [
     "Ownership",
     "Project",
     "ProjectOwnershipRelation",
+    "AssetSearchIndex",
     "Organization",
     "OrganizationHistory",
     "Position",

@@ -2,7 +2,7 @@
 测试 AnalyticsService (综合分析服务)
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -64,12 +64,14 @@ class TestAnalyticsService:
         assert key1 != key3
 
     @patch(
-        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics"
+        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics",
+        new_callable=AsyncMock,
     )
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_cache_key"
     )
-    def test_get_comprehensive_analytics_with_cache(
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_with_cache(
         self, mock_generate_key, mock_calculate, analytics_service
     ):
         """测试使用缓存的综合分析"""
@@ -78,7 +80,7 @@ class TestAnalyticsService:
         analytics_service.cache.get = MagicMock(return_value=mock_cache_data)
         mock_generate_key.return_value = "test_key"
 
-        result = analytics_service.get_comprehensive_analytics(
+        result = await analytics_service.get_comprehensive_analytics(
             filters={}, should_use_cache=True
         )
 
@@ -90,7 +92,8 @@ class TestAnalyticsService:
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_cache_key"
     )
-    def test_get_comprehensive_analytics_without_cache(
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_without_cache(
         self, mock_generate_key, analytics_service
     ):
         """测试不使用缓存的综合分析"""
@@ -101,27 +104,30 @@ class TestAnalyticsService:
         # Mock AreaService 和 OccupancyService - 修复导入路径
         with patch("src.services.analytics.area_service.AreaService") as mock_area_cls:
             mock_area_service = MagicMock()
-            mock_area_service.calculate_summary_with_aggregation.return_value = {
-                "total_assets": 10
-            }
+            mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 10}
+            )
             mock_area_cls.return_value = mock_area_service
 
             with patch(
                 "src.services.analytics.occupancy_service.OccupancyService"
             ) as mock_occupancy_cls:
                 mock_occupancy_service = MagicMock()
-                mock_occupancy_service.calculate_overall_rate.return_value = {
-                    "rate": 0.85
-                }
+                mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+                    return_value={"rate": 0.85}
+                )
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
-                # Mock数据库查询 - 使用 data_status
                 mock_assets = [MagicMock(data_status="正常")]
-                analytics_service.db.query.return_value.filter.return_value.all.return_value = mock_assets
+                with patch(
+                    "src.crud.asset.asset_crud.get_multi_with_search_async",
+                    new_callable=AsyncMock,
+                ) as mock_get_assets:
+                    mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-                result = analytics_service.get_comprehensive_analytics(
-                    filters={}, should_use_cache=False
-                )
+                    result = await analytics_service.get_comprehensive_analytics(
+                        filters={}, should_use_cache=False
+                    )
 
                 # 验证结果结构
                 assert "total_assets" in result
@@ -129,21 +135,23 @@ class TestAnalyticsService:
                 assert "area_summary" in result
                 assert "occupancy_rate" in result
 
-    def test_clear_cache(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_clear_cache(self, analytics_service):
         """测试清除缓存"""
         analytics_service.cache.clear = MagicMock(return_value=True)
 
-        result = analytics_service.clear_cache()
+        result = await analytics_service.clear_cache()
 
         assert result["status"] == "success"
         assert "timestamp" in result
 
-    def test_get_cache_stats(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_get_cache_stats(self, analytics_service):
         """测试获取缓存统计"""
         mock_stats = {"hits": 100, "misses": 10}
         analytics_service.cache.get_stats = MagicMock(return_value=mock_stats)
 
-        result = analytics_service.get_cache_stats()
+        result = await analytics_service.get_cache_stats()
 
         assert result["cache_type"] == "analytics_cache_shared_backend"
         assert result["stats"] == mock_stats
@@ -151,7 +159,8 @@ class TestAnalyticsService:
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_occupancy_trend"
     )
-    def test_calculate_trend_occupancy(self, mock_trend, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_trend_occupancy(self, mock_trend, analytics_service):
         """测试计算出租率趋势"""
         mock_trend_data = [
             {"period": "2024-01", "occupancy_rate": 0.85},
@@ -159,22 +168,24 @@ class TestAnalyticsService:
         ]
         mock_trend.return_value = mock_trend_data
 
-        # Mock数据库查询 - 使用 data_status 而不是 is_deleted
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="occupancy", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="occupancy", time_dimension="monthly", filters={}
+            )
 
         assert result == mock_trend_data
 
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_area_trend"
     )
-    def test_calculate_trend_area(self, mock_trend, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_trend_area(self, mock_trend, analytics_service):
         """测试计算面积趋势"""
         mock_trend_data = [
             {"period": "2024-01", "total_area": 5000},
@@ -182,19 +193,21 @@ class TestAnalyticsService:
         ]
         mock_trend.return_value = mock_trend_data
 
-        # Mock数据库查询 - 使用 data_status
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="area", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="area", time_dimension="monthly", filters={}
+            )
 
         assert result == mock_trend_data
 
-    def test_calculate_distribution(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_distribution(self, analytics_service):
         """测试计算分布数据"""
         # Mock资产数据
         mock_assets = [
@@ -214,13 +227,15 @@ class TestAnalyticsService:
                 data_status="正常",
             ),
         ]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_distribution(
-            distribution_type="property_nature", filters={}
-        )
+            result = await analytics_service.calculate_distribution(
+                distribution_type="property_nature", filters={}
+            )
 
         assert result["distribution_type"] == "property_nature"
         assert "data" in result
@@ -230,12 +245,14 @@ class TestAnalyticsService:
         assert result["data"]["Residential"]["count"] == 1
 
     @patch(
-        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics"
+        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics",
+        new_callable=AsyncMock,
     )
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_cache_key"
     )
-    def test_cache_is_set_after_calculation(
+    @pytest.mark.asyncio
+    async def test_cache_is_set_after_calculation(
         self, mock_generate_key, mock_calculate, analytics_service
     ):
         """测试缓存设置逻辑（覆盖第71行）"""
@@ -246,7 +263,7 @@ class TestAnalyticsService:
         mock_calculate.return_value = {"total": 100}
 
         # 调用时使用缓存
-        result = analytics_service.get_comprehensive_analytics(
+        result = await analytics_service.get_comprehensive_analytics(
             filters={}, should_use_cache=True
         )
 
@@ -256,30 +273,33 @@ class TestAnalyticsService:
         )
         assert result == {"total": 100}
 
-    def test_calculate_trend_unknown_type(self, analytics_service):
+    @pytest.mark.asyncio
+    async def test_calculate_trend_unknown_type(self, analytics_service):
         """测试未知趋势类型返回空列表（覆盖第213行）"""
-        # Mock数据库查询
         mock_assets = [MagicMock(data_status="正常")]
-        analytics_service.db.query.return_value.filter.return_value.all.return_value = (
-            mock_assets
-        )
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get_assets:
+            mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
-        result = analytics_service.calculate_trend(
-            trend_type="unknown_type", time_dimension="monthly", filters={}
-        )
+            result = await analytics_service.calculate_trend(
+                trend_type="unknown_type", time_dimension="monthly", filters={}
+            )
 
         assert result == []
 
     @patch("src.services.analytics.area_service.AreaService")
     @patch("src.services.analytics.occupancy_service.OccupancyService")
-    def test_clear_cache_exception_handling(
+    @pytest.mark.asyncio
+    async def test_clear_cache_exception_handling(
         self, mock_occupancy_cls, mock_area_cls, analytics_service
     ):
         """测试清除缓存时的异常处理（覆盖第157-158行）"""
         # Mock缓存清除时抛出异常
         analytics_service.cache.clear = MagicMock(side_effect=Exception("Cache error"))
 
-        result = analytics_service.clear_cache()
+        result = await analytics_service.clear_cache()
 
         # 异常时应返回 status='failed' 和 error 信息
         assert result["status"] == "failed"

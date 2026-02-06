@@ -60,7 +60,7 @@ def sample_user():
         "is_active": True,
         "is_verified": True,
         "created_at": datetime.now(),
-        "role": "user",
+        "role_id": "role-user-id",
     }
 
 

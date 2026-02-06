@@ -4,7 +4,7 @@ Unit test configuration and fixtures
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +14,37 @@ from sqlalchemy.orm import sessionmaker
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+
+class AsyncSessionAdapter:
+    """Provide async-compatible methods over a sync SQLAlchemy session."""
+
+    def __init__(self, session):  # noqa: ANN001 - test helper
+        self._session = session
+
+    async def execute(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.execute(*args, **kwargs)
+
+    async def commit(self):  # noqa: D401 - test helper
+        return self._session.commit()
+
+    async def refresh(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.refresh(*args, **kwargs)
+
+    async def flush(self):  # noqa: D401 - test helper
+        return self._session.flush()
+
+    async def rollback(self):  # noqa: D401 - test helper
+        return self._session.rollback()
+
+    def add(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.add(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.delete(*args, **kwargs)
+
+    def __getattr__(self, name: str):  # noqa: D401 - test helper
+        return getattr(self._session, name)
 
 
 @pytest.fixture(scope="session")
@@ -104,18 +135,19 @@ def mock_db():
     query.count.return_value = 0
     db.query.return_value = query
     db.add = MagicMock()
-    db.commit = MagicMock()
-    db.refresh = MagicMock()
-    db.delete = MagicMock()
-    db.flush = MagicMock()
-    db.execute = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.delete = AsyncMock()
+    db.flush = AsyncMock()
+    db.rollback = AsyncMock()
+    db.execute = AsyncMock()
     return db
 
 
 @pytest.fixture(autouse=True)
 def mock_enum_validation_service(request):
     """
-    自动 mock EnumValidationService 用于所有测试
+    自动 mock AsyncEnumValidationService 用于所有测试
 
     这个 fixture 会自动应用到所有测试，避免在每个测试中单独 mock。
     它返回常见枚举值，使测试可以正常通过验证。
@@ -148,17 +180,16 @@ def mock_enum_validation_service(request):
         }
         return enum_values.get(enum_type_code, ["test_value"])
 
-    # Mock 方法 (注意: 这些是实例方法，不需要 self 参数)
-    mock_service.validate_field_value = lambda table, field, value: True
-    mock_service.validate_asset_data = lambda data: (True, [])
+    mock_service.get_valid_values = AsyncMock(side_effect=mock_get_valid_values)
+    mock_service.validate_value = AsyncMock(return_value=(True, None))
+    mock_service.validate_asset_data = AsyncMock(return_value=(True, []))
 
-    # Patch EnumValidationService 在所有模块中的使用
     with patch(
-        "src.services.enum_validation_service.EnumValidationService",
+        "src.services.enum_validation_service.AsyncEnumValidationService",
         return_value=mock_service,
     ):
         with patch(
-            "src.services.enum_validation_service.get_enum_validation_service",
+            "src.services.enum_validation_service.get_enum_validation_service_async",
             return_value=mock_service,
         ):
             yield mock_service
@@ -167,7 +198,7 @@ def mock_enum_validation_service(request):
 @pytest.fixture
 def client(monkeypatch, db_session):
     """Create a test client for unit tests with authentication bypassed"""
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
     from src.middleware import auth as auth_module
     from src.middleware.auth import (
@@ -183,7 +214,11 @@ def client(monkeypatch, db_session):
     mock_user.id = "test_user_001"
     mock_user.username = "testuser"
     mock_user.email = "test@example.com"
-    mock_user.role = "admin"
+    mock_user.role_id = "role-admin-id"
+    mock_user.role_name = "admin"
+    mock_user.roles = ["admin"]
+    mock_user.role_ids = ["role-admin-id"]
+    mock_user.is_admin = True
     mock_user.is_active = True
 
     # Use monkeypatch to replace functions at module level
@@ -226,13 +261,10 @@ def client(monkeypatch, db_session):
             apply_rbac_overrides(dependant)
 
     # Use real database session
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(db_session)
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client
@@ -248,7 +280,11 @@ def admin_user():
     mock_user.id = "admin_001"
     mock_user.username = "admin"
     mock_user.email = "admin@example.com"
-    mock_user.role = "admin"
+    mock_user.role_id = "role-admin-id"
+    mock_user.role_name = "admin"
+    mock_user.roles = ["admin"]
+    mock_user.role_ids = ["role-admin-id"]
+    mock_user.is_admin = True
     mock_user.is_active = True
     return mock_user
 
@@ -260,7 +296,11 @@ def normal_user():
     mock_user.id = "user_001"
     mock_user.username = "testuser"
     mock_user.email = "user@example.com"
-    mock_user.role = "user"
+    mock_user.role_id = "role-user-id"
+    mock_user.role_name = "asset_viewer"
+    mock_user.roles = ["asset_viewer"]
+    mock_user.role_ids = ["role-user-id"]
+    mock_user.is_admin = False
     mock_user.is_active = True
     return mock_user
 
@@ -281,7 +321,7 @@ def client_normal_user(db_session, normal_user):
     """Create a test client with a normal user and real admin checks enabled."""
     from fastapi.testclient import TestClient
 
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
     from src.middleware.auth import (
         get_current_active_user,
@@ -296,13 +336,10 @@ def client_normal_user(db_session, normal_user):
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
 
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(db_session)
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client

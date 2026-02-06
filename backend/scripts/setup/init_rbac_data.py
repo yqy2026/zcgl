@@ -6,18 +6,21 @@ RBAC系统初始化脚本
 
 import os
 import sys
+import asyncio
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import uuid
 from datetime import datetime, timedelta
 
-from src.database import get_db
+from sqlalchemy import select
+
+from src.database import async_session_scope
 from src.models.auth import User
 from src.models.rbac import Permission, Role, UserRoleAssignment
 
 
-def create_basic_permissions(db):
+async def create_basic_permissions(db):
     """创建基础权限"""
     permissions_data = [
         # 资产管理权限
@@ -79,11 +82,12 @@ def create_basic_permissions(db):
     created_permissions = []
     for resource, action, display_name, description in permissions_data:
         # 检查权限是否已存在
-        existing = (
-            db.query(Permission)
-            .filter(Permission.resource == resource, Permission.action == action)
-            .first()
+        existing_result = await db.execute(
+            select(Permission).where(
+                Permission.resource == resource, Permission.action == action
+            )
         )
+        existing = existing_result.scalars().first()
 
         if not existing:
             permission = Permission(
@@ -98,12 +102,12 @@ def create_basic_permissions(db):
             db.add(permission)
             created_permissions.append(permission)
 
-    db.commit()
+    await db.commit()
     print(f"✅ 创建了 {len(created_permissions)} 个基础权限")
     return created_permissions
 
 
-def create_basic_roles(db):
+async def create_basic_roles(db):
     """创建基础角色"""
     roles_data = [
         ("admin", "系统管理员", "系统超级管理员，拥有所有权限", 1, "system"),
@@ -118,7 +122,8 @@ def create_basic_roles(db):
     created_roles = []
     for name, display_name, description, level, category in roles_data:
         # 检查角色是否已存在
-        existing = db.query(Role).filter(Role.name == name).first()
+        existing_result = await db.execute(select(Role).where(Role.name == name))
+        existing = existing_result.scalars().first()
 
         if not existing:
             role = Role(
@@ -133,15 +138,18 @@ def create_basic_roles(db):
             db.add(role)
             created_roles.append(role)
 
-    db.commit()
+    await db.commit()
     print(f"✅ 创建了 {len(created_roles)} 个基础角色")
     return created_roles
 
 
-def create_admin_user(db):
+async def create_admin_user(db):
     """创建管理员用户"""
     # 检查管理员用户是否已存在
-    existing_admin = db.query(User).filter(User.username == "admin").first()
+    existing_result = await db.execute(
+        select(User).where(User.username == "admin")
+    )
+    existing_admin = existing_result.scalars().first()
 
     if not existing_admin:
         admin_user = User(
@@ -149,23 +157,63 @@ def create_admin_user(db):
             username="admin",
             email="admin@example.com",
             full_name="系统管理员",
-            role="ADMIN",
             is_active=True,
-            is_verified=True,
             password_hash="$2b$12$dummy_hash_for_admin",  # 实际使用中应该设置真实的密码哈希
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
         db.add(admin_user)
-        db.commit()
+        await db.commit()
+
+        # Assign admin role via RBAC
+        role_result = await db.execute(
+            select(Role).where(Role.name.in_(["super_admin", "admin"]))
+        )
+        role = role_result.scalars().first()
+        if role:
+            assignment = UserRoleAssignment(
+                user_id=admin_user.id,
+                role_id=role.id,
+                assigned_by="system",
+                assigned_at=datetime.utcnow(),
+                is_active=True,
+            )
+            db.add(assignment)
+            await db.commit()
+
         print(f"✅ 创建了管理员用户: {admin_user.username}")
         return admin_user
     else:
+        # Ensure admin role assignment exists
+        role_result = await db.execute(
+            select(Role).where(Role.name.in_(["super_admin", "admin"]))
+        )
+        role = role_result.scalars().first()
+        if role:
+            assignment_result = await db.execute(
+                select(UserRoleAssignment).where(
+                    UserRoleAssignment.user_id == existing_admin.id,
+                    UserRoleAssignment.role_id == role.id,
+                    UserRoleAssignment.is_active,
+                )
+            )
+            if assignment_result.scalars().first() is None:
+                db.add(
+                    UserRoleAssignment(
+                        user_id=existing_admin.id,
+                        role_id=role.id,
+                        assigned_by="system",
+                        assigned_at=datetime.utcnow(),
+                        is_active=True,
+                    )
+                )
+                await db.commit()
+
         print(f"⚠️ 管理员用户已存在: {existing_admin.username}")
         return existing_admin
 
 
-def assign_permissions_to_roles(db, roles, permissions):
+async def assign_permissions_to_roles(db, roles, permissions):
     """为角色分配权限"""
     role_permission_map = {
         "admin": [p for p in permissions],  # 管理员拥有所有权限
@@ -196,17 +244,16 @@ def assign_permissions_to_roles(db, roles, permissions):
             role_perms = role_permission_map[role.name]
             for permission in role_perms:
                 # 检查是否已存在关联
-                existing = (
-                    db.query(role_permissions)
-                    .filter(
+                existing_result = await db.execute(
+                    select(role_permissions).where(
                         role_permissions.c.role_id == role.id,
                         role_permissions.c.permission_id == permission.id,
                     )
-                    .first()
                 )
+                existing = existing_result.first()
 
                 if not existing:
-                    db.execute(
+                    await db.execute(
                         role_permissions.insert().values(
                             role_id=role.id,
                             permission_id=permission.id,
@@ -218,7 +265,7 @@ def assign_permissions_to_roles(db, roles, permissions):
             print(f"✅ 为角色 '{role.display_name}' 分配了 {len(role_perms)} 个权限")
 
 
-def create_test_users(db):
+async def create_test_users(db):
     """创建测试用户"""
     test_users = [
         ("manager1", "manager1@example.com", "测试管理员", "USER"),
@@ -228,7 +275,10 @@ def create_test_users(db):
     ]
 
     for username, email, full_name, role in test_users:
-        existing = db.query(User).filter(User.username == username).first()
+        existing_result = await db.execute(
+            select(User).where(User.username == username)
+        )
+        existing = existing_result.scalars().first()
         if not existing:
             user = User(
                 id=str(uuid.uuid4()),
@@ -244,11 +294,11 @@ def create_test_users(db):
             )
             db.add(user)
 
-    db.commit()
+    await db.commit()
     print(f"✅ 创建了 {len(test_users)} 个测试用户")
 
 
-def assign_roles_to_users(db, roles, users):
+async def assign_roles_to_users(db, roles, users):
     """为用户分配角色"""
     role_map = {role.name: role for role in roles}
 
@@ -261,20 +311,22 @@ def assign_roles_to_users(db, roles, users):
     ]
 
     for username, role_name in user_role_assignments:
-        user = db.query(User).filter(User.username == username).first()
+        user_result = await db.execute(
+            select(User).where(User.username == username)
+        )
+        user = user_result.scalars().first()
         if user and role_name in role_map:
             role = role_map[role_name]
 
             # 检查是否已存在分配
-            existing = (
-                db.query(UserRoleAssignment)
-                .filter(
+            existing_result = await db.execute(
+                select(UserRoleAssignment).where(
                     UserRoleAssignment.user_id == user.id,
                     UserRoleAssignment.role_id == role.id,
                     UserRoleAssignment.is_active,
                 )
-                .first()
             )
+            existing = existing_result.scalars().first()
 
             if not existing:
                 assignment = UserRoleAssignment(
@@ -289,27 +341,31 @@ def assign_roles_to_users(db, roles, users):
                 )
                 db.add(assignment)
 
-    db.commit()
+    await db.commit()
     print("✅ 为测试用户分配了角色")
 
 
-def create_dynamic_permission_samples(db):
+async def create_dynamic_permission_samples(db):
     """创建动态权限示例"""
     from src.models.dynamic_permission import DynamicPermission, TemporaryPermission
     from src.models.rbac import Permission
 
     # 获取测试用户和权限
-    test_user = db.query(User).filter(User.username == "user1").first()
+    test_user_result = await db.execute(
+        select(User).where(User.username == "user1")
+    )
+    test_user = test_user_result.scalars().first()
     if not test_user:
         print("⚠️ 测试用户不存在，跳过动态权限创建")
         return
 
     # 获取一个权限
-    asset_create_perm = (
-        db.query(Permission)
-        .filter(Permission.resource == "asset", Permission.action == "create")
-        .first()
+    asset_perm_result = await db.execute(
+        select(Permission).where(
+            Permission.resource == "asset", Permission.action == "create"
+        )
     )
+    asset_create_perm = asset_perm_result.scalars().first()
 
     if asset_create_perm:
         # 创建一个临时权限（有效期为7天）
@@ -341,38 +397,36 @@ def create_dynamic_permission_samples(db):
         )
         db.add(dynamic_permission)
 
-        db.commit()
+        await db.commit()
         print("✅ 创建了动态权限示例")
 
 
-def main():
+async def main():
     """主函数"""
     print("开始初始化RBAC系统数据...")
 
     try:
-        # 创建数据库会话
-        db = next(get_db())
+        async with async_session_scope() as db:
+            # 1. 创建基础权限
+            permissions = await create_basic_permissions(db)
 
-        # 1. 创建基础权限
-        permissions = create_basic_permissions(db)
+            # 2. 创建基础角色
+            roles = await create_basic_roles(db)
 
-        # 2. 创建基础角色
-        roles = create_basic_roles(db)
+            # 3. 创建管理员用户
+            await create_admin_user(db)
 
-        # 3. 创建管理员用户
-        create_admin_user(db)
+            # 4. 为角色分配权限
+            await assign_permissions_to_roles(db, roles, permissions)
 
-        # 4. 为角色分配权限
-        assign_permissions_to_roles(db, roles, permissions)
+            # 5. 创建测试用户
+            await create_test_users(db)
 
-        # 5. 创建测试用户
-        create_test_users(db)
+            # 6. 为测试用户分配角色
+            await assign_roles_to_users(db, roles, None)
 
-        # 6. 为测试用户分配角色
-        assign_roles_to_users(db, roles, None)
-
-        # 7. 创建动态权限示例
-        create_dynamic_permission_samples(db)
+            # 7. 创建动态权限示例
+            await create_dynamic_permission_samples(db)
 
         print("\nRBAC系统初始化完成！")
         print("创建内容:")
@@ -392,9 +446,5 @@ def main():
         import traceback
 
         traceback.print_exc()
-    finally:
-        db.close()
-
-
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

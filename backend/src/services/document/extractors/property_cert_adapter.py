@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
     BusinessValidationError,
@@ -65,16 +65,10 @@ class PropertyCertAdapter(BaseVisionAdapter):
 4. 找不到的字段填 null
 5. 只返回JSON，不要其他说明{pages_hint}"""
 
-    def __init__(self, db: Session | None = None):
+    def __init__(self) -> None:
         super().__init__()
         self._vision_service = get_qwen_vision_service()
-        self.prompt_manager: PromptManager | None = None
-        if db:
-            self.prompt_manager = PromptManager()
-        else:
-            logger.warning(
-                "PropertyCertAdapter initialized without PromptManager - will require explicit prompt"
-            )
+        self.prompt_manager: PromptManager | None = PromptManager()
 
         logger.info("PropertyCertAdapter initialized with Qwen Vision")
 
@@ -117,15 +111,14 @@ class PropertyCertAdapter(BaseVisionAdapter):
                 )
             # Need db session for PromptManager
             db = kwargs.get("db")
-            if not db:
+            if not isinstance(db, AsyncSession):
                 raise ConfigurationError(
-                    "db session required for PromptManager - pass via kwargs or constructor"
+                    "db session required for PromptManager - pass AsyncSession via kwargs or constructor"
                 )
-
-            prompt = self.prompt_manager.get_active_prompt(
+            prompt = await self.prompt_manager.get_active_prompt_async(
                 db=db,
                 doc_type="PROPERTY_CERT",
-                provider="qwen",  # PropertyCertAdapter uses Qwen
+                provider="qwen",
             )
 
             if not prompt:

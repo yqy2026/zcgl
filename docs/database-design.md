@@ -44,7 +44,6 @@
 |--------|------|------|------|
 | `id` | String | PK | 资产ID (UUID) |
 | **基本信息** ||||
-| `ownership_entity` | String(200) | NOT NULL | 权属方 |
 | `ownership_category` | String(100) | | 权属类别 |
 | `project_name` | String(200) | | 项目名称 |
 | `property_name` | String(200) | NOT NULL | 物业名称 |
@@ -102,6 +101,9 @@
 **计算属性**:
 - `unrented_area`: 未出租面积 = 可出租面积 - 已出租面积
 - `occupancy_rate`: 出租率(%) = 已出租面积 / 可出租面积 × 100
+
+**说明**:
+- `ownership_entity` 不再作为存储字段；权属方名称从 `ownership_id` 关联的 `ownerships.name` 动态获取。
 
 ---
 
@@ -340,7 +342,6 @@
 | `password_hash` | String(255) | NOT NULL | 密码哈希 |
 | `password_history` | JSON | | 密码历史记录 |
 | **角色与状态** ||||
-| `role` | String(20) | NOT NULL, DEFAULT 'user' | 用户角色 |
 | `is_active` | Boolean | NOT NULL, DEFAULT TRUE | 是否激活 |
 | `is_locked` | Boolean | NOT NULL, DEFAULT FALSE | 是否锁定 |
 | **登录信息** ||||
@@ -357,9 +358,8 @@
 | `created_by` | String(100) | | 创建人 |
 | `updated_by` | String(100) | | 更新人 |
 
-**用户角色枚举 (UserRole)**:
-- `admin`: 管理员
-- `user`: 普通用户
+**说明**:
+- 用户角色由 RBAC 表 `roles` 与 `user_role_assignments` 维护，`users` 表不再存储角色字段。
 
 ---
 

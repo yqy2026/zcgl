@@ -7,7 +7,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import BaseBusinessError, bad_request, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
@@ -15,7 +14,6 @@ from ....crud.organization import organization as organization_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....models.organization import Organization, OrganizationHistory
 from ....schemas.organization import (
     OrganizationBatchRequest,
     OrganizationCreate,
@@ -48,10 +46,8 @@ async def get_organizations(
 ) -> JSONResponse:
     """获取组织列表"""
     skip = (page - 1) * page_size
-    organizations, total = await db.run_sync(
-        lambda sync_db: organization_crud.get_multi_with_count(
-            sync_db, skip=skip, limit=page_size
-        )
+    organizations, total = await organization_crud.get_multi_with_count_async(
+        db, skip=skip, limit=page_size
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
     return ResponseHandler.paginated(
@@ -71,27 +67,24 @@ async def get_organization_tree(
 ) -> list[OrganizationTree]:
     """获取组织层级结构"""
 
-    def _sync(sync_db: Session) -> list[OrganizationTree]:
-        def build_tree(pid: str | None = None) -> list[OrganizationTree]:
-            organizations = organization_crud.get_tree(sync_db, parent_id=pid)
-            tree: list[OrganizationTree] = []
-            for org in organizations:
-                org_id = getattr(org, "id", "")
-                children = build_tree(str(org_id))
-                tree.append(
-                    OrganizationTree(
-                        id=str(getattr(org, "id", "")),
-                        name=str(getattr(org, "name", "")),
-                        level=int(getattr(org, "level", 0)),
-                        sort_order=int(getattr(org, "sort_order", 0)),
-                        children=children,
-                    )
+    async def build_tree(pid: str | None = None) -> list[OrganizationTree]:
+        organizations = await organization_crud.get_tree_async(db, parent_id=pid)
+        tree: list[OrganizationTree] = []
+        for org in organizations:
+            org_id = getattr(org, "id", "")
+            children = await build_tree(str(org_id))
+            tree.append(
+                OrganizationTree(
+                    id=str(getattr(org, "id", "")),
+                    name=str(getattr(org, "name", "")),
+                    level=int(getattr(org, "level", 0)),
+                    sort_order=int(getattr(org, "sort_order", 0)),
+                    children=children,
                 )
-            return tree
+            )
+        return tree
 
-        return build_tree(parent_id)
-
-    return await db.run_sync(_sync)
+    return await build_tree(parent_id)
 
 
 @router.get(
@@ -107,10 +100,8 @@ async def search_organizations(
 ) -> JSONResponse:
     """搜索组织"""
     skip = (page - 1) * page_size
-    organizations, total = await db.run_sync(
-        lambda sync_db: organization_crud.get_multi_with_count(
-            sync_db, keyword=keyword, skip=skip, limit=page_size
-        )
+    organizations, total = await organization_crud.get_multi_with_count_async(
+        db, keyword=keyword, skip=skip, limit=page_size
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
 
@@ -129,9 +120,7 @@ async def get_organization_statistics(
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationStatistics:
     """获取组织统计信息"""
-    stats = await db.run_sync(
-        lambda sync_db: organization_service.get_statistics(sync_db)
-    )
+    stats = await organization_service.get_statistics(db)
     return OrganizationStatistics(**stats)
 
 
@@ -142,9 +131,7 @@ async def get_organization(
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationResponse:
     """根据ID获取组织详情"""
-    organization = await db.run_sync(
-        lambda sync_db: organization_crud.get(sync_db, id=org_id)
-    )
+    organization = await organization_crud.get_async(db, id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
     return OrganizationResponse.model_validate(organization)
@@ -158,19 +145,12 @@ async def get_organization_children(
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """获取组织下的子级组织"""
-
-    def _sync(sync_db: Session) -> tuple[Organization | None, list[Organization]]:
-        parent = organization_crud.get(sync_db, id=org_id)
-        if not parent:
-            return None, []
-        children = organization_crud.get_children(
-            sync_db, parent_id=org_id, recursive=is_recursive
-        )
-        return parent, children
-
-    parent, children = await db.run_sync(_sync)
+    parent = await organization_crud.get_async(db, id=org_id)
     if not parent:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
+    children = await organization_crud.get_children_async(
+        db, parent_id=org_id, recursive=is_recursive
+    )
     return [OrganizationResponse.model_validate(org) for org in children]
 
 
@@ -181,17 +161,10 @@ async def get_organization_path(
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """获取组织到根的路径"""
-
-    def _sync(sync_db: Session) -> tuple[Organization | None, list[Organization]]:
-        organization = organization_crud.get(sync_db, id=org_id)
-        if not organization:
-            return None, []
-        path = organization_crud.get_path_to_root(sync_db, org_id=org_id)
-        return organization, path
-
-    organization, path = await db.run_sync(_sync)
+    organization = await organization_crud.get_async(db, id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
+    path = await organization_crud.get_path_to_root_async(db, org_id=org_id)
     return [OrganizationResponse.model_validate(org) for org in path]
 
 
@@ -208,21 +181,12 @@ async def get_organization_history(
 ) -> JSONResponse:
     """获取组织变更历史"""
     skip = (page - 1) * page_size
-
-    def _sync(
-        sync_db: Session,
-    ) -> tuple[Organization | None, list[OrganizationHistory], int]:
-        organization = organization_crud.get(sync_db, id=org_id)
-        if not organization:
-            return None, [], 0
-        history, total = organization_service.get_history_with_count(
-            sync_db, org_id=org_id, skip=skip, limit=page_size
-        )
-        return organization, history, total
-
-    organization, history, total = await db.run_sync(_sync)
+    organization = await organization_crud.get_async(db, id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
+    history, total = await organization_service.get_history_with_count(
+        db, org_id=org_id, skip=skip, limit=page_size
+    )
 
     items = [OrganizationHistoryResponse.model_validate(item) for item in history]
 
@@ -243,10 +207,8 @@ async def create_organization(
 ) -> OrganizationResponse:
     """创建组织"""
     try:
-        db_organization = await db.run_sync(
-            lambda sync_db: organization_service.create_organization(
-                sync_db, obj_in=organization
-            )
+        db_organization = await organization_service.create_organization(
+            db, obj_in=organization
         )
         return OrganizationResponse.model_validate(db_organization)
     except BaseBusinessError:
@@ -264,10 +226,8 @@ async def update_organization(
 ) -> OrganizationResponse:
     """更新组织"""
     try:
-        db_organization = await db.run_sync(
-            lambda sync_db: organization_service.update_organization(
-                sync_db, org_id=org_id, obj_in=organization
-            )
+        db_organization = await organization_service.update_organization(
+            db, org_id=org_id, obj_in=organization
         )
         return OrganizationResponse.model_validate(db_organization)
     except BaseBusinessError:
@@ -287,10 +247,8 @@ async def delete_organization(
 ) -> dict[str, str]:
     """删除组织（软删除）"""
     try:
-        success = await db.run_sync(
-            lambda sync_db: organization_service.delete_organization(
-                sync_db, org_id=org_id, deleted_by=deleted_by
-            )
+        success = await organization_service.delete_organization(
+            db, org_id=org_id, deleted_by=deleted_by
         )
         if not success:
             raise not_found(
@@ -318,10 +276,8 @@ async def move_organization(
             "updated_by": move_request.updated_by,
         }
         update_data = OrganizationUpdate.model_validate(update_dict)
-        db_organization = await db.run_sync(
-            lambda sync_db: organization_service.update_organization(
-                sync_db, org_id=org_id, obj_in=update_data
-            )
+        db_organization = await organization_service.update_organization(
+            db, org_id=org_id, obj_in=update_data
         )
         return {"message": "组织移动成功", "organization": db_organization}
     except BaseBusinessError:
@@ -339,29 +295,24 @@ async def batch_organization_operation(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """批量操作组织"""
-
-    def _sync(sync_db: Session) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-        results: list[dict[str, str]] = []
-        errors: list[dict[str, str]] = []
-        for org_id in batch_request.organization_ids:
-            try:
-                if batch_request.action == "delete":
-                    success = organization_service.delete_organization(
-                        sync_db, org_id=org_id, deleted_by=batch_request.updated_by
+    results: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = []
+    for org_id in batch_request.organization_ids:
+        try:
+            if batch_request.action == "delete":
+                success = await organization_service.delete_organization(
+                    db, org_id=org_id, deleted_by=batch_request.updated_by
+                )
+                if success:
+                    results.append(
+                        {"id": org_id, "status": "success", "message": "删除成功"}
                     )
-                    if success:
-                        results.append(
-                            {"id": org_id, "status": "success", "message": "删除成功"}
-                        )
-                    else:
-                        errors.append({"id": org_id, "error": "组织不存在"})
-            except BaseBusinessError as e:
-                errors.append({"id": org_id, "error": str(e)})
-            except ValueError as e:
-                errors.append({"id": org_id, "error": str(e)})
-        return results, errors
-
-    results, errors = await db.run_sync(_sync)
+                else:
+                    errors.append({"id": org_id, "error": "组织不存在"})
+        except BaseBusinessError as e:
+            errors.append({"id": org_id, "error": str(e)})
+        except ValueError as e:
+            errors.append({"id": org_id, "error": str(e)})
 
     return {
         "message": f"批量操作完成，成功 {len(results)} 个，失败 {len(errors)} 个",
@@ -380,20 +331,17 @@ async def advanced_search_organizations(
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """高级搜索组织"""
-
-    def _sync(sync_db: Session) -> list[Organization]:
-        if search_request.keyword:
-            return organization_crud.search(
-                sync_db,
-                keyword=search_request.keyword,
-                skip=search_request.skip,
-                limit=search_request.page_size,
-            )
-        return organization_crud.get_multi_with_filters(
-            sync_db, skip=search_request.skip, limit=search_request.page_size
+    if search_request.keyword:
+        organizations = await organization_crud.search_async(
+            db,
+            keyword=search_request.keyword,
+            skip=search_request.skip,
+            limit=search_request.page_size,
         )
-
-    organizations = await db.run_sync(_sync)
+    else:
+        organizations = await organization_crud.get_multi_with_filters_async(
+            db, skip=search_request.skip, limit=search_request.page_size
+        )
 
     if search_request.level:
         organizations = [

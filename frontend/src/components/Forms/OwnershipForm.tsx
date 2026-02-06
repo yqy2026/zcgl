@@ -104,9 +104,10 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
         MessageManager.success('更新成功');
       } else {
         // 创建权属方 - 编码将由后端自动生成
+        const trimmedCode = values.code?.trim();
         const createData: OwnershipCreate = {
           name: values.name,
-          code: values.code ?? '', // 临时设为空字符串，后端会自动生成
+          code: trimmedCode != null && trimmedCode !== '' ? trimmedCode : undefined,
           short_name: values.short_name,
         };
 

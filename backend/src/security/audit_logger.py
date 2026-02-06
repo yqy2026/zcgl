@@ -14,9 +14,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exception_handler import InternalServerError
+from src.database import async_session_scope
 from src.models.security_event import (
     SecurityEvent,
     SecurityEventType,
@@ -50,7 +51,7 @@ class SecurityEventLogger:
 
     def __init__(
         self,
-        db: Session | None = None,
+        db: AsyncSession | None = None,
         alert_threshold: int = DEFAULT_ALERT_THRESHOLD,
         alert_window_minutes: int = DEFAULT_ALERT_WINDOW_MINUTES,
     ):
@@ -78,7 +79,36 @@ class SecurityEventLogger:
         """
         return self.EVENT_SEVERITY_MAP.get(event_type, SecuritySeverity.MEDIUM)
 
-    def _log_to_database(
+    async def _persist_event(
+        self,
+        db: AsyncSession,
+        *,
+        event_type: SecurityEventType,
+        severity: SecuritySeverity,
+        user_id: str | None,
+        ip: str | None,
+        metadata: dict[str, Any],
+    ) -> SecurityEvent | None:
+        try:
+            event = SecurityEvent()
+            event.event_type = event_type.value
+            event.severity = severity.value
+            event.user_id = user_id
+            event.ip_address = ip
+            event.event_metadata = metadata
+            event.created_at = datetime.now()
+
+            db.add(event)
+            await db.commit()
+            await db.refresh(event)
+
+            return event
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to commit security event to database: {e}")
+            return None
+
+    async def _log_to_database(
         self,
         event_type: SecurityEventType,
         severity: SecuritySeverity,
@@ -86,64 +116,30 @@ class SecurityEventLogger:
         ip: str | None,
         metadata: dict[str, Any],
     ) -> SecurityEvent | None:
-        """
-        Log event to database for long-term storage.
-
-        Args:
-            event_type: Type of security event
-            severity: Severity level
-            user_id: User ID if applicable
-            ip: IP address
-            metadata: Event metadata
-
-        Returns:
-            Created SecurityEvent object or None if failed
-        """
         try:
-            from src.database import SessionLocal
-
-            # Use provided session or create new one
             if self.db is not None:
-                db = self.db
-                should_close = False
-            else:
-                # SessionLocal should never be None at runtime
-                if SessionLocal is None:
-                    raise InternalServerError(
-                        "Database not initialized. Call init_database() first."
-                    )
-                db = SessionLocal()
-                should_close = True
-
-            try:
-                event = SecurityEvent()
-                event.event_type = event_type.value
-                event.severity = severity.value
-                event.user_id = user_id
-                event.ip_address = ip
-                event.event_metadata = metadata
-                event.created_at = datetime.now()
-
-                db.add(event)
-                db.commit()
-                db.refresh(event)
-
-                return event
-
-            except Exception as e:
-                db.rollback()
-                logger.error(f"Failed to commit security event to database: {e}")
-                return None
-
-            finally:
-                if should_close:
-                    db.close()
-
+                return await self._persist_event(
+                    self.db,
+                    event_type=event_type,
+                    severity=severity,
+                    user_id=user_id,
+                    ip=ip,
+                    metadata=metadata,
+                )
+            async with async_session_scope() as db:
+                return await self._persist_event(
+                    db,
+                    event_type=event_type,
+                    severity=severity,
+                    user_id=user_id,
+                    ip=ip,
+                    metadata=metadata,
+                )
         except Exception as e:
             logger.error(f"Failed to create database session for security event: {e}")
             return None
 
-    def log_auth_failure(
+    async def log_auth_failure(
         self,
         ip: str,
         username: str | None = None,
@@ -169,7 +165,7 @@ class SecurityEventLogger:
         }
 
         # Log to database for long-term storage
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,  # Use username as user_id for auth events
@@ -177,7 +173,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def log_auth_success(
+    async def log_auth_success(
         self,
         ip: str,
         username: str,
@@ -200,7 +196,7 @@ class SecurityEventLogger:
         }
 
         # Log to database
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,
@@ -208,7 +204,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def log_permission_denied(
+    async def log_permission_denied(
         self,
         user_id: str,
         resource: str,
@@ -236,7 +232,7 @@ class SecurityEventLogger:
         }
 
         # Log to database
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=user_id,
@@ -244,7 +240,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def log_rate_limit_exceeded(
+    async def log_rate_limit_exceeded(
         self,
         ip: str,
         endpoint: str,
@@ -267,7 +263,7 @@ class SecurityEventLogger:
         }
 
         # Log to database (no user_id for rate limiting)
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=None,
@@ -275,7 +271,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def log_suspicious_activity(
+    async def log_suspicious_activity(
         self,
         ip: str,
         activity_type: str,
@@ -301,7 +297,7 @@ class SecurityEventLogger:
         }
 
         # Log to database
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=None,
@@ -309,7 +305,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def log_account_locked(
+    async def log_account_locked(
         self,
         username: str,
         ip: str,
@@ -335,7 +331,7 @@ class SecurityEventLogger:
         }
 
         # Log to database
-        return self._log_to_database(
+        return await self._log_to_database(
             event_type=event_type,
             severity=severity,
             user_id=username,
@@ -343,7 +339,7 @@ class SecurityEventLogger:
             metadata=metadata,
         )
 
-    def should_alert(
+    async def should_alert(
         self,
         ip: str,
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
@@ -365,34 +361,21 @@ class SecurityEventLogger:
         threshold = threshold or self.alert_threshold
 
         try:
-            from src.database import SessionLocal
-
-            # Use provided session or create new one
             if self.db is not None:
-                db = self.db
-                should_close = False
-            else:
-                # SessionLocal should never be None at runtime
-                if SessionLocal is None:
-                    raise InternalServerError(
-                        "Database not initialized. Call init_database() first."
-                    )
-                db = SessionLocal()
-                should_close = True
-
-            try:
-                count = self._count_events_in_window(db, ip=ip, event_type=event_type)
+                count = await self._count_events_in_window(
+                    self.db, ip=ip, event_type=event_type
+                )
                 return count >= threshold
-
-            finally:
-                if should_close:
-                    db.close()
-
+            async with async_session_scope() as db:
+                count = await self._count_events_in_window(
+                    db, ip=ip, event_type=event_type
+                )
+                return count >= threshold
         except Exception as e:
             logger.error(f"Failed to check alert threshold: {e}")
             return False
 
-    def get_event_count(
+    async def get_event_count(
         self,
         ip: str,
         event_type: SecurityEventType = SecurityEventType.AUTH_FAILURE,
@@ -408,49 +391,37 @@ class SecurityEventLogger:
             Event count
         """
         try:
-            from src.database import SessionLocal
-
-            # Use provided session or create new one
             if self.db is not None:
-                db = self.db
-                should_close = False
-            else:
-                # SessionLocal should never be None at runtime
-                if SessionLocal is None:
-                    raise InternalServerError(
-                        "Database not initialized. Call init_database() first."
-                    )
-                db = SessionLocal()
-                should_close = True
-
-            try:
-                return self._count_events_in_window(db, ip=ip, event_type=event_type)
-
-            finally:
-                if should_close:
-                    db.close()
-
+                return await self._count_events_in_window(
+                    self.db, ip=ip, event_type=event_type
+                )
+            async with async_session_scope() as db:
+                return await self._count_events_in_window(
+                    db, ip=ip, event_type=event_type
+                )
         except Exception as e:
             logger.error(f"Failed to get event count: {e}")
             return 0
 
-    def _count_events_in_window(
+    async def _count_events_in_window(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         ip: str,
         event_type: SecurityEventType,
     ) -> int:
         window_start = datetime.now() - timedelta(minutes=self.alert_window_minutes)
-        return (
-            db.query(SecurityEvent)
-            .filter(
+        stmt = (
+            select(func.count())
+            .select_from(SecurityEvent)
+            .where(
                 SecurityEvent.ip_address == ip,
                 SecurityEvent.event_type == event_type.value,
                 SecurityEvent.created_at >= window_start,
             )
-            .count()
         )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
 
 
 # Global instance

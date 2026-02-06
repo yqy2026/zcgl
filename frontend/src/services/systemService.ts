@@ -13,9 +13,11 @@ export interface User {
   full_name: string;
   phone: string;
   status: 'active' | 'inactive' | 'locked';
-  role: string;
-  role_name: string;
-  organization_id: string;
+  role_id?: string;
+  role_name?: string;
+  roles?: string[];
+  role_ids?: string[];
+  default_organization_id?: string;
   organization_name: string;
   last_login: string | null;
   created_at: string;
@@ -49,8 +51,8 @@ export interface CreateUserData {
   phone?: string;
   password: string;
   status: 'active' | 'inactive';
-  role: string;
-  organization_id: string;
+  role_id: string;
+  default_organization_id: string;
 }
 
 export interface UpdateUserData {
@@ -58,8 +60,8 @@ export interface UpdateUserData {
   full_name?: string;
   phone?: string;
   status?: 'active' | 'inactive';
-  role?: string;
-  organization_id?: string;
+  role_id?: string;
+  default_organization_id?: string;
 }
 
 export const userService = {
@@ -69,10 +71,22 @@ export const userService = {
     page_size?: number;
     search?: string;
     status?: string;
-    role?: string;
-    organization_id?: string;
+    role_id?: string;
+    default_organization_id?: string;
   }): Promise<UserListResponse> {
-    const response = await api.get<UserListResponse>(SYSTEM_API.USERS, { params });
+    const { default_organization_id, ...rest } = params ?? {};
+    const requestParams =
+      params == null
+        ? undefined
+        : {
+            ...rest,
+            ...(default_organization_id !== undefined
+              ? { organization_id: default_organization_id }
+              : {}),
+          };
+      const response = await api.get<UserListResponse>(SYSTEM_API.USERS, {
+        params: requestParams,
+      });
     return response.data ?? { items: [], total: 0, page: 1, page_size: 20, pages: 0 };
   },
 

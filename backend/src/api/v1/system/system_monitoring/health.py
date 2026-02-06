@@ -18,7 +18,7 @@ def get_database_manager() -> Any:
         return None
 
 
-def check_component_health() -> dict[str, dict[str, Any]]:
+async def check_component_health() -> dict[str, dict[str, Any]]:
     """检查各组件健康状态"""
     components: dict[str, dict[str, Any]] = {}
 
@@ -26,7 +26,7 @@ def check_component_health() -> dict[str, dict[str, Any]]:
     try:
         db_manager: Any = get_database_manager()
         if db_manager:
-            health_check = db_manager.run_health_check()
+            health_check = await db_manager.run_health_check()
             pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
             if health_check["healthy"] and pool_status.get("utilization", 0) < 80:

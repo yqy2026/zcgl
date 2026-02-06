@@ -8,14 +8,14 @@ import logging
 import os
 import threading
 import time
-from collections.abc import AsyncGenerator, Generator
-from contextlib import asynccontextmanager, contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
 from typing import Any
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.exc import OperationalError
@@ -26,8 +26,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.orm import declarative_base
 
 from src.constants.message_constants import ErrorIDs
 from src.constants.storage_constants import DatabasePoolConfig
@@ -74,8 +73,8 @@ class DatabaseManager:
     """统一的数据库管理器，整合增强功能"""
 
     def __init__(self) -> None:
-        self.engine: Engine | None = None
-        self.session_factory: sessionmaker[Session] | None = None
+        self.engine: AsyncEngine | None = None
+        self.session_factory: async_sessionmaker[AsyncSession] | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
         self.query_history: Queue[dict[str, Any]] = Queue(
@@ -97,39 +96,35 @@ class DatabaseManager:
             connect_args={},
         )
 
-    def initialize_engine(self, database_url: str) -> Engine:
+    def initialize_engine(self, database_url: str) -> AsyncEngine:
         """初始化数据库引擎"""
         logger.info(f"正在初始化数据库引擎: {database_url}")
+
+        async_url = database_url
+        if database_url.startswith("postgresql+psycopg://"):
+            async_url = database_url.replace(
+                "postgresql+psycopg://", "postgresql+asyncpg://", 1
+            )
 
         engine_kwargs: dict[str, Any] = {
             "echo": self.config.echo,
             "future": True,
+            "pool_size": self.config.pool_size,
+            "max_overflow": self.config.max_overflow,
+            "pool_timeout": self.config.pool_timeout,
+            "pool_recycle": self.config.pool_recycle,
+            "pool_pre_ping": self.config.pool_pre_ping,
+            "connect_args": self.config.connect_args,
         }
 
-        engine_kwargs.update(
-            {
-                "poolclass": QueuePool,
-                "pool_size": self.config.pool_size,
-                "max_overflow": self.config.max_overflow,
-                "pool_timeout": self.config.pool_timeout,
-                "pool_recycle": self.config.pool_recycle,
-                "pool_pre_ping": self.config.pool_pre_ping,
-                "connect_args": self.config.connect_args,
-            }
-        )
-
         try:
-            self.engine = create_engine(database_url, **engine_kwargs)
-
-            # Test connection immediately
-            with self.engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
+            self.engine = create_async_engine(async_url, **engine_kwargs)
 
             # 设置事件监听器
             self._setup_event_listeners()
 
             # 创建会话工厂
-            self.session_factory = sessionmaker(
+            self.session_factory = async_sessionmaker(
                 bind=self.engine,
                 autocommit=False,
                 autoflush=False,
@@ -228,7 +223,9 @@ class DatabaseManager:
         if not self.engine:  # pragma: no cover
             return  # pragma: no cover
 
-        @event.listens_for(self.engine, "connect")
+        sync_engine = self.engine.sync_engine
+
+        @event.listens_for(sync_engine, "connect")
         def on_connect(
             dbapi_connection: DBAPIConnection, connection_record: Any
         ) -> None:
@@ -237,7 +234,7 @@ class DatabaseManager:
                 self.metrics.active_connections += 1
                 self.metrics.last_activity = datetime.now()
 
-        @event.listens_for(self.engine, "checkout")
+        @event.listens_for(sync_engine, "checkout")
         def on_checkout(
             dbapi_connection: DBAPIConnection,
             connection_record: Any,
@@ -255,7 +252,7 @@ class DatabaseManager:
                     else:  # pragma: no cover
                         self.metrics.pool_misses += 1  # pragma: no cover
 
-        @event.listens_for(self.engine, "before_execute")
+        @event.listens_for(sync_engine, "before_execute")
         def on_execute(
             conn: Any,
             clauseelement: Any,
@@ -266,7 +263,7 @@ class DatabaseManager:
             """执行查询事件"""
             conn.info.setdefault("query_start_time", time.time())
 
-        @event.listens_for(self.engine, "after_execute")
+        @event.listens_for(sync_engine, "after_execute")
         def after_execute(
             conn: Any,
             clauseelement: Any,
@@ -310,38 +307,36 @@ class DatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
-    @contextmanager
-    def get_session(self) -> Generator[Session, None, None]:
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """获取数据库会话"""
         if not self.session_factory:
             raise InternalServerError("数据库引擎未初始化")
 
-        session = self.session_factory()
-        try:
-            yield session
-        except Exception as e:
-            session.rollback()
-            # 🔒 安全修复: 添加完整的错误上下文信息
-            logger.critical(
-                "数据库会话异常",
-                exc_info=True,  # 包含完整的堆栈跟踪
-                extra={
-                    "error_id": ErrorIDs.Database.SESSION_ERROR,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "session_id": id(session),
-                },
-            )
-            raise
-        finally:
-            session.close()
+        async with self.session_factory() as session:
+            try:
+                yield session
+            except Exception as e:
+                await session.rollback()
+                # 🔒 安全修复: 添加完整的错误上下文信息
+                logger.critical(
+                    "数据库会话异常",
+                    exc_info=True,  # 包含完整的堆栈跟踪
+                    extra={
+                        "error_id": ErrorIDs.Database.SESSION_ERROR,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "session_id": id(session),
+                    },
+                )
+                raise
 
     def get_metrics(self) -> DatabaseMetrics:
         """获取数据库性能指标"""
         with self._metrics_lock:
             return DatabaseMetrics(**self.metrics.__dict__)
 
-    def run_health_check(self) -> dict[str, Any]:
+    async def run_health_check(self) -> dict[str, Any]:
         """运行数据库健康检查"""
         health_status: dict[str, Any] = {
             "healthy": True,
@@ -351,9 +346,9 @@ class DatabaseManager:
         }
 
         try:
-            with self.get_session() as session:
+            async with self.get_session() as session:
                 start_time = time.time()
-                session.execute(text("SELECT 1"))
+                await session.execute(text("SELECT 1"))
                 response_time = (time.time() - start_time) * 1000
 
                 checks = health_status["checks"]
@@ -506,92 +501,29 @@ def _get_database_manager() -> DatabaseManager:
     return _database_manager
 
 
-# 导出引擎和会话工厂（向后兼容，延迟初始化）
-def _get_engine() -> Engine | None:
-    """获取引擎（延迟初始化）"""
-    return _get_database_manager().engine  # pragma: no cover
-
-
-def _get_session_local() -> sessionmaker[Session] | None:
-    """获取会话工厂（延迟初始化）"""
-    return _get_database_manager().session_factory  # pragma: no cover
-
-
-# 为了向后兼容，提供全局变量（但实际使用时通过函数获取）
-engine: Engine | None = None  # 将在首次使用时初始化
-SessionLocal: sessionmaker[Session] | None = None  # 将在首次使用时初始化
-async_engine: AsyncEngine | None = None
-AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
-
-
-def _init_globals() -> None:
-    """初始化全局变量"""
-    global engine, SessionLocal
-    if engine is None or SessionLocal is None:
-        manager = _get_database_manager()
-        engine = manager.engine
-        SessionLocal = manager.session_factory
-
-
-def _init_async_globals() -> None:
-    global async_engine, AsyncSessionLocal
-    if async_engine is None or AsyncSessionLocal is None:
-        async_url = get_async_database_url()
-        async_engine = create_async_engine(
-            async_url,
-            echo=settings.DATABASE_ECHO,
-            future=True,
-            pool_size=settings.DATABASE_POOL_SIZE,
-            max_overflow=settings.DATABASE_MAX_OVERFLOW,
-            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
-            pool_recycle=settings.DATABASE_POOL_RECYCLE,
-            pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
-        )
-        AsyncSessionLocal = async_sessionmaker(
-            bind=async_engine,
-            autocommit=False,
-            autoflush=False,
-            expire_on_commit=False,
-        )
-
-
 # 创建基础模型类
 Base: DeclarativeMeta | Any = declarative_base()
 
 
-def get_db() -> Generator[Session, None, None]:
-    """获取数据库会话（FastAPI依赖注入）"""
-    _init_globals()
+def get_database_manager() -> DatabaseManager:
+    """获取数据库管理器（用于高级功能）"""
+    return _get_database_manager()
+
+
+def get_database_engine() -> AsyncEngine:
+    """获取异步数据库引擎"""
     db_manager = _get_database_manager()
-    session_factory = db_manager.session_factory
-    if session_factory is None:
-        raise InternalServerError("Database session factory is not initialized")
-    session = session_factory()
-    try:
-        yield session
-    except Exception as e:  # pragma: no cover
-        session.rollback()  # pragma: no cover
-        # 🔒 安全修复: 添加完整的错误上下文信息
-        logger.critical(
-            "数据库会话异常",
-            exc_info=True,  # 包含完整的堆栈跟踪
-            extra={
-                "error_id": ErrorIDs.Database.SESSION_ERROR,
-                "error_type": type(e).__name__,
-                "error_message": str(e),
-                "session_id": id(session),
-            },
-        )
-        raise  # pragma: no cover
-    finally:
-        session.close()
+    if db_manager.engine is None:
+        raise InternalServerError("Database engine is not initialized")
+    return db_manager.engine
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
-    _init_async_globals()
-    if AsyncSessionLocal is None:
+    db_manager = _get_database_manager()
+    session_factory = db_manager.session_factory
+    if session_factory is None:
         raise InternalServerError("Async database session factory is not initialized")
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         try:
             yield session
         except Exception as e:  # pragma: no cover
@@ -612,10 +544,11 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
     """获取异步数据库会话（非依赖场景的上下文管理器）"""
-    _init_async_globals()
-    if AsyncSessionLocal is None:
+    db_manager = _get_database_manager()
+    session_factory = db_manager.session_factory
+    if session_factory is None:
         raise InternalServerError("Async database session factory is not initialized")
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         try:
             yield session
         except Exception as e:  # pragma: no cover
@@ -633,63 +566,45 @@ async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
             raise  # pragma: no cover
 
 
-def get_database_engine() -> Engine:
-    """获取数据库引擎"""
-    _init_globals()
+async def create_tables() -> None:
+    """创建所有数据库表"""
     db_manager = _get_database_manager()
     if db_manager.engine is None:
         raise InternalServerError("Database engine is not initialized")
-    return db_manager.engine
+    _ = importlib.import_module("src.models")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("数据库表创建完成")
 
 
-def get_session_factory() -> sessionmaker[Session]:
-    """获取会话工厂"""
-    _init_globals()
-    db_manager = _get_database_manager()
-    if db_manager.session_factory is None:
-        raise InternalServerError("Database session factory is not initialized")
-    return db_manager.session_factory
-
-
-def get_database_manager() -> DatabaseManager:
-    """获取数据库管理器（用于高级功能）"""
-    return _get_database_manager()
-
-
-def create_tables() -> None:
-    """创建所有数据库表"""
-    _init_globals()
-    if engine:
-        _ = importlib.import_module("src.models")
-        Base.metadata.create_all(bind=engine)
-        logger.info("数据库表创建完成")
-
-
-def drop_tables() -> None:
+async def drop_tables() -> None:
     """删除所有数据库表"""
-    _init_globals()
-    if engine:
-        Base.metadata.drop_all(bind=engine)
+    db_manager = _get_database_manager()
+    if db_manager.engine is None:
+        raise InternalServerError("Database engine is not initialized")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
-def get_database_status() -> dict[str, Any]:
+async def get_database_status() -> dict[str, Any]:
     """获取数据库状态信息"""
     manager = _get_database_manager()
-    _init_globals()
     status = {
         "database_url": DATABASE_URL,
-        "engine_type": type(engine).__name__ if engine else "Unknown",
+        "engine_type": type(manager.engine).__name__ if manager.engine else "Unknown",
         "metrics": manager.get_metrics().__dict__,
-        "health_check": manager.run_health_check(),
+        "health_check": await manager.run_health_check(),
     }
     return status
 
 
-def init_db() -> None:
+async def init_db() -> None:
     """初始化数据库"""
-    create_tables()
+    await create_tables()
     logger.info("数据库初始化完成")
 
 
 if __name__ == "__main__":
-    init_db()
+    import asyncio
+
+    asyncio.run(init_db())

@@ -7,7 +7,7 @@ This test module covers all endpoints in the rent_contract router to achieve 70%
 import json
 from datetime import date, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -28,42 +28,48 @@ from src.core.exception_handler import (
 @pytest.fixture
 def mock_current_user():
     """Create mock authenticated user"""
-    from src.models.auth import UserRole
-
     user = MagicMock()
     user.id = "test-user-id"
     user.username = "testuser"
     user.full_name = "Test User"
     user.is_active = True
-    user.role = UserRole.ADMIN
+    user.role_id = "role-admin-id"
+    user.role_name = "admin"
+    user.roles = ["admin"]
+    user.role_ids = ["role-admin-id"]
+    user.is_admin = True
     return user
 
 
 @pytest.fixture
 def mock_current_user_admin():
     """Create mock admin user"""
-    from src.models.auth import UserRole
-
     user = MagicMock()
     user.id = "admin-id"
     user.username = "admin"
     user.full_name = "Admin User"
     user.is_active = True
-    user.role = UserRole.ADMIN
+    user.role_id = "role-admin-id"
+    user.role_name = "admin"
+    user.roles = ["admin"]
+    user.role_ids = ["role-admin-id"]
+    user.is_admin = True
     return user
 
 
 @pytest.fixture
 def mock_current_user_regular():
     """Create mock regular user"""
-    from src.models.auth import UserRole
-
     user = MagicMock()
     user.id = "user-id"
     user.username = "regularuser"
     user.full_name = "Regular User"
     user.is_active = True
-    user.role = UserRole.USER
+    user.role_id = "role-user-id"
+    user.role_name = "asset_viewer"
+    user.roles = ["asset_viewer"]
+    user.role_ids = ["role-user-id"]
+    user.is_admin = False
     return user
 
 
@@ -137,7 +143,8 @@ class TestCreateContract:
     @patch("src.api.v1.rent_contract.contracts.asset_crud")
     @patch("src.api.v1.rent_contract.contracts.ownership")
     @patch("src.api.v1.rent_contract.contracts.rent_contract_service")
-    def test_create_contract_success(
+    @pytest.mark.asyncio
+    async def test_create_contract_success(
         self, mock_service, mock_ownership, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test successful contract creation"""
@@ -162,20 +169,21 @@ class TestCreateContract:
         )
 
         mock_asset = MagicMock()
-        mock_asset_crud.get.return_value = mock_asset
+        mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_ownership_obj = MagicMock()
-        mock_ownership.get.return_value = mock_ownership_obj
-        mock_service.create_contract.return_value = mock_contract
+        mock_ownership.get = AsyncMock(return_value=mock_ownership_obj)
+        mock_service.create_contract_async = AsyncMock(return_value=mock_contract)
 
-        result = create_contract(
+        result = await create_contract(
             db=mock_db, contract_in=contract_in, current_user=mock_current_user
         )
 
         assert result is not None
-        mock_service.create_contract.assert_called_once()
+        mock_service.create_contract_async.assert_called_once()
 
     @patch("src.api.v1.rent_contract.contracts.asset_crud")
-    def test_create_contract_asset_not_found(
+    @pytest.mark.asyncio
+    async def test_create_contract_asset_not_found(
         self, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test contract creation with non-existent asset"""
@@ -199,10 +207,10 @@ class TestCreateContract:
             rent_terms=[rent_term],
         )
 
-        mock_asset_crud.get.return_value = None
+        mock_asset_crud.get_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            create_contract(
+            await create_contract(
                 db=mock_db, contract_in=contract_in, current_user=mock_current_user
             )
 
@@ -211,7 +219,8 @@ class TestCreateContract:
 
     @patch("src.api.v1.rent_contract.contracts.asset_crud")
     @patch("src.api.v1.rent_contract.contracts.ownership")
-    def test_create_contract_ownership_not_found(
+    @pytest.mark.asyncio
+    async def test_create_contract_ownership_not_found(
         self, mock_ownership, mock_asset_crud, mock_db, mock_current_user
     ):
         """Test contract creation with non-existent ownership"""
@@ -235,11 +244,11 @@ class TestCreateContract:
             rent_terms=[rent_term],
         )
 
-        mock_asset_crud.get.return_value = MagicMock()
-        mock_ownership.get.return_value = None
+        mock_asset_crud.get_async = AsyncMock(return_value=MagicMock())
+        mock_ownership.get = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            create_contract(
+            await create_contract(
                 db=mock_db, contract_in=contract_in, current_user=mock_current_user
             )
 
@@ -256,30 +265,34 @@ class TestGetContract:
     """Tests for GET /contracts/{contract_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_get_contract_success(self, mock_rent_contract, mock_db, mock_current_user):
+    @pytest.mark.asyncio
+    async def test_get_contract_success(
+        self, mock_rent_contract, mock_db, mock_current_user
+    ):
         """Test successful contract retrieval"""
         from src.api.v1.rent_contract.contracts import get_contract
 
-        mock_rent_contract.get_with_details.return_value = mock_contract
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=mock_contract)
 
-        result = get_contract(
+        result = await get_contract(
             contract_id="contract-123", db=mock_db, current_user=mock_current_user
         )
 
         assert result is not None
-        mock_rent_contract.get_with_details.assert_called_once()
+        mock_rent_contract.get_with_details_async.assert_called_once()
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_get_contract_not_found(
+    @pytest.mark.asyncio
+    async def test_get_contract_not_found(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test getting non-existent contract"""
         from src.api.v1.rent_contract.contracts import get_contract
 
-        mock_rent_contract.get_with_details.return_value = None
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            get_contract(
+            await get_contract(
                 contract_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
@@ -296,7 +309,8 @@ class TestGetContracts:
     """Tests for GET /contracts endpoint"""
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_get_contracts_default_params(
+    @pytest.mark.asyncio
+    async def test_get_contracts_default_params(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test listing contracts with default parameters"""
@@ -336,10 +350,12 @@ class TestGetContracts:
             contract.contract_notes = None
             mock_contracts.append(contract)
 
-        mock_rent_contract.get_multi_with_filters.return_value = (mock_contracts, 3)
+        mock_rent_contract.get_multi_with_filters_async = AsyncMock(
+            return_value=(mock_contracts, 3)
+        )
 
         # Call with explicit default values instead of relying on Query defaults
-        result = get_contracts(
+        result = await get_contracts(
             db=mock_db,
             current_user=mock_current_user,
             page=1,
@@ -360,7 +376,8 @@ class TestGetContracts:
         assert pagination["page_size"] == 10
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_get_contracts_with_pagination(
+    @pytest.mark.asyncio
+    async def test_get_contracts_with_pagination(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test listing contracts with pagination"""
@@ -400,12 +417,11 @@ class TestGetContracts:
             contract.contract_notes = None
             mock_contracts.append(contract)
 
-        mock_rent_contract.get_multi_with_filters.return_value = (
-            mock_contracts[:10],
-            25,
+        mock_rent_contract.get_multi_with_filters_async = AsyncMock(
+            return_value=(mock_contracts[:10], 25)
         )
 
-        result = get_contracts(
+        result = await get_contracts(
             db=mock_db,
             current_user=mock_current_user,
             page=2,
@@ -438,7 +454,8 @@ class TestUpdateContract:
     @patch("src.api.v1.rent_contract.contracts.can_edit_contract")
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
     @patch("src.api.v1.rent_contract.contracts.rent_contract_service")
-    def test_update_contract_success(
+    @pytest.mark.asyncio
+    async def test_update_contract_success(
         self,
         mock_service,
         mock_rent_contract,
@@ -453,10 +470,10 @@ class TestUpdateContract:
         contract_in = RentContractUpdate(tenant_name="Updated Tenant")
 
         mock_can_edit.return_value = True
-        mock_rent_contract.get_with_details.return_value = mock_contract
-        mock_service.update_contract.return_value = mock_contract
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=mock_contract)
+        mock_service.update_contract_async = AsyncMock(return_value=mock_contract)
 
-        result = update_contract(
+        result = await update_contract(
             contract_id="contract-123",
             db=mock_db,
             contract_in=contract_in,
@@ -464,10 +481,11 @@ class TestUpdateContract:
         )
 
         assert result is not None
-        mock_service.update_contract.assert_called_once()
+        mock_service.update_contract_async.assert_called_once()
 
     @patch("src.api.v1.rent_contract.contracts.can_edit_contract")
-    def test_update_contract_permission_denied(
+    @pytest.mark.asyncio
+    async def test_update_contract_permission_denied(
         self, mock_can_edit, mock_db, mock_current_user
     ):
         """Test contract update without permission"""
@@ -479,7 +497,7 @@ class TestUpdateContract:
         mock_can_edit.return_value = False
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            update_contract(
+            await update_contract(
                 contract_id="contract-123",
                 db=mock_db,
                 contract_in=contract_in,
@@ -499,29 +517,31 @@ class TestDeleteContract:
     """Tests for DELETE /contracts/{contract_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_delete_contract_success_admin(
+    @pytest.mark.asyncio
+    async def test_delete_contract_success_admin(
         self, mock_rent_contract, mock_db, mock_current_user_admin
     ):
         """Test successful contract deletion by admin"""
         from src.api.v1.rent_contract.contracts import delete_contract
 
-        mock_rent_contract.get.return_value = mock_contract
-        mock_rent_contract.remove.return_value = None
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=mock_contract)
+        mock_rent_contract.remove = AsyncMock(return_value=None)
 
-        result = delete_contract(
+        result = await delete_contract(
             contract_id="contract-123", db=mock_db, current_user=mock_current_user_admin
         )
 
         assert result["message"] == "合同删除成功"
 
-    def test_delete_contract_permission_denied(
+    @pytest.mark.asyncio
+    async def test_delete_contract_permission_denied(
         self, mock_db, mock_current_user_regular
     ):
         """Test contract deletion by non-admin user"""
         from src.api.v1.rent_contract.contracts import delete_contract
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            delete_contract(
+            await delete_contract(
                 contract_id="contract-123",
                 db=mock_db,
                 current_user=mock_current_user_regular,
@@ -539,16 +559,17 @@ class TestGetContractTerms:
     """Tests for GET /contracts/{contract_id}/terms endpoint"""
 
     @patch("src.api.v1.rent_contract.terms.rent_term")
-    def test_get_contract_terms_success(
+    @pytest.mark.asyncio
+    async def test_get_contract_terms_success(
         self, mock_rent_term, mock_db, mock_current_user
     ):
         """Test successful contract terms retrieval"""
         from src.api.v1.rent_contract.terms import get_contract_terms
 
         mock_terms = [MagicMock() for _ in range(3)]
-        mock_rent_term.get_by_contract.return_value = mock_terms
+        mock_rent_term.get_by_contract_async = AsyncMock(return_value=mock_terms)
 
-        result = get_contract_terms(
+        result = await get_contract_terms(
             contract_id="contract-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -565,7 +586,8 @@ class TestAddRentTerm:
 
     @patch("src.api.v1.rent_contract.terms.rent_contract")
     @patch("src.api.v1.rent_contract.terms.rent_term")
-    def test_add_rent_term_success(
+    @pytest.mark.asyncio
+    async def test_add_rent_term_success(
         self, mock_rent_term, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test successful rent term addition"""
@@ -578,10 +600,10 @@ class TestAddRentTerm:
             monthly_rent=Decimal("1000.00"),
         )
 
-        mock_rent_contract.get.return_value = mock_contract
-        mock_rent_term.create.return_value = MagicMock()
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=mock_contract)
+        mock_rent_term.create = AsyncMock(return_value=MagicMock())
 
-        result = add_rent_term(
+        result = await add_rent_term(
             contract_id="contract-123",
             db=mock_db,
             term_in=term_in,
@@ -600,7 +622,8 @@ class TestGetRentLedger:
     """Tests for GET /ledger endpoint"""
 
     @patch("src.api.v1.rent_contract.ledger.rent_ledger")
-    def test_get_rent_ledger_default_params(
+    @pytest.mark.asyncio
+    async def test_get_rent_ledger_default_params(
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         from src.constants.rent_contract_constants import PaymentStatus
@@ -632,9 +655,11 @@ class TestGetRentLedger:
             ledger.updated_at = datetime.now()
             mock_ledgers.append(ledger)
 
-        mock_rent_ledger.get_multi_with_filters.return_value = (mock_ledgers, 5)
+        mock_rent_ledger.get_multi_with_filters_async = AsyncMock(
+            return_value=(mock_ledgers, 5)
+        )
 
-        result = get_rent_ledger(
+        result = await get_rent_ledger(
             db=mock_db,
             current_user=mock_current_user,
             page=1,
@@ -664,31 +689,33 @@ class TestGetRentLedgerDetail:
     """Tests for GET /ledger/{ledger_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.ledger.rent_ledger")
-    def test_get_rent_ledger_detail_success(
+    @pytest.mark.asyncio
+    async def test_get_rent_ledger_detail_success(
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         """Test successful ledger detail retrieval"""
         from src.api.v1.rent_contract.ledger import get_rent_ledger_detail
 
-        mock_rent_ledger.get.return_value = mock_ledger
+        mock_rent_ledger.get = AsyncMock(return_value=mock_ledger)
 
-        result = get_rent_ledger_detail(
+        result = await get_rent_ledger_detail(
             ledger_id="ledger-123", db=mock_db, current_user=mock_current_user
         )
 
         assert result is not None
 
     @patch("src.api.v1.rent_contract.ledger.rent_ledger")
-    def test_get_rent_ledger_detail_not_found(
+    @pytest.mark.asyncio
+    async def test_get_rent_ledger_detail_not_found(
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         """Test getting non-existent ledger"""
         from src.api.v1.rent_contract.ledger import get_rent_ledger_detail
 
-        mock_rent_ledger.get.return_value = None
+        mock_rent_ledger.get = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            get_rent_ledger_detail(
+            await get_rent_ledger_detail(
                 ledger_id="nonexistent", db=mock_db, current_user=mock_current_user
             )
 
@@ -704,7 +731,8 @@ class TestUpdateRentLedger:
     """Tests for PUT /ledger/{ledger_id} endpoint"""
 
     @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
-    def test_update_rent_ledger_success(
+    @pytest.mark.asyncio
+    async def test_update_rent_ledger_success(
         self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test successful ledger update"""
@@ -713,9 +741,11 @@ class TestUpdateRentLedger:
 
         ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
-        mock_rent_contract_service.update_ledger.return_value = mock_ledger
+        mock_rent_contract_service.update_ledger_async = AsyncMock(
+            return_value=mock_ledger
+        )
 
-        result = update_rent_ledger(
+        result = await update_rent_ledger(
             ledger_id="ledger-123",
             ledger_in=ledger_in,
             db=mock_db,
@@ -725,7 +755,8 @@ class TestUpdateRentLedger:
         assert result is not None
 
     @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
-    def test_update_rent_ledger_not_found(
+    @pytest.mark.asyncio
+    async def test_update_rent_ledger_not_found(
         self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test updating non-existent ledger"""
@@ -734,12 +765,12 @@ class TestUpdateRentLedger:
 
         ledger_in = RentLedgerUpdate(payment_status=PaymentStatus.PAID)
 
-        mock_rent_contract_service.update_ledger.side_effect = ResourceNotFoundError(
-            "台账记录", "nonexistent"
+        mock_rent_contract_service.update_ledger_async = AsyncMock(
+            side_effect=ResourceNotFoundError("台账记录", "nonexistent")
         )
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            update_rent_ledger(
+            await update_rent_ledger(
                 ledger_id="nonexistent",
                 ledger_in=ledger_in,
                 db=mock_db,
@@ -749,7 +780,8 @@ class TestUpdateRentLedger:
         assert exc_info.value.status_code == 404
 
     @patch("src.api.v1.rent_contract.ledger.rent_contract_service")
-    def test_update_rent_ledger_invalid_status(
+    @pytest.mark.asyncio
+    async def test_update_rent_ledger_invalid_status(
         self, mock_rent_contract_service, mock_db, mock_current_user
     ):
         """Test ledger update with invalid payment status"""
@@ -757,9 +789,10 @@ class TestUpdateRentLedger:
         from src.schemas.rent_contract import RentLedgerUpdate
 
         ledger_in = RentLedgerUpdate(payment_status="invalid_status")
+        mock_rent_contract_service.update_ledger_async = AsyncMock()
 
         with pytest.raises(BusinessValidationError) as exc_info:
-            update_rent_ledger(
+            await update_rent_ledger(
                 ledger_id="ledger-123",
                 ledger_in=ledger_in,
                 db=mock_db,
@@ -767,7 +800,7 @@ class TestUpdateRentLedger:
             )
 
         assert exc_info.value.status_code == 422
-        mock_rent_contract_service.update_ledger.assert_not_called()
+        mock_rent_contract_service.update_ledger_async.assert_not_called()
 
 
 # ============================================================================
@@ -779,19 +812,22 @@ class TestStatisticsEndpoints:
     """Tests for statistics endpoints"""
 
     @patch("src.api.v1.rent_contract.statistics.rent_contract_service")
-    def test_get_rent_statistics_success(
+    @pytest.mark.asyncio
+    async def test_get_rent_statistics_success(
         self, mock_service, mock_db, mock_current_user
     ):
         """Test successful statistics retrieval"""
         from src.api.v1.rent_contract.statistics import get_rent_statistics
 
-        mock_service.get_statistics.return_value = {
-            "total_contracts": 10,
-            "active_contracts": 8,
-            "total_monthly_rent": Decimal("50000.00"),
-        }
+        mock_service.get_statistics_async = AsyncMock(
+            return_value={
+                "total_contracts": 10,
+                "active_contracts": 8,
+                "total_monthly_rent": Decimal("50000.00"),
+            }
+        )
 
-        result = get_rent_statistics(
+        result = await get_rent_statistics(
             db=mock_db,
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
@@ -804,17 +840,18 @@ class TestStatisticsEndpoints:
         assert result["total_contracts"] == 10
 
     @patch("src.api.v1.rent_contract.statistics.rent_contract_service")
-    def test_get_ownership_statistics_success(
+    @pytest.mark.asyncio
+    async def test_get_ownership_statistics_success(
         self, mock_service, mock_db, mock_current_user
     ):
         """Test successful ownership statistics retrieval"""
         from src.api.v1.rent_contract.statistics import get_ownership_statistics
 
-        mock_service.get_ownership_statistics.return_value = [
-            {"ownership_id": "own-1", "total_contracts": 5}
-        ]
+        mock_service.get_ownership_statistics_async = AsyncMock(
+            return_value=[{"ownership_id": "own-1", "total_contracts": 5}]
+        )
 
-        result = get_ownership_statistics(
+        result = await get_ownership_statistics(
             db=mock_db,
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
@@ -824,17 +861,18 @@ class TestStatisticsEndpoints:
         assert len(result) == 1
 
     @patch("src.api.v1.rent_contract.statistics.rent_contract_service")
-    def test_get_asset_statistics_success(
+    @pytest.mark.asyncio
+    async def test_get_asset_statistics_success(
         self, mock_service, mock_db, mock_current_user
     ):
         """Test successful asset statistics retrieval"""
         from src.api.v1.rent_contract.statistics import get_asset_statistics
 
-        mock_service.get_asset_statistics.return_value = [
-            {"asset_id": "asset-1", "total_contracts": 3}
-        ]
+        mock_service.get_asset_statistics_async = AsyncMock(
+            return_value=[{"asset_id": "asset-1", "total_contracts": 3}]
+        )
 
-        result = get_asset_statistics(
+        result = await get_asset_statistics(
             db=mock_db,
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
@@ -844,24 +882,24 @@ class TestStatisticsEndpoints:
         assert len(result) == 1
 
     @patch("src.api.v1.rent_contract.statistics.rent_contract_service")
-    def test_get_monthly_statistics_success(
+    @pytest.mark.asyncio
+    async def test_get_monthly_statistics_success(
         self, mock_service, mock_db, mock_current_user
     ):
         """Test successful monthly statistics retrieval"""
         from src.api.v1.rent_contract.statistics import get_monthly_statistics
 
-        mock_service.get_monthly_statistics.return_value = [
-            {"year_month": "2024-01", "total_rent": Decimal("10000.00")}
-        ]
+        mock_service.get_monthly_statistics_async = AsyncMock(
+            return_value=[{"year_month": "2024-01", "total_rent": Decimal("10000.00")}]
+        )
 
-        result = get_monthly_statistics(
+        result = await get_monthly_statistics(
             db=mock_db,
             current_user=mock_current_user,
             year=2024,
         )
 
         assert len(result) == 1
-
 
 # ============================================================================
 # Test: GET /contracts/{contract_id}/ledger - Get Contract Ledger
@@ -872,16 +910,19 @@ class TestGetContractLedger:
     """Tests for GET /contracts/{contract_id}/ledger endpoint"""
 
     @patch("src.api.v1.rent_contract.ledger.rent_ledger")
-    def test_get_contract_ledger_success(
+    @pytest.mark.asyncio
+    async def test_get_contract_ledger_success(
         self, mock_rent_ledger, mock_db, mock_current_user
     ):
         """Test successful contract ledger retrieval"""
         from src.api.v1.rent_contract.ledger import get_contract_ledger
 
         mock_ledgers = [mock_ledger for _ in range(5)]
-        mock_rent_ledger.get_multi_with_filters.return_value = (mock_ledgers, 5)
+        mock_rent_ledger.get_multi_with_filters_async = AsyncMock(
+            return_value=(mock_ledgers, 5)
+        )
 
-        result = get_contract_ledger(
+        result = await get_contract_ledger(
             contract_id="contract-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -897,16 +938,19 @@ class TestGetAssetContracts:
     """Tests for GET /assets/{asset_id}/contracts endpoint"""
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_get_asset_contracts_success(
+    @pytest.mark.asyncio
+    async def test_get_asset_contracts_success(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test successful asset contracts retrieval"""
         from src.api.v1.rent_contract.contracts import get_asset_contracts
 
         mock_contracts = [mock_contract for _ in range(3)]
-        mock_rent_contract.get_multi_with_filters.return_value = (mock_contracts, 3)
+        mock_rent_contract.get_multi_with_filters_async = AsyncMock(
+            return_value=(mock_contracts, 3)
+        )
 
-        result = get_asset_contracts(
+        result = await get_asset_contracts(
             asset_id="asset-123", db=mock_db, current_user=mock_current_user
         )
 
@@ -923,7 +967,8 @@ class TestExcelOperations:
 
     @patch("src.api.v1.rent_contract.excel_ops.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.excel_ops.rent_contract_excel_service")
-    def test_download_excel_template_success(
+    @pytest.mark.asyncio
+    async def test_download_excel_template_success(
         self, mock_excel_service, mock_current_user
     ):
         """Test successful Excel template download"""
@@ -937,34 +982,39 @@ class TestExcelOperations:
             "file_name": "template.xlsx",
         }
 
-        result = download_excel_template(current_user=mock_current_user)
+        result = await download_excel_template(current_user=mock_current_user)
 
         assert isinstance(result, FileResponse)
 
     @patch("src.api.v1.rent_contract.excel_ops.EXCEL_SERVICE_AVAILABLE", True)
     @patch("src.api.v1.rent_contract.excel_ops.rent_contract_excel_service")
-    def test_export_contracts_to_excel_success(
-        self, mock_excel_service, mock_current_user
+    @pytest.mark.asyncio
+    async def test_export_contracts_to_excel_success(
+        self, mock_excel_service, mock_current_user, mock_db
     ):
         """Test successful Excel export"""
         from fastapi.responses import FileResponse
 
         from src.api.v1.rent_contract.excel_ops import export_contracts_to_excel
 
-        mock_excel_service.export_contracts_to_excel.return_value = {
-            "success": True,
-            "file_path": "/tmp/export.xlsx",
-            "file_name": "export.xlsx",
-        }
+        mock_excel_service.export_contracts_to_excel = AsyncMock(
+            return_value={
+                "success": True,
+                "file_path": "/tmp/export.xlsx",
+                "file_name": "export.xlsx",
+            }
+        )
 
-        result = export_contracts_to_excel(
+        result = await export_contracts_to_excel(
             contract_ids=["contract-1", "contract-2"],
             current_user=mock_current_user,
+            db=mock_db,
             should_include_terms=True,
             should_include_ledger=True,
         )
 
         assert isinstance(result, FileResponse)
+        mock_excel_service.export_contracts_to_excel.assert_awaited_once()
 
 
 # ============================================================================
@@ -975,24 +1025,17 @@ class TestExcelOperations:
 class TestAttachmentManagement:
     """Tests for attachment management endpoints"""
 
+    @patch("src.api.v1.rent_contract.attachments.rent_contract_attachment_crud")
     @patch("src.api.v1.rent_contract.attachments.rent_contract")
-    def test_get_contract_attachments_success(
-        self, mock_rent_contract, mock_db, mock_current_user
+    @pytest.mark.asyncio
+    async def test_get_contract_attachments_success(
+        self, mock_rent_contract, mock_attachment_crud, mock_db, mock_current_user
     ):
         """Test successful attachment list retrieval"""
         from src.api.v1.rent_contract.attachments import get_contract_attachments
 
-        mock_rent_contract.get.return_value = mock_contract
+        mock_rent_contract.get_async = AsyncMock(return_value=mock_contract)
 
-        # Mock query chain
-        mock_query = MagicMock()
-        mock_filter = MagicMock()
-        mock_order = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.order_by.return_value = mock_order
-
-        # Mock attachment
         mock_attachment = MagicMock()
         mock_attachment.id = "att-1"
         mock_attachment.file_name = "test.pdf"
@@ -1003,9 +1046,11 @@ class TestAttachmentManagement:
         mock_attachment.uploader = "Test User"
         mock_attachment.created_at = datetime.now()
 
-        mock_order.all.return_value = [mock_attachment]
+        mock_attachment_crud.get_by_contract_async = AsyncMock(
+            return_value=[mock_attachment]
+        )
 
-        result = get_contract_attachments(
+        result = await get_contract_attachments(
             contract_id="contract-123",
             current_user=mock_current_user,
             db=mock_db,
@@ -1015,16 +1060,17 @@ class TestAttachmentManagement:
         assert result[0]["file_name"] == "test.pdf"
 
     @patch("src.api.v1.rent_contract.attachments.rent_contract")
-    def test_get_contract_attachments_contract_not_found(
+    @pytest.mark.asyncio
+    async def test_get_contract_attachments_contract_not_found(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test getting attachments for non-existent contract"""
         from src.api.v1.rent_contract.attachments import get_contract_attachments
 
-        mock_rent_contract.get.return_value = None
+        mock_rent_contract.get_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            get_contract_attachments(
+            await get_contract_attachments(
                 contract_id="nonexistent",
                 current_user=mock_current_user,
                 db=mock_db,
@@ -1032,45 +1078,49 @@ class TestAttachmentManagement:
 
         assert exc_info.value.status_code == 404
 
-    def test_download_contract_attachment_not_found(self, mock_db, mock_current_user):
+    @pytest.mark.asyncio
+    async def test_download_contract_attachment_not_found(
+        self, mock_db, mock_current_user
+    ):
         """Test downloading non-existent attachment"""
         from src.api.v1.rent_contract.attachments import download_contract_attachment
 
-        mock_query = MagicMock()
-        mock_filter = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = None
+        with patch(
+            "src.api.v1.rent_contract.attachments.rent_contract_attachment_crud"
+        ) as mock_attachment_crud:
+            mock_attachment_crud.get_async = AsyncMock(return_value=None)
 
-        with pytest.raises(ResourceNotFoundError) as exc_info:
-            download_contract_attachment(
-                contract_id="contract-123",
-                attachment_id="nonexistent",
-                current_user=mock_current_user,
-                db=mock_db,
-            )
+            with pytest.raises(ResourceNotFoundError) as exc_info:
+                await download_contract_attachment(
+                    contract_id="contract-123",
+                    attachment_id="nonexistent",
+                    current_user=mock_current_user,
+                    db=mock_db,
+                )
 
-        assert exc_info.value.status_code == 404
+            assert exc_info.value.status_code == 404
 
-    def test_delete_contract_attachment_not_found(self, mock_db, mock_current_user):
+    @pytest.mark.asyncio
+    async def test_delete_contract_attachment_not_found(
+        self, mock_db, mock_current_user
+    ):
         """Test deleting non-existent attachment"""
         from src.api.v1.rent_contract.attachments import delete_contract_attachment
 
-        mock_query = MagicMock()
-        mock_filter = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = None
+        with patch(
+            "src.api.v1.rent_contract.attachments.rent_contract_attachment_crud"
+        ) as mock_attachment_crud:
+            mock_attachment_crud.get_async = AsyncMock(return_value=None)
 
-        with pytest.raises(ResourceNotFoundError) as exc_info:
-            delete_contract_attachment(
-                contract_id="contract-123",
-                attachment_id="nonexistent",
-                current_user=mock_current_user,
-                db=mock_db,
-            )
+            with pytest.raises(ResourceNotFoundError) as exc_info:
+                await delete_contract_attachment(
+                    contract_id="contract-123",
+                    attachment_id="nonexistent",
+                    current_user=mock_current_user,
+                    db=mock_db,
+                )
 
-        assert exc_info.value.status_code == 404
+            assert exc_info.value.status_code == 404
 
 
 # ============================================================================
@@ -1081,9 +1131,11 @@ class TestAttachmentManagement:
 class TestAdditionalErrorCases:
     """Additional tests for error handling and edge cases"""
 
+    @patch("src.api.v1.rent_contract.contracts.can_edit_contract")
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_update_contract_not_found(
-        self, mock_rent_contract, mock_db, mock_current_user
+    @pytest.mark.asyncio
+    async def test_update_contract_not_found(
+        self, mock_rent_contract, mock_can_edit, mock_db, mock_current_user
     ):
         """Test updating non-existent contract"""
         from src.api.v1.rent_contract.contracts import update_contract
@@ -1091,10 +1143,11 @@ class TestAdditionalErrorCases:
 
         contract_in = RentContractUpdate(tenant_name="Updated Tenant")
 
-        mock_rent_contract.get_with_details.return_value = None
+        mock_can_edit.return_value = True
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            update_contract(
+            await update_contract(
                 contract_id="nonexistent",
                 db=mock_db,
                 contract_in=contract_in,
@@ -1104,16 +1157,17 @@ class TestAdditionalErrorCases:
         assert exc_info.value.status_code == 404
 
     @patch("src.api.v1.rent_contract.contracts.rent_contract")
-    def test_delete_contract_not_found(
+    @pytest.mark.asyncio
+    async def test_delete_contract_not_found(
         self, mock_rent_contract, mock_db, mock_current_user_admin
     ):
         """Test deleting non-existent contract"""
         from src.api.v1.rent_contract.contracts import delete_contract
 
-        mock_rent_contract.get.return_value = None
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            delete_contract(
+            await delete_contract(
                 contract_id="nonexistent",
                 db=mock_db,
                 current_user=mock_current_user_admin,
@@ -1122,7 +1176,8 @@ class TestAdditionalErrorCases:
         assert exc_info.value.status_code == 404
 
     @patch("src.api.v1.rent_contract.terms.rent_contract")
-    def test_add_rent_term_contract_not_found(
+    @pytest.mark.asyncio
+    async def test_add_rent_term_contract_not_found(
         self, mock_rent_contract, mock_db, mock_current_user
     ):
         """Test adding rent term to non-existent contract"""
@@ -1135,10 +1190,10 @@ class TestAdditionalErrorCases:
             monthly_rent=Decimal("1000.00"),
         )
 
-        mock_rent_contract.get.return_value = None
+        mock_rent_contract.get_with_details_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            add_rent_term(
+            await add_rent_term(
                 contract_id="nonexistent",
                 db=mock_db,
                 term_in=term_in,

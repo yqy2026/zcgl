@@ -31,6 +31,7 @@
   "data": [
     {
       "id": "asset-id-1",
+      "ownership_id": "ownership-id-1",
       "ownership_entity": "权属方名称",
       "property_name": "物业名称",
       "address": "物业地址",
@@ -81,6 +82,7 @@ GET /api/v1/assets/all?limit=1000
   "data": [
     {
       "id": "asset-id-1",
+      "ownership_id": "ownership-id-1",
       "ownership_entity": "权属方名称",
       "property_name": "物业名称",
       "unrented_area": 20.0,  // 计算字段
@@ -153,7 +155,7 @@ Content-Type: application/json
 ### search参数
 - 类型: string
 - 最大长度: 500
-- 搜索字段: property_name, address, ownership_entity, business_category
+- 搜索字段: property_name, address, ownership_entity(通过权属表名称), business_category
 
 ## 性能考虑
 

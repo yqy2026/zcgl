@@ -19,7 +19,7 @@ class StatisticsRequest(BaseModel):
             "example": {
                 "ownership_status": "已确权",
                 "property_nature": "经营性",
-                "ownership_entity": "国资集团",
+                "ownership_id": "ownership-uuid",
             }
         },
     )

@@ -19,15 +19,7 @@ try:
 
     __all__.append("RBACService")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    # Fallback to legacy shim if available
-    try:
-        from ..rbac_service import RBACService as _LegacyRBACService
-
-        RBACService = _LegacyRBACService
-
-        __all__.append("RBACService")
-    except Exception:  # nosec - B110: Intentional graceful degradation
-        _log_import_error("permission.rbac_service.RBACService (legacy fallback)")
+    _log_import_error("permission.rbac_service.RBACService")
 
 try:
     from .permission_cache_service import (

@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy.orm import Session
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...constants.rent_contract_constants import PaymentStatus
 from ...core.exception_handler import BusinessValidationError, ResourceNotFoundError
@@ -23,24 +24,22 @@ from .helpers import RentContractHelperMixin
 class RentContractLedgerService(RentContractHelperMixin):
     """合同台账相关服务"""
 
-    def generate_monthly_ledger(
-        self, db: Session, *, request: GenerateLedgerRequest
+    async def generate_monthly_ledger_async(
+        self, db: AsyncSession, *, request: GenerateLedgerRequest
     ) -> list[RentLedger]:
-        """生成月度台账"""
-        # 获取合同信息
-        contract = rent_contract.get(db, id=request.contract_id)
+        contract = await rent_contract.get_async(db, id=request.contract_id)
         if not contract:
             raise ResourceNotFoundError("合同", request.contract_id)
 
-        # 获取租金条款
-        rent_terms = rent_term.get_by_contract(db, contract_id=request.contract_id)
+        rent_terms = await rent_term.get_by_contract_async(
+            db, contract_id=request.contract_id
+        )
         if not rent_terms:
             raise BusinessValidationError(
                 f"合同没有租金条款: {request.contract_id}",
                 field_errors={"rent_terms": ["合同没有租金条款"]},
             )
 
-        # 确定生成月份范围
         if not request.start_year_month:
             start_year_month = contract.start_date.strftime("%Y-%m")
         else:
@@ -51,21 +50,16 @@ class RentContractLedgerService(RentContractHelperMixin):
         else:
             end_year_month = request.end_year_month
 
-        # 生成月份列表
         months = self._generate_month_range(start_year_month, end_year_month)
 
-        # 为每个月份生成台账记录
-        created_ledgers = []
+        created_ledgers: list[RentLedger] = []
         for year_month in months:
-            # 检查是否已存在
-            existing = rent_ledger.get_by_contract_and_month(
+            existing = await rent_ledger.get_by_contract_and_month_async(
                 db, contract_id=request.contract_id, year_month=year_month
             )
-
             if existing:
                 continue
 
-            # 计算该月的租金
             month_date = datetime.strptime(year_month + "-01", "%Y-%m-%d").date()
             term = self._get_rent_term_for_date(rent_terms, month_date)
 
@@ -86,19 +80,27 @@ class RentContractLedgerService(RentContractHelperMixin):
                 db.add(db_ledger)
                 created_ledgers.append(db_ledger)
 
-        db.commit()
+        await db.commit()
+        for ledger in created_ledgers:
+            await db.refresh(ledger)
         return created_ledgers
 
-    def batch_update_payment(
-        self, db: Session, *, request: RentLedgerBatchUpdate
+    async def batch_update_payment_async(
+        self, db: AsyncSession, *, request: RentLedgerBatchUpdate
     ) -> list[RentLedger]:
-        """批量更新支付状态"""
-        ledgers = (
-            db.query(RentLedger).filter(RentLedger.id.in_(request.ledger_ids)).all()
+        ledgers = list(
+            (
+                await db.execute(
+                    select(RentLedger).where(
+                        RentLedger.id.in_(request.ledger_ids)
+                    )
+                )
+            )
+            .scalars()
+            .all()
         )
 
         for ledger in ledgers:
-            # 更新支付信息
             if request.payment_status is not None:
                 ledger.payment_status = request.payment_status
             if request.payment_date is not None:
@@ -110,24 +112,21 @@ class RentContractLedgerService(RentContractHelperMixin):
             if request.notes is not None:
                 ledger.notes = request.notes
 
-            # 计算逾期金额
             if ledger.payment_status in [PaymentStatus.PAID, PaymentStatus.PARTIAL]:
                 if ledger.paid_amount < ledger.due_amount:
                     ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
                 else:
                     ledger.overdue_amount = Decimal("0")
 
-                # V2: 委托运营合同自动计算服务费
-                self._calculate_service_fee_for_ledger(db, ledger)
+                await self._calculate_service_fee_for_ledger_async(db, ledger)
 
-        db.commit()
+        await db.commit()
         return ledgers
 
-    def update_ledger(
-        self, db: Session, *, ledger_id: str, update_data: RentLedgerUpdate
+    async def update_ledger_async(
+        self, db: AsyncSession, *, ledger_id: str, update_data: RentLedgerUpdate
     ) -> RentLedger:
-        """更新单条租金台账并处理衍生字段"""
-        ledger = rent_ledger.get(db, id=ledger_id)
+        ledger = await rent_ledger.get(db, id=ledger_id)
         if not ledger:
             raise ResourceNotFoundError("台账记录", ledger_id)
 
@@ -135,63 +134,41 @@ class RentContractLedgerService(RentContractHelperMixin):
         for field, value in payload.items():
             setattr(ledger, field, value)
 
-        # 与批量更新逻辑保持一致：仅在收款状态下计算逾期与服务费
         if ledger.payment_status in [PaymentStatus.PAID, PaymentStatus.PARTIAL]:
             if ledger.paid_amount < ledger.due_amount:
                 ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
             else:
                 ledger.overdue_amount = Decimal("0")
 
-            # V2: 委托运营合同自动计算服务费
-            self._calculate_service_fee_for_ledger(db, ledger)
+            await self._calculate_service_fee_for_ledger_async(db, ledger)
 
         db.add(ledger)
-        db.commit()
-        db.refresh(ledger)
+        await db.commit()
+        await db.refresh(ledger)
         return ledger
 
-    def get_contract_by_id(
-        self, db: Session, *, contract_id: str
+    async def get_contract_by_id_async(
+        self, db: AsyncSession, *, contract_id: str
     ) -> RentContract | None:
-        """获取合同详情"""
-        return db.query(RentContract).filter(RentContract.id == contract_id).first()
+        stmt = select(RentContract).where(RentContract.id == contract_id)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_deposit_ledger(
-        self, db: Session, *, contract_id: str
+    async def get_deposit_ledger_async(
+        self, db: AsyncSession, *, contract_id: str
     ) -> list[RentDepositLedger]:
-        """
-        获取合同押金变动记录
-
-        Args:
-            db: 数据库会话
-            contract_id: 合同ID
-
-        Returns:
-            押金变动记录列表（按创建时间倒序）
-        """
-        return (
-            db.query(RentDepositLedger)
-            .filter(RentDepositLedger.contract_id == contract_id)
-            .order_by(RentDepositLedger.created_at.desc())
-            .all()
+        stmt = (
+            select(RentDepositLedger)
+            .where(RentDepositLedger.contract_id == contract_id)
+            .order_by(desc(RentDepositLedger.created_at))
         )
+        return list((await db.execute(stmt)).scalars().all())
 
-    def get_service_fee_ledger(
-        self, db: Session, *, contract_id: str
+    async def get_service_fee_ledger_async(
+        self, db: AsyncSession, *, contract_id: str
     ) -> list[ServiceFeeLedger]:
-        """
-        获取合同服务费台账记录
-
-        Args:
-            db: 数据库会话
-            contract_id: 合同ID
-
-        Returns:
-            服务费台账记录列表（按年月倒序）
-        """
-        return (
-            db.query(ServiceFeeLedger)
-            .filter(ServiceFeeLedger.contract_id == contract_id)
-            .order_by(ServiceFeeLedger.year_month.desc())
-            .all()
+        stmt = (
+            select(ServiceFeeLedger)
+            .where(ServiceFeeLedger.contract_id == contract_id)
+            .order_by(desc(ServiceFeeLedger.year_month))
         )
+        return list((await db.execute(stmt)).scalars().all())

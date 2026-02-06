@@ -14,9 +14,8 @@ from ..core.exception_handler import bad_request, forbidden
 from ..database import get_async_db
 from ..models.auth import User
 from ..security.audit_logger import SecurityEventLogger
-from ..security.roles import RoleNormalizer
+from ..services.permission.rbac_service import RBACService
 from ..services.organization_permission_service import OrganizationPermissionService
-from ..utils.async_db import AsyncServiceClassAdapter
 from .auth import get_current_active_user
 
 
@@ -43,9 +42,10 @@ def require_organization_access(
             raise bad_request("组织ID不能为空")
 
         org_service = OrganizationPermissionService(db)
-        if not await org_service.check_organization_access(current_user.id, organization_id):
-            # Log permission denied event
-            security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
+        if not await org_service.check_organization_access(
+            current_user.id, organization_id
+        ):
+            security_logger = SecurityEventLogger(db)
 
             # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
@@ -102,9 +102,10 @@ def require_organization_management(
             raise bad_request("组织ID不能为空")
 
         org_service = OrganizationPermissionService(db)
-        if not await org_service.can_manage_organization(current_user.id, organization_id):
-            # Log permission denied event
-            security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
+        if not await org_service.can_manage_organization(
+            current_user.id, organization_id
+        ):
+            security_logger = SecurityEventLogger(db)
 
             # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"
@@ -206,7 +207,9 @@ async def get_accessible_organizations(
     获取用户可访问的组织列表
     """
     org_service = OrganizationPermissionService(db)
-    result = await org_service.get_user_accessible_organizations_with_details(current_user.id)
+    result = await org_service.get_user_accessible_organizations_with_details(
+        current_user.id
+    )
     assert isinstance(result, list)  # nosec B101  # Defensive type check
     return result
 
@@ -249,8 +252,8 @@ class OrganizationPermissionChecker:
         """
         Check user permissions with case-insensitive role comparison
         """
-        # Check for admin role (case-insensitive)
-        if RoleNormalizer.is_admin(current_user.role):
+        rbac_service = RBACService(db)
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # If there's an organization ID parameter, check organization permission
@@ -260,9 +263,10 @@ class OrganizationPermissionChecker:
                 raise bad_request("组织ID不能为空")
 
             org_service = OrganizationPermissionService(db)
-            if not await org_service.check_organization_access(current_user.id, organization_id):
-                # Log permission denied event
-                security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
+            if not await org_service.check_organization_access(
+                current_user.id, organization_id
+            ):
+                security_logger = SecurityEventLogger(db)
 
                 client_ip = request.client.host if request.client else "unknown"
                 try:
@@ -290,11 +294,12 @@ class OrganizationPermissionChecker:
 
         # Check if user has any organization access permissions
         org_service = OrganizationPermissionService(db)
-        accessible_orgs = await org_service.get_user_accessible_organizations(current_user.id)
+        accessible_orgs = await org_service.get_user_accessible_organizations(
+            current_user.id
+        )
 
         if not accessible_orgs:
-            # Log permission denied event
-            security_logger = AsyncServiceClassAdapter(db, SecurityEventLogger)
+            security_logger = SecurityEventLogger(db)
 
             # Extract and validate client IP
             client_ip = request.client.host if request.client else "unknown"

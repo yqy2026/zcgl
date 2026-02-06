@@ -5,7 +5,7 @@ Provides organization access checks and helper filters for organization-scoped d
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import and_, or_, select
@@ -16,7 +16,6 @@ from ..models.auth import User
 from ..models.organization import Employee, Organization
 from ..models.rbac import ResourcePermission, Role, UserRoleAssignment
 from ..schemas.rbac import PermissionCheckRequest
-from ..security.roles import RoleNormalizer
 from .permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ class OrganizationPermissionService:
         user = await self._get_user(user_id)
         if not user:
             return False
-        if RoleNormalizer.is_admin(user.role):
+        if await self.rbac_service.is_admin(user_id):
             return True
 
         if await self._has_global_permission(user_id, "read"):
@@ -50,16 +49,14 @@ class OrganizationPermissionService:
         accessible_orgs = await self.get_user_accessible_organizations(user_id)
         return organization_id in accessible_orgs
 
-    async def can_manage_organization(
-        self, user_id: str, organization_id: str
-    ) -> bool:
+    async def can_manage_organization(self, user_id: str, organization_id: str) -> bool:
         """检查用户是否可管理指定组织"""
         if not organization_id:
             return False
         user = await self._get_user(user_id)
         if not user:
             return False
-        if RoleNormalizer.is_admin(user.role):
+        if await self.rbac_service.is_admin(user_id):
             return True
 
         if await self._has_global_permission(
@@ -92,7 +89,7 @@ class OrganizationPermissionService:
         if not user:
             return []
 
-        if RoleNormalizer.is_admin(user.role) or await self._has_global_permission(
+        if await self.rbac_service.is_admin(user_id) or await self._has_global_permission(
             user_id, "read"
         ):
             return await self._get_all_organization_ids()
@@ -104,10 +101,14 @@ class OrganizationPermissionService:
 
         if user.employee_id:
             employee = (
-                await self.db.execute(
-                    select(Employee).where(Employee.id == user.employee_id)
+                (
+                    await self.db.execute(
+                        select(Employee).where(Employee.id == user.employee_id)
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if employee and employee.organization_id:
                 org_ids.add(str(employee.organization_id))
 
@@ -194,16 +195,20 @@ class OrganizationPermissionService:
         user = await self._get_user(user_id)
         if not user:
             return None
-        if RoleNormalizer.is_admin(user.role):
+        if await self.rbac_service.is_admin(user_id):
             return "admin"
 
         target_org = user.default_organization_id
         if user.employee_id and not target_org:
             employee = (
-                await self.db.execute(
-                    select(Employee).where(Employee.id == user.employee_id)
+                (
+                    await self.db.execute(
+                        select(Employee).where(Employee.id == user.employee_id)
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             target_org = employee.organization_id if employee else None
 
         roles = await self._get_user_roles(user_id)
@@ -242,8 +247,10 @@ class OrganizationPermissionService:
 
     async def _get_user(self, user_id: str) -> User | None:
         return (
-            await self.db.execute(select(User).where(User.id == user_id))
-        ).scalars().first()
+            (await self.db.execute(select(User).where(User.id == user_id)))
+            .scalars()
+            .first()
+        )
 
     async def _get_user_roles(self, user_id: str) -> list[Role]:
         stmt = (
@@ -254,7 +261,7 @@ class OrganizationPermissionService:
                 UserRoleAssignment.is_active,
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.now(UTC),
+                    UserRoleAssignment.expires_at > datetime.utcnow(),
                 ),
             )
         )
@@ -274,7 +281,7 @@ class OrganizationPermissionService:
         conditions.append(
             or_(
                 ResourcePermission.expires_at.is_(None),
-                ResourcePermission.expires_at > datetime.now(UTC),
+                ResourcePermission.expires_at > datetime.utcnow(),
             )
         )
 

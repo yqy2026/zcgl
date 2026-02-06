@@ -7,8 +7,8 @@
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models.rent_contract import RentContract, RentLedger
 
@@ -63,9 +63,9 @@ class OwnershipFinancialResult:
 class OwnershipFinancialService:
     """权属方财务统计服务"""
 
-    def get_financial_summary(
+    async def get_financial_summary(
         self,
-        db: Session,
+        db: AsyncSession,
         ownership_id: str,
         ownership_name: str,
     ) -> OwnershipFinancialResult:
@@ -81,51 +81,42 @@ class OwnershipFinancialService:
             OwnershipFinancialResult
         """
         # 获取该权属方下所有合同的子查询
-        contract_subquery = (
-            db.query(RentContract.id)
-            .filter(RentContract.ownership_id == ownership_id)
-            .scalar_subquery()
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id
         )
 
         # 统计应收总额
-        due_amount = (
-            db.query(func.coalesce(func.sum(RentLedger.due_amount), 0))
-            .filter(RentLedger.contract_id == contract_subquery)
-            .scalar()
-        ) or 0
+        due_stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        due_amount = (await db.execute(due_stmt)).scalar() or 0
 
         # 统计实收总额
-        paid_amount = (
-            db.query(func.coalesce(func.sum(RentLedger.paid_amount), 0))
-            .filter(RentLedger.contract_id == contract_subquery)
-            .scalar()
-        ) or 0
+        paid_stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        paid_amount = (await db.execute(paid_stmt)).scalar() or 0
 
         # 统计欠款总额
-        arrears_amount = (
-            db.query(func.coalesce(func.sum(RentLedger.overdue_amount), 0))
-            .filter(RentLedger.contract_id == contract_subquery)
-            .scalar()
-        ) or 0
+        arrears_stmt = select(
+            func.coalesce(func.sum(RentLedger.overdue_amount), 0)
+        ).where(RentLedger.contract_id.in_(contract_ids))
+        arrears_amount = (await db.execute(arrears_stmt)).scalar() or 0
 
         # 统计合同数量
-        total_contracts = (
-            db.query(func.count(RentContract.id))
-            .filter(RentContract.ownership_id == ownership_id)
-            .scalar()
-        ) or 0
+        total_stmt = select(func.count(RentContract.id)).where(
+            RentContract.ownership_id == ownership_id
+        )
+        total_contracts = (await db.execute(total_stmt)).scalar() or 0
 
         # 统计活跃合同数
-        active_contracts = (
-            db.query(func.count(RentContract.id))
-            .filter(
-                and_(
-                    RentContract.ownership_id == ownership_id,
-                    RentContract.contract_status == "有效",
-                )
+        active_stmt = select(func.count(RentContract.id)).where(
+            and_(
+                RentContract.ownership_id == ownership_id,
+                RentContract.contract_status == "有效",
             )
-            .scalar()
-        ) or 0
+        )
+        active_contracts = (await db.execute(active_stmt)).scalar() or 0
 
         # 计算收款率
         payment_rate = float(paid_amount / due_amount * 100) if due_amount > 0 else 0.0

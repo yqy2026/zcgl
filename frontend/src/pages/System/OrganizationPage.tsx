@@ -58,7 +58,6 @@ interface OrganizationFormData {
 }
 
 const { Option } = Select;
-const { TabPane } = Tabs;
 const { Search } = Input;
 
 interface OrganizationFilters {
@@ -421,6 +420,73 @@ const OrganizationPage: React.FC = () => {
     },
   ];
 
+  const tabItems = [
+    {
+      key: 'list',
+      label: '列表视图',
+      children: (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <Row justify="space-between">
+              <Col>
+                <Space>
+                  <Search
+                    placeholder="搜索组织名称、编码或描述"
+                    allowClear
+                    style={{ width: 300 }}
+                    onSearch={handleSearch}
+                    value={filters.keyword}
+                    onChange={event => handleSearch(event.target.value)}
+                  />
+                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    刷新
+                  </Button>
+                </Space>
+              </Col>
+              <Col>
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                  新建组织
+                </Button>
+              </Col>
+            </Row>
+          </div>
+
+          <TableWithPagination
+            columns={columns}
+            dataSource={organizations}
+            rowKey="id"
+            loading={loading}
+            paginationState={pagination}
+            onPageChange={updatePagination}
+            paginationProps={{
+              showTotal: (total: number) => `共 ${total} 条记录`,
+            }}
+          />
+        </>
+      ),
+    },
+    {
+      key: 'tree',
+      label: '树形视图',
+      children: (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={loadOrganizationTree}>
+              刷新树形结构
+            </Button>
+          </div>
+
+          <Tree
+            treeData={organizationTree}
+            showLine={{ showLeafIcon: false }}
+            defaultExpandAll
+            style={{ background: COLORS.bgSecondary, padding: 16, borderRadius: 6 }}
+          />
+        </>
+      ),
+    },
+  ];
+
   return (
     <div style={{ padding: '24px' }}>
       {/* 统计卡片 */}
@@ -464,61 +530,7 @@ const OrganizationPage: React.FC = () => {
       )}
 
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="列表视图" key="list">
-            <div style={{ marginBottom: 16 }}>
-              <Row justify="space-between">
-                <Col>
-                  <Space>
-                    <Search
-                      placeholder="搜索组织名称、编码或描述"
-                      allowClear
-                      style={{ width: 300 }}
-                      onSearch={handleSearch}
-                      value={filters.keyword}
-                      onChange={event => handleSearch(event.target.value)}
-                    />
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                      刷新
-                    </Button>
-                  </Space>
-                </Col>
-                <Col>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                    新建组织
-                  </Button>
-                </Col>
-              </Row>
-            </div>
-
-            <TableWithPagination
-              columns={columns}
-              dataSource={organizations}
-              rowKey="id"
-              loading={loading}
-              paginationState={pagination}
-              onPageChange={updatePagination}
-              paginationProps={{
-                showTotal: (total: number) => `共 ${total} 条记录`,
-              }}
-            />
-          </TabPane>
-
-          <TabPane tab="树形视图" key="tree">
-            <div style={{ marginBottom: 16 }}>
-              <Button icon={<ReloadOutlined />} onClick={loadOrganizationTree}>
-                刷新树形结构
-              </Button>
-            </div>
-
-            <Tree
-              treeData={organizationTree}
-              showLine={{ showLeafIcon: false }}
-              defaultExpandAll
-              style={{ background: COLORS.bgSecondary, padding: 16, borderRadius: 6 }}
-            />
-          </TabPane>
-        </Tabs>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
       {/* 创建/编辑模态框 */}

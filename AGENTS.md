@@ -3,7 +3,7 @@
 本文件为 AI Coding Agents 提供项目上下文与执行约束，确保修改一致、可验证。
 每次修改后请更新CHANGELOG.md
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-05
 
 ---
 
@@ -38,6 +38,9 @@
 # 一键启动开发环境（前后端）
 make dev
 
+# 进程监控启动（异常退出记录日志）
+pwsh -File scripts/dev_watch.ps1
+
 # 单独启动
 make dev-backend      # 后端 :8002
 make dev-frontend     # 前端 :5173
@@ -50,6 +53,12 @@ make type-check       # TypeScript 类型检查
 make test             # 前后端测试
 make test-backend     # 仅后端单元测试 (pytest -m unit)
 make test-frontend    # 仅前端测试 (vitest)
+
+## ⚠️ 测试环境提示（重要）
+- 后端测试请使用项目虚拟环境 `backend/.venv`，避免使用系统 Python 或 Anaconda 导致 `.env` 不生效
+- 示例：
+  - `cd backend && .\\.venv\\Scripts\\pytest.exe tests/unit/services/core/test_security_service_removed.py -q`
+  - 或先 `cd backend` 后执行 `.\.venv\Scripts\activate` 再运行 `pytest`
 
 # 其他常用命令
 make secrets          # 生成 SECRET_KEY / DATA_ENCRYPTION_KEY
@@ -151,10 +160,14 @@ src/
 
 | 状态类型 | 使用工具 | 适用场景 |
 |---------|---------|---------|
-| 全局 UI | Zustand | 主题、侧边栏、用户信息、通知 |
+| 全局 UI / 偏好 / 通知 | Zustand | 主题、侧边栏、语言、用户偏好、通知等全局 UI 状态（`useAppStore`） |
+| 资产相关 UI 状态 | Zustand | 资产选中/多选、筛选参数、视图模式等（`useAssetStore`） |
+| 认证状态 | React Context | 当前登录用户、登录/登出流程（`AuthContext`） |
 | 服务器数据 | React Query | API 数据获取、缓存、同步 |
 | 表单状态 | React Hook Form | 表单验证、提交 |
 | 局部 UI | useState | 模态框开关、loading 状态 |
+
+说明：`frontend/src/store/` 目录实际存在，当前包含 `useAppStore` 与 `useAssetStore`；认证状态不在 Zustand，而在 `frontend/src/contexts/AuthContext.tsx`。
 
 ---
 
@@ -275,6 +288,29 @@ pytest -m unit                    # 仅单元测试
 pytest -m "not slow"              # 排除慢测试
 pytest -m integration             # 集成测试
 pytest --cov=src --cov-report=html # 覆盖率报告
+```
+
+### 低内存测试建议（避免卡死）
+
+```bash
+# 单文件或单用例（优先）
+cd backend
+pytest tests/unit/services/asset/test_asset_service.py
+pytest tests/unit/services/asset/test_asset_service.py::TestCreateAsset::test_create_asset_success
+
+# 关闭覆盖率（显著降低内存）
+pytest --no-cov <path>
+pytest -p no:cov <path>
+
+# 失败即停 / 只跑上次失败
+pytest -x --maxfail=1 <path>
+pytest -lf
+
+# 降低并发（若启用了 xdist）
+pytest -n 0 <path>
+
+# 找出最慢/最吃内存用例
+pytest --durations=10 <path>
 ```
 
 **测试目录**：

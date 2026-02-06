@@ -4,7 +4,6 @@
 
 import uuid
 from datetime import UTC, datetime
-from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
@@ -16,13 +15,6 @@ if TYPE_CHECKING:
     from .notification import Notification
     from .organization import Organization
     from .rbac import UserRoleAssignment
-
-
-class UserRole(str, Enum):
-    """用户角色枚举"""
-
-    ADMIN = "admin"
-    USER = "user"
 
 
 class User(Base):
@@ -51,10 +43,7 @@ class User(Base):
         JSON, comment="密码历史记录"
     )
 
-    # 角色和状态
-    role: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=UserRole.USER.value, comment="用户角色"
-    )
+    # 状态
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否激活"
     )
@@ -73,7 +62,7 @@ class User(Base):
         DateTime, comment="锁定到期时间"
     )
     password_last_changed: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="密码最后修改时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="密码最后修改时间"
     )
 
     # 组织关联
@@ -86,13 +75,13 @@ class User(Base):
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -128,24 +117,7 @@ class User(Base):
     # delegated_permissions_to_others = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegator_id", back_populates="delegator")
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, username={self.username}, role={self.role})>"
-
-    @property
-    def is_admin(self) -> bool:
-        """检查是否为管理员"""
-        # 注意：这是实例属性，不是SQL查询表达式
-        # 在实际使用中，self.role应该是从数据库加载的具体值
-        if TYPE_CHECKING:
-            # 在类型检查时，self.role是Column对象
-            return False
-        else:
-            # 在运行时，self.role是具体的值
-            role_value = cast("str", self.role)  # pragma: no cover
-            if isinstance(role_value, str):  # pragma: no cover
-                return role_value == UserRole.ADMIN.value  # pragma: no cover
-            elif hasattr(role_value, "value"):  # 如果是枚举类型  # pragma: no cover
-                return role_value.value == UserRole.ADMIN.value  # pragma: no cover
-            return False  # pragma: no cover
+        return f"<User(id={self.id}, username={self.username})>"
 
     def is_locked_now(self) -> bool:
         """检查当前是否被锁定"""
@@ -176,7 +148,7 @@ class User(Base):
                     locked_until_value = locked_until_value.replace(tzinfo=UTC)
                 else:
                     locked_until_value = locked_until_value.astimezone(UTC)
-                if locked_until_value > datetime.now(UTC):
+                if locked_until_value > datetime.utcnow():
                     return True
 
             # 如果锁定时间已过，自动解锁（安全地设置字段）
@@ -226,12 +198,12 @@ class UserSession(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     last_accessed_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
         comment="最后访问时间",
     )
 
@@ -256,7 +228,7 @@ class UserSession(Base):
                 )  # pragma: no cover
             else:  # pragma: no cover
                 expires_at_value = expires_at_value.astimezone(UTC)  # pragma: no cover
-            return datetime.now(UTC) > expires_at_value  # pragma: no cover
+            return datetime.utcnow() > expires_at_value  # pragma: no cover
 
 
 class AuditLog(Base):
@@ -301,7 +273,7 @@ class AuditLog(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
 
     # 关系

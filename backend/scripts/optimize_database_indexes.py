@@ -7,6 +7,7 @@
 """
 
 import logging
+import asyncio
 from pathlib import Path
 
 from sqlalchemy import text
@@ -22,7 +23,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.database import engine
+from src.database import get_database_engine
 
 
 class DatabaseIndexOptimizer:
@@ -45,16 +46,16 @@ class DatabaseIndexOptimizer:
     ]
 
     def __init__(self):
-        self.engine = engine
+        self.engine = get_database_engine()
         self.created_indexes = []
         self.failed_indexes = []
 
-    def create_index(self, index_name: str, sql_statement: str) -> bool:
+    async def create_index(self, index_name: str, sql_statement: str) -> bool:
         """创建单个索引"""
         try:
-            with self.engine.begin() as conn:
+            async with self.engine.begin() as conn:
                 logger.info(f"开始创建索引: {index_name}")
-                conn.execute(text(sql_statement))
+                await conn.execute(text(sql_statement))
                 logger.info(f"✅ 索引创建成功: {index_name}")
                 self.created_indexes.append(index_name)
                 return True
@@ -65,7 +66,7 @@ class DatabaseIndexOptimizer:
             self.failed_indexes.append((index_name, str(e)))
             return False
 
-    def run_optimization(self):
+    async def run_optimization(self):
         """执行优化"""
         logger.info("=" * 60)
         logger.info("开始数据库索引优化")
@@ -75,7 +76,7 @@ class DatabaseIndexOptimizer:
             # 创建所有索引
             success_count = 0
             for index_name, statement in self.INDEXES:
-                if self.create_index(index_name, statement):
+                if await self.create_index(index_name, statement):
                     success_count += 1
 
             # 打印结果
@@ -104,10 +105,10 @@ class DatabaseIndexOptimizer:
             raise
 
 
-def main():
+async def main():
     """主函数"""
     optimizer = DatabaseIndexOptimizer()
-    result = optimizer.run_optimization()
+    result = await optimizer.run_optimization()
 
     # 打印执行结果
     print("\n📊 优化结果总结:")
@@ -131,4 +132,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

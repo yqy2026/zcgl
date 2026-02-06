@@ -15,7 +15,7 @@ const AssetBasicInfoSection: React.FC = () => {
         <Col span={12}>
           <Form.Item
             label="权属方"
-            name="ownership_entity"
+            name="ownership_id"
             rules={[{ required: true, message: '请选择权属方' }]}
           >
             <OwnershipSelect

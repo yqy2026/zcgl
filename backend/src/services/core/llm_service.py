@@ -36,6 +36,25 @@ def _env_first(keys: list[str], default: str) -> str:
     return default
 
 
+def _get_settings() -> Any | None:
+    try:
+        from src.core.config import settings
+
+        return settings
+    except Exception:
+        return None
+
+
+def _env_or_setting(env_key: str, setting_attr: str) -> str | None:
+    value = os.getenv(env_key)
+    if value:
+        return value
+    settings = _get_settings()
+    if settings is None:
+        return None
+    return getattr(settings, setting_attr, None)
+
+
 class LLMResponse(BaseModel):
     """LLM 响应模型"""
 
@@ -254,7 +273,12 @@ class LLMServiceFactory:
         """
         # 从环境变量读取提供商
         if provider is None:
-            provider_str = os.getenv("LLM_PROVIDER", "hunyuan")
+            provider_str = os.getenv("LLM_PROVIDER")
+            if not provider_str:
+                settings = _get_settings()
+                if settings is not None:
+                    provider_str = getattr(settings, "LLM_PROVIDER", None)
+            provider_str = provider_str or "hunyuan"
             provider = LLMProvider.normalize(provider_str)
 
         # 根据提供商创建服务
@@ -275,13 +299,28 @@ class LLMServiceFactory:
     @classmethod
     def _create_glm_service(cls) -> LLMServiceInterface:
         """创建智谱 GLM 服务"""
-        return BaseOpenAILLM(
-            api_key=os.getenv("ZHIPU_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=_env_first(
+        api_key = _env_or_setting("ZHIPU_API_KEY", "ZHIPU_API_KEY") or os.getenv(
+            "LLM_API_KEY", ""
+        )
+        base_url = (
+            _env_or_setting("ZHIPU_BASE_URL", "ZHIPU_BASE_URL")
+            or _env_first(
                 ["ZHIPU_BASE_URL", "ZHIPU_API_BASE"],
                 "https://open.bigmodel.cn/api/paas/v4",
-            ),
-            model=os.getenv("ZHIPU_MODEL", "glm-4v"),
+            )
+        )
+        model = os.getenv("ZHIPU_MODEL")
+        if not model:
+            settings = _get_settings()
+            if settings is not None:
+                model = getattr(settings, "ZHIPU_MODEL", None)
+                if not model:
+                    model = getattr(settings, "ZHIPU_VISION_MODEL", None)
+        model = model or "glm-4v"
+        return BaseOpenAILLM(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
             timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.GLM,
         )
@@ -289,13 +328,28 @@ class LLMServiceFactory:
     @classmethod
     def _create_qwen_service(cls) -> LLMServiceInterface:
         """创建通义千问服务"""
-        return BaseOpenAILLM(
-            api_key=os.getenv("DASHSCOPE_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=_env_first(
+        api_key = _env_or_setting("DASHSCOPE_API_KEY", "DASHSCOPE_API_KEY") or os.getenv(
+            "LLM_API_KEY", ""
+        )
+        base_url = (
+            _env_or_setting("DASHSCOPE_BASE_URL", "DASHSCOPE_BASE_URL")
+            or _env_first(
                 ["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"],
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            ),
-            model=os.getenv("DASHSCOPE_MODEL", "qwen-vl-max"),
+            )
+        )
+        model = os.getenv("DASHSCOPE_MODEL")
+        if not model:
+            settings = _get_settings()
+            if settings is not None:
+                model = getattr(settings, "DASHSCOPE_MODEL", None)
+                if not model:
+                    model = getattr(settings, "QWEN_VISION_MODEL", None)
+        model = model or "qwen-vl-max"
+        return BaseOpenAILLM(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
             timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.QWEN,
         )
@@ -303,13 +357,28 @@ class LLMServiceFactory:
     @classmethod
     def _create_deepseek_service(cls) -> LLMServiceInterface:
         """创建 DeepSeek 服务"""
-        return BaseOpenAILLM(
-            api_key=os.getenv("DEEPSEEK_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=_env_first(
+        api_key = _env_or_setting("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY") or os.getenv(
+            "LLM_API_KEY", ""
+        )
+        base_url = (
+            _env_or_setting("DEEPSEEK_BASE_URL", "DEEPSEEK_BASE_URL")
+            or _env_first(
                 ["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"],
                 "https://api.deepseek.com",
-            ),
-            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            )
+        )
+        model = os.getenv("DEEPSEEK_MODEL")
+        if not model:
+            settings = _get_settings()
+            if settings is not None:
+                model = getattr(settings, "DEEPSEEK_MODEL", None)
+                if not model:
+                    model = getattr(settings, "DEEPSEEK_VISION_MODEL", None)
+        model = model or "deepseek-chat"
+        return BaseOpenAILLM(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
             timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.DEEPSEEK,
         )
@@ -317,16 +386,28 @@ class LLMServiceFactory:
     @classmethod
     def _create_hunyuan_service(cls) -> LLMServiceInterface:
         """创建腾讯混元服务"""
-        return BaseOpenAILLM(
-            api_key=os.getenv("HUNYUAN_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=_env_first(
+        api_key = _env_or_setting("HUNYUAN_API_KEY", "HUNYUAN_API_KEY") or os.getenv(
+            "LLM_API_KEY", ""
+        )
+        base_url = (
+            _env_or_setting("HUNYUAN_BASE_URL", "HUNYUAN_BASE_URL")
+            or _env_first(
                 ["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"],
                 "https://api.hunyuan.cloud.tencent.com/v1",
-            ),
-            model=os.getenv(
-                "HUNYUAN_MODEL",
-                os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision"),
-            ),
+            )
+        )
+        model = os.getenv("HUNYUAN_MODEL")
+        if not model:
+            settings = _get_settings()
+            if settings is not None:
+                model = getattr(settings, "HUNYUAN_MODEL", None)
+                if not model:
+                    model = getattr(settings, "HUNYUAN_VISION_MODEL", None)
+        model = model or "hunyuan-vision"
+        return BaseOpenAILLM(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
             timeout=int(os.getenv("LLM_TIMEOUT", str(DEFAULT_LLM_TIMEOUT_SECONDS))),
             provider=LLMProvider.HUNYUAN,
         )

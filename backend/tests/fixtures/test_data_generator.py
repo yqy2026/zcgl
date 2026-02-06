@@ -105,12 +105,21 @@ class TestDataGenerator:
         Returns:
             用户数据字典
         """
+        role_name = kwargs.get("role_name", kwargs.get("role", None))
+        if role_name is None:
+            role_name = random.choice(["admin", "user", "manager"])
+        role_id_map = {
+            "admin": "role-admin-id",
+            "user": "role-user-id",
+            "manager": "role-manager-id",
+        }
         return {
             "username": kwargs.get("username", fake.user_name()),
             "email": kwargs.get("email", fake.email()),
             "full_name": kwargs.get("full_name", fake.name()),
             "phone": kwargs.get("phone", fake.phone_number()),
-            "role": kwargs.get("role", random.choice(["admin", "user", "manager"])),
+            "role_id": kwargs.get("role_id", role_id_map.get(role_name, "role-user-id")),
+            "role_name": role_name,
             "department": kwargs.get("department", fake.company_suffix()),
             "is_active": kwargs.get("is_active", True),
         }

@@ -12,7 +12,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.constants.cache_constants import CACHE_TTL_MEDIUM_SECONDS
 from src.database import get_async_db
@@ -50,23 +49,18 @@ async def get_financial_summary(
         财务汇总统计信息
     """
 
-    def _sync(sync_db: Session) -> FinancialSummaryResponse:
-        db = sync_db
-        # 获取所有资产
-        filters: dict[str, Any] = {}
-        if not should_include_deleted:
-            filters["data_status"] = "正常"
+    filters: dict[str, Any] = {}
+    if not should_include_deleted:
+        filters["data_status"] = "正常"
 
-        service = FinancialService(db)
-        summary = service.calculate_summary(filters)
+    service = FinancialService(db)
+    summary = await service.calculate_summary(filters)
 
-        return FinancialSummaryResponse(
-            total_assets=int(summary["total_assets"]),
-            total_annual_income=summary["total_annual_income"],
-            total_annual_expense=summary["total_annual_expense"],
-            net_annual_income=summary["net_annual_income"],
-            income_per_sqm=summary["income_per_sqm"],
-            expense_per_sqm=summary["expense_per_sqm"],
-        )
-
-    return await db.run_sync(_sync)
+    return FinancialSummaryResponse(
+        total_assets=int(summary["total_assets"]),
+        total_annual_income=summary["total_annual_income"],
+        total_annual_expense=summary["total_annual_expense"],
+        net_annual_income=summary["net_annual_income"],
+        income_per_sqm=summary["income_per_sqm"],
+        expense_per_sqm=summary["expense_per_sqm"],
+    )

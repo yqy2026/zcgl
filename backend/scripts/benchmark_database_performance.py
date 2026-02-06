@@ -9,6 +9,7 @@ import json
 import statistics
 import sys
 import time
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
@@ -16,18 +17,18 @@ from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.database import engine
+from src.database import get_database_engine
 
 
 class DatabaseBenchmark:
     """数据库性能基准测试"""
 
     def __init__(self, num_iterations: int = 5):
-        self.engine = engine
+        self.engine = get_database_engine()
         self.num_iterations = num_iterations
         self.results = {}
 
-    def query_asset_list_with_filters(self) -> dict:
+    async def query_asset_list_with_filters(self) -> dict:
         """测试1: 资产列表查询（带筛选）"""
         query = """
         SELECT COUNT(*) FROM assets
@@ -36,10 +37,10 @@ class DatabaseBenchmark:
         """
 
         times = []
-        with self.engine.connect() as conn:
+        async with self.engine.connect() as conn:
             for _ in range(self.num_iterations):
                 start = time.time()
-                conn.execute(text(query))
+                await conn.execute(text(query))
                 times.append(time.time() - start)
 
         return {
@@ -51,7 +52,7 @@ class DatabaseBenchmark:
             "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
-    def query_occupancy_rate(self) -> dict:
+    async def query_occupancy_rate(self) -> dict:
         """测试2: 出租率统计查询"""
         query = """
         SELECT
@@ -63,10 +64,10 @@ class DatabaseBenchmark:
         """
 
         times = []
-        with self.engine.connect() as conn:
+        async with self.engine.connect() as conn:
             for _ in range(self.num_iterations):
                 start = time.time()
-                conn.execute(text(query))
+                await conn.execute(text(query))
                 times.append(time.time() - start)
 
         return {
@@ -78,7 +79,7 @@ class DatabaseBenchmark:
             "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
-    def query_financial_summary(self) -> dict:
+    async def query_financial_summary(self) -> dict:
         """测试3: 财务汇总查询"""
         query = """
         SELECT
@@ -90,10 +91,10 @@ class DatabaseBenchmark:
         """
 
         times = []
-        with self.engine.connect() as conn:
+        async with self.engine.connect() as conn:
             for _ in range(self.num_iterations):
                 start = time.time()
-                conn.execute(text(query))
+                await conn.execute(text(query))
                 times.append(time.time() - start)
 
         return {
@@ -105,7 +106,7 @@ class DatabaseBenchmark:
             "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
-    def run_benchmark(self) -> list[dict]:
+    async def run_benchmark(self) -> list[dict]:
         """执行所有性能测试"""
         print("=" * 70)
         print("🚀 开始数据库性能基准测试")
@@ -122,7 +123,7 @@ class DatabaseBenchmark:
         for i, bench_func in enumerate(benchmarks, 1):
             try:
                 print(f"\n({i}/{len(benchmarks)}) 运行: {bench_func.__doc__}")
-                result = bench_func()
+                result = await bench_func()
                 results.append(result)
                 print(f"   ✅ 完成 - 平均耗时: {result['avg'] * 1000:.2f}ms")
             except Exception as e:
@@ -172,9 +173,9 @@ class DatabaseBenchmark:
         print(f"\n📁 结果已保存到: {output_path}")
 
 
-def main():
+async def main() -> None:
     benchmark = DatabaseBenchmark(num_iterations=5)
-    results = benchmark.run_benchmark()
+    results = await benchmark.run_benchmark()
     benchmark.print_results(results)
     benchmark.save_results(results)
 
@@ -185,4 +186,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

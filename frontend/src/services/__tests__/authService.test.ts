@@ -27,8 +27,9 @@ describe('AuthService - Login with Permissions', () => {
           username: 'testuser',
           email: 'test@example.com',
           full_name: 'Test User',
-          role: 'admin',
-          organization_id: 'org-123',
+          role_id: 'role-admin-id',
+          role_name: 'admin',
+          default_organization_id: 'org-123',
         },
         permissions: [
           { resource: 'assets', action: 'read', description: 'Read assets' },

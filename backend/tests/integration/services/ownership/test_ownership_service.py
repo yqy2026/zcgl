@@ -6,7 +6,7 @@ OwnershipService 集成测试
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models.asset import Ownership
+from src.models.ownership import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
 
@@ -262,7 +262,7 @@ class TestOwnershipDeletion:
         asset_crud.create(
             self.db,
             obj_in={
-                "ownership_entity": "有权资产的权属方",
+                "ownership_id": ownership.id,
                 "property_name": "测试物业",
                 "address": "测试地址",
                 "ownership_status": "已确权",

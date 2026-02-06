@@ -4,7 +4,7 @@
 
 import enum
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -70,7 +70,7 @@ rent_contract_assets = Table(
     Column(
         "created_at",
         DateTime,
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
         comment="关联创建时间",
     ),
 )
@@ -187,12 +187,12 @@ class RentContract(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -324,7 +324,7 @@ class RentDepositLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
 
     # 关联关系
@@ -380,12 +380,12 @@ class RentTerm(Base):
 
     # 系统字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -464,12 +464,12 @@ class RentLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -538,12 +538,12 @@ class ServiceFeeLedger(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -587,7 +587,7 @@ class RentContractHistory(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
 
     # 关联关系
@@ -633,7 +633,7 @@ class RentContractAttachment(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="上传时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="上传时间"
     )
 
     # 关联关系

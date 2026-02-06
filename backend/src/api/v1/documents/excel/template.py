@@ -6,9 +6,7 @@ from collections.abc import Generator
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
-from src.database import get_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.services.excel import ExcelTemplateService
@@ -17,15 +15,14 @@ router = APIRouter()
 
 
 @router.get("/template", summary="下载Excel导入模板")
-def download_template(
-    db: Session = Depends(get_db),
+async def download_template(
     current_user: User = Depends(get_current_active_user),
 ) -> StreamingResponse:
     """
     下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
     # 使用ExcelTemplateService生成模板
-    service = ExcelTemplateService(db)
+    service = ExcelTemplateService()
     buffer = service.generate_template()
 
     # 返回文件流（避免重复读取buffer）

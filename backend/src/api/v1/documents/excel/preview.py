@@ -7,11 +7,11 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from src.core.exception_handler import BusinessValidationError
-from src.database import get_db
+from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.excel_advanced import (
@@ -32,7 +32,7 @@ router = APIRouter()
 async def preview_excel_advanced(
     file: UploadFile = File(...),
     request: ExcelPreviewRequest = Body(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> ExcelPreviewResponse:
     """
     高级Excel文件预览，支持字段映射检测

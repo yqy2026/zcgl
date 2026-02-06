@@ -18,9 +18,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from ..core.config import settings
+from ..crud.auth import UserCRUD
 from ..crud.operation_log import OperationLogCRUD
 from ..database import async_session_scope
-from ..models.auth import User
 from ..security.cookie_manager import cookie_manager
 from ..security.logging_security import SensitiveDataFilter, log_request_info
 
@@ -183,33 +183,29 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
                 resolved_username = username
                 if not resolved_username and user_id:
-                    user_obj = await db.run_sync(
-                        lambda sync_db: (
-                            sync_db.query(User).filter(User.id == user_id).first()
-                        )
-                    )
+                    user_crud = UserCRUD()
+                    user_obj = await user_crud.get_async(db, user_id)
                     if user_obj:
                         resolved_username = user_obj.username
 
-                await db.run_sync(
-                    lambda sync_db: OperationLogCRUD().create(
-                        db=sync_db,
-                        user_id=user_id,
-                        username=resolved_username,
-                        action=action,
-                        action_name=action_name,
-                        module=module,
-                        module_name=module_name,
-                        request_method=request_method,
-                        request_url=path,
-                        response_status=response.status_code,
-                        response_time=int(duration_ms),
-                        ip_address=client_ip,
-                        user_agent=user_agent,
-                        request_params=request_params,
-                        request_body=request_body,
-                        error_message=error_message,
-                    )
+                log_crud = OperationLogCRUD()
+                await log_crud.create_async(
+                    db=db,
+                    user_id=user_id,
+                    username=resolved_username,
+                    action=action,
+                    action_name=action_name,
+                    module=module,
+                    module_name=module_name,
+                    request_method=request_method,
+                    request_url=path,
+                    response_status=response.status_code,
+                    response_time=int(duration_ms),
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    request_params=request_params,
+                    request_body=request_body,
+                    error_message=error_message,
                 )
         except Exception:
             logger.exception("Operation log creation failed")

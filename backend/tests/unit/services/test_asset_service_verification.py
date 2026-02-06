@@ -2,12 +2,28 @@
 测试 AssetService CRUD 生命周期 (使用 Mock 避免数据库依赖)
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.core.exception_handler import ResourceNotFoundError
 from src.services.asset.asset_service import AssetService
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.in_transaction.return_value = True
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    db.flush = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    db.add = MagicMock()
+    db.delete = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -16,7 +32,7 @@ def asset_service(mock_db):
     return AssetService(mock_db)
 
 
-def test_asset_service_crud_lifecycle(asset_service, mock_db):
+async def test_asset_service_crud_lifecycle(asset_service, mock_db):
     """测试资产服务CRUD生命周期 - 简化版本"""
     # 这个测试主要验证服务可以正常实例化和方法存在
     # 具体的业务逻辑测试应该在集成测试中进行
@@ -33,16 +49,16 @@ def test_asset_service_crud_lifecycle(asset_service, mock_db):
 
     # 3. 验证资源不存在的错误处理
     with patch("src.services.asset.asset_service.asset_crud") as mock_crud:
-        mock_crud.get.return_value = None
+        mock_crud.get_async = AsyncMock(return_value=None)
         with pytest.raises(ResourceNotFoundError):
-            asset_service.get_asset("nonexistent_id")
+            await asset_service.get_asset("nonexistent_id")
 
     # 4. 验证枚举验证服务可以被正确mock
     with patch(
-        "src.services.asset.asset_service.get_enum_validation_service"
+        "src.services.asset.asset_service.get_enum_validation_service_async"
     ) as mock_enum:
         mock_enum_service = MagicMock()
-        mock_enum_service.validate_asset_data.return_value = (True, [])
+        mock_enum_service.validate_asset_data = AsyncMock(return_value=(True, []))
         mock_enum.return_value = mock_enum_service
 
         # 验证mock服务被正确设置

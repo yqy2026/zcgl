@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,8 +16,19 @@ def service():
     return OrganizationService()
 
 
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    return db
+
+
 class TestOrganizationService:
-    def test_create_organization_root(self, service, mock_db):
+    @pytest.mark.asyncio
+    async def test_create_organization_root(self, service, mock_db):
         obj_in = OrganizationCreate(
             name="Root Org",
             code="ROOT",
@@ -26,14 +37,15 @@ class TestOrganizationService:
             sort_order=1,
         )
 
-        result = service.create_organization(mock_db, obj_in=obj_in)
+        result = await service.create_organization(mock_db, obj_in=obj_in)
 
         assert result.level == 1
         assert result.path.startswith("/")
         mock_db.add.assert_called()
-        mock_db.commit.assert_called()
+        assert mock_db.commit.await_count >= 1
 
-    def test_create_organization_child(self, service, mock_db):
+    @pytest.mark.asyncio
+    async def test_create_organization_child(self, service, mock_db):
         obj_in = OrganizationCreate(
             name="Child Org",
             code="CHILD",
@@ -47,49 +59,66 @@ class TestOrganizationService:
             id=TEST_PARENT_ID, name="Root", level=1, path=f"/{TEST_PARENT_ID}"
         )
 
-        with patch("src.crud.organization.organization.get", return_value=parent):
-            result = service.create_organization(mock_db, obj_in=obj_in)
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=parent),
+        ):
+            result = await service.create_organization(mock_db, obj_in=obj_in)
 
             assert result.level == 2
             mock_db.add.assert_called()
 
-    def test_update_organization(self, service, mock_db):
+    @pytest.mark.asyncio
+    async def test_update_organization(self, service, mock_db):
         db_obj = Organization(id=TEST_ORG_ID, name="Old Name")
         obj_in = OrganizationUpdate(name="New Name")
 
-        with patch("src.crud.organization.organization.get", return_value=db_obj):
-            result = service.update_organization(
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=db_obj),
+        ):
+            result = await service.update_organization(
                 mock_db, org_id=TEST_ORG_ID, obj_in=obj_in
             )
 
             assert result.name == "New Name"
-            mock_db.commit.assert_called()
+            assert mock_db.commit.await_count >= 1
 
-    def test_move_organization_cycle(self, service, mock_db):
+    @pytest.mark.asyncio
+    async def test_move_organization_cycle(self, service, mock_db):
         # Move org to under itself or its child
         db_obj = Organization(id=TEST_ORG_ID, name="Moving Org")
         obj_in = OrganizationUpdate(parent_id="child_id")
 
-        with patch("src.crud.organization.organization.get", return_value=db_obj):
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=db_obj),
+        ):
             # Mock _would_create_cycle to return True
-            service._would_create_cycle = MagicMock(return_value=True)
+            service._would_create_cycle = AsyncMock(return_value=True)
 
             with pytest.raises(OperationNotAllowedError) as excinfo:
-                service.update_organization(mock_db, org_id=TEST_ORG_ID, obj_in=obj_in)
+                await service.update_organization(
+                    mock_db, org_id=TEST_ORG_ID, obj_in=obj_in
+                )
 
             assert "不能将组织移动到其子组织下" in str(excinfo.value)
 
-    def test_delete_organization_with_children(self, service, mock_db):
+    @pytest.mark.asyncio
+    async def test_delete_organization_with_children(self, service, mock_db):
         db_obj = Organization(id=TEST_ORG_ID)
 
-        with patch("src.crud.organization.organization.get", return_value=db_obj):
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=db_obj),
+        ):
             with patch(
-                "src.crud.organization.organization.get_children",
-                return_value=[MagicMock()],
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[MagicMock()]),
             ):
                 # Returns children
 
                 with pytest.raises(OperationNotAllowedError) as excinfo:
-                    service.delete_organization(mock_db, org_id=TEST_ORG_ID)
+                    await service.delete_organization(mock_db, org_id=TEST_ORG_ID)
 
                 assert "子组织" in str(excinfo.value)

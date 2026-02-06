@@ -75,7 +75,7 @@ async def get_health_status(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> HealthStatus:
     """获取系统整体健康状态"""
-    components = check_component_health()
+    components = await check_component_health()
     overall_score = calculate_overall_health_score(components)
 
     if overall_score >= 90:

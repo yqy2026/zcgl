@@ -10,8 +10,11 @@ import sys
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from src.api.v1.dictionaries import SimpleDictionaryCreate, quick_create_dictionary
-from src.database import SessionLocal, create_tables
+from src.api.v1.system.dictionaries import (
+    SimpleDictionaryCreate,
+    quick_create_dictionary,
+)
+from src.database import async_session_scope, create_tables
 
 
 async def init_asset_dictionaries():
@@ -125,41 +128,36 @@ async def init_asset_dictionaries():
         },
     }
 
-    db = SessionLocal()
     created_count = 0
     skipped_count = 0
 
     try:
-        for dict_type, config in dictionaries_config.items():
-            print(f"\n处理字典: {dict_type} - {config.get('description', '')}")
+        async with async_session_scope() as db:
+            for dict_type, config in dictionaries_config.items():
+                print(f"\n处理字典: {dict_type} - {config.get('description', '')}")
 
-            try:
-                # 创建字典数据
-                dictionary_data = SimpleDictionaryCreate(
-                    options=config["options"], description=config.get("description")
-                )
+                try:
+                    dictionary_data = SimpleDictionaryCreate(
+                        options=config["options"], description=config.get("description")
+                    )
 
-                # 调用API创建字典
-                await quick_create_dictionary(
-                    dict_type=dict_type, dictionary_data=dictionary_data, db=db
-                )
+                    await quick_create_dictionary(
+                        dict_type=dict_type, dictionary_data=dictionary_data, db=db
+                    )
 
-                print(f"  ✅ 创建成功: {len(config['options'])} 个选项")
-                created_count += 1
+                    print(f"  ✅ 创建成功: {len(config['options'])} 个选项")
+                    created_count += 1
 
-            except Exception as e:
-                if "已存在" in str(e):
-                    print("  ⚠️  字典已存在，跳过")
-                    skipped_count += 1
-                else:
-                    print(f"  ❌ 创建失败: {e}")
+                except Exception as e:
+                    if "已存在" in str(e):
+                        print("  ⚠️  字典已存在，跳过")
+                        skipped_count += 1
+                    else:
+                        print(f"  ❌ 创建失败: {e}")
 
     except Exception as e:
         print(f"\n❌ 初始化过程中发生错误: {e}")
         return False
-
-    finally:
-        db.close()
 
     print("\n" + "=" * 60)
     print("初始化完成!")
@@ -171,14 +169,14 @@ async def init_asset_dictionaries():
     return True
 
 
-def main():
+async def main():
     """主函数"""
     try:
         # 确保数据库表存在
-        create_tables()
+        await create_tables()
 
         # 运行异步初始化
-        asyncio.run(init_asset_dictionaries())
+        await init_asset_dictionaries()
 
         print("\n🎉 字典初始化完成！现在可以在前端使用这些字典了。")
 
@@ -188,4 +186,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

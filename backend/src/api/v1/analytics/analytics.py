@@ -17,7 +17,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
@@ -54,58 +53,54 @@ async def get_comprehensive_analytics(
     权限要求: 需要登录
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        # 构建筛选条件
-        filters: dict[str, Any] = {
-            "include_deleted": should_include_deleted,
-        }
+    filters: dict[str, Any] = {
+        "include_deleted": should_include_deleted,
+    }
 
-        if date_from is not None:
-            filters["date_from"] = date_from
-        if date_to is not None:
-            filters["date_to"] = date_to
+    if date_from is not None:
+        filters["date_from"] = date_from
+    if date_to is not None:
+        filters["date_to"] = date_to
 
+    try:
+        service = AnalyticsService(db)
+        result = await service.get_comprehensive_analytics(
+            filters=filters,
+            should_use_cache=should_use_cache,
+            current_user=current_user,
+        )
+
+        success_response: JSONResponse = ResponseHandler.success(
+            data=result,
+            message="统计分析数据获取成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
+
+    except Exception as e:
+        logger.error(f"获取综合分析数据失败: {str(e)}", exc_info=True)
         try:
-            service = AnalyticsService(db)
-            result = service.get_comprehensive_analytics(
+            fallback_service = AnalyticsService(db)
+            fallback_result = await fallback_service.get_comprehensive_analytics(
                 filters=filters,
-                should_use_cache=should_use_cache,
+                should_use_cache=False,
                 current_user=current_user,
             )
-
-            success_response: JSONResponse = ResponseHandler.success(
-                data=result,
+            return ResponseHandler.success(
+                data=fallback_result,
                 message="统计分析数据获取成功",
                 request_id=get_request_id(request),
             )
-            return success_response
-
-        except Exception as e:
-            logger.error(f"获取综合分析数据失败: {str(e)}", exc_info=True)
-            try:
-                fallback_service = AnalyticsService(db)
-                fallback_result = fallback_service.get_comprehensive_analytics(
-                    filters=filters,
-                    should_use_cache=False,
-                    current_user=current_user,
-                )
-                return ResponseHandler.success(
-                    data=fallback_result,
-                    message="统计分析数据获取成功",
-                    request_id=get_request_id(request),
-                )
-            except Exception as fallback_error:
-                logger.error(
-                    f"获取综合分析数据降级失败: {str(fallback_error)}",
-                    exc_info=True,
-                )
-                error_response: JSONResponse = ResponseHandler.error(
-                    message=f"获取分析数据失败: {str(e)}",
-                    request_id=get_request_id(request),
-                )
-                return error_response
-    return await db.run_sync(_sync)
+        except Exception as fallback_error:
+            logger.error(
+                f"获取综合分析数据降级失败: {str(fallback_error)}",
+                exc_info=True,
+            )
+            error_response: JSONResponse = ResponseHandler.error(
+                message=f"获取分析数据失败: {str(e)}",
+                request_id=get_request_id(request),
+            )
+            return error_response
 
 
 @router.get("/cache/stats", summary="获取缓存统计信息")
@@ -120,28 +115,24 @@ async def get_cache_stats(
     返回缓存命中率、键数量等信息
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            service = AnalyticsService(db)
-            stats = service.get_cache_stats()
+    try:
+        service = AnalyticsService(db)
+        stats = await service.get_cache_stats()
 
-            success_response: JSONResponse = ResponseHandler.success(
-                data=stats,
-                message="缓存统计信息获取成功",
-                request_id=get_request_id(request),
-            )
-            return success_response
+        success_response: JSONResponse = ResponseHandler.success(
+            data=stats,
+            message="缓存统计信息获取成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
 
-        except Exception as e:
-            logger.error(f"获取缓存统计失败: {str(e)}")
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"获取缓存统计失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        logger.error(f"获取缓存统计失败: {str(e)}")
+        error_response: JSONResponse = ResponseHandler.error(
+            message=f"获取缓存统计失败: {str(e)}",
+            request_id=get_request_id(request),
+        )
+        return error_response
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
@@ -156,28 +147,24 @@ async def clear_cache(
     权限要求: 需要登录
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            service = AnalyticsService(db)
-            result = service.clear_cache()
+    try:
+        service = AnalyticsService(db)
+        result = await service.clear_cache()
 
-            success_response: JSONResponse = ResponseHandler.success(
-                data=result,
-                message="缓存清除成功",
-                request_id=get_request_id(request),
-            )
-            return success_response
+        success_response: JSONResponse = ResponseHandler.success(
+            data=result,
+            message="缓存清除成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
 
-        except Exception as e:
-            logger.error(f"清除缓存失败: {str(e)}")
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"清除缓存失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        logger.error(f"清除缓存失败: {str(e)}")
+        error_response: JSONResponse = ResponseHandler.error(
+            message=f"清除缓存失败: {str(e)}",
+            request_id=get_request_id(request),
+        )
+        return error_response
 
 
 @router.get(
@@ -197,35 +184,30 @@ async def debug_cache_status(
     仅在调试模式下可用
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            service = AnalyticsService(db)
-            stats = service.get_cache_stats()
+    try:
+        service = AnalyticsService(db)
+        stats = await service.get_cache_stats()
 
-            # 添加调试信息
-            debug_info = {
-                **stats,
-                "debug_mode": True,
-                "request_path": str(request.url),
-            }
+        debug_info = {
+            **stats,
+            "debug_mode": True,
+            "request_path": str(request.url),
+        }
 
-            success_response: JSONResponse = ResponseHandler.success(
-                data=debug_info,
-                message="缓存调试信息获取成功",
-                request_id=get_request_id(request),
-            )
-            return success_response
+        success_response: JSONResponse = ResponseHandler.success(
+            data=debug_info,
+            message="缓存调试信息获取成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
 
-        except Exception as e:
-            logger.error(f"获取缓存调试信息失败: {str(e)}")
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"获取调试信息失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        logger.error(f"获取缓存调试信息失败: {str(e)}")
+        error_response: JSONResponse = ResponseHandler.error(
+            message=f"获取调试信息失败: {str(e)}",
+            request_id=get_request_id(request),
+        )
+        return error_response
 
 
 @router.get("/trend", summary="获取趋势数据")
@@ -248,38 +230,34 @@ async def get_trend_data(
         should_include_deleted: 是否包含已删除数据
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            filters = {"include_deleted": should_include_deleted}
+    try:
+        filters = {"include_deleted": should_include_deleted}
 
-            service = AnalyticsService(db)
-            trend_data = service.calculate_trend(
-                trend_type=trend_type,
-                time_dimension=time_dimension,
-                filters=filters,
-            )
+        service = AnalyticsService(db)
+        trend_data = await service.calculate_trend(
+            trend_type=trend_type,
+            time_dimension=time_dimension,
+            filters=filters,
+        )
 
-            success_response: JSONResponse = ResponseHandler.success(
-                data={
-                    "trend_type": trend_type,
-                    "time_dimension": time_dimension,
-                    "data": trend_data,
-                },
-                message="趋势数据获取成功",
-                request_id=get_request_id(request),
-            )
-            return success_response
+        success_response: JSONResponse = ResponseHandler.success(
+            data={
+                "trend_type": trend_type,
+                "time_dimension": time_dimension,
+                "data": trend_data,
+            },
+            message="趋势数据获取成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
 
-        except Exception as e:
-            logger.error(f"获取趋势数据失败: {str(e)}")
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"获取趋势数据失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        logger.error(f"获取趋势数据失败: {str(e)}")
+        error_response: JSONResponse = ResponseHandler.error(
+            message=f"获取趋势数据失败: {str(e)}",
+            request_id=get_request_id(request),
+        )
+        return error_response
 
 
 @router.get("/distribution", summary="获取分布数据")
@@ -300,33 +278,29 @@ async def get_distribution_data(
         should_include_deleted: 是否包含已删除数据
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            filters = {"include_deleted": should_include_deleted}
+    try:
+        filters = {"include_deleted": should_include_deleted}
 
-            service = AnalyticsService(db)
-            distribution = service.calculate_distribution(
-                distribution_type=distribution_type,
-                filters=filters,
-            )
+        service = AnalyticsService(db)
+        distribution = await service.calculate_distribution(
+            distribution_type=distribution_type,
+            filters=filters,
+        )
 
-            success_response: JSONResponse = ResponseHandler.success(
-                data=distribution,
-                message="分布数据获取成功",
-                request_id=get_request_id(request),
-            )
-            return success_response
+        success_response: JSONResponse = ResponseHandler.success(
+            data=distribution,
+            message="分布数据获取成功",
+            request_id=get_request_id(request),
+        )
+        return success_response
 
-        except Exception as e:
-            logger.error(f"获取分布数据失败: {str(e)}")
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"获取分布数据失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
-
-    return await db.run_sync(_sync)
+    except Exception as e:
+        logger.error(f"获取分布数据失败: {str(e)}")
+        error_response: JSONResponse = ResponseHandler.error(
+            message=f"获取分布数据失败: {str(e)}",
+            request_id=get_request_id(request),
+        )
+        return error_response
 
 
 @router.post("/export", summary="导出分析数据")
@@ -346,79 +320,68 @@ async def export_analytics(
     权限要求: 需要登录
     """
 
-    def _sync(sync_db: Session) -> StreamingResponse | JSONResponse:
-        db = sync_db
-        try:
-            # 构建筛选条件
-            filters: dict[str, Any] = {
-                "include_deleted": should_include_deleted,
-            }
+    try:
+        filters: dict[str, Any] = {
+            "include_deleted": should_include_deleted,
+        }
 
-            if date_from is not None:
-                filters["date_from"] = date_from
-            if date_to is not None:
-                filters["date_to"] = date_to
+        if date_from is not None:
+            filters["date_from"] = date_from
+        if date_to is not None:
+            filters["date_to"] = date_to
 
-            # 调用服务层获取数据
-            service = AnalyticsService(db)
-            result = service.get_comprehensive_analytics(
-                filters=filters,
-                should_use_cache=False,  # 导出时不使用缓存
-                current_user=current_user,
+        service = AnalyticsService(db)
+        result = await service.get_comprehensive_analytics(
+            filters=filters,
+            should_use_cache=False,
+            current_user=current_user,
+        )
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if export_format == "csv":
+            output = io.StringIO()
+            json.dump(result, output, ensure_ascii=False, indent=2)
+            output.seek(0)
+
+            async def csv_generator() -> AsyncIterator[bytes]:
+                yield output.getvalue().encode("utf-8")
+
+            return StreamingResponse(
+                csv_generator(),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analytics_{timestamp}.csv"
+                },
             )
 
-            # 生成文件名
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if export_format == "excel":
+            from ....services.excel import ExcelExportService
 
-            if export_format == "csv":
-                # 导出为 CSV (JSON 格式)
-                output = io.StringIO()
-                json.dump(result, output, ensure_ascii=False, indent=2)
-                output.seek(0)
+            excel_service = ExcelExportService(None)
+            buffer = excel_service.export_analytics_to_excel(result)
 
-                async def csv_generator() -> AsyncIterator[bytes]:
-                    yield output.getvalue().encode("utf-8")
+            async def excel_generator() -> AsyncIterator[bytes]:
+                data = buffer.getvalue()
+                yield data
+                buffer.close()
 
-                return StreamingResponse(
-                    csv_generator(),
-                    media_type="text/csv",
-                    headers={
-                        "Content-Disposition": f"attachment; filename=analytics_{timestamp}.csv"
-                    },
-                )
-
-            elif export_format == "excel":
-                # 导出为 Excel (使用现有服务)
-                from ....services.excel import ExcelExportService
-
-                excel_service = ExcelExportService(db)
-                buffer = excel_service.export_analytics_to_excel(result)
-
-                async def excel_generator() -> AsyncIterator[bytes]:
-                    data = buffer.getvalue()
-                    yield data
-                    buffer.close()
-
-                return StreamingResponse(
-                    excel_generator(),
-                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={
-                        "Content-Disposition": f"attachment; filename=analytics_{timestamp}.xlsx"
-                    },
-                )
-
-            else:  # pdf
-                # PDF 导出需要额外库，暂时返回 JSON
-                return ResponseHandler.error(
-                    message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
-                    request_id=get_request_id(request),
-                )
-
-        except Exception as e:
-            logger.error(f"导出分析数据失败: {str(e)}")
-            return ResponseHandler.error(
-                message=f"导出失败: {str(e)}",
-                request_id=get_request_id(request),
+            return StreamingResponse(
+                excel_generator(),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analytics_{timestamp}.xlsx"
+                },
             )
 
-    return await db.run_sync(_sync)
+        return ResponseHandler.error(
+            message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
+            request_id=get_request_id(request),
+        )
+
+    except Exception as e:
+        logger.error(f"导出分析数据失败: {str(e)}")
+        return ResponseHandler.error(
+            message=f"导出失败: {str(e)}",
+            request_id=get_request_id(request),
+        )

@@ -5,6 +5,7 @@
  * @author Claude Code
  */
 
+import { AxiosError } from 'axios';
 import {
   RentContract,
   RentContractCreate,
@@ -31,8 +32,55 @@ import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
 import { API_ENDPOINTS } from '@/constants/api';
+import { ApiClientError, ApiErrorType } from '@/types/apiResponse';
 
 const logger = createLogger('RentContractService');
+
+const isApiClientError = (error: unknown): error is ApiClientError => {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    'type' in error &&
+    'code' in error &&
+    'message' in error
+  );
+};
+
+const shouldRetryOnServerError = (error: unknown): boolean => {
+  if (error instanceof AxiosError) {
+    const statusCode = error.response?.status;
+    if (statusCode != null) {
+      return statusCode >= 500;
+    }
+    return true;
+  }
+
+  if (isApiClientError(error)) {
+    if (typeof error.statusCode === 'number') {
+      return error.statusCode >= 500;
+    }
+
+    if (error.type === ApiErrorType.NETWORK_ERROR) {
+      return true;
+    }
+
+    if (error.type === ApiErrorType.SERVER_ERROR) {
+      return true;
+    }
+
+    return false;
+  }
+
+  if (error != null && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: number } }).response;
+    const statusCode = response?.status;
+    if (statusCode != null) {
+      return statusCode >= 500;
+    }
+  }
+
+  return false;
+};
 
 class RentContractService {
   private baseUrl = API_ENDPOINTS.RENT_CONTRACT.LIST;
@@ -107,7 +155,12 @@ class RentContractService {
         API_ENDPOINTS.RENT_CONTRACT.CREATE,
         data,
         {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          retry: {
+            maxAttempts: 3,
+            delay: 1000,
+            backoffMultiplier: 2,
+            retryCondition: shouldRetryOnServerError,
+          },
           smartExtract: true,
         }
       );

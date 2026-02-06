@@ -6,9 +6,13 @@ from typing import Any, cast
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exception_handler import forbidden, internal_error, unauthorized
+from ..core.exception_handler import (
+    BaseBusinessError,
+    forbidden,
+    internal_error,
+    unauthorized,
+)
 from ..database import get_async_db
-from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user
 from ..models.auth import User
 from ..services import RBACService
@@ -99,7 +103,7 @@ def permission_required[**P, R](
             except HTTPException:
                 # Re-raise HTTPException directly (e.g., 403 permission denied)
                 raise
-            except BusinessLogicError as e:
+            except BaseBusinessError as e:
                 logger.error(f"权限验证业务逻辑错误: {str(e)}")
                 raise forbidden(str(e))
             except Exception as e:
@@ -147,9 +151,6 @@ def role_required[**P, R](
             user_id_value: str = str(getattr(current_user, "id", ""))
             roles = await rbac_service.get_user_roles(user_id_value)
             role_names = {role.name for role in roles}
-            current_role = getattr(current_user, "role", None)
-            if current_role is not None:
-                role_names.add(str(current_role))
 
             if role_code not in role_names:
                 raise forbidden(f"权限不足，需要 {role_code} 角色")
@@ -314,9 +315,6 @@ class PermissionChecker:
         user_id_value: str = getattr(self.user, "id", "")
         roles = await self.rbac_service.get_user_roles(user_id_value)
         role_names = {role.name for role in roles}
-        current_role = getattr(self.user, "role", None)
-        if current_role is not None:
-            role_names.add(str(current_role))
         return role_code in role_names
 
     async def is_admin(self) -> bool:

@@ -5,8 +5,10 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm.attributes import NO_VALUE
 
 
 class ProjectBase(BaseModel):
@@ -138,6 +140,36 @@ class ProjectResponse(ProjectBase):
     updated_by: str | None
     asset_count: int = 0
     ownership_relations: list[dict[str, Any]] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_project_model(cls, v: Any) -> Any:
+        """避免在响应序列化中触发懒加载关系。"""
+        if isinstance(v, dict):
+            return v
+        try:
+            state = sa_inspect(v)
+        except Exception:
+            return v
+
+        data = {attr.key: getattr(v, attr.key) for attr in state.mapper.column_attrs}
+
+        try:
+            rel_state = state.attrs.ownership_relations
+            rel_value = rel_state.loaded_value
+            data["ownership_relations"] = [] if rel_value is NO_VALUE else rel_value
+        except Exception:
+            data["ownership_relations"] = []
+
+        if hasattr(v, "asset_count"):
+            data["asset_count"] = getattr(v, "asset_count")
+
+        if "created_by" not in data:
+            data["created_by"] = getattr(v, "created_by", None)
+        if "updated_by" not in data:
+            data["updated_by"] = getattr(v, "updated_by", None)
+
+        return data
 
     @field_validator("ownership_relations", mode="before")
     @classmethod

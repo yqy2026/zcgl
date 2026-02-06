@@ -23,15 +23,15 @@ def health_check() -> dict[str, str]:
 
 
 @router.post("/database/reset")
-def reset_database(
+async def reset_database(
     current_user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, Any]:
     """
     重置数据库（仅管理员）
     """
     try:  # pragma: no cover
-        drop_tables()  # pragma: no cover
-        create_tables()  # pragma: no cover
+        await drop_tables()  # pragma: no cover
+        await create_tables()  # pragma: no cover
         return {"message": "数据库重置成功"}  # pragma: no cover
     except Exception as e:  # pragma: no cover
         raise internal_error(f"数据库重置失败: {str(e)}")  # pragma: no cover

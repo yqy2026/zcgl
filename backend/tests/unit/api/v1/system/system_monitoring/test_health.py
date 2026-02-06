@@ -5,7 +5,9 @@
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestCheckComponentHealth:
@@ -13,18 +15,21 @@ class TestCheckComponentHealth:
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_returns_dict(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_returns_dict(self, mock_psutil, mock_get_db):
         """测试返回字典类型"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
         # Mock database manager
         mock_db = MagicMock()
-        mock_db.run_health_check.return_value = {
-            "healthy": True,
-            "timestamp": datetime.now().isoformat(),
-            "checks": {"basic_connection": {"response_time_ms": 5}},
-            "overall_score": 95,
-        }
+        mock_db.run_health_check = AsyncMock(
+            return_value={
+                "healthy": True,
+                "timestamp": datetime.now().isoformat(),
+                "checks": {"basic_connection": {"response_time_ms": 5}},
+                "overall_score": 95,
+            }
+        )
         mock_db.get_connection_pool_status.return_value = {
             "utilization": 50,
             "active_connections": 5,
@@ -42,23 +47,26 @@ class TestCheckComponentHealth:
         mock_memory.available = 8 * 1024**3
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert isinstance(result, dict)
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_contains_database_component(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_contains_database_component(self, mock_psutil, mock_get_db):
         """测试包含数据库组件"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
         mock_db = MagicMock()
-        mock_db.run_health_check.return_value = {
-            "healthy": True,
-            "timestamp": datetime.now().isoformat(),
-            "checks": {},
-            "overall_score": 90,
-        }
+        mock_db.run_health_check = AsyncMock(
+            return_value={
+                "healthy": True,
+                "timestamp": datetime.now().isoformat(),
+                "checks": {},
+                "overall_score": 90,
+            }
+        )
         mock_db.get_connection_pool_status.return_value = {"utilization": 40}
         mock_get_db.return_value = mock_db
 
@@ -67,14 +75,15 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert "database" in result
         assert "status" in result["database"]
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_contains_cache_component(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_contains_cache_component(self, mock_psutil, mock_get_db):
         """测试包含缓存组件"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -85,14 +94,15 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert "cache" in result
         assert result["cache"]["status"] == "healthy"
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_contains_filesystem_component(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_contains_filesystem_component(self, mock_psutil, mock_get_db):
         """测试包含文件系统组件"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -103,14 +113,15 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert "filesystem" in result
         assert "usage_percent" in result["filesystem"]
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_contains_memory_component(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_contains_memory_component(self, mock_psutil, mock_get_db):
         """测试包含内存组件"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -121,14 +132,15 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert "memory" in result
         assert "usage_percent" in result["memory"]
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_filesystem_warning_on_high_usage(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_filesystem_warning_on_high_usage(self, mock_psutil, mock_get_db):
         """测试文件系统使用率高时显示警告"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -139,13 +151,14 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert result["filesystem"]["status"] == "warning"
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_memory_warning_on_high_usage(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_memory_warning_on_high_usage(self, mock_psutil, mock_get_db):
         """测试内存使用率高时显示警告"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -156,13 +169,14 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=90, available=2 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert result["memory"]["status"] == "warning"
 
     @patch("src.api.v1.system.system_monitoring.health.get_database_manager")
     @patch("src.api.v1.system.system_monitoring.health.psutil")
-    def test_database_unhealthy_when_manager_none(self, mock_psutil, mock_get_db):
+    @pytest.mark.asyncio
+    async def test_database_unhealthy_when_manager_none(self, mock_psutil, mock_get_db):
         """测试数据库管理器为空时状态为 unhealthy"""
         from src.api.v1.system.system_monitoring.health import check_component_health
 
@@ -173,7 +187,7 @@ class TestCheckComponentHealth:
         mock_memory = MagicMock(percent=60, available=8 * 1024**3)
         mock_psutil.virtual_memory.return_value = mock_memory
 
-        result = check_component_health()
+        result = await check_component_health()
 
         assert result["database"]["status"] == "unhealthy"
 

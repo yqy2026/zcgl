@@ -10,11 +10,13 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...core.exception_handler import BusinessValidationError
 from ...crud.asset import asset_crud
+from ...models.ownership import Ownership
 from ...schemas.asset import AssetCreate
 from ..asset.validators import AssetBatchValidator
 
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 # 字段映射：Excel中文列名 -> 数据库字段名
 FIELD_MAPPING = {
     "权属方": "ownership_entity",
+    "权属方ID": "ownership_id",
     "权属类别": "ownership_category",
     "项目名称": "project_name",
     "物业名称": "property_name",
@@ -54,7 +57,7 @@ class ExcelImportService:
     负责将Excel文件中的资产数据导入到数据库
     """
 
-    def __init__(self, db: Session | None = None):
+    def __init__(self, db: AsyncSession | None = None):
         """
         初始化导入服务
 
@@ -76,10 +79,11 @@ class ExcelImportService:
     ) -> dict[str, Any]:
         from fastapi.concurrency import run_in_threadpool
 
-        return await run_in_threadpool(
-            self._import_assets_from_excel_sync,
-            file_path=file_path,
-            sheet_name=sheet_name,
+        df = await run_in_threadpool(
+            pd.read_excel, file_path, sheet_name=sheet_name
+        )
+        return await self._import_assets_from_dataframe(
+            df=df,
             should_validate_data=should_validate_data,
             should_create_assets=should_create_assets,
             should_update_existing=should_update_existing,
@@ -87,19 +91,17 @@ class ExcelImportService:
             batch_size=batch_size,
         )
 
-    def _import_assets_from_excel_sync(
+    async def _import_assets_from_dataframe(
         self,
-        file_path: str,
-        sheet_name: str = STANDARD_SHEET_NAME,
-        should_validate_data: bool = True,
-        should_create_assets: bool = True,
-        should_update_existing: bool = False,
-        should_skip_errors: bool = False,
-        batch_size: int = 100,
+        *,
+        df: pd.DataFrame,
+        should_validate_data: bool,
+        should_create_assets: bool,
+        should_update_existing: bool,
+        should_skip_errors: bool,
+        batch_size: int,
     ) -> dict[str, Any]:
         try:
-            # 读取Excel文件
-            df = pd.read_excel(file_path, sheet_name=sheet_name)
 
             if df.empty:
                 empty_result: dict[str, Any] = {
@@ -177,24 +179,114 @@ class ExcelImportService:
 
                     # 创建资产
                     if should_create_assets and self.db:
-                        # 检查是否已存在（根据物业名称和地址）
-                        existing_asset = self._find_existing_asset(asset_data)
+                        existing_asset = await self._find_existing_asset(asset_data)
+
+                        ownership_id = asset_data.get("ownership_id")
+                        ownership_entity = asset_data.get("ownership_entity")
+
+                        if ownership_entity and not ownership_id:
+                            ownership_result = await self.db.execute(
+                                select(Ownership).where(
+                                    Ownership.name == ownership_entity
+                                )
+                            )
+                            ownership = ownership_result.scalars().first()
+                            if not ownership:
+                                results["errors"].append(
+                                    {
+                                        "row": idx + 2,
+                                        "field": "ownership_entity",
+                                        "error": "权属方不存在",
+                                    }
+                                )
+                                results["failed"] += 1
+                                if not should_skip_errors:
+                                    raise BusinessValidationError(
+                                        f"第{idx + 2}行权属方不存在"
+                                    )
+                                continue
+                            ownership_id = ownership.id
+
+                        if ownership_id:
+                            ownership_result = await self.db.execute(
+                                select(Ownership).where(Ownership.id == ownership_id)
+                            )
+                            ownership = ownership_result.scalars().first()
+                            if not ownership:
+                                results["errors"].append(
+                                    {
+                                        "row": idx + 2,
+                                        "field": "ownership_id",
+                                        "error": "权属方不存在",
+                                    }
+                                )
+                                results["failed"] += 1
+                                if not should_skip_errors:
+                                    raise BusinessValidationError(
+                                        f"第{idx + 2}行权属方不存在"
+                                    )
+                                continue
+
+                            if (
+                                ownership_entity is not None
+                                and ownership_entity != ownership.name
+                            ):
+                                results["errors"].append(
+                                    {
+                                        "row": idx + 2,
+                                        "field": "ownership_entity",
+                                        "error": "权属方名称与ID不一致",
+                                    }
+                                )
+                                results["failed"] += 1
+                                if not should_skip_errors:
+                                    raise BusinessValidationError(
+                                        f"第{idx + 2}行权属方名称与ID不一致"
+                                    )
+                                continue
+
+                            asset_data["ownership_id"] = ownership.id
+
+                        asset_data.pop("ownership_entity", None)
+
+                        property_name = asset_data.get("property_name")
+                        if property_name:
+                            existing_by_name = await asset_crud.get_by_name_async(
+                                db=self.db, property_name=property_name
+                            )
+                            if existing_by_name and (
+                                not existing_asset
+                                or existing_by_name.id != existing_asset.id
+                            ):
+                                results["errors"].append(
+                                    {
+                                        "row": idx + 2,
+                                        "field": "property_name",
+                                        "error": "物业名称已存在",
+                                    }
+                                )
+                                results["failed"] += 1
+                                if not should_skip_errors:
+                                    raise BusinessValidationError(
+                                        f"第{idx + 2}行物业名称已存在"
+                                    )
+                                continue
 
                         if existing_asset and should_update_existing:
-                            # 更新现有资产
                             from ...schemas.asset import AssetUpdate
 
                             update_schema = AssetUpdate(**asset_data)
-                            asset_crud.update(
+                            await asset_crud.update_async(
                                 db=self.db,
                                 db_obj=existing_asset,
                                 obj_in=update_schema,
                             )
                             results["updated_assets"] += 1
                         elif not existing_asset:
-                            # 创建新资产
                             create_schema = AssetCreate(**asset_data)
-                            asset_crud.create(db=self.db, obj_in=create_schema)
+                            await asset_crud.create_async(
+                                db=self.db, obj_in=create_schema
+                            )
                             results["created_assets"] += 1
                         else:
                             results["warnings"].append(
@@ -206,9 +298,8 @@ class ExcelImportService:
 
                         current_batch_count += 1
 
-                        # 批量提交策略：每batch_size行提交一次（仅在should_skip_errors模式下）
                         if should_skip_errors and current_batch_count >= batch_size:
-                            self.db.commit()
+                            await self.db.commit()
                             results["committed_batches"] += 1
                             current_batch_count = 0
                             logger.debug(
@@ -225,12 +316,12 @@ class ExcelImportService:
                     if not should_skip_errors:
                         # 严格模式：回滚并抛出异常
                         if self.db:
-                            self.db.rollback()
+                            await self.db.rollback()
                         raise
 
             # 提交剩余事务
             if should_create_assets and self.db:
-                self.db.commit()
+                await self.db.commit()
                 if current_batch_count > 0:
                     results["committed_batches"] += 1
 
@@ -245,7 +336,7 @@ class ExcelImportService:
 
         except Exception as e:
             if self.db:
-                self.db.rollback()
+                await self.db.rollback()
             logger.error(f"Excel导入失败: {str(e)}")
             raise
 
@@ -317,7 +408,7 @@ class ExcelImportService:
 
         return asset_data, parse_warnings
 
-    def _find_existing_asset(self, asset_data: dict[str, Any]) -> Any | None:
+    async def _find_existing_asset(self, asset_data: dict[str, Any]) -> Any | None:
         """
         根据物业名称和地址查找已存在的资产
 
@@ -337,7 +428,7 @@ class ExcelImportService:
                 "address": asset_data.get("address"),
             }
 
-            assets, _ = asset_crud.get_multi_with_search(
+            assets, _ = await asset_crud.get_multi_with_search_async(
                 db=self.db, filters=filters, limit=1
             )
 

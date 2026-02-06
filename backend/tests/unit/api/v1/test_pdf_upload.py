@@ -32,6 +32,32 @@ mock_current_user.is_active = True
 
 
 # ============================================================================
+# Helpers
+# ============================================================================
+
+
+def _build_mock_import_session(
+    *, session_id: str = "", processing_options: dict | None = None
+) -> MagicMock:
+    session = MagicMock()
+    session.session_id = session_id
+    if processing_options is not None:
+        session.processing_options = processing_options
+    return session
+
+
+def _configure_pdf_import_service(
+    service: MagicMock,
+    *,
+    session: MagicMock | None = None,
+) -> MagicMock:
+    service.create_import_session = AsyncMock(
+        return_value=session or _build_mock_import_session()
+    )
+    return service
+
+
+# ============================================================================
 # Fixtures
 # ============================================================================
 
@@ -91,7 +117,7 @@ def mock_pdf_import_service():
             "message": "PDF processing started",
         }
     )
-    return service
+    return _configure_pdf_import_service(service)
 
 
 @pytest.fixture
@@ -237,6 +263,7 @@ class TestUploadPdfFile:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 with patch("src.api.v1.documents.pdf_upload.Path") as mock_path_class:
@@ -277,6 +304,7 @@ class TestUploadPdfFile:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 with patch("src.security.file_validation.logger.warning"):
@@ -312,6 +340,7 @@ class TestUploadPdfFile:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 with patch("src.security.file_validation.logger.warning"):
@@ -347,6 +376,7 @@ class TestUploadPdfFile:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 with patch("src.api.v1.documents.pdf_upload.Path") as mock_path_class:
@@ -392,6 +422,7 @@ class TestUploadPdfFile:
         ) as mock_service_class:
             mock_service = MagicMock()
             mock_service.process_pdf_file = AsyncMock(return_value=None)
+            _configure_pdf_import_service(mock_service)
             mock_service_class.return_value = mock_service
 
             with patch("src.api.v1.documents.pdf_upload.Path") as mock_path_class:
@@ -487,6 +518,7 @@ class TestUploadPdfFile:
             mock_service.process_pdf_file = AsyncMock(
                 side_effect=Exception("Processing failed")
             )
+            _configure_pdf_import_service(mock_service)
 
             with patch(
                 "src.api.v1.documents.pdf_upload.PDFImportService"
@@ -536,6 +568,7 @@ class TestUploadPdfFile:
             mock_service.process_pdf_file = AsyncMock(
                 side_effect=Exception("Timeout error")
             )
+            _configure_pdf_import_service(mock_service)
 
             with patch(
                 "src.api.v1.documents.pdf_upload.PDFImportService"
@@ -584,6 +617,7 @@ class TestUploadPdfFile:
             mock_service.process_pdf_file = AsyncMock(
                 return_value={"success": False, "error_message": "Extraction failed"}
             )
+            _configure_pdf_import_service(mock_service)
 
             with patch(
                 "src.api.v1.documents.pdf_upload.PDFImportService"
@@ -632,6 +666,7 @@ class TestUploadPdfFile:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 with patch("src.api.v1.documents.pdf_upload.Path") as mock_path_class:
@@ -1182,6 +1217,7 @@ class TestEdgeCases:
             ) as mock_service_class:
                 mock_service = MagicMock()
                 mock_service.process_pdf_file = AsyncMock(return_value=None)
+                _configure_pdf_import_service(mock_service)
                 mock_service_class.return_value = mock_service
 
                 mock_pdf_file.filename = None

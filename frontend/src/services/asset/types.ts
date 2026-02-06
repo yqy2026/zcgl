@@ -277,10 +277,10 @@ export interface ExportOptions {
 
 /** 搜索过滤器接口 */
 export interface AssetSearchFilters {
-  project?: string;
-  ownershipEntity?: string;
-  propertyNature?: string;
-  usageStatus?: string;
-  businessCategory?: string;
+  project_id?: string;
+  ownership_id?: string;
+  property_nature?: string;
+  usage_status?: string;
+  business_category?: string;
   [key: string]: unknown;
 }

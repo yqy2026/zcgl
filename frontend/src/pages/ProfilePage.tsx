@@ -94,17 +94,20 @@ const ProfilePage: React.FC = () => {
   };
 
   // 获取角色显示名称
-  const getRoleDisplay = (role: string) => {
+  const getRoleDisplay = (roleName?: string, roleCodes?: string[]) => {
     const roleMap: Record<string, { text: string; color: string }> = {
+      super_admin: { text: '超级管理员', color: 'red' },
       admin: { text: '系统管理员', color: 'red' },
-      user: { text: '普通用户', color: 'blue' },
       manager: { text: '管理员', color: 'orange' },
+      user: { text: '普通用户', color: 'blue' },
+      asset_viewer: { text: '资产查看员', color: 'blue' },
+      asset_admin: { text: '资产管理员', color: 'orange' },
     };
-    const roleInfo =
-      roleMap[role] !== null && roleMap[role] !== undefined
-        ? roleMap[role]
-        : { text: role, color: 'default' };
-    return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>;
+    const primaryCode = roleCodes?.[0]?.toLowerCase();
+    const mapped = primaryCode != null ? roleMap[primaryCode] : undefined;
+    const displayText = roleName ?? mapped?.text ?? roleCodes?.[0] ?? '-';
+    const color = mapped?.color ?? 'default';
+    return <Tag color={color}>{displayText}</Tag>;
   };
 
   // 获取状态显示
@@ -196,7 +199,9 @@ const ProfilePage: React.FC = () => {
                       ? user.phone
                       : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="角色">{getRoleDisplay(user.role)}</Descriptions.Item>
+                  <Descriptions.Item label="角色">
+                    {getRoleDisplay(user.role_name, user.roles)}
+                  </Descriptions.Item>
                   <Descriptions.Item label="状态">
                     {getStatusDisplay(user.is_active)}
                   </Descriptions.Item>
@@ -287,6 +292,7 @@ const ProfilePage: React.FC = () => {
         onCancel={() => setEditModalVisible(false)}
         footer={null}
         width={600}
+        forceRender
       >
         <Form
           form={form}
@@ -347,6 +353,7 @@ const ProfilePage: React.FC = () => {
         }}
         footer={null}
         width={500}
+        forceRender
       >
         <Form
           form={passwordForm}

@@ -2,10 +2,10 @@
 资产历史CRUD操作
 """
 
-from typing import Any, cast
+from typing import Any
 
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import AssetHistory
 
@@ -13,81 +13,82 @@ from ..models.asset import AssetHistory
 class HistoryCRUD:
     """资产历史CRUD操作类"""
 
-    def get(self, db: Session, id: str) -> AssetHistory | None:
-        """根据ID获取历史记录"""
-        return db.query(AssetHistory).filter(AssetHistory.id == id).first()
+    async def get_async(self, db: AsyncSession, id: str) -> AssetHistory | None:
+        stmt = select(AssetHistory).where(AssetHistory.id == id)
+        result = await db.execute(stmt)
+        return result.scalars().first()
 
-    def get_by_asset_id(self, db: Session, asset_id: str) -> list[AssetHistory]:
-        """根据资产ID获取历史记录"""
-        return (
-            db.query(AssetHistory)
-            .filter(AssetHistory.asset_id == asset_id)
-            .order_by(desc(AssetHistory.operation_time))
-            .all()
-        )
-
-    def get_multi(
-        self, db: Session, skip: int = 0, limit: int = 100
+    async def get_by_asset_id_async(
+        self, db: AsyncSession, asset_id: str
     ) -> list[AssetHistory]:
-        """获取多个历史记录"""
-        return cast(
-            list[AssetHistory],
-            self._apply_history_filters(db.query(AssetHistory))
+        stmt = (
+            select(AssetHistory)
+            .where(AssetHistory.asset_id == asset_id)
             .order_by(desc(AssetHistory.operation_time))
-            .offset(skip)
-            .limit(limit)
-            .all(),
         )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
-    def get_multi_with_count(
+    async def get_multi_with_count_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
         asset_id: str | None = None,
     ) -> tuple[list[AssetHistory], int]:
-        """获取历史记录列表与总数"""
-        query = self._apply_history_filters(db.query(AssetHistory), asset_id=asset_id)
-        total = query.count()
-        items = cast(
-            list[AssetHistory],
-            query.order_by(desc(AssetHistory.operation_time))
-            .offset(skip)
-            .limit(limit)
-            .all(),
-        )
+        clauses = []
+        if asset_id:
+            clauses.append(AssetHistory.asset_id == asset_id)
+
+        count_stmt = select(func.count(AssetHistory.id))
+        if clauses:
+            count_stmt = count_stmt.where(*clauses)
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+
+        stmt = select(AssetHistory).order_by(desc(AssetHistory.operation_time))
+        if clauses:
+            stmt = stmt.where(*clauses)
+        stmt = stmt.offset(skip).limit(limit)
+        result = await db.execute(stmt)
+        items = list(result.scalars().all())
         return items, total
 
-    def _apply_history_filters(self, query: Any, *, asset_id: str | None = None) -> Any:
-        if asset_id:
-            query = query.filter(AssetHistory.asset_id == asset_id)
-        return query
-
-    def create(
-        self, db: Session, *, commit: bool = True, **kwargs: Any
+    async def create_async(
+        self, db: AsyncSession, *, commit: bool = True, **kwargs: Any
     ) -> AssetHistory:
-        """创建历史记录"""
         if "operator_id" in kwargs and "operator" not in kwargs:
             kwargs["operator"] = kwargs["operator_id"]
         kwargs.pop("operator_id", None)
         db_obj = AssetHistory(**kwargs)
         db.add(db_obj)
         if commit:
-            db.commit()
-            db.refresh(db_obj)
+            await db.commit()
+            await db.refresh(db_obj)
         else:
-            db.flush()
-            db.refresh(db_obj)
+            await db.flush()
+            await db.refresh(db_obj)
         return db_obj
 
-    def remove(self, db: Session, id: str) -> AssetHistory | None:
-        """删除历史记录"""
-        obj = db.query(AssetHistory).filter(AssetHistory.id == id).first()
+    async def remove_async(self, db: AsyncSession, id: str) -> AssetHistory | None:
+        obj = await self.get_async(db, id)
         if obj:
-            db.delete(obj)
-            db.commit()
+            await db.delete(obj)
+            await db.commit()
         return obj
+
+    async def remove_by_asset_id_async(
+        self, db: AsyncSession, *, asset_id: str, commit: bool = True
+    ) -> int:
+        """Delete all history records for a given asset (async)."""
+        result = await db.execute(
+            delete(AssetHistory).where(AssetHistory.asset_id == asset_id)
+        )
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        return int(result.rowcount or 0)
 
 
 # 创建全局实例

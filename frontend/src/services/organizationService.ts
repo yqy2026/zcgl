@@ -36,6 +36,27 @@ interface TreeNode {
 class OrganizationService {
   private baseUrl = '/organizations';
 
+  private extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) {
+      return data as T[];
+    }
+
+    if (data != null && typeof data === 'object') {
+      const record = data as Record<string, unknown>;
+      const items = record.items;
+      if (Array.isArray(items)) {
+        return items as T[];
+      }
+
+      const nested = record.data;
+      if (Array.isArray(nested)) {
+        return nested as T[];
+      }
+    }
+
+    return [];
+  }
+
   // ==================== 基础CRUD操作 ====================
 
   /**
@@ -54,7 +75,7 @@ class OrganizationService {
         throw new Error(`获取组织列表失败: ${result.error}`);
       }
 
-      return result.data ?? [];
+      return this.extractList<Organization>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       // eslint-disable-next-line no-console
@@ -257,7 +278,7 @@ class OrganizationService {
         throw new Error(`搜索组织失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.extractList<Organization>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -284,7 +305,7 @@ class OrganizationService {
         throw new Error(`高级搜索组织失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.extractList<Organization>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -344,7 +365,7 @@ class OrganizationService {
         throw new Error(`获取组织历史失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.extractList<OrganizationHistory>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

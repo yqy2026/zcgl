@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any
 
 """
 监控API路由
@@ -13,15 +13,12 @@ import psutil
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import internal_error
 from ....database import get_async_db
 from ....middleware.auth import get_current_user
 from ....models.auth import User
 from ....security.permissions import permission_required
-
-T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -66,49 +63,38 @@ class HealthCheck(BaseModel):
 
 @router.post("/route-performance", summary="上报路由性能指标")
 async def report_route_performance(
-    report: PerformanceReport, db: AsyncSession = Depends(get_async_db)
+    report: PerformanceReport, _: AsyncSession = Depends(get_async_db)
 ) -> dict[str, str]:
     """
     接收前端上报的路由性能指标
     """
+    try:
+        logger.info(
+            f"收到性能指标上报，会话ID: {report.session_id}, 指标数量: {len(report.metrics)}"
+        )
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        try:
-            # 简化版本：直接记录到日志，实际项目中应该保存到数据库
-            logger.info(
-                f"收到性能指标上报，会话ID: {report.session_id}, 指标数量: {len(report.metrics)}"
+        if report.metrics:
+            avg_load_time = sum(m.route_load_time for m in report.metrics) / len(
+                report.metrics
             )
+            total_errors = sum(m.error_count for m in report.metrics)
 
-            # 计算基本统计
-            if report.metrics:
-                avg_load_time = sum(m.route_load_time for m in report.metrics) / len(
-                    report.metrics
-                )
-                total_errors = sum(m.error_count for m in report.metrics)
+            logger.info(f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}")
 
-                logger.info(
-                    f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}"
-                )
+            for metric in report.metrics:
+                if metric.route_load_time > 5000:
+                    logger.warning(
+                        f"慢路由告警: {metric.route}, 加载时间: {metric.route_load_time}ms"
+                    )
+                if metric.error_count > 0:
+                    logger.error(
+                        f"路由错误告警: {metric.route}, 错误数: {metric.error_count}"
+                    )
 
-                # 检查性能告警
-                for metric in report.metrics:
-                    if metric.route_load_time > 5000:  # 5秒
-                        logger.warning(
-                            f"慢路由告警: {metric.route}, 加载时间: {metric.route_load_time}ms"
-                        )
-
-                    if metric.error_count > 0:
-                        logger.error(
-                            f"路由错误告警: {metric.route}, 错误数: {metric.error_count}"
-                        )
-
-            return {"success": str(True), "message": "性能指标已保存"}
-
-        except Exception as e:
-            logger.error(f"保存性能指标失败: {str(e)}")
-            raise internal_error("性能指标保存失败")
-
-    return await db.run_sync(_sync)
+        return {"success": str(True), "message": "性能指标已保存"}
+    except Exception as e:
+        logger.error(f"保存性能指标失败: {str(e)}")
+        raise internal_error("性能指标保存失败")
 
 
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)

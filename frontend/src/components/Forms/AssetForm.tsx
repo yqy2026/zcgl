@@ -212,7 +212,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     valuesChangeTimer.current = setTimeout(() => {
       const requiredFields = [
         'property_name',
-        'ownership_entity',
+        'ownership_id',
         'address',
         'ownership_status',
         'property_nature',
@@ -254,7 +254,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       ): value is AssetCreateRequest => {
         const requiredFields = [
           'property_name',
-          'ownership_entity',
+          'ownership_id',
           'address',
           'ownership_status',
           'property_nature',

@@ -10,6 +10,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import anyio
+
 logger = logging.getLogger(__name__)
 
 # PyMuPDF import with graceful fallback
@@ -153,3 +155,20 @@ def get_extraction_recommendation(pdf_path: str | Path) -> str:
     result: dict[str, Any] = analyze_pdf(pdf_path)
     recommendation: str = result.get("recommendation", "vision")
     return recommendation
+
+
+async def analyze_pdf_async(pdf_path: str | Path) -> dict[str, Any]:
+    """Async wrapper to avoid blocking the event loop."""
+    return await anyio.to_thread.run_sync(analyze_pdf, pdf_path)
+
+
+async def is_scanned_pdf_async(pdf_path: str | Path) -> bool:
+    """Async wrapper to detect scanned PDFs without blocking."""
+    result = await analyze_pdf_async(pdf_path)
+    return bool(result.get("is_scanned", True))
+
+
+async def get_extraction_recommendation_async(pdf_path: str | Path) -> str:
+    """Async wrapper to get extraction recommendation without blocking."""
+    result = await analyze_pdf_async(pdf_path)
+    return str(result.get("recommendation", "vision"))

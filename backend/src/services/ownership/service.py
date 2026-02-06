@@ -1,8 +1,8 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import case, desc, func
-from sqlalchemy.orm import Session
+from sqlalchemy import case, delete, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
     BusinessValidationError,
@@ -11,14 +11,15 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.ownership import ownership as ownership_crud
-from ...models.asset import Asset, Ownership, Project, ProjectOwnershipRelation
+from ...models.asset import Asset, Project, ProjectOwnershipRelation
+from ...models.ownership import Ownership
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
 class OwnershipService:
     """权属方服务层"""
 
-    def generate_ownership_code(self, db: Session) -> str:
+    async def generate_ownership_code(self, db: AsyncSession) -> str:
         """生成权属方编码
 
         编码规则：[前缀][年月][序号]
@@ -35,17 +36,18 @@ class OwnershipService:
         base_format = f"{prefix}{year_month}"
 
         # 查询所有已存在的编码（包括新格式和旧格式）
-        existing_codes = (
-            db.query(Ownership.code)
-            .filter(Ownership.code.like(f"{prefix}%"))
+        stmt = (
+            select(Ownership.code)
+            .where(Ownership.code.like(f"{prefix}%"))
             .order_by(Ownership.code.desc())
-            .all()
         )
+        existing_codes = (await db.execute(stmt)).scalars().all()
 
         # 找到新格式的最大序列号
         max_sequence = 0
-        for existing_code in existing_codes:
-            code_str = existing_code[0]
+        for code_str in existing_codes:
+            if code_str is None:
+                continue
             # 新格式：OW2501001 (9位)
             if (
                 len(code_str) == 9
@@ -71,7 +73,7 @@ class OwnershipService:
             code = f"{base_format}{sequence_str}"
 
             # 检查编码是否已存在
-            if not ownership_crud.get_by_code(db, code):
+            if not await ownership_crud.get_by_code(db, code):
                 return code
 
             next_sequence += 1
@@ -80,59 +82,51 @@ class OwnershipService:
         # 兜底：使用时间戳
         return f"{base_format}{int(datetime.now().timestamp() % 1000):03d}"
 
-    def create_ownership(self, db: Session, *, obj_in: OwnershipCreate) -> Ownership:
+    async def create_ownership(
+        self, db: AsyncSession, *, obj_in: OwnershipCreate
+    ) -> Ownership:
         """创建权属方"""
         # 检查名称是否已存在
-        if ownership_crud.get_by_name(db, obj_in.name):
+        if await ownership_crud.get_by_name(db, obj_in.name):
             raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         # 自动生成编码
-        code = self.generate_ownership_code(db)
+        code = await self.generate_ownership_code(db)
 
         # 创建数据对象
         create_data = obj_in.model_dump()
         create_data["code"] = code
 
-        db_obj = Ownership(**create_data)
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        return await ownership_crud.create(db, obj_in=create_data)
 
-    def update_ownership(
-        self, db: Session, *, db_obj: Ownership, obj_in: OwnershipUpdate
+    async def update_ownership(
+        self, db: AsyncSession, *, db_obj: Ownership, obj_in: OwnershipUpdate
     ) -> Ownership:
         """更新权属方"""
         # 检查名称是否已被其他权属方使用
         if obj_in.name and obj_in.name != db_obj.name:
-            existing = ownership_crud.get_by_name(db, obj_in.name)
+            existing = await ownership_crud.get_by_name(db, obj_in.name)
             if existing and existing.id != db_obj.id:
                 raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        update_data["updated_at"] = datetime.now(UTC)
+        update_data["updated_at"] = datetime.utcnow()
 
-        for field, value in update_data.items():
-            setattr(db_obj, field, value)
+        return await ownership_crud.update(db, db_obj=db_obj, obj_in=update_data)
 
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
-
-    def get_statistics(self, db: Session) -> dict[str, Any]:
+    async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
         """获取权属方统计信息"""
-        total_count, active_count = db.query(
+        stmt = select(
             func.count(Ownership.id),
             func.sum(case((Ownership.is_active.is_(True), 1), else_=0)),
-        ).one()
+        )
+        total_count, active_count = (await db.execute(stmt)).one()
         total_count = int(total_count or 0)
         active_count = int(active_count or 0)
         inactive_count = total_count - active_count
 
-        recent_created = (
-            db.query(Ownership).order_by(desc(Ownership.created_at)).limit(5).all()
-        )
+        recent_stmt = select(Ownership).order_by(desc(Ownership.created_at)).limit(5)
+        recent_created = (await db.execute(recent_stmt)).scalars().all()
 
         return {
             "total_count": total_count,
@@ -141,30 +135,35 @@ class OwnershipService:
             "recent_created": recent_created,
         }
 
-    def update_related_projects(
-        self, db: Session, *, ownership_id: str, project_ids: list[str]
+    async def update_related_projects(
+        self, db: AsyncSession, *, ownership_id: str, project_ids: list[str]
     ) -> None:
         """更新权属方关联的项目"""
         # 验证权属方是否存在
-        ownership_obj = ownership_crud.get(db, id=ownership_id)
+        ownership_obj = await ownership_crud.get(db, id=ownership_id)
         if not ownership_obj:
             raise ResourceNotFoundError("权属方", ownership_id)
 
         # 验证项目是否存在
-        valid_projects = db.query(Project).filter(Project.id.in_(project_ids)).all()
-        valid_project_ids = [p.id for p in valid_projects]
+        valid_projects = []
+        if project_ids:
+            project_stmt = select(Project.id).where(Project.id.in_(project_ids))
+            valid_projects = (await db.execute(project_stmt)).scalars().all()
+        valid_project_ids = [str(p_id) for p_id in valid_projects]
 
         if len(valid_project_ids) != len(project_ids):
-            invalid_ids = set(project_ids) - {str(p.id) for p in valid_projects}
+            invalid_ids = set(project_ids) - set(valid_project_ids)
             raise BusinessValidationError(
                 f"以下项目ID不存在: {invalid_ids}",
                 field_errors={"project_ids": [str(i) for i in invalid_ids]},
             )
 
         # 删除现有关联
-        db.query(ProjectOwnershipRelation).filter(
-            ProjectOwnershipRelation.ownership_id == ownership_id
-        ).delete()
+        await db.execute(
+            delete(ProjectOwnershipRelation).where(
+                ProjectOwnershipRelation.ownership_id == ownership_id
+            )
+        )
 
         # 创建新关联
         for project_id in project_ids:
@@ -174,33 +173,32 @@ class OwnershipService:
             relation.is_active = True
             db.add(relation)
 
-        db.commit()
+        await db.commit()
 
-    def get_project_count(self, db: Session, ownership_id: str) -> int:
+    async def get_project_count(self, db: AsyncSession, ownership_id: str) -> int:
         """获取权属方关联的项目数量"""
-        return (
-            db.query(ProjectOwnershipRelation)
-            .filter(
-                ProjectOwnershipRelation.ownership_id == ownership_id,
-                ProjectOwnershipRelation.is_active,
-            )
-            .count()
+        stmt = select(func.count(ProjectOwnershipRelation.id)).where(
+            ProjectOwnershipRelation.ownership_id == ownership_id,
+            ProjectOwnershipRelation.is_active.is_(True),
         )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
 
-    def get_asset_count(self, db: Session, ownership_id: str) -> int:
+    async def get_asset_count(self, db: AsyncSession, ownership_id: str) -> int:
         """获取权属方关联的资产数量"""
-        return db.query(Asset).filter(Asset.ownership_id == ownership_id).count()
+        stmt = select(func.count(Asset.id)).where(Asset.ownership_id == ownership_id)
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
 
-    def delete_ownership(self, db: Session, *, id: str) -> Ownership:
+    async def delete_ownership(self, db: AsyncSession, *, id: str) -> Ownership:
         """删除权属方"""
-        db_obj = ownership_crud.get(db, id=id)
+        db_obj = await ownership_crud.get(db, id=id)
         if not db_obj:
             raise ResourceNotFoundError("权属方", id)
 
         # 检查是否有关联的资产
-        asset_count = (
-            db.query(Asset).filter(Asset.ownership_entity == db_obj.name).count()
-        )
+        asset_stmt = select(func.count(Asset.id)).where(Asset.ownership_id == db_obj.id)
+        asset_count = int((await db.execute(asset_stmt)).scalar() or 0)
 
         if asset_count > 0:
             raise OperationNotAllowedError(
@@ -208,14 +206,19 @@ class OwnershipService:
                 reason="ownership_has_assets",
             )
 
-        ownership_crud.remove(db, id=id)
+        await ownership_crud.remove(db, id=id)
         return db_obj
 
-    def toggle_status(
-        self, db: Session, *, id: str, name: str | None = None, code: str | None = None
+    async def toggle_status(
+        self,
+        db: AsyncSession,
+        *,
+        id: str,
+        name: str | None = None,
+        code: str | None = None,
     ) -> Ownership:
         """切换权属方状态"""
-        db_obj = ownership_crud.get(db, id=id)
+        db_obj = await ownership_crud.get(db, id=id)
         if not db_obj:
             raise ResourceNotFoundError("权属方", id)
 
@@ -230,27 +233,31 @@ class OwnershipService:
             short_name=obj_short_name,
             is_active=not db_obj.is_active,
         )
-        return self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
+        return await self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
 
-    def get_ownership_dropdown_options(
-        self, db: Session, is_active: bool | None = True
+    async def get_ownership_dropdown_options(
+        self, db: AsyncSession, is_active: bool | None = True
     ) -> list[dict[str, Any]]:
         """获取权属方下拉选项列表"""
-        query = db.query(Ownership).filter(Ownership.data_status == "正常")
+        stmt = select(Ownership).where(Ownership.data_status == "正常")
         if is_active is not None:
             # 使用is_active字段过滤（如果存在）或通过data_status推断
             if hasattr(Ownership, "is_active"):
-                query = query.filter(Ownership.is_active == is_active)
+                stmt = stmt.where(Ownership.is_active == is_active)
 
-        ownerships = query.order_by(Ownership.created_at.desc()).limit(1000).all()
+        ownerships = (
+            (await db.execute(stmt.order_by(Ownership.created_at.desc()).limit(1000)))
+            .scalars()
+            .all()
+        )
 
         # 为下拉选项添加关联计数
         responses = []
         for item in ownerships:
             # 获取关联资产数量
-            asset_count = self.get_asset_count(db, item.id)
+            asset_count = await self.get_asset_count(db, item.id)
             # 获取关联项目数量
-            project_count = self.get_project_count(db, item.id)
+            project_count = await self.get_project_count(db, item.id)
             responses.append(
                 {
                     "id": item.id,
@@ -259,6 +266,8 @@ class OwnershipService:
                     "short_name": item.short_name,
                     "is_active": item.is_active,
                     "data_status": item.data_status,
+                    "created_at": item.created_at,
+                    "updated_at": item.updated_at,
                     "asset_count": asset_count,
                     "project_count": project_count,
                 }

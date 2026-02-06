@@ -407,6 +407,130 @@ def normalize_whitespace(text: str) -> str:
 
 
 # ============================================================================
+# Evidence helpers
+# ============================================================================
+
+
+def _date_variants(date_str: str) -> list[str]:
+    match = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", date_str)
+    if not match:
+        return []
+    year, month, day = match.groups()
+    month_i = int(month)
+    day_i = int(day)
+    return [
+        f"{year}年{month_i}月{day_i}日",
+        f"{year}年{month_i}月{day_i}",
+        f"{year}/{month_i}/{day_i}",
+        f"{year}.{month_i}.{day_i}",
+    ]
+
+
+def _build_snippet(text: str, start: int, end: int, window: int = 40) -> str:
+    left = max(start - window, 0)
+    right = min(end + window, len(text))
+    return text[left:right]
+
+
+def find_evidence_snippet(
+    text: str, value: Any, *, window: int = 40
+) -> dict[str, Any] | None:
+    """
+    Find evidence snippet for a value inside text.
+
+    Returns a dict with snippet, match, and match_type, or None if not found.
+    """
+    if not text or value is None:
+        return None
+
+    if isinstance(value, (dict, list)):
+        return None
+
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+
+    # Direct match
+    idx = text.find(value_str)
+    if idx != -1:
+        return {
+            "snippet": _build_snippet(text, idx, idx + len(value_str), window),
+            "match": value_str,
+            "match_type": "exact",
+        }
+
+    # Date variants
+    for variant in _date_variants(value_str):
+        idx = text.find(variant)
+        if idx != -1:
+            return {
+                "snippet": _build_snippet(text, idx, idx + len(variant), window),
+                "match": variant,
+                "match_type": "date_variant",
+            }
+
+    # Numeric search by digits
+    digits = re.sub(r"\D+", "", value_str)
+    if digits:
+        text_digits = re.sub(r"\D+", "", text)
+        pos = text_digits.find(digits)
+        if pos != -1:
+            # Best-effort: find first occurrence of the first 4 digits in raw text
+            probe = digits[:4]
+            raw_idx = text.find(probe)
+            if raw_idx != -1:
+                return {
+                    "snippet": _build_snippet(
+                        text, raw_idx, raw_idx + len(probe), window
+                    ),
+                    "match": digits,
+                    "match_type": "digits",
+                }
+
+    return None
+
+
+def build_field_evidence(
+    text: str, fields: dict[str, Any], *, source: str
+) -> dict[str, Any]:
+    """
+    Build evidence map for extracted fields.
+    """
+    evidence: dict[str, Any] = {}
+    for key, value in fields.items():
+        if isinstance(value, list):
+            # Handle rent_terms or other list fields
+            term_evidence = []
+            for item in value:
+                if not isinstance(item, dict):
+                    continue
+                item_evidence = {}
+                for item_key, item_value in item.items():
+                    snippet = find_evidence_snippet(text, item_value)
+                    if snippet is None:
+                        item_evidence[item_key] = None
+                    else:
+                        item_evidence[item_key] = {
+                            **snippet,
+                            "source": source,
+                        }
+                term_evidence.append(item_evidence)
+            evidence[key] = term_evidence
+            continue
+
+        snippet = find_evidence_snippet(text, value)
+        if snippet is None:
+            evidence[key] = None
+            continue
+        evidence[key] = {
+            **snippet,
+            "source": source,
+        }
+
+    return evidence
+
+
+# ============================================================================
 # 类型转换工具
 # ============================================================================
 

@@ -14,7 +14,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.core.exception_handler import bad_request
@@ -57,31 +56,28 @@ async def get_overall_occupancy_rate(
         整体出租率统计信息
     """
 
-    def _sync(sync_db: Session) -> OccupancyRateStatsResponse:
-        db = sync_db
-        logger.info(
-            f"开始计算整体出租率，包含已删除: {should_include_deleted}, 使用聚合: {should_use_aggregation}"
-        )
+    logger.info(
+        f"开始计算整体出租率，包含已删除: {should_include_deleted}, 使用聚合: {should_use_aggregation}"
+    )
 
-        # 构建筛选条件
-        filters: dict[str, Any] = {}
-        if not should_include_deleted:
-            filters["data_status"] = "正常"
+    filters: dict[str, Any] = {}
+    if not should_include_deleted:
+        filters["data_status"] = "正常"
 
-        # 使用 OccupancyService 计算占用率
-        service = OccupancyService(db)
-        stats = service.calculate_with_aggregation(filters)
+    service = OccupancyService(db)
+    if should_use_aggregation:
+        stats = await service.calculate_with_aggregation(filters)
+    else:
+        stats = await service._calculate_in_memory(filters)
 
-        logger.info(f"出租率计算完成: {stats}")
+    logger.info(f"出租率计算完成: {stats}")
 
-        return OccupancyRateStatsResponse(
-            overall_occupancy_rate=stats["overall_rate"],
-            total_rentable_area=stats["total_rentable_area"],
-            total_rented_area=stats["total_rented_area"],
-            calculated_at=datetime.now(),
-        )
-
-    return await db.run_sync(_sync)
+    return OccupancyRateStatsResponse(
+        overall_occupancy_rate=stats["overall_rate"],
+        total_rentable_area=stats["total_rentable_area"],
+        total_rented_area=stats["total_rented_area"],
+        calculated_at=datetime.now(),
+    )
 
 
 @cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存
@@ -110,54 +106,51 @@ async def get_occupancy_rate_by_category(
         HTTPException: 如果 category_field 不在允许的字段列表中
     """
 
-    def _sync(sync_db: Session) -> CategoryOccupancyRateListResponse:
-        db = sync_db
-        # 验证分类字段
-        valid_fields = [
-            "business_category",
-            "property_nature",
-            "usage_status",
-            "ownership_status",
-            "manager_name",
-            "business_model",
-            "operation_status",
-            "project_name",
-        ]
+    valid_fields = [
+        "business_category",
+        "property_nature",
+        "usage_status",
+        "ownership_status",
+        "manager_name",
+        "business_model",
+        "operation_status",
+        "project_name",
+    ]
 
-        if category_field not in valid_fields:
-            raise bad_request(f"无效的分类字段。支持的字段: {', '.join(valid_fields)}")
+    if category_field not in valid_fields:
+        raise bad_request(f"无效的分类字段。支持的字段: {', '.join(valid_fields)}")
 
-        # 构建筛选条件
-        filters: dict[str, Any] = {}
-        if not should_include_deleted:
-            filters["data_status"] = "正常"
+    filters: dict[str, Any] = {}
+    if not should_include_deleted:
+        filters["data_status"] = "正常"
 
-        # 使用 OccupancyService 计算分类占用率
-        service = OccupancyService(db)
-        category_results = service.calculate_category_with_aggregation(
+    service = OccupancyService(db)
+    if should_use_aggregation:
+        category_results = await service.calculate_category_with_aggregation(
+            category_field, filters
+        )
+    else:
+        category_results = await service._calculate_category_in_memory(
             category_field, filters
         )
 
-        # 转换为响应格式
-        category_occupancy = []
-        for category_name, category_stats in category_results.items():
-            category_occupancy.append(
-                CategoryOccupancyRateResponse(
-                    category=category_name,
-                    occupancy_rate=category_stats.get("overall_rate", 0.0),
-                    rentable_area=category_stats.get("total_rentable_area", 0.0),
-                    rented_area=category_stats.get("total_rented_area", 0.0),
-                    asset_count=category_stats.get("asset_count", 0),
-                )
+    category_occupancy = []
+    for category_name, category_stats in category_results.items():
+        category_occupancy.append(
+            CategoryOccupancyRateResponse(
+                category=category_name,
+                occupancy_rate=category_stats.get("overall_rate", 0.0),
+                rentable_area=category_stats.get("total_rentable_area", 0.0),
+                rented_area=category_stats.get("total_rented_area", 0.0),
+                asset_count=category_stats.get("asset_count", 0),
             )
-
-        return CategoryOccupancyRateListResponse(
-            category_field=category_field,
-            categories=category_occupancy,
-            generated_at=datetime.now(),
         )
 
-    return await db.run_sync(_sync)
+    return CategoryOccupancyRateListResponse(
+        category_field=category_field,
+        categories=category_occupancy,
+        generated_at=datetime.now(),
+    )
 
 
 @router.get("/occupancy-rate", summary="获取出租率统计")
@@ -188,37 +181,31 @@ async def get_occupancy_rate_statistics(
         - 可租资产数
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        # 构建筛选条件
-        filters: dict[str, Any] = {}
-        if ownership_status:
-            filters["ownership_status"] = ownership_status
-        if property_nature:
-            filters["property_nature"] = property_nature
-        if usage_status:
-            filters["usage_status"] = usage_status
-        if business_category:
-            filters["business_category"] = business_category
+    filters: dict[str, Any] = {}
+    if ownership_status:
+        filters["ownership_status"] = ownership_status
+    if property_nature:
+        filters["property_nature"] = property_nature
+    if usage_status:
+        filters["usage_status"] = usage_status
+    if business_category:
+        filters["business_category"] = business_category
 
-        # 计算出租率
-        occupancy_service = OccupancyService(db)
-        stats = occupancy_service.calculate_with_aggregation(filters)
+    occupancy_service = OccupancyService(db)
+    stats = await occupancy_service.calculate_with_aggregation(filters)
 
-        return {
-            "success": True,
-            "data": {
-                "overall_occupancy_rate": stats["overall_rate"],
-                "total_rentable_area": stats["total_rentable_area"],
-                "total_rented_area": stats["total_rented_area"],
-                "total_unrented_area": stats["total_rentable_area"]
-                - stats["total_rented_area"],
-                "total_assets": stats["total_assets"],
-                "rentable_assets": stats["rentable_assets_count"],
-                "generated_at": datetime.now().isoformat(),
-                "filters_applied": filters,
-            },
-            "message": "出租率统计数据获取成功",
-        }
-
-    return await db.run_sync(_sync)
+    return {
+        "success": True,
+        "data": {
+            "overall_occupancy_rate": stats["overall_rate"],
+            "total_rentable_area": stats["total_rentable_area"],
+            "total_rented_area": stats["total_rented_area"],
+            "total_unrented_area": stats["total_rentable_area"]
+            - stats["total_rented_area"],
+            "total_assets": stats["total_assets"],
+            "rentable_assets": stats["rentable_assets_count"],
+            "generated_at": datetime.now().isoformat(),
+            "filters_applied": filters,
+        },
+        "message": "出租率统计数据获取成功",
+    }

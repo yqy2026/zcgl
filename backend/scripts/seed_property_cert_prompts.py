@@ -5,6 +5,7 @@ Seed Property Certificate Prompts
 """
 
 import sys
+import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -16,14 +17,14 @@ load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_session_factory
+from src.database import async_session_scope
 from src.schemas.llm_prompt import PromptTemplateCreate
 from src.services.llm_prompt.prompt_manager import PromptManager
 
 
-def seed_prompts(db: Session) -> None:
+async def seed_prompts(db: AsyncSession) -> None:
     """创建产权证提取Prompt模板"""
 
     manager = PromptManager()
@@ -166,10 +167,11 @@ def seed_prompts(db: Session) -> None:
     for prompt_data in prompts_data:
         try:
             # Check for existing prompt using raw SQL (avoiding ORM relationship issues)
-            existing = db.execute(
+            result = await db.execute(
                 text("SELECT id FROM prompt_templates WHERE name = :name"),
                 {"name": prompt_data["name"]},
-            ).fetchone()
+            )
+            existing = result.fetchone()
 
             if existing:
                 print(f"[SKIP] Prompt already exists: {prompt_data['name']}")
@@ -178,10 +180,12 @@ def seed_prompts(db: Session) -> None:
 
             # Use PromptManager to create prompt and version
             schema = PromptTemplateCreate(**prompt_data)
-            template = manager.create_prompt(db, schema, user_id="system")
+            template = await manager.create_prompt_async(
+                db, schema, user_id="system"
+            )
 
             # Activate the prompt (manager creates it as DRAFT)
-            manager.activate_prompt(db, template.id)
+            await manager.activate_prompt_async(db, template.id)
 
             print(f"[OK] Created and activated prompt: {prompt_data['name']}")
             created_count += 1
@@ -203,15 +207,14 @@ def seed_prompts(db: Session) -> None:
 
 
 if __name__ == "__main__":
-    session_factory = get_session_factory()
-    db = session_factory()
+    async def _run() -> None:
+        async with async_session_scope() as db:
+            await seed_prompts(db)
+
     try:
-        seed_prompts(db)
+        asyncio.run(_run())
     except Exception as e:
         print(f"[ERROR] Error: {e}")
         import traceback
 
         traceback.print_exc()
-        db.rollback()
-    finally:
-        db.close()

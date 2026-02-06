@@ -5,11 +5,11 @@ Excel任务状态模块
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import not_found
 from src.crud.task import task_crud
-from src.database import get_db
+from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelStatusResponse
@@ -21,9 +21,9 @@ router = APIRouter()
 @router.get(
     "/status/{task_id}", response_model=ExcelStatusResponse, summary="获取任务状态"
 )
-def get_excel_task_status(
+async def get_excel_task_status(
     task_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> ExcelStatusResponse:
     """
@@ -31,10 +31,10 @@ def get_excel_task_status(
 
     - **task_id**: 任务ID
     """
-    task = task_crud.get(db=db, id=task_id)
+    task = await task_crud.get(db=db, id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-    ensure_task_access(task, current_user)
+    await ensure_task_access(task, current_user, db)
 
     # Extract values from Column objects - use getattr to get actual values
     task_id_val = str(getattr(task, "id", ""))
@@ -62,12 +62,12 @@ def get_excel_task_status(
 
 
 @router.get("/history", summary="获取Excel操作历史")
-def get_excel_history(
+async def get_excel_history(
     task_type: str | None = Query(None, description="任务类型筛选"),
     status: str | None = Query(None, description="状态筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """
@@ -81,8 +81,8 @@ def get_excel_history(
     # 转换 page 到 skip (offset)
     skip = (page - 1) * page_size
 
-    effective_user_id = resolve_task_user_filter(None, current_user)
-    tasks = task_crud.get_multi(
+    effective_user_id = await resolve_task_user_filter(None, current_user, db)
+    tasks = await task_crud.get_multi_async(
         db=db,
         skip=skip,
         limit=page_size,
@@ -92,7 +92,7 @@ def get_excel_history(
         order_by="created_at",
         order_dir="desc",
     )
-    total = task_crud.count(
+    total = await task_crud.count_async(
         db=db,
         task_type=task_type,
         status=status,

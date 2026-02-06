@@ -93,7 +93,7 @@ class TestUserManagementEndpoints:
                 "email": "test@example.com",
                 "password": "Test123!@#",
                 "full_name": "Test User",
-                "role": "user",
+                "role_id": "role-user-id",
             },
         )
         # 需要管理员权限
@@ -327,13 +327,13 @@ class TestModuleImports:
     def test_service_imports(self):
         """测试服务层导入"""
         from src.services.core.audit_service import AuditService
-        from src.services.core.authentication_service import AuthenticationService
+        from src.services.core.authentication_service import AsyncAuthenticationService
         from src.services.core.password_service import PasswordService
-        from src.services.core.session_service import SessionService
-        from src.services.core.user_management_service import UserManagementService
+        from src.services.core.session_service import AsyncSessionService
+        from src.services.core.user_management_service import AsyncUserManagementService
 
-        assert AuthenticationService is not None
-        assert UserManagementService is not None
-        assert SessionService is not None
+        assert AsyncAuthenticationService is not None
+        assert AsyncUserManagementService is not None
+        assert AsyncSessionService is not None
         assert PasswordService is not None
         assert AuditService is not None

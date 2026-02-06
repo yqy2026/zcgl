@@ -19,7 +19,7 @@ Endpoints Tested:
 13. GET /api/v1/auth/users/statistics/summary - Get user statistics
 
 Testing Approach:
-- Mock all dependencies (UserCRUD, UserManagementService, PasswordService, database, auth)
+- Mock all dependencies (UserCRUD, AsyncUserManagementService, PasswordService, database, auth)
 - Test successful responses
 - Test error handling scenarios
 - Test request validation
@@ -27,9 +27,10 @@ Testing Approach:
 - Test permission checks
 """
 
+import asyncio
 import json
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
@@ -43,6 +44,22 @@ from src.core.exception_handler import (
 
 pytestmark = pytest.mark.api
 
+ADMIN_ROLE_SUMMARY = {
+    "primary_role_id": "role-admin-id",
+    "primary_role_name": "admin",
+    "roles": ["admin"],
+    "role_ids": ["role-admin-id"],
+    "is_admin": True,
+}
+
+USER_ROLE_SUMMARY = {
+    "primary_role_id": "role-user-id",
+    "primary_role_name": "asset_viewer",
+    "roles": ["asset_viewer"],
+    "role_ids": ["role-user-id"],
+    "is_admin": False,
+}
+
 
 # ============================================================================
 # Fixtures
@@ -55,7 +72,11 @@ def mock_admin_user():
     user = MagicMock()
     user.id = "admin-id"
     user.username = "admin"
-    user.role = "admin"
+    user.role_id = "role-admin-id"
+    user.role_name = "admin"
+    user.roles = ["admin"]
+    user.role_ids = ["role-admin-id"]
+    user.is_admin = True
     user.is_active = True
     user.is_locked = False
     return user
@@ -67,10 +88,35 @@ def mock_regular_user():
     user = MagicMock()
     user.id = "user-id"
     user.username = "testuser"
-    user.role = "user"
+    user.role_id = "role-user-id"
+    user.role_name = "asset_viewer"
+    user.roles = ["asset_viewer"]
+    user.role_ids = ["role-user-id"]
+    user.is_admin = False
     user.is_active = True
     user.is_locked = False
     return user
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.rollback = AsyncMock()
+    db.query = MagicMock()
+    return db
+
+
+@pytest.fixture(autouse=True)
+def mock_rbac_service(monkeypatch):
+    """Patch RBACService to avoid DB usage in user API tests."""
+    from src.api.v1.auth.auth_modules import users as users_module
+
+    rbac_instance = MagicMock()
+    rbac_instance.get_user_role_summary = AsyncMock(return_value=USER_ROLE_SUMMARY)
+    monkeypatch.setattr(users_module, "RBACService", MagicMock(return_value=rbac_instance))
+    return rbac_instance
 
 
 @pytest.fixture
@@ -91,7 +137,11 @@ def mock_user_response():
     user.username = "testuser"
     user.email = "test@example.com"
     user.full_name = "Test User"
-    user.role = "user"
+    user.role_id = "role-user-id"
+    user.role_name = "asset_viewer"
+    user.roles = ["asset_viewer"]
+    user.role_ids = ["role-user-id"]
+    user.is_admin = False
     user.is_active = True
     user.is_locked = False
     user.employee_id = None
@@ -104,6 +154,22 @@ def mock_user_response():
 
 def _parse_json_response(response):
     return json.loads(response.body)
+
+
+def _make_user_crud():
+    crud = MagicMock()
+    crud.get_multi_with_filters_async = AsyncMock()
+    crud.create_async = AsyncMock()
+    crud.get_async = AsyncMock()
+    crud.update_async = AsyncMock()
+    crud.delete_async = AsyncMock()
+    return crud
+
+
+def _make_audit_crud():
+    crud = MagicMock()
+    crud.create_async = AsyncMock()
+    return crud
 
 
 # ============================================================================
@@ -126,7 +192,7 @@ class TestGetUsers:
             user.username = f"user{i}"
             user.email = f"user{i}@example.com"
             user.full_name = f"User {i}"
-            user.role = "user"
+            user.role_id = "role-user-id"
             user.is_active = True
             user.is_locked = False
             user.last_login_at = None
@@ -135,21 +201,23 @@ class TestGetUsers:
             user.created_at = datetime.now(UTC)
             user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_multi_with_filters.return_value = (mock_users, 5)
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_multi_with_filters_async.return_value = (mock_users, 5)
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = get_users(
-            params=MagicMock(
-                page=1,
-                page_size=10,
-                search=None,
-                role=None,
-                is_active=None,
-                organization_id=None,
-            ),
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            get_users(
+                params=MagicMock(
+                    page=1,
+                    page_size=10,
+                    search=None,
+                    role_id=None,
+                    is_active=None,
+                    organization_id=None,
+                ),
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result.status_code == status.HTTP_200_OK
@@ -161,7 +229,7 @@ class TestGetUsers:
         assert pagination["page_size"] == 10
         assert pagination["total_pages"] == 1
         assert len(data["items"]) == 5
-        mock_user_crud.get_multi_with_filters.assert_called_once()
+        mock_user_crud.get_multi_with_filters_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_get_users_with_search(
@@ -175,7 +243,7 @@ class TestGetUsers:
         mock_user.username = "testuser"
         mock_user.email = "test@example.com"
         mock_user.full_name = "Test User"
-        mock_user.role = "user"
+        mock_user.role_id = "role-user-id"
         mock_user.is_active = True
         mock_user.is_locked = False
         mock_user.last_login_at = None
@@ -184,31 +252,33 @@ class TestGetUsers:
         mock_user.created_at = datetime.now(UTC)
         mock_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_multi_with_filters.return_value = ([mock_user], 1)
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_multi_with_filters_async.return_value = ([mock_user], 1)
         mock_user_crud_class.return_value = mock_user_crud
 
         params = MagicMock(
             page=1,
             page_size=10,
             search="test",
-            role=None,
+            role_id=None,
             is_active=None,
             organization_id=None,
         )
 
-        result = get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = asyncio.run(
+            get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        )
 
         payload = _parse_json_response(result)
         data = payload["data"]
         pagination = data["pagination"]
         assert pagination["total"] == 1
-        mock_user_crud.get_multi_with_filters.assert_called_once_with(
+        mock_user_crud.get_multi_with_filters_async.assert_awaited_once_with(
             db=mock_db,
             skip=0,
             limit=10,
             search="test",
-            role=None,
+            role_id=None,
             is_active=None,
             organization_id=None,
         )
@@ -220,20 +290,22 @@ class TestGetUsers:
         """Test getting user list with role and status filters"""
         from src.api.v1.auth.auth_modules.users import get_users
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_multi_with_filters.return_value = ([], 0)
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_multi_with_filters_async.return_value = ([], 0)
         mock_user_crud_class.return_value = mock_user_crud
 
         params = MagicMock(
             page=1,
             page_size=10,
             search=None,
-            role="admin",
+            role_id="role-admin-id",
             is_active=True,
             organization_id="org-123",
         )
 
-        result = get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = asyncio.run(
+            get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        )
 
         payload = _parse_json_response(result)
         data = payload["data"]
@@ -241,7 +313,7 @@ class TestGetUsers:
         assert pagination["total"] == 0
         assert pagination["total_pages"] == 0
         assert data["items"] == []
-        mock_user_crud.get_multi_with_filters.assert_called_once()
+        mock_user_crud.get_multi_with_filters_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_get_users_pagination(self, mock_user_crud_class, mock_db, mock_admin_user):
@@ -255,7 +327,7 @@ class TestGetUsers:
             user.username = f"user{i}"
             user.email = f"user{i}@example.com"
             user.full_name = f"User {i}"
-            user.role = "user"
+            user.role_id = "role-user-id"
             user.is_active = True
             user.is_locked = False
             user.last_login_at = None
@@ -265,20 +337,22 @@ class TestGetUsers:
             user.updated_at = datetime.now(UTC)
             mock_users.append(user)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_multi_with_filters.return_value = (mock_users, 25)
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_multi_with_filters_async.return_value = (mock_users, 25)
         mock_user_crud_class.return_value = mock_user_crud
 
         params = MagicMock(
             page=2,
             page_size=10,
             search=None,
-            role=None,
+            role_id=None,
             is_active=None,
             organization_id=None,
         )
 
-        result = get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        result = asyncio.run(
+            get_users(params=params, db=mock_db, current_user=mock_admin_user)
+        )
 
         payload = _parse_json_response(result)
         data = payload["data"]
@@ -289,12 +363,12 @@ class TestGetUsers:
         assert pagination["total_pages"] == 3  # (25 + 10 - 1) // 10 = 3
         assert pagination["has_next"] is True
         assert pagination["has_prev"] is True
-        mock_user_crud.get_multi_with_filters.assert_called_once_with(
+        mock_user_crud.get_multi_with_filters_async.assert_awaited_once_with(
             db=mock_db,
             skip=10,
             limit=10,
             search=None,
-            role=None,
+            role_id=None,
             is_active=None,
             organization_id=None,
         )
@@ -319,7 +393,7 @@ class TestCreateUser:
             email="newuser@example.com",
             full_name="New User",
             password="SecurePass123!",
-            role="user",
+            role_id="role-user-id",
         )
 
         mock_user = MagicMock()
@@ -327,7 +401,7 @@ class TestCreateUser:
         mock_user.username = "newuser"
         mock_user.email = "newuser@example.com"
         mock_user.full_name = "New User"
-        mock_user.role = "user"
+        mock_user.role_id = "role-user-id"
         mock_user.is_active = True
         mock_user.is_locked = False
         mock_user.last_login_at = None
@@ -336,17 +410,19 @@ class TestCreateUser:
         mock_user.created_at = datetime.now(UTC)
         mock_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.create.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.create_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = create_user(
-            user_data=user_data, db=mock_db, current_user=mock_admin_user
+        result = asyncio.run(
+            create_user(
+                user_data=user_data, db=mock_db, current_user=mock_admin_user
+            )
         )
 
         assert result.username == "newuser"
         assert result.email == "newuser@example.com"
-        mock_user_crud.create.assert_called_once_with(mock_db, user_data)
+        mock_user_crud.create_async.assert_awaited_once_with(mock_db, user_data)
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_create_user_duplicate_username(
@@ -362,15 +438,19 @@ class TestCreateUser:
             email="new@example.com",
             full_name="New User",
             password="SecurePass123!",
-            role="user",
+            role_id="role-user-id",
         )
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.create.side_effect = BusinessLogicError("用户名已存在")
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.create_async.side_effect = BusinessLogicError("用户名已存在")
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(InvalidRequestError) as exc_info:
-            create_user(user_data=user_data, db=mock_db, current_user=mock_admin_user)
+            asyncio.run(
+                create_user(
+                    user_data=user_data, db=mock_db, current_user=mock_admin_user
+                )
+            )
 
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "用户名已存在" in exc_info.value.message
@@ -396,7 +476,7 @@ class TestGetUser:
         mock_user.username = "targetuser"
         mock_user.email = "target@example.com"
         mock_user.full_name = "Target User"
-        mock_user.role = "user"
+        mock_user.role_id = "role-user-id"
         mock_user.is_active = True
         mock_user.is_locked = False
         mock_user.last_login_at = None
@@ -405,16 +485,18 @@ class TestGetUser:
         mock_user.created_at = datetime.now(UTC)
         mock_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = get_user(
-            user_id="target-user-id", db=mock_db, current_user=mock_admin_user
+        result = asyncio.run(
+            get_user(
+                user_id="target-user-id", db=mock_db, current_user=mock_admin_user
+            )
         )
 
         assert result.username == "targetuser"
-        mock_user_crud.get.assert_called_once_with(mock_db, "target-user-id")
+        mock_user_crud.get_async.assert_awaited_once_with(mock_db, "target-user-id")
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_get_user_self_access(
@@ -428,7 +510,7 @@ class TestGetUser:
         mock_user.username = "testuser"
         mock_user.email = "test@example.com"
         mock_user.full_name = "Test User"
-        mock_user.role = "user"
+        mock_user.role_id = "role-user-id"
         mock_user.is_active = True
         mock_user.is_locked = False
         mock_user.last_login_at = None
@@ -437,14 +519,16 @@ class TestGetUser:
         mock_user.created_at = datetime.now(UTC)
         mock_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = get_user(user_id="user-id", db=mock_db, current_user=mock_regular_user)
+        result = asyncio.run(
+            get_user(user_id="user-id", db=mock_db, current_user=mock_regular_user)
+        )
 
         assert result.username == "testuser"
-        mock_user_crud.get.assert_called_once()
+        mock_user_crud.get_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_get_user_forbidden(self, mock_user_crud_class, mock_db, mock_regular_user):
@@ -452,8 +536,10 @@ class TestGetUser:
         from src.api.v1.auth.auth_modules.users import get_user
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            get_user(
-                user_id="other-user-id", db=mock_db, current_user=mock_regular_user
+            asyncio.run(
+                get_user(
+                    user_id="other-user-id", db=mock_db, current_user=mock_regular_user
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -464,12 +550,18 @@ class TestGetUser:
         """Test getting non-existent user"""
         from src.api.v1.auth.auth_modules.users import get_user
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            get_user(user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user)
+            asyncio.run(
+                get_user(
+                    user_id="nonexistent-id",
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
+            )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
         assert "不存在" in exc_info.value.message
@@ -485,13 +577,13 @@ class TestUpdateUser:
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_update_user_admin_success(
-        self, mock_user_crud_class, mock_db, mock_admin_user
+        self, mock_user_crud_class, mock_db, mock_admin_user, mock_rbac_service
     ):
         """Test admin updating user successfully"""
         from src.api.v1.auth.auth_modules.users import update_user
         from src.schemas.auth import UserUpdate
 
-        user_data = UserUpdate(full_name="Updated Name", role="admin")
+        user_data = UserUpdate(full_name="Updated Name", role_id="role-admin-id")
 
         mock_existing_user = MagicMock()
         mock_existing_user.id = "target-user-id"
@@ -501,7 +593,7 @@ class TestUpdateUser:
         mock_updated_user.username = "targetuser"
         mock_updated_user.email = "target@example.com"
         mock_updated_user.full_name = "Updated Name"
-        mock_updated_user.role = "admin"
+        mock_updated_user.role_id = "role-admin-id"
         mock_updated_user.is_active = True
         mock_updated_user.is_locked = False
         mock_updated_user.last_login_at = None
@@ -510,21 +602,25 @@ class TestUpdateUser:
         mock_updated_user.created_at = datetime.now(UTC)
         mock_updated_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_existing_user
-        mock_user_crud.update.return_value = mock_updated_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_existing_user
+        mock_user_crud.update_async.return_value = mock_updated_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = update_user(
-            user_id="target-user-id",
-            user_data=user_data,
-            db=mock_db,
-            current_user=mock_admin_user,
+        mock_rbac_service.get_user_role_summary.return_value = ADMIN_ROLE_SUMMARY
+
+        result = asyncio.run(
+            update_user(
+                user_id="target-user-id",
+                user_data=user_data,
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result.full_name == "Updated Name"
-        assert result.role == "admin"
-        mock_user_crud.update.assert_called_once()
+        assert result.role_id == "role-admin-id"
+        mock_user_crud.update_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_update_user_self_success(
@@ -541,7 +637,7 @@ class TestUpdateUser:
         mock_updated_user.username = "testuser"
         mock_updated_user.email = "test@example.com"
         mock_updated_user.full_name = "My Updated Name"
-        mock_updated_user.role = "user"
+        mock_updated_user.role_id = "role-user-id"
         mock_updated_user.is_active = True
         mock_updated_user.is_locked = False
         mock_updated_user.last_login_at = None
@@ -550,16 +646,18 @@ class TestUpdateUser:
         mock_updated_user.created_at = datetime.now(UTC)
         mock_updated_user.updated_at = datetime.now(UTC)
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_regular_user
-        mock_user_crud.update.return_value = mock_updated_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_regular_user
+        mock_user_crud.update_async.return_value = mock_updated_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = update_user(
-            user_id="user-id",
-            user_data=user_data,
-            db=mock_db,
-            current_user=mock_regular_user,
+        result = asyncio.run(
+            update_user(
+                user_id="user-id",
+                user_data=user_data,
+                db=mock_db,
+                current_user=mock_regular_user,
+            )
         )
 
         assert result.full_name == "My Updated Name"
@@ -575,11 +673,13 @@ class TestUpdateUser:
         user_data = UserUpdate(full_name="Hacked Name")
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            update_user(
-                user_id="other-user-id",
-                user_data=user_data,
-                db=mock_db,
-                current_user=mock_regular_user,
+            asyncio.run(
+                update_user(
+                    user_id="other-user-id",
+                    user_data=user_data,
+                    db=mock_db,
+                    current_user=mock_regular_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -595,16 +695,18 @@ class TestUpdateUser:
 
         user_data = UserUpdate(full_name="Updated Name")
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            update_user(
-                user_id="nonexistent-id",
-                user_data=user_data,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                update_user(
+                    user_id="nonexistent-id",
+                    user_data=user_data,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -618,7 +720,7 @@ class TestUpdateUser:
 class TestChangePassword:
     """Tests for POST /api/v1/auth/users/{user_id}/change-password endpoint"""
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_success(
         self, mock_user_crud_class, mock_user_service_class, mock_db, mock_regular_user
@@ -635,24 +737,26 @@ class TestChangePassword:
         mock_user.id = "user-id"
 
         mock_user_service = MagicMock()
-        mock_user_service.change_password.return_value = True
+        mock_user_service.change_password = AsyncMock(return_value=True)
         mock_user_service_class.return_value = mock_user_service
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = change_password(
-            user_id="user-id",
-            password_data=password_data,
-            db=mock_db,
-            current_user=mock_regular_user,
+        result = asyncio.run(
+            change_password(
+                user_id="user-id",
+                password_data=password_data,
+                db=mock_db,
+                current_user=mock_regular_user,
+            )
         )
 
         assert result["message"] == "密码修改成功"
-        mock_user_service.change_password.assert_called_once()
+        mock_user_service.change_password.assert_awaited_once()
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_admin_for_user(
         self, mock_user_crud_class, mock_user_service_class, mock_db, mock_admin_user
@@ -669,23 +773,25 @@ class TestChangePassword:
         mock_user.id = "target-user-id"
 
         mock_user_service = MagicMock()
-        mock_user_service.change_password.return_value = True
+        mock_user_service.change_password = AsyncMock(return_value=True)
         mock_user_service_class.return_value = mock_user_service
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = change_password(
-            user_id="target-user-id",
-            password_data=password_data,
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            change_password(
+                user_id="target-user-id",
+                password_data=password_data,
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result["message"] == "密码修改成功"
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_forbidden(
         self, mock_user_crud_class, mock_user_service_class, mock_db, mock_regular_user
@@ -699,17 +805,19 @@ class TestChangePassword:
         )
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            change_password(
-                user_id="other-user-id",
-                password_data=password_data,
-                db=mock_db,
-                current_user=mock_regular_user,
+            asyncio.run(
+                change_password(
+                    user_id="other-user-id",
+                    password_data=password_data,
+                    db=mock_db,
+                    current_user=mock_regular_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert "无权修改" in exc_info.value.message
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_change_password_user_not_found(
         self, mock_user_crud_class, mock_user_service_class, mock_db, mock_admin_user
@@ -722,16 +830,18 @@ class TestChangePassword:
             current_password="OldPass123!", new_password="NewPass123!"
         )
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            change_password(
-                user_id="nonexistent-id",
-                password_data=password_data,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                change_password(
+                    user_id="nonexistent-id",
+                    password_data=password_data,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -754,17 +864,19 @@ class TestDeactivateUser:
 
         mock_user = MagicMock()
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
-        mock_user_crud.delete.return_value = True
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
+        mock_user_crud.delete_async.return_value = True
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = deactivate_user(
-            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        result = asyncio.run(
+            deactivate_user(
+                user_id="user-id", db=mock_db, current_user=mock_admin_user
+            )
         )
 
         assert result["message"] == "用户已停用"
-        mock_user_crud.delete.assert_called_once_with(mock_db, "user-id")
+        mock_user_crud.delete_async.assert_awaited_once_with(mock_db, "user-id")
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_deactivate_user_not_found(
@@ -773,13 +885,15 @@ class TestDeactivateUser:
         """Test deactivating non-existent user"""
         from src.api.v1.auth.auth_modules.users import deactivate_user
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            deactivate_user(
-                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            asyncio.run(
+                deactivate_user(
+                    user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -793,7 +907,7 @@ class TestDeactivateUser:
 class TestActivateUser:
     """Tests for POST /api/v1/auth/users/{user_id}/activate endpoint"""
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_activate_user_success(
         self, mock_user_service_class, mock_db, mock_admin_user
     ):
@@ -801,17 +915,17 @@ class TestActivateUser:
         from src.api.v1.auth.auth_modules.users import activate_user
 
         mock_user_service = MagicMock()
-        mock_user_service.activate_user.return_value = True
+        mock_user_service.activate_user = AsyncMock(return_value=True)
         mock_user_service_class.return_value = mock_user_service
 
-        result = activate_user(
-            user_id="user-id", db=mock_db, current_user=mock_admin_user
+        result = asyncio.run(
+            activate_user(user_id="user-id", db=mock_db, current_user=mock_admin_user)
         )
 
         assert result["message"] == "用户已激活"
-        mock_user_service.activate_user.assert_called_once_with("user-id")
+        mock_user_service.activate_user.assert_awaited_once_with("user-id")
 
-    @patch("src.api.v1.auth.auth_modules.users.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_activate_user_not_found(
         self, mock_user_service_class, mock_db, mock_admin_user
     ):
@@ -819,12 +933,14 @@ class TestActivateUser:
         from src.api.v1.auth.auth_modules.users import activate_user
 
         mock_user_service = MagicMock()
-        mock_user_service.activate_user.return_value = False
+        mock_user_service.activate_user = AsyncMock(return_value=False)
         mock_user_service_class.return_value = mock_user_service
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            activate_user(
-                user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+            asyncio.run(
+                activate_user(
+                    user_id="nonexistent-id", db=mock_db, current_user=mock_admin_user
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -854,24 +970,26 @@ class TestLockUser:
         mock_user = MagicMock()
         mock_user.username = "testuser"
 
-        mock_audit_crud = MagicMock()
+        mock_audit_crud = _make_audit_crud()
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = lock_user(
-            user_id="user-id",
-            request=mock_request,
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            lock_user(
+                user_id="user-id",
+                request=mock_request,
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result["success"] is True
         assert "已锁定" in result["message"]
         assert mock_user.is_locked is True
-        mock_audit_crud.create.assert_called_once()
+        mock_audit_crud.create_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_lock_user_not_found(
@@ -880,16 +998,18 @@ class TestLockUser:
         """Test locking non-existent user"""
         from src.api.v1.auth.auth_modules.users import lock_user
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            lock_user(
-                user_id="nonexistent-id",
-                request=mock_request,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                lock_user(
+                    user_id="nonexistent-id",
+                    request=mock_request,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -919,24 +1039,26 @@ class TestUnlockUserAccount:
         mock_user = MagicMock()
         mock_user.username = "testuser"
 
-        mock_audit_crud = MagicMock()
+        mock_audit_crud = _make_audit_crud()
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = unlock_user_account(
-            user_id="user-id",
-            request=mock_request,
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            unlock_user_account(
+                user_id="user-id",
+                request=mock_request,
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result["success"] is True
         assert "已解锁" in result["message"]
         assert mock_user.is_locked is False
-        mock_audit_crud.create.assert_called_once()
+        mock_audit_crud.create_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_unlock_user_not_found(
@@ -945,16 +1067,18 @@ class TestUnlockUserAccount:
         """Test unlocking non-existent user"""
         from src.api.v1.auth.auth_modules.users import unlock_user_account
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            unlock_user_account(
-                user_id="nonexistent-id",
-                request=mock_request,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                unlock_user_account(
+                    user_id="nonexistent-id",
+                    request=mock_request,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -996,25 +1120,27 @@ class TestResetUserPassword:
         mock_password_service.get_password_hash.return_value = "hashed_password"
         mock_password_service_class.return_value = mock_password_service
 
-        mock_audit_crud = MagicMock()
+        mock_audit_crud = _make_audit_crud()
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_user
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_user
         mock_user_crud_class.return_value = mock_user_crud
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = reset_user_password(
-            user_id="user-id",
-            password_data=password_data,
-            request=mock_request,
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            reset_user_password(
+                user_id="user-id",
+                password_data=password_data,
+                request=mock_request,
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         assert result["success"] is True
         assert "密码已重置" in result["message"]
         assert result["user_id"] == "user-id"
-        mock_audit_crud.create.assert_called_once()
+        mock_audit_crud.create_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_reset_password_user_not_found(
@@ -1028,17 +1154,19 @@ class TestResetUserPassword:
             new_password="NewSecurePass123!", reason="Test"
         )
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = None
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = None
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
-            reset_user_password(
-                user_id="nonexistent-id",
-                password_data=password_data,
-                request=mock_request,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                reset_user_password(
+                    user_id="nonexistent-id",
+                    password_data=password_data,
+                    request=mock_request,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -1052,7 +1180,7 @@ class TestResetUserPassword:
 class TestGetUserStatistics:
     """Tests for GET /api/v1/auth/users/statistics/summary endpoint"""
 
-    @patch("src.services.core.user_management_service.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_get_user_statistics_success(
         self, mock_user_service_class, mock_db, mock_admin_user
     ):
@@ -1068,10 +1196,12 @@ class TestGetUserStatistics:
         }
 
         mock_user_service = MagicMock()
-        mock_user_service.get_statistics.return_value = mock_stats
+        mock_user_service.get_statistics = AsyncMock(return_value=mock_stats)
         mock_user_service_class.return_value = mock_user_service
 
-        result = get_user_statistics(db=mock_db, current_user=mock_admin_user)
+        result = asyncio.run(
+            get_user_statistics(db=mock_db, current_user=mock_admin_user)
+        )
 
         assert result["success"] is True
         assert "data" in result
@@ -1080,7 +1210,7 @@ class TestGetUserStatistics:
         assert result["data"]["locked_users"] == 1
         assert result["data"]["inactive_users"] == 2
 
-    @patch("src.services.core.user_management_service.UserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_get_user_statistics_empty_db(
         self, mock_user_service_class, mock_db, mock_admin_user
     ):
@@ -1095,10 +1225,12 @@ class TestGetUserStatistics:
             "online_users": 0,
         }
         mock_user_service = MagicMock()
-        mock_user_service.get_statistics.return_value = mock_stats
+        mock_user_service.get_statistics = AsyncMock(return_value=mock_stats)
         mock_user_service_class.return_value = mock_user_service
 
-        result = get_user_statistics(db=mock_db, current_user=mock_admin_user)
+        result = asyncio.run(
+            get_user_statistics(db=mock_db, current_user=mock_admin_user)
+        )
 
         assert result["success"] is True
         assert result["data"]["total_users"] == 0
@@ -1117,21 +1249,23 @@ class TestUsersEdgeCases:
         """Test getting users when no users exist"""
         from src.api.v1.auth.auth_modules.users import get_users
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_multi_with_filters.return_value = ([], 0)
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_multi_with_filters_async.return_value = ([], 0)
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = get_users(
-            params=MagicMock(
-                page=1,
-                page_size=10,
-                search=None,
-                role=None,
-                is_active=None,
-                organization_id=None,
-            ),
-            db=mock_db,
-            current_user=mock_admin_user,
+        result = asyncio.run(
+            get_users(
+                params=MagicMock(
+                    page=1,
+                    page_size=10,
+                    search=None,
+                    role_id=None,
+                    is_active=None,
+                    organization_id=None,
+                ),
+                db=mock_db,
+                current_user=mock_admin_user,
+            )
         )
 
         payload = _parse_json_response(result)
@@ -1140,6 +1274,7 @@ class TestUsersEdgeCases:
         assert pagination["total"] == 0
         assert pagination["total_pages"] == 0
         assert data["items"] == []
+        mock_user_crud.get_multi_with_filters_async.assert_awaited_once()
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
     def test_update_user_with_business_logic_error(
@@ -1154,29 +1289,38 @@ class TestUsersEdgeCases:
 
         mock_existing_user = MagicMock()
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get.return_value = mock_existing_user
-        mock_user_crud.update.side_effect = BusinessLogicError("用户名已被占用")
+        mock_user_crud = _make_user_crud()
+        mock_user_crud.get_async.return_value = mock_existing_user
+        mock_user_crud.update_async.side_effect = BusinessLogicError("用户名已被占用")
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(InvalidRequestError) as exc_info:
-            update_user(
-                user_id="user-id",
-                user_data=user_data,
-                db=mock_db,
-                current_user=mock_admin_user,
+            asyncio.run(
+                update_user(
+                    user_id="user-id",
+                    user_data=user_data,
+                    db=mock_db,
+                    current_user=mock_admin_user,
+                )
             )
 
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "用户名已被占用" in exc_info.value.message
 
-    def test_get_user_statistics_db_error(self, mock_db, mock_admin_user):
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
+    def test_get_user_statistics_db_error(
+        self, mock_user_service_class, mock_db, mock_admin_user
+    ):
         """Test getting user statistics with database error"""
         from src.api.v1.auth.auth_modules.users import get_user_statistics
 
-        mock_db.query.side_effect = Exception("Database connection failed")
+        mock_user_service = MagicMock()
+        mock_user_service.get_statistics = AsyncMock(
+            side_effect=Exception("Database connection failed")
+        )
+        mock_user_service_class.return_value = mock_user_service
 
         with pytest.raises(InternalServerError) as exc_info:
-            get_user_statistics(db=mock_db, current_user=mock_admin_user)
+            asyncio.run(get_user_statistics(db=mock_db, current_user=mock_admin_user))
 
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

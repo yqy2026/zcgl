@@ -31,6 +31,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { rentContractService } from '@/services/rentContractService';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ChartErrorBoundary } from '@/components/Analytics';
 
 import {
   OwnershipRentStatistics,
@@ -260,7 +261,7 @@ const RentStatisticsPage: React.FC = () => {
           <Progress
             type="circle"
             percent={percentage}
-            width={50}
+            size={50}
             strokeColor={color}
             format={() => `${percentage.toFixed(1)}%`}
           />
@@ -333,7 +334,7 @@ const RentStatisticsPage: React.FC = () => {
           <Progress
             type="circle"
             percent={percentage}
-            width={50}
+            size={50}
             strokeColor={color}
             format={() => `${percentage.toFixed(1)}%`}
           />
@@ -359,7 +360,13 @@ const RentStatisticsPage: React.FC = () => {
     innerRadius: 0.4,
     label: {
       type: 'outer' as const,
-      content: '{name} {percentage}',
+      content: (datum: { type?: string; percent?: number }) => {
+        const name = typeof datum.type === 'string' ? datum.type : '';
+        const percentValue = typeof datum.percent === 'number' ? datum.percent : undefined;
+        const percentText =
+          percentValue !== undefined ? `${(percentValue * 100).toFixed(1)}%` : '';
+        return percentText !== '' ? `${name} ${percentText}` : name;
+      },
     },
     legend: {
       layout: 'horizontal' as const,
@@ -456,7 +463,9 @@ const RentStatisticsPage: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <Card title="权属方租金分布" loading={isStatisticsLoading}>
-              <Pie {...ownershipPieConfig} height={300} />
+              <ChartErrorBoundary>
+                <Pie {...ownershipPieConfig} height={300} />
+              </ChartErrorBoundary>
             </Card>
           </Col>
           <Col xs={24} lg={12}>
@@ -506,12 +515,16 @@ const RentStatisticsPage: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={16}>
             <Card title="月度租金趋势" loading={isStatisticsLoading}>
-              <Column {...monthlyBarConfig} height={400} />
+              <ChartErrorBoundary>
+                <Column {...monthlyBarConfig} height={400} />
+              </ChartErrorBoundary>
             </Card>
           </Col>
           <Col xs={24} lg={8}>
             <Card title="收缴率趋势" loading={isStatisticsLoading}>
-              <Line {...monthlyLineConfig} height={400} />
+              <ChartErrorBoundary>
+                <Line {...monthlyLineConfig} height={400} />
+              </ChartErrorBoundary>
             </Card>
           </Col>
         </Row>

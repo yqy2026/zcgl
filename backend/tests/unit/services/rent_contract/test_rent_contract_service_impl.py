@@ -18,7 +18,8 @@ from src.core.exception_handler import (
     ResourceConflictError,
     ResourceNotFoundError,
 )
-from src.models.asset import Asset, Ownership
+from src.models.asset import Asset
+from src.models.ownership import Ownership
 from src.models.rent_contract import (
     ContractType as ContractTypeModel,
 )

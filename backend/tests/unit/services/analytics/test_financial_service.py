@@ -2,7 +2,7 @@
 Unit tests for FinancialService.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,11 +16,12 @@ def service(mock_db):
 
 @patch("src.services.analytics.financial_service.asset_crud")
 @patch("src.services.analytics.financial_service.to_float")
-def test_calculate_summary_empty(mock_to_float, mock_asset_crud, service):
-    mock_asset_crud.get_multi_with_search.return_value = ([], 0)
+@pytest.mark.asyncio
+async def test_calculate_summary_empty(mock_to_float, mock_asset_crud, service):
+    mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
     mock_to_float.return_value = 0.0
 
-    summary = service.calculate_summary()
+    summary = await service.calculate_summary()
 
     assert summary["total_assets"] == 0
     assert summary["total_annual_income"] == 0.0
@@ -32,7 +33,8 @@ def test_calculate_summary_empty(mock_to_float, mock_asset_crud, service):
 
 @patch("src.services.analytics.financial_service.asset_crud")
 @patch("src.services.analytics.financial_service.to_float")
-def test_calculate_summary_with_assets(mock_to_float, mock_asset_crud, service):
+@pytest.mark.asyncio
+async def test_calculate_summary_with_assets(mock_to_float, mock_asset_crud, service):
     asset_a = MagicMock()
     asset_a.rentable_area = 100.0
     asset_a.annual_income = 1000.0
@@ -45,10 +47,12 @@ def test_calculate_summary_with_assets(mock_to_float, mock_asset_crud, service):
     asset_b.annual_expense = 600.0
     asset_b.net_income = 1400.0
 
-    mock_asset_crud.get_multi_with_search.return_value = ([asset_a, asset_b], 2)
+    mock_asset_crud.get_multi_with_search_async = AsyncMock(
+        return_value=([asset_a, asset_b], 2)
+    )
     mock_to_float.side_effect = lambda x: x
 
-    summary = service.calculate_summary()
+    summary = await service.calculate_summary()
 
     assert summary["total_assets"] == 2
     assert summary["total_annual_income"] == 3000.0
@@ -60,17 +64,18 @@ def test_calculate_summary_with_assets(mock_to_float, mock_asset_crud, service):
 
 @patch("src.services.analytics.financial_service.asset_crud")
 @patch("src.services.analytics.financial_service.to_float")
-def test_calculate_summary_zero_area(mock_to_float, mock_asset_crud, service):
+@pytest.mark.asyncio
+async def test_calculate_summary_zero_area(mock_to_float, mock_asset_crud, service):
     asset = MagicMock()
     asset.rentable_area = 0.0
     asset.annual_income = 1000.0
     asset.annual_expense = 500.0
     asset.net_income = 500.0
 
-    mock_asset_crud.get_multi_with_search.return_value = ([asset], 1)
+    mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([asset], 1))
     mock_to_float.side_effect = lambda x: x
 
-    summary = service.calculate_summary()
+    summary = await service.calculate_summary()
 
     assert summary["income_per_sqm"] == 0.0
     assert summary["expense_per_sqm"] == 0.0

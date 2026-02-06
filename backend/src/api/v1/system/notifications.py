@@ -10,12 +10,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import forbidden, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
+from ....services.permission.rbac_service import RBACService
 from ....models.auth import User
 from ....services.notification.notification_service import notification_service
 from ....services.notification.scheduler import run_notification_tasks
@@ -88,30 +88,26 @@ async def get_notifications(
     - **type**: 按通知类型筛选
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        result = notification_service.list_notifications(
-            db,
-            user_id=str(current_user.id),
-            page=page,
-            page_size=page_size,
-            is_read=is_read,
-            type=type,
-        )
-        notifications = result["items"]
-        total = result["total"]
-        unread_count = result["unread_count"]
+    result = await notification_service.list_notifications_async(
+        db,
+        user_id=str(current_user.id),
+        page=page,
+        page_size=page_size,
+        is_read=is_read,
+        type=type,
+    )
+    notifications = result["items"]
+    total = result["total"]
+    unread_count = result["unread_count"]
 
-        return ResponseHandler.paginated(
-            data=[NotificationResponse.model_validate(n) for n in notifications],
-            page=page,
-            page_size=page_size,
-            total=total,
-            message="获取通知列表成功",
-            extra={"unread_count": unread_count, "count": unread_count},
-        )
-
-    return await db.run_sync(_sync)
+    return ResponseHandler.paginated(
+        data=[NotificationResponse.model_validate(n) for n in notifications],
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="获取通知列表成功",
+        extra={"unread_count": unread_count, "count": unread_count},
+    )
 
 
 @router.get("/unread-count", response_model=UnreadCountResponse)
@@ -123,18 +119,14 @@ async def get_unread_count(
     获取当前用户的未读通知数量
     """
 
-    def _sync(sync_db: Session) -> UnreadCountResponse:
-        db = sync_db
-        unread_count = notification_service.get_unread_count(
-            db, user_id=str(current_user.id)
-        )
+    unread_count = await notification_service.get_unread_count_async(
+        db, user_id=str(current_user.id)
+    )
 
-        return UnreadCountResponse(
-            unread_count=unread_count,
-            count=unread_count,  # count 字段值等于 unread_count
-        )
-
-    return await db.run_sync(_sync)
+    return UnreadCountResponse(
+        unread_count=unread_count,
+        count=unread_count,
+    )
 
 
 @router.post("/{notification_id}/read", response_model=NotificationResponse)
@@ -147,20 +139,16 @@ async def mark_notification_as_read(
     标记通知为已读
     """
 
-    def _sync(sync_db: Session) -> NotificationResponse:
-        db = sync_db
-        notification = notification_service.mark_as_read(
-            db, user_id=str(current_user.id), notification_id=notification_id
+    notification = await notification_service.mark_as_read_async(
+        db, user_id=str(current_user.id), notification_id=notification_id
+    )
+
+    if not notification:
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
         )
 
-        if not notification:
-            raise not_found(
-                "通知不存在", resource_type="notification", resource_id=notification_id
-            )
-
-        return NotificationResponse.model_validate(notification)
-
-    return await db.run_sync(_sync)
+    return NotificationResponse.model_validate(notification)
 
 
 @router.post("/read-all", response_model=dict)
@@ -172,13 +160,9 @@ async def mark_all_as_read(
     标记所有通知为已读
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        notification_service.mark_all_as_read(db, user_id=str(current_user.id))
+    await notification_service.mark_all_as_read_async(db, user_id=str(current_user.id))
 
-        return {"message": "已标记所有通知为已读"}
-
-    return await db.run_sync(_sync)
+    return {"message": "已标记所有通知为已读"}
 
 
 @router.delete("/{notification_id}", response_model=dict)
@@ -191,19 +175,15 @@ async def delete_notification(
     删除通知
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        deleted = notification_service.delete_notification(
-            db, user_id=str(current_user.id), notification_id=notification_id
+    deleted = await notification_service.delete_notification_async(
+        db, user_id=str(current_user.id), notification_id=notification_id
+    )
+    if not deleted:
+        raise not_found(
+            "通知不存在", resource_type="notification", resource_id=notification_id
         )
-        if not deleted:
-            raise not_found(
-                "通知不存在", resource_type="notification", resource_id=notification_id
-            )
 
-        return {"message": "通知已删除"}
-
-    return await db.run_sync(_sync)
+    return {"message": "通知已删除"}
 
 
 @router.post("/run-tasks", response_model=dict)
@@ -217,13 +197,14 @@ def run_notification_tasks_endpoint(
     扫描合同到期和付款逾期，并生成相应的通知
     """
     # 检查用户权限（只有管理员可以手动触发）
-    if current_user.role != "admin":
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id):
         raise forbidden("只有管理员可以手动触发通知任务")
 
     # 在后台运行任务
-    def run_tasks() -> dict[str, str]:
+    async def run_tasks() -> dict[str, str]:
         try:
-            result = run_notification_tasks()
+            result = await run_notification_tasks()
             return result
         except Exception as e:
             return {"error": str(e)}

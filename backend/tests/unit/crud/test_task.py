@@ -1,11 +1,11 @@
 """
-任务 CRUD 单元测试
+任务 CRUD 单元测试（异步）
 
-测试 TaskCRUD 和 ExcelTaskConfigCRUD 的所有主要方法
+覆盖 TaskCRUD 与 ExcelTaskConfigCRUD 的主要异步方法。
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -15,133 +15,119 @@ from src.crud.task import (
     excel_task_config_crud,
     task_crud,
 )
+from src.enums.task import TaskStatus, TaskType
 from src.models.task import AsyncTask, ExcelTaskConfig, TaskHistory
+
+pytestmark = pytest.mark.asyncio
+
+
+def _result_with_scalar(value: object | None) -> MagicMock:
+    result = MagicMock()
+    result.scalar.return_value = value
+    return result
+
+
+def _result_with_scalars(values: list[object] | None = None) -> MagicMock:
+    result = MagicMock()
+    scalars = MagicMock()
+    scalars.all.return_value = values or []
+    scalars.first.return_value = (values or [None])[0] if values is not None else None
+    result.scalars.return_value = scalars
+    return result
+
+
+def _result_with_all(values: list[tuple[object, object]] | None = None) -> MagicMock:
+    result = MagicMock()
+    result.all.return_value = values or []
+    return result
 
 
 class TestTaskCRUDGetMulti:
-    """测试 TaskCRUD get_multi 方法"""
+    """测试 TaskCRUD get_multi_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return TaskCRUD(AsyncTask)
 
     @pytest.fixture
-    def mock_db(self, db_session):
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.offset.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = []
-        db_session.query = MagicMock(return_value=mock_query)
-        return db_session
+    def mock_db(self):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
+        return mock_db
 
-    def test_get_multi_default_params(self, crud, mock_db):
-        """测试默认参数获取任务列表"""
-        result = crud.get_multi(mock_db)
-
+    async def test_get_multi_default_params(self, crud, mock_db):
+        result = await crud.get_multi_async(mock_db)
         assert isinstance(result, list)
-        mock_db.query.assert_called_once_with(AsyncTask)
+        mock_db.execute.assert_awaited()
 
-    def test_get_multi_with_task_type_filter(self, crud, mock_db):
-        """测试按任务类型筛选"""
-        crud.get_multi(mock_db, task_type="excel_import")
-
-        # 验证 filter 被调用
-        assert mock_db.query.return_value.filter.called
-
-    def test_get_multi_with_status_filter(self, crud, mock_db):
-        """测试按状态筛选"""
-        crud.get_multi(mock_db, status="running")
-
-        assert mock_db.query.return_value.filter.called
-
-    def test_get_multi_with_user_id_filter(self, crud, mock_db):
-        """测试按用户ID筛选"""
-        crud.get_multi(mock_db, user_id="user-123")
-
-        assert mock_db.query.return_value.filter.called
-
-    def test_get_multi_with_date_range(self, crud, mock_db):
-        """测试按日期范围筛选"""
-        now = datetime.now()
-        crud.get_multi(
+    async def test_get_multi_with_filters(self, crud, mock_db):
+        result = await crud.get_multi_async(
             mock_db,
-            created_after=now - timedelta(days=7),
-            created_before=now,
+            task_type="excel_import",
+            status="running",
+            user_id="user-123",
+            created_after=datetime.now() - timedelta(days=7),
+            created_before=datetime.now(),
         )
+        assert isinstance(result, list)
 
-        assert mock_db.query.return_value.filter.called
+    async def test_get_multi_with_pagination(self, crud, mock_db):
+        result = await crud.get_multi_async(mock_db, skip=10, limit=20)
+        assert isinstance(result, list)
 
-    def test_get_multi_with_pagination(self, crud, mock_db):
-        """测试分页参数"""
-        crud.get_multi(mock_db, skip=10, limit=20)
-
-        mock_db.query.return_value.filter.return_value.order_by.return_value.offset.assert_called_with(
-            10
+    async def test_get_multi_with_order(self, crud, mock_db):
+        result = await crud.get_multi_async(
+            mock_db, order_by="created_at", order_dir="asc"
         )
-
-    def test_get_multi_with_order_asc(self, crud, mock_db):
-        """测试升序排序"""
-        crud.get_multi(mock_db, order_by="created_at", order_dir="asc")
-
-        assert mock_db.query.return_value.filter.return_value.order_by.called
+        assert isinstance(result, list)
 
 
 class TestTaskCRUDCount:
-    """测试 TaskCRUD count 方法"""
+    """测试 TaskCRUD count_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return TaskCRUD(AsyncTask)
 
     @pytest.fixture
-    def mock_db(self, db_session):
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 5
-        db_session.query = MagicMock(return_value=mock_query)
-        return db_session
+    def mock_db(self):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalar(5))
+        return mock_db
 
-    def test_count_all_active(self, crud, mock_db):
-        """测试统计所有活跃任务"""
-        result = crud.count(mock_db)
-
+    async def test_count_all_active(self, crud, mock_db):
+        result = await crud.count_async(mock_db)
         assert result == 5
 
-    def test_count_with_filters(self, crud, mock_db):
-        """测试带筛选条件的统计"""
-        result = crud.count(mock_db, filters={"user_id": "user-1"})
-
+    async def test_count_with_filters(self, crud, mock_db):
+        result = await crud.count_async(mock_db, filters={"user_id": "user-1"})
         assert result == 5
-        assert mock_db.query.return_value.filter.called
 
-    def test_count_with_task_type(self, crud, mock_db):
-        """测试按任务类型统计"""
-        result = crud.count(mock_db, task_type="excel_export")
-
+    async def test_count_with_task_type(self, crud, mock_db):
+        result = await crud.count_async(mock_db, task_type="excel_export")
         assert result == 5
 
 
 class TestTaskCRUDGetStatistics:
-    """测试 TaskCRUD get_statistics 方法"""
+    """测试 TaskCRUD get_statistics_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return TaskCRUD(AsyncTask)
 
     @pytest.fixture
-    def mock_db(self, db_session):
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 10
-        mock_query.all.return_value = []
-        db_session.query = MagicMock(return_value=mock_query)
-        return db_session
+    def mock_db(self):
+        mock_db = AsyncMock()
+        count_results = [_result_with_scalar(0)] * (
+            4 + len(TaskType) + len(TaskStatus)
+        )
+        mock_db.execute = AsyncMock(
+            side_effect=[*count_results, _result_with_all([])]
+        )
+        return mock_db
 
-    def test_get_statistics_basic(self, crud, mock_db):
-        """测试获取基本统计信息"""
-        result = crud.get_statistics(mock_db)
+    async def test_get_statistics_basic(self, crud, mock_db):
+        result = await crud.get_statistics_async(mock_db)
 
         assert "total_tasks" in result
         assert "running_tasks" in result
@@ -151,153 +137,112 @@ class TestTaskCRUDGetStatistics:
         assert "by_status" in result
         assert "avg_duration" in result
 
-    def test_get_statistics_with_user_id(self, crud, mock_db):
-        """测试按用户获取统计"""
-        result = crud.get_statistics(mock_db, user_id="user-123")
-
+    async def test_get_statistics_with_user_id(self, crud, mock_db):
+        result = await crud.get_statistics_async(mock_db, user_id="user-123")
         assert isinstance(result, dict)
 
-    def test_get_statistics_avg_duration_calculation(self, crud, mock_db):
-        """测试平均持续时间计算"""
+    async def test_get_statistics_avg_duration_calculation(self, crud):
         now = datetime.now()
-        mock_task1 = MagicMock()
-        mock_task1.started_at = now - timedelta(seconds=100)
-        mock_task1.completed_at = now
+        rows = [(now - timedelta(seconds=100), now), (now - timedelta(seconds=200), now)]
+        mock_db = AsyncMock()
+        count_results = [_result_with_scalar(2)] * (
+            4 + len(TaskType) + len(TaskStatus)
+        )
+        mock_db.execute = AsyncMock(
+            side_effect=[*count_results, _result_with_all(rows)]
+        )
 
-        mock_task2 = MagicMock()
-        mock_task2.started_at = now - timedelta(seconds=200)
-        mock_task2.completed_at = now
-
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 2
-        mock_query.all.return_value = [mock_task1, mock_task2]
-        mock_db.query.return_value = mock_query
-
-        result = crud.get_statistics(mock_db)
-
-        # 验证返回结构
-        assert "avg_duration" in result
+        result = await crud.get_statistics_async(mock_db)
+        assert result["avg_duration"] > 0
 
 
 class TestTaskCRUDGetHistory:
-    """测试 TaskCRUD get_history 方法"""
+    """测试 TaskCRUD get_history_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return TaskCRUD(AsyncTask)
 
-    @pytest.fixture
-    def mock_db(self, db_session):
-        db_session.query = MagicMock()
-        return db_session
-
-    def test_get_history_exists(self, crud, mock_db):
-        """测试获取存在的任务历史"""
+    async def test_get_history_exists(self, crud):
+        mock_db = AsyncMock()
         mock_histories = [
             MagicMock(spec=TaskHistory),
             MagicMock(spec=TaskHistory),
         ]
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = mock_histories
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars(mock_histories))
 
-        result = crud.get_history(mock_db, task_id="task-1")
-
+        result = await crud.get_history_async(mock_db, task_id="task-1")
         assert len(result) == 2
 
-    def test_get_history_empty(self, crud, mock_db):
-        """测试获取空历史"""
-        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    async def test_get_history_empty(self, crud):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
-        result = crud.get_history(mock_db, task_id="task-not-exist")
-
+        result = await crud.get_history_async(mock_db, task_id="task-not-exist")
         assert result == []
 
 
 class TestExcelTaskConfigCRUDGetDefault:
-    """测试 ExcelTaskConfigCRUD get_default 方法"""
+    """测试 ExcelTaskConfigCRUD get_default_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return ExcelTaskConfigCRUD(ExcelTaskConfig)
 
-    @pytest.fixture
-    def mock_db(self, db_session):
-        db_session.query = MagicMock()
-        return db_session
-
-    def test_get_default_exists(self, crud, mock_db):
-        """测试获取存在的默认配置"""
+    async def test_get_default_exists(self, crud):
+        mock_db = AsyncMock()
         mock_config = MagicMock(spec=ExcelTaskConfig)
         mock_config.is_default = True
 
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_config
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([mock_config]))
 
-        result = crud.get_default(mock_db, config_type="import", task_type="asset")
-
+        result = await crud.get_default_async(
+            mock_db, config_type="import", task_type="asset"
+        )
         assert result is not None
         assert result.is_default is True
 
-    def test_get_default_not_exists(self, crud, mock_db):
-        """测试获取不存在的默认配置"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
+    async def test_get_default_not_exists(self, crud):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
-        result = crud.get_default(mock_db, config_type="export", task_type="not-exist")
-
+        result = await crud.get_default_async(
+            mock_db, config_type="export", task_type="not-exist"
+        )
         assert result is None
 
 
 class TestExcelTaskConfigCRUDGetMulti:
-    """测试 ExcelTaskConfigCRUD get_multi 方法"""
+    """测试 ExcelTaskConfigCRUD get_multi_async 方法"""
 
     @pytest.fixture
     def crud(self):
         return ExcelTaskConfigCRUD(ExcelTaskConfig)
 
-    @pytest.fixture
-    def mock_db(self, db_session):
-        mock_query = MagicMock()
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.offset.return_value = mock_query
-        mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = []
-        db_session.query = MagicMock(return_value=mock_query)
-        return db_session
+    async def test_get_multi_default_params(self, crud):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
-    def test_get_multi_default_params(self, crud, mock_db):
-        """测试默认参数获取配置列表"""
-        result = crud.get_multi(mock_db)
-
+        result = await crud.get_multi_async(mock_db)
         assert isinstance(result, list)
 
-    def test_get_multi_with_config_type(self, crud, mock_db):
-        """测试按配置类型筛选"""
-        crud.get_multi(mock_db, config_type="import")
+    async def test_get_multi_with_filters(self, crud):
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
-        assert mock_db.query.return_value.filter.called
-
-    def test_get_multi_with_task_type(self, crud, mock_db):
-        """测试按任务类型筛选"""
-        crud.get_multi(mock_db, task_type="asset")
-
-        assert mock_db.query.return_value.filter.called
-
-    def test_get_multi_inactive(self, crud, mock_db):
-        """测试获取非活跃配置"""
-        crud.get_multi(mock_db, is_active=False)
-
-        assert mock_db.query.called
+        result = await crud.get_multi_async(
+            mock_db, config_type="import", task_type="asset"
+        )
+        assert isinstance(result, list)
 
 
 class TestCRUDInstances:
     """测试 CRUD 实例"""
 
-    def test_task_crud_instance(self):
-        """测试任务 CRUD 实例"""
+    async def test_task_crud_instance(self):
         assert task_crud is not None
         assert isinstance(task_crud, TaskCRUD)
 
-    def test_excel_task_config_crud_instance(self):
-        """测试 Excel 任务配置 CRUD 实例"""
+    async def test_excel_task_config_crud_instance(self):
         assert excel_task_config_crud is not None
         assert isinstance(excel_task_config_crud, ExcelTaskConfigCRUD)

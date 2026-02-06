@@ -7,7 +7,8 @@
 import logging
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
 from ...models.llm_prompt import ExtractionFeedback
@@ -29,37 +30,20 @@ class FeedbackService:
         """
         self.prompt_manager = prompt_manager or PromptManager()
 
-    def collect(
+    async def collect_async(
         self,
-        db: Session,
+        db: AsyncSession,
         feedback_in: ExtractionFeedbackCreate,
         user_id: str,
     ) -> ExtractionFeedbackResponse:
-        """
-        收集用户反馈
-
-        Args:
-            db: 数据库会话
-            feedback_in: 反馈创建数据
-            user_id: 当前用户ID
-
-        Returns:
-            ExtractionFeedbackResponse
-
-        Raises:
-            ValueError: 当模板不存在时
-        """
-        # 验证模板存在
-        template = self.prompt_manager.get_by_id(
+        template = await self.prompt_manager.get_by_id_async(
             db, template_id=feedback_in.template_id
         )
         if not template:
             raise ResourceNotFoundError("Prompt", feedback_in.template_id)
 
-        # 获取当前版本ID（如果未指定）
         version_id = feedback_in.version_id or template.current_version_id
 
-        # 创建反馈记录
         feedback = ExtractionFeedback()
         feedback.id = str(uuid4())
         feedback.template_id = feedback_in.template_id
@@ -75,8 +59,8 @@ class FeedbackService:
         feedback.user_id = user_id
 
         db.add(feedback)
-        db.commit()
-        db.refresh(feedback)
+        await db.commit()
+        await db.refresh(feedback)
 
         logger.info(
             f"收集用户反馈: template={feedback_in.template_id}, "
@@ -85,27 +69,14 @@ class FeedbackService:
 
         return ExtractionFeedbackResponse.model_validate(feedback)
 
-    def get_by_template(
-        self,
-        db: Session,
-        template_id: str,
-        limit: int = 100,
+    async def get_by_template_async(
+        self, db: AsyncSession, template_id: str, limit: int = 100
     ) -> list[ExtractionFeedback]:
-        """
-        获取模板的反馈列表
-
-        Args:
-            db: 数据库会话
-            template_id: 模板ID
-            limit: 返回数量限制
-
-        Returns:
-            反馈列表
-        """
-        return (
-            db.query(ExtractionFeedback)
-            .filter(ExtractionFeedback.template_id == template_id)
+        stmt = (
+            select(ExtractionFeedback)
+            .where(ExtractionFeedback.template_id == template_id)
             .order_by(ExtractionFeedback.created_at.desc())
             .limit(limit)
-            .all()
         )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())

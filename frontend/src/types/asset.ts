@@ -2,7 +2,8 @@
 export interface Asset {
   id: string;
   // 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-  ownership_entity: string;
+  ownership_id?: string;
+  ownership_entity?: string;
   ownership_category?: string;
   project_name?: string;
   property_name: string;
@@ -55,7 +56,6 @@ export interface Asset {
 
   // 项目相关字段
   project_id?: string;
-  ownership_id?: string;
   wuyang_project_name?: string;
 
   // 项目相关字段已移至基本信息部分
@@ -211,7 +211,13 @@ export interface CustomFieldValue {
 // 表单数据接口
 export type AssetFormData = Omit<
   Asset,
-  'id' | 'created_at' | 'updated_at' | 'unrented_area' | 'occupancy_rate' | 'net_income'
+  | 'id'
+  | 'created_at'
+  | 'updated_at'
+  | 'unrented_area'
+  | 'occupancy_rate'
+  | 'net_income'
+  | 'ownership_entity'
 >;
 
 // API响应接口
@@ -250,6 +256,7 @@ export interface AssetSearchParams {
   tenant_type?: TenantType;
   contract_status?: ContractStatus;
   audit_status?: AuditStatus;
+  data_status?: DataStatus;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   // 面积范围筛选
@@ -263,7 +270,6 @@ export interface AssetSearchParams {
   end_date?: string;
   // 新增字段以匹配AnalyticsFilters的使用
   operation_status?: string;
-  ownership_entity?: string;
   // V2: 关联筛选
   project_id?: string;
   ownership_id?: string;
@@ -274,7 +280,13 @@ export interface AssetSearchParams {
 // 创建资产请求
 export type AssetCreateRequest = Omit<
   Asset,
-  'id' | 'created_at' | 'updated_at' | 'unrented_area' | 'occupancy_rate' | 'net_income'
+  | 'id'
+  | 'created_at'
+  | 'updated_at'
+  | 'unrented_area'
+  | 'occupancy_rate'
+  | 'net_income'
+  | 'ownership_entity'
 >;
 
 // 更新资产请求

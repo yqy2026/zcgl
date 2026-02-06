@@ -20,6 +20,7 @@ from ....security.route_guards import debug_only, require_localhost
 from ....services.core.authentication_service import AsyncAuthenticationService
 from ....services.core.password_service import PasswordService
 from ....services.core.user_management_service import AsyncUserManagementService
+from ....services.permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Auth Debug"], dependencies=[Depends(require_localhost)])
@@ -89,10 +90,13 @@ async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]
             access_token_length = 0
             token_error = str(e)
 
+        rbac_service = RBACService(db)
+        role_summary = await rbac_service.get_user_role_summary(str(admin_user.id))
+
         return {
             "admin_user_found": admin_user is not None,
             "admin_username": admin_user.username if admin_user else None,
-            "admin_role": admin_user.role if admin_user else None,
+            "admin_roles": role_summary["roles"],
             "password_valid": password_valid,
             "auth_success": auth_success,
             "auth_error": auth_error_debug,
@@ -108,21 +112,28 @@ async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]
 @router.get("/me", summary="调试ME端点")
 @debug_only
 async def test_me_debug(
-    current_user: UserResponse = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """调试ME端点，检查UserResponse内容"""
     # 检查 UserResponse 的所有字段
     user_dict = current_user.model_dump()
     logger.debug(f"UserResponse fields: {len(user_dict.keys())} fields")
 
+    rbac_service = RBACService(db)
+    role_summary = await rbac_service.get_user_role_summary(str(current_user.id))
+
     return {
         "username": current_user.username,
         "email": current_user.email,
         "full_name": current_user.full_name,
         "id": current_user.id,
-        "role": current_user.role,
+        "role_id": role_summary["primary_role_id"],
+        "role_name": role_summary["primary_role_name"],
+        "roles": role_summary["roles"],
+        "role_ids": role_summary["role_ids"],
         "is_active": current_user.is_active,
-        "is_admin": current_user.role == "admin",
+        "is_admin": role_summary["is_admin"],
         "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active",
     }

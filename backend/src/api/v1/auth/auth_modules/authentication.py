@@ -137,13 +137,19 @@ async def login(
             logger.warning(f"Failed to fetch permissions for user {user.id}: {e}")
             permissions_list = []
 
+            role_summary = await rbac_service.get_user_role_summary(str(user.id))
+
         return {
             "user": {
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
                 "full_name": user.full_name,
-                "role": user.role,
+                "role_id": role_summary["primary_role_id"],
+                "role_name": role_summary["primary_role_name"],
+                "roles": role_summary["roles"],
+                "role_ids": role_summary["role_ids"],
+                "is_admin": role_summary["is_admin"],
                 "is_active": bool(user.is_active)
                 if hasattr(user.is_active, "__int__")
                 else user.is_active,
@@ -339,22 +345,31 @@ async def refresh_token(
 
 
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
-def get_current_user_info(
-    current_user: UserResponse = Depends(get_current_active_user),
+async def get_current_user_info(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """
     获取当前登录用户的信息
 
     企业级实现，包含完整的用户信息、权限状态、会话信息和时间戳
     """
+    rbac_service = RBACService(db)
+    role_summary = await rbac_service.get_user_role_summary(str(current_user.id))
+
     return {
         "username": current_user.username,
         "email": current_user.email,
         "full_name": current_user.full_name,
         "id": current_user.id,
-        "role": current_user.role,
         "is_active": current_user.is_active,
-        "is_admin": current_user.role == "admin",
+        "role_id": role_summary["primary_role_id"],
+        "role_name": role_summary["primary_role_name"],
+        "roles": role_summary["roles"],
+        "role_ids": role_summary["role_ids"],
+        "is_admin": role_summary["is_admin"],
+        "default_organization_id": current_user.default_organization_id,
+        "organization_id": current_user.default_organization_id,
         "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active",
     }

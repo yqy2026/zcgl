@@ -96,6 +96,43 @@ class LlmSettings(BaseModel):
         json_schema_extra={"env": "ZHIPU_VISION_MODEL"},
     )
 
+    # GLM-OCR Configuration
+    GLM_OCR_ENABLE: bool = Field(
+        default=False,
+        description="是否启用 GLM-OCR 预处理",
+        json_schema_extra={"env": "GLM_OCR_ENABLE"},
+    )
+    GLM_OCR_AUTO: bool = Field(
+        default=True,
+        description="智能识别时自动对扫描件启用 GLM-OCR",
+        json_schema_extra={"env": "GLM_OCR_AUTO"},
+    )
+    GLM_OCR_API_KEY: str | None = Field(
+        default=None,
+        description="GLM-OCR API Key",
+        json_schema_extra={"env": "GLM_OCR_API_KEY"},
+    )
+    GLM_OCR_BASE_URL: str = Field(
+        default="https://open.bigmodel.cn/api/paas/v4",
+        description="GLM-OCR API 基础地址",
+        json_schema_extra={"env": "GLM_OCR_BASE_URL"},
+    )
+    GLM_OCR_MODEL: str = Field(
+        default="glm-ocr",
+        description="GLM-OCR 模型名称",
+        json_schema_extra={"env": "GLM_OCR_MODEL"},
+    )
+    GLM_OCR_TIMEOUT: int = Field(
+        default=120,
+        description="GLM-OCR API 超时时间（秒）",
+        json_schema_extra={"env": "GLM_OCR_TIMEOUT"},
+    )
+    GLM_OCR_TEXT_MAX_CHARS: int = Field(
+        default=12000,
+        description="OCR 文本输入 LLM 的最大字符数",
+        json_schema_extra={"env": "GLM_OCR_TEXT_MAX_CHARS"},
+    )
+
     # Tencent Hunyuan Configuration (2026-01 新增)
     HUNYUAN_API_KEY: str | None = Field(
         default=None,

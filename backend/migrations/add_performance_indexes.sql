@@ -7,7 +7,7 @@ CREATE INDEX IF NOT EXISTS "idx_assets_ownership_status" ON "assets" ("ownership
 CREATE INDEX IF NOT EXISTS "idx_assets_property_nature" ON "assets" ("property_nature");
 CREATE INDEX IF NOT EXISTS "idx_assets_usage_status" ON "assets" ("usage_status");
 CREATE INDEX IF NOT EXISTS "idx_assets_business_category" ON "assets" ("business_category");
-CREATE INDEX IF NOT EXISTS "idx_assets_ownership_entity" ON "assets" ("ownership_entity");
+CREATE INDEX IF NOT EXISTS "idx_assets_ownership_id" ON "assets" ("ownership_id");
 CREATE INDEX IF NOT EXISTS "idx_assets_project_name" ON "assets" ("project_name");
 
 -- 复合索引用于常见查询组合

@@ -48,6 +48,37 @@ if "DATA_ENCRYPTION_KEY" not in os.environ or os.environ[
     )
 
 
+class AsyncSessionAdapter:
+    """Provide async-compatible methods over a sync SQLAlchemy session."""
+
+    def __init__(self, session: Session):
+        self._session = session
+
+    async def execute(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.execute(*args, **kwargs)
+
+    async def commit(self):  # noqa: D401 - test helper
+        return self._session.commit()
+
+    async def refresh(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.refresh(*args, **kwargs)
+
+    async def flush(self):  # noqa: D401 - test helper
+        return self._session.flush()
+
+    async def rollback(self):  # noqa: D401 - test helper
+        return self._session.rollback()
+
+    def add(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.add(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.delete(*args, **kwargs)
+
+    def __getattr__(self, name: str):  # noqa: D401 - test helper
+        return getattr(self._session, name)
+
+
 # 确保测试产物目录存在
 def pytest_configure(config):
     artifacts_root = backend_root.parent / "test-results" / "backend"
@@ -101,22 +132,19 @@ def test_db(test_engine) -> Generator[Session, None, None]:
 @pytest.fixture(scope="function")
 async def test_client(test_db, test_user):
     """创建测试API客户端"""
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
     from src.middleware.auth import get_current_active_user, get_current_user
 
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(test_db)
 
     async def override_get_auth():
         """Mock认证依赖，直接返回测试用户"""
         return test_user
 
     # Override both dependencies in the chain
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_auth
     app.dependency_overrides[get_current_active_user] = override_get_auth
 
@@ -130,17 +158,14 @@ async def test_client(test_db, test_user):
 @pytest.fixture(scope="function")
 async def test_client_no_auth(test_db):
     """创建测试API客户端（无认证覆盖，用于测试未授权访问）"""
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
 
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(test_db)
 
     # Only override database, not authentication
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
@@ -158,11 +183,48 @@ async def test_client_no_auth(test_db):
 def test_user(test_db):
     """创建测试用户"""
     from src.models.auth import User
+    from src.models.rbac import Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
+
+    def ensure_role(role_name: str, display_name: str) -> Role:
+        existing_role = test_db.query(Role).filter(Role.name == role_name).first()
+        if existing_role:
+            return existing_role
+        role = Role(
+            name=role_name,
+            display_name=display_name,
+            is_system_role=True,
+            is_active=True,
+        )
+        test_db.add(role)
+        test_db.flush()
+        test_db.refresh(role)
+        return role
+
+    def ensure_assignment(user: User, role: Role) -> None:
+        existing_assignment = (
+            test_db.query(UserRoleAssignment)
+            .filter(
+                UserRoleAssignment.user_id == user.id,
+                UserRoleAssignment.role_id == role.id,
+            )
+            .first()
+        )
+        if existing_assignment:
+            return
+        assignment = UserRoleAssignment(
+            user_id=user.id,
+            role_id=role.id,
+            assigned_by="test-fixture",
+        )
+        test_db.add(assignment)
+        test_db.flush()
 
     # Check if user already exists to avoid UNIQUE constraint errors
     existing_user = test_db.query(User).filter(User.username == "testuser").first()
     if existing_user:
+        admin_role = ensure_role("admin", "管理员")
+        ensure_assignment(existing_user, admin_role)
         return existing_user
 
     # Create proper password hash with special character
@@ -175,11 +237,12 @@ def test_user(test_db):
         full_name="Test User",
         password_hash=password_hash,
         is_active=True,
-        role="admin",  # 设为管理员以便测试有权限要求的端点
     )
     test_db.add(user)
     test_db.flush()  # Use flush instead of commit so test_db rollback can clean up
     test_db.refresh(user)
+    admin_role = ensure_role("admin", "管理员")
+    ensure_assignment(user, admin_role)
     return user
 
 
@@ -187,11 +250,48 @@ def test_user(test_db):
 def test_admin(test_db):
     """创建测试管理员"""
     from src.models.auth import User
+    from src.models.rbac import Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
+
+    def ensure_role(role_name: str, display_name: str) -> Role:
+        existing_role = test_db.query(Role).filter(Role.name == role_name).first()
+        if existing_role:
+            return existing_role
+        role = Role(
+            name=role_name,
+            display_name=display_name,
+            is_system_role=True,
+            is_active=True,
+        )
+        test_db.add(role)
+        test_db.flush()
+        test_db.refresh(role)
+        return role
+
+    def ensure_assignment(user: User, role: Role) -> None:
+        existing_assignment = (
+            test_db.query(UserRoleAssignment)
+            .filter(
+                UserRoleAssignment.user_id == user.id,
+                UserRoleAssignment.role_id == role.id,
+            )
+            .first()
+        )
+        if existing_assignment:
+            return
+        assignment = UserRoleAssignment(
+            user_id=user.id,
+            role_id=role.id,
+            assigned_by="test-fixture",
+        )
+        test_db.add(assignment)
+        test_db.flush()
 
     # Check if admin already exists to avoid UNIQUE constraint errors
     existing_admin = test_db.query(User).filter(User.username == "admin").first()
     if existing_admin:
+        admin_role = ensure_role("admin", "管理员")
+        ensure_assignment(existing_admin, admin_role)
         return existing_admin
 
     # Create proper password hash with special character
@@ -204,11 +304,12 @@ def test_admin(test_db):
         full_name="Admin User",
         password_hash=password_hash,
         is_active=True,
-        role="admin",
     )
     test_db.add(admin)
     test_db.flush()  # Use flush instead of commit
     test_db.refresh(admin)
+    admin_role = ensure_role("admin", "管理员")
+    ensure_assignment(admin, admin_role)
     return admin
 
 
@@ -226,7 +327,6 @@ def auth_headers(test_user):
         "sub": str(test_user.id),  # sub should be user_id
         "user_id": str(test_user.id),  # legacy field
         "username": test_user.username,
-        "role": test_user.role or "user",
         "exp": int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
         "jti": str(test_user.id),  # JWT ID
@@ -244,10 +344,10 @@ def auth_headers(test_user):
 
 
 @pytest.fixture
-def sample_asset_data():
+def sample_asset_data(sample_ownership):
     """示例资产数据"""
     return {
-        "ownership_entity": "测试权属人",
+        "ownership_id": sample_ownership.id,
         "property_name": "测试物业",
         "address": "测试地址123号",
         "actual_property_area": 1000.0,
@@ -263,7 +363,7 @@ def sample_asset_data():
 @pytest.fixture
 def sample_ownership(test_db):
     """创建示例权属方"""
-    from src.models.asset import Ownership
+    from src.models.ownership import Ownership
 
     ownership = Ownership(name="测试权属方", code=f"OWN-{uuid4().hex[:8]}")
     test_db.add(ownership)

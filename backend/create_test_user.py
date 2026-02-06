@@ -42,16 +42,32 @@ now = datetime.now(UTC)
 
 with engine.connect() as conn:
     try:
+        role_result = conn.execute(
+            text(
+                """
+            SELECT id
+            FROM roles
+            WHERE name IN ('super_admin', 'admin')
+            ORDER BY CASE WHEN name = 'super_admin' THEN 0 ELSE 1 END
+            LIMIT 1
+            """
+            )
+        )
+        role_row = role_result.fetchone()
+        if role_row is None:
+            raise RuntimeError("No admin role found in roles table.")
+        role_id = role_row[0]
+
         conn.execute(
             text(
                 """
             INSERT INTO users (
                 id, username, email, full_name, password_hash,
-                role, is_active, is_locked, failed_login_attempts,
+                is_active, is_locked, failed_login_attempts,
                 password_last_changed, created_at, updated_at, created_by, updated_by
             ) VALUES (
                 :id, :username, :email, :full_name, :password_hash,
-                :role, :is_active, :is_locked, :failed_login_attempts,
+                :is_active, :is_locked, :failed_login_attempts,
                 :password_last_changed, :created_at, :updated_at, :created_by, :updated_by
             )
         """
@@ -62,7 +78,6 @@ with engine.connect() as conn:
                 "email": "admin@example.com",
                 "full_name": "系统管理员",
                 "password_hash": password_hash,
-                "role": "admin",
                 "is_active": True,
                 "is_locked": False,
                 "failed_login_attempts": 0,
@@ -71,6 +86,27 @@ with engine.connect() as conn:
                 "updated_at": now,
                 "created_by": "system",
                 "updated_by": "system",
+            },
+        )
+        conn.execute(
+            text(
+                """
+            INSERT INTO user_role_assignments (
+                id, user_id, role_id, assigned_by, assigned_at, is_active, created_at, updated_at
+            ) VALUES (
+                :id, :user_id, :role_id, :assigned_by, :assigned_at, :is_active, :created_at, :updated_at
+            )
+        """
+            ),
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id,
+                "assigned_by": "system",
+                "assigned_at": now,
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now,
             },
         )
         conn.commit()

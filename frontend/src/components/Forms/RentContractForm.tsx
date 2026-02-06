@@ -5,12 +5,14 @@
 
 import React from 'react';
 import { Form } from 'antd';
+import type { FormInstance } from 'antd';
 
 import { RentContractCreate, ContractStatus } from '@/types/rentContract';
 
 // Import section components
 import {
   RentContractFormProvider,
+  useRentContractFormContext,
   RentContractInitialData,
   BasicInfoSection,
   RelationInfoSection,
@@ -48,6 +50,27 @@ const RentContractFormInner: React.FC = () => {
   );
 };
 
+interface RentContractFormBodyProps {
+  form: FormInstance;
+}
+
+const RentContractFormBody: React.FC<RentContractFormBodyProps> = ({ form }) => {
+  const { handleSubmit } = useRentContractFormContext();
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={{
+        contract_status: ContractStatus.ACTIVE,
+      }}
+      onFinish={handleSubmit}
+    >
+      <RentContractFormInner />
+    </Form>
+  );
+};
+
 /**
  * RentContractForm - Main form component for creating/editing rent contracts
  * Refactored to use section components for better maintainability
@@ -72,15 +95,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
       isLoading={isLoading}
       mode={mode}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          contract_status: ContractStatus.ACTIVE,
-        }}
-      >
-        <RentContractFormInner />
-      </Form>
+      <RentContractFormBody form={form} />
     </RentContractFormProvider>
   );
 };

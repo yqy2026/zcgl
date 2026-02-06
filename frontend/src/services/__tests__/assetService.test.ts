@@ -17,6 +17,12 @@ vi.mock('@/api/client', () => ({
   },
 }));
 
+vi.mock('@/services/ownershipService', () => ({
+  ownershipService: {
+    getOwnershipSelectOptions: vi.fn(),
+  },
+}));
+
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
@@ -28,6 +34,7 @@ vi.mock('@/utils/responseExtractor', () => ({
 }));
 
 import { apiClient } from '@/api/client';
+import { ownershipService } from '@/services/ownershipService';
 
 describe('AssetCoreService', () => {
   let service: AssetCoreService;
@@ -366,14 +373,14 @@ describe('AssetCoreService', () => {
         data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
       });
 
-      await service.searchAssets('测试', { ownership_entity: '公司A' });
+      await service.searchAssets('测试', { ownership_id: 'own-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           params: expect.objectContaining({
             search: '测试',
-            ownership_entity: '公司A',
+            ownership_id: 'own-1',
           }),
         })
       );
@@ -440,12 +447,12 @@ describe('AssetCoreService', () => {
 
   describe('getOwnershipEntities', () => {
     it('should return ownership entities list', async () => {
-      const mockEntities = ['公司A', '公司B', '公司C'];
-
-      vi.mocked(apiClient.get).mockResolvedValue({
-        success: true,
-        data: mockEntities,
-      });
+      const mockEntities = [
+        { value: 'own-1', label: '公司A' },
+        { value: 'own-2', label: '公司B' },
+        { value: 'own-3', label: '公司C' },
+      ];
+      vi.mocked(ownershipService.getOwnershipSelectOptions).mockResolvedValue(mockEntities);
 
       const result = await service.getOwnershipEntities();
 
@@ -454,10 +461,7 @@ describe('AssetCoreService', () => {
     });
 
     it('should return empty array when no entities', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        success: true,
-        data: null,
-      });
+      vi.mocked(ownershipService.getOwnershipSelectOptions).mockResolvedValue([]);
 
       const result = await service.getOwnershipEntities();
 
@@ -547,12 +551,12 @@ describe('AssetCoreService', () => {
         data: [],
       });
 
-      await service.getAllAssets({ ownership_entity: '公司A' });
+      await service.getAllAssets({ ownership_id: 'own-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          params: expect.objectContaining({ ownership_entity: '公司A' }),
+          params: expect.objectContaining({ ownership_id: 'own-1' }),
         })
       );
     });

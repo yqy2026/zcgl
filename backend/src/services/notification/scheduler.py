@@ -10,13 +10,14 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...constants.business_constants import DataStatusValues
 from ...constants.rent_contract_constants import PaymentStatus
 from ...core.enums import ContractStatus
-from ...database import get_session_factory
+from ...database import async_session_scope
 
 logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
@@ -28,7 +29,7 @@ from .wecom_service import wecom_service
 class NotificationSchedulerService:
     """通知定时任务服务"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.wecom_enabled = wecom_service.enabled
 
@@ -59,16 +60,16 @@ class NotificationSchedulerService:
             else:
                 notification.wecom_send_error = "企业微信返回失败"
 
-            self.db.commit()
+            await self.db.commit()
             return success
 
         except Exception as e:
             # 记录错误但不影响主流程
             notification.wecom_send_error = f"企业微信发送异常: {str(e)}"
-            self.db.commit()
+            await self.db.commit()
             return False
 
-    def _create_and_send_notification(
+    async def _create_and_send_notification(
         self,
         recipient_id: str,
         notification_type: str,
@@ -104,25 +105,19 @@ class NotificationSchedulerService:
             is_read=False,
         )
         self.db.add(notification)
-        self.db.flush()  # 获取 ID
+        await self.db.flush()  # 获取 ID
 
         # 如果启用了企业微信，异步推送
         if self.wecom_enabled:
             try:
-                # 在新的事件循环中运行异步推送
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(self._send_wecom_notification(notification))
-                finally:
-                    loop.close()
+                await self._send_wecom_notification(notification)
             except Exception as e:
                 # 推送失败不影响通知创建
                 notification.wecom_send_error = f"企业微信推送失败: {str(e)}"
 
         return notification
 
-    def check_contract_expiry(self, days_ahead: int = 30) -> int:
+    async def check_contract_expiry(self, days_ahead: int = 30) -> int:
         """
         检查合同到期
 
@@ -136,17 +131,14 @@ class NotificationSchedulerService:
         warning_date = today + timedelta(days=days_ahead)
 
         # 查找即将到期的有效合同
-        expiring_contracts = (
-            self.db.query(RentContract)
-            .filter(
-                and_(
-                    RentContract.contract_status == ContractStatus.ACTIVE,
-                    RentContract.end_date <= warning_date,
-                    RentContract.end_date >= today,
-                )
+        stmt = select(RentContract).where(
+            and_(
+                RentContract.contract_status == ContractStatus.ACTIVE,
+                RentContract.end_date <= warning_date,
+                RentContract.end_date >= today,
             )
-            .all()
         )
+        expiring_contracts = list((await self.db.execute(stmt)).scalars().all())
 
         for contract in expiring_contracts:
             # 计算剩余天数
@@ -181,23 +173,25 @@ class NotificationSchedulerService:
                 content = f"合同 {contract.contract_number}（{contract.tenant_name}）将在{days_remaining}天后到期"
 
             # 查找所有活跃用户
-            active_users = notification_service.list_active_users(self.db)
+            active_users = await notification_service.list_active_users_async(self.db)
 
             # 为每个用户创建通知
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing_notification = notification_service.find_existing_notification(
+                existing_notification = (
+                    await notification_service.find_existing_notification_async(
                     self.db,
                     recipient_id=str(user.id),
                     related_entity_type="contract",
                     related_entity_id=str(contract.id),
                     notification_type=notification_type,
                     require_unread=True,
+                    )
                 )
 
                 if not existing_notification:
                     # 使用统一方法创建通知并推送企业微信
-                    self._create_and_send_notification(
+                    await self._create_and_send_notification(
                         recipient_id=user.id,
                         notification_type=notification_type,
                         priority=priority,
@@ -207,10 +201,10 @@ class NotificationSchedulerService:
                         related_entity_id=contract.id,
                     )
 
-        self.db.commit()
+        await self.db.commit()
         return len(expiring_contracts)
 
-    def check_payment_overdue(self) -> int:
+    async def check_payment_overdue(self) -> int:
         """
         检查付款逾期
 
@@ -222,9 +216,10 @@ class NotificationSchedulerService:
         today = date.today()
 
         # 查找逾期未支付的台账记录
-        overdue_ledgers = (
-            self.db.query(RentLedger)
-            .filter(
+        stmt = (
+            select(RentLedger)
+            .options(selectinload(RentLedger.contract))
+            .where(
                 and_(
                     RentLedger.payment_status.in_(
                         [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
@@ -233,8 +228,8 @@ class NotificationSchedulerService:
                     RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )
             )
-            .all()
         )
+        overdue_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
 
@@ -267,11 +262,11 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = notification_service.list_active_users(self.db)
+            active_users = await notification_service.list_active_users_async(self.db)
 
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing = notification_service.find_existing_notification(
+                existing = await notification_service.find_existing_notification_async(
                     self.db,
                     recipient_id=str(user.id),
                     related_entity_type="rent_ledger",
@@ -282,7 +277,7 @@ class NotificationSchedulerService:
 
                 if not existing:
                     # 使用统一方法创建通知并推送企业微信
-                    self._create_and_send_notification(
+                    await self._create_and_send_notification(
                         recipient_id=user.id,
                         notification_type=NotificationType.PAYMENT_OVERDUE,
                         priority=priority,
@@ -293,10 +288,10 @@ class NotificationSchedulerService:
                     )
                     notifications_created += 1
 
-        self.db.commit()
+        await self.db.commit()
         return notifications_created
 
-    def check_payment_due_soon(self, days_ahead: int = 7) -> int:
+    async def check_payment_due_soon(self, days_ahead: int = 7) -> int:
         """
         检查即将到期的付款
 
@@ -310,9 +305,10 @@ class NotificationSchedulerService:
         warning_date = today + timedelta(days=days_ahead)
 
         # 查找即将到期且未支付的台账记录
-        due_soon_ledgers = (
-            self.db.query(RentLedger)
-            .filter(
+        stmt = (
+            select(RentLedger)
+            .options(selectinload(RentLedger.contract))
+            .where(
                 and_(
                     RentLedger.payment_status == PaymentStatus.UNPAID,
                     RentLedger.due_date <= warning_date,
@@ -320,8 +316,8 @@ class NotificationSchedulerService:
                     RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )
             )
-            .all()
         )
+        due_soon_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
 
@@ -354,11 +350,11 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = notification_service.list_active_users(self.db)
+            active_users = await notification_service.list_active_users_async(self.db)
 
             for user in active_users:
                 # 检查是否已存在相同的通知
-                existing = notification_service.find_existing_notification(
+                existing = await notification_service.find_existing_notification_async(
                     self.db,
                     recipient_id=str(user.id),
                     related_entity_type="rent_ledger",
@@ -369,7 +365,7 @@ class NotificationSchedulerService:
 
                 if not existing:
                     # 使用统一方法创建通知并推送企业微信
-                    self._create_and_send_notification(
+                    await self._create_and_send_notification(
                         recipient_id=user.id,
                         notification_type=NotificationType.PAYMENT_DUE,
                         priority=priority,
@@ -380,25 +376,23 @@ class NotificationSchedulerService:
                     )
                     notifications_created += 1
 
-        self.db.commit()
+        await self.db.commit()
         return notifications_created
 
 
-def run_notification_tasks() -> dict[str, Any]:
+async def run_notification_tasks() -> dict[str, Any]:
     """运行所有通知任务"""
-    session_factory = get_session_factory()
-    db = session_factory()
-    try:
+    async with async_session_scope() as db:
         service = NotificationSchedulerService(db)
 
         # 检查合同到期
-        expiring_count = service.check_contract_expiry(days_ahead=30)
+        expiring_count = await service.check_contract_expiry(days_ahead=30)
 
         # 检查付款逾期
-        overdue_count = service.check_payment_overdue()
+        overdue_count = await service.check_payment_overdue()
 
         # 检查即将到期的付款
-        due_count = service.check_payment_due_soon(days_ahead=7)
+        due_count = await service.check_payment_due_soon(days_ahead=7)
 
         return {
             "expiring_contracts": expiring_count,
@@ -406,11 +400,9 @@ def run_notification_tasks() -> dict[str, Any]:
             "due_payments": due_count,
             "timestamp": datetime.now().isoformat(),
         }
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":
     # 测试运行
-    result = run_notification_tasks()
+    result = asyncio.run(run_notification_tasks())
     logger.info(f"通知任务执行结果: {result}")

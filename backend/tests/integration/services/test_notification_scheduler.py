@@ -1,13 +1,10 @@
 """
-Unit Tests for Notification Scheduler Service
+Integration Tests for Notification Scheduler Service (Async)
 
 Tests for the notification scheduler that scans for:
 - Contract expiry warnings
 - Payment overdue reminders (future)
 - Payment due reminders (future)
-
-Author: V2.0 Test Suite
-Date: 2026-01-08
 """
 
 import uuid
@@ -15,34 +12,43 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
 
+from src.database import async_session_scope
 from src.models.auth import User
 from src.models.notification import Notification, NotificationPriority, NotificationType
 from src.models.rent_contract import ContractType, PaymentCycle, RentContract
 from src.services.notification.scheduler import NotificationSchedulerService
 
+pytestmark = pytest.mark.asyncio
+
+
 # ==================== Fixtures ====================
 
 
+@pytest.fixture
+async def async_db():
+    async with async_session_scope() as session:
+        yield session
+
+
 @pytest.fixture(autouse=True)
-def clean_database(test_db: Session):
-    """Clean database before and after each test to ensure isolation"""
-    # Clean before test
-    test_db.query(Notification).delete()
-    test_db.query(RentContract).delete()
-    test_db.query(User).delete()
-    test_db.commit()
+async def clean_database():
+    async with async_session_scope() as session:
+        await session.execute(delete(Notification))
+        await session.execute(delete(RentContract))
+        await session.execute(delete(User))
+        await session.commit()
     yield
-    # Clean after test
-    test_db.query(Notification).delete()
-    test_db.query(RentContract).delete()
-    test_db.query(User).delete()
-    test_db.commit()
+    async with async_session_scope() as session:
+        await session.execute(delete(Notification))
+        await session.execute(delete(RentContract))
+        await session.execute(delete(User))
+        await session.commit()
 
 
 @pytest.fixture
-def active_user(test_db: Session):
+async def active_user(async_db):
     """Create an active test user with unique ID"""
     from src.services.core.password_service import PasswordService
 
@@ -56,15 +62,13 @@ def active_user(test_db: Session):
         password_hash=pwd_service.get_password_hash("testpass123"),
         is_active=True,
     )
-    test_db.add(user)
-    test_db.flush()
+    async_db.add(user)
+    await async_db.flush()
     yield user
-    # 清理
-    test_db.rollback()
 
 
 @pytest.fixture
-def expiring_contract_today(test_db: Session):
+async def expiring_contract_today(async_db):
     """Contract expiring today with unique ID"""
     unique_id = str(uuid.uuid4())[:8]
     contract = RentContract(
@@ -80,15 +84,13 @@ def expiring_contract_today(test_db: Session):
         payment_cycle=PaymentCycle.MONTHLY,
         total_deposit=Decimal("10000"),
     )
-    test_db.add(contract)
-    test_db.flush()
+    async_db.add(contract)
+    await async_db.flush()
     yield contract
-    # 清理
-    test_db.rollback()
 
 
 @pytest.fixture
-def expiring_contract_7days(test_db: Session):
+async def expiring_contract_7days(async_db):
     """Contract expiring in 7 days with unique ID"""
     unique_id = str(uuid.uuid4())[:8]
     contract = RentContract(
@@ -104,15 +106,13 @@ def expiring_contract_7days(test_db: Session):
         payment_cycle=PaymentCycle.MONTHLY,
         total_deposit=Decimal("15000"),
     )
-    test_db.add(contract)
-    test_db.flush()
+    async_db.add(contract)
+    await async_db.flush()
     yield contract
-    # 清理
-    test_db.rollback()
 
 
 @pytest.fixture
-def expiring_contract_30days(test_db: Session):
+async def expiring_contract_30days(async_db):
     """Contract expiring in 30 days with unique ID"""
     unique_id = str(uuid.uuid4())[:8]
     contract = RentContract(
@@ -128,37 +128,28 @@ def expiring_contract_30days(test_db: Session):
         payment_cycle=PaymentCycle.QUARTERLY,
         total_deposit=Decimal("20000"),
     )
-    test_db.add(contract)
-    test_db.flush()
+    async_db.add(contract)
+    await async_db.flush()
     yield contract
-    # 清理
-    test_db.rollback()
 
 
 # ==================== Contract Expiry Tests ====================
 
 
 class TestContractExpiryNotifications:
-    """Test contract expiry notification generation"""
-
-    def test_contract_expiring_today_creates_urgent_notification(
-        self, test_db: Session, active_user: User, expiring_contract_today: RentContract
+    async def test_contract_expiring_today_creates_urgent_notification(
+        self, async_db, active_user, expiring_contract_today
     ):
-        """TC-NOT-001: Contract expiring today generates URGENT notification"""
-        scheduler = NotificationSchedulerService(test_db)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Run expiry check
-        scheduler.check_contract_expiry(days_ahead=30)
-
-        # Verify notification created
-        notifications = (
-            test_db.query(Notification)
-            .filter(
+        result = await async_db.execute(
+            select(Notification).where(
                 Notification.recipient_id == active_user.id,
                 Notification.related_entity_id == expiring_contract_today.id,
             )
-            .all()
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 1
         notification = notifications[0]
@@ -168,22 +159,19 @@ class TestContractExpiryNotifications:
         assert expiring_contract_today.contract_number in notification.content
         assert not notification.is_read
 
-    def test_contract_expiring_in_7days_creates_urgent_notification(
-        self, test_db: Session, active_user: User, expiring_contract_7days: RentContract
+    async def test_contract_expiring_in_7days_creates_urgent_notification(
+        self, async_db, active_user, expiring_contract_7days
     ):
-        """TC-NOT-002: Contract expiring in 7 days generates URGENT notification"""
-        scheduler = NotificationSchedulerService(test_db)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        scheduler.check_contract_expiry(days_ahead=30)
-
-        notifications = (
-            test_db.query(Notification)
-            .filter(
+        result = await async_db.execute(
+            select(Notification).where(
                 Notification.recipient_id == active_user.id,
                 Notification.related_entity_id == expiring_contract_7days.id,
             )
-            .all()
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 1
         notification = notifications[0]
@@ -191,25 +179,19 @@ class TestContractExpiryNotifications:
         assert notification.priority == NotificationPriority.URGENT
         assert "7天" in notification.title
 
-    def test_contract_expiring_in_30days_creates_normal_notification(
-        self,
-        test_db: Session,
-        active_user: User,
-        expiring_contract_30days: RentContract,
+    async def test_contract_expiring_in_30days_creates_normal_notification(
+        self, async_db, active_user, expiring_contract_30days
     ):
-        """TC-NOT-003: Contract expiring in 30 days generates NORMAL notification"""
-        scheduler = NotificationSchedulerService(test_db)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        scheduler.check_contract_expiry(days_ahead=30)
-
-        notifications = (
-            test_db.query(Notification)
-            .filter(
+        result = await async_db.execute(
+            select(Notification).where(
                 Notification.recipient_id == active_user.id,
                 Notification.related_entity_id == expiring_contract_30days.id,
             )
-            .all()
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 1
         notification = notifications[0]
@@ -217,9 +199,7 @@ class TestContractExpiryNotifications:
         assert notification.priority == NotificationPriority.NORMAL
         assert "30天" in notification.title
 
-    def test_expired_contract_not_checked(self, test_db: Session, active_user: User):
-        """TC-NOT-004: Already expired contracts are not checked"""
-        # Create expired contract
+    async def test_expired_contract_not_checked(self, async_db, active_user):
         expired_contract = RentContract(
             id="contract_expired",
             contract_number="EXP_OLD",
@@ -228,30 +208,28 @@ class TestContractExpiryNotifications:
             ownership_id="ownership_001",
             sign_date=date.today() - timedelta(days=400),
             start_date=date.today() - timedelta(days=400),
-            end_date=date.today() - timedelta(days=10),  # 10天前已过期
+            end_date=date.today() - timedelta(days=10),
             contract_status="有效",
             payment_cycle=PaymentCycle.MONTHLY,
         )
-        test_db.add(expired_contract)
-        test_db.commit()
+        async_db.add(expired_contract)
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Should not create notification for expired contract
-        notifications = (
-            test_db.query(Notification)
-            .filter(Notification.related_entity_id == expired_contract.id)
-            .all()
+        result = await async_db.execute(
+            select(Notification).where(
+                Notification.related_entity_id == expired_contract.id
+            )
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 0
 
-    def test_future_contract_beyond_warning_period(
-        self, test_db: Session, active_user: User
+    async def test_future_contract_beyond_warning_period(
+        self, async_db, active_user
     ):
-        """TC-NOT-005: Contracts beyond warning period don't generate notifications"""
-        # Create contract expiring in 60 days
         future_contract = RentContract(
             id="contract_future",
             contract_number="FUTURE",
@@ -260,22 +238,22 @@ class TestContractExpiryNotifications:
             ownership_id="ownership_001",
             sign_date=date.today(),
             start_date=date.today(),
-            end_date=date.today() + timedelta(days=60),  # 60天后
+            end_date=date.today() + timedelta(days=60),
             contract_status="有效",
             payment_cycle=PaymentCycle.MONTHLY,
         )
-        test_db.add(future_contract)
-        test_db.commit()
+        async_db.add(future_contract)
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Should not create notification
-        notifications = (
-            test_db.query(Notification)
-            .filter(Notification.related_entity_id == future_contract.id)
-            .all()
+        result = await async_db.execute(
+            select(Notification).where(
+                Notification.related_entity_id == future_contract.id
+            )
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 0
 
@@ -284,40 +262,30 @@ class TestContractExpiryNotifications:
 
 
 class TestDuplicatePrevention:
-    """Test that duplicate notifications are prevented"""
-
-    def test_no_duplicate_notification_for_same_contract(
-        self, test_db: Session, active_user: User, expiring_contract_7days: RentContract
+    async def test_no_duplicate_notification_for_same_contract(
+        self, async_db, active_user, expiring_contract_7days
     ):
-        """TC-NOT-006: Running scheduler twice doesn't create duplicate notifications"""
-        scheduler = NotificationSchedulerService(test_db)
+        scheduler = NotificationSchedulerService(async_db)
 
-        # Run first time
-        scheduler.check_contract_expiry(days_ahead=30)
+        await scheduler.check_contract_expiry(days_ahead=30)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Run second time
-        scheduler.check_contract_expiry(days_ahead=30)
-
-        # Should still have only one notification
-        notifications = (
-            test_db.query(Notification)
-            .filter(
+        result = await async_db.execute(
+            select(Notification).where(
                 Notification.recipient_id == active_user.id,
                 Notification.related_entity_id == expiring_contract_7days.id,
             )
-            .all()
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 1
 
-    def test_different_users_receive_separate_notifications(
-        self, test_db: Session, expiring_contract_7days: RentContract
+    async def test_different_users_receive_separate_notifications(
+        self, async_db, expiring_contract_7days
     ):
-        """TC-NOT-007: Each active user receives their own notification"""
         from src.services.core.password_service import PasswordService
 
         pwd_service = PasswordService()
-        # Create two active users
         user1 = User(
             id="user_1",
             username="user1",
@@ -334,28 +302,20 @@ class TestDuplicatePrevention:
             password_hash=pwd_service.get_password_hash("pass123"),
             is_active=True,
         )
-        test_db.add_all([user1, user2])
-        test_db.commit()
+        async_db.add_all([user1, user2])
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Each user should have their own notification
-        user1_notifications = (
-            test_db.query(Notification)
-            .filter(
-                Notification.recipient_id == user1.id,
-            )
-            .all()
+        result1 = await async_db.execute(
+            select(Notification).where(Notification.recipient_id == user1.id)
         )
-
-        user2_notifications = (
-            test_db.query(Notification)
-            .filter(
-                Notification.recipient_id == user2.id,
-            )
-            .all()
+        result2 = await async_db.execute(
+            select(Notification).where(Notification.recipient_id == user2.id)
         )
+        user1_notifications = list(result1.scalars().all())
+        user2_notifications = list(result2.scalars().all())
 
         assert len(user1_notifications) == 1
         assert len(user2_notifications) == 1
@@ -366,38 +326,30 @@ class TestDuplicatePrevention:
 
 
 class TestInactiveUserFiltering:
-    """Test that inactive users don't receive notifications"""
-
-    def test_inactive_users_do_not_receive_notifications(
-        self, test_db: Session, expiring_contract_7days: RentContract
+    async def test_inactive_users_do_not_receive_notifications(
+        self, async_db, expiring_contract_7days
     ):
-        """TC-NOT-008: Inactive users are excluded from notifications"""
         from src.services.core.password_service import PasswordService
 
         pwd_service = PasswordService()
-        # Create inactive user
         inactive_user = User(
             id="inactive_user",
             username="inactive",
             email="inactive@example.com",
             full_name="Inactive User",
             password_hash=pwd_service.get_password_hash("pass123"),
-            is_active=False,  # Inactive
+            is_active=False,
         )
-        test_db.add(inactive_user)
-        test_db.commit()
+        async_db.add(inactive_user)
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Inactive user should not receive notification
-        notifications = (
-            test_db.query(Notification)
-            .filter(
-                Notification.recipient_id == inactive_user.id,
-            )
-            .all()
+        result = await async_db.execute(
+            select(Notification).where(Notification.recipient_id == inactive_user.id)
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 0
 
@@ -406,12 +358,7 @@ class TestInactiveUserFiltering:
 
 
 class TestEdgeCases:
-    """Test edge cases and boundary conditions"""
-
-    def test_contract_with_invalid_status_skipped(
-        self, test_db: Session, active_user: User
-    ):
-        """TC-NOT-009: Contracts with non-'有效' status are skipped"""
+    async def test_contract_with_invalid_status_skipped(self, async_db, active_user):
         contract = RentContract(
             id="contract_terminated",
             contract_number="TERM001",
@@ -421,35 +368,31 @@ class TestEdgeCases:
             sign_date=date.today() - timedelta(days=100),
             start_date=date.today() - timedelta(days=100),
             end_date=date.today() + timedelta(days=7),
-            contract_status="已终止",  # Not '有效'
+            contract_status="已终止",
             payment_cycle=PaymentCycle.MONTHLY,
         )
-        test_db.add(contract)
-        test_db.commit()
+        async_db.add(contract)
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Should not create notification for terminated contract
-        notifications = (
-            test_db.query(Notification)
-            .filter(Notification.related_entity_id == contract.id)
-            .all()
+        result = await async_db.execute(
+            select(Notification).where(Notification.related_entity_id == contract.id)
         )
+        notifications = list(result.scalars().all())
 
         assert len(notifications) == 0
 
-    def test_no_active_users_no_notifications_created(
-        self, test_db: Session, expiring_contract_7days: RentContract
+    async def test_no_active_users_no_notifications_created(
+        self, async_db, expiring_contract_7days
     ):
-        """TC-NOT-010: No notifications created when there are no active users"""
-        # Ensure no active users (fixture creates one, so we need to handle this)
-        test_db.query(User).delete()
-        test_db.commit()
+        await async_db.execute(delete(User))
+        await async_db.commit()
 
-        scheduler = NotificationSchedulerService(test_db)
-        scheduler.check_contract_expiry(days_ahead=30)
+        scheduler = NotificationSchedulerService(async_db)
+        await scheduler.check_contract_expiry(days_ahead=30)
 
-        # Should not create any notifications
-        notifications = test_db.query(Notification).all()
+        result = await async_db.execute(select(Notification))
+        notifications = list(result.scalars().all())
         assert len(notifications) == 0

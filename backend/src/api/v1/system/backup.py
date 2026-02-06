@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.params import Query as QueryParam
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.config import settings
 from ....core.exception_handler import bad_request, not_found
@@ -47,29 +46,24 @@ async def create_backup(
         备份结果信息
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        # 使用BackupService创建备份
-        service = BackupService(backup_dir=BACKUP_DIR)
+    service = BackupService(backup_dir=BACKUP_DIR)
 
-        # 从数据库连接获取数据库URL
-        db_url: str | None = None
-        if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
-            db_url = str(db.bind.url)
-        if not db_url:
-            db_url = settings.DATABASE_URL or None
+    db_url: str | None = None
+    bind = db.get_bind()
+    if bind is not None and hasattr(bind, "url") and bind.url is not None:
+        db_url = str(bind.url)
+    if not db_url:
+        db_url = settings.DATABASE_URL or None
 
-        result = service.create_backup(backup_name=backup_name, database_url=db_url)
+    result = service.create_backup(backup_name=backup_name, database_url=db_url)
 
-        logger.info(f"数据备份创建成功: {result['backup_path']}")
+    logger.info(f"数据备份创建成功: {result['backup_path']}")
 
-        return {
-            "success": True,
-            "message": "数据备份创建成功",
-            "data": result,
-        }
-
-    return await db.run_sync(_sync)
+    return {
+        "success": True,
+        "message": "数据备份创建成功",
+        "data": result,
+    }
 
 
 @router.get("/list[Any]", summary="获取备份列表")
@@ -146,43 +140,38 @@ async def restore_backup(
         恢复结果信息
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        if isinstance(should_confirm, QueryParam):
-            confirm_value = confirm
-        else:
-            confirm_value = confirm if should_confirm is None else should_confirm
-        if not confirm_value:
-            raise bad_request("请确认恢复操作，这将覆盖当前数据")
+    if isinstance(should_confirm, QueryParam):
+        confirm_value = confirm
+    else:
+        confirm_value = confirm if should_confirm is None else should_confirm
+    if not confirm_value:
+        raise bad_request("请确认恢复操作，这将覆盖当前数据")
 
-        # 使用BackupService恢复备份
-        service = BackupService(backup_dir=BACKUP_DIR)
+    service = BackupService(backup_dir=BACKUP_DIR)
 
-        # 从数据库连接获取数据库URL
-        db_url: str | None = None
-        if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
-            db_url = str(db.bind.url)
-        if not db_url:
-            db_url = settings.DATABASE_URL or None
+    db_url: str | None = None
+    bind = db.get_bind()
+    if bind is not None and hasattr(bind, "url") and bind.url is not None:
+        db_url = str(bind.url)
+    if not db_url:
+        db_url = settings.DATABASE_URL or None
 
-        try:
-            result = service.restore_backup(
-                backup_name=backup_name,
-                database_url=db_url,
-                create_current_backup=True,
-            )
-        except FileNotFoundError as e:
-            raise not_found(str(e), resource_type="backup")
+    try:
+        result = service.restore_backup(
+            backup_name=backup_name,
+            database_url=db_url,
+            create_current_backup=True,
+        )
+    except FileNotFoundError as e:
+        raise not_found(str(e), resource_type="backup")
 
-        logger.info(f"数据恢复成功: {backup_name}")
+    logger.info(f"数据恢复成功: {backup_name}")
 
-        return {
-            "success": True,
-            "message": "数据恢复成功",
-            "data": result,
-        }
-
-    return await db.run_sync(_sync)
+    return {
+        "success": True,
+        "message": "数据恢复成功",
+        "data": result,
+    }
 
 
 @router.delete("/delete/{backup_name}", summary="删除备份文件")

@@ -12,8 +12,9 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from functools import wraps
 
-from sqlalchemy import Index, func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import Index, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from ..constants.performance_constants import PerformanceThresholds
 from .cache_manager import cache_manager as core_cache_manager
@@ -173,7 +174,7 @@ def monitor_query(
 class QueryOptimizer:
     """查询优化器"""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.cache_enabled = settings.REDIS_ENABLED
         self.cache_ttl = settings.CACHE_TTL
@@ -193,17 +194,16 @@ class QueryOptimizer:
     def optimize_asset_query(self, should_include_related: bool = False) -> Any:
         """优化资产查询"""
         with self.query_with_monitoring("optimized_asset_query"):
-            from ..models.asset import Asset
+from ..models.asset import Asset
+from ..models.ownership import Ownership
 
-            query = self.db.query(Asset)
-
+            stmt = select(Asset)
             if should_include_related:
-                # 使用joinedload避免N+1查询
-                query = query.options(
+                stmt = stmt.options(
                     joinedload(Asset.project), joinedload(Asset.ownership)
                 )
 
-            return query
+            return stmt
 
     def optimize_asset_list_query(
         self,
@@ -217,62 +217,65 @@ class QueryOptimizer:
         from ..models.asset import Asset
 
         with self.query_with_monitoring("optimized_asset_list_query"):
-            query = self.db.query(Asset)
+            stmt = select(Asset)
 
             # 添加搜索条件
-            if search:
-                search_conditions = [
-                    Asset.property_name.ilike(f"%{search}%"),
-                    Asset.address.ilike(f"%{search}%"),
-                    Asset.ownership_entity.ilike(f"%{search}%"),
-                ]
-                query = query.filter(*search_conditions)
+                if search:
+                    search_conditions = [
+                        Asset.property_name.ilike(f"%{search}%"),
+                        Asset.address.ilike(f"%{search}%"),
+                        Ownership.name.ilike(f"%{search}%"),
+                    ]
+                    stmt = stmt.join(
+                        Ownership, Asset.ownership_id == Ownership.id, isouter=True
+                    ).where(*search_conditions)
 
             # 添加筛选条件
             if filters:
                 for field, value in filters.items():
                     if hasattr(Asset, field):
-                        query = query.filter(getattr(Asset, field) == value)
+                        stmt = stmt.where(getattr(Asset, field) == value)
 
             # 添加排序
             if order_by:
                 if order_by.startswith("-"):  # pragma: no cover
                     field = order_by[1:]  # pragma: no cover
-                    query = query.order_by(
+                    stmt = stmt.order_by(
                         getattr(Asset, field).desc()
                     )  # pragma: no cover
                 else:
-                    query = query.order_by(getattr(Asset, order_by))
+                    stmt = stmt.order_by(getattr(Asset, order_by))
 
             # 添加分页
             if offset:  # pragma: no cover
-                query = query.offset(offset)  # pragma: no cover
+                stmt = stmt.offset(offset)  # pragma: no cover
             if limit:
-                query = query.limit(limit)
+                stmt = stmt.limit(limit)
 
-            return query
+            return stmt
 
-    def optimize_batch_update_query(
+    async def optimize_batch_update_query(
         self, asset_ids: list[str], update_data: dict[str, Any]
     ) -> int:
         """优化批量更新查询"""
         from ..models.asset import Asset
 
         with self.query_with_monitoring("optimized_batch_update_query"):
-            # 批量更新使用单个查询而不是循环
-            return (
-                self.db.query(Asset)
-                .filter(Asset.id.in_(asset_ids))
-                .update(cast(dict[Any, Any], update_data), synchronize_session=False)
+            stmt = (
+                update(Asset)
+                .where(Asset.id.in_(asset_ids))
+                .values(cast(dict[Any, Any], update_data))
             )
+            result = await self.db.execute(stmt)
+            return int(result.rowcount or 0)
 
-    def optimize_statistics_query(self) -> Any:
+    async def optimize_statistics_query(self) -> Any:
         """优化统计查询"""
         from ..models.asset import Asset
 
         with self.query_with_monitoring("optimized_statistics_query"):
             # 使用聚合查询减少数据库往返
-            stats = self.db.query(
+            stmt = select(
                 func.count(Asset.id).label("total_assets"),
                 func.count(Asset.id)
                 .filter(Asset.usage_status == "出租")
@@ -281,9 +284,9 @@ class QueryOptimizer:
                 func.sum(Asset.actual_property_area).label("total_property_area"),
                 func.sum(Asset.rentable_area).label("total_rentable_area"),
                 func.sum(Asset.rented_area).label("total_rented_area"),
-            ).first()
-
-            return stats
+            )
+            result = await self.db.execute(stmt)
+            return result.first()
 
 
 # 统一缓存管理器
@@ -322,7 +325,7 @@ def cached(
 class DatabaseOptimizer:
     """数据库优化器"""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.query_optimizer = QueryOptimizer(db)
 

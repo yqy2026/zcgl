@@ -98,12 +98,12 @@ async def upload_pdf_file(
         raise internal_error(f"文件处理失败: {str(e)}")
 
     sanitized_force_method = force_method.strip() if force_method else None
-    allowed_methods = {"text", "vision", "smart"}
+    allowed_methods = {"text", "vision", "smart", "ocr"}
     if (
         sanitized_force_method is not None
         and sanitized_force_method not in allowed_methods
     ):
-        raise bad_request("force_method 仅支持: text, vision, smart")
+        raise bad_request("force_method 仅支持: text, vision, smart, ocr")
 
     session_id = f"session-{uuid.uuid4().hex[:12]}"
     processing_options = {

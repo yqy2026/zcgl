@@ -28,7 +28,7 @@ from ....schemas.rbac import (
     RoleResponse,
     RoleUpdate,
 )
-from ....services.rbac import rbac_service
+from ....services import RBACService
 
 router = APIRouter(tags=["角色管理"])
 
@@ -153,9 +153,9 @@ async def create_role(
     """
 
     try:
+        rbac_service = RBACService(db)
         new_role = await rbac_service.create_role(
-            db=db,
-            obj_in=role_data,
+            role_data=role_data,
             created_by=str(current_user.id),
         )
 
@@ -201,10 +201,10 @@ async def update_role(
     """
 
     try:
+        rbac_service = RBACService(db)
         updated_role = await rbac_service.update_role(
-            db=db,
             role_id=role_id,
-            obj_in=role_data,
+            role_data=role_data,
             updated_by=str(current_user.id),
         )
 
@@ -229,8 +229,9 @@ async def delete_role(
     """
 
     try:
+        rbac_service = RBACService(db)
         success = await rbac_service.delete_role(
-            db=db, role_id=role_id, deleted_by=str(current_user.id)
+            role_id=role_id, deleted_by=str(current_user.id)
         )
 
         if not success:
@@ -288,8 +289,8 @@ async def set_role_permissions(
     """
 
     try:
+        rbac_service = RBACService(db)
         await rbac_service.update_role_permissions(
-            db=db,
             role_id=role_id,
             permission_ids=request.permission_ids,
             updated_by=str(current_user.id),
@@ -336,9 +337,7 @@ async def get_role_users(
 
         user_crud = UserCRUD()
         skip = (page - 1) * page_size
-        users, total = await user_crud.get_users_by_role(
-            db, role_id, skip, page_size
-        )
+        users, total = await user_crud.get_users_by_role(db, role_id, skip, page_size)
 
         return ResponseHandler.paginated(
             data=[

@@ -5,10 +5,11 @@ Excel配置管理模块
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import not_found, validation_error
-from src.database import get_db
+from src.database import get_async_db
 from src.enums.task import ExcelConfigType, TaskType
 from src.middleware.auth import require_permission
 from src.models.auth import User
@@ -43,9 +44,9 @@ def _build_format_config(config_data: dict[str, Any]) -> dict[str, Any] | None:
 
 
 @router.post("/configs", summary="创建Excel配置")
-def create_excel_config(
+async def create_excel_config(
     config_in: ExcelConfigCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> dict[str, Any]:
     """
@@ -63,13 +64,18 @@ def create_excel_config(
         config_data["format_config"] = format_config
 
     if config_data.get("is_default") is True:
-        db.query(ExcelTaskConfig).filter(
-            ExcelTaskConfig.config_type == config_data["config_type"],
-            ExcelTaskConfig.task_type == config_data["task_type"],
-            ExcelTaskConfig.is_default.is_(True),
-        ).update({"is_default": False})
+        stmt = (
+            update(ExcelTaskConfig)
+            .where(
+                ExcelTaskConfig.config_type == config_data["config_type"],
+                ExcelTaskConfig.task_type == config_data["task_type"],
+                ExcelTaskConfig.is_default.is_(True),
+            )
+            .values(is_default=False)
+        )
+        await db.execute(stmt)
 
-    config = excel_task_config_crud.create(db=db, obj_in=config_data)
+    config = await excel_task_config_crud.create(db=db, obj_in=config_data)
     return {
         "message": "配置创建成功",
         "config_id": config.id,
@@ -78,10 +84,10 @@ def create_excel_config(
 
 
 @router.get("/configs", summary="获取Excel配置列表")
-def get_excel_configs(
+async def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> dict[str, Any]:
     """
@@ -92,17 +98,17 @@ def get_excel_configs(
     """
     from src.crud.task import excel_task_config_crud
 
-    configs = excel_task_config_crud.get_multi(
+    configs = await excel_task_config_crud.get_multi_async(
         db=db, limit=50, config_type=config_type, task_type=task_type
     )
     return {"items": configs, "total": len(configs)}
 
 
 @router.get("/configs/default", summary="获取默认Excel配置")
-def get_default_excel_config(
+async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> Any:
     """
@@ -113,7 +119,7 @@ def get_default_excel_config(
     """
     from src.crud.task import excel_task_config_crud
 
-    config = excel_task_config_crud.get_default(
+    config = await excel_task_config_crud.get_default_async(
         db=db, config_type=config_type, task_type=task_type
     )
     if not config:
@@ -126,9 +132,9 @@ def get_default_excel_config(
 
 
 @router.get("/configs/{config_id}", summary="获取Excel配置详情")
-def get_excel_config(
+async def get_excel_config(
     config_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
 ) -> Any:
     """
@@ -138,7 +144,7 @@ def get_excel_config(
     """
     from src.crud.task import excel_task_config_crud
 
-    config = excel_task_config_crud.get(db=db, id=config_id)
+    config = await excel_task_config_crud.get(db=db, id=config_id)
     if not config:
         raise not_found(
             "配置不存在", resource_type="excel_config", resource_id=config_id
@@ -147,10 +153,10 @@ def get_excel_config(
 
 
 @router.put("/configs/{config_id}", summary="更新Excel配置")
-def update_excel_config(
+async def update_excel_config(
     config_id: str,
     config_in: dict[str, Any],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> dict[str, Any]:
     """
@@ -161,7 +167,7 @@ def update_excel_config(
     """
     from src.crud.task import excel_task_config_crud
 
-    config = excel_task_config_crud.get(db=db, id=config_id)
+    config = await excel_task_config_crud.get(db=db, id=config_id)
     if not config:
         raise not_found(
             "配置不存在", resource_type="excel_config", resource_id=config_id
@@ -180,23 +186,28 @@ def update_excel_config(
     if config_data.get("is_default") is True:
         target_config_type = config_data.get("config_type", config.config_type)
         target_task_type = config_data.get("task_type", config.task_type)
-        db.query(ExcelTaskConfig).filter(
-            ExcelTaskConfig.config_type == target_config_type,
-            ExcelTaskConfig.task_type == target_task_type,
-            ExcelTaskConfig.is_default.is_(True),
-            ExcelTaskConfig.id != config.id,
-        ).update({"is_default": False})
+        stmt = (
+            update(ExcelTaskConfig)
+            .where(
+                ExcelTaskConfig.config_type == target_config_type,
+                ExcelTaskConfig.task_type == target_task_type,
+                ExcelTaskConfig.is_default.is_(True),
+                ExcelTaskConfig.id != config.id,
+            )
+            .values(is_default=False)
+        )
+        await db.execute(stmt)
 
-    updated_config = excel_task_config_crud.update(
+    updated_config = await excel_task_config_crud.update(
         db=db, db_obj=config, obj_in=config_data
     )
     return {"message": "配置更新成功", "config_id": updated_config.id}
 
 
 @router.delete("/configs/{config_id}", summary="删除Excel配置")
-def delete_excel_config(
+async def delete_excel_config(
     config_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
 ) -> dict[str, str]:
     """
@@ -206,5 +217,5 @@ def delete_excel_config(
     """
     from src.crud.task import excel_task_config_crud
 
-    excel_task_config_crud.remove(db=db, id=config_id)
+    await excel_task_config_crud.remove(db=db, id=config_id)
     return {"message": "配置删除成功"}

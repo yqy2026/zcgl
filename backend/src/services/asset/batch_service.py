@@ -5,14 +5,20 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
+from ...models.asset import Asset
+from ...models.ownership import Ownership
+from ...models.property_certificate import property_cert_assets
+from ...models.rent_contract import RentLedger, rent_contract_assets
 from ...schemas.asset import AssetUpdate
 from .validators import AssetBatchValidator
 
@@ -60,51 +66,80 @@ class BatchOperationResult(BaseModel):
         }
 
 
-class AssetBatchService:
-    """
-    资产批量操作服务
-
-    提供带事务管理的批量更新、删除和验证功能
-    """
-
-    def __init__(self, db: Session):
-        """
-        初始化批量操作服务
-
-        Args:
-            db: 数据库会话
-        """
+class AsyncAssetBatchService:
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.validator = AssetBatchValidator()
 
-    def batch_update(
+    async def _ensure_asset_not_linked(self, asset_id: str) -> None:
+        has_contract = (
+            (
+                await self.db.execute(
+                    select(rent_contract_assets.c.asset_id)
+                    .where(rent_contract_assets.c.asset_id == asset_id)
+                    .limit(1)
+                )
+            ).first()
+            is not None
+        )
+        if has_contract:
+            raise ValueError("资产已关联合同，禁止删除")
+
+        has_certificate = (
+            (
+                await self.db.execute(
+                    select(property_cert_assets.c.asset_id)
+                    .where(property_cert_assets.c.asset_id == asset_id)
+                    .limit(1)
+                )
+            ).first()
+            is not None
+        )
+        if has_certificate:
+            raise ValueError("资产已关联产权证，禁止删除")
+        has_ledger = (
+            (
+                await self.db.execute(
+                    select(RentLedger.id)
+                    .where(RentLedger.asset_id == asset_id)
+                    .limit(1)
+                )
+            ).first()
+            is not None
+        )
+        if has_ledger:
+            raise ValueError("资产已有租金台账记录，禁止删除")
+
+    async def _resolve_ownership(
+        self, asset: Asset, updates: dict[str, Any]
+    ) -> dict[str, Any]:
+        if "ownership_id" not in updates:
+            return updates
+
+        ownership_id = updates.get("ownership_id") or getattr(
+            asset, "ownership_id", None
+        )
+
+        if ownership_id:
+            result = await self.db.execute(
+                select(Ownership).where(Ownership.id == ownership_id)
+            )
+            ownership = result.scalars().first()
+            if not ownership:
+                raise ValueError("权属方不存在")
+
+        updates["ownership_id"] = ownership_id
+        return updates
+
+    async def batch_update(
         self,
         asset_ids: list[str] | None = None,
         updates: dict[str, Any] | None = None,
         should_update_all: bool = False,
         operator: str = "system",
     ) -> BatchOperationResult:
-        """
-        批量更新资产
-
-        改进点:
-        1. 添加事务管理
-        2. 移除静默失败
-        3. 详细错误记录
-        4. 支持 SAVEPOINT 事务（容错模式）
-
-        Args:
-            asset_ids: 资产ID列表
-            updates: 更新数据字典
-            should_update_all: 是否更新所有资产
-            operator: 操作人
-
-        Returns:
-            BatchOperationResult
-        """
-        # 如果更新所有资产，获取所有资产ID
         if should_update_all:
-            all_assets, _ = asset_crud.get_multi_with_search(
+            all_assets, _ = await asset_crud.get_multi_with_search_async(
                 db=self.db, skip=0, limit=10000
             )
             asset_ids = [asset.id for asset in all_assets]
@@ -114,15 +149,12 @@ class AssetBatchService:
 
         result = BatchOperationResult(total_count=len(asset_ids))
 
-        # 使用 SAVEPOINT 事务管理批量操作
         for asset_id in asset_ids:
-            # 创建 SAVEPOINT（嵌套事务）
-            savepoint = self.db.begin_nested()
+            savepoint = await self.db.begin_nested()
             try:
-                # 获取现有资产
-                asset = asset_crud.get(db=self.db, id=asset_id)
+                asset = await asset_crud.get_async(db=self.db, id=asset_id)
                 if not asset:
-                    savepoint.rollback()
+                    await savepoint.rollback()
                     result.errors.append(
                         {
                             "asset_id": asset_id,
@@ -133,32 +165,41 @@ class AssetBatchService:
                     result.failed_count += 1
                     continue
 
-                # 更新资产
                 if updates is None:
                     updates = {}
-                update_schema = AssetUpdate(**updates)
-                asset_crud.update(
+                update_payload = updates.copy()
+                update_payload = await self._resolve_ownership(
+                    asset, update_payload
+                )
+
+                new_name = update_payload.get("property_name")
+                if new_name and new_name != asset.property_name:
+                    existing_asset = await asset_crud.get_by_name_async(
+                        db=self.db, property_name=new_name
+                    )
+                    if existing_asset and existing_asset.id != asset_id:
+                        raise ValueError("物业名称已存在")
+
+                update_schema = AssetUpdate(**update_payload)
+                await asset_crud.update_async(
                     db=self.db, db_obj=asset, obj_in=update_schema, commit=False
                 )
 
-                # 记录历史
-                history_crud.create(
+                await history_crud.create_async(
                     db=self.db,
                     asset_id=asset_id,
                     operation_type="批量更新",
-                    description=f"批量更新字段: {', '.join(updates.keys())}",
+                    description=f"批量更新字段: {', '.join(update_payload.keys())}",
                     operator=operator,
                     commit=False,
                 )
 
-                # 提交 SAVEPOINT
-                savepoint.commit()
+                await savepoint.commit()
                 result.success_count += 1
                 result.updated_ids.append(asset_id)
 
             except Exception as e:
-                # 回滚 SAVEPOINT（仅影响当前资产）
-                savepoint.rollback()
+                await savepoint.rollback()
                 result.errors.append(
                     {
                         "asset_id": asset_id,
@@ -170,66 +211,42 @@ class AssetBatchService:
                 result.failed_count += 1
                 logger.warning(f"资产 {asset_id} 更新失败: {e}")
 
-        # 如果有任何成功，提交整体事务
         if result.success_count > 0:
-            self.db.commit()
+            await self.db.commit()
             logger.info(
                 f"批量更新完成: 成功={result.success_count}, 失败={result.failed_count}"
             )
         else:
-            # 全部失败，回滚
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"批量更新全部失败，已回滚: {len(result.errors)} 个错误")
 
         return result
 
     def _extract_field_from_error(self, error_msg: str) -> str | None:
-        """从错误消息中提取字段名"""
         import re
 
-        # 匹配 Pydantic 验证错误格式
         match = re.search(r"(\w+)\n\s+Field required|(\w+)\n\s+Value error", error_msg)
         if match:
             return match.group(1) or match.group(2)
         return None
 
-    def validate_asset_data(
+    async def validate_asset_data(
         self,
         data: dict[str, Any],
         validate_rules: list[str] | None = None,
         enum_validation_service: Any = None,
     ) -> tuple[bool, list[dict[str, str]], list[dict[str, str]], list[str]]:
-        """
-        验证资产数据
-
-        改进点:
-        1. 使用模块化验证器
-        2. 枚举验证集成
-
-        Args:
-            data: 待验证的资产数据
-            validate_rules: 验证规则列表
-            enum_validation_service: 枚举验证服务
-
-        Returns:
-            (is_valid, errors, warnings, validated_fields) 元组
-        """
-        # 基础验证
         is_valid, errors, warnings, validated_fields = self.validator.validate_all(
             data, validate_rules
         )
 
-        # 枚举验证（如果提供服务）
         if "ownership_status" in data and enum_validation_service:
-            enum_service = enum_validation_service
-
-            # 构建验证上下文
             validation_context = {
-                "service": "AssetBatchService",
+                "service": "AsyncAssetBatchService",
                 "action": "validate_asset_data",
             }
 
-            is_enum_valid, error_msg = enum_service.validate_value(
+            is_enum_valid, error_msg = await enum_validation_service.validate_value(
                 "ownership_status",
                 data["ownership_status"],
                 allow_empty=False,
@@ -249,36 +266,20 @@ class AssetBatchService:
         is_valid = len(errors) == 0
         return is_valid, errors, warnings, validated_fields
 
-    def batch_delete(
+    async def batch_delete(
         self,
         asset_ids: list[str],
         operator: str = "system",
     ) -> BatchOperationResult:
-        """
-        批量删除资产
-
-        改进点:
-        1. 添加事务管理
-        2. 移除静默失败
-        3. 详细错误记录
-
-        Args:
-            asset_ids: 资产ID列表
-            operator: 操作人
-
-        Returns:
-            BatchOperationResult
-        """
         if not asset_ids:
             return BatchOperationResult(total_count=0)
 
         result = BatchOperationResult(total_count=len(asset_ids))
 
-        # 使用事务管理批量操作
         try:
             for asset_id in asset_ids:
-                with self.db.begin_nested():
-                    asset = asset_crud.get(db=self.db, id=asset_id)
+                async with self.db.begin_nested():
+                    asset = await asset_crud.get_async(db=self.db, id=asset_id)
                     if not asset:
                         result.errors.append(
                             {"asset_id": asset_id, "error": "资产不存在"}
@@ -286,7 +287,14 @@ class AssetBatchService:
                         result.failed_count += 1
                         continue
 
-                    history_crud.create(
+                    try:
+                        await self._ensure_asset_not_linked(asset_id)
+                    except ValueError as exc:
+                        result.errors.append({"asset_id": asset_id, "error": str(exc)})
+                        result.failed_count += 1
+                        continue
+
+                    await history_crud.create_async(
                         db=self.db,
                         asset_id=asset_id,
                         operation_type="DELETE",
@@ -294,10 +302,14 @@ class AssetBatchService:
                         operator=operator,
                         commit=False,
                     )
-                    asset_crud.remove(db=self.db, id=asset_id, commit=False)
+                    asset.data_status = "已删除"
+                    asset.updated_by = operator
+                    asset.updated_at = datetime.utcnow()
+                    self.db.add(asset)
+                    await self.db.flush()
                     result.success_count += 1
 
-            self.db.commit()
+            await self.db.commit()
             logger.info(
                 f"批量删除完成: 成功={result.success_count}, 失败={result.failed_count}"
             )
@@ -312,6 +324,6 @@ class AssetBatchService:
                 }
             )
             result.failed_count += 1
-            self.db.rollback()
+            await self.db.rollback()
             logger.error(f"批量删除失败，已回滚: {str(e)}")
             raise

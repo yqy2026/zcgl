@@ -109,6 +109,14 @@ export class AssetService {
     return assetCoreService.deleteAsset(id);
   }
 
+  async restoreAsset(id: string): Promise<Asset> {
+    return assetCoreService.restoreAsset(id);
+  }
+
+  async hardDeleteAsset(id: string): Promise<void> {
+    return assetCoreService.hardDeleteAsset(id);
+  }
+
   async deleteAssets(ids: string[]): Promise<void> {
     return assetCoreService.deleteAssets(ids);
   }
@@ -123,7 +131,7 @@ export class AssetService {
     return assetCoreService.validateAsset(data);
   }
 
-  async getOwnershipEntities(): Promise<string[]> {
+  async getOwnershipEntities(): Promise<Array<{ value: string; label: string }>> {
     return assetCoreService.getOwnershipEntities();
   }
 

@@ -19,7 +19,7 @@ sys.path.insert(0, str(project_root / "src"))
 from models.ownership import Ownership
 from models.project import Project
 
-from database import engine
+from database import get_database_engine
 from models.asset import Asset
 from models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 
@@ -28,7 +28,7 @@ class DatabaseDocumentationGenerator:
     """数据库文档生成器"""
 
     def __init__(self):
-        self.engine = engine
+        self.engine = get_database_engine().sync_engine
         self.output_dir = project_root / "docs" / "generated" / "database"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.metadata = MetaData()
@@ -180,8 +180,8 @@ class DatabaseDocumentationGenerator:
                     {
                         "name": "Get assets by ownership",
                         "description": "Filter assets by ownership entity",
-                        "sql": "SELECT * FROM assets WHERE ownership_entity = '示例权属方';",
-                        "python": "assets = session.query(Asset).filter(Asset.ownership_entity == '示例权属方').all()",
+                        "sql": "SELECT * FROM assets WHERE ownership_id = 'ownership-id';",
+                        "python": "assets = session.query(Asset).filter(Asset.ownership_id == 'ownership-id').all()",
                     },
                     {
                         "name": "Count assets by project",
@@ -220,8 +220,8 @@ class DatabaseDocumentationGenerator:
                     {
                         "name": "Financial summary",
                         "description": "Get financial summary by ownership",
-                        "sql": "SELECT ownership_entity, SUM(annual_income) as total_income, SUM(annual_expense) as total_expense FROM assets GROUP BY ownership_entity;",
-                        "python": "financial_summary = session.query(\n    Asset.ownership_entity,\n    func.sum(Asset.annual_income),\n    func.sum(Asset.annual_expense)\n).group_by(Asset.ownership_entity).all()",
+                        "sql": "SELECT o.name, SUM(a.annual_income) as total_income, SUM(a.annual_expense) as total_expense FROM assets a LEFT JOIN ownerships o ON a.ownership_id = o.id GROUP BY o.name;",
+                        "python": "financial_summary = session.query(\n    Ownership.name,\n    func.sum(Asset.annual_income),\n    func.sum(Asset.annual_expense)\n).join(Ownership, Asset.ownership_id == Ownership.id, isouter=True).group_by(Ownership.name).all()",
                     },
                 ],
             },

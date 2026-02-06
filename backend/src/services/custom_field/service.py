@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, cast
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...constants.message_constants import EMPTY_STRING
 from ...core.exception_handler import (
@@ -25,43 +25,44 @@ from ...schemas.asset import (
 class CustomFieldService:
     """自定义字段服务层"""
 
-    def create_custom_field(
-        self, db: Session, *, obj_in: AssetCustomFieldCreate
+    async def create_custom_field_async(
+        self, db: AsyncSession, *, obj_in: AssetCustomFieldCreate
     ) -> AssetCustomField:
-        """创建自定义字段"""
-        existing = custom_field_crud.get_by_field_name(db, field_name=obj_in.field_name)
+        existing = await custom_field_crud.get_by_field_name_async(
+            db, field_name=obj_in.field_name
+        )
         if existing:
             raise DuplicateResourceError("字段", "field_name", obj_in.field_name)
 
-        result: AssetCustomField = custom_field_crud.create(db, obj_in=obj_in)
+        result: AssetCustomField = await custom_field_crud.create(db, obj_in=obj_in)
         return result
 
-    def update_custom_field(
-        self, db: Session, *, id: str, obj_in: AssetCustomFieldUpdate
+    async def update_custom_field_async(
+        self, db: AsyncSession, *, id: str, obj_in: AssetCustomFieldUpdate
     ) -> AssetCustomField:
-        """更新自定义字段"""
-        field = custom_field_crud.get(db, id)
+        field = await custom_field_crud.get(db, id)
         if not field:
             raise ResourceNotFoundError("字段", id)
 
         if obj_in.field_name and obj_in.field_name != field.field_name:
-            existing = custom_field_crud.get_by_field_name(
+            existing = await custom_field_crud.get_by_field_name_async(
                 db, field_name=obj_in.field_name
             )
             if existing and existing.id != id:
                 raise DuplicateResourceError("字段", "field_name", obj_in.field_name)
 
-        result: AssetCustomField = custom_field_crud.update(
+        result: AssetCustomField = await custom_field_crud.update(
             db, db_obj=field, obj_in=obj_in
         )
         return result
 
-    def delete_custom_field(self, db: Session, *, id: str) -> AssetCustomField:
-        """删除自定义字段"""
-        field = custom_field_crud.get(db, id)
+    async def delete_custom_field_async(
+        self, db: AsyncSession, *, id: str
+    ) -> AssetCustomField:
+        field = await custom_field_crud.get(db, id)
         if not field:
             raise ResourceNotFoundError("字段", id)
-        result: AssetCustomField = custom_field_crud.remove(db, id=id)
+        result: AssetCustomField = await custom_field_crud.remove(db, id=id)
         return result
 
     def validate_field_value(
@@ -265,14 +266,13 @@ class CustomFieldService:
         except Exception as e:
             return False, f"验证字段 {field.display_name} 时发生错误: {str(e)}"
 
-    def update_asset_field_values(
+    async def update_asset_field_values_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         asset_id: str,
         values: Sequence[CustomFieldValueItem | dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """更新资产的自定义字段值 (Refactored from CRUD)"""
         updated_values: list[dict[str, Any]] = []
 
         for value_data in values:
@@ -290,16 +290,17 @@ class CustomFieldService:
 
             field = None
             if field_id:
-                field = custom_field_crud.get(db, field_id)
+                field = await custom_field_crud.get(db, field_id)
             elif field_name:
-                field = custom_field_crud.get_by_field_name(db, field_name=field_name)
+                field = await custom_field_crud.get_by_field_name_async(
+                    db, field_name=field_name
+                )
                 if field:
                     field_id = field.id
 
             if not field or not field_id:
                 continue
 
-            # 验证字段值
             is_valid, error_message = self.validate_field_value(field, field_value)
             if not is_valid:
                 raise BusinessValidationError(
@@ -307,8 +308,6 @@ class CustomFieldService:
                     field_errors={"custom_fields": [error_message or "字段值无效"]},
                 )
 
-            # NOTE: logic to update database is currently a stub in original CRUD too.
-            # Keeping the stub behavior.
             updated_values.append(
                 {
                     "field_id": field_id,
@@ -321,31 +320,30 @@ class CustomFieldService:
 
         return updated_values
 
-    def get_asset_field_values(
-        self, db: Session, *, asset_id: str
+    async def get_asset_field_values_async(
+        self, db: AsyncSession, *, asset_id: str
     ) -> list[dict[str, Any]]:
-        """获取资产的自定义字段值"""
-        # Delegating to CRUD or implementing logic.
-        # Original CRUD logic was empty stub.
-        return custom_field_crud.get_asset_field_values(db, asset_id=asset_id)
+        return await custom_field_crud.get_asset_field_values_async(
+            db, asset_id=asset_id
+        )
 
-    def toggle_active_status(self, db: Session, *, id: str) -> AssetCustomField:
-        """切换启用状态"""
-        field = custom_field_crud.get(db, id)
+
+    async def toggle_active_status_async(
+        self, db: AsyncSession, *, id: str
+    ) -> AssetCustomField:
+        field = await custom_field_crud.get(db, id)
         if not field:
             raise ResourceNotFoundError("字段", id)
 
         field.is_active = not field.is_active
         db.add(field)
-        db.commit()
-        db.refresh(field)
-        result: AssetCustomField = field
-        return result
+        await db.commit()
+        await db.refresh(field)
+        return field
 
-    def update_sort_orders(
-        self, db: Session, *, sort_data: list[dict[str, Any]]
+    async def update_sort_orders_async(
+        self, db: AsyncSession, *, sort_data: list[dict[str, Any]]
     ) -> list[AssetCustomField]:
-        """批量更新排序"""
         updated_fields: list[AssetCustomField] = []
 
         for item in sort_data:
@@ -353,17 +351,16 @@ class CustomFieldService:
             sort_order = item.get("sort_order")
 
             if field_id and sort_order is not None:
-                field = custom_field_crud.get(db, field_id)
+                field = await custom_field_crud.get(db, field_id)
                 if field:
                     field.sort_order = sort_order
                     db.add(field)
                     updated_fields.append(field)
 
-        db.commit()
+        await db.commit()
         for field in updated_fields:
-            db.refresh(field)
+            await db.refresh(field)
 
         return updated_fields
-
 
 custom_field_service = CustomFieldService()

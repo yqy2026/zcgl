@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from src.database import Base
 from src.models.asset import Asset
+from src.models.ownership import Ownership
 
 
 class TestAssetModelCreation:
@@ -43,7 +44,7 @@ class TestAssetModelCreation:
     def sample_asset(self):
         """Create a sample Asset instance"""
         return Asset(
-            ownership_entity="Test Corporation",
+            ownership_id="Test Corporation",
             property_name="Test Property",
             address="123 Test Street",
             ownership_status="已确权",
@@ -53,7 +54,7 @@ class TestAssetModelCreation:
 
     def test_asset_creation(self, sample_asset):
         """Test basic Asset creation"""
-        assert sample_asset.ownership_entity == "Test Corporation"
+        assert sample_asset.ownership_id == "Test Corporation"
         assert sample_asset.property_name == "Test Property"
         assert sample_asset.address == "123 Test Street"
         assert sample_asset.ownership_status == "已确权"
@@ -85,7 +86,7 @@ class TestAssetBasicFields:
     @pytest.fixture
     def asset(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -95,9 +96,23 @@ class TestAssetBasicFields:
 
     def test_string_fields(self, asset):
         """Test string field types"""
-        assert isinstance(asset.ownership_entity, str)
+        assert isinstance(asset.ownership_id, str)
         assert isinstance(asset.property_name, str)
         assert isinstance(asset.address, str)
+
+    def test_ownership_entity_property(self):
+        """Test ownership_entity derives from ownership relation"""
+        ownership = Ownership(name="Test Owner", code="OWN-001")
+        asset = Asset(
+            ownership_id="owner-id",
+            property_name="Property",
+            address="Address",
+            ownership_status="Status",
+            property_nature="Nature",
+            usage_status="Status",
+        )
+        asset.ownership = ownership
+        assert asset.ownership_entity == "Test Owner"
 
     def test_boolean_defaults(self, asset):
         """Test boolean field defaults"""
@@ -119,7 +134,7 @@ class TestAssetAreaFields:
     @pytest.fixture
     def asset_with_areas(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -147,7 +162,7 @@ class TestAssetAreaFields:
     def test_area_fields_can_be_null(self):
         """Test that area fields can be None"""
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -164,7 +179,7 @@ class TestAssetContractFields:
     @pytest.fixture
     def asset_with_contract(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -205,7 +220,7 @@ class TestAssetTimestamps:
     @pytest.fixture
     def asset(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -235,7 +250,7 @@ class TestAssetManagementFields:
     @pytest.fixture
     def managed_asset(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -262,7 +277,7 @@ class TestAssetUsageFields:
     @pytest.fixture
     def asset_with_usage(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -284,7 +299,7 @@ class TestAssetSystemFields:
     @pytest.fixture
     def system_asset(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -307,7 +322,7 @@ class TestAssetSystemFields:
     def test_version_increment(self):
         """Test version field can be incremented"""
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -326,7 +341,7 @@ class TestAssetValidation:
         # SQLAlchemy doesn't automatically validate ranges
         # This would need application-level validation
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -342,7 +357,7 @@ class TestAssetValidation:
         """Test that future dates are allowed for contracts"""
         future_date = date(2030, 12, 31)
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -359,7 +374,7 @@ class TestAssetRelationships:
     @pytest.fixture
     def asset(self):
         return Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -387,7 +402,7 @@ class TestAssetStringRepresentation:
     @pytest.fixture
     def asset(self):
         return Asset(
-            ownership_entity="Test Owner",
+            ownership_id="Test Owner",
             property_name="Test Property Name",
             address="123 Test Address",
             ownership_status="Status",
@@ -415,7 +430,7 @@ class TestAssetEdgeCases:
         # SQLAlchemy won't truncate automatically
         # This should be validated at application level
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name=long_name,
             address="Address",
             ownership_status="Status",
@@ -427,7 +442,7 @@ class TestAssetEdgeCases:
     def test_special_characters_in_name(self):
         """Test handling of special characters"""
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property <script>alert('xss')</script>",
             address="Address",
             ownership_status="Status",
@@ -439,14 +454,14 @@ class TestAssetEdgeCases:
     def test_unicode_characters(self):
         """Test handling of unicode characters"""
         asset = Asset(
-            ownership_entity="业主单位",
+            ownership_id="业主单位",
             property_name="物业名称",
             address="地址",
             ownership_status="状态",
             property_nature="性质",
             usage_status="状态",
         )
-        assert asset.ownership_entity == "业主单位"
+        assert asset.ownership_id == "业主单位"
         assert asset.property_name == "物业名称"
 
 
@@ -456,7 +471,7 @@ class TestAssetDefaultsAndConstraints:
     def test_all_required_fields(self):
         """Test that all required fields are identified"""
         required_fields = [
-            "ownership_entity",
+            "ownership_id",
             "property_name",
             "address",
             "ownership_status",
@@ -471,7 +486,7 @@ class TestAssetDefaultsAndConstraints:
     def test_default_boolean_values(self):
         """Test default values for boolean fields"""
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
@@ -486,7 +501,7 @@ class TestAssetDefaultsAndConstraints:
     def test_default_int_values(self):
         """Test default values for integer fields"""
         asset = Asset(
-            ownership_entity="Owner",
+            ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",

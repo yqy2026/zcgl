@@ -61,7 +61,9 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         update_data.pop("ownership_relations", None)
         update_data.pop("ownership_ids", None)
 
-        return await super().update(db, db_obj=db_obj, obj_in=update_data, commit=commit)
+        return await super().update(
+            db, db_obj=db_obj, obj_in=update_data, commit=commit
+        )
 
     async def get_multi(
         self,
@@ -137,9 +139,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
         # 分页
         skip = (search_params.page - 1) * search_params.page_size
-        result = await db.execute(
-            query.offset(skip).limit(search_params.page_size)
-        )
+        result = await db.execute(query.offset(skip).limit(search_params.page_size))
         items = list(result.scalars().all())
 
         return items, total

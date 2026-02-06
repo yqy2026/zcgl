@@ -16,6 +16,7 @@ from pydantic import (
     Field,
     ValidationInfo,
     field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -28,12 +29,7 @@ class AssetBase(BaseModel):
     """资产基础模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    ownership_entity: str = Field(
-        ...,
-        min_length=1,
-        max_length=FieldLengthLimits.SHORT_TEXT_MAX,
-        description="权属方",
-    )
+    ownership_id: str | None = Field(None, description="权属方ID")
     ownership_category: str | None = Field(
         None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
     )
@@ -196,6 +192,14 @@ class AssetBase(BaseModel):
             )  # pragma: no cover
         return v  # pragma: no cover
 
+    @model_validator(mode="after")
+    def validate_ownership_required(self) -> "AssetBase":
+        if not self.ownership_id:
+            raise PydanticCustomError(
+                "missing_ownership", "权属方不能为空", {"field": "ownership_id"}
+            )
+        return self
+
 
 class AssetCreate(AssetBase):
     """创建资产模型"""
@@ -207,9 +211,7 @@ class AssetUpdate(BaseModel):
     """更新资产模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    ownership_entity: str | None = Field(
-        None, min_length=1, max_length=200, description="权属方"
-    )
+    ownership_id: str | None = Field(None, description="权属方ID")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(None, max_length=200, description="项目名称")
     property_name: str | None = Field(
@@ -340,7 +342,9 @@ class AssetResponseBase(BaseModel):
     """
 
     # 基本信息
-    ownership_entity: str = Field(..., description="权属方")
+    ownership_entity: str | None = Field(
+        None, description="权属方名称（动态获取）"
+    )
     ownership_category: str | None = Field(None, description="权属类别")
     project_name: str | None = Field(None, description="项目名称")
     property_name: str = Field(..., description="物业名称")

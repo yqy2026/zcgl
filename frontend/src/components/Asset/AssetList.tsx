@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { Table, Tag, Button, Space, Popconfirm, Tooltip } from 'antd';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Table, Tag, Button, Space, Popconfirm, Tooltip, Modal, Input } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type {
@@ -10,9 +10,11 @@ import type {
 } from 'antd/es/table/interface';
 
 import type { Asset, AssetListResponse } from '@/types/asset';
+import { DataStatus } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
 import { getOccupancyRateColor } from '@/styles/colorMap';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
+import usePermission from '@/hooks/usePermission';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 
 // Constants
@@ -38,11 +40,28 @@ function formatOwnershipCategory(
   return matchedOption?.label ?? text;
 }
 
+function getDataStatusColor(status?: string): string {
+  switch (status) {
+    case DataStatus.NORMAL:
+      return 'green';
+    case DataStatus.DELETED:
+      return 'red';
+    case DataStatus.ARCHIVED:
+      return 'orange';
+    case DataStatus.ABNORMAL:
+      return 'volcano';
+    default:
+      return 'default';
+  }
+}
+
 interface AssetListProps {
   data?: AssetListResponse;
   loading?: boolean;
   onEdit: (asset: Asset) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
+  onHardDelete: (id: string) => void;
   onView: (asset: Asset) => void;
   onViewHistory: (asset: Asset) => void;
   onTableChange: (
@@ -60,6 +79,8 @@ const AssetList: React.FC<AssetListProps> = ({
   loading = false,
   onEdit,
   onDelete,
+  onRestore,
+  onHardDelete,
   onView,
   onViewHistory,
   onTableChange,
@@ -68,6 +89,40 @@ const AssetList: React.FC<AssetListProps> = ({
 }) => {
   // 使用系统字典获取权属类别
   const { options: ownershipCategoryOptions } = useSystemDictionary('ownership_category');
+  const { isAdmin } = usePermission();
+  const isAdminUser = isAdmin();
+
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<Asset | null>(null);
+  const [hardDeleteInput, setHardDeleteInput] = useState('');
+
+  const handleOpenHardDelete = useCallback((asset: Asset) => {
+    setHardDeleteTarget(asset);
+    setHardDeleteInput('');
+  }, []);
+
+  const handleCloseHardDelete = useCallback(() => {
+    setHardDeleteTarget(null);
+    setHardDeleteInput('');
+  }, []);
+
+  const hardDeleteMatch = useMemo(() => {
+    if (hardDeleteTarget == null) {
+      return false;
+    }
+    const input = hardDeleteInput.trim();
+    if (input === '') {
+      return false;
+    }
+    return input === hardDeleteTarget.property_name || input === hardDeleteTarget.id;
+  }, [hardDeleteInput, hardDeleteTarget]);
+
+  const handleConfirmHardDelete = useCallback(async () => {
+    if (hardDeleteTarget == null) {
+      return;
+    }
+    await onHardDelete(hardDeleteTarget.id);
+    handleCloseHardDelete();
+  }, [handleCloseHardDelete, hardDeleteTarget, onHardDelete]);
 
   // 表格列定义
   const columns = useMemo<ColumnsType<Asset>>(
@@ -228,6 +283,15 @@ const AssetList: React.FC<AssetListProps> = ({
         render: status => <Tag color={getStatusColor(status, 'usage')}>{status}</Tag>,
       },
       {
+        title: '数据状态',
+        dataIndex: 'data_status',
+        key: 'data_status',
+        width: 100,
+        render: status => (
+          <Tag color={getDataStatusColor(status)}>{status ?? '未知'}</Tag>
+        ),
+      },
+      {
         title: '出租率',
         dataIndex: 'occupancy_rate',
         key: 'occupancy_rate',
@@ -296,54 +360,99 @@ const AssetList: React.FC<AssetListProps> = ({
       {
         title: '操作',
         key: 'actions',
-        width: 150,
+        width: 240,
         fixed: 'right',
-        render: (_, record) => (
-          <Space size="small">
-            <Tooltip title="查看详情">
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => onView(record)}
-                size="small"
-              />
-            </Tooltip>
+        render: (_, record) => {
+          const isDeleted = record.data_status === DataStatus.DELETED;
+          const showAdminActions = isAdminUser && isDeleted;
 
-            <Tooltip title="编辑">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => onEdit(record)}
-                size="small"
-              />
-            </Tooltip>
-
-            <Tooltip title="查看历史">
-              <Button
-                type="text"
-                icon={<HistoryOutlined />}
-                onClick={() => onViewHistory(record)}
-                size="small"
-              />
-            </Tooltip>
-
-            <Popconfirm
-              title="确定要删除这个资产吗？"
-              description="删除后无法恢复，请谨慎操作"
-              onConfirm={() => onDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
-              okType="danger"
-            >
-              <Tooltip title="删除">
-                <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+          return (
+            <Space size="small">
+              <Tooltip title="查看详情">
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => onView(record)}
+                  size="small"
+                />
               </Tooltip>
-            </Popconfirm>
-          </Space>
-        ),
+
+              {!isDeleted && (
+                <Tooltip title="编辑">
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={() => onEdit(record)}
+                    size="small"
+                  />
+                </Tooltip>
+              )}
+
+              <Tooltip title="查看历史">
+                <Button
+                  type="text"
+                  icon={<HistoryOutlined />}
+                  onClick={() => onViewHistory(record)}
+                  size="small"
+                />
+              </Tooltip>
+
+              {!isDeleted && (
+                <Popconfirm
+                  title="确定要删除这个资产吗？"
+                  description="删除后可在回收站恢复"
+                  onConfirm={() => onDelete(record.id)}
+                  okText="确定"
+                  cancelText="取消"
+                  okType="danger"
+                >
+                  <Tooltip title="删除">
+                    <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                  </Tooltip>
+                </Popconfirm>
+              )}
+
+              {showAdminActions && (
+                <Popconfirm
+                  title="确定要恢复这个资产吗？"
+                  description="恢复后将回到资产列表"
+                  onConfirm={() => onRestore(record.id)}
+                  okText="恢复"
+                  cancelText="取消"
+                >
+                  <Button type="link" size="small">
+                    恢复
+                  </Button>
+                </Popconfirm>
+              )}
+
+              {showAdminActions && (
+                <Tooltip title="彻底删除">
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    onClick={() => handleOpenHardDelete(record)}
+                  >
+                    彻底删除
+                  </Button>
+                </Tooltip>
+              )}
+            </Space>
+          );
+        },
       },
     ],
-    [onDelete, onEdit, onView, onViewHistory, ownershipCategoryOptions]
+    [
+      handleOpenHardDelete,
+      isAdminUser,
+      onDelete,
+      onEdit,
+      onRestore,
+      onView,
+      onViewHistory,
+      ownershipCategoryOptions,
+    ]
   );
 
   // 计算当前页汇总数据
@@ -391,7 +500,7 @@ const AssetList: React.FC<AssetListProps> = ({
     const actualIndex = landIndex + 1;
     const rentableIndex = actualIndex + 1;
     const rentedIndex = rentableIndex + 1;
-    const statusSpan = 3;
+    const statusSpan = 4;
     const occupancyIndex = rentedIndex + 1 + statusSpan;
     const trailingSpan = 4;
 
@@ -459,27 +568,57 @@ const AssetList: React.FC<AssetListProps> = ({
   );
 
   return (
-    <TableWithPagination
-      columns={columns}
-      dataSource={data?.items ?? []}
-      rowKey="id"
-      loading={loading}
-      scroll={{ x: 1800, y: 600 }}
-      rowSelection={rowSelection}
-      summary={renderSummary}
-      paginationState={paginationState}
-      onPageChange={handlePageChange}
-      paginationProps={{
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total: number, range: [number, number]) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
-        pageSizeOptions: ['10', '20', '50', '100'],
-      }}
-      onChange={onTableChange}
-      size="middle"
-      bordered
-      sticky={{ offsetHeader: 64 }}
-    />
+    <>
+      <TableWithPagination
+        columns={columns}
+        dataSource={data?.items ?? []}
+        rowKey="id"
+        loading={loading}
+        scroll={{ x: 2000, y: 600 }}
+        rowSelection={rowSelection}
+        summary={renderSummary}
+        paginationState={paginationState}
+        onPageChange={handlePageChange}
+        paginationProps={{
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }}
+        onChange={onTableChange}
+        size="middle"
+        bordered
+        sticky={{ offsetHeader: 64 }}
+      />
+
+      <Modal
+        title="确认彻底删除"
+        open={hardDeleteTarget != null}
+        onCancel={handleCloseHardDelete}
+        onOk={handleConfirmHardDelete}
+        okText="彻底删除"
+        okType="danger"
+        cancelText="取消"
+        okButtonProps={{ disabled: !hardDeleteMatch }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div>
+            此操作不可恢复。请输入物业名称或资产 ID 以确认删除：
+            <strong>
+              {hardDeleteTarget != null
+                ? ` ${hardDeleteTarget.property_name} / ${hardDeleteTarget.id}`
+                : ''}
+            </strong>
+          </div>
+          <Input
+            placeholder="输入物业名称或资产ID"
+            value={hardDeleteInput}
+            onChange={event => setHardDeleteInput(event.target.value)}
+          />
+        </Space>
+      </Modal>
+    </>
   );
 };
 

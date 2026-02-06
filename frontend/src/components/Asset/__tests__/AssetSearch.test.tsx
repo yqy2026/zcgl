@@ -27,8 +27,18 @@ vi.mock('@/utils/logger', () => ({
 
 vi.mock('@/services/assetService', () => ({
   assetService: {
-    getOwnershipEntities: vi.fn(() => Promise.resolve(['政府', '企业', '事业单位'])),
     getBusinessCategories: vi.fn(() => Promise.resolve(['办公', '商业', '工业'])),
+  },
+}));
+
+vi.mock('@/services/ownershipService', () => ({
+  ownershipService: {
+    getOwnershipSelectOptions: vi.fn(() =>
+      Promise.resolve([
+        { value: 'own-1', label: '政府' },
+        { value: 'own-2', label: '企业' },
+      ])
+    ),
   },
 }));
 
@@ -51,7 +61,13 @@ vi.mock('@/hooks/useSearchHistory', () => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQueries: () => [
-    { data: ['政府', '企业', '事业单位'], isLoading: false },
+    {
+      data: [
+        { value: 'own-1', label: '政府' },
+        { value: 'own-2', label: '企业' },
+      ],
+      isLoading: false,
+    },
     { data: ['办公', '商业', '工业'], isLoading: false },
   ],
 }));
@@ -597,7 +613,7 @@ describe('AssetSearch', () => {
       renderWithProviders(<AssetSearch {...defaultProps} />);
 
       // 高级字段不应该显示
-      expect(screen.queryByTestId('form-item-ownership_entity')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('form-item-ownership_id')).not.toBeInTheDocument();
     });
 
     it('展开后应该显示高级搜索字段', () => {
@@ -608,7 +624,7 @@ describe('AssetSearch', () => {
       fireEvent.click(expandButton);
 
       // 高级字段应该显示
-      expect(screen.getByTestId('form-item-ownership_entity')).toBeInTheDocument();
+      expect(screen.getByTestId('form-item-ownership_id')).toBeInTheDocument();
       expect(screen.getByTestId('form-item-business_category')).toBeInTheDocument();
       expect(screen.getByTestId('form-item-is_litigated')).toBeInTheDocument();
     });

@@ -46,7 +46,7 @@ def _build_occupancy_snapshot(filters: dict[str, Any]) -> dict[str, Any]:
 def calculate_occupancy_rate(
     property_nature: str | None = Query(None, description="物业性质筛选"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
-    ownership_entity: str | None = Query(None, description="权属方筛选"),
+    ownership_id: str | None = Query(None, description="权属方ID筛选"),
 ) -> dict[str, Any]:
     try:
         filters: dict[str, Any] = {}
@@ -54,8 +54,8 @@ def calculate_occupancy_rate(
             filters["property_nature"] = property_nature
         if ownership_status:
             filters["ownership_status"] = ownership_status
-        if ownership_entity:
-            filters["ownership_entity"] = ownership_entity
+        if ownership_id:
+            filters["ownership_id"] = ownership_id
 
         logger.info("开始计算出租率，筛选条件: %s", filters)
 

@@ -1,76 +1,100 @@
 """
-任务服务增强测试
-
-Enhanced tests for Task Service to improve coverage
+Task Service Integration Tests (Async)
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select, update
+
+from src.database import async_session_scope
+from src.enums.task import TaskStatus, TaskType
+from src.models.task import AsyncTask, TaskHistory
+from src.schemas.task import TaskCreate
+from src.services.task.service import TaskService
+
+pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
-def task_service(db: Session):
-    """任务服务实例"""
-    from src.services.task.service import TaskService
+async def async_db():
+    async with async_session_scope() as session:
+        yield session
 
-    return TaskService(db)
+
+@pytest.fixture(autouse=True)
+async def clean_tasks():
+    async with async_session_scope() as session:
+        await session.execute(delete(TaskHistory))
+        await session.execute(delete(AsyncTask))
+        await session.commit()
+    yield
+    async with async_session_scope() as session:
+        await session.execute(delete(TaskHistory))
+        await session.execute(delete(AsyncTask))
+        await session.commit()
 
 
 @pytest.fixture
-def sample_task(db: Session, admin_user):
-    """示例任务数据"""
-    from src.crud.task import task_crud
-    from src.schemas.task import TaskCreate
+def task_service():
+    return TaskService()
 
-    task = task_crud.create(
-        db,
+
+@pytest.fixture
+async def sample_task(async_db, task_service):
+    task = await task_service.create_task(
+        async_db,
         obj_in=TaskCreate(
+            task_type=TaskType.EXCEL_IMPORT,
             title="测试任务",
             description="任务描述",
-            task_type="inspection",
-            priority="normal",
-            status="pending",
-            assigned_to=admin_user.id,
-            due_date=datetime.now(UTC),
+            parameters={"file": "test.xlsx"},
         ),
+        user_id="test-user",
     )
     yield task
-    try:
-        task_crud.remove(db, id=task.id)
-    except Exception:
-        pass
 
 
-class TestTaskServiceBusinessLogic:
-    """测试任务服务业务逻辑"""
-
-    def test_task_status_transition(self, task_service, sample_task, db: Session):
-        """测试任务状态转换"""
-        # pending → in_progress
-        updated = task_service.update_task_status(db, sample_task.id, "in_progress")
-        assert updated.status == "in_progress"
-
-    def test_task_priority_sorting(self, task_service, db: Session):
-        """测试任务按优先级排序"""
-        result = task_service.get_tasks_sorted_by_priority(db)
-        assert result is not None
-
-    def test_task_assignment(self, task_service, db: Session, admin_user):
-        """测试任务分配"""
-        result = task_service.assign_task(
-            db, task_id="test-task-id", user_id=admin_user.id
+class TestTaskServiceIntegration:
+    async def test_update_task_status_creates_history(
+        self, async_db, task_service, sample_task
+    ):
+        updated = await task_service.update_task_status(
+            async_db, task_id=str(sample_task.id), status=TaskStatus.RUNNING
         )
-        # 可能返回成功或失败
-        assert result is not None
+        assert updated.status == TaskStatus.RUNNING
+        assert updated.started_at is not None
 
-    def test_task_due_date_reminder(self, task_service, db: Session):
-        """测试任务到期提醒"""
-        result = task_service.get_overdue_tasks(db)
-        assert result is not None
+        result = await async_db.execute(
+            select(TaskHistory).where(TaskHistory.task_id == str(sample_task.id))
+        )
+        history_rows = list(result.scalars().all())
+        assert history_rows
 
-    def test_task_statistics(self, task_service, db: Session):
-        """测试任务统计信息"""
-        stats = task_service.get_task_statistics(db)
-        assert stats is not None
+    async def test_cleanup_old_tasks_marks_inactive(self, async_db, task_service):
+        task = await task_service.create_task(
+            async_db,
+            obj_in=TaskCreate(
+                task_type=TaskType.EXCEL_EXPORT,
+                title="旧任务",
+                description="用于清理测试",
+                parameters={},
+            ),
+            user_id="cleanup-user",
+        )
+        old_date = datetime.now(UTC) - timedelta(days=60)
+        await async_db.execute(
+            update(AsyncTask)
+            .where(AsyncTask.id == str(task.id))
+            .values(created_at=old_date, status=TaskStatus.COMPLETED)
+        )
+        await async_db.commit()
+
+        result = await task_service.cleanup_old_tasks(
+            async_db, days=30, dry_run=False
+        )
+        assert result["cleaned_count"] >= 1
+
+        refreshed = await async_db.get(AsyncTask, str(task.id))
+        assert refreshed is not None
+        assert refreshed.is_active is False

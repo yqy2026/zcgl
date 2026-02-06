@@ -50,8 +50,9 @@ describe('useAuth Hook', () => {
     username: 'testuser',
     email: 'test@example.com',
     full_name: 'Test User',
-    role: 'admin',
-    organization_id: 'org-1',
+    role_id: 'role-admin-id',
+    role_name: 'admin',
+    default_organization_id: 'org-1',
   };
 
   beforeEach(() => {

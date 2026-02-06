@@ -189,6 +189,18 @@ class MemoryCache {
     this.cache.delete(key);
   }
 
+  deleteByPrefix(prefix: string): void {
+    if (prefix.trim() === '') {
+      return;
+    }
+
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   size(): number {
     return this.cache.size;
   }
@@ -505,6 +517,22 @@ export class ApiClient {
         if (this.config.enableLogging === true) {
           apiLogger.debug(`📦 Cache Hit: ${url}`);
         }
+        if (smartExtract) {
+          const cachedResponse = {
+            data: cachedData,
+            config: {
+              url,
+              method: 'get',
+            },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+          } as AxiosResponse;
+          return ResponseExtractor.smartExtract<T>(cachedResponse, {
+            detection: this.config.responseDetection,
+            enableTypeValidation: this.config.enableTypeValidation,
+          });
+        }
         return {
           success: true,
           data: cachedData as T,
@@ -808,6 +836,22 @@ export class ApiClient {
     }
 
     return value;
+  }
+
+  /**
+   * 失效指定缓存
+   */
+  invalidateCache(method: string, url: string, params?: Record<string, unknown>): void {
+    const normalizedMethod = method.toUpperCase();
+    const cacheKey = this.generateCacheKey(normalizedMethod, url, params);
+    this.cache.delete(cacheKey);
+  }
+
+  /**
+   * 按前缀失效缓存
+   */
+  invalidateCacheByPrefix(prefix: string): void {
+    this.cache.deleteByPrefix(prefix);
   }
 
   /**

@@ -11,7 +11,7 @@ This test module covers Excel import/export functionality:
 """
 
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -209,8 +209,8 @@ class TestExcelOperationHistory:
             MagicMock(id="task1", task_type="excel_import", status="completed"),
             MagicMock(id="task2", task_type="excel_export", status="pending"),
         ]
-        mock_task_crud.get_multi.return_value = mock_tasks
-        mock_task_crud.count.return_value = 2
+        mock_task_crud.get_multi_async = AsyncMock(return_value=mock_tasks)
+        mock_task_crud.count_async = AsyncMock(return_value=2)
 
         response = client.get("/api/v1/excel/history")
 
@@ -221,8 +221,8 @@ class TestExcelOperationHistory:
     @patch("src.api.v1.documents.excel.task_crud")
     def test_get_history_with_pagination(self, mock_task_crud, client):
         """Test history with pagination parameters"""
-        mock_task_crud.get_multi.return_value = []
-        mock_task_crud.count.return_value = 0
+        mock_task_crud.get_multi_async = AsyncMock(return_value=[])
+        mock_task_crud.count_async = AsyncMock(return_value=0)
 
         response = client.get("/api/v1/excel/history?page=1&limit=10")
 
@@ -231,8 +231,8 @@ class TestExcelOperationHistory:
     @patch("src.api.v1.documents.excel.task_crud")
     def test_get_history_with_filters(self, mock_task_crud, client):
         """Test history with type and status filters"""
-        mock_task_crud.get_multi.return_value = []
-        mock_task_crud.count.return_value = 0
+        mock_task_crud.get_multi_async = AsyncMock(return_value=[])
+        mock_task_crud.count_async = AsyncMock(return_value=0)
 
         response = client.get(
             "/api/v1/excel/history?task_type=excel_import&status=completed"

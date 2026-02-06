@@ -4,11 +4,12 @@ Prompt管理服务
 """
 
 import logging
-from datetime import UTC, datetime
-from typing import Any, cast
+from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
     DuplicateResourceError,
@@ -24,29 +25,19 @@ logger = logging.getLogger(__name__)
 class PromptManager:
     """Prompt管理器"""
 
-    def get_active_prompt(
-        self, db: Session, doc_type: str, provider: str | None = None
+    async def get_active_prompt_async(
+        self, db: AsyncSession, doc_type: str, provider: str | None = None
     ) -> PromptTemplate | None:
-        """
-        获取当前活跃的Prompt
-
-        Args:
-            db: 数据库会话
-            doc_type: 文档类型 (CONTRACT, PROPERTY_CERT等)
-            provider: LLM提供商 (qwen, hunyuan, deepseek, glm)
-
-        Returns:
-            PromptTemplate or None
-        """
-        query = db.query(PromptTemplate).filter(
+        stmt = select(PromptTemplate).where(
             PromptTemplate.doc_type == doc_type,
             PromptTemplate.status == PromptStatus.ACTIVE,
         )
 
         if provider:
-            query = query.filter(PromptTemplate.provider == provider)
+            stmt = stmt.where(PromptTemplate.provider == provider)
 
-        prompt = query.order_by(PromptTemplate.updated_at.desc()).first()
+        result = await db.execute(stmt.order_by(PromptTemplate.updated_at.desc()))
+        prompt = result.scalars().first()
 
         if prompt:
             logger.info(f"✅ 获取活跃Prompt: {prompt.name} (v{prompt.version})")
@@ -57,32 +48,16 @@ class PromptManager:
 
         return prompt
 
-    def create_prompt(
-        self, db: Session, data: PromptTemplateCreate, user_id: str | None = None
+    async def create_prompt_async(
+        self, db: AsyncSession, data: PromptTemplateCreate, user_id: str | None = None
     ) -> PromptTemplate:
-        """
-        创建新Prompt模板
-
-        Args:
-            db: 数据库会话
-            data: Prompt创建数据
-            user_id: 创建人ID
-
-        Returns:
-            PromptTemplate
-        """
-        # 1. 检查名称是否已存在
-        existing = (
-            db.query(PromptTemplate).filter(PromptTemplate.name == data.name).first()
-        )
-
+        existing_stmt = select(PromptTemplate).where(PromptTemplate.name == data.name)
+        existing = (await db.execute(existing_stmt)).scalars().first()
         if existing:
             raise DuplicateResourceError("Prompt", "name", data.name)
 
-        # 2. 生成版本号
         version = "v1.0.0"
 
-        # 3. 创建Prompt模板
         template = PromptTemplate()
         template.id = str(uuid4())
         template.name = data.name
@@ -97,7 +72,6 @@ class PromptManager:
         template.tags = data.tags or []
         template.created_by = user_id
 
-        # 4. 创建初始版本
         version_record = PromptVersion()
         version_record.id = str(uuid4())
         version_record.template_id = template.id
@@ -111,41 +85,25 @@ class PromptManager:
 
         db.add(template)
         db.add(version_record)
-        db.commit()
-        db.refresh(template)
+        await db.commit()
+        await db.refresh(template)
 
         logger.info(f"✅ 创建Prompt: {template.name} (v{version})")
         return template
 
-    def update_prompt(
+    async def update_prompt_async(
         self,
-        db: Session,
+        db: AsyncSession,
         template_id: str,
         data: PromptTemplateUpdate,
         user_id: str | None = None,
     ) -> PromptTemplate:
-        """
-        更新Prompt(自动创建新版本)
-
-        Args:
-            db: 数据库会话
-            template_id: Prompt模板ID
-            data: 更新数据
-            user_id: 操作人ID
-
-        Returns:
-            PromptTemplate
-        """
-        template = cast(
-            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
-        )
+        template = await db.get(PromptTemplate, template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
-        # 1. 生成新版本号
         new_version = self._increment_version(template.version)
 
-        # 2. 准备新内容
         new_system_prompt = data.system_prompt or template.system_prompt
         new_user_prompt = data.user_prompt_template or template.user_prompt_template
         new_examples = (
@@ -154,7 +112,6 @@ class PromptManager:
             else template.few_shot_examples
         )
 
-        # 3. 创建版本记录
         version_record = PromptVersion()
         version_record.id = str(uuid4())
         version_record.template_id = template_id
@@ -166,78 +123,55 @@ class PromptManager:
         version_record.change_type = "optimized"
         version_record.created_by = user_id
 
-        # 4. 更新模板
         template.system_prompt = new_system_prompt
         template.user_prompt_template = new_user_prompt
         template.few_shot_examples = new_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.now(UTC)
+        template.updated_at = datetime.utcnow()
 
         if data.tags is not None:
             template.tags = data.tags
 
         db.add(version_record)
-        db.commit()
-        db.refresh(template)
+        await db.commit()
+        await db.refresh(template)
 
         logger.info(
             f"✅ 更新Prompt: {template.name} (v{template.version} → {new_version})"
         )
         return template
 
-    def activate_prompt(self, db: Session, template_id: str) -> PromptTemplate:
-        """
-        激活指定Prompt
-
-        Args:
-            db: 数据库会话
-            template_id: 要激活的Prompt模板ID
-
-        Returns:
-            PromptTemplate
-        """
-        template = cast(
-            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
-        )
+    async def activate_prompt_async(
+        self, db: AsyncSession, template_id: str
+    ) -> PromptTemplate:
+        template = await db.get(PromptTemplate, template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
-        # 1. 停用同类型的其他Prompt
-        db.query(PromptTemplate).filter(
+        stmt = update(PromptTemplate).where(
             PromptTemplate.doc_type == template.doc_type,
             PromptTemplate.status == PromptStatus.ACTIVE,
             PromptTemplate.id != template_id,
-        ).update({"status": PromptStatus.ARCHIVED, "updated_at": datetime.now(UTC)})
+        )
+        await db.execute(stmt.values(status=PromptStatus.ARCHIVED, updated_at=datetime.utcnow()))
 
-        # 2. 激活目标Prompt
         template.status = PromptStatus.ACTIVE
-        template.updated_at = datetime.now(UTC)
-        db.commit()
-        db.refresh(template)
+        template.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(template)
 
         logger.info(f"✅ 激活Prompt: {template.name} (停用同类型的其他Prompt)")
         return template
 
-    def rollback_to_version(
-        self, db: Session, template_id: str, version_id: str, user_id: str | None = None
+    async def rollback_to_version_async(
+        self,
+        db: AsyncSession,
+        template_id: str,
+        version_id: str,
+        user_id: str | None = None,
     ) -> PromptTemplate:
-        """
-        回滚到指定版本
-
-        Args:
-            db: 数据库会话
-            template_id: Prompt模板ID
-            version_id: 要回滚到的目标版本ID
-            user_id: 操作人ID
-
-        Returns:
-            PromptTemplate
-        """
-        # 1. 获取目标版本
-        target_version = cast(
-            PromptVersion | None, db.query(PromptVersion).get(version_id)
-        )
+        target_version = await db.get(PromptVersion, version_id)
         if not target_version:
             raise ResourceNotFoundError("Prompt版本", version_id)
         if target_version.template_id != template_id:
@@ -247,16 +181,12 @@ class PromptManager:
                 details={"template_id": template_id, "version_id": version_id},
             )
 
-        template = cast(
-            PromptTemplate | None, db.query(PromptTemplate).get(template_id)
-        )
+        template = await db.get(PromptTemplate, template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
-        # 2. 生成新版本号
         new_version = self._increment_version(template.version)
 
-        # 3. 创建回滚版本
         version_record = PromptVersion()
         version_record.id = str(uuid4())
         version_record.template_id = template_id
@@ -268,47 +198,38 @@ class PromptManager:
         version_record.change_type = "rollback"
         version_record.created_by = user_id
 
-        # 4. 更新模板
         template.system_prompt = target_version.system_prompt
         template.user_prompt_template = target_version.user_prompt_template
         template.few_shot_examples = target_version.few_shot_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.now(UTC)
+        template.updated_at = datetime.utcnow()
 
         db.add(version_record)
-        db.commit()
-        db.refresh(template)
+        await db.commit()
+        await db.refresh(template)
 
         logger.info(
             f"✅ 回滚Prompt: {template.name} (v{template.version} ← v{target_version.version})"
         )
         return template
 
-    def get_prompt_history(self, db: Session, template_id: str) -> list[PromptVersion]:
-        """
-        获取Prompt的所有历史版本
-
-        Args:
-            db: 数据库会话
-            template_id: Prompt模板ID
-
-        Returns:
-            版本列表(按创建时间倒序)
-        """
-        versions = (
-            db.query(PromptVersion)
-            .filter(PromptVersion.template_id == template_id)
+    async def get_prompt_history_async(
+        self, db: AsyncSession, template_id: str
+    ) -> list[PromptVersion]:
+        stmt = (
+            select(PromptVersion)
+            .where(PromptVersion.template_id == template_id)
             .order_by(PromptVersion.created_at.desc())
-            .all()
         )
+        versions = list((await db.execute(stmt)).scalars().all())
 
         logger.info(f"📜 Prompt历史: {template_id}, 共{len(versions)}个版本")
         return versions
 
-    def list_templates(
+    async def list_templates_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         doc_type: str | None = None,
         status: str | None = None,
@@ -316,97 +237,56 @@ class PromptManager:
         page: int = 1,
         page_size: int = 10,
     ) -> dict[str, Any]:
-        """
-        获取Prompt模板列表
-
-        Args:
-            db: 数据库会话
-            doc_type: 文档类型筛选
-            status: 状态筛选
-            provider: 提供商筛选
-            page: 页码
-            page_size: 每页记录数
-
-        Returns:
-            包含 items, total, page, page_size 的字典
-        """
-        query = db.query(PromptTemplate)
-
-        # 应用筛选
+        clauses: list[Any] = []
         if doc_type:
-            query = query.filter(PromptTemplate.doc_type == doc_type)
+            clauses.append(PromptTemplate.doc_type == doc_type)
         if status:
-            query = query.filter(PromptTemplate.status == status)
+            clauses.append(PromptTemplate.status == status)
         if provider:
-            query = query.filter(PromptTemplate.provider == provider)
+            clauses.append(PromptTemplate.provider == provider)
 
-        # 计算总数
-        total = query.count()
+        count_stmt = select(func.count()).select_from(PromptTemplate)
+        if clauses:
+            count_stmt = count_stmt.where(*clauses)
+        total = int((await db.execute(count_stmt)).scalar() or 0)
 
-        # 分页
+        stmt = select(PromptTemplate)
+        if clauses:
+            stmt = stmt.where(*clauses)
         skip = (page - 1) * page_size
-        prompts = query.offset(skip).limit(page_size).all()
+        result = await db.execute(stmt.offset(skip).limit(page_size))
+        prompts = list(result.scalars().all())
 
-        return {
-            "items": prompts,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-        }
+        return {"items": prompts, "total": total, "page": page, "page_size": page_size}
 
-    def get_by_id(self, db: Session, *, template_id: str) -> PromptTemplate | None:
-        """
-        获取单个Prompt模板
+    async def get_by_id_async(
+        self, db: AsyncSession, *, template_id: str
+    ) -> PromptTemplate | None:
+        return await db.get(PromptTemplate, template_id)
 
-        Args:
-            db: 数据库会话
-            template_id: 模板ID
+    async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
+        total_stmt = select(func.count()).select_from(PromptTemplate)
+        total_prompts = int((await db.execute(total_stmt)).scalar() or 0)
 
-        Returns:
-            PromptTemplate or None
-        """
-        from typing import cast
-
-        return cast(PromptTemplate | None, db.query(PromptTemplate).get(template_id))
-
-    def get_statistics(self, db: Session) -> dict[str, Any]:
-        """
-        获取Prompt统计概览
-
-        Returns:
-            包含总数统计、按状态/类型/提供商分布、平均准确率等
-        """
-        from sqlalchemy import func
-
-        # 总数统计
-        total_prompts = db.query(PromptTemplate).count()
-
-        # 按状态统计
-        status_stats = (
-            db.query(PromptTemplate.status, func.count(PromptTemplate.id))
-            .group_by(PromptTemplate.status)
-            .all()
+        status_stmt = select(PromptTemplate.status, func.count(PromptTemplate.id)).group_by(
+            PromptTemplate.status
         )
+        status_stats = (await db.execute(status_stmt)).all()
 
-        # 按文档类型统计
-        doc_type_stats = (
-            db.query(PromptTemplate.doc_type, func.count(PromptTemplate.id))
-            .group_by(PromptTemplate.doc_type)
-            .all()
+        doc_type_stmt = select(PromptTemplate.doc_type, func.count(PromptTemplate.id)).group_by(
+            PromptTemplate.doc_type
         )
+        doc_type_stats = (await db.execute(doc_type_stmt)).all()
 
-        # 按提供商统计
-        provider_stats = (
-            db.query(PromptTemplate.provider, func.count(PromptTemplate.id))
-            .group_by(PromptTemplate.provider)
-            .all()
+        provider_stmt = select(PromptTemplate.provider, func.count(PromptTemplate.id)).group_by(
+            PromptTemplate.provider
         )
+        provider_stats = (await db.execute(provider_stmt)).all()
 
-        # 平均准确率
-        avg_accuracy = db.query(func.avg(PromptTemplate.avg_accuracy)).scalar() or 0.0
-        avg_confidence = (
-            db.query(func.avg(PromptTemplate.avg_confidence)).scalar() or 0.0
-        )
+        avg_accuracy_stmt = select(func.avg(PromptTemplate.avg_accuracy))
+        avg_accuracy = (await db.execute(avg_accuracy_stmt)).scalar() or 0.0
+        avg_confidence_stmt = select(func.avg(PromptTemplate.avg_confidence))
+        avg_confidence = (await db.execute(avg_confidence_stmt)).scalar() or 0.0
 
         return {
             "total_prompts": total_prompts,

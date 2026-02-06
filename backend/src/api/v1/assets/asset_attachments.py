@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
     BaseBusinessError,
@@ -13,7 +13,7 @@ from ....core.exception_handler import (
     internal_error,
 )
 from ....crud.asset import asset_crud
-from ....database import get_db
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....utils import file_security
@@ -39,14 +39,14 @@ def _resolve_attachment_path(asset_id: str, filename: str) -> Path:
     response_model=dict[str, Any],
     summary="上传资产附件",
 )
-def upload_asset_attachments(
+async def upload_asset_attachments(
     asset_id: str,
     files: list[UploadFile] = File(..., description="附件文件列表"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     try:
-        asset = asset_crud.get(db=db, id=asset_id)
+        asset = await asset_crud.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -62,15 +62,9 @@ def upload_asset_attachments(
                 continue
 
             try:
-                file_obj = getattr(file, "file", None)
-                if file_obj is None:
-                    raise ValueError("文件对象缺失")
-                try:
-                    file_obj.seek(0)
-                except Exception:
-                    pass
-                content = file_obj.read()
+                content = await file.read()
                 file_size = len(content)
+                await file.seek(0)
             except Exception:
                 content = b""
                 file_size = 0
@@ -117,13 +111,13 @@ def upload_asset_attachments(
     response_model=list[dict[str, Any]],
     summary="获取资产附件列表",
 )
-def get_asset_attachments(
+async def get_asset_attachments(
     asset_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[dict[str, Any]]:
     try:
-        asset = asset_crud.get(db=db, id=asset_id)
+        asset = await asset_crud.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -157,14 +151,14 @@ def get_asset_attachments(
     "/{asset_id}/attachments/{filename}",
     summary="下载资产附件",
 )
-def download_asset_attachment(
+async def download_asset_attachment(
     asset_id: str,
     filename: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> FileResponse:
     try:
-        asset = asset_crud.get(db=db, id=asset_id)
+        asset = await asset_crud.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -189,14 +183,14 @@ def download_asset_attachment(
     response_model=dict[str, str],
     summary="删除资产附件",
 )
-def delete_asset_attachment(
+async def delete_asset_attachment(
     asset_id: str,
     attachment_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, str]:
     try:
-        asset = asset_crud.get(db=db, id=asset_id)
+        asset = await asset_crud.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 

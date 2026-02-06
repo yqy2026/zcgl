@@ -1,6 +1,7 @@
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import AssetCustomField
 from ..schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
@@ -12,29 +13,24 @@ class CRUDCustomField(
 ):
     """自定义字段CRUD操作类"""
 
-    def get_by_field_name(
-        self, db: Session, *, field_name: str
+    async def get_by_field_name_async(
+        self, db: AsyncSession, *, field_name: str
     ) -> AssetCustomField | None:
-        """根据字段名获取字段配置"""
-        return (
-            db.query(AssetCustomField)
-            .filter(AssetCustomField.field_name == field_name)
-            .first()
+        result = await db.execute(
+            select(AssetCustomField).filter(AssetCustomField.field_name == field_name)
         )
+        return result.scalars().first()
 
-    def get_multi_with_filters(
+    async def get_multi_with_filters_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[AssetCustomField]:
-        """根据筛选条件获取字段列表"""
         if filters is None:
             filters = {}
-
-        from sqlalchemy import select
 
         base_query = select(self.model)
 
@@ -46,7 +42,6 @@ class CRUDCustomField(
                 qb_filters["is_required"] = filters["is_required"]
             if "is_active" in filters:
                 qb_filters["is_active"] = filters["is_active"]
-            # asset_id logic in original was pass/empty, keeping it implicitly handled or ignored
 
         query = self.query_builder.build_query(
             filters=qb_filters,
@@ -56,12 +51,12 @@ class CRUDCustomField(
             skip=skip,
             limit=limit,
         )
-        return list(db.execute(query).scalars().all())
+        result = await db.execute(query)
+        return list(result.scalars().all())
 
-    def get_active_fields(self, db: Session) -> list[AssetCustomField]:
-        """获取所有启用的字段"""
-        from sqlalchemy import select
-
+    async def get_active_fields_async(
+        self, db: AsyncSession
+    ) -> list[AssetCustomField]:
         base_query = select(self.model)
 
         query = self.query_builder.build_query(
@@ -70,16 +65,13 @@ class CRUDCustomField(
             sort_by="sort_order",
             sort_desc=False,
         )
-        return list(db.execute(query).scalars().all())
+        result = await db.execute(query)
+        return list(result.scalars().all())
 
-    def get_asset_field_values(
-        self, db: Session, *, asset_id: str
+    async def get_asset_field_values_async(
+        self, db: AsyncSession, *, asset_id: str
     ) -> list[dict[str, Any]]:
-        """获取资产的自定义字段值"""
-        # 这是一个存根，逻辑上属于数据访问，保留在CRUD中
-        # 实际实现中应查询 asset_field_values 表
         return []
-
     # Removed: validate_field_value (moved to Service)
     # Removed: update_asset_field_values (moved to Service)
     # Removed: toggle_active_status (moved to Service)

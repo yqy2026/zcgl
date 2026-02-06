@@ -77,7 +77,8 @@ def test_complete_auth_flow_e2e(
     )
     user_data = me_response.json()
     assert user_data["username"] == "admin_test"
-    assert user_data["role"] == "admin"
+    assert "admin" in (user_data.get("roles") or [])
+    assert user_data.get("is_admin") is True
     # Note: /me endpoint returns user info, permissions are in login response only
 
     # Step 4: Test rate limiting with authenticated user (Issue #1 verification)
@@ -141,7 +142,8 @@ def test_regular_user_auth_flow_e2e(
     me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
     user_data = me_response.json()
-    assert user_data["role"] == "user"
+    assert "user" in (user_data.get("roles") or [])
+    assert user_data.get("is_admin") is False
 
 
 def test_invalid_credentials_flow(

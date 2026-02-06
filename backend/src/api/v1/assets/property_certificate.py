@@ -28,7 +28,7 @@ from ....utils.file_security import generate_safe_filename, validate_file_extens
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/property-certificates", tags=["Property Certificates"])
+router = APIRouter()
 
 
 @router.post("/upload", response_model=PropertyCertificateUploadResponse)

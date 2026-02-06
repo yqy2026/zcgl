@@ -50,6 +50,9 @@ class QueryBuilder[ModelType]:
 
         query = select(func.count()).select_from(self.model)
 
+        if self._should_apply_soft_delete_filter(filters):
+            query = self._apply_soft_delete_filter(query)
+
         if filters:
             query = self._apply_filters(query, filters)
 
@@ -102,7 +105,8 @@ class QueryBuilder[ModelType]:
         query = base_query if base_query is not None else select(self.model)
 
         # 0. Apply Soft Delete Filter (自动过滤已删除记录)
-        query = self._apply_soft_delete_filter(query)
+        if self._should_apply_soft_delete_filter(filters):
+            query = self._apply_soft_delete_filter(query)
 
         # 1. Apply Filters (with validation)
         if filters:
@@ -164,6 +168,32 @@ class QueryBuilder[ModelType]:
             data_status_column = getattr(self.model, "data_status")
             query = query.where(data_status_column != "已删除")
         return query
+
+    @staticmethod
+    def _has_data_status_filter(filters: dict[str, Any]) -> bool:
+        for key, value in filters.items():
+            if value is None:
+                continue
+            field_name = key
+            if key.startswith("min_") or key.startswith("max_"):
+                field_name = key[4:]
+            elif "__" in key:
+                field_name = key.rsplit("__", 1)[0]
+            if field_name == "data_status":
+                return True
+        return False
+
+    def _should_apply_soft_delete_filter(
+        self, filters: dict[str, Any] | None
+    ) -> bool:
+        """
+        Apply soft delete filter unless caller explicitly filters by data_status.
+        """
+        if not hasattr(self.model, "data_status"):
+            return False
+        if not filters:
+            return True
+        return not self._has_data_status_filter(filters)
 
     def _apply_filters(
         self, query: Select[Any], filters: dict[str, Any]

@@ -15,7 +15,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.crud.asset import asset_crud
@@ -43,7 +42,7 @@ def _build_basic_filters(
     ownership_status: str | None,
     property_nature: str | None,
     usage_status: str | None,
-    ownership_entity: str | None,
+    ownership_id: str | None,
 ) -> dict[str, Any]:
     filters: dict[str, Any] = {}
     if ownership_status is not None:
@@ -52,28 +51,28 @@ def _build_basic_filters(
         filters["property_nature"] = property_nature
     if usage_status is not None:
         filters["usage_status"] = usage_status
-    if ownership_entity is not None:
-        filters["ownership_entity"] = ownership_entity
+    if ownership_id is not None:
+        filters["ownership_id"] = ownership_id
     return filters
 
 
-def _calculate_basic_statistics(
-    db: Session,
+async def _calculate_basic_statistics(
+    db: AsyncSession,
     ownership_status: str | None,
     property_nature: str | None,
     usage_status: str | None,
-    ownership_entity: str | None,
+    ownership_id: str | None,
 ) -> BasicStatisticsResponse:
     filters = _build_basic_filters(
         ownership_status,
         property_nature,
         usage_status,
-        ownership_entity,
+        ownership_id,
     )
 
     logger.info("开始获取基础统计数据，筛选条件: %s", filters)
 
-    assets, _ = asset_crud.get_multi_with_search(
+    assets, _ = await asset_crud.get_multi_with_search_async(
         db=db, skip=0, limit=10000, filters=filters
     )
     total_assets = len(assets)
@@ -129,14 +128,12 @@ async def get_basic_statistics(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
-    ownership_entity: str | None = Query(None, description="权属方筛选"),
+    ownership_id: str | None = Query(None, description="权属方ID筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> BasicStatisticsResponse:
-    return await db.run_sync(
-        lambda sync_db: _calculate_basic_statistics(
-            sync_db, ownership_status, property_nature, usage_status, ownership_entity
-        )
+    return await _calculate_basic_statistics(
+        db, ownership_status, property_nature, usage_status, ownership_id
     )
 
 
@@ -145,9 +142,7 @@ async def get_statistics_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> BasicStatisticsResponse:
-    return await db.run_sync(
-        lambda sync_db: _calculate_basic_statistics(sync_db, None, None, None, None)
-    )
+    return await _calculate_basic_statistics(db, None, None, None, None)
 
 
 @cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)
@@ -156,50 +151,20 @@ async def get_dashboard_data(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
 ) -> DashboardDataResponse:
-    def _sync(
-        sync_db: Session,
-    ) -> tuple[
-        BasicStatisticsResponse,
-        dict[str, Any],
-        dict[str, Any],
-        dict[str, Any],
-        dict[str, Any],
-        dict[str, Any],
-    ]:
-        basic_stats = _calculate_basic_statistics(sync_db, None, None, None, None)
-        filters = basic_stats.filters_applied or {}
+    basic_stats = await _calculate_basic_statistics(db, None, None, None, None)
+    filters = basic_stats.filters_applied or {}
 
-        area_service = AreaService(sync_db)
-        area_summary_stats = area_service.calculate_summary_with_aggregation(filters)
+    area_service = AreaService(db)
+    area_summary_stats = await area_service.calculate_summary_with_aggregation(filters)
 
-        financial_service = FinancialService(sync_db)
-        financial_summary_stats = financial_service.calculate_summary(filters)
+    financial_service = FinancialService(db)
+    financial_summary_stats = await financial_service.calculate_summary(filters)
 
-        occupancy_service = OccupancyService(sync_db)
-        occupancy_stats_data = occupancy_service.calculate_with_aggregation(filters)
-        category_occupancy_stats = (
-            occupancy_service.calculate_category_with_aggregation(
-                "business_category", filters
-            )
-        )
-
-        return (
-            basic_stats,
-            filters,
-            area_summary_stats,
-            financial_summary_stats,
-            occupancy_stats_data,
-            category_occupancy_stats,
-        )
-
-    (
-        basic_stats,
-        filters,
-        area_summary_stats,
-        financial_summary_stats,
-        occupancy_stats_data,
-        category_occupancy_stats,
-    ) = await db.run_sync(_sync)
+    occupancy_service = OccupancyService(db)
+    occupancy_stats_data = await occupancy_service.calculate_with_aggregation(filters)
+    category_occupancy_stats = await occupancy_service.calculate_category_with_aggregation(
+        "business_category", filters
+    )
 
     area_summary = AreaSummaryResponse(
         total_area=area_summary_stats["total_land_area"],
@@ -257,10 +222,8 @@ async def get_comprehensive_statistics(
     if not should_include_deleted:
         filters["data_status"] = "正常"
 
-    assets, _ = await db.run_sync(
-        lambda sync_db: asset_crud.get_multi_with_search(
-            db=sync_db, skip=0, limit=10000, filters=filters
-        )
+    assets, _ = await asset_crud.get_multi_with_search_async(
+        db=db, skip=0, limit=10000, filters=filters
     )
 
     total_assets = len(assets)

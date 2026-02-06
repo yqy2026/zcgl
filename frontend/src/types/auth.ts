@@ -14,8 +14,11 @@ export interface User {
   username: string;
   email?: string;
   full_name: string;
-  role: string;
-  organization_id?: string;
+  role_id?: string;
+  role_name?: string;
+  roles?: string[];
+  role_ids?: string[];
+  is_admin?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -29,7 +32,6 @@ export interface User {
   employee_id?: string;
   default_organization_id?: string;
   // 关联数据
-  roles?: Role[];
   organization?: Organization;
   permissions?: Permission[];
 }

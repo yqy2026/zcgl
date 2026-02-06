@@ -167,7 +167,7 @@ class ExtractionConfig(BaseModel):
     # 方法选择
     force_method: str | None = Field(
         default=None,
-        description="强制使用的提取方法: text, vision, smart",
+        description="强制使用的提取方法: text, vision, smart, ocr",
     )
 
     # 验证选项
@@ -226,7 +226,7 @@ class ExtractionConfig(BaseModel):
     def validate_force_method(cls, v: str | None) -> str | None:
         """验证强制方法"""
         if v is not None:
-            valid_methods = ["text", "vision", "smart", "llm"]
+            valid_methods = ["text", "vision", "smart", "llm", "ocr"]
             if v not in valid_methods:
                 raise PydanticCustomError(
                     "invalid_method",

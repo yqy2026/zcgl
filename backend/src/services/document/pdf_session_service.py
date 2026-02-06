@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 
@@ -16,17 +17,16 @@ from ...models.pdf_import_session import PDFImportSession, ProcessingStep, Sessi
 class PDFSessionService:
     """Manage PDF import sessions in the database."""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    def get_session(self, session_id: str) -> PDFImportSession | None:
-        return (
-            self.db.query(PDFImportSession)
-            .filter(PDFImportSession.session_id == session_id)
-            .first()
+    async def get_session(self, session_id: str) -> PDFImportSession | None:
+        stmt = select(PDFImportSession).where(
+            PDFImportSession.session_id == session_id
         )
+        return (await self.db.execute(stmt)).scalars().first()
 
-    def create_session(
+    async def create_session(
         self,
         *,
         session_id: str,
@@ -51,6 +51,6 @@ class PDFSessionService:
             session.processing_options = processing_options
 
         self.db.add(session)
-        self.db.commit()
-        self.db.refresh(session)
+        await self.db.commit()
+        await self.db.refresh(session)
         return session

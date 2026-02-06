@@ -33,11 +33,7 @@ from .core.import_utils import (
 )
 from .core.observability import init_sentry
 from .core.response_handler import success_response
-from .database import (
-    create_tables,
-    get_database_status,
-    init_db,
-)
+from .database import get_database_status, init_db
 from .security.logging_security import setup_logging_security
 
 if TYPE_CHECKING:
@@ -219,16 +215,13 @@ async def lifespan(app: FastAPI) -> Any:
     # 初始化枚举字段数据
     if not is_testing():
         try:
-            from .database import SessionLocal
+            from .database import async_session_scope
             from .services.enum_data_init import add_legacy_enum_values, init_enum_data
 
-            if SessionLocal is None:
-                logger.warning("无法获取数据库会话工厂，跳过枚举初始化")
-            else:
-                db = SessionLocal()
-                try:
-                    logger.info("开始初始化枚举字段数据...")
-                    init_result = init_enum_data(db, created_by="system")
+            try:
+                logger.info("开始初始化枚举字段数据...")
+                async with async_session_scope() as db:
+                    init_result = await init_enum_data(db, created_by="system")
                     logger.info(
                         f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
                     )
@@ -237,12 +230,12 @@ async def lifespan(app: FastAPI) -> Any:
                     )
 
                     # 添加遗留枚举值支持
-                    legacy_result = add_legacy_enum_values(db, created_by="system")
+                    legacy_result = await add_legacy_enum_values(
+                        db, created_by="system"
+                    )
                     logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
-                except Exception as e:
-                    logger.warning(f"枚举数据初始化失败: {e}")
-                finally:
-                    db.close()
+            except Exception as e:
+                logger.warning(f"枚举数据初始化失败: {e}")
         except ImportError as e:
             logger.warning(f"枚举初始化模块导入失败: {e}")
         except Exception as e:
@@ -383,14 +376,13 @@ except Exception as e:
 
 # 初始化数据库（跳过测试模式）
 if not is_testing():
-    # 初始化数据库
-    init_db()
+    import asyncio
 
-    # 创建数据库表
-    create_tables()
+    # 初始化数据库
+    asyncio.run(init_db())
 
     # 记录数据库状态
-    db_status = get_database_status()
+    db_status = asyncio.run(get_database_status())
     logger.info(f"数据库状态: {db_status}")
 
     health_check = db_status.get("health_check", {})

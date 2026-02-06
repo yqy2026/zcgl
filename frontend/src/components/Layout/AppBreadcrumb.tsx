@@ -149,7 +149,9 @@ const AppBreadcrumb: React.FC = () => {
       ];
     }
 
-    const certificateDetailMatch = pathname.match(/^\/property-certificates\/([^/]+)$/);
+    const certificateDetailMatch = pathname.match(
+      /^\/property-certificates\/(?!import$)([^/]+)$/
+    );
     if (certificateDetailMatch !== undefined && certificateDetailMatch !== null) {
       return [
         ...breadcrumbItems,

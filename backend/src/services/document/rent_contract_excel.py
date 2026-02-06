@@ -18,12 +18,13 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...core.enums import ContractStatus
 from ...core.exception_handler import BusinessValidationError
 from ...crud.rent_contract import rent_contract as rent_contract_crud
-from ...database import get_session_factory
 from ...models.rent_contract import RentContract, RentLedger, RentTerm
 from ...schemas.rent_contract import (
     ContractType,
@@ -225,9 +226,10 @@ class RentContractExcelService:
             "file_size": file_path.stat().st_size,
         }
 
-    def import_contracts_from_excel(
+    async def import_contracts_from_excel(
         self,
         *,
+        db: AsyncSession,
         file_path: str,
         import_terms: bool = True,
         import_ledger: bool = False,
@@ -259,239 +261,235 @@ class RentContractExcelService:
             except Exception:
                 warnings.append("未找到租金条款表，已按基础月租金生成默认条款。")
 
-        session_factory = get_session_factory()
-        db: Session = session_factory()
-        try:
-            for index, row in contracts_df.iterrows():
-                row_data = {k: row[k] for k in contracts_df.columns}
-                contract_number_raw = row_data.get("contract_number")
-                contract_number = (
-                    str(contract_number_raw).strip() if contract_number_raw else ""
+        for index, row in contracts_df.iterrows():
+            row_data = {k: row[k] for k in contracts_df.columns}
+            contract_number_raw = row_data.get("contract_number")
+            contract_number = (
+                str(contract_number_raw).strip() if contract_number_raw else ""
+            )
+            ownership_id_raw = row_data.get("ownership_id")
+            ownership_id = str(ownership_id_raw).strip() if ownership_id_raw else ""
+            tenant_name_raw = row_data.get("tenant_name")
+            tenant_name = str(tenant_name_raw).strip() if tenant_name_raw else ""
+
+            sign_date = _parse_date(row_data.get("sign_date"))
+            start_date = _parse_date(row_data.get("start_date"))
+            end_date = _parse_date(row_data.get("end_date"))
+
+            missing_fields = []
+            if not contract_number:
+                missing_fields.append("合同编号")
+            if not ownership_id:
+                missing_fields.append("权属方ID")
+            if not tenant_name:
+                missing_fields.append("承租方名称")
+            if sign_date is None:
+                missing_fields.append("签订日期")
+            if start_date is None:
+                missing_fields.append("租期开始日期")
+            if end_date is None:
+                missing_fields.append("租期结束日期")
+
+            if missing_fields:
+                errors.append(
+                    f"第 {index + 2} 行缺少字段: {', '.join(missing_fields)}"
                 )
-                ownership_id_raw = row_data.get("ownership_id")
-                ownership_id = str(ownership_id_raw).strip() if ownership_id_raw else ""
-                tenant_name_raw = row_data.get("tenant_name")
-                tenant_name = str(tenant_name_raw).strip() if tenant_name_raw else ""
+                continue
+            try:
+                assert sign_date is not None
+                assert start_date is not None
+                assert end_date is not None
 
-                sign_date = _parse_date(row_data.get("sign_date"))
-                start_date = _parse_date(row_data.get("start_date"))
-                end_date = _parse_date(row_data.get("end_date"))
-
-                missing_fields = []
-                if not contract_number:
-                    missing_fields.append("合同编号")
-                if not ownership_id:
-                    missing_fields.append("权属方ID")
-                if not tenant_name:
-                    missing_fields.append("承租方名称")
-                if sign_date is None:
-                    missing_fields.append("签订日期")
-                if start_date is None:
-                    missing_fields.append("租期开始日期")
-                if end_date is None:
-                    missing_fields.append("租期结束日期")
-
-                if missing_fields:
-                    errors.append(
-                        f"第 {index + 2} 行缺少字段: {', '.join(missing_fields)}"
+                contract_type = ContractType(
+                    _normalize_enum(
+                        row_data.get("contract_type"),
+                        CONTRACT_TYPE_ALIASES,
+                        ContractType.LEASE_DOWNSTREAM.value,
                     )
-                    continue
-                try:
-                    assert sign_date is not None
-                    assert start_date is not None
-                    assert end_date is not None
-
-                    contract_type = ContractType(
-                        _normalize_enum(
-                            row_data.get("contract_type"),
-                            CONTRACT_TYPE_ALIASES,
-                            ContractType.LEASE_DOWNSTREAM.value,
-                        )
+                )
+                payment_cycle = PaymentCycle(
+                    _normalize_enum(
+                        row_data.get("payment_cycle"),
+                        PAYMENT_CYCLE_ALIASES,
+                        PaymentCycle.MONTHLY.value,
                     )
-                    payment_cycle = PaymentCycle(
-                        _normalize_enum(
-                            row_data.get("payment_cycle"),
-                            PAYMENT_CYCLE_ALIASES,
-                            PaymentCycle.MONTHLY.value,
-                        )
+                )
+                contract_status = ContractStatus(
+                    _normalize_enum(
+                        row_data.get("contract_status"),
+                        CONTRACT_STATUS_ALIASES,
+                        ContractStatus.ACTIVE.value,
                     )
-                    contract_status = ContractStatus(
-                        _normalize_enum(
-                            row_data.get("contract_status"),
-                            CONTRACT_STATUS_ALIASES,
-                            ContractStatus.ACTIVE.value,
-                        )
-                    )
+                )
 
-                    asset_ids = _parse_asset_ids(row_data.get("asset_ids"))
+                asset_ids = _parse_asset_ids(row_data.get("asset_ids"))
 
-                    base_rent = (
-                        _parse_decimal(row_data.get("monthly_rent_base"), Decimal("0"))
-                        or Decimal("0")
-                    )
-                    total_deposit = (
-                        _parse_decimal(row_data.get("total_deposit"), Decimal("0"))
-                        or Decimal("0")
-                    )
-                    service_fee_rate = _parse_decimal(row_data.get("service_fee_rate"))
+                base_rent = (
+                    _parse_decimal(row_data.get("monthly_rent_base"), Decimal("0"))
+                    or Decimal("0")
+                )
+                total_deposit = (
+                    _parse_decimal(row_data.get("total_deposit"), Decimal("0"))
+                    or Decimal("0")
+                )
+                service_fee_rate = _parse_decimal(row_data.get("service_fee_rate"))
 
-                    term_rows = terms_map.get(contract_number, [])
-                    terms: list[RentTermCreate] = []
-                    if term_rows:
-                        for term_row in term_rows:
-                            term_start = _parse_date(term_row.get("start_date"))
-                            term_end = _parse_date(term_row.get("end_date"))
-                            if term_start is None or term_end is None:
-                                continue
-                            term = RentTermCreate(
-                                start_date=term_start,
-                                end_date=term_end,
-                                monthly_rent=(
-                                    _parse_decimal(
-                                        term_row.get("monthly_rent"), Decimal("0")
-                                    )
-                                    or Decimal("0")
-                                ),
-                                management_fee=(
-                                    _parse_decimal(
-                                        term_row.get("management_fee"), Decimal("0")
-                                    )
-                                    or Decimal("0")
-                                ),
-                                other_fees=(
-                                    _parse_decimal(
-                                        term_row.get("other_fees"), Decimal("0")
-                                    )
-                                    or Decimal("0")
-                                ),
-                                total_monthly_amount=_parse_decimal(
-                                    term_row.get("total_monthly_amount")
-                                ),
-                                rent_description=(
-                                    str(term_row.get("rent_description")).strip()
-                                    if term_row.get("rent_description") is not None
-                                    else None
-                                ),
-                            )
-                            terms.append(term)
-
-                    if not terms:
-                        terms = [
-                            RentTermCreate(
-                                start_date=start_date,
-                                end_date=end_date,
-                                monthly_rent=base_rent,
-                                management_fee=Decimal("0"),
-                                other_fees=Decimal("0"),
-                                total_monthly_amount=None,
-                                rent_description=None,
-                            )
-                        ]
-                        warnings.append(
-                            f"合同 {contract_number} 未提供条款，已生成默认条款。"
-                        )
-
-                    contract_data = RentContractCreate(
-                        contract_number=contract_number,
-                        ownership_id=ownership_id,
-                        contract_type=contract_type,
-                        tenant_name=tenant_name,
-                        sign_date=sign_date,
-                        start_date=start_date,
-                        end_date=end_date,
-                        total_deposit=total_deposit,
-                        monthly_rent_base=base_rent,
-                        payment_cycle=payment_cycle,
-                        contract_status=contract_status,
-                        asset_ids=asset_ids,
-                        tenant_contact=(
-                            str(row_data.get("tenant_contact")).strip()
-                            if row_data.get("tenant_contact") is not None
-                            else None
-                        ),
-                        tenant_phone=(
-                            str(row_data.get("tenant_phone")).strip()
-                            if row_data.get("tenant_phone") is not None
-                            else None
-                        ),
-                        tenant_address=(
-                            str(row_data.get("tenant_address")).strip()
-                            if row_data.get("tenant_address") is not None
-                            else None
-                        ),
-                        tenant_usage=(
-                            str(row_data.get("tenant_usage")).strip()
-                            if row_data.get("tenant_usage") is not None
-                            else None
-                        ),
-                        owner_name=(
-                            str(row_data.get("owner_name")).strip()
-                            if row_data.get("owner_name") is not None
-                            else None
-                        ),
-                        owner_contact=(
-                            str(row_data.get("owner_contact")).strip()
-                            if row_data.get("owner_contact") is not None
-                            else None
-                        ),
-                        owner_phone=(
-                            str(row_data.get("owner_phone")).strip()
-                            if row_data.get("owner_phone") is not None
-                            else None
-                        ),
-                        service_fee_rate=service_fee_rate,
-                        payment_terms=(
-                            str(row_data.get("payment_terms")).strip()
-                            if row_data.get("payment_terms") is not None
-                            else None
-                        ),
-                        contract_notes=(
-                            str(row_data.get("contract_notes")).strip()
-                            if row_data.get("contract_notes") is not None
-                            else None
-                        ),
-                        upstream_contract_id=(
-                            str(row_data.get("upstream_contract_id")).strip()
-                            if row_data.get("upstream_contract_id") is not None
-                            else None
-                        ),
-                        rent_terms=terms,
-                    )
-
-                    existing = (
-                        db.query(RentContract)
-                        .filter(RentContract.contract_number == contract_number)
-                        .first()
-                    )
-                    if existing:
-                        if not overwrite_existing:
-                            errors.append(f"合同编号已存在: {contract_number}")
+                term_rows = terms_map.get(contract_number, [])
+                terms: list[RentTermCreate] = []
+                if term_rows:
+                    for term_row in term_rows:
+                        term_start = _parse_date(term_row.get("start_date"))
+                        term_end = _parse_date(term_row.get("end_date"))
+                        if term_start is None or term_end is None:
                             continue
-                        update_data = RentContractUpdate(
-                            **contract_data.model_dump(exclude={"rent_terms"})
+                        term = RentTermCreate(
+                            start_date=term_start,
+                            end_date=term_end,
+                            monthly_rent=(
+                                _parse_decimal(
+                                    term_row.get("monthly_rent"), Decimal("0")
+                                )
+                                or Decimal("0")
+                            ),
+                            management_fee=(
+                                _parse_decimal(
+                                    term_row.get("management_fee"), Decimal("0")
+                                )
+                                or Decimal("0")
+                            ),
+                            other_fees=(
+                                _parse_decimal(
+                                    term_row.get("other_fees"), Decimal("0")
+                                )
+                                or Decimal("0")
+                            ),
+                            total_monthly_amount=_parse_decimal(
+                                term_row.get("total_monthly_amount")
+                            ),
+                            rent_description=(
+                                str(term_row.get("rent_description")).strip()
+                                if term_row.get("rent_description") is not None
+                                else None
+                            ),
                         )
-                        update_data.rent_terms = [
-                            RentTermUpdate(**term.model_dump()) for term in terms
-                        ]
-                        rent_contract_service.update_contract(
-                            db=db, db_obj=existing, obj_in=update_data
+                        terms.append(term)
+
+                if not terms:
+                    terms = [
+                        RentTermCreate(
+                            start_date=start_date,
+                            end_date=end_date,
+                            monthly_rent=base_rent,
+                            management_fee=Decimal("0"),
+                            other_fees=Decimal("0"),
+                            total_monthly_amount=None,
+                            rent_description=None,
                         )
-                    else:
-                        rent_contract_service.create_contract(
-                            db=db, obj_in=contract_data
-                        )
+                    ]
+                    warnings.append(
+                        f"合同 {contract_number} 未提供条款，已生成默认条款。"
+                    )
 
-                    imported_contracts += 1
-                    imported_terms += len(terms)
-                except Exception as exc:
-                    errors.append(f"第 {index + 2} 行导入失败: {exc}")
-                    continue
+                contract_data = RentContractCreate(
+                    contract_number=contract_number,
+                    ownership_id=ownership_id,
+                    contract_type=contract_type,
+                    tenant_name=tenant_name,
+                    sign_date=sign_date,
+                    start_date=start_date,
+                    end_date=end_date,
+                    total_deposit=total_deposit,
+                    monthly_rent_base=base_rent,
+                    payment_cycle=payment_cycle,
+                    contract_status=contract_status,
+                    asset_ids=asset_ids,
+                    tenant_contact=(
+                        str(row_data.get("tenant_contact")).strip()
+                        if row_data.get("tenant_contact") is not None
+                        else None
+                    ),
+                    tenant_phone=(
+                        str(row_data.get("tenant_phone")).strip()
+                        if row_data.get("tenant_phone") is not None
+                        else None
+                    ),
+                    tenant_address=(
+                        str(row_data.get("tenant_address")).strip()
+                        if row_data.get("tenant_address") is not None
+                        else None
+                    ),
+                    tenant_usage=(
+                        str(row_data.get("tenant_usage")).strip()
+                        if row_data.get("tenant_usage") is not None
+                        else None
+                    ),
+                    owner_name=(
+                        str(row_data.get("owner_name")).strip()
+                        if row_data.get("owner_name") is not None
+                        else None
+                    ),
+                    owner_contact=(
+                        str(row_data.get("owner_contact")).strip()
+                        if row_data.get("owner_contact") is not None
+                        else None
+                    ),
+                    owner_phone=(
+                        str(row_data.get("owner_phone")).strip()
+                        if row_data.get("owner_phone") is not None
+                        else None
+                    ),
+                    service_fee_rate=service_fee_rate,
+                    payment_terms=(
+                        str(row_data.get("payment_terms")).strip()
+                        if row_data.get("payment_terms") is not None
+                        else None
+                    ),
+                    contract_notes=(
+                        str(row_data.get("contract_notes")).strip()
+                        if row_data.get("contract_notes") is not None
+                        else None
+                    ),
+                    upstream_contract_id=(
+                        str(row_data.get("upstream_contract_id")).strip()
+                        if row_data.get("upstream_contract_id") is not None
+                        else None
+                    ),
+                    rent_terms=terms,
+                )
 
-            if import_ledger:
-                warnings.append("台账导入暂未实现，已跳过台账数据。")
+                existing_result = await db.execute(
+                    select(RentContract).where(
+                        RentContract.contract_number == contract_number
+                    )
+                )
+                existing = existing_result.scalars().first()
+                if existing:
+                    if not overwrite_existing:
+                        errors.append(f"合同编号已存在: {contract_number}")
+                        continue
+                    update_data = RentContractUpdate(
+                        **contract_data.model_dump(exclude={"rent_terms"})
+                    )
+                    update_data.rent_terms = [
+                        RentTermUpdate(**term.model_dump()) for term in terms
+                    ]
+                    await rent_contract_service.update_contract_async(
+                        db=db, db_obj=existing, obj_in=update_data
+                    )
+                else:
+                    await rent_contract_service.create_contract_async(
+                        db=db, obj_in=contract_data
+                    )
 
-        finally:
-            db.close()
+                imported_contracts += 1
+                imported_terms += len(terms)
+            except Exception as exc:
+                await db.rollback()
+                errors.append(f"第 {index + 2} 行导入失败: {exc}")
+                continue
+
+        if import_ledger:
+            warnings.append("台账导入暂未实现，已跳过台账数据。")
 
         success = imported_contracts > 0 and len(errors) == 0
         return {
@@ -504,9 +502,10 @@ class RentContractExcelService:
             "warnings": warnings,
         }
 
-    def export_contracts_to_excel(
+    async def export_contracts_to_excel(
         self,
         *,
+        db: AsyncSession,
         contract_ids: list[str] | None = None,
         include_terms: bool = True,
         include_ledger: bool = True,
@@ -517,135 +516,120 @@ class RentContractExcelService:
         file_name = f"rent_contract_export_{uuid.uuid4().hex[:8]}.xlsx"
         file_path = export_dir / file_name
 
-        session_factory = get_session_factory()
-        db: Session = session_factory()
-        try:
-            query = db.query(RentContract)
-            if contract_ids:
-                query = query.filter(RentContract.id.in_(contract_ids))
-            if start_date:
-                query = query.filter(RentContract.start_date >= start_date)
-            if end_date:
-                query = query.filter(RentContract.end_date <= end_date)
+        stmt = select(RentContract).options(selectinload(RentContract.assets))
+        if contract_ids:
+            stmt = stmt.where(RentContract.id.in_(contract_ids))
+        if start_date:
+            stmt = stmt.where(RentContract.start_date >= start_date)
+        if end_date:
+            stmt = stmt.where(RentContract.end_date <= end_date)
 
-            contracts = query.order_by(RentContract.created_at.desc()).all()
-            for contract in contracts:
-                rent_contract_crud.sensitive_data_handler.decrypt_data(
-                    contract.__dict__
-                )
+        stmt = stmt.order_by(RentContract.created_at.desc())
+        contracts = list((await db.execute(stmt)).scalars().all())
+        for contract in contracts:
+            rent_contract_crud.sensitive_data_handler.decrypt_data(contract.__dict__)
 
-            contract_rows: list[dict[str, Any]] = []
-            for contract in contracts:
-                assets = []
-                if hasattr(contract, "assets"):
-                    assets = [str(asset.id) for asset in contract.assets]
-                contract_rows.append(
+        contract_rows: list[dict[str, Any]] = []
+        for contract in contracts:
+            assets = []
+            if hasattr(contract, "assets"):
+                assets = [str(asset.id) for asset in contract.assets]
+            contract_rows.append(
+                {
+                    CONTRACT_COLUMNS["contract_number"]: contract.contract_number,
+                    CONTRACT_COLUMNS["ownership_id"]: contract.ownership_id,
+                    CONTRACT_COLUMNS["contract_type"]: str(contract.contract_type),
+                    CONTRACT_COLUMNS["tenant_name"]: contract.tenant_name,
+                    CONTRACT_COLUMNS["sign_date"]: contract.sign_date,
+                    CONTRACT_COLUMNS["start_date"]: contract.start_date,
+                    CONTRACT_COLUMNS["end_date"]: contract.end_date,
+                    CONTRACT_COLUMNS["total_deposit"]: contract.total_deposit,
+                    CONTRACT_COLUMNS["monthly_rent_base"]: contract.monthly_rent_base,
+                    CONTRACT_COLUMNS["payment_cycle"]: str(contract.payment_cycle),
+                    CONTRACT_COLUMNS["contract_status"]: str(contract.contract_status),
+                    CONTRACT_COLUMNS["asset_ids"]: ",".join(assets),
+                    CONTRACT_COLUMNS["tenant_contact"]: contract.tenant_contact,
+                    CONTRACT_COLUMNS["tenant_phone"]: contract.tenant_phone,
+                    CONTRACT_COLUMNS["tenant_address"]: contract.tenant_address,
+                    CONTRACT_COLUMNS["tenant_usage"]: contract.tenant_usage,
+                    CONTRACT_COLUMNS["owner_name"]: contract.owner_name,
+                    CONTRACT_COLUMNS["owner_contact"]: contract.owner_contact,
+                    CONTRACT_COLUMNS["owner_phone"]: contract.owner_phone,
+                    CONTRACT_COLUMNS["service_fee_rate"]: contract.service_fee_rate,
+                    CONTRACT_COLUMNS["payment_terms"]: contract.payment_terms,
+                    CONTRACT_COLUMNS["contract_notes"]: contract.contract_notes,
+                    CONTRACT_COLUMNS["upstream_contract_id"]: contract.upstream_contract_id,
+                }
+            )
+
+        terms_df = pd.DataFrame(columns=list(TERM_COLUMNS.values()))
+        if include_terms and contracts:
+            term_rows: list[dict[str, Any]] = []
+            contract_ids_lookup = [contract.id for contract in contracts]
+            terms_stmt = (
+                select(RentTerm)
+                .where(RentTerm.contract_id.in_(contract_ids_lookup))
+                .order_by(RentTerm.contract_id, RentTerm.start_date)
+            )
+            terms = list((await db.execute(terms_stmt)).scalars().all())
+            contract_number_map = {
+                contract.id: contract.contract_number for contract in contracts
+            }
+            for term in terms:
+                term_rows.append(
                     {
-                        CONTRACT_COLUMNS["contract_number"]: contract.contract_number,
-                        CONTRACT_COLUMNS["ownership_id"]: contract.ownership_id,
-                        CONTRACT_COLUMNS["contract_type"]: str(contract.contract_type),
-                        CONTRACT_COLUMNS["tenant_name"]: contract.tenant_name,
-                        CONTRACT_COLUMNS["sign_date"]: contract.sign_date,
-                        CONTRACT_COLUMNS["start_date"]: contract.start_date,
-                        CONTRACT_COLUMNS["end_date"]: contract.end_date,
-                        CONTRACT_COLUMNS["total_deposit"]: contract.total_deposit,
-                        CONTRACT_COLUMNS[
-                            "monthly_rent_base"
-                        ]: contract.monthly_rent_base,
-                        CONTRACT_COLUMNS["payment_cycle"]: str(contract.payment_cycle),
-                        CONTRACT_COLUMNS["contract_status"]: str(
-                            contract.contract_status
+                        TERM_COLUMNS["contract_number"]: contract_number_map.get(
+                            term.contract_id
                         ),
-                        CONTRACT_COLUMNS["asset_ids"]: ",".join(assets),
-                        CONTRACT_COLUMNS["tenant_contact"]: contract.tenant_contact,
-                        CONTRACT_COLUMNS["tenant_phone"]: contract.tenant_phone,
-                        CONTRACT_COLUMNS["tenant_address"]: contract.tenant_address,
-                        CONTRACT_COLUMNS["tenant_usage"]: contract.tenant_usage,
-                        CONTRACT_COLUMNS["owner_name"]: contract.owner_name,
-                        CONTRACT_COLUMNS["owner_contact"]: contract.owner_contact,
-                        CONTRACT_COLUMNS["owner_phone"]: contract.owner_phone,
-                        CONTRACT_COLUMNS["service_fee_rate"]: contract.service_fee_rate,
-                        CONTRACT_COLUMNS["payment_terms"]: contract.payment_terms,
-                        CONTRACT_COLUMNS["contract_notes"]: contract.contract_notes,
-                        CONTRACT_COLUMNS[
-                            "upstream_contract_id"
-                        ]: contract.upstream_contract_id,
+                        TERM_COLUMNS["start_date"]: term.start_date,
+                        TERM_COLUMNS["end_date"]: term.end_date,
+                        TERM_COLUMNS["monthly_rent"]: term.monthly_rent,
+                        TERM_COLUMNS["management_fee"]: term.management_fee,
+                        TERM_COLUMNS["other_fees"]: term.other_fees,
+                        TERM_COLUMNS["total_monthly_amount"]: term.total_monthly_amount,
+                        TERM_COLUMNS["rent_description"]: term.rent_description,
                     }
                 )
+            terms_df = pd.DataFrame(term_rows)
 
-            terms_df = pd.DataFrame(columns=list(TERM_COLUMNS.values()))
-            if include_terms and contracts:
-                term_rows: list[dict[str, Any]] = []
-                contract_ids_lookup = [contract.id for contract in contracts]
-                terms = (
-                    db.query(RentTerm)
-                    .filter(RentTerm.contract_id.in_(contract_ids_lookup))
-                    .order_by(RentTerm.contract_id, RentTerm.start_date)
-                    .all()
-                )
-                contract_number_map = {
-                    contract.id: contract.contract_number for contract in contracts
-                }
-                for term in terms:
-                    term_rows.append(
-                        {
-                            TERM_COLUMNS["contract_number"]: contract_number_map.get(
-                                term.contract_id
-                            ),
-                            TERM_COLUMNS["start_date"]: term.start_date,
-                            TERM_COLUMNS["end_date"]: term.end_date,
-                            TERM_COLUMNS["monthly_rent"]: term.monthly_rent,
-                            TERM_COLUMNS["management_fee"]: term.management_fee,
-                            TERM_COLUMNS["other_fees"]: term.other_fees,
-                            TERM_COLUMNS[
-                                "total_monthly_amount"
-                            ]: term.total_monthly_amount,
-                            TERM_COLUMNS["rent_description"]: term.rent_description,
-                        }
-                    )
-                terms_df = pd.DataFrame(term_rows)
-
-            ledger_df = pd.DataFrame(columns=list(LEDGER_COLUMNS.values()))
-            if include_ledger and contracts:
-                ledger_rows: list[dict[str, Any]] = []
-                contract_ids_lookup = [contract.id for contract in contracts]
-                ledgers = (
-                    db.query(RentLedger)
-                    .filter(RentLedger.contract_id.in_(contract_ids_lookup))
-                    .order_by(RentLedger.contract_id, RentLedger.year_month)
-                    .all()
-                )
-                contract_number_map = {
-                    contract.id: contract.contract_number for contract in contracts
-                }
-                for ledger in ledgers:
-                    ledger_rows.append(
-                        {
-                            LEDGER_COLUMNS["contract_number"]: contract_number_map.get(
-                                ledger.contract_id
-                            ),
-                            LEDGER_COLUMNS["year_month"]: ledger.year_month,
-                            LEDGER_COLUMNS["due_date"]: ledger.due_date,
-                            LEDGER_COLUMNS["amount_due"]: ledger.due_amount,
-                            LEDGER_COLUMNS["payment_status"]: ledger.payment_status,
-                            LEDGER_COLUMNS["paid_date"]: ledger.payment_date,
-                            LEDGER_COLUMNS["remarks"]: ledger.notes,
-                        }
-                    )
-                ledger_df = pd.DataFrame(ledger_rows)
-
-            contracts_df = pd.DataFrame(
-                contract_rows, columns=list(CONTRACT_COLUMNS.values())
+        ledger_df = pd.DataFrame(columns=list(LEDGER_COLUMNS.values()))
+        if include_ledger and contracts:
+            ledger_rows: list[dict[str, Any]] = []
+            contract_ids_lookup = [contract.id for contract in contracts]
+            ledger_stmt = (
+                select(RentLedger)
+                .where(RentLedger.contract_id.in_(contract_ids_lookup))
+                .order_by(RentLedger.contract_id, RentLedger.year_month)
             )
-            with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
-                contracts_df.to_excel(writer, sheet_name=CONTRACT_SHEET, index=False)
-                if include_terms:
-                    terms_df.to_excel(writer, sheet_name=TERM_SHEET, index=False)
-                if include_ledger:
-                    ledger_df.to_excel(writer, sheet_name=LEDGER_SHEET, index=False)
+            ledgers = list((await db.execute(ledger_stmt)).scalars().all())
+            contract_number_map = {
+                contract.id: contract.contract_number for contract in contracts
+            }
+            for ledger in ledgers:
+                ledger_rows.append(
+                    {
+                        LEDGER_COLUMNS["contract_number"]: contract_number_map.get(
+                            ledger.contract_id
+                        ),
+                        LEDGER_COLUMNS["year_month"]: ledger.year_month,
+                        LEDGER_COLUMNS["due_date"]: ledger.due_date,
+                        LEDGER_COLUMNS["amount_due"]: ledger.due_amount,
+                        LEDGER_COLUMNS["payment_status"]: ledger.payment_status,
+                        LEDGER_COLUMNS["paid_date"]: ledger.payment_date,
+                        LEDGER_COLUMNS["remarks"]: ledger.notes,
+                    }
+                )
+            ledger_df = pd.DataFrame(ledger_rows)
 
-        finally:
-            db.close()
+        contracts_df = pd.DataFrame(
+            contract_rows, columns=list(CONTRACT_COLUMNS.values())
+        )
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            contracts_df.to_excel(writer, sheet_name=CONTRACT_SHEET, index=False)
+            if include_terms:
+                terms_df.to_excel(writer, sheet_name=TERM_SHEET, index=False)
+            if include_ledger:
+                ledger_df.to_excel(writer, sheet_name=LEDGER_SHEET, index=False)
 
         return {
             "success": True,

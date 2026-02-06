@@ -242,7 +242,7 @@ export const checkAssetDataCompleteness = (
 } => {
   // 必填字段
   const requiredFields = [
-    'ownership_entity',
+    'ownership_id',
     'property_name',
     'address',
     'ownership_status',

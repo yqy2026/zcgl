@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, asc, desc
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, asc, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..enums.task import TaskStatus, TaskType
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
@@ -43,9 +43,33 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
 
         return query
 
-    def get_multi(
+    async def create_async(
         self,
-        db: Session,
+        db: AsyncSession,
+        *,
+        obj_in: TaskCreate | dict[str, Any],
+        commit: bool = True,
+        **kwargs: Any,
+    ) -> AsyncTask:
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            obj_in_data = obj_in.model_dump()
+
+        obj_in_data.update(kwargs)
+        db_obj = AsyncTask(**obj_in_data)
+        db.add(db_obj)
+        if commit:
+            await db.commit()
+            await db.refresh(db_obj)
+        else:
+            await db.flush()
+            await db.refresh(db_obj)
+        return db_obj
+
+    async def get_multi_async(
+        self,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -57,14 +81,11 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         order_by: str = "created_at",
         order_dir: str = "desc",
         filters: dict[str, Any] | None = None,
-        **kwargs: Any,  # 扩展参数，与基类兼容
+        **kwargs: Any,
     ) -> list[AsyncTask]:
-        """获取任务列表"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
-
-        # 应用筛选条件
-        query = self._apply_task_filters(
-            query,
+        stmt = select(AsyncTask).filter(AsyncTask.is_active.is_(True))
+        stmt = self._apply_task_filters(
+            stmt,
             task_type=task_type,
             status=status,
             user_id=user_id,
@@ -73,20 +94,20 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
             filters=filters,
         )
 
-        # 应用排序
         if hasattr(AsyncTask, order_by):
             order_column = getattr(AsyncTask, order_by)
             if order_dir.lower() == "desc":
-                query = query.order_by(desc(order_column))
+                stmt = stmt.order_by(desc(order_column))
             else:
-                query = query.order_by(asc(order_column))
+                stmt = stmt.order_by(asc(order_column))
 
-        # 应用分页
-        return query.offset(skip).limit(limit).all()
+        stmt = stmt.offset(skip).limit(limit)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
-    def count(
+    async def count_async(
         self,
-        db: Session,
+        db: AsyncSession,
         filters: dict[str, Any] | None = None,
         task_type: str | None = None,
         status: str | None = None,
@@ -95,11 +116,9 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         created_before: datetime | None = None,
         **kwargs: Any,
     ) -> int:
-        """统计任务数量"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
-
-        query = self._apply_task_filters(
-            query,
+        stmt = select(func.count(AsyncTask.id)).filter(AsyncTask.is_active.is_(True))
+        stmt = self._apply_task_filters(
+            stmt,
             task_type=task_type,
             status=status,
             user_id=user_id,
@@ -107,58 +126,65 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
             created_before=created_before,
             filters=filters,
         )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
 
-        return query.count()
-
-    def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
-        """获取任务统计信息"""
-        base_query = db.query(AsyncTask).filter(AsyncTask.is_active.is_(True))
-
+    async def get_statistics_async(
+        self, db: AsyncSession, user_id: str | None = None
+    ) -> dict[str, Any]:
+        conditions = [AsyncTask.is_active.is_(True)]
         if user_id:
-            base_query = base_query.filter(AsyncTask.user_id == user_id)
+            conditions.append(AsyncTask.user_id == user_id)
 
-        total_tasks = base_query.count()
-        # Simplified counting mainly for read operations
-        running_tasks = base_query.filter(
-            AsyncTask.status == TaskStatus.RUNNING.value
-        ).count()
-        completed_tasks = base_query.filter(
-            AsyncTask.status == TaskStatus.COMPLETED.value
-        ).count()
-        failed_tasks = base_query.filter(
-            AsyncTask.status == TaskStatus.FAILED.value
-        ).count()
+        total_stmt = select(func.count(AsyncTask.id)).where(*conditions)
+        total_tasks = int((await db.execute(total_stmt)).scalar() or 0)
 
-        # 按类型统计
-        by_type = {}
+        running_stmt = select(func.count(AsyncTask.id)).where(
+            *conditions, AsyncTask.status == TaskStatus.RUNNING.value
+        )
+        running_tasks = int((await db.execute(running_stmt)).scalar() or 0)
+
+        completed_stmt = select(func.count(AsyncTask.id)).where(
+            *conditions, AsyncTask.status == TaskStatus.COMPLETED.value
+        )
+        completed_tasks = int((await db.execute(completed_stmt)).scalar() or 0)
+
+        failed_stmt = select(func.count(AsyncTask.id)).where(
+            *conditions, AsyncTask.status == TaskStatus.FAILED.value
+        )
+        failed_tasks = int((await db.execute(failed_stmt)).scalar() or 0)
+
+        by_type: dict[str, int] = {}
         for task_type in TaskType:
-            count = base_query.filter(AsyncTask.task_type == task_type.value).count()
+            type_stmt = select(func.count(AsyncTask.id)).where(
+                *conditions, AsyncTask.task_type == task_type.value
+            )
+            count = int((await db.execute(type_stmt)).scalar() or 0)
             if count > 0:
                 by_type[task_type.value] = count
 
-        # 按状态统计
-        by_status = {}
+        by_status: dict[str, int] = {}
         for status in TaskStatus:
-            count = base_query.filter(AsyncTask.status == status.value).count()
+            status_stmt = select(func.count(AsyncTask.id)).where(
+                *conditions, AsyncTask.status == status.value
+            )
+            count = int((await db.execute(status_stmt)).scalar() or 0)
             if count > 0:
                 by_status[status.value] = count
 
-        # 平均持续时间
-        completed_tasks_query = base_query.filter(
-            and_(
-                AsyncTask.status == TaskStatus.COMPLETED.value,
-                AsyncTask.started_at.isnot(None),
-                AsyncTask.completed_at.isnot(None),
-            )
+        completed_rows_stmt = select(
+            AsyncTask.started_at, AsyncTask.completed_at
+        ).where(
+            *conditions,
+            AsyncTask.status == TaskStatus.COMPLETED.value,
+            AsyncTask.started_at.isnot(None),
+            AsyncTask.completed_at.isnot(None),
         )
-
-        avg_duration: float = 0
-        completed_tasks_rows = completed_tasks_query.all()
-        if completed_tasks_rows:
-            durations = []
-            for task in completed_tasks_rows:
-                started_at = task.started_at
-                completed_at = task.completed_at
+        completed_rows = (await db.execute(completed_rows_stmt)).all()
+        avg_duration = 0.0
+        if completed_rows:
+            durations: list[float] = []
+            for started_at, completed_at in completed_rows:
                 if started_at is None or completed_at is None:
                     continue
                 durations.append((completed_at - started_at).total_seconds())
@@ -175,14 +201,16 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
             "avg_duration": avg_duration,
         }
 
-    def get_history(self, db: Session, task_id: str) -> list[TaskHistory]:
-        """获取任务历史记录"""
-        return (
-            db.query(TaskHistory)
+    async def get_history_async(
+        self, db: AsyncSession, task_id: str
+    ) -> list[TaskHistory]:
+        stmt = (
+            select(TaskHistory)
             .filter(TaskHistory.task_id == task_id)
             .order_by(desc(TaskHistory.created_at))
-            .all()
         )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
     # create_history, update status logic, etc moved to Service.
 
@@ -190,50 +218,47 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
 class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, TaskUpdate]):
     """Excel任务配置CRUD操作类"""
 
-    def get_default(
-        self, db: Session, config_type: str, task_type: str
+    async def get_default_async(
+        self, db: AsyncSession, config_type: str, task_type: str
     ) -> ExcelTaskConfig | None:
-        """获取默认配置"""
-        return (
-            db.query(ExcelTaskConfig)
-            .filter(
-                and_(
-                    ExcelTaskConfig.config_type == config_type,
-                    ExcelTaskConfig.task_type == task_type,
-                    ExcelTaskConfig.is_default.is_(True),
-                    ExcelTaskConfig.is_active.is_(True),
-                )
+        stmt = select(ExcelTaskConfig).filter(
+            and_(
+                ExcelTaskConfig.config_type == config_type,
+                ExcelTaskConfig.task_type == task_type,
+                ExcelTaskConfig.is_default.is_(True),
+                ExcelTaskConfig.is_active.is_(True),
             )
-            .first()
         )
+        result = await db.execute(stmt)
+        return result.scalars().first()
 
-    def get_multi(
+    async def get_multi_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
         config_type: str | None = None,
         task_type: str | None = None,
         is_active: bool = True,
-        **kwargs: Any,  # 扩展参数，与基类兼容
+        **kwargs: Any,
     ) -> list[ExcelTaskConfig]:
-        """获取配置列表"""
-        query = db.query(ExcelTaskConfig).filter(ExcelTaskConfig.is_active == is_active)
+        stmt = select(ExcelTaskConfig).filter(ExcelTaskConfig.is_active == is_active)
 
         if config_type:
-            query = query.filter(ExcelTaskConfig.config_type == config_type)
+            stmt = stmt.filter(ExcelTaskConfig.config_type == config_type)
         if task_type:
-            query = query.filter(ExcelTaskConfig.task_type == task_type)
+            stmt = stmt.filter(ExcelTaskConfig.task_type == task_type)
 
-        return (
-            query.order_by(
+        stmt = (
+            stmt.order_by(
                 ExcelTaskConfig.is_default.desc(), ExcelTaskConfig.created_at.desc()
             )
             .offset(skip)
             .limit(limit)
-            .all()
         )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
     # create method in base is fine, extra default toggle logic moved to service
 

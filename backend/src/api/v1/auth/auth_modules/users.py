@@ -5,7 +5,7 @@
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -26,13 +26,8 @@ logger = logging.getLogger(__name__)
 from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_async_db
 from .....exceptions import BusinessLogicError
-from .....middleware.auth import (
-    get_current_active_user,
-    require_admin,
-    safe_role_compare,
-)
+from .....middleware.auth import get_current_active_user, require_admin
 from .....middleware.security_middleware import get_client_ip
-from .....models.auth import UserRole
 from .....schemas.auth import (
     AdminPasswordResetRequest,
     PasswordChangeRequest,
@@ -45,8 +40,24 @@ from .....schemas.auth import (
 )
 from .....services.core.password_service import PasswordService
 from .....services.core.user_management_service import AsyncUserManagementService
+from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
+
+
+async def _build_user_response(user: Any, db: AsyncSession) -> UserResponse:
+    rbac_service = RBACService(db)
+    role_summary = await rbac_service.get_user_role_summary(str(user.id))
+    base = UserResponse.model_validate(user)
+    return base.model_copy(
+        update={
+            "role_id": role_summary["primary_role_id"],
+            "role_name": role_summary["primary_role_name"],
+            "roles": role_summary["roles"],
+            "role_ids": role_summary["role_ids"],
+            "is_admin": role_summary["is_admin"],
+        }
+    )
 
 
 # ==================== User CRUD Endpoints ====================
@@ -80,13 +91,13 @@ async def get_users(
         skip=(params.page - 1) * params.page_size,
         limit=params.page_size,
         search=params.search,
-        role=params.role,
+        role_id=params.role_id,
         is_active=params.is_active,
         organization_id=params.organization_id,
     )
 
     return ResponseHandler.paginated(
-        data=[UserResponse.model_validate(user) for user in users],
+        data=[await _build_user_response(user, db) for user in users],
         page=params.page,
         page_size=params.page_size,
         total=total,
@@ -108,9 +119,9 @@ async def create_user(
     """
 
     try:
-        user_crud = UserCRUD()
-        user = await user_crud.create_async(db, user_data)
-        return UserResponse.model_validate(user)
+        user_service = AsyncUserManagementService(db)
+        user = await user_service.create_user(user_data, assigned_by=str(current_user.id))
+        return await _build_user_response(user, db)
     except BusinessLogicError as e:
         raise bad_request(str(e))
 
@@ -130,7 +141,8 @@ async def get_user(
 
     user_crud = UserCRUD()
 
-    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id) and (
         current_user.id != user_id
     ):
         raise forbidden("无权访问该用户信息")
@@ -139,7 +151,7 @@ async def get_user(
     if not user:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-    return UserResponse.model_validate(user)
+    return await _build_user_response(user, db)
 
 
 @router.put("/{user_id}", response_model=UserResponse, summary="更新用户")
@@ -159,7 +171,8 @@ async def update_user(
 
     user_crud = UserCRUD()
 
-    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id) and (
         current_user.id != user_id
     ):
         raise forbidden("无权修改该用户信息")
@@ -168,8 +181,13 @@ async def update_user(
         existing_user = await user_crud.get_async(db, str(user_id))
         if not existing_user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
-        user = await user_crud.update_async(db, existing_user, user_data)
-        return UserResponse.model_validate(user)
+        user_service = AsyncUserManagementService(db)
+        user = await user_service.update_user(
+            user_id, user_data, assigned_by=str(current_user.id)
+        )
+        if not user:
+            raise not_found("用户不存在", resource_type="user", resource_id=user_id)
+        return await _build_user_response(user, db)
     except BusinessLogicError as e:
         raise bad_request(str(e))
 
@@ -192,7 +210,8 @@ async def change_password(
     user_service = AsyncUserManagementService(db)
     user_crud = UserCRUD()
 
-    if not safe_role_compare(current_user.role, UserRole.ADMIN) and (
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id) and (
         current_user.id != user_id
     ):
         raise forbidden("无权修改该用户密码")
@@ -303,7 +322,7 @@ async def lock_user(
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         setattr(user, "is_locked", True)
-        setattr(user, "updated_at", datetime.now(UTC))
+        setattr(user, "updated_at", datetime.utcnow())
         await db.commit()
         await db.refresh(user)
 
@@ -350,7 +369,7 @@ async def unlock_user_account(
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         setattr(user, "is_locked", False)
-        setattr(user, "updated_at", datetime.now(UTC))
+        setattr(user, "updated_at", datetime.utcnow())
         await db.commit()
         await db.refresh(user)
 
@@ -403,7 +422,7 @@ async def reset_user_password(
             "password_hash",
             password_service.get_password_hash(reset_request.new_password),
         )
-        setattr(user, "updated_at", datetime.now(UTC))
+        setattr(user, "updated_at", datetime.utcnow())
         await db.commit()
         await db.refresh(user)
 

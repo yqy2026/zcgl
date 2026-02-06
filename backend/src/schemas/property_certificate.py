@@ -9,7 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class PropertyCertificateFields(BaseModel):
@@ -172,6 +172,8 @@ class PropertyCertificateCreate(PropertyCertificateBase):
 class PropertyCertificateUpdate(BaseModel):
     """更新产权证"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     certificate_number: str | None = Field(default=None, description="证书编号")
     certificate_type: str | None = Field(default=None, description="证书类型")
     registration_date: date | None = Field(default=None, description="登记日期")
@@ -190,7 +192,9 @@ class PropertyCertificateUpdate(BaseModel):
         default=None, description="LLM提取置信度"
     )
     extraction_source: str | None = Field(default=None, description="数据来源")
-    is_verified: bool | None = Field(default=None, description="是否人工审核")
+    is_verified: bool | None = Field(
+        default=None, description="是否人工审核", validation_alias="verified"
+    )
 
     @property
     def verified(self) -> bool:
@@ -208,6 +212,7 @@ class PropertyCertificateResponse(PropertyCertificateBase):
     extraction_source: str = Field(description="数据来源")
     is_verified: bool = Field(description="是否人工审核")
 
+    @computed_field
     @property
     def verified(self) -> bool:
         return self.is_verified

@@ -7,7 +7,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import internal_error, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
@@ -39,20 +38,15 @@ async def create_contact(
     - 支持权属方(ownership)、项目(project)、租户(tenant)等实体类型
     """
 
-    def _sync(sync_db: Session) -> ContactResponse:
-        db = sync_db
-        # Create a copy with the user info
-        contact_data = contact_in.model_dump()
-        contact_data["created_by"] = current_user.username
-        contact_data["updated_by"] = current_user.username
+    contact_data = contact_in.model_dump()
+    contact_data["created_by"] = current_user.username
+    contact_data["updated_by"] = current_user.username
 
-        try:
-            contact = contact_crud.create(db=db, obj_in=contact_data)
-            return ContactResponse.model_validate(contact)
-        except Exception as e:
-            raise internal_error(f"创建联系人失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        contact = await contact_crud.create_async(db=db, obj_in=contact_data)
+        return ContactResponse.model_validate(contact)
+    except Exception as e:
+        raise internal_error(f"创建联系人失败: {str(e)}")
 
 
 @router.get("/{contact_id}", response_model=ContactResponse, summary="获取联系人详情")
@@ -62,16 +56,11 @@ async def get_contact(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """获取联系人详情"""
-    def _sync(sync_db: Session) -> ContactResponse:
-        db = sync_db
-        contact = contact_crud.get(db, id=contact_id)
-        if not contact:
-            raise not_found(
-                "联系人不存在", resource_type="contact", resource_id=contact_id
-            )
-        return ContactResponse.model_validate(contact)
 
-    return await db.run_sync(_sync)
+    contact = await contact_crud.get_async(db, id=contact_id)
+    if not contact:
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
+    return ContactResponse.model_validate(contact)
 
 
 @router.get(
@@ -95,27 +84,23 @@ async def get_entity_contacts(
     - 返回结果按主要联系人优先，然后按创建时间倒序
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        skip = (page - 1) * page_size
-        contacts, total = contact_crud.get_multi(
-            db=db,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            skip=skip,
-            limit=page_size,
-        )
+    skip = (page - 1) * page_size
+    contacts, total = await contact_crud.get_multi_async(
+        db=db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        skip=skip,
+        limit=page_size,
+    )
 
-        items = [ContactResponse.model_validate(contact) for contact in contacts]
-        return ResponseHandler.paginated(
-            data=items,
-            page=page,
-            page_size=page_size,
-            total=total,
-            message="获取联系人列表成功",
-        )
-
-    return await db.run_sync(_sync)
+    items = [ContactResponse.model_validate(contact) for contact in contacts]
+    return ResponseHandler.paginated(
+        data=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        message="获取联系人列表成功",
+    )
 
 
 @router.get(
@@ -137,17 +122,13 @@ async def get_primary_contact(
     - 如果没有主要联系人，返回404
     """
 
-    def _sync(sync_db: Session) -> PrimaryContactResponse:
-        db = sync_db
-        contact = contact_crud.get_primary(
-            db=db, entity_type=entity_type, entity_id=entity_id
-        )
-        if not contact:
-            raise not_found("主要联系人不存在", resource_type="primary_contact")
+    contact = await contact_crud.get_primary_async(
+        db=db, entity_type=entity_type, entity_id=entity_id
+    )
+    if not contact:
+        raise not_found("主要联系人不存在", resource_type="primary_contact")
 
-        return PrimaryContactResponse.model_validate(contact)
-
-    return await db.run_sync(_sync)
+    return PrimaryContactResponse.model_validate(contact)
 
 
 @router.put("/{contact_id}", response_model=ContactResponse, summary="更新联系人")
@@ -159,26 +140,21 @@ async def update_contact(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """更新联系人信息"""
-    def _sync(sync_db: Session) -> ContactResponse:
-        db = sync_db
-        contact = contact_crud.get(db, id=contact_id)
-        if not contact:
-            raise not_found(
-                "联系人不存在", resource_type="contact", resource_id=contact_id
-            )
 
-        update_data = contact_in.model_dump(exclude_unset=True)
-        update_data["updated_by"] = current_user.username
+    contact = await contact_crud.get_async(db, id=contact_id)
+    if not contact:
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
 
-        try:
-            updated_contact = contact_crud.update(
-                db=db, db_obj=contact, obj_in=update_data
-            )
-            return ContactResponse.model_validate(updated_contact)
-        except Exception as e:
-            raise internal_error(f"更新联系人失败: {str(e)}")
+    update_data = contact_in.model_dump(exclude_unset=True)
+    update_data["updated_by"] = current_user.username
 
-    return await db.run_sync(_sync)
+    try:
+        updated_contact = await contact_crud.update_async(
+            db=db, db_obj=contact, obj_in=update_data
+        )
+        return ContactResponse.model_validate(updated_contact)
+    except Exception as e:
+        raise internal_error(f"更新联系人失败: {str(e)}")
 
 
 @router.delete("/{contact_id}", response_model=ContactResponse, summary="删除联系人")
@@ -194,16 +170,10 @@ async def delete_contact(
     - 数据保留在数据库中
     """
 
-    def _sync(sync_db: Session) -> ContactResponse:
-        db = sync_db
-        contact = contact_crud.delete(db, id=contact_id)
-        if not contact:
-            raise not_found(
-                "联系人不存在", resource_type="contact", resource_id=contact_id
-            )
-        return ContactResponse.model_validate(contact)
-
-    return await db.run_sync(_sync)
+    contact = await contact_crud.delete_async(db, id=contact_id)
+    if not contact:
+        raise not_found("联系人不存在", resource_type="contact", resource_id=contact_id)
+    return ContactResponse.model_validate(contact)
 
 
 @router.post(
@@ -226,23 +196,18 @@ async def create_contacts_batch(
     - 自动设置创建人信息
     """
 
-    def _sync(sync_db: Session) -> list[ContactResponse]:
-        db = sync_db
-        created_contacts = []
-        for contact_in in contacts_in:
-            # Create a dict with all required fields
-            contact_data = contact_in.model_dump()
-            contact_data["entity_type"] = entity_type
-            contact_data["entity_id"] = entity_id
-            contact_data["created_by"] = current_user.username
-            contact_data["updated_by"] = current_user.username
+    created_contacts: list[ContactResponse] = []
+    for contact_in in contacts_in:
+        contact_data = contact_in.model_dump()
+        contact_data["entity_type"] = entity_type
+        contact_data["entity_id"] = entity_id
+        contact_data["created_by"] = current_user.username
+        contact_data["updated_by"] = current_user.username
 
-            try:
-                contact = contact_crud.create(db=db, obj_in=contact_data)
-                created_contacts.append(ContactResponse.model_validate(contact))
-            except Exception as e:
-                raise internal_error(f"批量创建失败: {str(e)}")
+        try:
+            contact = await contact_crud.create_async(db=db, obj_in=contact_data)
+            created_contacts.append(ContactResponse.model_validate(contact))
+        except Exception as e:
+            raise internal_error(f"批量创建失败: {str(e)}")
 
-        return created_contacts
-
-    return await db.run_sync(_sync)
+    return created_contacts

@@ -8,7 +8,8 @@
 import logging
 from typing import Any, TypedDict
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.enum_field import EnumFieldType, EnumFieldValue
 
@@ -41,9 +42,9 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
         "description": "资产的确权状态",
         "values": [
             {"value": "已确权", "label": "已确权", "sort_order": 1},
-            {"value": "未确权", "label": "未确权", "sort_order": 2},
-            {"value": "部分确权", "label": "部分确权", "sort_order": 3},
-            {"value": "无法确认业权", "label": "无法确认业权", "sort_order": 4},
+            {"value": "部分确权", "label": "部分确权", "sort_order": 2},
+            {"value": "未确权", "label": "未确权", "sort_order": 3},
+            {"value": "其它", "label": "其它", "sort_order": 4},
         ],
     },
     "property_nature": {
@@ -51,23 +52,10 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
         "category": "资产管理",
         "description": "物业的经营性质分类",
         "values": [
-            {"value": "经营性", "label": "经营性", "sort_order": 1},
-            {"value": "非经营性", "label": "非经营性", "sort_order": 2},
-            {"value": "经营-外部", "label": "经营-外部", "sort_order": 3},
-            {"value": "经营-内部", "label": "经营-内部", "sort_order": 4},
-            {"value": "经营-租赁", "label": "经营-租赁", "sort_order": 5},
-            {"value": "非经营类-公配", "label": "非经营类-公配", "sort_order": 6},
-            {"value": "非经营类-其他", "label": "非经营类-其他", "sort_order": 7},
-            {"value": "经营类", "label": "经营类", "sort_order": 8},
-            {"value": "非经营类", "label": "非经营类", "sort_order": 9},
-            {"value": "经营-配套", "label": "经营-配套", "sort_order": 10},
-            {"value": "非经营-配套", "label": "非经营-配套", "sort_order": 11},
-            {"value": "经营-配套镇", "label": "经营-配套镇", "sort_order": 12},
-            {"value": "非经营-配套镇", "label": "非经营-配套镇", "sort_order": 13},
-            {"value": "经营-处置类", "label": "经营-处置类", "sort_order": 14},
-            {"value": "非经营-处置类", "label": "非经营-处置类", "sort_order": 15},
-            {"value": "非经营-公配房", "label": "非经营-公配房", "sort_order": 16},
-            {"value": "非经营类-配套", "label": "非经营类-配套", "sort_order": 17},
+            {"value": "经营类", "label": "经营类", "sort_order": 1},
+            {"value": "公房", "label": "公房", "sort_order": 2},
+            {"value": "自用", "label": "自用", "sort_order": 3},
+            {"value": "其它", "label": "其它", "sort_order": 4},
         ],
     },
     "usage_status": {
@@ -76,20 +64,11 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
         "description": "资产的使用状态",
         "values": [
             {"value": "出租", "label": "出租", "sort_order": 1},
-            {"value": "空置", "label": "空置", "sort_order": 2},
+            {"value": "闲置", "label": "闲置", "sort_order": 2},
             {"value": "自用", "label": "自用", "sort_order": 3},
-            {"value": "公房", "label": "公房", "sort_order": 4},
-            {"value": "其他", "label": "其他", "sort_order": 5},
-            {"value": "转租", "label": "转租", "sort_order": 6},
-            {"value": "公配", "label": "公配", "sort_order": 7},
-            {"value": "空置规划", "label": "空置规划", "sort_order": 8},
-            {"value": "空置预留", "label": "空置预留", "sort_order": 9},
-            {"value": "配套", "label": "配套", "sort_order": 10},
-            {"value": "空置配套", "label": "空置配套", "sort_order": 11},
-            {"value": "空置配", "label": "空置配", "sort_order": 12},
-            {"value": "待处置", "label": "待处置", "sort_order": 13},
-            {"value": "待移交", "label": "待移交", "sort_order": 14},
-            {"value": "闲置", "label": "闲置", "sort_order": 15},
+            {"value": "公房（出租）", "label": "公房（出租）", "sort_order": 4},
+            {"value": "公房（闲置）", "label": "公房（闲置）", "sort_order": 5},
+            {"value": "其它", "label": "其它", "sort_order": 6},
         ],
     },
     "tenant_type": {
@@ -97,10 +76,9 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
         "category": "合同管理",
         "description": "租户的类型分类",
         "values": [
-            {"value": "个人", "label": "个人", "sort_order": 1},
-            {"value": "企业", "label": "企业", "sort_order": 2},
-            {"value": "政府机构", "label": "政府机构", "sort_order": 3},
-            {"value": "其他", "label": "其他", "sort_order": 4},
+            {"value": "企业", "label": "企业", "sort_order": 1},
+            {"value": "个人", "label": "个人", "sort_order": 2},
+            {"value": "其它", "label": "其它", "sort_order": 3},
         ],
     },
     "business_model": {
@@ -138,7 +116,9 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
 }
 
 
-def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
+async def init_enum_data(
+    db: AsyncSession, created_by: str = "system"
+) -> dict[str, Any]:
     """
     初始化标准枚举数据
 
@@ -161,7 +141,13 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
         try:
             # 查找或创建枚举类型
             enum_type = (
-                db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
+                (
+                    await db.execute(
+                        select(EnumFieldType).where(EnumFieldType.code == enum_code)
+                    )
+                )
+                .scalars()
+                .first()
             )
 
             if not enum_type:
@@ -179,7 +165,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
                 _set_attr(enum_type, "status", "active")
                 _set_attr(enum_type, "created_by", created_by)
                 db.add(enum_type)
-                db.flush()  # 获取ID
+                await db.flush()  # 获取ID
                 stats["types_created"] += 1
                 logger.info(f"创建枚举类型: {enum_code}")
             else:
@@ -206,11 +192,15 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
             for value_config in enum_config["values"]:
                 value_dict: EnumValueConfig = value_config
                 existing_value = (
-                    db.query(EnumFieldValue)
-                    .filter(
-                        EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.value == value_dict["value"],
+                    (
+                        await db.execute(
+                            select(EnumFieldValue).where(
+                                EnumFieldValue.enum_type_id == enum_type.id,
+                                EnumFieldValue.value == value_dict["value"],
+                            )
+                        )
                     )
+                    .scalars()
                     .first()
                 )
 
@@ -243,12 +233,14 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
             logger.error(error_msg)
             stats["errors"].append(error_msg)
 
-    db.commit()
+    await db.commit()
     logger.info(f"枚举数据初始化完成: {stats}")
     return stats
 
 
-def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str, Any]:
+async def add_legacy_enum_values(
+    db: AsyncSession, created_by: str = "system"
+) -> dict[str, Any]:
     """
     添加遗留数据中存在但标准定义中没有的枚举值
 
@@ -275,7 +267,13 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
     for enum_code, values in legacy_values.items():
         try:
             enum_type = (
-                db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
+                (
+                    await db.execute(
+                        select(EnumFieldType).where(EnumFieldType.code == enum_code)
+                    )
+                )
+                .scalars()
+                .first()
             )
 
             if not enum_type:
@@ -285,11 +283,15 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
             for value_config in values:
                 value_dict: EnumValueConfig = value_config
                 existing = (
-                    db.query(EnumFieldValue)
-                    .filter(
-                        EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.value == value_dict["value"],
+                    (
+                        await db.execute(
+                            select(EnumFieldValue).where(
+                                EnumFieldValue.enum_type_id == enum_type.id,
+                                EnumFieldValue.value == value_dict["value"],
+                            )
+                        )
                     )
+                    .scalars()
                     .first()
                 )
 
@@ -309,6 +311,6 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str,
         except Exception as e:
             stats["errors"].append(f"处理遗留值 {enum_code} 失败: {e}")
 
-    db.commit()
+    await db.commit()
     logger.info(f"遗留枚举值添加完成: {stats}")
     return stats

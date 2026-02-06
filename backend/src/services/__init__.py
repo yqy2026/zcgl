@@ -41,13 +41,6 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         "permission.permission_cache_service.get_permission_cache_service"
     )
 
-try:
-    from .core.security_service import SecurityService as SecurityService
-
-    __all__.append("SecurityService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("core.security_service.SecurityService")
-
 # Core services - Audit Service
 try:
     from .core.audit_service import AuditService as AuditService

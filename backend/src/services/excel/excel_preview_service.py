@@ -58,6 +58,7 @@ class ExcelPreviewService:
             "物业性质": ["property_nature", "物业性质", "资产性质"],
             "使用状态": ["usage_status", "使用状态", "状态"],
             "权属方": ["ownership_entity", "权属方", "所有权人"],
+            "权属方ID": ["ownership_id", "权属方ID", "权属方编号"],
             "土地面积": ["land_area", "土地面积", "占地面积"],
             "实际房产面积": ["actual_property_area", "实际房产面积", "建筑面积"],
             "可出租面积": ["rentable_area", "可出租面积", "出租面积"],

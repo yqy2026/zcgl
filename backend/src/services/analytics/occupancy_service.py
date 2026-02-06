@@ -7,9 +7,9 @@
 import logging
 from typing import Any
 
-from sqlalchemy import Float, case, func
+from sqlalchemy import Float, case, func, select
 from sqlalchemy import cast as sql_cast
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...services.asset.occupancy_calculator import OccupancyRateCalculator
@@ -32,7 +32,7 @@ class OccupancyService:
     使用数据库聚合查询优化性能，支持降级到内存计算
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         初始化出租率服务
 
@@ -41,7 +41,7 @@ class OccupancyService:
         """
         self.db = db
 
-    def calculate_with_aggregation(
+    async def calculate_with_aggregation(
         self, filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
@@ -65,27 +65,28 @@ class OccupancyService:
             from ...models.asset import Asset
 
             # 构建基础查询
-            query = self.db.query(Asset)
+            stmt = select(Asset)
 
             # 应用筛选条件
             if filters:
                 for key, value in filters.items():
                     if hasattr(Asset, key) and value is not None:
-                        query = query.filter(getattr(Asset, key) == value)
+                        stmt = stmt.where(getattr(Asset, key) == value)
 
             # 使用数据库聚合函数计算 - 避免加载所有数据到内存
-            result = query.with_entities(
+            agg_stmt = stmt.with_only_columns(
+                func.count(Asset.id).label("total_assets"),
                 sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
                     "total_rentable_area"
                 ),
                 sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
                     "total_rented_area"
                 ),
-                func.count(Asset.id).label("total_assets"),
                 func.count(case((Asset.rentable_area > 0, 1))).label(
                     "rentable_assets_count"
                 ),
-            ).first()
+            )
+            result = (await self.db.execute(agg_stmt)).first()
 
             # 提取结果并转换为float
             if result is None:
@@ -127,11 +128,11 @@ class OccupancyService:
         except Exception as e:
             logger.error(f"数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            memory_result = self._calculate_in_memory(filters)
+            memory_result = await self._calculate_in_memory(filters)
             memory_result["calculation_method"] = "memory_fallback"
             return memory_result
 
-    def _calculate_in_memory(
+    async def _calculate_in_memory(
         self, filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
@@ -152,7 +153,7 @@ class OccupancyService:
             all_assets = []
 
             while True:
-                assets_batch, _ = asset_crud.get_multi_with_search(
+                assets_batch, _ = await asset_crud.get_multi_with_search_async(
                     db=self.db, skip=offset, limit=batch_size, filters=filters
                 )
 
@@ -177,7 +178,7 @@ class OccupancyService:
             logger.error(f"内存计算失败: {str(e)}")
             raise OccupancyCalculationError(f"出租率计算失败: {str(e)}")
 
-    def calculate_category_with_aggregation(
+    async def calculate_category_with_aggregation(
         self, category_field: str, filters: dict[str, Any] | None = None
     ) -> dict[str, dict[str, Any]]:
         """
@@ -193,17 +194,17 @@ class OccupancyService:
         try:
             from ...models.asset import Asset
 
-            query = self.db.query(Asset)
+            stmt = select(Asset)
 
             # 应用筛选条件
             if filters:
                 for key, value in filters.items():
                     if hasattr(Asset, key) and value is not None:
-                        query = query.filter(getattr(Asset, key) == value)
+                        stmt = stmt.where(getattr(Asset, key) == value)
 
             # 按分类字段聚合查询
-            results = (
-                query.with_entities(
+            agg_stmt = (
+                stmt.with_only_columns(
                     getattr(Asset, category_field).label("category"),
                     sql_cast(
                         func.sum(func.coalesce(Asset.rentable_area, 0)), Float
@@ -217,8 +218,8 @@ class OccupancyService:
                     ),
                 )
                 .group_by(getattr(Asset, category_field))
-                .all()
             )
+            results = (await self.db.execute(agg_stmt)).all()
 
             categories = {}
             for result in results:
@@ -247,9 +248,9 @@ class OccupancyService:
         except Exception as e:
             logger.error(f"数据库分类聚合查询失败: {str(e)}")
             # 降级到内存计算
-            return self._calculate_category_in_memory(category_field, filters)
+            return await self._calculate_category_in_memory(category_field, filters)
 
-    def _calculate_category_in_memory(
+    async def _calculate_category_in_memory(
         self, category_field: str, filters: dict[str, Any] | None = None
     ) -> dict[str, dict[str, Any]]:
         """
@@ -271,7 +272,7 @@ class OccupancyService:
             all_assets = []
 
             while True:
-                assets_batch, _ = asset_crud.get_multi_with_search(
+                assets_batch, _ = await asset_crud.get_multi_with_search_async(
                     db=self.db, skip=offset, limit=batch_size, filters=filters
                 )
 

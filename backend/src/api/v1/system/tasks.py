@@ -4,7 +4,6 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from ....core.exception_handler import (
     BaseBusinessError,
@@ -52,19 +51,15 @@ async def create_task(
     创建新的异步任务
     """
 
-    def _sync(sync_db: Session) -> TaskResponse:
-        db = sync_db
-        try:
-            task = task_service.create_task(
-                db=db, obj_in=task_in, user_id=current_user.id
-            )
-            return TaskResponse.model_validate(task)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"创建任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        task = await task_service.create_task(
+            db=db, obj_in=task_in, user_id=current_user.id
+        )
+        return TaskResponse.model_validate(task)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"创建任务失败: {str(e)}")
 
 
 @router.get(
@@ -94,56 +89,49 @@ async def get_tasks(
     获取任务列表，支持分页和筛选
     """
 
-    def _sync(sync_db: Session) -> JSONResponse:
-        db = sync_db
-        try:
-            # 处理时间筛选
-            created_after_dt = None
-            created_before_dt = None
-            if created_after:
-                created_after_dt = datetime.fromisoformat(created_after)
-            if created_before:
-                created_before_dt = datetime.fromisoformat(created_before)
+    try:
+        created_after_dt = None
+        created_before_dt = None
+        if created_after:
+            created_after_dt = datetime.fromisoformat(created_after)
+        if created_before:
+            created_before_dt = datetime.fromisoformat(created_before)
 
-            skip = (page - 1) * page_size
-            effective_user_id = resolve_task_user_filter(user_id, current_user)
-            tasks = task_crud.get_multi(
-                db=db,
-                skip=skip,
-                limit=page_size,
-                task_type=task_type,
-                status=status,
-                user_id=effective_user_id,
-                created_after=created_after_dt,
-                created_before=created_before_dt,
-                order_by=order_by,
-                order_dir=order_dir,
-            )
+        skip = (page - 1) * page_size
+        effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
+        tasks = await task_crud.get_multi_async(
+            db=db,
+            skip=skip,
+            limit=page_size,
+            task_type=task_type,
+            status=status,
+            user_id=effective_user_id,
+            created_after=created_after_dt,
+            created_before=created_before_dt,
+            order_by=order_by,
+            order_dir=order_dir,
+        )
 
-            # 计算总数
-            total = task_crud.count(
-                db=db,
-                task_type=task_type,
-                status=status,
-                user_id=effective_user_id,
-                created_after=created_after_dt,
-                created_before=created_before_dt,
-            )
+        total = await task_crud.count_async(
+            db=db,
+            task_type=task_type,
+            status=status,
+            user_id=effective_user_id,
+            created_after=created_after_dt,
+            created_before=created_before_dt,
+        )
 
-            # Convert AsyncTask models to TaskResponse schemas
-            task_responses = [TaskResponse.model_validate(task) for task in tasks]
+        task_responses = [TaskResponse.model_validate(task) for task in tasks]
 
-            return ResponseHandler.paginated(
-                data=task_responses,
-                page=page,
-                page_size=page_size,
-                total=total,
-                message="获取任务列表成功",
-            )
-        except Exception as e:
-            raise internal_error(f"获取任务列表失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+        return ResponseHandler.paginated(
+            data=task_responses,
+            page=page,
+            page_size=page_size,
+            total=total,
+            message="获取任务列表成功",
+        )
+    except Exception as e:
+        raise internal_error(f"获取任务列表失败: {str(e)}")
 
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
@@ -156,16 +144,12 @@ async def get_task(
     获取单个任务的详细信息
     """
 
-    def _sync(sync_db: Session) -> TaskResponse:
-        db = sync_db
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-        ensure_task_access(task, current_user)
-        result: TaskResponse = TaskResponse.model_validate(task)
-        return result
-
-    return await db.run_sync(_sync)
+    task = await task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    await ensure_task_access(task, current_user, db)
+    result: TaskResponse = TaskResponse.model_validate(task)
+    return result
 
 
 @router.put("/{task_id}", response_model=TaskResponse, summary="更新任务")
@@ -179,23 +163,19 @@ async def update_task(
     更新任务信息
     """
 
-    def _sync(sync_db: Session) -> TaskResponse:
-        db = sync_db
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-        ensure_task_access(task, current_user)
-        try:
-            updated_task = task_service.update_task(
-                db=db, task_id=task_id, obj_in=task_in
-            )
-            return TaskResponse.model_validate(updated_task)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"更新任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    task = await task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    await ensure_task_access(task, current_user, db)
+    try:
+        updated_task = await task_service.update_task(
+            db=db, task_id=task_id, obj_in=task_in
+        )
+        return TaskResponse.model_validate(updated_task)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"更新任务失败: {str(e)}")
 
 
 @router.post("/{task_id}/cancel", response_model=TaskResponse, summary="取消任务")
@@ -209,25 +189,21 @@ async def cancel_task(
     取消正在运行的任务
     """
 
-    def _sync(sync_db: Session) -> TaskResponse:
-        db = sync_db
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-        ensure_task_access(task, current_user)
-        try:
-            updated_task = task_service.cancel_task(
-                db=db,
-                task_id=task_id,
-                reason=cancel_request.reason if cancel_request else None,
-            )
-            return TaskResponse.model_validate(updated_task)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"取消任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    task = await task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    await ensure_task_access(task, current_user, db)
+    try:
+        updated_task = await task_service.cancel_task(
+            db=db,
+            task_id=task_id,
+            reason=cancel_request.reason if cancel_request else None,
+        )
+        return TaskResponse.model_validate(updated_task)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"取消任务失败: {str(e)}")
 
 
 @router.delete("/{task_id}", summary="删除任务")
@@ -240,21 +216,17 @@ async def delete_task(
     删除任务（软删除）
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-        ensure_task_access(task, current_user)
-        try:
-            task_service.delete_task(db=db, task_id=task_id)
-            return {"message": "任务删除成功"}
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"删除任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    task = await task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    await ensure_task_access(task, current_user, db)
+    try:
+        await task_service.delete_task(db=db, task_id=task_id)
+        return {"message": "任务删除成功"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"删除任务失败: {str(e)}")
 
 
 @router.get(
@@ -271,24 +243,19 @@ async def get_task_history(
     获取任务的历史记录
     """
 
-    def _sync(sync_db: Session) -> list[TaskHistoryResponse]:
-        db = sync_db
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise not_found("任务不存在", resource_type="task", resource_id=task_id)
-        ensure_task_access(task, current_user)
+    task = await task_crud.get(db=db, id=task_id)
+    if not task:
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
+    await ensure_task_access(task, current_user, db)
 
-        try:
-            history = task_crud.get_history(db=db, task_id=task_id)
-            # Convert TaskHistory models to TaskHistoryResponse schemas
-            result: list[TaskHistoryResponse] = [
-                TaskHistoryResponse.model_validate(h) for h in history
-            ]
-            return result
-        except Exception as e:
-            raise internal_error(f"获取任务历史失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        history = await task_crud.get_history_async(db=db, task_id=task_id)
+        result: list[TaskHistoryResponse] = [
+            TaskHistoryResponse.model_validate(h) for h in history
+        ]
+        return result
+    except Exception as e:
+        raise internal_error(f"获取任务历史失败: {str(e)}")
 
 
 @router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
@@ -301,16 +268,12 @@ async def get_task_statistics(
     获取任务统计信息
     """
 
-    def _sync(sync_db: Session) -> TaskStatistics:
-        db = sync_db
-        try:
-            effective_user_id = resolve_task_user_filter(user_id, current_user)
-            stats = task_service.get_statistics(db=db, user_id=effective_user_id)
-            return TaskStatistics.model_validate(stats)
-        except Exception as e:
-            raise internal_error(f"获取任务统计失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
+        stats = await task_service.get_statistics(db=db, user_id=effective_user_id)
+        return TaskStatistics.model_validate(stats)
+    except Exception as e:
+        raise internal_error(f"获取任务统计失败: {str(e)}")
 
 
 @router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
@@ -322,23 +285,19 @@ async def get_running_tasks(
     获取当前正在运行的所有任务
     """
 
-    def _sync(sync_db: Session) -> list[TaskResponse]:
-        db = sync_db
-        try:
-            effective_user_id = resolve_task_user_filter(None, current_user)
-            tasks = task_crud.get_multi(
-                db=db,
-                limit=100,
-                status=TaskStatus.RUNNING.value,
-                user_id=effective_user_id,
-                order_by="started_at",
-                order_dir="asc",
-            )
-            return [TaskResponse.model_validate(task) for task in tasks]
-        except Exception as e:
-            raise internal_error(f"获取运行任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        effective_user_id = await resolve_task_user_filter(None, current_user, db)
+        tasks = await task_crud.get_multi_async(
+            db=db,
+            limit=100,
+            status=TaskStatus.RUNNING.value,
+            user_id=effective_user_id,
+            order_by="started_at",
+            order_dir="asc",
+        )
+        return [TaskResponse.model_validate(task) for task in tasks]
+    except Exception as e:
+        raise internal_error(f"获取运行任务失败: {str(e)}")
 
 
 @router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
@@ -351,23 +310,17 @@ async def get_recent_tasks(
     获取最近的任务
     """
 
-    def _sync(sync_db: Session) -> list[TaskResponse]:
-        db = sync_db
-        try:
-            tasks = task_crud.get_multi(
-                db=db,
-                limit=page_size,
-                user_id=resolve_task_user_filter(None, current_user),
-                order_by="created_at",
-                order_dir="desc",
-            )
-            return [TaskResponse.model_validate(task) for task in tasks]
-        except Exception as e:
-            raise internal_error(f"获取最近任务失败: {str(e)}")
-
-    # ===== Excel任务配置管理 =====
-
-    return await db.run_sync(_sync)
+    try:
+        tasks = await task_crud.get_multi_async(
+            db=db,
+            limit=page_size,
+            user_id=await resolve_task_user_filter(None, current_user, db),
+            order_by="created_at",
+            order_dir="desc",
+        )
+        return [TaskResponse.model_validate(task) for task in tasks]
+    except Exception as e:
+        raise internal_error(f"获取最近任务失败: {str(e)}")
 
 
 @router.post(
@@ -384,17 +337,13 @@ async def create_excel_config(
     创建Excel任务配置
     """
 
-    def _sync(sync_db: Session) -> ExcelTaskConfigResponse:
-        db = sync_db
-        try:
-            config = task_service.create_excel_config(
-                db=db, obj_in=config_in, user_id=current_user.id
-            )
-            return ExcelTaskConfigResponse.model_validate(config)
-        except Exception as e:
-            raise internal_error(f"创建Excel配置失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        config = await task_service.create_excel_config(
+            db=db, obj_in=config_in, user_id=current_user.id
+        )
+        return ExcelTaskConfigResponse.model_validate(config)
+    except Exception as e:
+        raise internal_error(f"创建Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -412,17 +361,13 @@ async def get_excel_configs(
     获取Excel任务配置列表
     """
 
-    def _sync(sync_db: Session) -> list[ExcelTaskConfigResponse]:
-        db = sync_db
-        try:
-            configs = excel_task_config_crud.get_multi(
-                db=db, limit=50, config_type=config_type, task_type=task_type
-            )
-            return [ExcelTaskConfigResponse.model_validate(cfg) for cfg in configs]
-        except Exception as e:
-            raise internal_error(f"获取Excel配置失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        configs = await excel_task_config_crud.get_multi_async(
+            db=db, limit=50, config_type=config_type, task_type=task_type
+        )
+        return [ExcelTaskConfigResponse.model_validate(cfg) for cfg in configs]
+    except Exception as e:
+        raise internal_error(f"获取Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -440,21 +385,17 @@ async def get_default_excel_config(
     获取默认的Excel任务配置
     """
 
-    def _sync(sync_db: Session) -> ExcelTaskConfigResponse:
-        db = sync_db
-        try:
-            config = excel_task_config_crud.get_default(
-                db=db, config_type=config_type, task_type=task_type
-            )
-            if not config:
-                raise not_found("未找到默认配置", resource_type="excel_config")
-            return ExcelTaskConfigResponse.model_validate(config)
-        except Exception as e:
-            if isinstance(e, BaseBusinessError):
-                raise
-            raise internal_error(f"获取默认Excel配置失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        config = await excel_task_config_crud.get_default_async(
+            db=db, config_type=config_type, task_type=task_type
+        )
+        if not config:
+            raise not_found("未找到默认配置", resource_type="excel_config")
+        return ExcelTaskConfigResponse.model_validate(config)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取默认Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -471,17 +412,13 @@ async def get_excel_config(
     获取单个Excel配置的详细信息
     """
 
-    def _sync(sync_db: Session) -> ExcelTaskConfigResponse:
-        db = sync_db
-        config = excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
-            raise not_found(
-                "配置不存在", resource_type="excel_config", resource_id=config_id
-            )
-        result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
-        return result
-
-    return await db.run_sync(_sync)
+    config = await excel_task_config_crud.get(db=db, id=config_id)
+    if not config:
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
+    result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
+    return result
 
 
 @router.put(
@@ -499,26 +436,22 @@ async def update_excel_config(
     更新Excel任务配置
     """
 
-    def _sync(sync_db: Session) -> ExcelTaskConfigResponse:
-        db = sync_db
-        config = excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
-            raise not_found(
-                "配置不存在", resource_type="excel_config", resource_id=config_id
-            )
+    config = await excel_task_config_crud.get(db=db, id=config_id)
+    if not config:
+        raise not_found(
+            "配置不存在", resource_type="excel_config", resource_id=config_id
+        )
 
-        try:
-            updated_config = excel_task_config_crud.update(
-                db=db, db_obj=config, obj_in=config_in
-            )
-            result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(
-                updated_config
-            )
-            return result
-        except Exception as e:
-            raise internal_error(f"更新Excel配置失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        updated_config = await excel_task_config_crud.update(
+            db=db, db_obj=config, obj_in=config_in
+        )
+        result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(
+            updated_config
+        )
+        return result
+    except Exception as e:
+        raise internal_error(f"更新Excel配置失败: {str(e)}")
 
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
@@ -531,24 +464,19 @@ async def delete_excel_config(
     删除Excel配置（软删除）
     """
 
-    def _sync(sync_db: Session) -> dict[str, str]:
-        db = sync_db
-        try:
-            # Use soft deletion by setting is_active=False
-            config = excel_task_config_crud.get(db=db, id=config_id)
-            if not config:
-                raise not_found(
-                    "配置不存在", resource_type="excel_config", resource_id=config_id
-                )
-
-            excel_task_config_crud.update(
-                db=db, db_obj=config, obj_in={"is_active": False}
+    try:
+        config = await excel_task_config_crud.get(db=db, id=config_id)
+        if not config:
+            raise not_found(
+                "配置不存在", resource_type="excel_config", resource_id=config_id
             )
-            return {"message": "Excel配置删除成功"}
-        except Exception as e:
-            raise internal_error(f"删除Excel配置失败: {str(e)}")
 
-    return await db.run_sync(_sync)
+        await excel_task_config_crud.update(
+            db=db, db_obj=config, obj_in={"is_active": False}
+        )
+        return {"message": "Excel配置删除成功"}
+    except Exception as e:
+        raise internal_error(f"删除Excel配置失败: {str(e)}")
 
 
 @router.get("/cleanup", summary="清理过期任务")
@@ -562,11 +490,9 @@ async def cleanup_old_tasks(
     清理过期的任务记录
     """
 
-    def _sync(sync_db: Session) -> dict[str, Any]:
-        db = sync_db
-        try:
-            return task_service.cleanup_old_tasks(db=db, days=days, dry_run=is_dry_run)
-        except Exception as e:
-            raise internal_error(f"清理任务失败: {str(e)}")
-
-    return await db.run_sync(_sync)
+    try:
+        return await task_service.cleanup_old_tasks(
+            db=db, days=days, dry_run=is_dry_run
+        )
+    except Exception as e:
+        raise internal_error(f"清理任务失败: {str(e)}")

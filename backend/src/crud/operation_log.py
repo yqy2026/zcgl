@@ -5,8 +5,8 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.operation_log import OperationLog
 
@@ -17,44 +17,8 @@ class OperationLogCRUD:
     def _stats_start_date(self, days: int) -> datetime:
         return datetime.now() - timedelta(days=days)
 
-    def _stats_query(
+    def _build_filter_clauses(
         self,
-        db: Session,
-        *,
-        start_date: datetime,
-        user_id: str | None = None,
-        module: str | None = None,
-        error_only: bool = False,
-    ) -> Any:
-        return self._apply_stats_filters(
-            db.query(OperationLog),
-            start_date=start_date,
-            user_id=user_id,
-            module=module,
-            error_only=error_only,
-        )
-
-    def _apply_stats_filters(
-        self,
-        query: Any,
-        *,
-        start_date: datetime,
-        user_id: str | None = None,
-        module: str | None = None,
-        error_only: bool = False,
-    ) -> Any:
-        query = query.filter(OperationLog.created_at >= start_date)
-        if user_id:
-            query = query.filter(OperationLog.user_id == user_id)
-        if module:
-            query = query.filter(OperationLog.module == module)
-        if error_only:
-            query = query.filter(OperationLog.error_message.isnot(None))
-        return query
-
-    def _apply_filters(
-        self,
-        query: Any,
         *,
         user_id: str | None = None,
         action: str | None = None,
@@ -64,61 +28,62 @@ class OperationLogCRUD:
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         search: str | None = None,
-    ) -> Any:
-        # 用户筛选
+    ) -> list[Any]:
+        clauses: list[Any] = []
         if user_id:
-            query = query.filter(OperationLog.user_id == user_id)
-
-        # 操作类型筛选
+            clauses.append(OperationLog.user_id == user_id)
         if action:
-            query = query.filter(OperationLog.action == action)
-
-        # 模块筛选
+            clauses.append(OperationLog.action == action)
         if module:
-            query = query.filter(OperationLog.module == module)
-
-        # 资源类型筛选
+            clauses.append(OperationLog.module == module)
         if resource_type:
-            query = query.filter(OperationLog.resource_type == resource_type)
-
+            clauses.append(OperationLog.resource_type == resource_type)
         if response_status:
             if response_status == "success":
-                query = query.filter(
-                    OperationLog.response_status >= 200,
-                    OperationLog.response_status < 300,
-                )
+                clauses.append(OperationLog.response_status >= 200)
+                clauses.append(OperationLog.response_status < 300)
             elif response_status == "warning":
-                query = query.filter(
-                    OperationLog.response_status >= 400,
-                    OperationLog.response_status < 500,
-                )
+                clauses.append(OperationLog.response_status >= 400)
+                clauses.append(OperationLog.response_status < 500)
             elif response_status == "error":
-                query = query.filter(OperationLog.response_status >= 500)
+                clauses.append(OperationLog.response_status >= 500)
             elif response_status.isdigit():
-                query = query.filter(
-                    OperationLog.response_status == int(response_status)
-                )
-
-        # 日期范围筛选
+                clauses.append(OperationLog.response_status == int(response_status))
         if start_date:
-            query = query.filter(OperationLog.created_at >= start_date)
+            clauses.append(OperationLog.created_at >= start_date)
         if end_date:
-            query = query.filter(OperationLog.created_at <= end_date)
-
-        # 关键词搜索
+            clauses.append(OperationLog.created_at <= end_date)
         if search:
-            search_filter = or_(
-                OperationLog.username.ilike(f"%{search}%"),
-                OperationLog.action_name.ilike(f"%{search}%"),
-                OperationLog.resource_name.ilike(f"%{search}%"),
+            clauses.append(
+                or_(
+                    OperationLog.username.ilike(f"%{search}%"),
+                    OperationLog.action_name.ilike(f"%{search}%"),
+                    OperationLog.resource_name.ilike(f"%{search}%"),
+                )
             )
-            query = query.filter(search_filter)
+        return clauses
 
-        return query
-
-    def create(
+    def _build_stats_filter_clauses(
         self,
-        db: Session,
+        *,
+        start_date: datetime,
+        user_id: str | None = None,
+        module: str | None = None,
+        error_only: bool = False,
+    ) -> list[Any]:
+        clauses: list[Any] = [OperationLog.created_at >= start_date]
+        if user_id:
+            clauses.append(OperationLog.user_id == user_id)
+        if module:
+            clauses.append(OperationLog.module == module)
+        if error_only:
+            clauses.append(OperationLog.error_message.isnot(None))
+        return clauses
+
+    async def create_async(
+        self,
+        db: AsyncSession,
+        *,
         user_id: str,
         action: str,
         module: str,
@@ -139,7 +104,6 @@ class OperationLogCRUD:
         action_name: str | None = None,
         module_name: str | None = None,
     ) -> OperationLog:
-        """创建操作日志"""
         log = OperationLog(
             user_id=user_id,
             username=username,
@@ -164,58 +128,18 @@ class OperationLogCRUD:
         )
 
         db.add(log)
-        db.commit()
-        db.refresh(log)
+        await db.commit()
+        await db.refresh(log)
 
         return log
 
-    def get(self, db: Session, log_id: str) -> OperationLog | None:
-        """根据ID获取操作日志"""
-        return db.query(OperationLog).filter(OperationLog.id == log_id).first()
+    async def get_async(self, db: AsyncSession, log_id: str) -> OperationLog | None:
+        stmt = select(OperationLog).where(OperationLog.id == log_id)
+        return (await db.execute(stmt)).scalars().first()
 
-    def get_multi(
+    async def get_multi_with_count_async(
         self,
-        db: Session,
-        skip: int = 0,
-        limit: int = 100,
-        user_id: str | None = None,
-        action: str | None = None,
-        module: str | None = None,
-        resource_type: str | None = None,
-        response_status: str | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-        search: str | None = None,
-    ) -> tuple[list[OperationLog], int]:
-        """获取操作日志列表"""
-        query = self._apply_filters(
-            db.query(OperationLog),
-            user_id=user_id,
-            action=action,
-            module=module,
-            resource_type=resource_type,
-            response_status=response_status,
-            start_date=start_date,
-            end_date=end_date,
-            search=search,
-        )
-
-        # 总数
-        total = query.count()
-
-        # 分页和排序
-        logs = (
-            query.order_by(OperationLog.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-
-        return logs, total
-
-    def get_multi_with_count(
-        self,
-        db: Session,
+        db: AsyncSession,
         *,
         skip: int = 0,
         limit: int = 100,
@@ -228,9 +152,7 @@ class OperationLogCRUD:
         end_date: datetime | None = None,
         search: str | None = None,
     ) -> tuple[list[OperationLog], int]:
-        """获取操作日志列表与总数"""
-        query = self._apply_filters(
-            db.query(OperationLog),
+        clauses = self._build_filter_clauses(
             user_id=user_id,
             action=action,
             module=module,
@@ -240,48 +162,41 @@ class OperationLogCRUD:
             end_date=end_date,
             search=search,
         )
-        total = query.count()
-        logs = (
-            query.order_by(OperationLog.created_at.desc())
+        count_stmt = select(func.count()).select_from(OperationLog).where(*clauses)
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        logs_stmt = (
+            select(OperationLog)
+            .where(*clauses)
+            .order_by(OperationLog.created_at.desc())
             .offset(skip)
             .limit(limit)
-            .all()
         )
+        logs = list((await db.execute(logs_stmt)).scalars().all())
         return logs, total
 
-    def delete_old_logs(self, db: Session, days: int = 90) -> int:
-        """删除指定天数前的日志"""
+    async def delete_old_logs_async(self, db: AsyncSession, days: int = 90) -> int:
         cutoff_date = datetime.now() - timedelta(days=days)
-        deleted = (
-            db.query(OperationLog)
-            .filter(OperationLog.created_at < cutoff_date)
-            .delete()
+        result = await db.execute(
+            delete(OperationLog).where(OperationLog.created_at < cutoff_date)
         )
-        db.commit()
-        return deleted
+        await db.commit()
+        return int(result.rowcount or 0)
 
-    def get_user_statistics(
-        self, db: Session, user_id: str, days: int = 30
+    async def get_user_statistics_async(
+        self, db: AsyncSession, user_id: str, days: int = 30
     ) -> dict[str, Any]:
-        """获取用户操作统计"""
         start_date = self._stats_start_date(days)
-        total_operations = self._apply_stats_filters(
-            db.query(func.count(OperationLog.id)),
-            start_date=start_date,
-            user_id=user_id,
-        ).scalar()
-
-        # 按操作类型统计
-        action_stats = (
-            self._apply_stats_filters(
-                db.query(OperationLog.action, func.count(OperationLog.id)),
-                start_date=start_date,
-                user_id=user_id,
-            )
-            .group_by(OperationLog.action)
-            .all()
+        clauses = self._build_stats_filter_clauses(
+            start_date=start_date, user_id=user_id
         )
-
+        total_stmt = select(func.count(OperationLog.id)).where(*clauses)
+        total_operations = (await db.execute(total_stmt)).scalar()
+        action_stmt = (
+            select(OperationLog.action, func.count(OperationLog.id))
+            .where(*clauses)
+            .group_by(OperationLog.action)
+        )
+        action_stats = (await db.execute(action_stmt)).all()
         return {
             "user_id": user_id,
             "days": days,
@@ -289,28 +204,19 @@ class OperationLogCRUD:
             "action_breakdown": {str(action): count for action, count in action_stats},
         }
 
-    def get_module_statistics(
-        self, db: Session, module: str, days: int = 30
+    async def get_module_statistics_async(
+        self, db: AsyncSession, module: str, days: int = 30
     ) -> dict[str, Any]:
-        """获取模块操作统计"""
         start_date = self._stats_start_date(days)
-        total_operations = self._apply_stats_filters(
-            db.query(func.count(OperationLog.id)),
-            start_date=start_date,
-            module=module,
-        ).scalar()
-
-        # 按操作类型统计
-        action_stats = (
-            self._apply_stats_filters(
-                db.query(OperationLog.action, func.count(OperationLog.id)),
-                start_date=start_date,
-                module=module,
-            )
+        clauses = self._build_stats_filter_clauses(start_date=start_date, module=module)
+        total_stmt = select(func.count(OperationLog.id)).where(*clauses)
+        total_operations = (await db.execute(total_stmt)).scalar()
+        action_stmt = (
+            select(OperationLog.action, func.count(OperationLog.id))
+            .where(*clauses)
             .group_by(OperationLog.action)
-            .all()
         )
-
+        action_stats = (await db.execute(action_stmt)).all()
         return {
             "module": module,
             "days": days,
@@ -318,54 +224,44 @@ class OperationLogCRUD:
             "action_breakdown": {str(action): count for action, count in action_stats},
         }
 
-    def get_daily_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
-        """获取每日操作统计"""
+    async def get_daily_statistics_async(
+        self, db: AsyncSession, days: int = 30
+    ) -> dict[str, Any]:
         start_date = self._stats_start_date(days)
-        daily_stats = (
-            self._apply_stats_filters(
-                db.query(
-                    func.date(OperationLog.created_at),
-                    func.count(OperationLog.id),
-                ),
-                start_date=start_date,
-            )
+        clauses = self._build_stats_filter_clauses(start_date=start_date)
+        daily_stmt = (
+            select(func.date(OperationLog.created_at), func.count(OperationLog.id))
+            .where(*clauses)
             .group_by(func.date(OperationLog.created_at))
             .order_by(func.date(OperationLog.created_at))
-            .all()
         )
-
+        daily_stats = (await db.execute(daily_stmt)).all()
         return {
             "days": days,
             "daily_breakdown": {str(date): count for date, count in daily_stats},
         }
 
-    def get_error_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
-        """获取错误操作统计"""
+    async def get_error_statistics_async(
+        self, db: AsyncSession, days: int = 30
+    ) -> dict[str, Any]:
         start_date = self._stats_start_date(days)
-        total_errors = self._apply_stats_filters(
-            db.query(func.count(OperationLog.id)),
-            start_date=start_date,
-            error_only=True,
-        ).scalar()
-
-        # 按错误类型统计
-        error_types = (
-            self._apply_stats_filters(
-                db.query(OperationLog.action, func.count(OperationLog.id)),
-                start_date=start_date,
-                error_only=True,
-            )
-            .group_by(OperationLog.action)
-            .all()
+        clauses = self._build_stats_filter_clauses(
+            start_date=start_date, error_only=True
         )
-
+        total_stmt = select(func.count(OperationLog.id)).where(*clauses)
+        total_errors = (await db.execute(total_stmt)).scalar()
+        error_stmt = (
+            select(OperationLog.action, func.count(OperationLog.id))
+            .where(*clauses)
+            .group_by(OperationLog.action)
+        )
+        error_types = (await db.execute(error_stmt)).all()
         return {
             "days": days,
             "total_errors": total_errors,
             "error_breakdown": {str(action): count for action, count in error_types},
         }
 
-    def count(self, db: Session) -> int:
-        """日志总数"""
-        result = db.query(func.count(OperationLog.id)).scalar()
-        return int(result) if result is not None else 0
+    async def count_async(self, db: AsyncSession) -> int:
+        result = await db.execute(select(func.count(OperationLog.id)))
+        return int(result.scalar() or 0)

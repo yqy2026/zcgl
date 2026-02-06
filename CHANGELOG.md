@@ -1,11 +1,181 @@
 # 变更日志 (Changelog)
 
-## [Unreleased] - 2026-02-03
+## [Unreleased] - 2026-02-06
+
+### 🧪 审核 (Audit)
+
+- **数据库异步化实施核查** (Async DB Migration Audit)
+  - 仍存在 run_sync、同步 Session 与 get_db 依赖，异步化未完全收敛
+
+### 🧰 工具与环境 (Tooling & Environment)
+
+#### Fixed / 修复
+
+- 开发启动脚本限制 Uvicorn reload 监听目录为 `backend/src`，并支持 `RELOAD` 环境变量关闭重载，避免非源码变更触发重启
+
+#### Removed / 删除
+
+- 删除根目录 `.venv`，统一使用 `backend/.venv` 以避免环境混淆
+
+### 🔍 搜索 (Search)
+
+- **加密字段模糊搜索支持** (Blind Index for Encrypted Search)
+  - 新增 `asset_search_index` 表，使用 HMAC n-gram 盲索引支持地址/权属方子串搜索
+  - 资产列表搜索与产权证资产匹配改用盲索引（加密启用时），仍保留未加密时 ILIKE
+  - 新增重建脚本 `scripts/maintenance/rebuild_asset_search_index.py` 用于回填索引
+
+### 📚 文档 (Docs)
+
+- 明确说明 `SecurityService` 已移除，并指向 `PasswordService`/`AuthenticationService` 作为安全替代路径
+- AGENTS.md 增加提示：后端测试应使用项目 `backend/.venv`，避免 `.env` 不生效
 
 ### 🛡️ 稳定性与架构修复 (Stability & Architecture Fixes)
 
 #### Fixed / 修复
 
+- **RBAC 角色单一来源** (Single Source of Truth for Roles)
+  - 认证响应与用户信息统一使用 RBAC 角色汇总（`role_id`/`role_name`/`role_ids`），移除旧 `role` 字段依赖
+  - 统一测试与示例数据为 `role_id`，避免遗留角色字符串导致权限误判
+- **资产权属字段统一** (Asset Ownership Unification)
+  - 资产创建/更新/筛选仅使用 `ownership_id`，`ownership_entity` 改为动态读取（不落库）
+  - 资产筛选与统计接口移除 `ownership_entity` 查询参数，前端筛选改用权属方选项与 `ownership_id`
+- **组织循环检测查询降为单次递归 CTE** (Organization Cycle Check Single-Query CTE)
+  - `_would_create_cycle` 改为递归 CTE 检测父链，避免逐层查询造成的性能放大
+- **组织子树路径批量更新** (Organization Subtree Path Batch Update)
+  - `_update_children_path` 改为递归 CTE 批量更新层级与路径，移除逐节点递归查询
+- **管理员数据库重置异步化** (Admin DB Reset Async)
+  - 管理员重置数据库接口改为异步并 await create/drop tables
+- **RBAC 服务统一** (RBAC Service Consolidation)
+  - 移除 `services/rbac` 旧实现与相关遗留测试引用
+  - 统一使用 `services/permission/rbac_service.py`，改用 CRUD + 标准异常
+  - 角色管理 API 调用路径切换至新 RBAC 服务
+  - RBAC 服务内时间戳改为 `datetime.now(UTC)`，避免 `utcnow()` 弃用警告
+- **移除不安全 SecurityService Stub** (Remove Unsafe SecurityService Stub)
+  - 删除 `SecurityService` stub 与相关导出，避免 IDE/自动导入误用
+  - 新增单元测试防回归，确保 `SecurityService` 不可被导入或导出
+- **Ownership 模型抽离与导入统一** (Ownership Model Extraction & Import Unification)
+  - Ownership 独立到 `models/ownership.py` 并更新所有引用路径
+  - 统一模型导出，避免对 `models.asset` 的隐式依赖与循环导入风险
+  - 修复字段白名单初始化中 Ownership 的导入路径，避免运行时警告
+- **数据库引擎类型注解修复** (Database Engine Type Hint Fix)
+  - 补充 `sqlalchemy.engine.Engine` 导入，避免类型注解在运行时报 NameError
+- **枚举初始化异步化** (Enum Init Async Migration)
+  - 启动阶段枚举数据初始化改用 AsyncSession + async_session_scope
+  - 枚举与遗留值同步逻辑改为异步查询/提交
+- **Excel 模板服务去数据库依赖** (Excel Template DB Decoupling)
+  - Excel 模板服务移除 Session 依赖，下载路由不再注入未使用的 db
+- **移除同步适配层** (Remove Sync Adapter Layer)
+  - 删除 `utils/async_db.py` 中的 run_sync/适配器占位实现
+- **资产唯一性校验异步化** (Asset Uniqueness Async Validation)
+  - AssetValidator 唯一性校验改为 AsyncSession 查询
+- **出租率计算去同步 DB** (Occupancy Calc Sync DB Removal)
+  - OccupancyRateCalculator 移除同步 Session 聚合路径，仅保留内存计算
+- **Excel 导出服务异步收敛** (Excel Export Async Convergence)
+  - Excel 导出服务移除同步导出接口与 Session 依赖，保留异步导出路径
+- **审计服务异步化** (Audit Service Async Migration)
+  - AuditService 改为 AsyncSession + await 调用并更新单元测试为异步
+- **分析缓存接口异步化** (Analytics Cache Async Update)
+  - 缓存统计/清理服务方法改为异步并在 API 端点 await 调用
+  - 分析服务单元测试与统计 API 测试更新为异步 Mock/await
+- **分析缓存执行异步化** (Analytics Cache Async Execution)
+  - 分析服务缓存读取/写入/清理/统计改为异步线程执行，避免阻塞事件循环
+- **Excel 导出服务异步兼容** (Excel Export Async Compatibility)
+  - Excel 导出服务支持 AsyncSession 并新增异步导出与预览方法
+- **财务统计接口异步化** (Financial Stats Async Migration)
+  - 财务汇总统计移除 run_sync，统一 await 异步服务
+  - 财务统计单元测试改用 AsyncMock 与 await
+- **系统备份与历史接口异步化** (System Backup & History Async Migration)
+  - 备份创建/恢复移除 run_sync，统一使用 AsyncSession 获取数据库连接信息
+  - 历史记录列表/详情/删除改用异步 CRUD 方法
+- **租赁合同统计与生命周期异步化** (Rent Contract Stats & Lifecycle Async Migration)
+  - 统计概览/权属/资产/月度/导出移除 run_sync，统一使用 AsyncSession 异步服务
+  - 续签/终止流程新增异步服务并在路由 await 调用
+- **租赁合同统计服务异步化收敛** (Rent Contract Statistics Async Convergence)
+  - 统计服务移除同步方法与 Session 依赖，统一 AsyncSession 路径
+- **资产批量/自定义字段/产权证测试异步对齐** (Async Test Alignment for Batch/CustomField/PropertyCert)
+  - 资产批量服务与 API 单测改用 AsyncMock/await
+  - 自定义字段/产权证 CRUD 与服务单测更新为异步调用
+- **租赁合同 CRUD 异步化** (Rent Contract CRUD Async Migration)
+  - 合同查询/筛选/台账/条款 CRUD 补齐 AsyncSession 方法，移除 run_sync 包装
+  - 合同创建/更新/删除改为异步调用并新增异步更新服务
+  - 租赁合同 API 单测改用 AsyncMock/await 适配异步接口
+- **租赁合同台账与附件异步补齐** (Rent Contract Ledger & Attachment Async Follow-up)
+  - 台账生成/批量更新/更新服务补齐异步实现并移除 run_sync
+  - 附件/合同错误用例单测改为异步调用以匹配异步路由
+- **租赁合同附件异步收敛** (Rent Contract Attachment Async Convergence)
+  - 附件增删查改用 AsyncSession 调用并补齐异步上传服务
+  - Excel 异步导入任务创建改为异步 CRUD，移除 run_sync 适配
+- **资产附件单测异步对齐** (Asset Attachment Test Async Alignment)
+  - 资产附件单元测试改用 AsyncMock/await 适配异步路由实现
+- **资产附件字段防丢失对齐** (Asset Attachment Field Preservation)
+  - 前端 `assetFormSchema` 补齐接收协议/终端合同附件字段
+  - 后端新增 Asset schema 单元测试，确保字段序列化不丢失
+  - 资产 API 单测样例补齐附件字段
+- **用户组织字段对齐** (User Organization Field Alignment)
+  - 后端 User 支持 `organization_id` 兼容别名并返回别名字段
+  - 前端统一使用 `default_organization_id`，/auth/me 补齐组织字段
+
+### 🧪 测试 (Tests)
+
+- **RBAC/权属测试对齐** (RBAC/Ownership Test Alignment)
+  - 单元/集成/E2E 测试统一使用 `role_id` 与 RBAC 角色分配
+  - 资产测试数据改为 `ownership_id`，并为集成场景补齐权属方关联
+- **系统监控健康检查测试异步化** (System Health Tests Async)
+  - check_component_health 单测改为 async/await 并使用 AsyncMock
+- **PDF 批量导入集成测试对齐异步依赖** (PDF Batch API Tests Async Alignment)
+  - 移除 get_db 覆盖，使用默认 get_async_db 依赖
+- **PDF 批量上传错误响应断言对齐** (PDF Batch Upload Error Assertion)
+  - 集成测试改为校验中间件返回的 message 字段
+- **出租率计算单测切换为内存计算路径** (Occupancy Calculator Tests In-Memory)
+  - 移除 get_db patch，按内存资产列表验证统计结果
+
+### 📚 文档 (Docs)
+
+- 资产与数据库设计文档更新：`ownership_id` 作为唯一来源，`ownership_entity` 动态读取
+- 认证与测试示例更新：移除旧 `role` 字段，统一使用 `role_id`
+- **异步数据库示例更新** (Async DB Docs Refresh)
+  - 后端/数据库/测试指南示例改为 AsyncSession + get_async_db
+- **Excel 导出路由单测异步对齐** (Excel Export Route Test Async Alignment)
+  - Excel 导出相关单元测试补齐 await 与异步 Mock
+- **Excel 预览路由异步对齐** (Excel Preview Route Async Alignment)
+  - 预览接口改用 AsyncSession + get_async_db 依赖注入
+- **Excel 导入路由异步对齐** (Excel Import Route Async Alignment)
+  - 同步/异步导入改为 AsyncSession 调用并移除线程内同步会话
+  - 导入后台任务测试改为异步 CRUD 调用与 AsyncMock
+- **请求日志异步化** (Request Logging Async Migration)
+  - 操作日志记录改为 AsyncSession 异步写入并移除 run_sync 适配
+- **产权证服务异步化** (Property Certificate Service Async Migration)
+  - 产权证列表/详情/创建/更新/删除移除 run_sync，直接使用 AsyncSession CRUD
+- **产权证提取提示词加载** (Property Certificate Prompt Loading)
+  - 上传提取流程改用异步 PromptManager 获取激活模板，避免无 PromptManager 时抛配置异常
+- **文档提取管理器兼容性** (Document Extraction Manager Compatibility)
+  - 产权证提取支持注入 AsyncSession 获取 Prompt，结果字段兼容 extracted_fields/data
+- **产权证提取适配器异步兼容** (Property Certificate Adapter Async Compatibility)
+  - PromptManager 根据 AsyncSession 调用异步查询，避免同步查询阻塞
+- **PDF 导入会话异步化** (PDF Import Session Async Migration)
+  - 会话创建/状态查询/处理状态持久化/确认导入/取消流程移除 run_sync
+- **PDF 批量会话查询异步化** (PDF Batch Session Async Migration)
+  - 批量状态/取消接口改用 AsyncSession 查询会话映射
+- **PDF 会话服务异步化** (PDF Session Service Async Migration)
+  - PDFSessionService 改为 AsyncSession 并异步化会话查询/创建
+- **PDF 处理追踪异步化** (PDF Processing Tracker Async Migration)
+  - ProcessingTracker 与步骤追踪装饰器改为 AsyncSession
+- **组织列表分页解析修复** (Organization List Pagination Parsing)
+  - 前端组织服务解包分页 items，避免用户管理页加载组织列表时报错
+  - 组织搜索/高级搜索/历史列表统一兼容分页响应
+- **用户列表无限刷新修复** (User List Infinite Refresh Fix)
+  - 拆分用户管理页初始化副作用，避免统计刷新触发重复拉取导致渲染深度溢出
+- **租赁合同创建提交修复** (Rent Contract Create Submit Fix)
+  - 租赁合同表单补齐 onFinish 提交回调，修复创建合同无请求的问题
+  - 新增表单提交单元测试覆盖
+- **租赁合同创建错误提示与重试优化** (Rent Contract Create Error Messaging & Retry)
+  - 创建合同遇到 4xx 冲突不再重试，避免重复提交
+  - 失败提示展示后端返回的冲突原因
+- **资产重名与删除约束** (Asset Uniqueness & Delete Guard)
+  - 资产 `property_name` 全局唯一（服务/导入校验 + 数据库唯一约束）
+  - 资产删除时若已关联合同或产权证则阻止删除
+- **权属一致性校验** (Ownership Alignment)
+  - `ownership_id` 与 `ownership_entity` 不一致时拒绝写入并对齐名称
 - **异步会话迁移补齐** (Async Session Migration Completion)
   - 资产/合同/组织/催缴/字典/统计/产权证/PDF批量等接口统一改用 AsyncSession + get_async_db
   - PDF 批量监控改用 async_session_scope，避免同步会话混用
@@ -14,12 +184,81 @@
   - Excel 同步导入改为线程内创建会话，避免跨线程复用 Session
 - **异步会话迁移补充** (Async Session Migration Follow-ups)
   - 枚举字段/权属方/项目/会话管理接口统一改为 AsyncSession + run_sync 适配同步 CRUD/Service
-  - 资产导入/提示词/系统设置接口补齐 run_sync 包装与类型适配
+    - 资产导入/提示词/系统设置接口补齐 run_sync 包装与类型适配
+- **用户管理服务单测异步化** (User Management Service Test Async Migration)
+  - 修复用户管理服务单元测试，统一 AsyncMock/await 与 AsyncSessionService 依赖注入
+- **用户管理 API 单测异步对齐** (Users API Test Async Alignment)
+  - Users API 单测改为 asyncio.run 调用异步路由，CRUD/Service Mock 全量异步化
+  - 锁定/解锁/重置密码测试补齐 AsyncMock commit/refresh/rollback
+- **认证集成测试导入清理** (Auth Integration Test Import Cleanup)
+  - 集成测试导入改为 AsyncAuthenticationService/AsyncSessionService/AsyncUserManagementService
+- **认证 CRUD 异步化** (Auth CRUD Async Migration)
+  - auth CRUD 移除同步 Session 接口，补齐用户/会话/审计异步方法
+  - 认证 CRUD 单元测试改为 AsyncMock/await，集成测试移除 get_db 同步依赖
+- **资产服务异步化** (Asset Service Async Migration)
+  - AssetService 统一为 AsyncSession 异步实现，并保留 AsyncAssetService 别名
+  - 资产服务单元/集成测试改为异步执行，使用 AsyncMock 与异步会话隔离
+  - 资产服务集成测试改用临时异步引擎 + NullPool，避免事件循环关闭导致连接异常
+- **组织服务异步化** (Organization Service Async Migration)
+  - OrganizationService 全量改为 AsyncSession 调用并修正组织 API 调用命名
+  - 组织服务单元/集成测试改为异步执行（AsyncMock + AsyncSession）
+  - 组织服务历史/统计查询改为异步路径
+  - 遗留的深度/增强集成测试暂时标记跳过，等待异步 API 对齐后恢复
+- **操作日志 CRUD 异步化** (Operation Log CRUD Async Migration)
+  - OperationLogCRUD 移除同步方法，仅保留异步 CRUD/统计接口
+  - 操作日志 CRUD 单元测试改为 AsyncMock + await
+  - 组织服务集成测试修正异步引擎引用方式，避免引擎初始化判定失效
+  - 组织服务集成测试改用临时异步引擎 + NullPool，避免事件循环关闭导致连接异常
+- **系统字典异步化** (System Dictionary Async Migration)
+  - system_dictionary CRUD/Service 移除同步 Session 接口，仅保留 AsyncSession 路径
+  - 系统字典单元/集成测试改为异步执行并使用 asyncpg 引擎
+- **枚举字段与公共字典异步化** (Enum Field & Common Dictionary Async Migration)
+  - enum_field CRUD 移除同步方法，仅保留 AsyncSession 异步实现
+  - CommonDictionaryService 移除同步入口，单元测试改为 AsyncMock/await 并移除 db_session 依赖
+- **通知模块异步化** (Notification Module Async Migration)
+  - Notification CRUD/Service 移除同步方法，仅保留 AsyncSession 异步接口
+  - 通知定时任务调度器改为异步查询与 async_session_scope 执行
+  - 通知调度单元/集成测试改为异步会话与 AsyncMock
+- **任务模块异步化** (Task Module Async Migration)
+  - Task/ExcelTaskConfig CRUD 移除同步方法，仅保留 AsyncSession 异步实现
+  - 任务 API 与服务单元测试统一 AsyncMock/await 调用
+  - 任务服务集成测试改用异步会话与当前 TaskService 能力
+  - 任务创建单元测试对齐历史记录写入与多次提交行为
+- **资产字段值查询测试数据去重** (Asset Field Values Test Data Uniqueness)
+  - 资产集成测试字段值查询场景改用唯一 `property_name`，避免唯一约束冲突
+
+### ✨ 文档识别 (Document Extraction)
+
+- **GLM-OCR 预处理接入**
+  - 新增 GLM-OCR 服务与 OCR 文本抽取管道
+  - 智能识别支持扫描件自动走 OCR，并支持 `force_method=ocr`
+  - 产权证/合同提取在 OCR 失败时回退至现有视觉模型
+- **PyMuPDF 调用异步化**
+  - 文本提取 / PDF 分析 / Vision 转图统一线程池 offload，避免阻塞事件循环
+- **LLMService 读取配置对齐**
+  - LLM 服务创建优先读取 settings/.env 中的提供商与密钥配置，避免本地脚本无法读取环境变量
+- **Vision PDF 转图工具补齐**
+  - 补充 `pdf_to_images` 实现，支持 PyMuPDF/pdf2image 转图，修复视觉提取缺失模块
+- **证据驱动识别输出**
+  - OCR 提取新增字段证据片段与来源（field_evidence/field_sources）
+  - PDF 智能合并流程加入一致性校验与置信度扣减
+  - API 类型与前端处理选项支持 `force_method=ocr`
   - async_db 适配器补齐构造签名类型约束，修正类型推断错误
+- **合同导入审核证据展示**
+  - 合同导入确认页支持字段证据弹窗与来源提示
+  - 提取警告信息同步展示，便于快速复核异常字段
+- **资产批量与历史接口异步化** (Asset Batch & History Async Migration)
+  - 资产批量更新/验证/删除/列表与历史接口移除 run_sync，统一使用 AsyncSession 调用
+  - 批量更新与删除补齐异步 CRUD 与历史记录写入
 - **PDF 路由兼容性** (PDF Route Compatibility)
   - 增加 `/documents/pdf-import/*` 兼容路由，保持历史路径与测试用例可用
 - **分析缓存容错** (Analytics Cache Guard)
   - 分析缓存读写失败时降级执行计算，避免测试/运行期 Redis 异常导致 500
+- **分析与面积服务单测异步适配** (Analytics/Area Test Async Alignment)
+  - 面积聚合/内存计算单测改用 AsyncSession mock 与 await
+  - 分析趋势/分布测试补齐异步 patch 与 await 逻辑
+- **分析服务清理无用导入** (Analytics Service Import Cleanup)
+  - 移除未使用的 SQLAlchemy or_ 导入以通过 lint
 - **后台服务会话初始化修复** (Background Service Session Init Fix)
   - 出租率计算、通知任务、租金合同导出改用 session_factory，移除 get_db 生成器调用
 - **代码格式统一** (Code Formatting Alignment)
@@ -28,7 +267,55 @@
   - V1 兼容上传改为流式写入并严格限制大小，避免一次性读入内存
   - 上传临时文件处理完成后自动清理
 - **PDF 导入临时文件清理** (PDF Import Temp File Cleanup)
+- **催缴服务异步收敛** (Collection Service Async Convergence)
+  - CollectionService 移除同步方法与 Session 依赖，统一 AsyncSession
+  - 催缴 API 单测改用 AsyncMock/await
+- **枚举验证异步收敛** (Enum Validation Async Convergence)
+  - 移除同步 EnumValidationService 与便捷函数，仅保留 AsyncEnumValidationService
+  - 单测与全局 mock 更新为异步验证接口
+- **LLM Prompt 异步收敛** (LLM Prompt Async Convergence)
+  - PromptManager/FeedbackService/AutoOptimizer 移除同步接口并改用 AsyncSession
+  - LLM Prompt 服务单测重写为异步覆盖
+- **产权证提示词适配器收紧** (Property Cert Adapter Async-only)
+  - PromptManager 获取提示词仅接受 AsyncSession，移除同步 fallback
+
+### 🧰 工具 (Tooling)
+
+- **开发进程监控脚本** (Dev Watch Script)
+  - 新增 `scripts/dev_watch.ps1`，启动前后端并在异常退出时记录退出码与日志尾部
+  - 支持后台脱离控制台运行，避免关窗导致进程被中断
+- **开发启动默认行为恢复** (Dev Server Defaults Restored)
+  - Makefile 恢复默认 shell 行为
+  - 前端 Vite 恢复默认启动与 TS 配置，后端 dev server 恢复默认 reload
+
+### 📝 文档更新 (Documentation Updates)
+
+- 更新 `AGENTS.md` 与 `CLAUDE.md`，同步最新命令、规则与更新时间
+- 对齐前端状态管理描述：Zustand 用于 UI/资产 UI 状态，认证使用 React Context
+
+### 🐞 Bug Fixes
+
+- **产权证列表 404** (Property Certificate List 404)
+  - 修复产权证路由重复前缀导致 `/api/v1/property-certificates/` 404
   - 处理结果/失败后自动清理 `temp_uploads` 与系统临时目录下的源文件
+- **产权证字段兼容修复** (Property Certificate Field Compatibility)
+  - 响应补齐 `verified` 字段并兼容 `is_verified` 更新
+  - 列表查询参数统一使用 `limit`
+- **前端路由与组件警告修复** (Frontend Route & Warning Fixes)
+  - 产权证导入页面包屑不再误判为详情页
+  - Ant Design Steps/Modal 废弃属性警告修复
+- **系统字典与统计页面修复** (Dictionary & Stats Page Fixes)
+  - 枚举字段列表响应移除 children 懒加载，修复字典页 500
+  - 枚举值 children 通过 `set_committed_value` 清理，避免 Pydantic 校验触发 MissingGreenlet
+  - 系统设置/组织管理 Tabs 改用 items，移除 TabPane 废弃警告
+  - 系统设置密码策略表单修复单子元素渲染警告
+  - 个人中心弹窗强制渲染，避免 useForm 未连接提示
+  - 租金统计饼图标签改为函数并补齐图表错误边界
+  - 租金统计收缴率进度条改用 `size`，移除 Progress width 废弃警告
+- **项目/组织响应懒加载防护** (Project/Organization Lazy-load Guard)
+  - ProjectResponse/OrganizationResponse 避免在序列化时访问未加载关系字段
+- **枚举字段异步加载修复** (Enum Field Async Load Fix)
+  - 异步加载枚举值使用 `set_committed_value`，避免 greenlet_spawn 触发 503
 - **PDF 批量上传内存风险** (PDF Batch Upload Memory Risk)
   - 批量上传改为流式写入 `temp_uploads`，避免一次性读取到内存
   - 超限/空文件即时清理，失败时回收临时文件
@@ -41,10 +328,30 @@
 - **Excel 配置创建修复** (Excel Config Create Fix)
   - Excel 配置创建时补齐 `task_type` 与格式配置，避免字段不匹配导致创建失败
   - 默认配置切换时自动取消同类型默认值，避免多默认配置
+- **资产创建事务提交修复** (Asset Create Transaction Commit Fix)
+  - 修复资产创建在已有事务（权限校验/审计依赖）场景下仅开启嵌套事务导致提交丢失的问题
+  - 资产创建现在在检测到已有事务时显式提交，确保写入持久化
+- **资产列表缓存失效修复** (Asset List Cache Invalidation Fix)
+  - 资产新增/更新/删除后清理资产相关 GET 缓存，避免列表继续显示旧数据
+  - API 客户端新增按前缀失效缓存接口，支持粒度清理
+- **资产软删除与校验加强** (Asset Soft Delete & Guard)
+  - 资产删除改为软删除（data_status=已删除），保留历史记录与附件数据
+  - 删除前新增租金台账关联校验，阻止存在台账的资产被删除
+  - 查询统计补齐软删除过滤，确保列表与总数一致
+  - 管理员新增资产恢复/彻底删除接口，支持软删除恢复与物理清理
+  - 资产恢复/彻底删除补齐服务层校验与单元测试覆盖
+  - Hard delete now clears asset history to avoid FK violations.
+- **资产回收站筛选与前端操作** (Asset Recycle Bin UI)
+  - 资产列表支持 `data_status` 筛选查看回收站记录
+  - 前端新增资产状态筛选与状态列展示
+  - 已删除资产仅显示恢复/彻底删除操作（管理员 + 强确认）
 - **任务访问控制修复** (Task Access Control Fix)
   - 任务列表/详情/更新/删除/历史仅允许任务创建者或管理员访问
   - Excel 任务状态与导出下载接口需要认证并校验任务归属
   - 过期任务清理接口限制为管理员调用
+- **任务模块异步迁移** (Task Module Async Migration)
+  - 任务 CRUD/Service/API 统一使用 AsyncSession，移除 run_sync 适配
+  - Excel 任务创建与状态更新改用同步会话专用 CRUD 方法
 - **租金台账更新逻辑修复** (Rent Ledger Update Logic Fix)
   - 单条台账更新改为服务层处理，自动计算逾期金额与服务费
   - 统一与批量更新的衍生字段逻辑，避免直接 CRUD 导致数据不一致
@@ -63,6 +370,8 @@
   - 产权证接口改用同步会话并修正服务调用方式，避免运行期异常
 - **Session 类型引用修复** (Session Type Reference Fix)
   - 修复 PDF 导入服务、系统设置与用户管理路由缺失 `Session` 类型引用导致的导入失败
+- **系统设置接口异步化** (System Settings Async Migration)
+  - 系统设置/系统信息/备份/恢复接口移除 run_sync，审计日志改为异步写入
 - **租金合同路由同步化修复** (Rent Contract Route Sync Fix)
   - 将合同/条款/台账/统计/附件接口改为同步会话，移除错误的 `run_sync` 包装
   - 附件下载/删除改为同步获取附件对象，避免运行期取不到元数据
@@ -81,6 +390,35 @@
   - 支持合同/条款/台账多表导出与基础导入
 - **运行依赖补齐** (Runtime Dependency Completion)
   - 添加 `cryptography` 与 `httpx` 到后端核心依赖，避免运行期导入失败
+  - 添加 `asyncpg` 作为异步数据库驱动依赖，避免 AsyncSession 运行期导入失败
+- **认证会话写入修复** (Auth Session Insert Fix)
+  - `user_sessions` 写入统一使用 naive UTC 时间戳，避免 asyncpg 对 TIMESTAMP WITHOUT TIME ZONE 抛错
+  - 审计日志写入改用 naive UTC 时间戳，避免 `audit_logs` 写入失败
+  - 用户时间戳字段（`password_last_changed`/`updated_at`/`last_accessed_at`）改为 naive UTC
+  - 登录流程不再因会话写入失败返回 500
+- **密码过期判断修复** (Password Expiry Comparison Fix)
+  - 密码过期时间比较统一为 naive UTC，避免登录时出现 aware/naive 比较异常
+- **资产筛选下拉修复** (Asset Filter Dropdown Fix)
+  - 资产列表筛选项改为异步 distinct 查询，避免 `run_sync` 调用协程导致 500
+- **权属方列表修复** (Ownership List Fix)
+  - 权属方列表/搜索改用同步查询封装，修复 `/api/v1/ownerships` 500
+- **前端缓存分页提取修复** (Frontend Cache Paginated Extract Fix)
+  - GET 缓存命中时继续执行 smartExtract，避免缓存返回原始响应导致列表结构缺失
+- **创建接口斜杠兼容** (Create Endpoint Slash Compatibility)
+  - 权属方/项目创建同时支持无尾斜杠路径，避免前端 POST 405
+- **权属方创建校验修复** (Ownership Create Validation Fix)
+  - 前端创建不再提交空字符串编码，允许后端自动生成编码，避免 422
+- **权属方/项目异步化** (Ownership & Project Async Migration)
+  - 权属方/项目服务与 API 端点改为 AsyncSession 调用，移除 run_sync 适配
+  - 权属方财务汇总查询改为异步 SQL，避免同步子查询问题
+- **项目响应懒加载修复** (Project Response Lazy-Load Fix)
+  - 项目创建/列表/详情响应改为显式映射列字段，避免 ownership_relations 触发 MissingGreenlet
+- **前端缓存提取测试** (Frontend Cache Extract Test)
+  - 新增单元测试覆盖缓存命中时的分页响应提取
+- **时间戳标准化扩展** (UTC Timestamp Standardization Expansion)
+  - 模型/服务/CRUD 中写库时间统一使用 `datetime.utcnow()`（naive UTC），避免 asyncpg 对无时区字段报错
+  - API 层 Excel 任务与用户更新写入时间统一为 `datetime.utcnow()`（naive UTC）
+  - 清理替换后未使用的 `UTC` 导入
 - **生产环境路由注册器防降级** (Production Router Registry Guard)
   - 生产环境禁止启用 `ALLOW_MOCK_REGISTRY`，缺失注册器属性时直接报错
   - 新增单元测试覆盖生产环境 Mock 降级保护
@@ -96,14 +434,39 @@
 - **认证会话接口异步化** (Auth Session Async Migration)
   - 会话查询/撤销与可选认证中间件移除 run_sync，改用 AsyncSession 查询
   - 调试认证端点改为 AsyncAuthenticationService 与 AsyncUserManagementService
+  - 审计日志统计接口改为 AsyncSession 直连查询
+- **组织架构接口异步化** (Organization API Async Migration)
+  - 组织列表/搜索/树形/路径/历史等接口移除 run_sync 适配
+  - 组织服务与 CRUD 补齐 AsyncSession 查询与历史记录写入
+- **操作日志接口异步化** (Operation Log API Async Migration)
+  - 操作日志列表/统计/导出/清理改为 AsyncSession 直连查询
+  - 用户名补齐查询改用异步批量映射接口
+- **安全事件接口异步化** (Security Event API Async Migration)
+  - 系统设置安全事件查询改为异步 CRUD 调用
+  - 组织权限与安全告警测试改为原生异步安全日志记录
+- **枚举字段接口异步化** (Enum Field API Async Migration)
+  - 枚举类型/值/使用记录/历史查询改为 AsyncSession 直连调用
+  - 枚举 CRUD 补齐异步统计、批量写入与历史记录写入方法
+- **提示词与通知接口异步化** (Prompt & Notification API Async Migration)
+  - Prompt 模板/版本/统计/反馈接口移除 run_sync 适配
+  - 通知列表/未读统计/标记已读/删除改为 AsyncSession 调用
+- **系统字典与催缴接口异步化** (System Dictionary & Collection API Async Migration)
+  - 系统字典 CRUD/批量更新改为 AsyncSession 直连
+  - 催缴汇总/记录列表/读写接口移除 run_sync 适配
 
 #### Changed / 变更
 
+- **AGENTS 测试指引** (AGENTS Low-Memory Test Guidance)
+  - 补充低内存运行 pytest 的建议与示例命令
+- **资产枚举值更新** (Asset Enum Defaults Update)
+  - 更新确权状态/使用状态/物业性质/租户类型的标准枚举值
 - **产权证 API 层依赖规范化** (Property Certificate API Layer Normalization)
   - API 端点改为通过 `PropertyCertificateService` 访问 CRUD
 
 #### Added / 新增
 
+- **资产权属回填脚本** (Asset Ownership Backfill Script)
+  - 新增脚本用于按 ownership_id 回填 ownership_entity（安全策略 A）
 - **缺失的 CRUD 类补齐** (Missing CRUD Classes Added)
   - 新增 `collection_crud`、`dynamic_permission_crud`、`prompt_template_crud`
 - **白名单补齐** (Field Whitelist Coverage)
@@ -120,6 +483,8 @@
   - 修正缺失的类型导入与泛型写法（`AsyncDB` 适配器改用 PEP 695 语法）
   - 修复分析接口空行空白、重复导入与未使用导入问题
   - 统一 Excel 导入与产权证 CRUD 的导入排序/来源
+  - 补齐资产历史查询缺失的 `Session` 类型导入
+  - 密码过期校验改用 `datetime.UTC` 以符合 Ruff 规则
 - **MyPy 类型修复** (MyPy Type Fixes)
   - 完善系统日志/字典/联系人/角色等接口的 `run_sync` 适配与 `Session` 类型注解
   - 修复租金合同 Excel 导入/导出类型转换与字段映射模型匹配
@@ -133,6 +498,11 @@
 - **测试稳定性** (Test Stability)
   - 测试环境变量恢复逻辑补齐，避免污染后续用例
   - 清理未使用断言变量并补充必要断言
+  - 认证 API 与会话服务单元测试改为 AsyncSession + AsyncMock
+  - 认证服务拆分验证测试改用异步服务与 AsyncSession mock
+- **可选认证测试清理** (Optional Auth Test Cleanup)
+  - 移除可选认证单测中的未使用 mock 逻辑与多余 token 生成，避免 lint 噪音
+  - 可选认证单测改为异步调用并使用 AsyncSession 兼容的 stub
 
 ### ⚙️ 配置管理优化 (Configuration Management Optimization)
 
@@ -299,6 +669,14 @@
   - `docs/includes/mkdocs.md`
   - `backend/pyproject.toml` 中的 docs 可选依赖
   - `backend/uv.lock` 中的 mkdocs 相关锁定项
+
+### 📝 文档更新 (Documentation Updates)
+
+#### Changed / 变更
+
+- 更新后端与数据库指南，补充 asyncpg 依赖说明、虚拟环境提示与 UTC 时间戳写库约定
+- 更新资产管理 PRD，补充范围/对象关系、枚举、唯一性、删除约束、权属对齐与权限预留要求
+- 更新资产管理 API 文档，补充业务规则、枚举与关联/删除约束说明
 
 ---
 ## [1.0.0] - 2026-01-15

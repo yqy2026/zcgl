@@ -187,7 +187,7 @@ export interface PatternMatch {
 
 // 处理选项接口
 export interface ProcessingOptions {
-  force_method?: 'text' | 'vision' | 'smart';
+  force_method?: 'text' | 'vision' | 'smart' | 'ocr';
   enable_chinese_optimization?: boolean;
   enable_table_detection?: boolean;
   enable_seal_detection?: boolean;
@@ -305,6 +305,9 @@ export interface PdfImportExtractionResult {
   extraction_method: string;
   processed_fields: number;
   total_fields: number;
+  warnings?: string[];
+  field_evidence?: Record<string, unknown> | null;
+  field_sources?: Record<string, unknown> | null;
   vision_result?: VisionResult;
   table_analysis?: TableAnalysisResult;
   seal_detection?: SealDetectionResult;

@@ -215,6 +215,60 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('缓存命中响应提取', () => {
+    it('缓存命中时应继续执行分页响应提取', async () => {
+      const cacheClient = new ApiClient({
+        baseURL: API_BASE_URL,
+        enableAutoRetry: false,
+        enableCaching: true,
+        enableLogging: false,
+        defaultCacheConfig: {
+          enabled: true,
+          ttl: 5000,
+          maxSize: 10,
+        },
+      });
+
+      const cacheKey = cacheClient['generateCacheKey']('GET', '/api/test', { page: 1 });
+      const cachedResponse = {
+        success: true,
+        data: {
+          items: [{ id: 1 }],
+          pagination: {
+            page: 1,
+            page_size: 10,
+            total: 1,
+            total_pages: 1,
+            has_next: false,
+            has_prev: false,
+          },
+        },
+        message: 'ok',
+      };
+
+      cacheClient['cache'].set(cacheKey, cachedResponse, 5000);
+
+      const result = await cacheClient.get<{
+        items: Array<{ id: number }>;
+        total: number;
+        page: number;
+        page_size: number;
+        pages: number;
+      }>('/api/test', {
+        params: { page: 1 },
+        cache: true,
+        smartExtract: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.items).toHaveLength(1);
+      expect(result.data?.page).toBe(1);
+      expect(result.data?.page_size).toBe(10);
+      expect(result.data?.total).toBe(1);
+      expect(result.data?.pages).toBe(1);
+    });
+  });
+
   describe('工具方法', () => {
     it('clearCache应该清除所有缓存', () => {
       const cacheClient = new ApiClient({

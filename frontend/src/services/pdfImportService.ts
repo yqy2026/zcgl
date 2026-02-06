@@ -136,6 +136,9 @@ export interface ExtractionResult {
   extraction_method: string;
   processed_fields: number;
   total_fields: number;
+  warnings?: string[];
+  field_evidence?: Record<string, unknown> | null;
+  field_sources?: Record<string, unknown> | null;
   error?: string;
 }
 
@@ -1037,6 +1040,26 @@ export class PDFImportService {
       if (progressResponse.success && progressResponse.session_status) {
         const session = progressResponse.session_status;
         const processingStatus = session.processing_status;
+        const processingStatusRecord =
+          processingStatus != null && typeof processingStatus === 'object'
+            ? (processingStatus as Record<string, unknown>)
+            : undefined;
+        const finalResultsRecord =
+          processingStatusRecord?.final_results != null &&
+          typeof processingStatusRecord.final_results === 'object'
+            ? (processingStatusRecord.final_results as Record<string, unknown>)
+            : undefined;
+        const fieldEvidence =
+          (processingStatusRecord?.field_evidence as Record<string, unknown> | undefined) ??
+          (finalResultsRecord?.field_evidence as Record<string, unknown> | undefined);
+        const fieldSources =
+          (processingStatusRecord?.field_sources as Record<string, unknown> | undefined) ??
+          (finalResultsRecord?.field_sources as Record<string, unknown> | undefined);
+        const extractionWarnings = (() => {
+          const rawWarnings =
+            processingStatusRecord?.warnings ?? finalResultsRecord?.warnings ?? undefined;
+          return Array.isArray(rawWarnings) ? rawWarnings : undefined;
+        })();
 
         if (session.status === 'ready_for_review' || session.status === 'completed') {
           // 构建结果对象
@@ -1056,6 +1079,9 @@ export class PDFImportService {
               extraction_method: 'multi_engine',
               processed_fields: Object.keys(processingStatus?.final_fields ?? {}).length,
               total_fields: 58,
+              warnings: extractionWarnings,
+              field_evidence: fieldEvidence,
+              field_sources: fieldSources,
             },
             validation_result: {
               success: true,

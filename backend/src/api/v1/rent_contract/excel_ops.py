@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....constants.message_constants import ErrorIDs
 from ....core.exception_handler import (
@@ -20,6 +21,7 @@ from ....core.exception_handler import (
     internal_error,
     service_unavailable,
 )
+from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....utils.file_security import generate_safe_filename
@@ -63,7 +65,7 @@ except SyntaxError as e:
 
 
 @router.get("/excel/template", summary="下载Excel导入模板")
-def download_excel_template(
+async def download_excel_template(
     current_user: User = Depends(get_current_active_user),
 ) -> FileResponse:
     """
@@ -99,9 +101,10 @@ def download_excel_template(
 
 
 @router.post("/excel/import", summary="Excel导入合同数据")
-def import_contracts_from_excel(
+async def import_contracts_from_excel(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
     should_import_terms: bool = Form(True, description="是否导入租金条款"),
     should_import_ledger: bool = Form(False, description="是否导入台账数据"),
     should_overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
@@ -127,10 +130,11 @@ def import_contracts_from_excel(
         file_path = os.path.join(temp_dir, safe_filename)
 
         with open(file_path, "wb") as buffer:
-            content = file.file.read()
+            content = await file.read()
             buffer.write(content)
 
-        result = rent_contract_excel_service.import_contracts_from_excel(
+        result = await rent_contract_excel_service.import_contracts_from_excel(
+            db=db,
             file_path=file_path,
             import_terms=should_import_terms,
             import_ledger=should_import_ledger,
@@ -157,9 +161,10 @@ def import_contracts_from_excel(
 
 
 @router.get("/excel/export", summary="Excel导出合同数据")
-def export_contracts_to_excel(
+async def export_contracts_to_excel(
     contract_ids: list[str] | None = Query(None, description="要导出的合同ID列表"),
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
     should_include_terms: bool = Query(True, description="是否包含租金条款"),
     should_include_ledger: bool = Query(True, description="是否包含台账数据"),
     start_date: date | None = Query(None, description="开始日期"),
@@ -173,7 +178,8 @@ def export_contracts_to_excel(
     assert rent_contract_excel_service is not None
 
     try:
-        result = rent_contract_excel_service.export_contracts_to_excel(
+        result = await rent_contract_excel_service.export_contracts_to_excel(
+            db=db,
             contract_ids=contract_ids,
             include_terms=should_include_terms,
             include_ledger=should_include_ledger,

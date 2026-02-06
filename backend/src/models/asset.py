@@ -3,7 +3,7 @@
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
@@ -37,9 +37,7 @@ class Asset(Base):
     )
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    ownership_entity: Mapped[str] = mapped_column(
-        String(200), nullable=False, index=True, comment="权属方"
-    )
+    # ownership_entity 移除：使用 ownership_id 作为权属唯一来源
     ownership_category: Mapped[str | None] = mapped_column(
         String(100), comment="权属类别"
     )
@@ -47,7 +45,7 @@ class Asset(Base):
         String(200), index=True, comment="项目名称"
     )
     property_name: Mapped[str] = mapped_column(
-        String(200), nullable=False, comment="物业名称"
+        String(200), nullable=False, unique=True, comment="物业名称"
     )
     address: Mapped[str] = mapped_column(
         String(500), nullable=False, comment="物业地址"
@@ -169,12 +167,12 @@ class Asset(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -206,6 +204,11 @@ class Asset(Base):
     project: Mapped["Project"] = relationship("Project", back_populates="assets")
     ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 
+    @property
+    def ownership_entity(self) -> str | None:
+        ownership = getattr(self, "ownership", None)
+        return getattr(ownership, "name", None)
+
     # 计算属性 - 未出租面积（自动计算，不存储）
     @cached_property
     def unrented_area(self) -> Decimal:
@@ -236,8 +239,8 @@ class Asset(Base):
         kwargs.setdefault("is_litigated", False)
         kwargs.setdefault("include_in_occupancy_rate", True)
         kwargs.setdefault("is_sublease", False)
-        kwargs.setdefault("created_at", datetime.now(UTC))
-        kwargs.setdefault("updated_at", datetime.now(UTC))
+        kwargs.setdefault("created_at", datetime.utcnow())
+        kwargs.setdefault("updated_at", datetime.utcnow())
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:
@@ -269,7 +272,7 @@ class AssetHistory(Base):
     new_value: Mapped[str | None] = mapped_column(Text, comment="新值")
     operator: Mapped[str | None] = mapped_column(String(100), comment="操作人")
     operation_time: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="操作时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="操作时间"
     )
     description: Mapped[str | None] = mapped_column(Text, comment="操作描述")
 
@@ -307,7 +310,7 @@ class AssetDocument(Base):
     file_size: Mapped[int | None] = mapped_column(Integer, comment="文件大小(字节)")
     mime_type: Mapped[str | None] = mapped_column(String(100), comment="文件MIME类型")
     upload_time: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), comment="上传时间"
+        DateTime, default=lambda: datetime.utcnow(), comment="上传时间"
     )
     uploader: Mapped[str | None] = mapped_column(String(100), comment="上传人")
     description: Mapped[str | None] = mapped_column(Text, comment="文档描述")
@@ -346,13 +349,13 @@ class SystemDictionary(Base):
         Boolean, nullable=False, default=True, comment="是否启用"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -392,13 +395,13 @@ class AssetCustomField(Base):
     help_text: Mapped[str | None] = mapped_column(Text, comment="帮助文本")
     description: Mapped[str | None] = mapped_column(Text, comment="描述")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
 
@@ -430,13 +433,13 @@ class ProjectOwnershipRelation(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -538,13 +541,13 @@ class Project(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.utcnow(),
+        onupdate=lambda: datetime.utcnow(),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -564,62 +567,3 @@ class Project(Base):
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"
 
 
-class Ownership(Base):
-    """权属方模型"""
-
-    __tablename__ = "ownerships"
-
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-
-    # 基本信息
-    name: Mapped[str] = mapped_column(String(200), nullable=False, comment="权属方全称")
-    code: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True, comment="权属方编码"
-    )
-    short_name: Mapped[str | None] = mapped_column(String(100), comment="权属方简称")
-    # 以下字段已删除: contact_person, contact_phone, contact_email, registration_number, legal_representative, business_scope, established_date, registered_capital
-    address: Mapped[str | None] = mapped_column(String(500), comment="地址")
-    management_entity: Mapped[str | None] = mapped_column(
-        String(200), comment="管理单位"
-    )
-    notes: Mapped[str | None] = mapped_column(Text, comment="备注")
-
-    # 系统字段
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, comment="状态"
-    )
-    data_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="正常", comment="数据状态"
-    )
-
-    # 时间戳
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC), comment="创建时间"
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
-        comment="更新时间",
-    )
-    created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
-    updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
-
-    # 关联关系
-    owned_rent_contracts: Mapped[list["RentContract"]] = relationship(
-        "RentContract", back_populates="ownership", cascade="all, delete-orphan"
-    )
-    assets: Mapped[list["Asset"]] = relationship(
-        "Asset", back_populates="ownership", passive_deletes=True
-    )  # 注意：不使用 cascade="all, delete-orphan"，因为资产不应随权属方删除而自动删除
-    ownership_relations: Mapped[list["ProjectOwnershipRelation"]] = relationship(
-        "ProjectOwnershipRelation",
-        back_populates="ownership",
-        cascade="all, delete-orphan",
-    )
-
-    def __repr__(self) -> str:
-        return f"<Ownership(id={self.id}, name={self.name}, code={self.code})>"

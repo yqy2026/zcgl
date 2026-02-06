@@ -8,11 +8,11 @@ import io
 import json
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...crud.asset import asset_crud
@@ -50,7 +50,7 @@ class ExcelExportService:
     负责将资产数据导出为Excel文件
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession | None):
         """
         初始化导出服务
 
@@ -59,7 +59,7 @@ class ExcelExportService:
         """
         self.db = db
 
-    def export_assets_to_excel(
+    async def export_assets_to_excel_async(
         self,
         filters: dict[str, Any] | None = None,
         search: str | None = None,
@@ -69,31 +69,13 @@ class ExcelExportService:
         date_format: str = "%Y-%m-%d %H:%M:%S",
         limit: int = 5000,
     ) -> io.BytesIO:
-        """
-        导出资产数据到Excel文件（内存）
-
-        Args:
-            filters: 筛选条件
-            search: 搜索关键词
-            asset_ids: 资产ID列表
-            fields: 要导出的字段列表
-            sheet_name: 工作表名称
-            date_format: 日期格式
-            limit: 最大导出数量
-
-        Returns:
-            BytesIO缓冲区，包含Excel文件数据
-        """
         try:
-            # 构建筛选条件
             export_filters = filters or {}
 
-            # 如果指定了资产ID，添加到筛选条件中
             if asset_ids:
                 export_filters["ids"] = asset_ids
 
-            # 从数据库获取资产数据
-            assets, total = asset_crud.get_multi_with_search(
+            assets, total = await asset_crud.get_multi_with_search_async(
                 db=self.db,
                 search=search,
                 filters=export_filters,
@@ -102,31 +84,24 @@ class ExcelExportService:
 
             logger.info(f"准备导出 {total} 个资产")
 
-            # 转换为导出格式
             export_data = self._convert_assets_to_export_format(
                 assets, fields, date_format
             )
 
-            # 如果没有数据，提供提示数据
             if not export_data:
                 export_data = self._get_empty_export_data(fields)
 
-            # 创建DataFrame
             df = pd.DataFrame(export_data)
 
-            # 写入Excel文件（内存）
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-                # 设置列宽
                 self._set_column_widths(writer.sheets[sheet_name])
 
             buffer.seek(0)
 
             logger.info(f"成功导出 {len(export_data)} 条资产数据到内存")
             return buffer
-
         except Exception as e:
             logger.error(f"导出Excel文件失败: {str(e)}")
             raise
@@ -165,7 +140,7 @@ class ExcelExportService:
             logger.error(f"导出分析Excel文件失败: {str(e)}")
             raise
 
-    def export_assets_to_file(
+    async def export_assets_to_file_async(
         self,
         file_path: str,
         filters: dict[str, Any] | None = None,
@@ -176,25 +151,8 @@ class ExcelExportService:
         date_format: str = "%Y-%m-%d %H:%M:%S",
         limit: int = 5000,
     ) -> dict[str, Any]:
-        """
-        导出资产数据到Excel文件（磁盘）
-
-        Args:
-            file_path: 导出文件路径
-            filters: 筛选条件
-            search: 搜索关键词
-            asset_ids: 资产ID列表
-            fields: 要导出的字段列表
-            sheet_name: 工作表名称
-            date_format: 日期格式
-            limit: 最大导出数量
-
-        Returns:
-            导出结果信息
-        """
         try:
-            # 获取内存中的Excel数据
-            buffer = self.export_assets_to_excel(
+            buffer = await self.export_assets_to_excel_async(
                 filters=filters,
                 search=search,
                 asset_ids=asset_ids,
@@ -204,7 +162,6 @@ class ExcelExportService:
                 limit=limit,
             )
 
-            # 写入文件
             with open(file_path, "wb") as f:
                 f.write(buffer.read())
 
@@ -216,9 +173,8 @@ class ExcelExportService:
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
                 "file_size": file_size,
-                "export_time": datetime.now(UTC).isoformat(),
+                "export_time": datetime.utcnow().isoformat(),
             }
-
         except Exception as e:
             logger.error(f"导出到文件失败: {str(e)}")
             raise
@@ -342,34 +298,23 @@ class ExcelExportService:
             if col in worksheet.column_dimensions:
                 worksheet.column_dimensions[col].width = width
 
-    def get_export_preview(
+    async def get_export_preview_async(
         self,
         filters: dict[str, Any] | None = None,
         search: str | None = None,
         asset_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """
-        获取导出预览信息
-
-        Args:
-            filters: 筛选条件
-            search: 搜索关键词
-            asset_ids: 资产ID列表
-
-        Returns:
-            预览信息
-        """
         try:
             export_filters = filters or {}
 
             if asset_ids:
                 export_filters["ids"] = asset_ids
 
-            assets, total = asset_crud.get_multi_with_search(
+            assets, total = await asset_crud.get_multi_with_search_async(
                 db=self.db,
                 search=search,
                 filters=export_filters,
-                limit=1,  # 只获取一条用于预览
+                limit=1,
             )
 
             if not assets:
@@ -379,7 +324,6 @@ class ExcelExportService:
                     "sample_data": None,
                 }
 
-            # 转换第一条数据作为示例
             sample_data = self._convert_assets_to_export_format(assets)
 
             return {

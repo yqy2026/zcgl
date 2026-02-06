@@ -68,7 +68,7 @@ const assets = await assetService.getAssets({
 // 创建资产
 const newAsset = await assetService.createAsset({
   property_name: '新写字楼',
-  ownership_entity: '某公司',
+  ownership_id: 'ownership-001',
   // ... 其他字段
 });
 

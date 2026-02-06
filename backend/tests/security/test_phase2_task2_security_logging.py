@@ -197,7 +197,6 @@ class TestSecurityAlertsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
@@ -246,7 +245,6 @@ class TestSecurityAlertsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
@@ -277,7 +275,7 @@ class TestSecurityAlertsEndpoint:
         assert final_count >= initial_count + 12
 
     async def test_security_alerts_test_non_admin_forbidden(
-        self, test_client_no_auth, test_user
+        self, test_client_no_auth, test_user, test_db
     ):
         """Test that non-admin users cannot access /security/alerts/test"""
         # Create auth headers for regular user
@@ -286,17 +284,39 @@ class TestSecurityAlertsEndpoint:
         import jwt
 
         from src.core.config import settings
+        from src.models.rbac import Role, UserRoleAssignment
         from src.security.cookie_manager import cookie_manager
 
-        # Change user role to non-admin
-        test_user.role = "user"
+        # Ensure user only has non-admin role
+        role = test_db.query(Role).filter(Role.name == "asset_viewer").first()
+        if role is None:
+            role = Role(
+                name="asset_viewer",
+                display_name="资产查看",
+                is_system_role=True,
+                is_active=True,
+            )
+            test_db.add(role)
+            test_db.flush()
+            test_db.refresh(role)
+
+        test_db.query(UserRoleAssignment).filter(
+            UserRoleAssignment.user_id == test_user.id
+        ).delete()
+        test_db.add(
+            UserRoleAssignment(
+                user_id=test_user.id,
+                role_id=role.id,
+                assigned_by="test-fixture",
+            )
+        )
+        test_db.commit()
 
         now = datetime.now(UTC)
         token_data = {
             "sub": str(test_user.id),
             "user_id": str(test_user.id),
             "username": test_user.username,
-            "role": "user",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_user.id),
@@ -350,7 +370,6 @@ class TestSecurityEventsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
@@ -409,7 +428,6 @@ class TestSecurityEventsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
@@ -469,7 +487,6 @@ class TestSecurityEventsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),
@@ -501,7 +518,7 @@ class TestSecurityEventsEndpoint:
         assert found_event["ip"] == "10.0.0.1"
 
     async def test_security_events_non_admin_forbidden(
-        self, test_client_no_auth, test_user
+        self, test_client_no_auth, test_user, test_db
     ):
         """Test that non-admin users cannot access /security/events"""
         from datetime import datetime, timedelta
@@ -509,17 +526,39 @@ class TestSecurityEventsEndpoint:
         import jwt
 
         from src.core.config import settings
+        from src.models.rbac import Role, UserRoleAssignment
         from src.security.cookie_manager import cookie_manager
 
-        # Change role to user
-        test_user.role = "user"
+        # Ensure user only has non-admin role
+        role = test_db.query(Role).filter(Role.name == "asset_viewer").first()
+        if role is None:
+            role = Role(
+                name="asset_viewer",
+                display_name="资产查看",
+                is_system_role=True,
+                is_active=True,
+            )
+            test_db.add(role)
+            test_db.flush()
+            test_db.refresh(role)
+
+        test_db.query(UserRoleAssignment).filter(
+            UserRoleAssignment.user_id == test_user.id
+        ).delete()
+        test_db.add(
+            UserRoleAssignment(
+                user_id=test_user.id,
+                role_id=role.id,
+                assigned_by="test-fixture",
+            )
+        )
+        test_db.commit()
 
         now = datetime.now(UTC)
         token_data = {
             "sub": str(test_user.id),
             "user_id": str(test_user.id),
             "username": test_user.username,
-            "role": "user",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_user.id),
@@ -573,7 +612,6 @@ class TestSecurityEventsEndpoint:
             "sub": str(test_admin.id),
             "user_id": str(test_admin.id),
             "username": test_admin.username,
-            "role": test_admin.role or "admin",
             "exp": int((now + timedelta(hours=1)).timestamp()),
             "iat": int(now.timestamp()),
             "jti": str(test_admin.id),

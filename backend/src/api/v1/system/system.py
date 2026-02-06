@@ -15,13 +15,13 @@ router = APIRouter(tags=["系统管理"])
 
 
 @router.get("/monitoring/health")
-def health_check() -> JSONResponse:
+async def health_check() -> JSONResponse:
     """
     健康检查端点 - 包含数据库状态
     迁移自 main.py 的健康检查功能
     """
     try:
-        db_status = get_database_status()
+        db_status = await get_database_status()
 
         health_check = db_status.get("health_check", {})
         metrics = db_status.get("metrics", {})

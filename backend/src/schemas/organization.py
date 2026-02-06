@@ -8,8 +8,10 @@ from typing import Any
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm.attributes import NO_VALUE
 
 
 class OrganizationBase(BaseModel):
@@ -89,6 +91,28 @@ class OrganizationResponse(OrganizationBase):
 
     # 子组织列表
     children: list["OrganizationResponse"] | None = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_organization_model(cls, v: Any) -> Any:
+        """避免在响应序列化中触发 children 懒加载。"""
+        if isinstance(v, dict):
+            return v
+        try:
+            state = sa_inspect(v)
+        except Exception:
+            return v
+
+        data = {attr.key: getattr(v, attr.key) for attr in state.mapper.column_attrs}
+
+        try:
+            children_state = state.attrs.children
+            children_value = children_state.loaded_value
+            data["children"] = [] if children_value is NO_VALUE else children_value
+        except Exception:
+            data["children"] = []
+
+        return data
 
     model_config = ConfigDict(from_attributes=True)
 

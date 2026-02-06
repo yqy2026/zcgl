@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const assetFormSchema = z
   .object({
     property_name: z.string().min(1, '物业名称不能为空'),
-    ownership_entity: z.string().min(1, '权属方不能为空'),
+    ownership_id: z.string().min(1, '权属方不能为空'),
     management_entity: z.string().optional(),
     address: z.string().min(1, '所在地址不能为空'),
     land_area: z.number().min(0, '土地面积不能为负数').optional(),
@@ -31,7 +31,9 @@ export const assetFormSchema = z
     wuyang_project_name: z.string().optional(),
     agreement_start_date: z.string().optional(),
     agreement_end_date: z.string().optional(),
+    operation_agreement_attachments: z.string().optional(),
     current_terminal_contract: z.string().optional(),
+    terminal_contract_files: z.string().optional(),
     description: z.string().optional(),
     notes: z.string().optional(),
   })

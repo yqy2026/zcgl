@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.base import CRUDBase
-from ..models.asset import Ownership
+from ..models.ownership import Ownership
 from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 

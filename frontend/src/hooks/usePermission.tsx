@@ -15,6 +15,8 @@ export interface UserPermissions {
   userId: string;
   username: string;
   roles: string[];
+  roleIds?: string[];
+  isAdmin?: boolean;
   permissions: Array<{ resource: string; action: string }>;
   organizationId?: string;
 }
@@ -48,9 +50,15 @@ const usePermission = () => {
       const userPermissionsData: UserPermissions = {
         userId: authData.user.id,
         username: authData.user.username,
-        roles: authData.user.role ? [authData.user.role] : [],
+        roles:
+          authData.user.roles ??
+          (authData.user.role_name != null ? [authData.user.role_name] : []),
+        roleIds:
+          authData.user.role_ids ??
+          (authData.user.role_id != null ? [authData.user.role_id] : []),
+        isAdmin: authData.user.is_admin === true,
         permissions: authData.permissions,
-        organizationId: authData.user.organization_id,
+        organizationId: authData.user.default_organization_id,
       };
 
       setUserPermissions(userPermissionsData);
@@ -68,7 +76,7 @@ const usePermission = () => {
       if (!userPermissions) return false;
 
       // 管理员拥有所有权限
-      if (userPermissions.roles.includes('admin')) {
+      if (userPermissions.isAdmin === true) {
         return true;
       }
 
@@ -107,8 +115,8 @@ const usePermission = () => {
 
   // 检查是否是管理员
   const isAdmin = useCallback((): boolean => {
-    return hasRole('admin');
-  }, [hasRole]);
+    return userPermissions?.isAdmin === true || hasRole('admin') || hasRole('super_admin');
+  }, [hasRole, userPermissions]);
 
   // 检查是否有组织访问权限
   const canAccessOrganization = useCallback(

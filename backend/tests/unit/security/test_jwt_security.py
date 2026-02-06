@@ -125,7 +125,7 @@ class TestTokenCreation:
 
         from src.core.config import settings
 
-        payload = {"user_id": 123, "role": "admin"}
+        payload = {"user_id": 123, "role_id": "role-admin-id"}
         token = jwt_security.create_token_with_claims(payload, token_type="access")
 
         # Decode and verify claims
@@ -144,7 +144,7 @@ class TestTokenCreation:
 
         # Check custom claims
         assert decoded["user_id"] == 123
-        assert decoded["role"] == "admin"
+        assert decoded["role_id"] == "role-admin-id"
 
     def test_access_token_expiry(self):
         """Test access token expiration time"""
@@ -291,7 +291,7 @@ class TestTokenSecurityInfo:
 
     def test_get_security_info_valid_token(self):
         """Test extracting security info from valid token"""
-        payload = {"user_id": 123, "role": "admin"}
+        payload = {"user_id": 123, "role_id": "role-admin-id"}
         token = jwt_security.create_token_with_claims(payload, token_type="access")
 
         info = jwt_security.get_token_security_info(token)

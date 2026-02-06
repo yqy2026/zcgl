@@ -22,7 +22,7 @@ class MockFactory:
         Args:
             user_id: 用户 ID
             username: 用户名
-            role: 用户角色
+            role: 用户角色编码
 
         Returns:
             Mock 用户对象
@@ -32,7 +32,12 @@ class MockFactory:
         user.username = username
         user.email = f"{username}@example.com"
         user.full_name = f"Test {username.capitalize()}"
-        user.role = role
+        role_id = "role-admin-id" if role in {"admin", "super_admin"} else "role-user-id"
+        user.role_id = role_id
+        user.role_name = role
+        user.roles = [role]
+        user.role_ids = [role_id]
+        user.is_admin = role in {"admin", "super_admin"}
         user.is_active = True
         user.created_at = datetime.now()
         return user

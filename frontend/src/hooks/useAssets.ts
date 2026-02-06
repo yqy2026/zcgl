@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { assetService } from '@/services/assetService';
+import { ownershipService } from '@/services/ownershipService';
 import { MessageManager } from '@/utils/messageManager';
 import type { AssetSearchParams, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
 import type { AssetSearchFilters } from '@/services/asset/types';
@@ -137,8 +138,8 @@ export const useAssetStats = (filters?: AssetSearchParams) => {
  */
 export const useOwnershipEntities = () => {
   return useQuery({
-    queryKey: ['ownership-entities'],
-    queryFn: () => assetService.getOwnershipEntities(),
+    queryKey: ['ownership-options'],
+    queryFn: () => ownershipService.getOwnershipSelectOptions(),
     staleTime: 10 * 60 * 1000, // 10分钟缓存
   });
 };

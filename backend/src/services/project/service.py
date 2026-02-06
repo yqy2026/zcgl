@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
     from pinyin import get as get_pinyin
@@ -26,22 +27,26 @@ from ...schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdat
 class ProjectService:
     """项目服务层"""
 
-    def create_project(
-        self, db: Session, *, obj_in: ProjectCreate, created_by: str | None = None
+    async def create_project(
+        self,
+        db: AsyncSession,
+        *,
+        obj_in: ProjectCreate,
+        created_by: str | None = None,
     ) -> Project:
         """创建项目"""
         try:
             # 1. 生成项目编码 (如果未提供)
             if not obj_in.code:
-                obj_in.code = self.generate_project_code(db, obj_in.name)
+                obj_in.code = await self.generate_project_code(db, obj_in.name)
 
             # 2. 检查编码唯一性
-            existing_project = project_crud.get_by_code(db, code=obj_in.code)
+            existing_project = await project_crud.get_by_code(db, code=obj_in.code)
             if existing_project:
                 raise DuplicateResourceError("项目", "code", obj_in.code)
 
             # 3. 创建项目
-            project: Project = project_crud.create(
+            project: Project = await project_crud.create(
                 db, obj_in=obj_in, created_by=created_by
             )
             return project
@@ -51,27 +56,27 @@ class ProjectService:
                 raise
             raise InternalServerError("创建项目失败", original_error=e) from e
 
-    def update_project(
+    async def update_project(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         project_id: str,
         obj_in: ProjectUpdate,
         updated_by: str | None = None,
     ) -> Project:
         """更新项目"""
-        project: Project | None = project_crud.get(db, project_id)
+        project: Project | None = await project_crud.get(db, id=project_id)
         if not project:
             raise ResourceNotFoundError("项目", project_id)
 
-        result: Project = project_crud.update(db, db_obj=project, obj_in=obj_in)
+        result: Project = await project_crud.update(db, db_obj=project, obj_in=obj_in)
         return result
 
-    def toggle_status(
-        self, db: Session, *, project_id: str, updated_by: str | None = None
+    async def toggle_status(
+        self, db: AsyncSession, *, project_id: str, updated_by: str | None = None
     ) -> Project:
         """切换项目状态"""
-        project: Project | None = project_crud.get(db, project_id)
+        project: Project | None = await project_crud.get(db, id=project_id)
         if not project:
             raise ResourceNotFoundError("项目", project_id)
 
@@ -85,15 +90,15 @@ class ProjectService:
             project.project_status = "进行中"
 
         project.updated_by = updated_by
-        project.updated_at = datetime.now()
+        project.updated_at = datetime.utcnow()
         db.add(project)
-        db.commit()
-        db.refresh(project)
+        await db.commit()
+        await db.refresh(project)
         return project
 
-    def delete_project(self, db: Session, *, project_id: str) -> None:
+    async def delete_project(self, db: AsyncSession, *, project_id: str) -> None:
         """删除项目"""
-        count = project_crud.get_asset_count(db, project_id)
+        count = await project_crud.get_asset_count(db, project_id)
         if count > 0:
             raise OperationNotAllowedError(
                 f"项目包含 {count} 个资产，无法删除",
@@ -101,27 +106,30 @@ class ProjectService:
             )
 
         # Use remove instead of delete
-        project = project_crud.get(db, project_id)
+        project = await project_crud.get(db, id=project_id)
         if project:
-            project_crud.remove(db, id=project_id)
+            await project_crud.remove(db, id=project_id)
 
-    def generate_project_code(self, db: Session, name: str | None = None) -> str:
+    async def generate_project_code(
+        self, db: AsyncSession, name: str | None = None
+    ) -> str:
         """生成项目编码"""
         # 1. 尝试从名称生成语义化编码
         if name:
             code = self._generate_name_code(name)
-            if code and not project_crud.get_by_code(db, code):
+            if code and not await project_crud.get_by_code(db, code):
                 return code
 
         # 2. 生成顺序编码 PJ + YYMM + NNN
         prefix = f"PJ{datetime.now().strftime('%y%m')}"
 
-        last_project = (
-            db.query(Project)
-            .filter(Project.code.like(f"{prefix}%"))
+        stmt = (
+            select(Project)
+            .where(Project.code.like(f"{prefix}%"))
             .order_by(Project.code.desc())
-            .first()
+            .limit(1)
         )
+        last_project = (await db.execute(stmt)).scalars().first()
 
         if last_project:
             try:
@@ -165,10 +173,10 @@ class ProjectService:
         except Exception:
             return None
 
-    def search_projects(
-        self, db: Session, search_params: ProjectSearchRequest
+    async def search_projects(
+        self, db: AsyncSession, search_params: ProjectSearchRequest
     ) -> dict[str, Any]:
-        items, total = project_crud.search(db, search_params)
+        items, total = await project_crud.search(db, search_params)
         return {
             "items": items,
             "total": total,
@@ -177,17 +185,19 @@ class ProjectService:
             "pages": (total + search_params.page_size - 1) // search_params.page_size,
         }
 
-    def get_project_dropdown_options(
-        self, db: Session, is_active: bool | None = True
+    async def get_project_dropdown_options(
+        self, db: AsyncSession, is_active: bool | None = True
     ) -> list[dict[str, Any]]:
         """获取项目下拉选项列表"""
         from ...models.asset import Project as AssetProject
 
-        query = db.query(AssetProject)
+        stmt = select(AssetProject)
         if is_active is not None:
-            query = query.filter(AssetProject.is_active == is_active)
+            stmt = stmt.where(AssetProject.is_active == is_active)
 
-        projects = query.order_by(AssetProject.name.asc()).all()
+        projects = (
+            (await db.execute(stmt.order_by(AssetProject.name.asc()))).scalars().all()
+        )
         return [
             {
                 "id": p.id,

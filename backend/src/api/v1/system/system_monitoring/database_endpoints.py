@@ -52,7 +52,7 @@ router = APIRouter()
     response_model=DatabaseHealthMetrics,
     summary="获取数据库健康指标",
 )
-def get_database_health_metrics(
+async def get_database_health_metrics(
     current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> DatabaseHealthMetrics:
     """获取数据库健康状态和性能指标"""
@@ -61,7 +61,7 @@ def get_database_health_metrics(
         if not db_manager:
             raise service_unavailable("数据库管理器不可用")
 
-        health_check = db_manager.run_health_check()
+        health_check = await db_manager.run_health_check()
         pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
         metrics = db_manager.get_metrics()
 

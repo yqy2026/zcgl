@@ -18,6 +18,37 @@ from sqlalchemy.orm import sessionmaker
 TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
 
 
+class AsyncSessionAdapter:
+    """Provide async-compatible methods over a sync SQLAlchemy session."""
+
+    def __init__(self, session):  # noqa: ANN001 - test helper
+        self._session = session
+
+    async def execute(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.execute(*args, **kwargs)
+
+    async def commit(self):  # noqa: D401 - test helper
+        return self._session.commit()
+
+    async def refresh(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.refresh(*args, **kwargs)
+
+    async def flush(self):  # noqa: D401 - test helper
+        return self._session.flush()
+
+    async def rollback(self):  # noqa: D401 - test helper
+        return self._session.rollback()
+
+    def add(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.add(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.delete(*args, **kwargs)
+
+    def __getattr__(self, name: str):  # noqa: D401 - test helper
+        return getattr(self._session, name)
+
+
 def create_test_user(
     db_session,
     username: str,
@@ -34,6 +65,7 @@ def create_test_user(
     """
     from src.database import Base
     from src.models.auth import User
+    from src.models.rbac import Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
 
     # Ensure tables exist (for in-memory databases)
@@ -45,12 +77,31 @@ def create_test_user(
         email=email,
         full_name=full_name,
         password_hash=password_service.get_password_hash(password),
-        role=role,
         is_active=True,
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+
+    role_record = db_session.query(Role).filter(Role.name == role).first()
+    if role_record is None:
+        role_record = Role(
+            name=role,
+            display_name="管理员" if role in {"admin", "super_admin"} else "普通用户",
+            is_system_role=role in {"admin", "super_admin", "user"},
+            is_active=True,
+        )
+        db_session.add(role_record)
+        db_session.commit()
+        db_session.refresh(role_record)
+
+    assignment = UserRoleAssignment(
+        user_id=user.id,
+        role_id=role_record.id,
+        assigned_by="e2e-fixture",
+    )
+    db_session.add(assignment)
+    db_session.commit()
     return user
 
 
@@ -137,17 +188,14 @@ def client(db_session):
     """Create a FastAPI TestClient with database session."""
     from fastapi.testclient import TestClient
 
-    from src.database import get_db
+    from src.database import get_async_db
     from src.main import app
 
     # Override the database dependency
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
+    async def override_get_db():
+        yield AsyncSessionAdapter(db_session)
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client

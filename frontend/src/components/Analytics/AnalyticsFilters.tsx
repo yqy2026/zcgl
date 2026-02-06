@@ -9,9 +9,6 @@ import {
   DownOutlined,
   UpOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { createLogger } from '@/utils/logger';
-import { assetService } from '@/services/assetService';
 import type { AssetSearchParams } from '@/types/asset';
 
 // Import section components
@@ -25,8 +22,6 @@ import {
   FilterActionsSection,
   FILTER_PRESETS,
 } from './Filters';
-
-const logger = createLogger('AnalyticsFilters');
 
 interface AnalyticsFiltersProps {
   filters: AssetSearchParams;
@@ -145,32 +140,6 @@ const AnalyticsFiltersInner: React.FC = () => {
       }
     }
   }, [filters]);
-
-  // Fetch filter options data
-  useQuery({
-    queryKey: ['analytics-filter-options'],
-    queryFn: async () => {
-      try {
-        const [ownershipEntities, businessCategories] = await Promise.all([
-          assetService.getOwnershipEntities(),
-          assetService.getBusinessCategories(),
-        ]);
-        return {
-          ownershipEntities,
-          businessCategories,
-        };
-      } catch (error) {
-        logger.warn('获取筛选选项失败:', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return {
-          ownershipEntities: [],
-          businessCategories: [],
-        };
-      }
-    },
-    staleTime: 30 * 60 * 1000, // 30 minute cache
-  });
 
   return <FiltersCardHeader />;
 };

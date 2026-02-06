@@ -20,6 +20,7 @@ import {
   Tabs,
   Statistic,
   Switch,
+  Popover,
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -35,7 +36,7 @@ import {
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 
@@ -72,6 +73,13 @@ interface FormValues {
   }>;
 }
 
+interface EvidenceSnippet {
+  snippet?: string;
+  match?: string;
+  match_type?: string;
+  source?: string;
+}
+
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
   onConfirm,
@@ -82,6 +90,106 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   const [modifiedFields, setModifiedFields] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('basic');
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
+
+  const fieldEvidence = result.extraction_result.field_evidence ?? undefined;
+  const fieldSources = result.extraction_result.field_sources ?? undefined;
+
+  const hasExtractedValue = (fieldKey: string): boolean => {
+    const value = (result.extraction_result.data as Record<string, unknown>)[fieldKey];
+    if (value == null) {
+      return false;
+    }
+    if (typeof value === 'string') {
+      return value.trim() !== '';
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+    return true;
+  };
+
+  const getEvidenceSnippet = (fieldKey: string): EvidenceSnippet | null => {
+    if (fieldEvidence == null) {
+      return null;
+    }
+    const rawEvidence = (fieldEvidence as Record<string, unknown>)[fieldKey];
+    if (rawEvidence == null || Array.isArray(rawEvidence) || typeof rawEvidence !== 'object') {
+      return null;
+    }
+    return rawEvidence as EvidenceSnippet;
+  };
+
+  const resolveSourceLabel = (sourceKey?: string): string => {
+    if (sourceKey == null || sourceKey.trim() === '') {
+      return '未知';
+    }
+    const labels: Record<string, string> = {
+      ocr_llm: 'OCR+大模型',
+      ocr_regex: 'OCR+正则',
+      vision: '视觉模型',
+      regex: '正则',
+      text: '文本解析',
+      smart: '智能合并',
+    };
+    return labels[sourceKey] ?? sourceKey;
+  };
+
+  const renderEvidenceTag = (fieldKey: string) => {
+    const evidence = getEvidenceSnippet(fieldKey);
+    const evidenceSource = evidence?.source;
+    const mappedSource = fieldSources != null ? (fieldSources as Record<string, unknown>)[fieldKey] : undefined;
+    const sourceKey =
+      typeof evidenceSource === 'string' && evidenceSource.trim() !== ''
+        ? evidenceSource
+        : typeof mappedSource === 'string' && mappedSource.trim() !== ''
+          ? mappedSource
+          : undefined;
+    const snippet = evidence?.snippet;
+    const hasSnippet = typeof snippet === 'string' && snippet.trim() !== '';
+    const matchValue = evidence?.match;
+    const hasMatch = matchValue != null && String(matchValue).trim() !== '';
+
+    if (!hasSnippet && !hasMatch && sourceKey == null) {
+      return null;
+    }
+
+    const content = (
+      <div style={{ maxWidth: 420 }}>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+          来源: {resolveSourceLabel(sourceKey)}
+        </Text>
+        {hasSnippet ? (
+          <Text style={{ whiteSpace: 'pre-wrap' }}>{snippet}</Text>
+        ) : (
+          <Text type="secondary">未提供原文片段</Text>
+        )}
+        {hasMatch && (
+          <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+            匹配: {String(matchValue)}
+          </Text>
+        )}
+        {evidence?.match_type != null && String(evidence.match_type).trim() !== '' && (
+          <Text type="secondary" style={{ display: 'block' }}>
+            匹配类型: {String(evidence.match_type)}
+          </Text>
+        )}
+      </div>
+    );
+
+    return (
+      <Popover content={content} title="提取证据" placement="topLeft">
+        <Tag color="geekblue">证据</Tag>
+      </Popover>
+    );
+  };
+
+  const renderFieldLabel = (label: string, fieldKey: string) => (
+    <Space size={6} wrap>
+      <span>{label}</span>
+      {hasExtractedValue(fieldKey) && <Tag color="blue">自动提取</Tag>}
+      {renderEvidenceTag(fieldKey)}
+    </Space>
+  );
 
   // 初始化表单数据
   useEffect(() => {
@@ -188,14 +296,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            label={
-              <Space>
-                <span>合同编号</span>
-                {(result.extraction_result.data.contract_number ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('合同编号', 'contract_number')}
             name="contract_number"
             rules={[{ required: true, message: '请输入合同编号' }]}
           >
@@ -204,14 +305,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            label={
-              <Space>
-                <span>承租方名称</span>
-                {(result.extraction_result.data.tenant_name ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('承租方名称', 'tenant_name')}
             name="tenant_name"
             rules={[{ required: true, message: '请输入承租方名称' }]}
           >
@@ -223,14 +317,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            label={
-              <Space>
-                <span>承租方联系方式</span>
-                {(result.extraction_result.data.tenant_contact ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('承租方联系方式', 'tenant_contact')}
             name="tenant_contact"
           >
             <Input placeholder="请输入承租方联系方式" />
@@ -238,14 +325,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            label={
-              <Space>
-                <span>合同状态</span>
-                {(result.extraction_result.data.contract_status ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('合同状态', 'contract_status')}
             name="contract_status"
           >
             <Select placeholder="请选择合同状态">
@@ -267,14 +347,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>签订日期</span>
-                {(result.extraction_result.data.sign_date ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('签订日期', 'sign_date')}
             name="sign_date"
           >
             <DatePicker style={{ width: '100%' }} placeholder="请选择签订日期" />
@@ -282,14 +355,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>开始日期</span>
-                {(result.extraction_result.data.start_date ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('开始日期', 'start_date')}
             name="start_date"
             rules={[{ required: true, message: '请选择开始日期' }]}
           >
@@ -298,14 +364,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>结束日期</span>
-                {(result.extraction_result.data.end_date ?? '') !== '' && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('结束日期', 'end_date')}
             name="end_date"
             rules={[{ required: true, message: '请选择结束日期' }]}
           >
@@ -317,14 +376,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>租赁面积(㎡)</span>
-                {result.extraction_result.data.rentable_area != null && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('租赁面积(㎡)', 'rentable_area')}
             name="rentable_area"
           >
             <InputNumber
@@ -338,14 +390,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>月租金(元)</span>
-                {result.extraction_result.data.monthly_rent != null && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('月租金(元)', 'monthly_rent')}
             name="monthly_rent"
             rules={[{ required: true, message: '请输入月租金' }]}
           >
@@ -360,14 +405,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label={
-              <Space>
-                <span>押金(元)</span>
-                {result.extraction_result.data.total_deposit != null && (
-                  <Tag color="blue">自动提取</Tag>
-                )}
-              </Space>
-            }
+            label={renderFieldLabel('押金(元)', 'total_deposit')}
             name="total_deposit"
           >
             <InputNumber
@@ -510,28 +548,14 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   const AdvancedForm = () => (
     <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
       <Form.Item
-        label={
-          <Space>
-            <span>支付条款</span>
-            {(result.extraction_result.data.payment_terms ?? '') !== '' && (
-              <Tag color="blue">自动提取</Tag>
-            )}
-          </Space>
-        }
+        label={renderFieldLabel('支付条款', 'payment_terms')}
         name="payment_terms"
       >
         <TextArea rows={3} placeholder="请输入支付条款" />
       </Form.Item>
 
       <Form.Item
-        label={
-          <Space>
-            <span>合同备注</span>
-            {(result.extraction_result.data.contract_notes ?? '') !== '' && (
-              <Tag color="blue">自动提取</Tag>
-            )}
-          </Space>
-        }
+        label={renderFieldLabel('合同备注', 'contract_notes')}
         name="contract_notes"
       >
         <TextArea rows={3} placeholder="请输入合同备注" />
@@ -599,6 +623,23 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           style={{ marginBottom: 16 }}
         />
       )}
+
+      {result.extraction_result.warnings != null &&
+        result.extraction_result.warnings.length > 0 && (
+          <Alert
+            title="提取警告"
+            description={
+              <ul>
+                {result.extraction_result.warnings.map(warning => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            }
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
 
       {/* 验证错误和警告 */}
       {result.validation_result.errors.length > 0 && (

@@ -13,6 +13,8 @@ import AssetListPage from '../AssetListPage';
 vi.mock('@/services/assetService', () => ({
   assetService: {
     deleteAsset: vi.fn(),
+    restoreAsset: vi.fn(),
+    hardDeleteAsset: vi.fn(),
     exportAssets: vi.fn(),
     exportSelectedAssets: vi.fn(),
   },
@@ -260,7 +262,7 @@ describe('AssetListPage', () => {
 
       await waitFor(() => {
         expect(assetService.deleteAsset).toHaveBeenCalledWith('asset_1');
-        expect(MessageManager.success).toHaveBeenCalledWith('删除成功');
+        expect(MessageManager.success).toHaveBeenCalledWith('删除成功，已移入回收站');
       });
     });
 

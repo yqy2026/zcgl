@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/api/client';
+import { ownershipService } from '@/services/ownershipService';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { ASSET_API } from '@/constants/api';
 import type {
@@ -20,6 +21,10 @@ import type {
  * 提供资产的基础 CRUD 操作
  */
 export class AssetCoreService {
+  private invalidateAssetCaches(): void {
+    apiClient.invalidateCacheByPrefix(`GET:${ASSET_API.LIST}`);
+  }
+
   /**
    * 获取资产列表
    */
@@ -147,6 +152,7 @@ export class AssetCoreService {
         throw new Error(`创建资产失败: ${result.error}`);
       }
 
+      this.invalidateAssetCaches();
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -168,6 +174,7 @@ export class AssetCoreService {
         throw new Error(`更新资产失败: ${result.error}`);
       }
 
+      this.invalidateAssetCaches();
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -188,6 +195,51 @@ export class AssetCoreService {
       if (!result.success) {
         throw new Error(`删除资产失败: ${result.error}`);
       }
+
+      this.invalidateAssetCaches();
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 恢复资产（仅管理员）
+   */
+  async restoreAsset(id: string): Promise<Asset> {
+    try {
+      const result = await apiClient.post<Asset>(ASSET_API.RESTORE(id), {}, {
+        retry: false,
+        smartExtract: true,
+      });
+
+      if (!result.success) {
+        throw new Error(`恢复资产失败: ${result.error}`);
+      }
+
+      this.invalidateAssetCaches();
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 彻底删除资产（仅管理员）
+   */
+  async hardDeleteAsset(id: string): Promise<void> {
+    try {
+      const result = await apiClient.delete<void>(ASSET_API.HARD_DELETE(id), {
+        retry: false,
+        smartExtract: true,
+      });
+
+      if (!result.success) {
+        throw new Error(`彻底删除资产失败: ${result.error}`);
+      }
+
+      this.invalidateAssetCaches();
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -211,6 +263,8 @@ export class AssetCoreService {
       if (!result.success) {
         throw new Error(`批量删除资产失败: ${result.error}`);
       }
+
+      this.invalidateAssetCaches();
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -269,26 +323,10 @@ export class AssetCoreService {
   }
 
   /**
-   * 获取权属方列表
+   * 获取权属方选项列表
    */
-  async getOwnershipEntities(): Promise<string[]> {
-    try {
-      const result = await apiClient.get<string[]>(ASSET_API.OWNERSHIP_ENTITIES, {
-        timeout: 3000,
-        cache: true,
-        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取权属方列表失败: ${result.error}`);
-      }
-
-      return result.data || [];
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async getOwnershipEntities(): Promise<Array<{ value: string; label: string }>> {
+    return ownershipService.getOwnershipSelectOptions();
   }
 
   /**

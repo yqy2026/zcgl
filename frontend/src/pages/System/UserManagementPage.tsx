@@ -110,8 +110,8 @@ const UserManagementPage: React.FC = () => {
         page_size: pageSize,
         search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
         status: status !== '' ? status : undefined,
-        role: roleId !== '' ? roleId : undefined,
-        organization_id: organizationId !== '' ? organizationId : undefined,
+        role_id: roleId !== '' ? roleId : undefined,
+        default_organization_id: organizationId !== '' ? organizationId : undefined,
       });
       return { items: response.items ?? [], total: response.total ?? 0 };
     },
@@ -212,8 +212,11 @@ const UserManagementPage: React.FC = () => {
     void loadList();
     void loadOrganizations();
     void loadRoles();
+  }, [loadList, loadOrganizations, loadRoles]);
+
+  useEffect(() => {
     void loadStatistics();
-  }, [loadList, loadOrganizations, loadRoles, loadStatistics]);
+  }, [loadStatistics]);
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -277,8 +280,8 @@ const UserManagementPage: React.FC = () => {
       full_name: user.full_name,
       phone: user.phone,
       status: user.status,
-      role: user.role,
-      organization_id: user.organization_id,
+      role_id: user.role_id ?? user.role_ids?.[0],
+      default_organization_id: user.default_organization_id,
     });
     setModalVisible(true);
   };
@@ -692,7 +695,7 @@ const UserManagementPage: React.FC = () => {
               </Col>
               <Col span={8}>
                 <Form.Item
-                  name="role"
+                  name="role_id"
                   label="角色"
                   rules={[{ required: true, message: '请选择角色' }]}
                 >
@@ -707,7 +710,7 @@ const UserManagementPage: React.FC = () => {
               </Col>
               <Col span={8}>
                 <Form.Item
-                  name="organization_id"
+                  name="default_organization_id"
                   label="所属组织"
                   rules={[{ required: true, message: '请选择所属组织' }]}
                 >

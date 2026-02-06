@@ -13,9 +13,10 @@ class DatabaseFixture:
     def create_asset(db: Session, **kwargs):
         """创建测试资产"""
         from src.models.asset import Asset
+        from src.models.ownership import Ownership
 
         default_data = {
-            "ownership_entity": "测试权属人",
+            "ownership_id": None,
             "property_name": "测试物业",
             "address": "测试地址",
             "ownership_status": "已确权",
@@ -23,6 +24,17 @@ class DatabaseFixture:
             "usage_status": "使用中",
         }
         default_data.update(kwargs)
+
+        if not default_data.get("ownership_id"):
+            ownership = (
+                db.query(Ownership).filter(Ownership.name == "测试权属人").first()
+            )
+            if not ownership:
+                ownership = Ownership(name="测试权属人", code="OWN-TEST")
+                db.add(ownership)
+                db.flush()
+                db.refresh(ownership)
+            default_data["ownership_id"] = ownership.id
 
         asset = Asset(**default_data)
         db.add(asset)

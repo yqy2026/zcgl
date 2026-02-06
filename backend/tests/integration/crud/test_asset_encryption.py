@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from src.crud.asset import AssetCRUD
 from src.models.asset import Asset
+from src.models.ownership import Ownership
 from src.schemas.asset import AssetUpdate
 
 
@@ -88,12 +89,17 @@ def asset_crud_no_encryption(monkeypatch):
 
 
 @pytest.fixture
-def sample_asset_data():
+def sample_asset_data(db_session: Session):
     """示例资产数据"""
+    ownership = db_session.query(Ownership).filter(Ownership.name == "李四集团").first()
+    if ownership is None:
+        ownership = Ownership(name="李四集团", code="OWN-ENCRYPT")
+        db_session.add(ownership)
+        db_session.flush()
     return {
         "property_name": "测试物业A",
         "tenant_name": "张三公司",
-        "ownership_entity": "李四集团",
+        "ownership_id": ownership.id,
         "address": "北京市朝阳区某某街道123号",
         "manager_name": "王经理",
         "business_category": "商业",
@@ -133,7 +139,6 @@ class TestAssetCRUDEncryption:
 
         # PII字段应该在数据库中是加密格式
         assert db_asset.tenant_name.startswith("enc:v1:")
-        assert db_asset.ownership_entity.startswith("enc:v1:")
         assert db_asset.address.startswith("enc:v1:")
         assert db_asset.manager_name.startswith("enc:v1:")
 
@@ -157,7 +162,6 @@ class TestAssetCRUDEncryption:
 
         # PII字段应该被解密为明文
         assert asset.tenant_name == "张三公司"
-        assert asset.ownership_entity == "李四集团"
         assert asset.address == "北京市朝阳区某某街道123号"
         assert asset.manager_name == "王经理"
 
@@ -182,7 +186,6 @@ class TestAssetCRUDEncryption:
         assert len(assets) >= 3
         for asset in assets[:3]:
             assert not asset.tenant_name.startswith("enc:v1:")
-            assert not asset.ownership_entity.startswith("enc:v1:")
 
     def test_update_encrypts_new_pii_values(
         self,
@@ -197,7 +200,7 @@ class TestAssetCRUDEncryption:
         )
 
         # 更新PII字段
-        update_data = AssetUpdate(tenant_name="新租户公司", ownership_entity="新权属方")
+        update_data = AssetUpdate(tenant_name="新租户公司", address="新地址")
         updated = asset_crud_with_encryption.update(
             db=db_session, db_obj=created, obj_in=update_data
         )
@@ -207,12 +210,12 @@ class TestAssetCRUDEncryption:
 
         # 更新的字段应该是加密格式
         assert db_asset.tenant_name.startswith("enc:v1:")
-        assert db_asset.ownership_entity.startswith("enc:v1:")
+        assert db_asset.address.startswith("enc:v1:")
 
         # 通过 CRUD 获取应该是明文
         asset = asset_crud_with_encryption.get(db=db_session, id=updated.id)
         assert asset.tenant_name == "新租户公司"
-        assert asset.ownership_entity == "新权属方"
+        assert asset.address == "新地址"
 
     def test_update_preserves_non_pii_fields(
         self,
@@ -274,20 +277,19 @@ class TestSearchEncryptedFields:
                 # 确保结果是解密后的明文
                 assert not asset.tenant_name.startswith("enc:v1:")
 
-    def test_search_on_encrypted_address_and_owner(
+    def test_search_on_encrypted_address(
         self,
         db_session: Session,
         asset_crud_with_encryption: AssetCRUD,
         sample_asset_data: dict,
     ):
-        """测试搜索加密的地址/权属方字段"""
+        """测试搜索加密的地址字段"""
         assert (
             asset_crud_with_encryption.sensitive_data_handler.encryption_enabled is True
         )
         data = sample_asset_data.copy()
         data["property_name"] = "SearchTargetProperty"
         data["address"] = "Test Address 123"
-        data["ownership_entity"] = "Test Owner LLC"
         asset_crud_with_encryption.create(db=db_session, obj_in=data)
 
         assets_by_address, total_by_address = (
@@ -298,16 +300,6 @@ class TestSearchEncryptedFields:
         assert total_by_address >= 1
         assert any(
             asset.property_name == "SearchTargetProperty" for asset in assets_by_address
-        )
-
-        assets_by_owner, total_by_owner = (
-            asset_crud_with_encryption.get_multi_with_search(
-                db=db_session, search=data["ownership_entity"], skip=0, limit=20
-            )
-        )
-        assert total_by_owner >= 1
-        assert any(
-            asset.property_name == "SearchTargetProperty" for asset in assets_by_owner
         )
 
 
@@ -333,7 +325,6 @@ class TestGracefulDegradation:
 
         # 所有字段都应该是明文
         assert db_asset.tenant_name == "张三公司"
-        assert db_asset.ownership_entity == "李四集团"
         assert db_asset.address == "北京市朝阳区某某街道123号"
 
     def test_get_without_key_returns_plaintext(
@@ -351,7 +342,6 @@ class TestGracefulDegradation:
 
         # 应该返回明文
         assert result.tenant_name == "张三公司"
-        assert result.ownership_entity == "李四集团"
 
     def test_mixed_encrypted_plaintext_data(
         self,
@@ -466,7 +456,7 @@ class TestEncryptionFormat:
 
         # 可搜索字段应该是确定性加密（相同明文 → 相同密文）
         # 格式: enc:v1:base64(ciphertext)
-        searchable_fields = ["tenant_name", "ownership_entity", "address"]
+        searchable_fields = ["tenant_name", "address"]
         for field in searchable_fields:
             value = getattr(db_asset, field)
             assert value.startswith("enc:v1:")

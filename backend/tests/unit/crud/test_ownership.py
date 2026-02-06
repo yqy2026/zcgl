@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.crud.ownership import CRUDOwnership
-from src.models.asset import Ownership
+from src.models.ownership import Ownership
 
 
 class TestCRUDOwnershipGet:

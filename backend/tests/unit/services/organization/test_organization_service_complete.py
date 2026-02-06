@@ -13,7 +13,7 @@ Test Coverage:
 - Edge cases
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -35,6 +35,17 @@ pytestmark = pytest.mark.unit
 def organization_service():
     """Organization service instance"""
     return OrganizationService()
+
+
+@pytest.fixture
+def mock_db():
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -83,7 +94,7 @@ def sample_child_org():
 class TestCreateOrganization:
     """Tests for organization creation"""
 
-    def test_create_root_organization(self, organization_service, mock_db):
+    async def test_create_root_organization(self, organization_service, mock_db):
         """Test creating a root organization (no parent)"""
         org_data = OrganizationCreate(
             name="Root Organization",
@@ -98,14 +109,16 @@ class TestCreateOrganization:
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
 
-        result = organization_service.create_organization(db=mock_db, obj_in=org_data)
+        result = await organization_service.create_organization(
+            db=mock_db, obj_in=org_data
+        )
 
         assert result is not None
         assert result.name == "Root Organization"
         mock_db.add.assert_called()
-        mock_db.commit.assert_called()
+        assert mock_db.commit.await_count >= 1
 
-    def test_create_child_organization(
+    async def test_create_child_organization(
         self, organization_service, mock_db, sample_parent_org
     ):
         """Test creating a child organization"""
@@ -119,17 +132,19 @@ class TestCreateOrganization:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=sample_parent_org,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=sample_parent_org),
         ):
-            result = organization_service.create_organization(
+            result = await organization_service.create_organization(
                 db=mock_db, obj_in=org_data
             )
 
             assert result is not None
             assert result.parent_id == "parent-123"
 
-    def test_create_organization_invalid_parent(self, organization_service, mock_db):
+    async def test_create_organization_invalid_parent(
+        self, organization_service, mock_db
+    ):
         """Test creating organization with non-existent parent"""
         org_data = OrganizationCreate(
             name="Orphan Organization",
@@ -141,12 +156,17 @@ class TestCreateOrganization:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get", return_value=None
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=None),
         ):
             with pytest.raises(ResourceNotFoundError, match="组织不存在"):
-                organization_service.create_organization(db=mock_db, obj_in=org_data)
+                await organization_service.create_organization(
+                    db=mock_db, obj_in=org_data
+                )
 
-    def test_create_organization_records_history(self, organization_service, mock_db):
+    async def test_create_organization_records_history(
+        self, organization_service, mock_db
+    ):
         """Test that organization creation is recorded in history"""
         org_data = OrganizationCreate(
             name="Historical Organization",
@@ -157,10 +177,10 @@ class TestCreateOrganization:
         )
 
         with patch.object(
-            organization_service, "_create_history", return_value=None
+            organization_service, "_create_history", new=AsyncMock(return_value=None)
         ) as mock_history:
-            organization_service.create_organization(db=mock_db, obj_in=org_data)
-            mock_history.assert_called_once()
+            await organization_service.create_organization(db=mock_db, obj_in=org_data)
+            mock_history.assert_awaited_once()
 
 
 # ============================================================================
@@ -171,7 +191,7 @@ class TestCreateOrganization:
 class TestUpdateOrganization:
     """Tests for organization updates"""
 
-    def test_update_organization_name(
+    async def test_update_organization_name(
         self, organization_service, mock_db, sample_organization
     ):
         """Test updating organization name"""
@@ -181,17 +201,17 @@ class TestUpdateOrganization:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=sample_organization,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=sample_organization),
         ):
-            result = organization_service.update_organization(
+            result = await organization_service.update_organization(
                 db=mock_db, org_id="org-123", obj_in=update_data
             )
 
             assert result is not None
-            mock_db.commit.assert_called()
+            assert mock_db.commit.await_count >= 1
 
-    def test_update_organization_parent(
+    async def test_update_organization_parent(
         self, organization_service, mock_db, sample_organization, sample_parent_org
     ):
         """Test updating organization parent"""
@@ -200,26 +220,24 @@ class TestUpdateOrganization:
             updated_by="user-123",
         )
 
-        def get_side_effect(db, org_id):
-            if org_id == "org-123":
-                return sample_organization
-            return sample_parent_org
+        async def get_side_effect(db, org_id):
+            return sample_organization if org_id == "org-123" else sample_parent_org
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            side_effect=get_side_effect,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(side_effect=get_side_effect),
         ):
             with patch.object(
-                organization_service, "_would_create_cycle", return_value=False
+                organization_service, "_would_create_cycle", new=AsyncMock(return_value=False)
             ):
-                result = organization_service.update_organization(
+                result = await organization_service.update_organization(
                     db=mock_db, org_id="org-123", obj_in=update_data
                 )
 
                 assert result is not None
                 assert result.parent_id == "parent-123"
 
-    def test_update_organization_prevents_cycle(
+    async def test_update_organization_prevents_cycle(
         self, organization_service, mock_db, sample_organization, sample_child_org
     ):
         """Test that updating parent prevents cycle creation"""
@@ -229,20 +247,22 @@ class TestUpdateOrganization:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=sample_organization,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=sample_organization),
         ):
             with patch.object(
-                organization_service, "_would_create_cycle", return_value=True
+                organization_service, "_would_create_cycle", new=AsyncMock(return_value=True)
             ):
                 with pytest.raises(
                     OperationNotAllowedError, match="不能将组织移动到其子组织下"
                 ):
-                    organization_service.update_organization(
+                    await organization_service.update_organization(
                         db=mock_db, org_id="org-123", obj_in=update_data
                     )
 
-    def test_update_nonexistent_organization(self, organization_service, mock_db):
+    async def test_update_nonexistent_organization(
+        self, organization_service, mock_db
+    ):
         """Test updating non-existent organization"""
         update_data = OrganizationUpdate(
             name="New Name",
@@ -250,10 +270,11 @@ class TestUpdateOrganization:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get", return_value=None
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=None),
         ):
             with pytest.raises(ResourceNotFoundError, match="组织不存在"):
-                organization_service.update_organization(
+                await organization_service.update_organization(
                     db=mock_db, org_id="nonexistent", obj_in=update_data
                 )
 
@@ -326,7 +347,7 @@ class TestOrganizationHierarchy:
 class TestOrganizationHistory:
     """Tests for organization history tracking"""
 
-    def test_history_created_on_organization_create(
+    async def test_history_created_on_organization_create(
         self, organization_service, mock_db
     ):
         """Test that history record is created on organization creation"""
@@ -339,12 +360,12 @@ class TestOrganizationHistory:
         )
 
         with patch.object(
-            organization_service, "_create_history", return_value=None
+            organization_service, "_create_history", new=AsyncMock(return_value=None)
         ) as mock_history:
-            organization_service.create_organization(db=mock_db, obj_in=org_data)
-            mock_history.assert_called_once()
+            await organization_service.create_organization(db=mock_db, obj_in=org_data)
+            mock_history.assert_awaited_once()
 
-    def test_history_created_on_organization_update(
+    async def test_history_created_on_organization_update(
         self, organization_service, mock_db
     ):
         """Test that history record is created on organization update"""
@@ -362,15 +383,16 @@ class TestOrganizationHistory:
         )
 
         with patch(
-            "src.services.organization.service.organization_crud.get", return_value=org
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=org),
         ):
             with patch.object(
-                organization_service, "_create_history", return_value=None
+                organization_service, "_create_history", new=AsyncMock(return_value=None)
             ) as mock_history:
-                organization_service.update_organization(
+                await organization_service.update_organization(
                     db=mock_db, org_id="org-123", obj_in=update_data
                 )
-                mock_history.assert_called()
+                mock_history.assert_awaited()
 
     def test_history_tracks_field_changes(self, organization_service, mock_db):
         """Test that history correctly tracks field changes"""
@@ -430,12 +452,14 @@ class TestOrganizationValidation:
 class TestOrganizationErrorHandling:
     """Tests for error handling scenarios"""
 
-    def test_handle_database_error_on_create(self, organization_service, mock_db):
+    async def test_handle_database_error_on_create(
+        self, organization_service, mock_db
+    ):
         """Test handling database error during creation"""
         mock_db.commit.side_effect = Exception("Database connection failed")
 
         with pytest.raises(Exception, match="Database connection failed"):
-            organization_service.create_organization(
+            await organization_service.create_organization(
                 db=mock_db,
                 obj_in=OrganizationCreate(
                     name="Test Organization",
@@ -446,18 +470,18 @@ class TestOrganizationErrorHandling:
                 ),
             )
 
-    def test_handle_database_error_on_update(
+    async def test_handle_database_error_on_update(
         self, organization_service, mock_db, sample_organization
     ):
         """Test handling database error during update"""
         mock_db.commit.side_effect = Exception("Database connection failed")
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=sample_organization,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=sample_organization),
         ):
             with pytest.raises(Exception, match="Database connection failed"):
-                organization_service.update_organization(
+                await organization_service.update_organization(
                     db=mock_db,
                     org_id="org-123",
                     obj_in=OrganizationUpdate(
@@ -475,21 +499,21 @@ class TestOrganizationErrorHandling:
 class TestOrganizationEdgeCases:
     """Tests for edge cases and corner scenarios"""
 
-    def test_update_organization_with_no_changes(
+    async def test_update_organization_with_no_changes(
         self, organization_service, mock_db, sample_organization
     ):
         """Test updating organization with no actual changes"""
         update_data = OrganizationUpdate(updated_by="user-123")
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=sample_organization,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=sample_organization),
         ):
-            result = organization_service.update_organization(
+            result = await organization_service.update_organization(
                 db=mock_db, org_id="org-123", obj_in=update_data
             )
             assert result is not None
-            mock_db.commit.assert_called()
+            assert mock_db.commit.await_count >= 1
 
     def test_move_organization_to_different_branch(self, organization_service, mock_db):
         """Test moving organization to different branch of hierarchy"""
@@ -501,7 +525,9 @@ class TestOrganizationEdgeCases:
         new_path = f"{new_parent_path}/org-123"
         assert new_path == "/branch-b/org-123"
 
-    def test_delete_organization_with_children(self, organization_service, mock_db):
+    async def test_delete_organization_with_children(
+        self, organization_service, mock_db
+    ):
         """Test deleting organization that has children"""
         parent = MagicMock(spec=Organization)
         parent.id = "org-123"
@@ -509,15 +535,15 @@ class TestOrganizationEdgeCases:
         child.id = "child-123"
 
         with patch(
-            "src.services.organization.service.organization_crud.get",
-            return_value=parent,
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=parent),
         ):
             with patch(
-                "src.services.organization.service.organization_crud.get_children",
-                return_value=[child],
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[child]),
             ):
                 with pytest.raises(OperationNotAllowedError, match="不能删除有子组织"):
-                    organization_service.delete_organization(
+                    await organization_service.delete_organization(
                         db=mock_db, org_id="org-123"
                     )
 

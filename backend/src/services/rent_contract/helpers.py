@@ -1,8 +1,9 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import and_
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...constants.rent_contract_constants import SettlementStatus
 from ...core.enums import ContractStatus
@@ -19,54 +20,34 @@ from ...models.rent_contract import (
 class RentContractHelperMixin:
     """租金合同服务公共辅助方法"""
 
-    def _check_asset_rent_conflicts(
+    async def _check_asset_rent_conflicts_async(
         self,
-        db: Session,
+        db: AsyncSession,
         *,
         asset_ids: list[str],
         start_date: date,
         end_date: date,
         exclude_contract_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        检查资产租金冲突
-
-        检测指定资产在指定时间段内是否已被其他合同覆盖
-
-        Args:
-            db: 数据库会话
-            asset_ids: 要检查的资产ID列表
-            start_date: 新合同的开始日期
-            end_date: 新合同的结束日期
-            exclude_contract_id: 要排除的合同ID(更新合同时使用)
-
-        Returns:
-            冲突列表,每个冲突包含资产信息和合同信息
-        """
         conflicts = []
 
-        # Build conditions for and_()
         conditions = [RentContract.contract_status == ContractStatus.ACTIVE]
         if exclude_contract_id:
             conditions.append(RentContract.id != exclude_contract_id)
 
-        # 查询与指定资产相关的所有有效合同
-        query = db.query(RentContract).options(selectinload(RentContract.assets))
-        existing_contracts = query.filter(and_(*conditions)).all()
+        stmt = (
+            select(RentContract)
+            .options(selectinload(RentContract.assets))
+            .where(and_(*conditions))
+        )
+        existing_contracts = list((await db.execute(stmt)).scalars().all())
 
-        # 检查每个现有合同是否与新合同时间段重叠
         for contract in existing_contracts:
-            # 获取该合同的资产
             contract_assets = [a.id for a in contract.assets]
-
-            # 检查是否有资产重叠
             overlapping_assets = set(asset_ids) & set(contract_assets)
 
             if overlapping_assets:
-                # 检查时间段是否重叠
-                # 重叠条件: (新合同开始 <= 旧合同结束) AND (新合同结束 >= 旧合同开始)
                 if start_date <= contract.end_date and end_date >= contract.start_date:
-                    # 获取重叠资产的名称
                     overlapping_asset_names = [
                         a.property_name
                         if getattr(a, "property_name", None)
@@ -90,9 +71,9 @@ class RentContractHelperMixin:
 
         return conflicts
 
-    def _create_history(
+    async def _create_history_async(
         self,
-        db: Session,
+        db: AsyncSession,
         contract_id: str,
         change_type: str,
         change_description: str,
@@ -101,7 +82,6 @@ class RentContractHelperMixin:
         operator: str | None = None,
         operator_id: str | None = None,
     ) -> RentContractHistory:
-        """创建合同历史记录"""
         history = RentContractHistory()
         history.contract_id = contract_id
         history.change_type = change_type
@@ -111,7 +91,7 @@ class RentContractHelperMixin:
         history.operator = operator
         history.operator_id = operator_id
         db.add(history)
-        db.commit()
+        await db.commit()
         return history
 
     def _generate_month_range(self, start_month: str, end_month: str) -> list[str]:
@@ -146,44 +126,45 @@ class RentContractHelperMixin:
         """计算应缴日期（默认每月1号）"""
         return month_date.replace(day=1)
 
-    def _calculate_service_fee_for_ledger(
-        self, db: Session, ledger: RentLedger
+    async def _calculate_service_fee_for_ledger_async(
+        self, db: AsyncSession, ledger: RentLedger
     ) -> ServiceFeeLedger | None:
-        """
-        V2: 为委托运营合同自动计算服务费
-        当租金台账收到实收款项时，如果关联合同为委托运营类型，自动生成服务费记录
-        """
-        # 获取合同信息
         contract = (
-            db.query(RentContract).filter(RentContract.id == ledger.contract_id).first()
+            (
+                await db.execute(
+                    select(RentContract).where(RentContract.id == ledger.contract_id)
+                )
+            )
+            .scalars()
+            .first()
         )
         if not contract:
             return None
 
-        # 仅处理委托运营类型的合同
         if contract.contract_type != ContractType.ENTRUSTED:
             return None
 
-        # 合同必须设置服务费率
         if not contract.service_fee_rate or contract.service_fee_rate <= 0:
             return None
 
-        # 检查此台账是否已生成过服务费
         existing = (
-            db.query(ServiceFeeLedger)
-            .filter(ServiceFeeLedger.source_ledger_id == ledger.id)
+            (
+                await db.execute(
+                    select(ServiceFeeLedger).where(
+                        ServiceFeeLedger.source_ledger_id == ledger.id
+                    )
+                )
+            )
+            .scalars()
             .first()
         )
         if existing:
-            # 更新现有记录
             existing.paid_rent_amount = ledger.paid_amount
             existing.fee_amount = ledger.paid_amount * contract.service_fee_rate
             return existing
 
-        # 计算服务费：实收金额 × 服务费率
         fee_amount = ledger.paid_amount * contract.service_fee_rate
 
-        # 创建服务费记录
         service_fee = ServiceFeeLedger()
         service_fee.contract_id = contract.id
         service_fee.source_ledger_id = ledger.id
