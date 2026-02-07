@@ -6,6 +6,7 @@ PostgreSQL并发访问集成测试
 
 import asyncio
 import os
+import uuid
 
 import pytest
 from sqlalchemy import text
@@ -60,6 +61,7 @@ class TestPostgreSQLConcurrency:
     async def test_concurrent_transaction_isolation(self):
         """测试并发事务隔离"""
         from src.crud.asset import asset_crud
+        from src.models.ownership import Ownership
 
         mgr = get_database_manager()
 
