@@ -305,18 +305,9 @@ export class ResponseExtractor {
         : {};
 
     const page = this.toNumber(pagination.page, 1);
-    const pageSize = this.toNumber(
-      pagination.page_size ?? pagination.pageSize ?? pagination.size,
-      items.length
-    );
-    const total = this.toNumber(
-      pagination.total ?? pagination.total_count ?? pagination.totalCount,
-      items.length
-    );
-    const totalPages = this.toNumber(
-      pagination.total_pages ?? pagination.totalPages ?? pagination.pages,
-      undefined
-    );
+    const pageSize = this.toNumber(pagination.page_size, items.length);
+    const total = this.toNumber(pagination.total, items.length);
+    const totalPages = this.toNumber(pagination.total_pages, undefined);
     const pages = totalPages ?? (pageSize > 0 ? Math.ceil(total / pageSize) : 0);
 
     const normalized: Record<string, unknown> = {

@@ -22,19 +22,16 @@ export const assetFormSchema = z
     business_model: z.string().optional(),
     include_in_occupancy_rate: z.boolean().optional(),
     occupancy_rate: z.string().optional(),
-    lease_contract: z.string().optional(),
-    current_contract_start_date: z.string().optional(),
-    current_contract_end_date: z.string().optional(),
+    lease_contract_number: z.string().optional(),
+    contract_start_date: z.string().optional(),
+    contract_end_date: z.string().optional(),
     tenant_name: z.string().optional(),
     ownership_category: z.string().optional(),
-    current_lease_contract: z.string().optional(),
-    wuyang_project_name: z.string().optional(),
-    agreement_start_date: z.string().optional(),
-    agreement_end_date: z.string().optional(),
+    project_name: z.string().optional(),
+    operation_agreement_start_date: z.string().optional(),
+    operation_agreement_end_date: z.string().optional(),
     operation_agreement_attachments: z.string().optional(),
-    current_terminal_contract: z.string().optional(),
     terminal_contract_files: z.string().optional(),
-    description: z.string().optional(),
     notes: z.string().optional(),
   })
   .refine(
@@ -61,20 +58,18 @@ export const assetFormSchema = z
   .refine(
     data => {
       if (
-        data.current_contract_end_date !== null &&
-        data.current_contract_end_date !== undefined &&
-        data.current_contract_start_date !== null &&
-        data.current_contract_start_date !== undefined
+        data.contract_end_date !== null &&
+        data.contract_end_date !== undefined &&
+        data.contract_start_date !== null &&
+        data.contract_start_date !== undefined
       ) {
-        return (
-          new Date(data.current_contract_end_date) > new Date(data.current_contract_start_date)
-        );
+        return new Date(data.contract_end_date) > new Date(data.contract_start_date);
       }
       return true;
     },
     {
       message: '合同结束日期必须晚于开始日期',
-      path: ['current_contract_end_date'],
+      path: ['contract_end_date'],
     }
   );
 

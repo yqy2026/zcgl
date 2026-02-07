@@ -104,7 +104,7 @@ describe('NotificationService', () => {
     it('成功获取未读数量', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
-        data: { count: 5 },
+        data: { unread_count: 5 },
       });
 
       const result = await notificationService.getUnreadCount();

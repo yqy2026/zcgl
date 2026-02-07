@@ -171,7 +171,7 @@ const RoleManagementPage: React.FC = () => {
       const items = Array.isArray(data) ? data : (data.items ?? []);
       const mapped: Role[] = items.map(r => ({
         id: r.id,
-        name: r.display_name ?? r.name,
+        name: r.display_name ?? '',
         code: r.name,
         description: r.description ?? '',
         status: r.is_active ? 'active' : 'inactive',
@@ -269,7 +269,7 @@ const RoleManagementPage: React.FC = () => {
           const resourceKey = p.resource ?? resource;
           return {
             id: p.id,
-            name: p.display_name ?? p.name ?? `${resourceKey}:${action}`,
+            name: p.display_name ?? `${resourceKey}:${action}`,
             code: `${resourceKey}.${action}`,
             module: resourceKey,
             description: p.description ?? '',

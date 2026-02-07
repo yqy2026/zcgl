@@ -111,7 +111,7 @@ const UserManagementPage: React.FC = () => {
         search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
         status: status !== '' ? status : undefined,
         role_id: roleId !== '' ? roleId : undefined,
-        default_organization_id: organizationId !== '' ? organizationId : undefined,
+        organization_id: organizationId !== '' ? organizationId : undefined,
       });
       return { items: response.items ?? [], total: response.total ?? 0 };
     },
@@ -280,7 +280,7 @@ const UserManagementPage: React.FC = () => {
       full_name: user.full_name,
       phone: user.phone,
       status: user.status,
-      role_id: user.role_id ?? user.role_ids?.[0],
+      role_id: user.role_id,
       default_organization_id: user.default_organization_id,
     });
     setModalVisible(true);

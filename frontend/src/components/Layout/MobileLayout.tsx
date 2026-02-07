@@ -44,8 +44,32 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
         {/* 右侧：用户信息 */}
         <Space size="small">
-          <Button type="text" icon={<BellOutlined />} size="small" style={{ fontSize: '16px' }} />
-          <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+          <Button
+            type="text"
+            icon={<BellOutlined />}
+            size="small"
+            aria-label="通知"
+            style={{
+              fontSize: '16px',
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              minHeight: 44,
+            }}
+          />
+          <Avatar
+            size="small"
+            icon={<UserOutlined />}
+            style={{
+              backgroundColor: '#1890ff',
+              width: 36,
+              height: 36,
+              minWidth: 36,
+              minHeight: 36,
+              cursor: 'pointer',
+            }}
+            aria-label="用户信息"
+          />
         </Space>
       </Header>
 

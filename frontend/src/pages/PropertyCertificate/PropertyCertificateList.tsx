@@ -114,10 +114,12 @@ export const PropertyCertificateList: React.FC = () => {
     },
     {
       title: '审核状态',
-      dataIndex: 'verified',
-      key: 'verified',
-      render: (verified: boolean) => (
-        <Tag color={verified ? 'success' : 'default'}>{verified ? '已审核' : '待审核'}</Tag>
+      dataIndex: 'is_verified',
+      key: 'is_verified',
+      render: (isVerified: boolean) => (
+        <Tag color={isVerified ? 'success' : 'default'}>
+          {isVerified ? '已审核' : '待审核'}
+        </Tag>
       ),
     },
     {

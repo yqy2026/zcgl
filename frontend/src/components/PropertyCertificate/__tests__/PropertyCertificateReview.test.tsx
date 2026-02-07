@@ -313,9 +313,9 @@ describe('PropertyCertificateReview - 渲染与提交测试', () => {
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
           session_id: 'session-123',
+          asset_ids: [],
           asset_link_id: null,
-          create_new_asset: true,
-          verified: true,
+          should_create_new_asset: true,
         })
       );
     });
@@ -336,8 +336,9 @@ describe('PropertyCertificateReview - 渲染与提交测试', () => {
     await waitFor(() => {
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
+          asset_ids: ['asset-1'],
           asset_link_id: 'asset-1',
-          create_new_asset: false,
+          should_create_new_asset: false,
         })
       );
     });

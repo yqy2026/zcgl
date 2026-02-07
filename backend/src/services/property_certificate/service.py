@@ -166,9 +166,10 @@ class PropertyCertificateService:
 
         Args:
             data: 包含提取字段和用户确认信息的字典
-                - certificate_number: 证书编号
-                - certificate_type: 证书类型
-                - extraction_data: 提取的字段数据
+                - extracted_data: 提取并确认后的字段数据
+                - asset_ids: 需关联的资产ID列表
+                - asset_link_id: 单个资产关联ID（UI兼容）
+                - should_create_new_asset: 是否创建新资产（为 True 时忽略资产关联）
                 - owners: 权利人信息列表 (可选)
 
         Returns:
@@ -178,10 +179,33 @@ class PropertyCertificateService:
             ValueError: 数据验证失败
             Exception: 数据库操作失败
         """
-        # 提取数据
-        certificate_number = data.get("certificate_number")
-        extraction_data = data.get("extraction_data", {})
+        extracted_data = data.get("extracted_data")
+        if not isinstance(extracted_data, dict):
+            raise BusinessValidationError(
+                "缺少提取数据",
+                field_errors={"extracted_data": ["缺少提取数据"]},
+            )
+
+        certificate_number = self._normalize_match_value(
+            extracted_data.get("certificate_number")
+        )
         owners_data = data.get("owners", [])
+        should_create_new_asset = data.get("should_create_new_asset") is True
+        asset_ids = [
+            str(asset_id).strip()
+            for asset_id in (data.get("asset_ids") or [])
+            if str(asset_id).strip()
+        ]
+        asset_link_id = data.get("asset_link_id")
+        if not should_create_new_asset and asset_link_id is not None:
+            normalized_asset_link_id = str(asset_link_id).strip()
+            if (
+                normalized_asset_link_id
+                and normalized_asset_link_id not in asset_ids
+            ):
+                asset_ids.append(normalized_asset_link_id)
+        if should_create_new_asset:
+            asset_ids = []
 
         if not certificate_number:
             raise BusinessValidationError(
@@ -198,30 +222,38 @@ class PropertyCertificateService:
                 logger.warning(f"产权证已存在: {certificate_number}")
                 return existing
 
+            confidence_raw = extracted_data.get("confidence")
+            try:
+                extraction_confidence = (
+                    float(confidence_raw) if confidence_raw is not None else None
+                )
+            except (TypeError, ValueError):
+                extraction_confidence = None
+
             certificate_create_data = {
                 "certificate_number": certificate_number,
-                "certificate_type": extraction_data.get("certificate_type", "房产证"),
-                "extraction_confidence": extraction_data.get("confidence", 0.0),
+                "certificate_type": str(extracted_data.get("certificate_type") or "other"),
+                "extraction_confidence": extraction_confidence,
                 "extraction_source": "llm",
                 "is_verified": False,
                 "registration_date": self._parse_date(
-                    extraction_data.get("registration_date")
+                    extracted_data.get("registration_date")
                 ),
-                "property_address": extraction_data.get("property_address"),
-                "property_type": extraction_data.get("property_type"),
-                "building_area": extraction_data.get("building_area"),
-                "floor_info": extraction_data.get("floor_info"),
-                "land_area": extraction_data.get("land_area"),
-                "land_use_type": extraction_data.get("land_use_type"),
+                "property_address": extracted_data.get("property_address"),
+                "property_type": extracted_data.get("property_type"),
+                "building_area": extracted_data.get("building_area"),
+                "floor_info": extracted_data.get("floor_info"),
+                "land_area": extracted_data.get("land_area"),
+                "land_use_type": extracted_data.get("land_use_type"),
                 "land_use_term_start": self._parse_date(
-                    extraction_data.get("land_use_term_start")
+                    extracted_data.get("land_use_term_start")
                 ),
                 "land_use_term_end": self._parse_date(
-                    extraction_data.get("land_use_term_end")
+                    extracted_data.get("land_use_term_end")
                 ),
-                "co_ownership": extraction_data.get("co_ownership"),
-                "restrictions": extraction_data.get("restrictions"),
-                "remarks": extraction_data.get("remarks"),
+                "co_ownership": extracted_data.get("co_ownership"),
+                "restrictions": extracted_data.get("restrictions"),
+                "remarks": extracted_data.get("remarks"),
             }
 
             owner_ids: list[str] = []
@@ -246,6 +278,7 @@ class PropertyCertificateService:
                 self.db,
                 obj_in=certificate_create,
                 owner_ids=owner_ids if owner_ids else None,
+                asset_ids=asset_ids if asset_ids else None,
             )
 
             logger.info(f"产权证创建成功: {certificate.id} - {certificate_number}")

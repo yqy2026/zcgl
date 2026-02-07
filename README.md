@@ -30,6 +30,11 @@
 - **[API 总览](docs/integrations/api-overview.md)** - API架构和规范
 - **[认证 API](docs/integrations/auth-api.md)** - 登录、注册、权限管理
 
+## 🔐 密钥泄露处置（必须执行）
+- 任何 `SECRET_KEY`、`API_KEY`、`SESSION_SECRET`、数据库密码等凭证，只要曾出现在 Git 历史（即使后续删除或已轮换），一律按“已泄露”处理。
+- 发现后必须立即轮换受影响凭证，并强制旧会话/旧令牌失效。
+- 处置流程见：[部署指南 - 凭证泄露应急处置](docs/guides/deployment.md#凭证泄露应急处置)。
+
 ---
 
 ## 📚 文档导航

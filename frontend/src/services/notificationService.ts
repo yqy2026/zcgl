@@ -41,7 +41,7 @@ class NotificationService {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const result = await apiClient.get<{ count: number }>(
+      const result = await apiClient.get<{ unread_count: number }>(
         API_ENDPOINTS.NOTIFICATION.UNREAD_COUNT,
         {
           retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
@@ -52,7 +52,7 @@ class NotificationService {
         throw new Error(`获取未读通知数量失败: ${result.error}`);
       }
 
-      return result.data!.count;
+      return result.data!.unread_count;
     } catch (error) {
       // 这里的错误可以忽略，返回0即可，避免影响主流程
       // eslint-disable-next-line no-console

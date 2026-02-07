@@ -57,8 +57,9 @@ from ...schemas.rbac import (
     UserRoleAssignmentCreate,
 )
 
-# RBAC role names that should be treated as full administrators
-ADMIN_ROLE_NAMES = {"admin", "super_admin"}
+# Legacy role-name fallback for admin detection.
+# Primary source should be RBAC permissions (system:admin).
+LEGACY_ADMIN_ROLE_NAMES = {"admin", "super_admin"}
 
 
 class RBACService:
@@ -69,8 +70,32 @@ class RBACService:
         self.user_crud = UserCRUD()
 
     @staticmethod
+    def _has_system_admin_permission(role: Role) -> bool:
+        permissions = getattr(role, "permissions", None)
+        if permissions is None:
+            return False
+
+        try:
+            permission_iterable = iter(permissions)
+        except TypeError:
+            return False
+
+        for permission in permission_iterable:
+            if (
+                getattr(permission, "resource", None) == "system"
+                and getattr(permission, "action", None) == "admin"
+            ):
+                return True
+        return False
+
+    @staticmethod
     def _is_admin_role(role: Role) -> bool:
-        return role.name.lower() in ADMIN_ROLE_NAMES
+        if RBACService._has_system_admin_permission(role):
+            return True
+
+        # Backward compatibility for historical role naming conventions.
+        role_name = (getattr(role, "name", "") or "").lower()
+        return role_name in LEGACY_ADMIN_ROLE_NAMES
 
     # ==================== 角色管理 ====================
 

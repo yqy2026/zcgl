@@ -35,7 +35,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
   // 获取导出历史
   const { data: exportHistory, refetch: refetchHistory } = useQuery({
     queryKey: ['export-history'],
-    queryFn: () => assetService.getExportHistory() as Promise<ExportTaskWithApiFields[]>,
+    queryFn: () => assetService.getExportHistory(),
     refetchInterval: 5000, // 每5秒刷新一次
   });
 
@@ -43,7 +43,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
   const pollExportStatus = (taskId: string) => {
     const interval = setInterval(async () => {
       try {
-        const task = (await assetService.getExportStatus(taskId)) as ExportTaskWithApiFields;
+        const task = await assetService.getExportStatus(taskId);
         setExportTask(task);
 
         if (task.status === 'completed' || task.status === 'failed') {
@@ -52,19 +52,9 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
           if (task.status === 'completed') {
             MessageManager.success('导出完成！');
-            // 转换为标准ExportTask类型
-            const standardTask: ExportTask = {
-              id: task.id,
-              status: task.status,
-              progress: task.progress,
-              downloadUrl: task.download_url ?? task.downloadUrl,
-              createdAt: task.created_at ?? task.createdAt ?? new Date().toISOString(),
-              completedAt: task.completedAt,
-              errorMessage: task.errorMessage,
-            };
-            onExportComplete?.(standardTask);
+            onExportComplete?.(task);
           } else {
-            MessageManager.error(task.errorMessage ?? '导出失败');
+            MessageManager.error(task.error_message ?? '导出失败');
           }
         }
       } catch {
@@ -97,8 +87,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           id: `direct_${Date.now()}`,
           status: 'completed',
           progress: 100,
-          downloadUrl: url,
-          createdAt: new Date().toISOString(),
+          download_url: url,
           filename: `assets_export_${new Date().toISOString().split('T')[0]}.${options.format}`,
           total_records: 0,
           file_size: blob.size,
@@ -138,7 +127,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
   // 下载文件
   const handleDownload = async (task: ExportTaskWithApiFields) => {
-    const downloadUrl = task.download_url ?? task.downloadUrl ?? '';
+    const downloadUrl = task.download_url ?? '';
     if (downloadUrl === '') return;
 
     try {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Table, Tag, Button, Space, Popconfirm, Tooltip, Modal, Input } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -16,6 +16,7 @@ import { getOccupancyRateColor } from '@/styles/colorMap';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
 import usePermission from '@/hooks/usePermission';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { announceToScreenReader } from '@/utils/accessibility';
 
 // Constants
 const UUID_LENGTH = 36;
@@ -94,6 +95,18 @@ const AssetList: React.FC<AssetListProps> = ({
 
   const [hardDeleteTarget, setHardDeleteTarget] = useState<Asset | null>(null);
   const [hardDeleteInput, setHardDeleteInput] = useState('');
+
+  // 通知屏幕阅读器数据加载状态
+  useEffect(() => {
+    if (!loading && data?.items) {
+      const itemCount = data.items.length;
+      const total = data.total;
+      announceToScreenReader(
+        `资产列表已加载，当前显示 ${itemCount} 条记录，共 ${total} 条`,
+        'polite'
+      );
+    }
+  }, [loading, data]);
 
   const handleOpenHardDelete = useCallback((asset: Asset) => {
     setHardDeleteTarget(asset);
@@ -588,6 +601,17 @@ const AssetList: React.FC<AssetListProps> = ({
 
   return (
     <>
+      {/* 屏幕阅读器专用状态通知 */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id="asset-list-status"
+      >
+        {loading ? '正在加载资产列表...' : `显示 ${data?.items.length ?? 0} 条资产记录`}
+      </div>
+
       <TableWithPagination
         columns={columns}
         dataSource={data?.items ?? []}

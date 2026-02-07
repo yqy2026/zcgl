@@ -182,9 +182,6 @@ const OperationLogPage: React.FC = () => {
         request_params: parseJsonValue(item.request_params),
         request_body: parseJsonValue(item.request_body),
         details: parseJsonValue(item.details),
-        user_name: item.user_name ?? item.username ?? '-',
-        module_name: item.module_name ?? item.module,
-        action_name: item.action_name ?? item.action,
       }));
 
       return {
@@ -351,7 +348,7 @@ const OperationLogPage: React.FC = () => {
       width: 150,
       render: (_, record) => (
         <Space orientation="vertical" size="small">
-          <div style={{ fontWeight: 500 }}>{record.user_name ?? record.username ?? '-'}</div>
+          <div style={{ fontWeight: 500 }}>{record.username ?? '-'}</div>
           <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             @{record.username ?? '-'}
           </div>
@@ -367,7 +364,7 @@ const OperationLogPage: React.FC = () => {
     },
     {
       title: '模块',
-      dataIndex: 'module_name',
+      dataIndex: 'module',
       key: 'module',
       width: 120,
       render: module => <Tag color="blue">{module ?? '-'}</Tag>,
@@ -636,8 +633,7 @@ const OperationLogPage: React.FC = () => {
                 <Space>
                   <UserOutlined />
                   <span>
-                    {selectedLog.user_name ?? selectedLog.username ?? '-'} (@
-                    {selectedLog.username ?? '-'})
+                    {selectedLog.username ?? '-'} (@{selectedLog.username ?? '-'})
                   </span>
                 </Space>
               </Descriptions.Item>
@@ -645,7 +641,7 @@ const OperationLogPage: React.FC = () => {
                 {getActionTag(selectedLog.action)}
               </Descriptions.Item>
               <Descriptions.Item label="所属模块">
-                <Tag color="blue">{selectedLog.module_name ?? selectedLog.module ?? '-'}</Tag>
+                <Tag color="blue">{selectedLog.module ?? '-'}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="资源信息">
                 {selectedLog.resource_name != null ? (

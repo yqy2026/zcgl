@@ -311,8 +311,7 @@ const mockUpdatePagination = vi.fn();
 let mockData: Array<{
   id: string;
   change_type?: string;
-  changed_by?: string;
-  changed_at?: string;
+  operator?: string;
   operation_time?: string;
   changed_fields?: string[];
 }> = [];
@@ -329,16 +328,14 @@ describe('AssetHistory', () => {
       {
         id: '1',
         change_type: 'create',
-        changed_by: '张三',
-        changed_at: '2024-01-01T00:00:00.000Z',
+        operator: '张三',
         operation_time: '2024-01-01T00:00:00.000Z',
         changed_fields: ['property_name'],
       },
       {
         id: '2',
         change_type: 'update',
-        changed_by: '李四',
-        changed_at: '2024-01-02T00:00:00.000Z',
+        operator: '李四',
         operation_time: '2024-01-02T00:00:00.000Z',
         changed_fields: ['rentable_area', 'rented_area'],
       },

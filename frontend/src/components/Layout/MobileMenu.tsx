@@ -34,10 +34,13 @@ const MobileMenu: React.FC = () => {
         type="text"
         icon={<MenuOutlined />}
         onClick={showMenu}
+        aria-label="打开菜单"
         style={{
           fontSize: '16px',
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
+          minWidth: 44,
+          minHeight: 44,
         }}
       />
 
@@ -45,7 +48,7 @@ const MobileMenu: React.FC = () => {
       <Drawer
         title={
           <Space>
-            <HomeOutlined style={{ color: '#1890ff' }} />
+            <HomeOutlined style={{ color: '#1890ff' }} aria-label="首页" />
             <Text strong>资产管理系统</Text>
           </Space>
         }
@@ -56,7 +59,21 @@ const MobileMenu: React.FC = () => {
         styles={{
           body: { padding: 0 },
         }}
-        extra={<Button type="text" icon={<CloseOutlined />} onClick={hideMenu} />}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={hideMenu}
+            aria-label="关闭菜单"
+            style={{
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              minHeight: 44,
+            }}
+          />
+        }
+        aria-label="移动端导航菜单"
       >
         <Menu
           mode="inline"

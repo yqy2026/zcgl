@@ -47,8 +47,14 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
     <List
       loading={loading}
       dataSource={assets}
-      renderItem={asset => (
-        <List.Item
+      renderItem={asset => {
+        const projectName = asset.project_name;
+        const notes = asset.notes;
+        const hasProjectName = projectName != null && projectName.trim() !== '';
+        const hasNotes = notes != null && notes.trim() !== '';
+
+        return (
+          <List.Item
           key={asset.id}
           actions={[
             <Tooltip key="view" title="查看详情">
@@ -89,9 +95,11 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 <div style={{ marginBottom: 8 }}>
                   <Space>
                     <UserOutlined style={{ color: '#8c8c8c' }} />
-                    <Text type="secondary">
-                      权属方: {highlightSearchText(asset.ownership_entity)}
-                    </Text>
+                    {asset.ownership_entity != null ? (
+                      <Text type="secondary">
+                        权属方: {highlightSearchText(asset.ownership_entity)}
+                      </Text>
+                    ) : null}
                     {asset.management_entity != null && (
                       <>
                         <Text type="secondary">|</Text>
@@ -160,26 +168,29 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                   <Space>
                     {asset.is_litigated != null && <Tag color="red">涉诉</Tag>}
                     {asset.include_in_occupancy_rate != null && <Tag color="green">计入出租率</Tag>}
-                    {asset.wuyang_project_name != null && <Tag color="blue">五羊项目</Tag>}
+                    {hasProjectName && (
+                      <Tag color="blue">{highlightSearchText(projectName)}</Tag>
+                    )}
                   </Space>
                 </div>
 
                 {/* 描述信息 */}
-                {asset.description != null && (
+                {hasNotes && (
                   <div style={{ marginTop: 8 }}>
                     <Paragraph
                       ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
                       style={{ margin: 0, fontSize: '12px', color: '#8c8c8c' }}
                     >
-                      {highlightSearchText(asset.description)}
+                      {highlightSearchText(notes)}
                     </Paragraph>
                   </div>
                 )}
               </div>
             }
           />
-        </List.Item>
-      )}
+          </List.Item>
+        );
+      }}
     />
   );
 };

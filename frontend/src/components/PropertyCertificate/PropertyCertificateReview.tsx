@@ -52,11 +52,11 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
       const values = await form.validateFields();
       onConfirm({
         session_id: extractionResult.session_id,
+        asset_ids: selectedAssetId != null ? [selectedAssetId] : [],
         extracted_data: values,
         asset_link_id: selectedAssetId,
-        create_new_asset: selectedAssetId == null,
+        should_create_new_asset: selectedAssetId == null,
         owners: [],
-        verified: true,
       });
     } catch {
       console.error('Validation failed');

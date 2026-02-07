@@ -72,20 +72,10 @@ export const userService = {
     search?: string;
     status?: string;
     role_id?: string;
-    default_organization_id?: string;
+    organization_id?: string;
   }): Promise<UserListResponse> {
-    const { default_organization_id, ...rest } = params ?? {};
-    const requestParams =
-      params == null
-        ? undefined
-        : {
-            ...rest,
-            ...(default_organization_id !== undefined
-              ? { organization_id: default_organization_id }
-              : {}),
-          };
       const response = await api.get<UserListResponse>(SYSTEM_API.USERS, {
-        params: requestParams,
+        params,
       });
     return response.data ?? { items: [], total: 0, page: 1, page_size: 20, pages: 0 };
   },

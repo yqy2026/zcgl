@@ -56,11 +56,11 @@ const createMockExtractionResult = (): CertificateExtractionResult => ({
 
 const createMockConfirmData = (): CertificateImportConfirm => ({
   session_id: 'session-123',
+  asset_ids: [],
   extracted_data: {},
   asset_link_id: null,
-  create_new_asset: false,
+  should_create_new_asset: false,
   owners: [],
-  verified: true,
 });
 
 const renderPage = () => render(<PropertyCertificateImport />);

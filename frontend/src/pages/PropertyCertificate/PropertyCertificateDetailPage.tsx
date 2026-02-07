@@ -108,8 +108,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
     if (!id) return;
     setSubmitting(true);
     try {
-      await propertyCertificateService.updateCertificate(id, { verified: !certificate.verified });
-      message.success(certificate.verified ? '已取消审核' : '已标记为已审核');
+      await propertyCertificateService.updateCertificate(id, {
+        is_verified: !certificate.is_verified,
+      });
+      message.success(certificate.is_verified ? '已取消审核' : '已标记为已审核');
       await refetch();
     } catch {
       message.error('更新审核状态失败');
@@ -246,8 +248,11 @@ const PropertyCertificateDetailPage: React.FC = () => {
           </Title>
           <Tag icon={<FileTextOutlined />}>{certificate.certificate_number}</Tag>
           <Tag color="blue">{typeLabelMap[certificate.certificate_type]}</Tag>
-          <Tag color={certificate.verified ? 'green' : 'default'} icon={<CheckCircleOutlined />}>
-            {certificate.verified ? '已审核' : '待审核'}
+          <Tag
+            color={certificate.is_verified ? 'green' : 'default'}
+            icon={<CheckCircleOutlined />}
+          >
+            {certificate.is_verified ? '已审核' : '待审核'}
           </Tag>
           {certificate.extraction_confidence != null && (
             <Tag
@@ -275,11 +280,11 @@ const PropertyCertificateDetailPage: React.FC = () => {
             编辑
           </Button>
           <Button
-            type={certificate.verified ? 'default' : 'primary'}
+            type={certificate.is_verified ? 'default' : 'primary'}
             loading={submitting}
             onClick={handleToggleVerified}
           >
-            {certificate.verified ? '取消审核' : '标记已审核'}
+            {certificate.is_verified ? '取消审核' : '标记已审核'}
           </Button>
           <Popconfirm
             title="确认删除该产权证？"

@@ -41,9 +41,9 @@ export class LLMPromptService {
    */
   async getPrompts(params?: PromptQueryParams): Promise<PromptTemplateListResponse> {
     try {
-      const { pageSize, page_size, ...rest } = params ?? {};
+      const { page_size, ...rest } = params ?? {};
       const response = await apiClient.get<PromptTemplateListResponse>(API_BASE, {
-        params: { ...rest, page: params?.page, page_size: page_size ?? pageSize },
+        params: { ...rest, page: params?.page, page_size },
       });
       return extractData(response, '获取 Prompt 列表失败: 响应数据为空');
     } catch (error) {

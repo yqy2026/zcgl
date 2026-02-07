@@ -5,8 +5,10 @@
 
 import hashlib
 import logging
+import os
 import secrets
 import string
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -116,9 +118,35 @@ class SecurityKeyGenerator:
 class SecurityConfigManager:
     """安全配置管理器"""
 
-    def __init__(self, config_dir: str = "config"):
-        self.config_dir = Path(config_dir)
+    def __init__(self, config_dir: str | Path | None = None):
+        self.config_dir = self._resolve_config_dir(config_dir)
         self.generator = SecurityKeyGenerator()
+
+    @staticmethod
+    def _resolve_config_dir(config_dir: str | Path | None) -> Path:
+        """解析敏感产物输出目录，默认写入系统临时目录。"""
+        if config_dir is None:
+            env_dir = os.getenv("SECURITY_ARTIFACTS_DIR", "").strip()
+            if env_dir:
+                return Path(env_dir).expanduser().resolve()
+            return (Path(tempfile.gettempdir()) / "zcgl-security-artifacts").resolve()
+        return Path(config_dir).expanduser().resolve()
+
+    def _prepare_output_dir(self) -> None:
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(self.config_dir, 0o700)
+        except OSError:
+            # Windows 等平台可能不支持 POSIX 权限位，忽略即可
+            pass
+
+    @staticmethod
+    def _harden_file_permissions(file_path: Path) -> None:
+        try:
+            os.chmod(file_path, 0o600)
+        except OSError:
+            # Windows 等平台可能不支持 POSIX 权限位，忽略即可
+            pass
 
     def generate_secure_env_file(self, env_type: str = "production") -> dict[str, str]:
         """
@@ -164,7 +192,7 @@ class SecurityConfigManager:
 
         return config
 
-    def save_env_file(self, config: dict[str, str], filename: str) -> bool:
+    def save_env_file(self, config: dict[str, str], filename: str) -> Path | None:
         """
         保存环境变量配置到文件
 
@@ -173,10 +201,10 @@ class SecurityConfigManager:
             filename: 文件名
 
         Returns:
-            bool: 是否保存成功
+            Path | None: 保存后的文件路径
         """
         try:
-            self.config_dir.mkdir(exist_ok=True)
+            self._prepare_output_dir()
             env_file = self.config_dir / filename
 
             with open(env_file, "w", encoding="utf-8") as f:
@@ -188,12 +216,26 @@ class SecurityConfigManager:
                     if not key.startswith("CONFIG_"):  # 跳过元数据
                         f.write(f"{key}={value}\n")
 
+            self._harden_file_permissions(env_file)
             logger.info(f"安全配置已保存到: {env_file}")
-            return True
+            return env_file
 
         except Exception as e:
             logger.error(f"保存配置文件失败: {e}")
-            return False
+            return None
+
+    def save_admin_sql_file(self, sql_script: str) -> Path | None:
+        """保存管理员 SQL 脚本到敏感产物目录。"""
+        try:
+            self._prepare_output_dir()
+            sql_file = self.config_dir / "create_admin_user.sql"
+            with open(sql_file, "w", encoding="utf-8") as f:
+                f.write(sql_script)
+            self._harden_file_permissions(sql_file)
+            return sql_file
+        except Exception as e:
+            logger.error(f"保存SQL脚本失败: {e}")
+            return None
 
     def generate_admin_credentials(self) -> dict[str, Any]:
         """
@@ -340,13 +382,18 @@ def main():  # pragma: no cover
     print("=" * 60)  # pragma: no cover
     print("Security Configuration Generator")  # pragma: no cover
     print("=" * 60)  # pragma: no cover
+    print(f"Output directory: {manager.config_dir}")  # pragma: no cover
+    print(
+        "You can override this path via SECURITY_ARTIFACTS_DIR"
+    )  # pragma: no cover
 
     # 生成环境配置  # pragma: no cover
     env_config = manager.generate_secure_env_file("production")  # pragma: no cover
 
     # 保存到文件  # pragma: no cover
-    if manager.save_env_file(env_config, "backend.env.secure"):  # pragma: no cover
-        print("[OK] Security environment configuration generated")  # pragma: no cover
+    env_file = manager.save_env_file(env_config, "backend.env.secure")  # pragma: no cover
+    if env_file is not None:  # pragma: no cover
+        print(f"[OK] Security environment configuration generated: {env_file}")  # pragma: no cover
     else:  # pragma: no cover
         print("[ERROR] Environment configuration generation failed")  # pragma: no cover
 
@@ -367,14 +414,11 @@ def main():  # pragma: no cover
     sql_script = manager.create_secure_admin_user_script(
         admin_credentials
     )  # pragma: no cover
-    sql_file = Path("config/create_admin_user.sql")  # pragma: no cover
-
-    try:  # pragma: no cover
-        with open(sql_file, "w", encoding="utf-8") as f:  # pragma: no cover
-            f.write(sql_script)  # pragma: no cover
+    sql_file = manager.save_admin_sql_file(sql_script)  # pragma: no cover
+    if sql_file is not None:  # pragma: no cover
         print(f"[OK] SQL script generated: {sql_file}")  # pragma: no cover
-    except Exception as e:  # pragma: no cover
-        print(f"[ERROR] SQL script generation failed: {e}")  # pragma: no cover
+    else:  # pragma: no cover
+        print("[ERROR] SQL script generation failed")  # pragma: no cover
 
     # 验证当前密钥强度  # pragma: no cover
     print("\n" + "=" * 60)  # pragma: no cover

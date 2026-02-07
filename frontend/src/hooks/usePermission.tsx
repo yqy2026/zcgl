@@ -115,8 +115,8 @@ const usePermission = () => {
 
   // 检查是否是管理员
   const isAdmin = useCallback((): boolean => {
-    return userPermissions?.isAdmin === true || hasRole('admin') || hasRole('super_admin');
-  }, [hasRole, userPermissions]);
+    return userPermissions?.isAdmin === true;
+  }, [userPermissions]);
 
   // 检查是否有组织访问权限
   const canAccessOrganization = useCallback(

@@ -10,7 +10,6 @@ from decimal import Decimal
 from typing import Any
 
 from pydantic import (
-    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
@@ -24,6 +23,32 @@ from ..constants.validation_constants import FieldLengthLimits
 from .ownership import OwnershipResponse
 from .project import ProjectResponse
 
+LEGACY_ASSET_FIELD_REPLACEMENTS = {
+    "wuyang_project_name": "project_name",
+    "description": "notes",
+}
+
+
+def _reject_legacy_asset_fields(data: Any) -> Any:
+    if not isinstance(data, dict):
+        return data
+
+    legacy_fields = [
+        key for key in LEGACY_ASSET_FIELD_REPLACEMENTS.keys() if key in data
+    ]
+    if not legacy_fields:
+        return data
+
+    replacement_mapping = "、".join(
+        f"{field}->{LEGACY_ASSET_FIELD_REPLACEMENTS[field]}"
+        for field in legacy_fields
+    )
+    raise PydanticCustomError(
+        "legacy_asset_field_not_supported",
+        f"检测到已废弃字段，请改用: {replacement_mapping}",
+        {"legacy_fields": legacy_fields},
+    )
+
 
 class AssetBase(BaseModel):
     """资产基础模型"""
@@ -34,7 +59,9 @@ class AssetBase(BaseModel):
         None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
     )
     project_name: str | None = Field(
-        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="项目名称"
+        None,
+        max_length=FieldLengthLimits.SHORT_TEXT_MAX,
+        description="项目名称",
     )
     property_name: str = Field(
         ...,
@@ -73,9 +100,6 @@ class AssetBase(BaseModel):
     include_in_occupancy_rate: bool = Field(
         True,
         description="是否计入出租率统计",
-        validation_alias=AliasChoices(
-            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
-        ),
     )
 
     # 用途相关字段
@@ -133,6 +157,11 @@ class AssetBase(BaseModel):
     # 审核相关字段已简化
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_fields(cls, data: Any) -> Any:
+        return _reject_legacy_asset_fields(data)
 
     @field_validator(
         "land_area",
@@ -213,7 +242,11 @@ class AssetUpdate(BaseModel):
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
     ownership_id: str | None = Field(None, description="权属方ID")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
-    project_name: str | None = Field(None, max_length=200, description="项目名称")
+    project_name: str | None = Field(
+        None,
+        max_length=200,
+        description="项目名称",
+    )
     property_name: str | None = Field(
         None, min_length=1, max_length=200, description="物业名称"
     )
@@ -244,9 +277,6 @@ class AssetUpdate(BaseModel):
     include_in_occupancy_rate: bool | None = Field(
         None,
         description="是否计入出租率统计",
-        validation_alias=AliasChoices(
-            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
-        ),
     )
 
     # 用途相关字段
@@ -303,6 +333,11 @@ class AssetUpdate(BaseModel):
     # 审核相关字段已简化
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_fields(cls, data: Any) -> Any:
+        return _reject_legacy_asset_fields(data)
 
     @field_validator(
         "land_area",
@@ -375,9 +410,6 @@ class AssetResponseBase(BaseModel):
     include_in_occupancy_rate: bool = Field(
         True,
         description="是否计入出租率统计",
-        validation_alias=AliasChoices(
-            "include_in_occupancy_rate", "should_include_in_occupancy_rate"
-        ),
     )
 
     # 用途相关字段

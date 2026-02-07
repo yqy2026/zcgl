@@ -9,9 +9,7 @@
 /* 头部样式 */
 .header {
   padding: 0 var(--spacing-xl);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
@@ -77,14 +75,10 @@
 
 /* 侧边栏样式 */
 .sidebar {
-  background: rgba(255, 255, 255, 0.95) !important;
-  /* Better visibility in light mode */
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background: var(--color-bg-primary) !important;
+  border-right: 1px solid var(--color-border-light) !important;
   z-index: 1001;
   box-shadow: none !important;
-  /* Clean sidebar */
 }
 
 .sidebarLogo {

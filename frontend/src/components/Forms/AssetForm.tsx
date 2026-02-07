@@ -7,6 +7,7 @@ import type { Asset, AssetCreateRequest } from '@/types/asset';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useDictionaries } from '@/hooks/useDictionary';
 import { COLORS } from '@/styles/colorMap';
+import { announceToScreenReader } from '@/utils/accessibility';
 
 // Section components
 import {
@@ -305,12 +306,18 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       if (onSubmit !== undefined && onSubmit !== null) {
         if (isAssetCreateRequest(submitData)) {
           await onSubmit(submitData);
+          // 通知屏幕阅读器提交成功
+          announceToScreenReader('资产保存成功', 'polite');
         } else {
           MessageManager.error('表单数据不完整，请检查必填字段');
+          // 通知屏幕阅读器验证失败
+          announceToScreenReader('表单数据不完整，请检查必填字段', 'assertive');
         }
       }
     } catch {
       MessageManager.error('提交失败，请重试');
+      // 通知屏幕阅读器提交失败
+      announceToScreenReader('提交失败，请重试', 'assertive');
     }
   };
 
@@ -323,6 +330,17 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   return (
     <div>
+      {/* 屏幕阅读器专用表单状态通知 */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id="asset-form-status"
+      >
+        {mode === 'create' ? '创建资产表单' : '编辑资产表单'}，表单完成度 {completionRate.toFixed(0)}%
+      </div>
+
       <FormCompletionProgress />
 
       <Form

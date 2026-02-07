@@ -4,6 +4,9 @@ Unit tests for Asset schema attachment fields.
 
 from datetime import datetime
 
+import pytest
+from pydantic import ValidationError
+
 from src.schemas.asset import AssetCreate, AssetResponse, AssetUpdate
 
 
@@ -58,3 +61,31 @@ class TestAssetSchemaAttachments:
 
         assert payload["operation_agreement_attachments"] == "receive-4.pdf"
         assert payload["terminal_contract_files"] == "terminal-4.pdf"
+
+    def test_asset_create_rejects_legacy_fields(self) -> None:
+        with pytest.raises(ValidationError) as error:
+            AssetCreate(
+                ownership_id="owner-001",
+                property_name="测试物业",
+                address="测试地址",
+                ownership_status="已确权",
+                property_nature="经营类",
+                usage_status="出租",
+                wuyang_project_name="历史项目名",
+                description="历史备注",
+            )
+
+        message = str(error.value)
+        assert "wuyang_project_name->project_name" in message
+        assert "description->notes" in message
+
+    def test_asset_update_rejects_legacy_fields(self) -> None:
+        with pytest.raises(ValidationError) as error:
+            AssetUpdate(
+                wuyang_project_name="历史项目名",
+                description="历史备注",
+            )
+
+        message = str(error.value)
+        assert "wuyang_project_name->project_name" in message
+        assert "description->notes" in message

@@ -3,12 +3,18 @@ import { Form, Input, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '@/components/Dictionary';
 import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 import ProjectSelect from '@/components/Project/ProjectSelect';
+import { generateFormFieldIds } from '@/utils/accessibility';
 
 /**
  * AssetForm - Basic Info Section
  * Fields: ownership entity, category, project, property name, address
  */
 const AssetBasicInfoSection: React.FC = () => {
+  // 为必填字段生成可访问性 ID
+  const ownershipIds = generateFormFieldIds('ownership');
+  const propertyNameIds = generateFormFieldIds('property-name');
+  const addressIds = generateFormFieldIds('address');
+
   return (
     <Card title="基本信息" style={{ marginBottom: '16px' }}>
       <Row gutter={16}>
@@ -18,12 +24,13 @@ const AssetBasicInfoSection: React.FC = () => {
             name="ownership_id"
             rules={[{ required: true, message: '请选择权属方' }]}
             aria-required="true"
+            htmlFor={ownershipIds.inputId}
           >
             <OwnershipSelect
               placeholder="请选择权属方"
               allowClear={false}
               showCreateButton={true}
-              aria-label="权属方选择器"
+              aria-label="请选择权属方"
               onChange={(_value, _ownership) => {
                 // When ownership is selected, can auto-fill related info
               }}
@@ -61,10 +68,12 @@ const AssetBasicInfoSection: React.FC = () => {
             name="property_name"
             rules={[{ required: true, message: '请输入物业名称' }]}
             aria-required="true"
+            htmlFor={propertyNameIds.inputId}
           >
             <Input
+              id={propertyNameIds.inputId}
               placeholder="请输入物业名称"
-              aria-label="物业名称输入框"
+              aria-required="true"
             />
           </Form.Item>
         </Col>
@@ -75,10 +84,12 @@ const AssetBasicInfoSection: React.FC = () => {
         name="address"
         rules={[{ required: true, message: '请输入物业地址' }]}
         aria-required="true"
+        htmlFor={addressIds.inputId}
       >
         <Input
+          id={addressIds.inputId}
           placeholder="请输入详细地址"
-          aria-label="物业地址输入框"
+          aria-required="true"
         />
       </Form.Item>
     </Card>

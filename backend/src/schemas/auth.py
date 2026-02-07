@@ -7,12 +7,10 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import (
-    AliasChoices,
     BaseModel,
     ConfigDict,
     EmailStr,
     Field,
-    computed_field,
     field_validator,
 )
 from pydantic_core import PydanticCustomError
@@ -55,10 +53,6 @@ class UserCreate(UserBase):
     default_organization_id: str | None = Field(
         None,
         description="默认组织ID",
-        validation_alias=AliasChoices(
-            "default_organization_id",
-            "organization_id",
-        ),
     )
 
     @field_validator("password")
@@ -103,10 +97,6 @@ class UserUpdate(BaseModel):
     default_organization_id: str | None = Field(
         None,
         description="默认组织ID",
-        validation_alias=AliasChoices(
-            "default_organization_id",
-            "organization_id",
-        ),
     )
 
     @field_validator("full_name")
@@ -135,11 +125,6 @@ class UserResponse(UserBase):
     updated_at: datetime | str
 
     model_config = ConfigDict(from_attributes=True)
-
-    @computed_field(return_type=str | None)
-    @property
-    def organization_id(self) -> str | None:
-        return self.default_organization_id
 
     @field_validator("is_active", "is_locked", mode="before")
     @classmethod
