@@ -57,9 +57,6 @@ class HistoryCRUD:
     async def create_async(
         self, db: AsyncSession, *, commit: bool = True, **kwargs: Any
     ) -> AssetHistory:
-        if "operator_id" in kwargs and "operator" not in kwargs:
-            kwargs["operator"] = kwargs["operator_id"]
-        kwargs.pop("operator_id", None)
         db_obj = AssetHistory(**kwargs)
         db.add(db_obj)
         if commit:

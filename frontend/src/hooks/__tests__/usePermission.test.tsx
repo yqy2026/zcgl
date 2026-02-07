@@ -44,6 +44,8 @@ describe('usePermission', () => {
       userId: '1',
       username: 'test',
       roles: ['user'],
+      roleIds: ['role-user-id'],
+      isAdmin: false,
       permissions: [
         { resource: 'assets', action: 'read' },
         { resource: 'users', action: 'write' }
@@ -94,6 +96,7 @@ describe('usePermission', () => {
         role_id: 'role-admin-id',
         role_name: 'admin',
         roles: ['admin'],
+        is_admin: true,
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
@@ -109,6 +112,31 @@ describe('usePermission', () => {
     expect(result.current.hasRole('admin')).toBe(true);
     // Admin should have all permissions
     expect(result.current.hasPermission('any-resource', 'any-action')).toBe(true);
+  });
+
+  it('should not treat role name alone as admin when is_admin is false', () => {
+    const mockAuthData = {
+      user: {
+        id: '1',
+        username: 'admin',
+        full_name: 'Admin User',
+        role_id: 'role-admin-id',
+        role_name: 'admin',
+        roles: ['admin'],
+        is_admin: false,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      permissions: []
+    };
+
+    AuthStorage.setAuthData(mockAuthData);
+
+    const { result } = renderHook(() => usePermission());
+
+    expect(result.current.isAdmin()).toBe(false);
+    expect(result.current.hasPermission('any-resource', 'any-action')).toBe(false);
   });
 
   it('should handle role from auth data', () => {

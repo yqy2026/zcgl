@@ -12,9 +12,14 @@ export interface FieldVisibilityRule<T extends FieldValues> {
 }
 
 /**
- * Asset表单专用的字段可见性规则（向后兼容）
+ * Asset表单专用的字段可见性规则
  */
 export type AssetFieldVisibilityRule = FieldVisibilityRule<AssetFormData>;
+
+const hasProjectName = (values: AssetFormData): boolean => {
+  const projectName = values.project_name;
+  return projectName != null && projectName.trim() !== '';
+};
 
 // 字段显示规则配置 - Asset表单专用
 const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
@@ -52,22 +57,17 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
     dependsOn: ['usage_status'],
   },
   {
-    field: 'lease_contract',
+    field: 'lease_contract_number',
     condition: values => values.usage_status === '出租',
     dependsOn: ['usage_status'],
   },
   {
-    field: 'current_contract_start_date',
+    field: 'contract_start_date',
     condition: values => values.usage_status === '出租',
     dependsOn: ['usage_status'],
   },
   {
-    field: 'current_contract_end_date',
-    condition: values => values.usage_status === '出租',
-    dependsOn: ['usage_status'],
-  },
-  {
-    field: 'current_lease_contract',
+    field: 'contract_end_date',
     condition: values => values.usage_status === '出租',
     dependsOn: ['usage_status'],
   },
@@ -86,21 +86,21 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
     dependsOn: ['business_category'],
   },
 
-  // 有五羊项目名称时显示接收协议日期
+  // 有项目名称时显示接收协议日期
   {
-    field: 'operation_agreement_start_date' as keyof AssetFormData,
-    condition: values => values.wuyang_project_name?.trim() !== '',
-    dependsOn: ['wuyang_project_name'],
+    field: 'operation_agreement_start_date',
+    condition: hasProjectName,
+    dependsOn: ['project_name'],
   },
   {
-    field: 'operation_agreement_end_date' as keyof AssetFormData,
-    condition: values => values.wuyang_project_name?.trim() !== '',
-    dependsOn: ['wuyang_project_name'],
+    field: 'operation_agreement_end_date',
+    condition: hasProjectName,
+    dependsOn: ['project_name'],
   },
   {
-    field: 'operation_agreement_attachments' as keyof AssetFormData,
-    condition: values => values.wuyang_project_name?.trim() !== '',
-    dependsOn: ['wuyang_project_name'],
+    field: 'operation_agreement_attachments',
+    condition: hasProjectName,
+    dependsOn: ['project_name'],
   },
 ];
 
@@ -207,7 +207,7 @@ export const useGenericFormFieldVisibility = <T extends FieldValues>(
 };
 
 /**
- * Asset表单字段可见性管理Hook（向后兼容）
+ * Asset表单字段可见性管理Hook
  * 使用预定义的Asset表单规则
  */
 export const useFormFieldVisibility = (watch: UseFormWatch<AssetFormData>) => {

@@ -3,27 +3,22 @@
 /* 主布局样式 */
 .appLayout {
   min-height: 100vh;
-  background: #f8fafc;
-  /* Slate 50 */
+  background: var(--color-bg-secondary);
 }
 
 /* 头部样式 */
 .header {
-  padding: 0 24px;
-  background: rgba(255, 255, 255, 0.95);
-  /* Better visibility in light mode */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0 var(--spacing-xl);
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 64px;
   position: sticky;
   top: 0;
-  z-index: 1000;
-  /* Very subtle shadow for separation */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  z-index: var(--z-index-sticky);
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition-slow);
 }
 
@@ -33,11 +28,10 @@
 }
 
 .headerTitle {
-  margin-left: 16px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
-  /* Slate 900 */
+  margin-left: var(--spacing-lg);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   letter-spacing: -0.5px;
 }
 
@@ -50,18 +44,16 @@
 .headerAction {
   display: flex;
   align-items: center;
-  padding: 8px;
-  border-radius: 8px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: #475569;
-  /* Slate 600 - Improved contrast */
+  color: var(--color-text-secondary);
 }
 
 .headerAction:hover {
   background: rgba(0, 0, 0, 0.04);
-  color: #1e293b;
-  /* Slate 800 */
+  color: var(--color-text-primary);
 }
 
 .userInfo {
@@ -83,14 +75,10 @@
 
 /* 侧边栏样式 */
 .sidebar {
-  background: rgba(255, 255, 255, 0.95) !important;
-  /* Better visibility in light mode */
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background: var(--color-bg-primary) !important;
+  border-right: 1px solid var(--color-border-light) !important;
   z-index: 1001;
   box-shadow: none !important;
-  /* Clean sidebar */
 }
 
 .sidebarLogo {
@@ -185,8 +173,8 @@
 /* 内容区域样式 */
 .content {
   margin: 0;
-  padding: 0;
-  background: #f5f5f5;
+  padding: var(--spacing-xl);
+  background: var(--color-bg-tertiary);
   min-height: calc(100vh - 112px);
   overflow: auto;
 }

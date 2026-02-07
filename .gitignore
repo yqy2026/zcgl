@@ -215,6 +215,14 @@ prod/
 .env.production
 .env.prod
 
+# Generated secure env files (never commit)
+backend/config/*.env.secure
+backend/config/*.secure
+config/*.env.secure
+config/*.secure
+backend/config/create_admin_user.sql
+config/create_admin_user.sql
+
 # Local config overrides
 config.local.js
 config.local.ts

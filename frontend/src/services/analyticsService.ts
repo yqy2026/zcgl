@@ -27,7 +27,6 @@ interface RawApiData {
   usage_status_area_distribution?: unknown[];
   business_category_area_distribution?: unknown[];
   occupancy_distribution?: unknown[];
-  data?: RawApiData;
 }
 
 /**
@@ -86,12 +85,7 @@ export class AnalyticsService {
         throw new Error('综合分析接口返回为空');
       }
 
-      const apiData = response.data as AnalyticsResponse | RawApiData;
-
-      if ('success' in apiData && 'data' in apiData) {
-        return apiData as AnalyticsResponse;
-      }
-
+      const apiData = response.data as RawApiData;
       const adaptedData = this.adaptApiDataToAnalyticsData(apiData);
       return {
         success: true,
@@ -120,7 +114,7 @@ export class AnalyticsService {
     );
 
     // 从 API 数据中提取 area_summary
-    const rawAreaSummary = apiData.area_summary ?? apiData.data?.area_summary ?? {};
+    const rawAreaSummary = apiData.area_summary ?? {};
 
     // 适配 area_summary
     const area_summary: AnalyticsData['area_summary'] = {
@@ -135,7 +129,7 @@ export class AnalyticsService {
     };
 
     // 提取或生成 financial_summary（如果后端没有返回，使用空值）
-    const rawFinancialSummary = apiData.financial_summary ?? apiData.data?.financial_summary ?? {};
+    const rawFinancialSummary = apiData.financial_summary ?? {};
     const financial_summary: AnalyticsData['financial_summary'] = {
       estimated_annual_income: rawFinancialSummary.estimated_annual_income ?? 0,
       total_annual_income: rawFinancialSummary.total_annual_income ?? 0,
@@ -150,18 +144,14 @@ export class AnalyticsService {
 
     // 提取分布数据（如果不存在则使用空数组）
     const property_nature_distribution = (apiData.property_nature_distribution ??
-      apiData.data?.property_nature_distribution ??
       []) as AnalyticsData['property_nature_distribution'];
     const ownership_status_distribution = (apiData.ownership_status_distribution ??
-      apiData.data?.ownership_status_distribution ??
       []) as AnalyticsData['ownership_status_distribution'];
     const usage_status_distribution = (apiData.usage_status_distribution ??
-      apiData.data?.usage_status_distribution ??
       []) as AnalyticsData['usage_status_distribution'];
 
     // BusinessCategoryDistribution 需要 percentage 字段
-    const rawBusinessCategories =
-      apiData.business_category_distribution ?? apiData.data?.business_category_distribution ?? [];
+    const rawBusinessCategories = apiData.business_category_distribution ?? [];
     const business_category_distribution: AnalyticsData['business_category_distribution'] =
       rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
         category: typeof item.category === 'string' ? item.category : '未分类',
@@ -171,27 +161,20 @@ export class AnalyticsService {
       }));
 
     // 提取趋势数据
-    const occupancy_trend = (apiData.occupancy_trend ??
-      apiData.data?.occupancy_trend ??
-      []) as AnalyticsData['occupancy_trend'];
+    const occupancy_trend = (apiData.occupancy_trend ?? []) as AnalyticsData['occupancy_trend'];
 
     // 提取面积分布数据
     const property_nature_area_distribution = (apiData.property_nature_area_distribution ??
-      apiData.data?.property_nature_area_distribution ??
       []) as AnalyticsData['property_nature_area_distribution'];
     const ownership_status_area_distribution = (apiData.ownership_status_area_distribution ??
-      apiData.data?.ownership_status_area_distribution ??
       []) as AnalyticsData['ownership_status_area_distribution'];
     const usage_status_area_distribution = (apiData.usage_status_area_distribution ??
-      apiData.data?.usage_status_area_distribution ??
       []) as AnalyticsData['usage_status_area_distribution'];
     const business_category_area_distribution = (apiData.business_category_area_distribution ??
-      apiData.data?.business_category_area_distribution ??
       []) as AnalyticsData['business_category_area_distribution'];
 
     // 提取出租率分布
     const occupancy_distribution = (apiData.occupancy_distribution ??
-      apiData.data?.occupancy_distribution ??
       []) as AnalyticsData['occupancy_distribution'];
 
     const adaptedData: AnalyticsData = {

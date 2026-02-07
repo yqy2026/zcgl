@@ -2,6 +2,7 @@
 开发服务器启动脚本
 """
 
+import base64
 import os
 import sys
 from pathlib import Path
@@ -22,6 +23,7 @@ load_dotenv()
 # 设置开发模式环境变量
 os.environ.setdefault("DEV_MODE", "true")
 
+
 def parse_bool_env(name: str, default: bool) -> bool:
     raw = os.getenv(name)
     if raw is None:
@@ -32,6 +34,31 @@ def parse_bool_env(name: str, default: bool) -> bool:
     if value in {"0", "false", "no", "n", "off"}:
         return False
     return default
+
+
+def validate_data_encryption_key(raw_key: str) -> tuple[bool, str | None]:
+    """Validate DATA_ENCRYPTION_KEY format and decoded key length."""
+    entries = [entry.strip() for entry in raw_key.split(",") if entry.strip() != ""]
+    if len(entries) == 0:
+        return False, "密钥为空"
+
+    for entry in entries:
+        key_b64 = entry
+        if ":" in entry:
+            key_b64, version = entry.rsplit(":", 1)
+            if not version.isdigit():
+                return False, f"版本号无效: {version}"
+
+        try:
+            key_bytes = base64.b64decode(key_b64, validate=True)
+        except Exception as exc:
+            return False, f"Base64 解码失败: {exc}"
+
+        if len(key_bytes) < 32:
+            return False, f"密钥长度不足: {len(key_bytes)} bytes（至少 32 bytes）"
+
+    return True, None
+
 
 if __name__ == "__main__":
     # 在启动前验证环境配置
@@ -83,6 +110,26 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\n取消启动")
             sys.exit(1)
+    else:
+        valid_key, key_error = validate_data_encryption_key(data_encryption_key)
+        if not valid_key:
+            print("⚠️  警告: DATA_ENCRYPTION_KEY 格式或长度不正确")
+            print(f"原因: {key_error}")
+            print("注意: 当前配置会导致敏感字段加密不可用或降级为明文存储。")
+            print()
+            print("正确格式示例:")
+            print("  DATA_ENCRYPTION_KEY=<base64_key>:1")
+            print("  （可选多版本）<base64_key_v1>:1,<base64_key_v2>:2")
+            print()
+            print("生成方法:")
+            print("  python -m src.core.encryption")
+            print()
+            print("按 Enter 继续启动服务，或按 Ctrl+C 退出并修复配置...")
+            try:
+                input()
+            except KeyboardInterrupt:
+                print("\n取消启动")
+                sys.exit(1)
 
     print("启动开发服务器 (DEV_MODE=true)")
     host = os.getenv("HOST", "0.0.0.0")

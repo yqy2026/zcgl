@@ -44,3 +44,25 @@ curl http://localhost:8002/api/v1/admin/health
 - 开启 HTTPS 与反向代理
 - 启用日志与监控
 - 定期备份数据库与上传文件
+
+## 凭证泄露应急处置
+
+判定规则：
+- 任何生产/安全凭证（如 `SECRET_KEY`、`SESSION_SECRET`、`API_KEY`、数据库密码）只要出现在 Git 历史，即使已删除或已轮换，仍必须视为“已泄露”。
+
+立即执行：
+1. 从当前分支移除敏感文件跟踪：
+```bash
+git rm --cached backend/config/backend.env.secure
+```
+2. 清理历史提交中的明文凭证（变更窗口内执行）：
+```bash
+git filter-repo --force --invert-paths --path backend/config/backend.env.secure
+# 或使用 BFG Repo-Cleaner 完成同等清理
+```
+3. 强制轮换所有受影响凭证并失效旧凭证：JWT 密钥、会话密钥、第三方 API keys、数据库密码等。
+4. 通知运维/安全负责人完成轮换、会话失效、审计记录与回归验证。
+
+防复发：
+- 在 `.gitignore` 中持续屏蔽 `*.env`、`*.secure` 及 `backend/config/*.env.secure`。
+- 建议启用提交前密钥扫描（如 `gitleaks` 或 `trufflehog`）。

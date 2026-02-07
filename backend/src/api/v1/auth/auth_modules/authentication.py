@@ -379,7 +379,6 @@ async def get_current_user_info(
         "role_ids": role_summary["role_ids"],
         "is_admin": role_summary["is_admin"],
         "default_organization_id": current_user.default_organization_id,
-        "organization_id": current_user.default_organization_id,
         "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active",
     }

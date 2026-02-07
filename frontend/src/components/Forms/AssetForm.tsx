@@ -7,6 +7,7 @@ import type { Asset, AssetCreateRequest } from '@/types/asset';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useDictionaries } from '@/hooks/useDictionary';
 import { COLORS } from '@/styles/colorMap';
+import { announceToScreenReader } from '@/utils/accessibility';
 
 // Section components
 import {
@@ -46,6 +47,7 @@ const FormCompletionProgress: React.FC = () => {
             percent={completionRate}
             size="small"
             strokeColor={completionRate === 100 ? COLORS.success : COLORS.primary}
+            showInfo={false}
           />
         </Col>
         <Col>
@@ -71,11 +73,27 @@ const FormActions: React.FC<FormActionsProps> = ({ isLoading, mode, onCancel, on
     <Card>
       <Row justify="end">
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={onReset}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={onReset}
+            aria-label="重置表单"
+            title="重置表单"
+          >
             重置
           </Button>
-          {onCancel && <Button onClick={onCancel}>取消</Button>}
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={isLoading}>
+          {onCancel && (
+            <Button onClick={onCancel} aria-label="取消操作" title="取消">
+              取消
+            </Button>
+          )}
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SaveOutlined />}
+            loading={isLoading}
+            aria-label={mode === 'create' ? '创建资产' : '保存修改'}
+            title={mode === 'create' ? '创建新资产' : '保存修改'}
+          >
             {mode === 'create' ? '创建资产' : '保存修改'}
           </Button>
         </Space>
@@ -288,12 +306,18 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       if (onSubmit !== undefined && onSubmit !== null) {
         if (isAssetCreateRequest(submitData)) {
           await onSubmit(submitData);
+          // 通知屏幕阅读器提交成功
+          announceToScreenReader('资产保存成功', 'polite');
         } else {
           MessageManager.error('表单数据不完整，请检查必填字段');
+          // 通知屏幕阅读器验证失败
+          announceToScreenReader('表单数据不完整，请检查必填字段', 'assertive');
         }
       }
     } catch {
       MessageManager.error('提交失败，请重试');
+      // 通知屏幕阅读器提交失败
+      announceToScreenReader('提交失败，请重试', 'assertive');
     }
   };
 
@@ -306,6 +330,17 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   return (
     <div>
+      {/* 屏幕阅读器专用表单状态通知 */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id="asset-form-status"
+      >
+        {mode === 'create' ? '创建资产表单' : '编辑资产表单'}，表单完成度 {completionRate.toFixed(0)}%
+      </div>
+
       <FormCompletionProgress />
 
       <Form

@@ -1130,6 +1130,47 @@ class TestRoleHasPermission:
 
 
 # ============================================================================
+# _is_admin_role 测试
+# ============================================================================
+
+
+class TestIsAdminRole:
+    """测试管理员角色判定"""
+
+    async def test_detect_admin_by_system_admin_permission(self, rbac_service):
+        """拥有 system:admin 权限的任意角色应视为管理员"""
+        role = Mock(spec=Role)
+        role.name = "custom_ops_role"
+
+        admin_permission = Mock(spec=Permission)
+        admin_permission.resource = "system"
+        admin_permission.action = "admin"
+        role.permissions = [admin_permission]
+
+        assert rbac_service._is_admin_role(role) is True
+
+    async def test_detect_admin_by_legacy_role_name(self, rbac_service):
+        """兼容历史角色命名（admin/super_admin）"""
+        role = Mock(spec=Role)
+        role.name = "admin"
+        role.permissions = []
+
+        assert rbac_service._is_admin_role(role) is True
+
+    async def test_non_admin_role(self, rbac_service):
+        """非管理员角色且无 system:admin 权限时返回 False"""
+        role = Mock(spec=Role)
+        role.name = "manager"
+
+        permission = Mock(spec=Permission)
+        permission.resource = "asset"
+        permission.action = "view"
+        role.permissions = [permission]
+
+        assert rbac_service._is_admin_role(role) is False
+
+
+# ============================================================================
 # _get_role_permission_conditions 测试
 # ============================================================================
 

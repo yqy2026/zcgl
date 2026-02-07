@@ -36,7 +36,7 @@ export interface PropertyCertificate {
   remarks: string | null;
   extraction_confidence: number | null;
   extraction_source: string;
-  verified: boolean;
+  is_verified: boolean;
   created_at: string;
   updated_at: string;
   owners: PropertyOwner[];
@@ -80,11 +80,11 @@ export interface AssetMatch {
 // Import Confirm
 export interface CertificateImportConfirm {
   session_id: string;
+  asset_ids: string[];
   extracted_data: Record<string, unknown>;
   asset_link_id: string | null;
-  create_new_asset: boolean;
+  should_create_new_asset: boolean;
   owners: Record<string, unknown>[];
-  verified: boolean;
 }
 
 // Forms
@@ -121,6 +121,6 @@ export interface PropertyCertificateUpdate {
   co_ownership?: string | null;
   restrictions?: string | null;
   remarks?: string | null;
-  verified?: boolean;
+  is_verified?: boolean;
   asset_ids?: string[];
 }

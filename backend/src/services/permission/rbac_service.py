@@ -61,6 +61,10 @@ from ...schemas.rbac import (
 ADMIN_PERMISSION_RESOURCE = "system"
 ADMIN_PERMISSION_ACTION = "admin"
 
+# Legacy role-name fallback for admin detection.
+# Primary source should be RBAC permissions (system:admin).
+LEGACY_ADMIN_ROLE_NAMES = {"admin", "super_admin"}
+
 
 class RBACService:
     """RBAC服务"""
@@ -623,7 +627,10 @@ class RBACService:
                 and permission.action == ADMIN_PERMISSION_ACTION
             ):
                 return True
-        return False
+
+        # Backward compatibility for historical role naming conventions.
+        role_name = (getattr(role, "name", "") or "").lower()
+        return role_name in LEGACY_ADMIN_ROLE_NAMES
 
     async def _user_has_admin_permission(
         self, user_id: str, roles: list[Role]

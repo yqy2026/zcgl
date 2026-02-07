@@ -40,7 +40,7 @@ const AssetExportHistoryModal: React.FC<AssetExportHistoryModalProps> = ({
           <List.Item
             actions={[
               item.status === 'completed' &&
-                (item.download_url !== undefined || item.downloadUrl !== undefined) && (
+                item.download_url !== undefined && (
                   <Tooltip key="download" title="下载文件">
                     <Button
                       type="text"

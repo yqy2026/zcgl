@@ -3,12 +3,18 @@ import { Form, Input, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '@/components/Dictionary';
 import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 import ProjectSelect from '@/components/Project/ProjectSelect';
+import { generateFormFieldIds } from '@/utils/accessibility';
 
 /**
  * AssetForm - Basic Info Section
  * Fields: ownership entity, category, project, property name, address
  */
 const AssetBasicInfoSection: React.FC = () => {
+  // 为必填字段生成可访问性 ID
+  const ownershipIds = generateFormFieldIds('ownership');
+  const propertyNameIds = generateFormFieldIds('property-name');
+  const addressIds = generateFormFieldIds('address');
+
   return (
     <Card title="基本信息" style={{ marginBottom: '16px' }}>
       <Row gutter={16}>
@@ -17,11 +23,14 @@ const AssetBasicInfoSection: React.FC = () => {
             label="权属方"
             name="ownership_id"
             rules={[{ required: true, message: '请选择权属方' }]}
+            aria-required="true"
+            htmlFor={ownershipIds.inputId}
           >
             <OwnershipSelect
               placeholder="请选择权属方"
               allowClear={false}
               showCreateButton={true}
+              aria-label="请选择权属方"
               onChange={(_value, _ownership) => {
                 // When ownership is selected, can auto-fill related info
               }}
@@ -30,7 +39,11 @@ const AssetBasicInfoSection: React.FC = () => {
         </Col>
         <Col span={12}>
           <Form.Item label="权属类别" name="ownership_category">
-            <DictionarySelect dictType="ownership_category" placeholder="请选择权属类别" />
+            <DictionarySelect
+              dictType="ownership_category"
+              placeholder="请选择权属类别"
+              aria-label="权属类别选择器"
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -42,6 +55,7 @@ const AssetBasicInfoSection: React.FC = () => {
               placeholder="请选择项目"
               allowClear={false}
               showCreateButton={true}
+              aria-label="项目名称选择器"
               onChange={(_value, _project) => {
                 // When project is selected, can auto-fill related info
               }}
@@ -53,8 +67,14 @@ const AssetBasicInfoSection: React.FC = () => {
             label="物业名称"
             name="property_name"
             rules={[{ required: true, message: '请输入物业名称' }]}
+            aria-required="true"
+            htmlFor={propertyNameIds.inputId}
           >
-            <Input placeholder="请输入物业名称" />
+            <Input
+              id={propertyNameIds.inputId}
+              placeholder="请输入物业名称"
+              aria-required="true"
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -63,8 +83,14 @@ const AssetBasicInfoSection: React.FC = () => {
         label="物业地址"
         name="address"
         rules={[{ required: true, message: '请输入物业地址' }]}
+        aria-required="true"
+        htmlFor={addressIds.inputId}
       >
-        <Input placeholder="请输入详细地址" />
+        <Input
+          id={addressIds.inputId}
+          placeholder="请输入详细地址"
+          aria-required="true"
+        />
       </Form.Item>
     </Card>
   );

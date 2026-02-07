@@ -230,12 +230,15 @@ export interface ComprehensiveStats extends AssetStats {
 /** 导出任务状态接口 */
 export interface ExportTask {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'processing' | 'completed' | 'failed';
   progress: number;
-  downloadUrl?: string;
-  createdAt: string;
-  completedAt?: string;
-  errorMessage?: string;
+  download_url?: string;
+  filename?: string;
+  total_records?: number;
+  file_size?: number;
+  created_at: string;
+  completed_at?: string;
+  error_message?: string;
 }
 
 /** 导入预览结果接口 */
@@ -275,12 +278,21 @@ export interface ExportOptions {
 
 // ==================== 搜索过滤器接口 ====================
 
+import type {
+  OwnershipStatus,
+  UsageStatus,
+  PropertyNature,
+  TenantType,
+} from '@/types/asset';
+
 /** 搜索过滤器接口 */
 export interface AssetSearchFilters {
   project_id?: string;
   ownership_id?: string;
-  property_nature?: string;
-  usage_status?: string;
+  ownership_status?: OwnershipStatus;
+  property_nature?: PropertyNature;
+  usage_status?: UsageStatus;
   business_category?: string;
+  tenant_type?: TenantType;
   [key: string]: unknown;
 }

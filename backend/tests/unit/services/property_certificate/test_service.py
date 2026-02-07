@@ -5,7 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.models.property_certificate import PropertyCertificate
-from src.schemas.property_certificate import PropertyCertificateCreate, PropertyCertificateUpdate
+from src.schemas.property_certificate import (
+    PropertyCertificateCreate,
+    PropertyCertificateUpdate,
+)
 from src.services.property_certificate.service import PropertyCertificateService
 
 pytestmark = pytest.mark.asyncio
@@ -81,7 +84,11 @@ class TestPropertyCertificateConfirmImport:
             new=AsyncMock(return_value=existing),
         ):
             result = await service.confirm_import(
-                {"certificate_number": "PC-EXIST", "extraction_data": {}}
+                {
+                    "extracted_data": {"certificate_number": "PC-EXIST"},
+                    "asset_ids": [],
+                    "should_create_new_asset": True,
+                }
             )
             assert result == existing
 
@@ -103,8 +110,13 @@ class TestPropertyCertificateConfirmImport:
                     new=AsyncMock(return_value=created),
                 ) as mock_create_with_owners:
                     data = {
-                        "certificate_number": "PC-NEW",
-                        "extraction_data": {"certificate_type": "property"},
+                        "extracted_data": {
+                            "certificate_number": "PC-NEW",
+                            "certificate_type": "property",
+                        },
+                        "asset_ids": ["asset-1"],
+                        "asset_link_id": "asset-1",
+                        "should_create_new_asset": False,
                         "owners": [
                             {"name": "Owner", "id_number": "123"}
                         ],
@@ -113,3 +125,5 @@ class TestPropertyCertificateConfirmImport:
 
                     assert result == created
                     mock_create_with_owners.assert_called_once()
+                    kwargs = mock_create_with_owners.call_args.kwargs
+                    assert kwargs["asset_ids"] == ["asset-1"]

@@ -19,20 +19,18 @@ export interface ExportFieldOption {
   required?: boolean;
 }
 
-// 扩展ExportTask接口以匹配API返回的实际字段名
+// 导出任务字段（与后端接口保持一致）
 export interface ExportTaskWithApiFields {
   id: string;
   status: 'pending' | 'running' | 'processing' | 'completed' | 'failed';
   progress: number;
   download_url?: string;
-  downloadUrl?: string; // 兼容原有字段
   filename?: string;
   total_records?: number;
   file_size?: number;
   created_at: string;
-  createdAt?: string; // 兼容原有字段
-  completedAt?: string;
-  errorMessage?: string;
+  completed_at?: string;
+  error_message?: string;
 }
 
 export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
@@ -55,15 +53,15 @@ export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
   { key: 'business_model', label: '接收模式' },
   { key: 'occupancy_rate', label: '出租率' },
   { key: 'tenant_name', label: '租户名称' },
-  { key: 'lease_contract', label: '承租合同' },
-  { key: 'current_contract_start_date', label: '合同开始日期' },
-  { key: 'current_contract_end_date', label: '合同结束日期' },
+  { key: 'lease_contract_number', label: '租赁合同编号' },
+  { key: 'contract_start_date', label: '合同开始日期' },
+  { key: 'contract_end_date', label: '合同结束日期' },
   { key: 'is_litigated', label: '是否涉诉' },
   { key: 'include_in_occupancy_rate', label: '是否计入出租率' },
-  { key: 'wuyang_project_name', label: '五羊项目名称' },
-  { key: 'agreement_start_date', label: '接收协议开始日期' },
-  { key: 'agreement_end_date', label: '接收协议结束日期' },
-  { key: 'description', label: '说明' },
+  { key: 'project_name', label: '项目名称' },
+  { key: 'operation_agreement_start_date', label: '接收协议开始日期' },
+  { key: 'operation_agreement_end_date', label: '接收协议结束日期' },
+  { key: 'terminal_contract_files', label: '终端合同文件' },
   { key: 'notes', label: '其他备注' },
   { key: 'created_at', label: '创建时间' },
   { key: 'updated_at', label: '更新时间' },

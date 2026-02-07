@@ -56,7 +56,6 @@ export interface Asset {
 
   // 项目相关字段
   project_id?: string;
-  wuyang_project_name?: string;
 
   // 项目相关字段已移至基本信息部分
 
@@ -71,7 +70,6 @@ export interface Asset {
   // 其他字段
   is_litigated: boolean; // 优化为boolean类型
   notes?: string;
-  description?: string;
 
   // 时间戳
   created_at: string;
@@ -304,12 +302,9 @@ export interface AssetHistory {
   old_values?: Record<string, unknown>; // 批量变更时的旧值
   new_values?: Record<string, unknown>; // 批量变更时的新值
   operator?: string;
-  changed_by?: string; // 变更操作人
   operation_time: string;
-  changed_at?: string; // 变更时间
   description?: string;
   changed_fields?: string[]; // 添加changed_fields字段
-  reason?: string; // 变更原因
   // 新增审计字段
   change_reason?: string;
   ip_address?: string;

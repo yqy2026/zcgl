@@ -2,6 +2,109 @@
 
 ## [Unreleased] - 2026-02-06
 
+### 🛠️ 本次修复 (Current Fixes)
+
+- 资产字段统一替换：后端 `AssetCreate/AssetUpdate` 移除历史字段别名兼容，并在请求中显式拒绝 `wuyang_project_name`/`description`（统一使用 `project_name`/`notes`）
+- 资产前端字段对齐：`AssetSearchResult` 仅使用 `project_name/notes`，移除旧字段回退逻辑
+- 资产导出字段对齐：导出配置改为使用 `project_name`，移除无效导出键 `description`
+- 旧可见性规则修复：`useFormFieldVisibility` 将协议字段依赖从 `wuyang_project_name` 调整为 `project_name`
+- 权限判定改进：`RBACService` 管理员判定优先基于 RBAC 权限 `system:admin`，仅保留 `admin/super_admin` 名称作为兼容回退
+- 权限上下文对齐：`AuthorizationContext.is_admin()` 改为调用 `rbac_service.is_admin()`，移除局部硬编码角色判断
+- 启动前配置保护：`backend/run_dev.py` 新增 `DATA_ENCRYPTION_KEY` 的 Base64 格式与解码长度校验（至少 32 bytes），提前暴露配置错误
+- 新增/更新测试：
+  - 后端 schema 测试覆盖历史字段拒绝（提示改用 `project_name`/`notes`）
+  - 后端 RBAC 测试覆盖基于 `system:admin` 的管理员识别
+  - 前端 `usePermission` 测试覆盖“仅角色名不应自动视为管理员”
+- 回归修复：`TableWithPagination` 恢复透传调用方 `scroll` 配置，仅在未传入时默认 `{ x: 'max-content' }`
+- 回归修复：`Pagination` 移除重复触发的 `onShowSizeChange` 绑定，避免分页大小变更导致重复请求
+- 回归修复：`Layout.module.css` 将未定义的 `--color-bg-container` 替换为已定义的 `--color-bg-primary`
+- 可访问性修复：`AssetBasicInfoSection` 移除输入框错误的 `aria-label={labelId}`，避免屏幕阅读器朗读内部 ID
+- 类型修复：`assetFormSchema` 与 `Asset` 类型移除 `wuyang_project_name/description` 历史字段，仅保留 `project_name/notes`
+- 资产表单字段彻底统一：`assetFormSchema` 与 `useFormFieldVisibility` 全量替换为 `lease_contract_number / contract_start_date / contract_end_date`，移除 `lease_contract / current_contract_* / current_lease_contract / agreement_* / current_terminal_contract`
+- 资产历史展示字段统一：`AssetHistory` 仅使用 `operator / operation_time / change_reason`，移除 `changed_by / changed_at / reason` 回退路径
+- 通知未读数接口统一：前端 `notificationService` 改为读取 `unread_count`（不再读取 `count` 兼容字段），并同步更新单测
+- 产权证审核字段统一：前端 `PropertyCertificate` 类型与页面全部改为 `is_verified`，移除 `verified` 历史字段兼容
+- 产权证导入确认字段统一：前端确认载荷改为 `asset_ids + should_create_new_asset`，移除 `create_new_asset` 历史字段
+- 分析服务响应兼容清理：`analyticsService` 移除 `apiData.data?.*` 多形态回退，仅保留当前响应结构与字段适配
+- 导出任务字段统一：前端导出任务类型改为 snake_case（`download_url / created_at / completed_at / error_message`），移除 camelCase 兼容路径
+- 资产历史字段兼容清理：后端 `history_crud.create_async` 移除 `operator_id -> operator` 桥接，仅接受标准字段 `operator`
+- 资产 schema 进一步收敛：删除 `AssetBase` 中的 `wuyang_project_name` 历史字段定义，仅保留“显式拒绝旧字段并提示替换”的校验逻辑
+- 产权证导入确认字段统一：后端 `PropertyCertificateService.confirm_import` 改为仅处理 `extracted_data / asset_ids / should_create_new_asset`，并将资产关联透传到 CRUD 创建流程
+
+### 🔐 安全 (Security)
+
+#### Fixed / 修复
+
+- 将 `backend/config/backend.env.secure` 从 Git 索引移除，阻止继续版本化跟踪明文敏感配置
+- 删除工作区中的 `backend/config/backend.env.secure` 明文敏感文件，避免本地误用或二次泄露
+- `.gitignore` 增加 `backend/config/*.env.secure` / `backend/config/*.secure` 规则，防止安全配置文件再次被提交
+- 清理 `backend/config/` 目录中的遗留跟踪文件（`config.example.yaml`、`quality_monitor_config.yaml`、`pytest_ultra_optimized.ini`、`create_admin_user.sql`）
+- `.gitignore` 增加 `backend/config/create_admin_user.sql` 与 `config/create_admin_user.sql` 规则，阻止管理员凭据 SQL 产物被提交
+- `README.md` 与 `docs/guides/deployment.md` 增加“密钥一旦出现在 Git 历史即必须视为泄露并强制轮换”的应急处置指引
+- 调整 `backend/scripts/devtools/security_key_generator.py`：敏感产物默认输出到系统临时目录 `zcgl-security-artifacts`（可用 `SECURITY_ARTIFACTS_DIR` 覆盖），不再默认写入仓库目录
+
+### 🎨 UI/UX 改进 (UI/UX Improvements)
+
+#### Added / 新增
+
+- **可访问性增强** (Accessibility Enhancement)
+  - 为 AssetList 组件的所有操作按钮添加 ARIA 标签（aria-label, title）
+  - 为表单字段添加可访问性属性（aria-required, aria-describedby, aria-label）
+  - 为 Modal 添加焦点管理（autoFocus, focusTriggerAfterClose）
+  - 为错误提示添加 role="alert" 和 aria-invalid 属性
+  - 影响 24+ 个交互元素，符合 WCAG 2.1 AA 级标准
+
+- **响应式设计优化** (Responsive Design)
+  - 实现表格响应式设计，移动端（< 768px）自动隐藏次要列
+  - 动态调整表格滚动配置和尺寸（移动端 y: 400px, 桌面端 y: 600px）
+  - 添加窗口 resize 监听，实时响应屏幕尺寸变化
+  - 移动端使用 size="small" 优化显示效果
+
+- **样式系统统一** (Style System Unification)
+  - 将 Layout.module.css 中 15+ 处硬编码颜色替换为 CSS 变量
+  - 统一使用 variables.css 定义的语义化变量
+  - 修复内容区域被固定导航栏遮挡的问题（添加适当的 padding-top）
+
+- **性能优化指南** (Performance Optimization Guide)
+  - 新增 `frontend/docs/performance-optimization.md` 文档
+  - 包含虚拟滚动方案、图片优化、搜索防抖等最佳实践
+  - 记录 Web Vitals 性能监控指标和目标
+
+#### Changed / 改进
+
+- AssetList 组件添加响应式状态管理（isMobile）
+- 表格列配置支持移动端自动隐藏
+- 表单输入框添加完整的可访问性属性
+- 按钮和交互元素添加描述性 ARIA 标签
+
+#### Fixed / 修复
+
+- 修复内容区域被固定导航栏遮挡（64px header + 56px breadcrumb）
+- **修复页面"蒙层"效果** (Fix Overlay Effect)
+  - 移除 Layout.module.css 中的毛玻璃效果（`backdrop-filter: blur(8px)` 和半透明背景）
+  - 移除 global.css 中的过渡动画冲突规则
+  - 统一使用 CSS 变量 `var(--color-bg-container)` 作为背景色
+  - 影响文件：Layout.module.css, global.css, App.tsx, TableWithPagination.tsx 等
+  - 修复文件数：12个，修复问题数：15个
+- **修复 TypeScript 类型错误** (Fix Type Errors)
+  - 修复 AssetSearchResult 组件中 undefined 类型传递问题
+  - 修复 AssetSearchFilters 接口类型定义（usage_status, property_nature 等）
+  - 修复 ResponsiveTable 和 TableWithPagination 组件类型兼容性
+  - 移除未使用的导入和变量（AssetList, EmptyState, Loading, ThemeToggle, VirtualList）
+  - ESLint 检查通过（0 错误，0 警告）
+- **修复导入路径大小写不一致** (Fix Import Path Case)
+  - 统一使用 `Common` 目录（大写C）替代 `common`（小写c）
+  - 提高跨平台兼容性（Windows/macOS/Linux）
+- **修复 CSS 样式错误** (Fix CSS Style Errors)
+  - 修复 EmptyState 组件中 `var-spacing-md)` 缺少开括号的错误
+  - 优化 ThemeToggle 组件使用 CSS 类代替内联样式修改
+- 修复硬编码样式导致的主题切换不兼容问题
+
+#### 文档 (Documentation)
+
+- 新增 `frontend/docs/ui-ux-improvements-report.md` - UI/UX 改进实施报告
+- 新增 `frontend/docs/performance-optimization.md` - 性能优化指南
+
 ### 🧪 审核 (Audit)
 
 - **数据库异步化实施核查** (Async DB Migration Audit)
@@ -47,6 +150,7 @@
 
 - 明确说明 `SecurityService` 已移除，并指向 `PasswordService`/`AuthenticationService` 作为安全替代路径
 - AGENTS.md 增加提示：后端测试应使用项目 `backend/.venv`，避免 `.env` 不生效
+- AGENTS.md 增补启动/登录/排查经验与常见故障定位要点
 
 ### 🛡️ 稳定性与架构修复 (Stability & Architecture Fixes)
 

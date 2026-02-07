@@ -73,9 +73,9 @@ def test_upload_extract_confirm_flow(
                     "session_id": result["session_id"],
                     "extracted_data": result.get("extracted_data", {}),
                     "asset_link_id": None,
-                    "create_new_asset": False,
+                    "asset_ids": [],
+                    "should_create_new_asset": False,
                     "owners": [],
-                    "is_verified": True,
                 }
 
                 response = client.post(

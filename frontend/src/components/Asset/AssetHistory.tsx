@@ -289,19 +289,19 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                           <Space split={<span>•</span>}>
                             <span>
                               <UserOutlined style={{ marginRight: 4 }} />
-                              {history.changed_by ?? history.operator ?? '未知用户'}
+                              {history.operator ?? '未知用户'}
                             </span>
                             <span>
                               <CalendarOutlined style={{ marginRight: 4 }} />
-                              {formatDate(history.changed_at ?? history.operation_time, 'datetime')}
+                              {formatDate(history.operation_time, 'datetime')}
                             </span>
                           </Space>
                         </div>
 
                         {/* 变更原因 */}
-                        {history.reason != null && (
+                        {history.change_reason != null && (
                           <div style={{ marginBottom: 8, color: '#595959' }}>
-                            原因：{history.reason}
+                            原因：{history.change_reason}
                           </div>
                         )}
 
@@ -379,19 +379,16 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Descriptions.Item>
 
               <Descriptions.Item label="操作人">
-                {selectedHistory.changed_by ?? selectedHistory.operator ?? '未知用户'}
+                {selectedHistory.operator ?? '未知用户'}
               </Descriptions.Item>
 
               <Descriptions.Item label="变更时间">
-                {formatDate(
-                  selectedHistory.changed_at ?? selectedHistory.operation_time,
-                  'datetime'
-                )}
+                {formatDate(selectedHistory.operation_time, 'datetime')}
               </Descriptions.Item>
 
-              {(selectedHistory.reason != null || selectedHistory.description != null) && (
+              {selectedHistory.change_reason != null && (
                 <Descriptions.Item label="变更原因">
-                  {selectedHistory.reason ?? selectedHistory.description}
+                  {selectedHistory.change_reason}
                 </Descriptions.Item>
               )}
             </Descriptions>

@@ -7,6 +7,7 @@ import GroupedSelectSingle from '@/components/Common/GroupedSelect';
 import { BusinessModelOptions } from '@/utils/enumHelpers';
 import { useAssetFormContext } from './AssetFormContext';
 import { COLORS } from '@/styles/colorMap';
+import { generateFormFieldIds } from '@/utils/accessibility';
 
 const { Title } = Typography;
 
@@ -16,6 +17,12 @@ const { Title } = Typography;
  */
 const AssetReceptionSection: React.FC = () => {
   const { fileList, setFileList } = useAssetFormContext();
+
+  // 为字段生成可访问性 ID
+  const businessModelIds = generateFormFieldIds('business-model');
+  const agreementStartDateIds = generateFormFieldIds('agreement-start-date');
+  const agreementEndDateIds = generateFormFieldIds('agreement-end-date');
+  const attachmentsIds = generateFormFieldIds('attachments');
 
   const uploadProps: UploadProps = {
     multiple: true,
@@ -44,34 +51,69 @@ const AssetReceptionSection: React.FC = () => {
       <Title level={5}>接收信息</Title>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item label="接收模式" name="business_model">
+          <Form.Item
+            label="接收模式"
+            name="business_model"
+            htmlFor={businessModelIds.inputId}
+          >
             <GroupedSelectSingle
               groups={[{ label: '接收模式', options: BusinessModelOptions }]}
               placeholder="请选择接收模式"
               showGroupLabel={false}
+              id={businessModelIds.inputId}
+              aria-label={businessModelIds.labelId}
             />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="(当前)接收协议开始日期" name="operation_agreement_start_date">
-            <DatePicker style={{ width: '100%' }} />
+          <Form.Item
+            label="(当前)接收协议开始日期"
+            name="operation_agreement_start_date"
+            htmlFor={agreementStartDateIds.inputId}
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              id={agreementStartDateIds.inputId}
+              aria-label={agreementStartDateIds.labelId}
+            />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="(当前)接收协议结束日期" name="operation_agreement_end_date">
-            <DatePicker style={{ width: '100%' }} />
+          <Form.Item
+            label="(当前)接收协议结束日期"
+            name="operation_agreement_end_date"
+            htmlFor={agreementEndDateIds.inputId}
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              id={agreementEndDateIds.inputId}
+              aria-label={agreementEndDateIds.labelId}
+            />
           </Form.Item>
         </Col>
       </Row>
 
       <Row gutter={16}>
         <Col span={24}>
-          <Form.Item label="接收协议文件" name="operation_agreement_attachments">
+          <Form.Item
+            label="接收协议文件"
+            name="operation_agreement_attachments"
+            htmlFor={attachmentsIds.inputId}
+          >
             <div>
               <Upload {...uploadProps}>
-                <Button icon={<UploadOutlined />}>上传PDF接收协议文件</Button>
+                <Button
+                  icon={<UploadOutlined />}
+                  aria-label="上传PDF接收协议文件"
+                >
+                  上传PDF接收协议文件
+                </Button>
               </Upload>
-              <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}>
+              <div
+                style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}
+                role="note"
+                aria-label="文件上传说明"
+              >
                 支持多文件上传，每个文件不超过10MB，仅支持PDF格式
               </div>
               {fileList.length > 0 && (
@@ -93,6 +135,7 @@ const AssetReceptionSection: React.FC = () => {
                               window.open(file.url, '_blank');
                             }
                           }}
+                          aria-label={`查看文件: ${file.name}`}
                         >
                           查看
                         </Button>,
@@ -105,6 +148,7 @@ const AssetReceptionSection: React.FC = () => {
                           onClick={() => {
                             setFileList(fileList.filter(f => f.uid !== file.uid));
                           }}
+                          aria-label={`删除文件: ${file.name}`}
                         >
                           删除
                         </Button>,
@@ -112,7 +156,7 @@ const AssetReceptionSection: React.FC = () => {
                     >
                       <List.Item.Meta
                         avatar={<Tag color="blue">PDF</Tag>}
-                        title={file.name}
+                        title={<span aria-label={`文件名: ${file.name}`}>{file.name}</span>}
                         description={`文件大小: ${file.size != null ? (file.size / 1024 / 1024).toFixed(2) + 'MB' : '未知'}`}
                       />
                     </List.Item>

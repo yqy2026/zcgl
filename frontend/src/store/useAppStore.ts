@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
+import type { ThemeMode } from '@/types/theme';
 
 // 通知ID计数器，确保唯一性
 let notificationIdCounter = 0;
@@ -10,7 +11,8 @@ const generateNotificationId = (): string => {
 interface AppState {
   // 应用全局状态
   sidebarCollapsed: boolean;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
+  useSystemPreference: boolean;
   language: 'zh-CN' | 'en-US';
 
   // 用户偏好设置
@@ -25,7 +27,9 @@ interface AppState {
 
   // Actions
   setSidebarCollapsed: (collapsed: boolean) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
+  setUseSystemPreference: (useSystem: boolean) => void;
   setLanguage: (language: 'zh-CN' | 'en-US') => void;
   setPreferences: (preferences: Partial<AppState['preferences']>) => void;
   addNotification: (notification: Omit<Notification, 'id'>) => void;
@@ -45,6 +49,7 @@ interface Notification {
 const initialState = {
   sidebarCollapsed: false,
   theme: 'light' as const,
+  useSystemPreference: false,
   language: 'zh-CN' as const,
   preferences: {
     pageSize: 20,
@@ -52,6 +57,14 @@ const initialState = {
     showAdvancedSearch: false,
   },
   notifications: [],
+};
+
+/**
+ * Get system theme preference
+ */
+const getSystemTheme = (): ThemeMode => {
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
 const notificationTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -79,7 +92,28 @@ export const useAppStore = create<AppState>()(
 
         setSidebarCollapsed: collapsed => set({ sidebarCollapsed: collapsed }),
 
-        setTheme: theme => set({ theme }),
+        setTheme: theme => {
+          // Apply theme to document
+          if (typeof document !== 'undefined') {
+            document.documentElement.setAttribute('data-theme', theme);
+          }
+          set({ theme });
+        },
+
+        toggleTheme: () => {
+          const currentTheme = get().theme;
+          const newTheme: ThemeMode = currentTheme === 'light' ? 'dark' : 'light';
+          get().setTheme(newTheme);
+        },
+
+        setUseSystemPreference: useSystem => {
+          set({ useSystemPreference: useSystem });
+          // If enabling system preference, immediately apply system theme
+          if (useSystem) {
+            const systemTheme = getSystemTheme();
+            get().setTheme(systemTheme);
+          }
+        },
 
         setLanguage: language => set({ language }),
 
@@ -133,6 +167,7 @@ export const useAppStore = create<AppState>()(
         partialize: state => ({
           sidebarCollapsed: state.sidebarCollapsed,
           theme: state.theme,
+          useSystemPreference: state.useSystemPreference,
           language: state.language,
           preferences: state.preferences,
         }),

@@ -23,6 +23,7 @@ import { UploadOutlined, DeleteOutlined, EyeOutlined, InfoCircleOutlined } from 
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { DictionarySelect } from '@/components/Dictionary';
 import { useAssetFormContext } from './AssetFormContext';
+import { generateFormFieldIds } from '@/utils/accessibility';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -42,6 +43,20 @@ const AssetDetailedSection: React.FC = () => {
     loadingContracts,
     handleContractChange,
   } = useAssetFormContext();
+
+  // 为字段生成可访问性 ID
+  const selectedContractIds = generateFormFieldIds('selected-contract');
+  const tenantNameIds = generateFormFieldIds('tenant-name');
+  const tenantContactIds = generateFormFieldIds('tenant-contact');
+  const tenantTypeIds = generateFormFieldIds('tenant-type');
+  const contractNumberIds = generateFormFieldIds('contract-number');
+  const contractStartDateIds = generateFormFieldIds('contract-start-date');
+  const contractEndDateIds = generateFormFieldIds('contract-end-date');
+  const monthlyRentIds = generateFormFieldIds('monthly-rent');
+  const depositIds = generateFormFieldIds('deposit');
+  const isSubleaseIds = generateFormFieldIds('is-sublease');
+  const subleaseNotesIds = generateFormFieldIds('sublease-notes');
+  const terminalContractIds = generateFormFieldIds('terminal-contract');
 
   const terminalContractUploadProps: UploadProps = {
     multiple: true,
@@ -70,7 +85,12 @@ const AssetDetailedSection: React.FC = () => {
       title={
         <Space>
           <span>高级选项</span>
-          <Switch checked={showAdvanced} onChange={setShowAdvanced} size="small" />
+          <Switch
+            checked={showAdvanced}
+            onChange={setShowAdvanced}
+            size="small"
+            aria-label="显示高级选项"
+          />
         </Space>
       }
       style={{ marginBottom: '16px' }}
@@ -86,14 +106,20 @@ const AssetDetailedSection: React.FC = () => {
           </Title>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item label="选择租赁合同" name="selected_contract_id">
+              <Form.Item
+                label="选择租赁合同"
+                name="selected_contract_id"
+                htmlFor={selectedContractIds.inputId}
+              >
                 <Select
+                  id={selectedContractIds.inputId}
                   placeholder="请选择租赁合同"
                   allowClear
                   loading={loadingContracts}
                   onChange={handleContractChange}
                   optionFilterProp="children"
                   showSearch
+                  aria-label={selectedContractIds.labelId}
                   filterOption={(input, option) =>
                     String(option?.children ?? '')
                       .toLowerCase()
@@ -112,21 +138,47 @@ const AssetDetailedSection: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item label="租户名称" name="tenant_name">
-                <Input placeholder="自动从合同获取" readOnly />
+              <Form.Item
+                label="租户名称"
+                name="tenant_name"
+                htmlFor={tenantNameIds.inputId}
+              >
+                <Input
+                  id={tenantNameIds.inputId}
+                  placeholder="自动从合同获取"
+                  readOnly
+                  aria-label={tenantNameIds.labelId}
+                  aria-readonly="true"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="租户联系方式" name="tenant_contact">
-                <Input placeholder="自动从合同获取" readOnly />
+              <Form.Item
+                label="租户联系方式"
+                name="tenant_contact"
+                htmlFor={tenantContactIds.inputId}
+              >
+                <Input
+                  id={tenantContactIds.inputId}
+                  placeholder="自动从合同获取"
+                  readOnly
+                  aria-label={tenantContactIds.labelId}
+                  aria-readonly="true"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="租户类型" name="tenant_type">
+              <Form.Item
+                label="租户类型"
+                name="tenant_type"
+                htmlFor={tenantTypeIds.inputId}
+              >
                 <DictionarySelect
                   dictType="tenant_type"
                   placeholder="自动从合同获取"
                   disabled
+                  id={tenantTypeIds.inputId}
+                  aria-label={tenantTypeIds.labelId}
                 />
               </Form.Item>
             </Col>
@@ -141,51 +193,100 @@ const AssetDetailedSection: React.FC = () => {
           </Title>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item label="租赁合同编号" name="lease_contract_number">
-                <Input placeholder="自动从合同获取" readOnly />
+              <Form.Item
+                label="租赁合同编号"
+                name="lease_contract_number"
+                htmlFor={contractNumberIds.inputId}
+              >
+                <Input
+                  id={contractNumberIds.inputId}
+                  placeholder="自动从合同获取"
+                  readOnly
+                  aria-label={contractNumberIds.labelId}
+                  aria-readonly="true"
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="合同开始日期" name="contract_start_date">
-                <DatePicker style={{ width: '100%' }} disabled />
+              <Form.Item
+                label="合同开始日期"
+                name="contract_start_date"
+                htmlFor={contractStartDateIds.inputId}
+              >
+                <DatePicker
+                  style={{ width: '100%' }}
+                  disabled
+                  id={contractStartDateIds.inputId}
+                  aria-label={contractStartDateIds.labelId}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="合同结束日期" name="contract_end_date">
-                <DatePicker style={{ width: '100%' }} disabled />
+              <Form.Item
+                label="合同结束日期"
+                name="contract_end_date"
+                htmlFor={contractEndDateIds.inputId}
+              >
+                <DatePicker
+                  style={{ width: '100%' }}
+                  disabled
+                  id={contractEndDateIds.inputId}
+                  aria-label={contractEndDateIds.labelId}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item label="月租金(元)" name="monthly_rent">
+              <Form.Item
+                label="月租金(元)"
+                name="monthly_rent"
+                htmlFor={monthlyRentIds.inputId}
+              >
                 <InputNumber
+                  id={monthlyRentIds.inputId}
                   placeholder="自动从合同获取"
                   style={{ width: '100%' }}
                   min={0}
                   precision={2}
                   disabled
+                  aria-label={monthlyRentIds.labelId}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="押金(元)" name="deposit">
+              <Form.Item
+                label="押金(元)"
+                name="deposit"
+                htmlFor={depositIds.inputId}
+              >
                 <InputNumber
+                  id={depositIds.inputId}
                   placeholder="自动从合同获取"
                   style={{ width: '100%' }}
                   min={0}
                   precision={2}
                   disabled
+                  aria-label={depositIds.labelId}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="是否分租/转租" name="is_sublease">
-                <Select placeholder="请选择" disabled>
+              <Form.Item
+                label="是否分租/转租"
+                name="is_sublease"
+                htmlFor={isSubleaseIds.inputId}
+              >
+                <Select
+                  id={isSubleaseIds.inputId}
+                  placeholder="请选择"
+                  disabled
+                  aria-label={isSubleaseIds.labelId}
+                >
                   <Option value={false}>否</Option>
                   <Option value={true}>是</Option>
                 </Select>
@@ -195,8 +296,17 @@ const AssetDetailedSection: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item label="分租/转租备注" name="sublease_notes">
-                <TextArea rows={2} placeholder="请输入分租/转租备注" />
+              <Form.Item
+                label="分租/转租备注"
+                name="sublease_notes"
+                htmlFor={subleaseNotesIds.inputId}
+              >
+                <TextArea
+                  id={subleaseNotesIds.inputId}
+                  rows={2}
+                  placeholder="请输入分租/转租备注"
+                  aria-label={subleaseNotesIds.labelId}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -204,12 +314,25 @@ const AssetDetailedSection: React.FC = () => {
           {/* Terminal Contract Files */}
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item label="终端合同文件" name="terminal_contract_files">
+              <Form.Item
+                label="终端合同文件"
+                name="terminal_contract_files"
+                htmlFor={terminalContractIds.inputId}
+              >
                 <div>
                   <Upload {...terminalContractUploadProps}>
-                    <Button icon={<UploadOutlined />}>上传PDF终端合同文件</Button>
+                    <Button
+                      icon={<UploadOutlined />}
+                      aria-label="上传PDF终端合同文件"
+                    >
+                      上传PDF终端合同文件
+                    </Button>
                   </Upload>
-                  <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}>
+                  <div
+                    style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}
+                    role="note"
+                    aria-label="文件上传说明"
+                  >
                     支持多文件上传，每个文件不超过10MB，仅支持PDF格式
                   </div>
                   {terminalContractFileList.length > 0 && (
@@ -231,6 +354,7 @@ const AssetDetailedSection: React.FC = () => {
                                   window.open(file.url, '_blank');
                                 }
                               }}
+                              aria-label={`查看终端合同文件: ${file.name}`}
                             >
                               查看
                             </Button>,
@@ -245,6 +369,7 @@ const AssetDetailedSection: React.FC = () => {
                                   terminalContractFileList.filter(f => f.uid !== file.uid)
                                 );
                               }}
+                              aria-label={`删除终端合同文件: ${file.name}`}
                             >
                               删除
                             </Button>,
@@ -252,7 +377,7 @@ const AssetDetailedSection: React.FC = () => {
                         >
                           <List.Item.Meta
                             avatar={<Tag color="green">PDF</Tag>}
-                            title={file.name}
+                            title={<span aria-label={`文件名: ${file.name}`}>{file.name}</span>}
                             description={`文件大小: ${file.size != null ? (file.size / 1024 / 1024).toFixed(2) + 'MB' : '未知'}`}
                           />
                         </List.Item>

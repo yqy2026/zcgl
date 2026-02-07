@@ -50,7 +50,6 @@ class NotificationListResponse(BaseModel):
     items: list[NotificationResponse]
     total: int
     unread_count: int
-    count: int  # 别名字段，兼容前端期望的 "count"
 
 
 class MarkAsReadRequest(BaseModel):
@@ -63,7 +62,6 @@ class UnreadCountResponse(BaseModel):
     """未读数量响应模型"""
 
     unread_count: int
-    count: int  # 别名字段，兼容前端期望的 "count"
 
 
 # ==================== API 端点 ====================
@@ -106,7 +104,7 @@ async def get_notifications(
         page_size=page_size,
         total=total,
         message="获取通知列表成功",
-        extra={"unread_count": unread_count, "count": unread_count},
+        extra={"unread_count": unread_count},
     )
 
 
@@ -125,7 +123,6 @@ async def get_unread_count(
 
     return UnreadCountResponse(
         unread_count=unread_count,
-        count=unread_count,
     )
 
 

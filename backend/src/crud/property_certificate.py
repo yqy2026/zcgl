@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..models.asset import Asset
 from ..models.property_certificate import PropertyCertificate, PropertyOwner
 from ..schemas.property_certificate import (
     PropertyCertificateCreate,
@@ -17,6 +18,7 @@ from ..schemas.property_certificate import (
 )
 from .asset import SensitiveDataHandler
 from .base import CRUDBase
+
 
 class CRUDPropertyOwner(
     CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwnerUpdate]
@@ -130,6 +132,7 @@ class CRUDPropertyCertificate(
         *,
         obj_in: PropertyCertificateCreate,
         owner_ids: list[str] | None = None,
+        asset_ids: list[str] | None = None,
         commit: bool = True,
     ) -> PropertyCertificate:
         db_obj = PropertyCertificate(**obj_in.model_dump())
@@ -143,6 +146,12 @@ class CRUDPropertyCertificate(
             owners = list(result.scalars().all())
             if owners:
                 db_obj.owners.extend(owners)
+
+        if asset_ids:
+            result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+            assets = list(result.scalars().all())
+            if assets:
+                db_obj.assets.extend(assets)
 
         if commit:
             await db.commit()

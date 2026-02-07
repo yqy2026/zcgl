@@ -82,7 +82,6 @@ declare module '@/types/asset' {
     annual_income?: number;
     annual_expense?: number;
     net_income?: number;
-    agreement_start_date?: string;
   }
 }
 
