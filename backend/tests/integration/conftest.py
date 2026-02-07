@@ -203,7 +203,7 @@ def test_data(db_session):
     # Import models needed for test data
     from src.models.auth import User
     from src.models.organization import Organization
-    from src.models.rbac import Role, UserRoleAssignment
+    from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
     from src.services.enum_data_init import init_enum_data
 
@@ -242,6 +242,33 @@ def test_data(db_session):
         db_session.add(admin_role)
         db_session.commit()
         db_session.refresh(admin_role)
+
+    admin_permission = (
+        db_session.query(Permission)
+        .filter(
+            Permission.resource == "system",
+            Permission.action == "admin",
+        )
+        .first()
+    )
+    if admin_permission is None:
+        admin_permission = Permission(
+            name="system:admin",
+            display_name="系统管理员",
+            description="系统管理员全局权限",
+            resource="system",
+            action="admin",
+            is_system_permission=True,
+            requires_approval=False,
+            created_by="integration_test",
+            updated_by="integration_test",
+        )
+        db_session.add(admin_permission)
+        db_session.commit()
+        db_session.refresh(admin_permission)
+    if admin_permission not in admin_role.permissions:
+        admin_role.permissions.append(admin_permission)
+        db_session.commit()
 
     db_session.add(
         UserRoleAssignment(

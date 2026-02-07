@@ -69,6 +69,7 @@ class Asset(Base):
         Boolean, nullable=False, default=False, comment="是否涉诉"
     )
     notes: Mapped[str | None] = mapped_column(Text, comment="备注")
+    description: Mapped[str | None] = mapped_column(Text, comment="描述")
 
     # 面积相关字段
     land_area: Mapped[Decimal | None] = mapped_column(
@@ -148,6 +149,9 @@ class Asset(Base):
     )
 
     # 项目相关字段
+    wuyang_project_name: Mapped[str | None] = mapped_column(
+        String(200), comment="五羊项目名称"
+    )
 
     # 系统字段
     data_status: Mapped[str] = mapped_column(
@@ -565,5 +569,4 @@ class Project(Base):
 
     def __repr__(self) -> str:
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"
-
 
