@@ -761,14 +761,17 @@ async def get_user_rbac_permissions(
 ) -> dict[str, Any]:
     """获取用户RBAC权限信息"""
     rbac_service = RBACService(db)
-    if await rbac_service.is_admin(current_user.id):
-        return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
     permissions_summary = await rbac_service.get_user_permissions_summary(
         current_user.id
     )
+    is_admin = await rbac_service.is_admin(current_user.id)
 
     return {
-        "is_admin": False,
+        "is_admin": is_admin,
         "roles": [role.name for role in permissions_summary.roles],
-        "permissions": dict(permissions_summary.effective_permissions.items()),
+        "permissions": (
+            ["all"]
+            if is_admin
+            else dict(permissions_summary.effective_permissions.items())
+        ),
     }

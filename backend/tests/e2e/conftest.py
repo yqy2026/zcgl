@@ -65,7 +65,7 @@ def create_test_user(
     """
     from src.database import Base
     from src.models.auth import User
-    from src.models.rbac import Role, UserRoleAssignment
+    from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
 
     # Ensure tables exist (for in-memory databases)
@@ -94,6 +94,34 @@ def create_test_user(
         db_session.add(role_record)
         db_session.commit()
         db_session.refresh(role_record)
+
+    if role in {"admin", "super_admin"}:
+        admin_permission = (
+            db_session.query(Permission)
+            .filter(
+                Permission.resource == "system",
+                Permission.action == "admin",
+            )
+            .first()
+        )
+        if admin_permission is None:
+            admin_permission = Permission(
+                name="system:admin",
+                display_name="系统管理员",
+                description="系统管理员全局权限",
+                resource="system",
+                action="admin",
+                is_system_permission=True,
+                requires_approval=False,
+                created_by="e2e-fixture",
+                updated_by="e2e-fixture",
+            )
+            db_session.add(admin_permission)
+            db_session.commit()
+            db_session.refresh(admin_permission)
+        if admin_permission not in role_record.permissions:
+            role_record.permissions.append(admin_permission)
+            db_session.commit()
 
     assignment = UserRoleAssignment(
         user_id=user.id,

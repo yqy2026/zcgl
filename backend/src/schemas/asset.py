@@ -63,6 +63,9 @@ class AssetBase(BaseModel):
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
         description="项目名称",
     )
+    wuyang_project_name: str | None = Field(
+        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="五羊项目名称"
+    )
     property_name: str = Field(
         ...,
         min_length=1,
@@ -84,6 +87,7 @@ class AssetBase(BaseModel):
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
+    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
@@ -247,6 +251,9 @@ class AssetUpdate(BaseModel):
         max_length=200,
         description="项目名称",
     )
+    wuyang_project_name: str | None = Field(
+        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="五羊项目名称"
+    )
     property_name: str | None = Field(
         None, min_length=1, max_length=200, description="物业名称"
     )
@@ -259,6 +266,7 @@ class AssetUpdate(BaseModel):
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool | None = Field(None, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
+    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
@@ -382,6 +390,7 @@ class AssetResponseBase(BaseModel):
     )
     ownership_category: str | None = Field(None, description="权属类别")
     project_name: str | None = Field(None, description="项目名称")
+    wuyang_project_name: str | None = Field(None, description="五羊项目名称")
     property_name: str = Field(..., description="物业名称")
     address: str = Field(..., description="物业地址")
 
@@ -396,6 +405,7 @@ class AssetResponseBase(BaseModel):
     business_category: str | None = Field(None, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
+    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, description="土地面积（平方米）")

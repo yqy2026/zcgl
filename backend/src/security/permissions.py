@@ -320,7 +320,7 @@ class PermissionChecker:
     async def is_admin(self) -> bool:
         """检查用户是否是管理员"""
         user_id_value: str = getattr(self.user, "id", "")
-        return bool(await self.rbac_service.is_admin(user_id_value))
+        return await self.rbac_service.is_admin(user_id_value)
 
 
 # 便捷权限检查装饰器

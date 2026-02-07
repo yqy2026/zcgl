@@ -794,7 +794,10 @@ class TestCheckPermission:
     async def test_check_permission_admin_user(self, rbac_service, mock_db, sample_user):
         """测试管理员用户拥有所有权限"""
         admin_role = Mock(spec=Role)
-        admin_role.name = "admin"
+        admin_permission = Mock(spec=Permission)
+        admin_permission.resource = "system"
+        admin_permission.action = "admin"
+        admin_role.permissions = [admin_permission]
         request = PermissionCheckRequest(
             resource="any_resource", action="any_action", resource_id=None, context=None
         )
@@ -810,7 +813,7 @@ class TestCheckPermission:
                 response = await rbac_service.check_permission("user-1", request)
 
         assert response.has_permission is True
-        assert "admin_role" in response.granted_by
+        assert "system_admin_permission" in response.granted_by
 
     async def test_check_permission_user_not_found(self, rbac_service, mock_db):
         """测试不存在的用户"""

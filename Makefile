@@ -4,6 +4,10 @@
 	build-frontend backend-import check \
 	backend-org-cov secrets migrate
 
+ROOT_DIR := $(CURDIR)
+BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
+PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/bin/python" ]; then echo "$(BACKEND_VENV)/bin/python"; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+
 help:
 	@echo "Targets:"
 	@echo "  dev               Run backend and frontend dev servers"
@@ -25,7 +29,7 @@ dev:
 	@$(MAKE) -j2 dev-backend dev-frontend
 
 dev-backend:
-	cd backend && python run_dev.py
+	cd backend && $(PYTHON) run_dev.py
 
 dev-frontend:
 	cd frontend && pnpm dev
@@ -33,7 +37,7 @@ dev-frontend:
 lint: lint-backend lint-frontend
 
 lint-backend:
-	cd backend && ruff check .
+	cd backend && $(PYTHON) -m ruff check .
 
 lint-frontend:
 	cd frontend && pnpm lint
@@ -44,7 +48,7 @@ type-check:
 test: test-backend test-frontend
 
 test-backend:
-	cd backend && pytest -m unit
+	cd backend && $(PYTHON) -m pytest -m unit
 
 test-frontend:
 	cd frontend && pnpm test
@@ -53,7 +57,7 @@ build-frontend:
 	cd frontend && pnpm build
 
 backend-import:
-	cd backend && python -c "from src.main import app; print('import ok')"
+	cd backend && $(PYTHON) -c "from src.main import app; print('import ok')"
 
 check: lint-backend lint-frontend type-check test-backend test-frontend build-frontend backend-import
 
@@ -64,12 +68,12 @@ backend-org-cov:
 		PYDANTIC_SETTINGS_IGNORE_DOT_ENV=1 \
 		SECRET_KEY=local-test-secret \
 		DATABASE_URL="$${TEST_DATABASE_URL:-postgresql+psycopg://user:pass@localhost:5432/zcgl_test}" \
-		python -m pytest tests/unit/crud/test_organization.py \
+		$(PYTHON) -m pytest tests/unit/crud/test_organization.py \
 			--cov=src.crud.organization --cov-report=term-missing -v
 
 secrets:
-	@python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32))"
-	@cd backend && python -m src.core.encryption
+	@$(PYTHON) -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32))"
+	@cd backend && $(PYTHON) -m src.core.encryption
 
 migrate:
 	cd backend && alembic upgrade head

@@ -121,6 +121,8 @@
 - 修复角色列表/详情接口未预加载权限导致的 `MissingGreenlet` 500 错误
 - 调整 CORS 中间件顺序，确保错误响应也包含 CORS 头，避免前端 `system/users` 报 CORS 拒绝
 - CORS 允许 `Authorization` 请求头，修复携带登录令牌的预检请求被拒绝
+- 本地开发环境补齐 `backend/.env` 基础配置（development 模式 + PostgreSQL 连接信息）
+- Makefile 后端命令默认使用 `backend/.venv` 的 Python，避免调用系统 Python 导致依赖缺失
 
 #### Removed / 删除
 
@@ -162,6 +164,12 @@
 - **RBAC 角色单一来源** (Single Source of Truth for Roles)
   - 认证响应与用户信息统一使用 RBAC 角色汇总（`role_id`/`role_name`/`role_ids`），移除旧 `role` 字段依赖
   - 统一测试与示例数据为 `role_id`，避免遗留角色字符串导致权限误判
+- **资产字段补齐** (Asset Field Completeness)
+  - 资产新增 `wuyang_project_name` 与 `description` 字段对齐前端，避免提交后静默丢失
+  - 新增数据库迁移补齐 `assets` 表字段
+- **管理员权限统一** (Admin Permission Unification)
+  - 管理员判断改为 `system:admin` 权限，不再依赖角色名
+  - 迁移为 `admin`/`super_admin` 角色回填 `system:admin` 权限
 - **资产权属字段统一** (Asset Ownership Unification)
   - 资产创建/更新/筛选仅使用 `ownership_id`，`ownership_entity` 改为动态读取（不落库）
   - 资产筛选与统计接口移除 `ownership_entity` 查询参数，前端筛选改用权属方选项与 `ownership_id`

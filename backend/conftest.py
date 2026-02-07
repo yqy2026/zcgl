@@ -183,12 +183,43 @@ async def test_client_no_auth(test_db):
 def test_user(test_db):
     """创建测试用户"""
     from src.models.auth import User
-    from src.models.rbac import Role, UserRoleAssignment
+    from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
+
+    def ensure_admin_permission(role: Role) -> None:
+        if role.name not in {"admin", "super_admin"}:
+            return
+        permission = (
+            test_db.query(Permission)
+            .filter(
+                Permission.resource == "system",
+                Permission.action == "admin",
+            )
+            .first()
+        )
+        if permission is None:
+            permission = Permission(
+                name="system:admin",
+                display_name="系统管理员",
+                description="系统管理员全局权限",
+                resource="system",
+                action="admin",
+                is_system_permission=True,
+                requires_approval=False,
+                created_by="test-fixture",
+                updated_by="test-fixture",
+            )
+            test_db.add(permission)
+            test_db.flush()
+            test_db.refresh(permission)
+        if permission not in role.permissions:
+            role.permissions.append(permission)
+            test_db.flush()
 
     def ensure_role(role_name: str, display_name: str) -> Role:
         existing_role = test_db.query(Role).filter(Role.name == role_name).first()
         if existing_role:
+            ensure_admin_permission(existing_role)
             return existing_role
         role = Role(
             name=role_name,
@@ -199,6 +230,7 @@ def test_user(test_db):
         test_db.add(role)
         test_db.flush()
         test_db.refresh(role)
+        ensure_admin_permission(role)
         return role
 
     def ensure_assignment(user: User, role: Role) -> None:
@@ -250,12 +282,43 @@ def test_user(test_db):
 def test_admin(test_db):
     """创建测试管理员"""
     from src.models.auth import User
-    from src.models.rbac import Role, UserRoleAssignment
+    from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
+
+    def ensure_admin_permission(role: Role) -> None:
+        if role.name not in {"admin", "super_admin"}:
+            return
+        permission = (
+            test_db.query(Permission)
+            .filter(
+                Permission.resource == "system",
+                Permission.action == "admin",
+            )
+            .first()
+        )
+        if permission is None:
+            permission = Permission(
+                name="system:admin",
+                display_name="系统管理员",
+                description="系统管理员全局权限",
+                resource="system",
+                action="admin",
+                is_system_permission=True,
+                requires_approval=False,
+                created_by="test-fixture",
+                updated_by="test-fixture",
+            )
+            test_db.add(permission)
+            test_db.flush()
+            test_db.refresh(permission)
+        if permission not in role.permissions:
+            role.permissions.append(permission)
+            test_db.flush()
 
     def ensure_role(role_name: str, display_name: str) -> Role:
         existing_role = test_db.query(Role).filter(Role.name == role_name).first()
         if existing_role:
+            ensure_admin_permission(existing_role)
             return existing_role
         role = Role(
             name=role_name,
@@ -266,6 +329,7 @@ def test_admin(test_db):
         test_db.add(role)
         test_db.flush()
         test_db.refresh(role)
+        ensure_admin_permission(role)
         return role
 
     def ensure_assignment(user: User, role: Role) -> None:

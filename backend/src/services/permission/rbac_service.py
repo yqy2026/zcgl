@@ -57,6 +57,10 @@ from ...schemas.rbac import (
     UserRoleAssignmentCreate,
 )
 
+# Global admin permission used for full access
+ADMIN_PERMISSION_RESOURCE = "system"
+ADMIN_PERMISSION_ACTION = "admin"
+
 # Legacy role-name fallback for admin detection.
 # Primary source should be RBAC permissions (system:admin).
 LEGACY_ADMIN_ROLE_NAMES = {"admin", "super_admin"}
@@ -68,34 +72,6 @@ class RBACService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.user_crud = UserCRUD()
-
-    @staticmethod
-    def _has_system_admin_permission(role: Role) -> bool:
-        permissions = getattr(role, "permissions", None)
-        if permissions is None:
-            return False
-
-        try:
-            permission_iterable = iter(permissions)
-        except TypeError:
-            return False
-
-        for permission in permission_iterable:
-            if (
-                getattr(permission, "resource", None) == "system"
-                and getattr(permission, "action", None) == "admin"
-            ):
-                return True
-        return False
-
-    @staticmethod
-    def _is_admin_role(role: Role) -> bool:
-        if RBACService._has_system_admin_permission(role):
-            return True
-
-        # Backward compatibility for historical role naming conventions.
-        role_name = (getattr(role, "name", "") or "").lower()
-        return role_name in LEGACY_ADMIN_ROLE_NAMES
 
     # ==================== 角色管理 ====================
 
@@ -440,10 +416,10 @@ class RBACService:
 
         # 获取用户的有效角色
         user_roles = await self.get_user_roles(user_id)
-        if any(self._is_admin_role(role) for role in user_roles):
+        if await self._user_has_admin_permission(user_id, user_roles):
             return PermissionCheckResponse(
                 has_permission=True,
-                granted_by=["admin_role"],
+                granted_by=["system_admin_permission"],
                 conditions=None,
                 reason=None,
             )
@@ -489,15 +465,16 @@ class RBACService:
         )
 
     async def is_admin(self, user_id: str) -> bool:
-        """判断用户是否为管理员（基于RBAC角色）"""
+        """判断用户是否为管理员（基于RBAC权限）"""
         roles = await self.get_user_roles(user_id)
-        return any(self._is_admin_role(role) for role in roles)
+        return await self._user_has_admin_permission(user_id, roles)
 
     async def get_user_role_summary(self, user_id: str) -> dict[str, Any]:
         """获取用户角色汇总信息（含主角色与管理员标记）"""
         roles = await self.get_user_roles(user_id)
         roles_sorted = sorted(roles, key=lambda role: role.level or 0)
         primary = roles_sorted[0] if roles_sorted else None
+        is_admin = await self._user_has_admin_permission(user_id, roles_sorted)
         return {
             "roles": [role.name for role in roles_sorted],
             "role_ids": [str(role.id) for role in roles_sorted],
@@ -505,7 +482,7 @@ class RBACService:
             "primary_role_name": (
                 primary.display_name if primary and primary.display_name else None
             ),
-            "is_admin": any(self._is_admin_role(role) for role in roles_sorted),
+            "is_admin": is_admin,
         }
 
     async def get_user_permissions_summary(self, user_id: str) -> UserPermissionSummary:
@@ -641,6 +618,37 @@ class RBACService:
             "permission_level": permission.permission_level,
             "conditions": permission.conditions if permission.conditions else None,
         }
+
+    def _role_has_admin_permission(self, role: Role) -> bool:
+        """检查角色是否具有系统管理员权限"""
+        for permission in role.permissions:
+            if (
+                permission.resource == ADMIN_PERMISSION_RESOURCE
+                and permission.action == ADMIN_PERMISSION_ACTION
+            ):
+                return True
+
+        # Backward compatibility for historical role naming conventions.
+        role_name = (getattr(role, "name", "") or "").lower()
+        return role_name in LEGACY_ADMIN_ROLE_NAMES
+
+    async def _user_has_admin_permission(
+        self, user_id: str, roles: list[Role]
+    ) -> bool:
+        """检查用户是否具备系统管理员权限（基于权限而非角色名）"""
+        if any(self._role_has_admin_permission(role) for role in roles):
+            return True
+
+        admin_request = PermissionCheckRequest(
+            resource=ADMIN_PERMISSION_RESOURCE,
+            action=ADMIN_PERMISSION_ACTION,
+            resource_id=None,
+            context=None,
+        )
+        resource_permissions = await self._get_user_resource_permissions(
+            user_id, admin_request
+        )
+        return resource_permissions is not None
 
     def _role_has_permission(
         self, role: Role, permission_request: PermissionCheckRequest
