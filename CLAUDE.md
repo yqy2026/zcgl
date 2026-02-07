@@ -2,7 +2,7 @@
 每次回复我都叫我【yellowUp】
 本文件为 Claude Code 提供项目上下文与执行约束。详细文档请参阅 `docs/` 目录。
 
-**最后更新**: 2026-02-05
+**最后更新**: 2026-02-07
 
 ---
 
@@ -179,6 +179,17 @@ LLM_PROVIDER="hunyuan"   # qwen | glm | deepseek | hunyuan
 
 - **分支**: main (生产) ← develop ← feature/* / hotfix/*
 - **提交格式**: `type(scope): description` (如 `feat(auth): add JWT refresh`)
+
+### 冲突处理经验（2026-02）
+
+- 禁止在大量冲突时直接依赖 `-X theirs/ours` 后推送，必须逐文件人工复核
+- `modify/delete` 冲突先查历史（`git log -- <file>`），确认删除是否为架构收口，避免误恢复旧文件
+- 模型与聚合导入文件是高风险区域：重点检查 `models/*.py`、`models/__init__.py`、`crud/*.py`
+- 冲突解决后至少执行：
+  - 无冲突标记检查：`rg -n "^(<<<<<<<|=======|>>>>>>>)"`
+  - 关键导入烟测（models/crud）
+  - `ruff check` 与受影响测试最小集
+- 推送前给出“冲突清单 + 处理决策 + 未覆盖风险”，必要时先人工核准
 
 ---
 

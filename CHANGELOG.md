@@ -4,6 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- 文档补充冲突复盘：在 `AGENTS.md` 与 `CLAUDE.md` 新增 Git 冲突处理经验与标准流程（`UU`/`DU` 分类、`modify/delete` 历史核查、冲突后最小验证、推送前人工核准），用于避免自动偏向合并导致的误恢复/导入漂移/模型重复定义问题
 - 手动冲突复核修复：纠正 `fed92f6b` 自动冲突处理引入的问题，恢复 `backend/src/models/asset.py` 为单一 `Asset` 定义并移除重复模型声明，修正 `backend/src/crud/__init__.py`、`backend/src/crud/asset.py`、`backend/src/crud/field_whitelist.py`、`backend/src/models/__init__.py`、`backend/src/services/asset/asset_service.py` 的跨模块导入；修复 `backend/tests/integration/test_postgresql_concurrency.py` 缺失导入；再次删除误恢复的历史文件 `backend/scripts/maintenance/backfill_asset_ownership_entity.py`、`backend/src/services/core/security_service.py`、`frontend/src/types/permission.ts`
 - 资产批量更新去循环查库：`backend/src/services/asset/batch_service.py` 将 `batch_update` 中按资产逐条校验 `ownership_id` 与逐条 `get_by_name_async` 查重改为批次前置查询（权属一次校验 + 物业名一次查重 + 内存占位冲突判断），消除批量更新路径 N+1 往返
 - Excel 导入结果提取兼容性修复：`backend/src/services/excel/excel_import_service.py` 新增 `_scalars_all`，统一兼容真实 `AsyncSession` 与测试 `AsyncMock` 的 `scalars().all()` 调用链，修复预加载优化后的异步测试回归
