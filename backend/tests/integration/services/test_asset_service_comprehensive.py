@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import ResourceNotFoundError
-from src.database import _init_async_globals, async_engine
+from src.database import get_database_engine
 from src.models.ownership import Ownership
 from src.schemas.asset import AssetCreate, AssetUpdate
 from src.services.asset.asset_service import AssetService
@@ -35,9 +35,7 @@ def _build_asset_data(**overrides):
 
 @pytest.fixture
 async def db_session():
-    _init_async_globals()
-    if async_engine is None:
-        raise RuntimeError("Async engine is not initialized")
+    async_engine = get_database_engine()
 
     async with async_engine.connect() as connection:
         transaction = await connection.begin()

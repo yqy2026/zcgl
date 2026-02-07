@@ -48,7 +48,7 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   if (error) {
-    pageLogger.error('Analytics Error:', error as Error);
+    pageLogger.error('Analytics Error:', error);
     return (
       <div style={{ padding: '24px' }}>
         <Alert

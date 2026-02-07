@@ -353,9 +353,11 @@ export const useNetworkStatus = (enabled = true) => {
 
     const getConnection = () =>
       'connection' in navigator
-        ? (navigator as Navigator & {
-            connection?: { effectiveType?: string };
-          }).connection
+        ? (
+            navigator as Navigator & {
+              connection?: { effectiveType?: string };
+            }
+          ).connection
         : undefined;
 
     const handleConnectionChange = () => {
@@ -372,13 +374,15 @@ export const useNetworkStatus = (enabled = true) => {
     // 监听连接类型变化
     const connection =
       'connection' in navigator
-        ? (navigator as Navigator & {
-            connection?: {
-              effectiveType?: string;
-              addEventListener?: (type: string, handler: () => void) => void;
-              removeEventListener?: (type: string, handler: () => void) => void;
-            };
-          }).connection
+        ? (
+            navigator as Navigator & {
+              connection?: {
+                effectiveType?: string;
+                addEventListener?: (type: string, handler: () => void) => void;
+                removeEventListener?: (type: string, handler: () => void) => void;
+              };
+            }
+          ).connection
         : undefined;
     if (connection != null) {
       connection.addEventListener?.('change', handleConnectionChange);

@@ -6,8 +6,8 @@
 目标: 实现40-60%的查询性能提升
 """
 
-import logging
 import asyncio
+import logging
 from pathlib import Path
 
 from sqlalchemy import text

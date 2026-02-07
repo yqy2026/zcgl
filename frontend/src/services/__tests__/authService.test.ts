@@ -136,9 +136,12 @@ describe('AuthService - Login with Permissions', () => {
     const result = await AuthService.getCurrentUser();
 
     expect(result).toEqual(mockUser);
-    expect(apiClient.get).toHaveBeenCalledWith('/auth/me', expect.objectContaining({
-      cache: false,
-    }));
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/auth/me',
+      expect.objectContaining({
+        cache: false,
+      })
+    );
   });
 
   it('should handle missing permissions field (defaults to empty array)', async () => {

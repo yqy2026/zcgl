@@ -95,7 +95,10 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
         // 如果有关联项目数据，则更新关联项目
         if (values.related_projects != null && Array.isArray(values.related_projects)) {
           try {
-            await ownershipService.updateOwnershipProjects(initialValues.id, values.related_projects);
+            await ownershipService.updateOwnershipProjects(
+              initialValues.id,
+              values.related_projects
+            );
           } catch {
             MessageManager.warning('基本信息更新成功，但关联项目更新失败');
           }
@@ -139,10 +142,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
             <Form.Item
               label="权属方全称"
               name="name"
-              rules={[
-                { required: true, message: '请输入权属方全称' },
-                { validator: validateName },
-              ]}
+              rules={[{ required: true, message: '请输入权属方全称' }, { validator: validateName }]}
             >
               <Input placeholder="请输入权属方全称" />
             </Form.Item>

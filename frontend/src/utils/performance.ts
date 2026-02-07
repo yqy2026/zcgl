@@ -202,14 +202,14 @@ class PerformanceMonitor {
           value: number;
         };
         if (layoutShiftEntry.hadRecentInput === false) {
-        const currentCLS = this.metrics.get('cls') ?? 0;
-        const newCLS = currentCLS + layoutShiftEntry.value;
-        this.metrics.set('cls', newCLS);
+          const currentCLS = this.metrics.get('cls') ?? 0;
+          const newCLS = currentCLS + layoutShiftEntry.value;
+          this.metrics.set('cls', newCLS);
 
-        if (newCLS > this.config.thresholds.cls) {
-          perfLogger.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`);
+          if (newCLS > this.config.thresholds.cls) {
+            perfLogger.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`);
+          }
         }
-      }
       }
     });
   }

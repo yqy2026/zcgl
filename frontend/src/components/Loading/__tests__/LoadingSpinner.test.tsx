@@ -89,7 +89,9 @@ describe('LoadingSpinner', () => {
   });
 
   it('handles null children gracefully', () => {
-    const { container } = renderWithProviders(<LoadingSpinner spinning={false}>{null}</LoadingSpinner>);
+    const { container } = renderWithProviders(
+      <LoadingSpinner spinning={false}>{null}</LoadingSpinner>
+    );
 
     // 即使 children 为 null，组件也应该渲染
     expect(container.firstChild).toBeInTheDocument();

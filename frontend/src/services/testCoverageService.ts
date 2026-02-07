@@ -3,7 +3,8 @@
  * 提供测试覆盖率数据的API调用封装
  */
 
-import { StandardApiResponse } from '@/types/apiResponse';
+import { apiClient } from '@/api/client';
+import type { StandardApiResponse, ExtractResult } from '@/types/apiResponse';
 
 // 类型定义
 export interface CoverageMetrics {
@@ -120,36 +121,42 @@ export interface DefectReport {
  * 测试覆盖率API服务类
  */
 class TestCoverageService {
-  private baseUrl = '/api/test-coverage';
+  private readonly baseUrl = '/test-coverage';
+
+  private unwrapResult<T>(result: ExtractResult<T>, actionName: string): T {
+    if (!result.success || result.data == null) {
+      throw new Error(`${actionName}: ${result.error ?? '未知错误'}`);
+    }
+    return result.data;
+  }
+
+  private ensureSuccess(result: ExtractResult<unknown>, actionName: string): void {
+    if (!result.success) {
+      throw new Error(`${actionName}: ${result.error ?? '未知错误'}`);
+    }
+  }
 
   /**
    * 获取当前测试覆盖率报告
    */
   async getCurrentCoverageReport(): Promise<StandardApiResponse<CoverageReport>> {
-    const response = await fetch(`${this.baseUrl}/report`);
-    if (!response.ok) {
-      throw new Error(`获取覆盖率报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as CoverageReport;
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<CoverageReport>(`${this.baseUrl}/report`, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取覆盖率报告失败');
+    return { success: true, data };
   }
 
   /**
    * 获取覆盖率趋势数据
    */
   async getCoverageTrend(days: number = 30): Promise<StandardApiResponse<CoverageTrend[]>> {
-    const response = await fetch(`${this.baseUrl}/trend?days=${days}`);
-    if (!response.ok) {
-      throw new Error(`获取覆盖率趋势失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as CoverageTrend[];
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<CoverageTrend[]>(`${this.baseUrl}/trend`, {
+      params: { days },
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取覆盖率趋势失败');
+    return { success: true, data };
   }
 
   /**
@@ -159,34 +166,26 @@ class TestCoverageService {
     minCoverage: number = 0,
     maxCoverage: number = 100
   ): Promise<StandardApiResponse<CoverageMetrics[]>> {
-    const params = new URLSearchParams({
-      min_coverage: minCoverage.toString(),
-      max_coverage: maxCoverage.toString(),
+    const result = await apiClient.get<CoverageMetrics[]>(`${this.baseUrl}/modules`, {
+      params: {
+        min_coverage: minCoverage,
+        max_coverage: maxCoverage,
+      },
+      retry: false,
     });
-    const response = await fetch(`${this.baseUrl}/modules?${params}`);
-    if (!response.ok) {
-      throw new Error(`获取模块覆盖率失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as CoverageMetrics[];
-    return {
-      success: true,
-      data,
-    };
+    const data = this.unwrapResult(result, '获取模块覆盖率失败');
+    return { success: true, data };
   }
 
   /**
    * 获取覆盖率阈值配置
    */
   async getCoverageThresholds(): Promise<StandardApiResponse<CoverageThreshold>> {
-    const response = await fetch(`${this.baseUrl}/thresholds`);
-    if (!response.ok) {
-      throw new Error(`获取覆盖率阈值失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as CoverageThreshold;
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<CoverageThreshold>(`${this.baseUrl}/thresholds`, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取覆盖率阈值失败');
+    return { success: true, data };
   }
 
   /**
@@ -195,36 +194,26 @@ class TestCoverageService {
   async updateCoverageThresholds(
     thresholds: CoverageThreshold
   ): Promise<StandardApiResponse<CoverageThreshold>> {
-    const response = await fetch(`${this.baseUrl}/thresholds`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(thresholds),
-    });
-    if (!response.ok) {
-      throw new Error(`更新覆盖率阈值失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as CoverageThreshold;
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.put<CoverageThreshold>(
+      `${this.baseUrl}/thresholds`,
+      thresholds,
+      {
+        retry: false,
+      }
+    );
+    const data = this.unwrapResult(result, '更新覆盖率阈值失败');
+    return { success: true, data };
   }
 
   /**
    * 检查质量门禁状态
    */
   async checkQualityGate(): Promise<StandardApiResponse<QualityGateResult>> {
-    const response = await fetch(`${this.baseUrl}/quality-gate`);
-    if (!response.ok) {
-      throw new Error(`检查质量门禁失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as QualityGateResult;
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<QualityGateResult>(`${this.baseUrl}/quality-gate`, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '检查质量门禁失败');
+    return { success: true, data };
   }
 
   /**
@@ -233,33 +222,21 @@ class TestCoverageService {
   async createCoverageReport(
     report: Omit<CoverageReport, 'generated_at'>
   ): Promise<StandardApiResponse<{ report_id: number }>> {
-    const response = await fetch(`${this.baseUrl}/report`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(report),
+    const result = await apiClient.post<{ report_id: number }>(`${this.baseUrl}/report`, report, {
+      retry: false,
     });
-    if (!response.ok) {
-      throw new Error(`创建覆盖率报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as { report_id: number };
-    return {
-      success: true,
-      data,
-    };
+    const data = this.unwrapResult(result, '创建覆盖率报告失败');
+    return { success: true, data };
   }
 
   /**
    * 删除覆盖率报告
    */
   async deleteCoverageReport(reportId: number): Promise<StandardApiResponse<null>> {
-    const response = await fetch(`${this.baseUrl}/reports/${reportId}`, {
-      method: 'DELETE',
+    const result = await apiClient.delete(`${this.baseUrl}/reports/${reportId}`, {
+      retry: false,
     });
-    if (!response.ok) {
-      throw new Error(`删除覆盖率报告失败: ${response.statusText}`);
-    }
+    this.ensureSuccess(result, '删除覆盖率报告失败');
     return {
       success: true,
       data: null,
@@ -269,20 +246,18 @@ class TestCoverageService {
   /**
    * 获取测试执行报告
    */
-  async getTestExecutionReport(executionId?: string): Promise<StandardApiResponse<TestExecutionReport[]>> {
+  async getTestExecutionReport(
+    executionId?: string
+  ): Promise<StandardApiResponse<TestExecutionReport[]>> {
     const url =
       executionId !== null && executionId !== undefined && executionId !== ''
         ? `${this.baseUrl}/test-execution/${executionId}`
         : `${this.baseUrl}/test-execution`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`获取测试执行报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as TestExecutionReport[];
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<TestExecutionReport[]>(url, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取测试执行报告失败');
+    return { success: true, data };
   }
 
   /**
@@ -296,24 +271,15 @@ class TestCoverageService {
     page_size?: number;
     offset?: number;
   }): Promise<StandardApiResponse<{ defects: DefectReport[]; total: number }>> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    const url = `${this.baseUrl}/defects${queryParams.toString() ? `?${queryParams}` : ''}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`获取缺陷报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as { defects: DefectReport[]; total: number };
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.get<{ defects: DefectReport[]; total: number }>(
+      `${this.baseUrl}/defects`,
+      {
+        params,
+        retry: false,
+      }
+    );
+    const data = this.unwrapResult(result, '获取缺陷报告失败');
+    return { success: true, data };
   }
 
   /**
@@ -322,21 +288,11 @@ class TestCoverageService {
   async createDefectReport(
     defect: Omit<DefectReport, 'defect_id' | 'created_at' | 'updated_at'>
   ): Promise<StandardApiResponse<DefectReport>> {
-    const response = await fetch(`${this.baseUrl}/defects`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(defect),
+    const result = await apiClient.post<DefectReport>(`${this.baseUrl}/defects`, defect, {
+      retry: false,
     });
-    if (!response.ok) {
-      throw new Error(`创建缺陷报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as DefectReport;
-    return {
-      success: true,
-      data,
-    };
+    const data = this.unwrapResult(result, '创建缺陷报告失败');
+    return { success: true, data };
   }
 
   /**
@@ -346,21 +302,15 @@ class TestCoverageService {
     defectId: string,
     updates: Partial<DefectReport>
   ): Promise<StandardApiResponse<DefectReport>> {
-    const response = await fetch(`${this.baseUrl}/defects/${defectId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-    if (!response.ok) {
-      throw new Error(`更新缺陷报告失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as DefectReport;
-    return {
-      success: true,
-      data,
-    };
+    const result = await apiClient.put<DefectReport>(
+      `${this.baseUrl}/defects/${defectId}`,
+      updates,
+      {
+        retry: false,
+      }
+    );
+    const data = this.unwrapResult(result, '更新缺陷报告失败');
+    return { success: true, data };
   }
 
   /**
@@ -380,11 +330,7 @@ class TestCoverageService {
       trend_direction: 'improving' | 'declining' | 'stable';
     }>
   > {
-    const response = await fetch(`${this.baseUrl}/summary`);
-    if (!response.ok) {
-      throw new Error(`获取覆盖率摘要失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as {
+    const result = await apiClient.get<{
       overall_coverage: number;
       backend_coverage: number;
       frontend_coverage: number;
@@ -395,11 +341,11 @@ class TestCoverageService {
       pass_rate: number;
       average_execution_time: number;
       trend_direction: 'improving' | 'declining' | 'stable';
-    };
-    return {
-      success: true,
-      data,
-    };
+    }>(`${this.baseUrl}/summary`, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取覆盖率摘要失败');
+    return { success: true, data };
   }
 
   /**
@@ -422,20 +368,7 @@ class TestCoverageService {
       recommendations: string[];
     }>
   > {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, value);
-        }
-      });
-    }
-    const url = `${this.baseUrl}/performance-analysis${queryParams.toString() ? `?${queryParams}` : ''}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`获取测试性能分析失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as {
+    const result = await apiClient.get<{
       slow_tests: TestPerformanceMetrics[];
       memory_intensive_tests: TestPerformanceMetrics[];
       cpu_intensive_tests: TestPerformanceMetrics[];
@@ -445,11 +378,12 @@ class TestCoverageService {
         avg_memory_usage: number;
       }>;
       recommendations: string[];
-    };
-    return {
-      success: true,
-      data,
-    };
+    }>(`${this.baseUrl}/performance-analysis`, {
+      params,
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取测试性能分析失败');
+    return { success: true, data };
   }
 
   /**
@@ -467,25 +401,15 @@ class TestCoverageService {
       estimated_duration: number;
     }>
   > {
-    const response = await fetch(`${this.baseUrl}/trigger-scan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(options || {}),
-    });
-    if (!response.ok) {
-      throw new Error(`触发覆盖率扫描失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as {
+    const result = await apiClient.post<{
       scan_id: string;
       status: 'started' | 'queued';
       estimated_duration: number;
-    };
-    return {
-      success: true,
-      data,
-    };
+    }>(`${this.baseUrl}/trigger-scan`, options ?? {}, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '触发覆盖率扫描失败');
+    return { success: true, data };
   }
 
   /**
@@ -502,11 +426,7 @@ class TestCoverageService {
       error_message?: string;
     }>
   > {
-    const response = await fetch(`${this.baseUrl}/scan-status/${scanId}`);
-    if (!response.ok) {
-      throw new Error(`获取扫描状态失败: ${response.statusText}`);
-    }
-    const data = (await response.json()) as {
+    const result = await apiClient.get<{
       scan_id: string;
       status: 'running' | 'completed' | 'failed' | 'cancelled';
       progress: number;
@@ -514,11 +434,11 @@ class TestCoverageService {
       estimated_remaining_time?: number;
       result?: CoverageReport;
       error_message?: string;
-    };
-    return {
-      success: true,
-      data,
-    };
+    }>(`${this.baseUrl}/scan-status/${scanId}`, {
+      retry: false,
+    });
+    const data = this.unwrapResult(result, '获取扫描状态失败');
+    return { success: true, data };
   }
 }
 

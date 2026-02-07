@@ -10,8 +10,10 @@ import { useDictionary } from '@/hooks/useDictionary';
 import { dictionaryService } from '@/services/dictionary';
 import type { DictionaryOption } from '@/services/dictionary';
 
-interface DictionarySelectProps
-  extends Omit<SelectProps<string, DictionaryOption>, 'options' | 'optionRender'> {
+interface DictionarySelectProps extends Omit<
+  SelectProps<string, DictionaryOption>,
+  'options' | 'optionRender'
+> {
   /** 字典类型 */
   dictType: string;
   /** 是否只显示启用的选项 */
@@ -80,7 +82,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     <Select
       {...props}
       loading={isLoading}
-      placeholder={placeholder ?? (`请选择${dictType.replace('_', '')}` as string)}
+      placeholder={placeholder ?? `请选择${dictType.replace('_', '')}`}
       notFoundContent={isLoading ? <Spin size="small" /> : '暂无数据'}
       options={options}
       filterOption={(input, option) => {

@@ -249,21 +249,25 @@ export class PDFImportService {
     formData.append('prefer_markitdown', preferMarkitdown.toString());
 
     try {
-      const response = await apiClient.post<FileUploadResponse>(`${API_BASE_URL}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 300000, // 增加到5分钟，支持大文件视觉处理
-        onUploadProgress: progressEvent => {
-          if (progressEvent.total != null && progressEvent.total > 0) {
-            const _percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            // Upload progress
-          }
-        },
-        signal: signal, // 支持AbortController
-      });
+      const response = await apiClient.post<FileUploadResponse>(
+        `${API_BASE_URL}/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 300000, // 增加到5分钟，支持大文件视觉处理
+          onUploadProgress: progressEvent => {
+            if (progressEvent.total != null && progressEvent.total > 0) {
+              const _percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              // Upload progress
+            }
+          },
+          signal: signal, // 支持AbortController
+        }
+      );
 
       // 直接返回后端API响应
       const responseData = response.data;
@@ -341,7 +345,9 @@ export class PDFImportService {
       return {
         success: true,
         result: result.result,
-        processing_summary: result.result?.processing_summary as Record<string, unknown> | undefined,
+        processing_summary: result.result?.processing_summary as
+          | Record<string, unknown>
+          | undefined,
       };
     }
     return {
@@ -358,10 +364,13 @@ export class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
-      const response = await apiClient.post<ConfirmImportResponse>(`${API_BASE_URL}/confirm_import`, {
-        session_id: sessionId,
-        confirmed_data: confirmedData,
-      });
+      const response = await apiClient.post<ConfirmImportResponse>(
+        `${API_BASE_URL}/confirm_import`,
+        {
+          session_id: sessionId,
+          confirmed_data: confirmedData,
+        }
+      );
 
       const responseData = response.data;
       if (!responseData) {
@@ -1114,8 +1123,7 @@ export class PDFImportService {
             processing_summary: {
               total_processing_time: '60-90秒',
               extraction_method: 'multi_engine',
-              engines_used:
-                processingStatus?.final_results?.processing_summary?.engines_used ?? [],
+              engines_used: processingStatus?.final_results?.processing_summary?.engines_used ?? [],
               processing_steps: [],
               performance_metrics: {
                 total_processing_time: 0,
@@ -1136,8 +1144,7 @@ export class PDFImportService {
                 processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
               validation_score: processingStatus?.final_results?.validation_score ?? 0.8,
               match_confidence: processingStatus?.final_results?.match_confidence ?? 0.7,
-              semantic_confidence:
-                processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
+              semantic_confidence: processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
               fusion_confidence: processingStatus?.fusion_results?.confidence ?? 0.8,
               overall_quality:
                 processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
@@ -1150,8 +1157,7 @@ export class PDFImportService {
                 processingStatus?.final_results?.extraction_quality?.overall_quality ?? 0.8,
               validation_quality: processingStatus?.final_results?.validation_score ?? 0.8,
               matching_quality: processingStatus?.final_results?.match_confidence ?? 0.7,
-              semantic_quality:
-                processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
+              semantic_quality: processingStatus?.semantic_validation?.overall_confidence ?? 0.8,
               processing_efficiency: 0.8,
               overall_score: 0.8,
             },

@@ -8,11 +8,7 @@
  */
 
 import { z } from 'zod';
-import type {
-  StandardApiResponse,
-  PaginatedApiResponse,
-  ErrorResponse,
-} from '@/types/apiResponse';
+import type { StandardApiResponse, PaginatedApiResponse, ErrorResponse } from '@/types/apiResponse';
 
 // ==================== Zod Schemas ====================
 
@@ -27,10 +23,10 @@ const StandardResponseBaseSchema = z.object({
 
 // 确保 data 在 success=true 时存在
 export const StandardResponseSchema = StandardResponseBaseSchema.refine(
-  (data) => !data.success || data.data !== undefined,
+  data => !data.success || data.data !== undefined,
   {
-    message: "Successful response must contain data field",
-    path: ["data"],
+    message: 'Successful response must contain data field',
+    path: ['data'],
   }
 );
 
@@ -53,13 +49,10 @@ export const PaginatedDataSchema = z.object({
 // 分页响应 Schema
 export const PaginatedResponseSchema = StandardResponseBaseSchema.extend({
   data: PaginatedDataSchema,
-}).refine(
-  (data) => !data.success || data.data !== undefined,
-  {
-    message: "Successful response must contain data field",
-    path: ["data"],
-  }
-);
+}).refine(data => !data.success || data.data !== undefined, {
+  message: 'Successful response must contain data field',
+  path: ['data'],
+});
 
 // 错误详情 Schema
 export const ErrorDetailSchema = z.object({
@@ -111,14 +104,16 @@ export function validateStandardResponse<T = unknown>(
   return {
     valid: false,
     zodError: result.error,
-    error: result.error.message
+    error: result.error.message,
   };
 }
 
 /**
  * 验证分页 API 响应格式
  */
-export function isPaginatedApiResponse<T = unknown>(data: unknown): data is PaginatedApiResponse<T> {
+export function isPaginatedApiResponse<T = unknown>(
+  data: unknown
+): data is PaginatedApiResponse<T> {
   return PaginatedResponseSchema.safeParse(data).success;
 }
 
@@ -139,7 +134,7 @@ export function validatePaginatedResponse<T = unknown>(
   return {
     valid: false,
     zodError: result.error,
-    error: result.error.message
+    error: result.error.message,
   };
 }
 
@@ -153,9 +148,7 @@ export function isErrorResponse(data: unknown): data is ErrorResponse {
 /**
  * 详细验证错误响应
  */
-export function validateErrorResponse(
-  data: unknown
-): DetailedValidationResult<ErrorResponse> {
+export function validateErrorResponse(data: unknown): DetailedValidationResult<ErrorResponse> {
   const result = ErrorResponseSchema.safeParse(data);
 
   if (result.success) {
@@ -167,7 +160,7 @@ export function validateErrorResponse(
   return {
     valid: false,
     zodError: result.error,
-    error: result.error.message
+    error: result.error.message,
   };
 }
 
@@ -179,9 +172,12 @@ export function validateApiResponse(data: unknown): {
   type: 'standard' | 'paginated' | 'error' | 'unknown';
   result?: DetailedValidationResult;
 } {
-  if (isErrorResponse(data)) return { valid: true, type: 'error', result: validateErrorResponse(data) };
-  if (isPaginatedApiResponse(data)) return { valid: true, type: 'paginated', result: validatePaginatedResponse(data) };
-  if (isStandardApiResponse(data)) return { valid: true, type: 'standard', result: validateStandardResponse(data) };
+  if (isErrorResponse(data))
+    return { valid: true, type: 'error', result: validateErrorResponse(data) };
+  if (isPaginatedApiResponse(data))
+    return { valid: true, type: 'paginated', result: validatePaginatedResponse(data) };
+  if (isStandardApiResponse(data))
+    return { valid: true, type: 'standard', result: validateStandardResponse(data) };
 
   return { valid: false, type: 'unknown' };
 }

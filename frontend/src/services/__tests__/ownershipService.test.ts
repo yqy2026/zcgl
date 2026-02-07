@@ -20,7 +20,7 @@ vi.mock('@/api/client', () => ({
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -172,9 +172,9 @@ describe('OwnershipService', () => {
         error: '编码重复',
       });
 
-      await expect(
-        service.createOwnership({ name: '测试', code: 'OWN-001' })
-      ).rejects.toThrow('创建权属方失败');
+      await expect(service.createOwnership({ name: '测试', code: 'OWN-001' })).rejects.toThrow(
+        '创建权属方失败'
+      );
     });
   });
 
@@ -629,9 +629,7 @@ describe('OwnershipService', () => {
         error: '文件格式错误',
       });
 
-      await expect(service.importOwnerships(mockFile)).rejects.toThrow(
-        '导入权属方数据失败'
-      );
+      await expect(service.importOwnerships(mockFile)).rejects.toThrow('导入权属方数据失败');
     });
   });
 });

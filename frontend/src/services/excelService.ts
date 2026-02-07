@@ -113,25 +113,21 @@ export class ExcelService {
       formData.append('file', file);
       formData.append('sheet_name', sheetName);
 
-      const result = await apiClient.post<ExcelImportResponse>(
-        `${this.baseUrl}/import`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: onProgress
-            ? progressEvent => {
-                if (progressEvent.total !== undefined && progressEvent.total > 0) {
-                  const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                  onProgress(progress);
-                }
+      const result = await apiClient.post<ExcelImportResponse>(`${this.baseUrl}/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: onProgress
+          ? progressEvent => {
+              if (progressEvent.total !== undefined && progressEvent.total > 0) {
+                const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onProgress(progress);
               }
-            : undefined,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+            }
+          : undefined,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`Excel导入失败: ${result.error}`);
@@ -174,14 +170,11 @@ export class ExcelService {
    */
   async getImportTaskInfo(taskId: string): Promise<ImportTaskInfo> {
     try {
-      const result = await apiClient.get<ImportTaskInfo>(
-        `${this.baseUrl}/import/tasks/${taskId}`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ImportTaskInfo>(`${this.baseUrl}/import/tasks/${taskId}`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取导入任务详情失败: ${result.error}`);
@@ -257,14 +250,10 @@ export class ExcelService {
    */
   async exportExcel(request: ExcelExportRequest): Promise<ExcelExportResponse> {
     try {
-      const result = await apiClient.post<ExcelExportResponse>(
-        `${this.baseUrl}/export`,
-        request,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.post<ExcelExportResponse>(`${this.baseUrl}/export`, request, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`Excel导出失败: ${result.error}`);
@@ -307,14 +296,11 @@ export class ExcelService {
    */
   async getExportTaskInfo(taskId: string): Promise<ExportTaskInfo> {
     try {
-      const result = await apiClient.get<ExportTaskInfo>(
-        `${this.baseUrl}/export/tasks/${taskId}`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ExportTaskInfo>(`${this.baseUrl}/export/tasks/${taskId}`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取导出任务详情失败: ${result.error}`);
@@ -486,15 +472,12 @@ export class ExcelService {
    */
   async getImportHistory(page = 1, pageSize = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await apiClient.get<ImportExportHistory[]>(
-        `${this.baseUrl}/import/history`,
-        {
-          params: { page, page_size: pageSize },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ImportExportHistory[]>(`${this.baseUrl}/import/history`, {
+        params: { page, page_size: pageSize },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       return result.data ?? [];
     } catch (error) {
@@ -509,15 +492,12 @@ export class ExcelService {
    */
   async getExportHistory(page = 1, pageSize = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await apiClient.get<ImportExportHistory[]>(
-        `${this.baseUrl}/export/history`,
-        {
-          params: { page, page_size: pageSize },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ImportExportHistory[]>(`${this.baseUrl}/export/history`, {
+        params: { page, page_size: pageSize },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       return result.data ?? [];
     } catch (error) {

@@ -80,10 +80,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   }, [value, allProjects, displayValue]);
 
   // 处理选择
-  const handleChange: SelectProps<string, ProjectOption>['onChange'] = (
-    selectedValue,
-    option
-  ) => {
+  const handleChange: SelectProps<string, ProjectOption>['onChange'] = (selectedValue, option) => {
     if (selectedValue == null) {
       setDisplayValue('');
       onChange?.('');
@@ -162,9 +159,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
           options={filteredProjects.map(project => {
             const nameLabel =
-              project.short_name != null
-                ? `${project.name} (${project.short_name})`
-                : project.name;
+              project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
             return {
               label: (
                 <Space>

@@ -3,10 +3,10 @@
 将系统字典数据迁移到枚举字段，并初始化资产相关的字典
 """
 
+import asyncio
 import os
 import sys
 import uuid
-import asyncio
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))

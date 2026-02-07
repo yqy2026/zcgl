@@ -95,11 +95,9 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 <div style={{ marginBottom: 8 }}>
                   <Space>
                     <UserOutlined style={{ color: '#8c8c8c' }} />
-                    {asset.ownership_entity != null ? (
-                      <Text type="secondary">
-                        权属方: {highlightSearchText(asset.ownership_entity)}
-                      </Text>
-                    ) : null}
+                    <Text type="secondary">
+                      权属方: {highlightSearchText(asset.ownership_entity ?? '')}
+                    </Text>
                     {asset.management_entity != null && (
                       <>
                         <Text type="secondary">|</Text>

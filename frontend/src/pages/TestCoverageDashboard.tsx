@@ -32,6 +32,7 @@ import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { testCoverageService } from '@/services/testCoverageService';
 
 // 类型定义
 interface CoverageMetrics {
@@ -104,64 +105,56 @@ interface QualityGateResult {
 
 // API服务函数
 const fetchCoverageReport = async (): Promise<CoverageReport> => {
-  const response = await fetch('/api/test-coverage/report');
-  if (!response.ok) {
+  const response = await testCoverageService.getCurrentCoverageReport();
+  if (!response.success || response.data == null) {
     throw new Error('获取覆盖率报告失败');
   }
-  return response.json();
+  return response.data;
 };
 
 const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> => {
-  const response = await fetch(`/api/test-coverage/trend?days=${days}`);
-  if (!response.ok) {
+  const response = await testCoverageService.getCoverageTrend(days);
+  if (!response.success || response.data == null) {
     throw new Error('获取覆盖率趋势失败');
   }
-  return response.json();
+  return response.data;
 };
 
 const fetchModuleCoverage = async (
   minCoverage: number = 0,
   maxCoverage: number = 100
 ): Promise<CoverageMetrics[]> => {
-  const response = await fetch(
-    `/api/test-coverage/modules?min_coverage=${minCoverage}&max_coverage=${maxCoverage}`
-  );
-  if (!response.ok) {
+  const response = await testCoverageService.getModuleCoverage(minCoverage, maxCoverage);
+  if (!response.success || response.data == null) {
     throw new Error('获取模块覆盖率失败');
   }
-  return response.json();
+  return response.data;
 };
 
 const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/test-coverage/thresholds');
-  if (!response.ok) {
+  const response = await testCoverageService.getCoverageThresholds();
+  if (!response.success || response.data == null) {
     throw new Error('获取覆盖率阈值失败');
   }
-  return response.json();
+  return response.data;
 };
 
 const updateCoverageThresholds = async (
   thresholds: CoverageThreshold
 ): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/test-coverage/thresholds', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(thresholds),
-  });
-  if (!response.ok) {
+  const response = await testCoverageService.updateCoverageThresholds(thresholds);
+  if (!response.success || response.data == null) {
     throw new Error('更新覆盖率阈值失败');
   }
-  return response.json();
+  return response.data;
 };
 
 const fetchQualityGate = async (): Promise<QualityGateResult> => {
-  const response = await fetch('/api/test-coverage/quality-gate');
-  if (!response.ok) {
+  const response = await testCoverageService.checkQualityGate();
+  if (!response.success || response.data == null) {
     throw new Error('获取质量门禁状态失败');
   }
-  return response.json();
+  return response.data;
 };
 
 // 主组件
@@ -304,10 +297,7 @@ const TestCoverageDashboard: React.FC = () => {
     },
   ];
 
-  const moduleCoverageItems = useMemo(
-    () => moduleCoverageSource ?? [],
-    [moduleCoverageSource]
-  );
+  const moduleCoverageItems = useMemo(() => moduleCoverageSource ?? [], [moduleCoverageSource]);
 
   const {
     data: moduleCoverageRows,
@@ -448,12 +438,14 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.total_coverage ?? 0}
               precision={1}
               suffix="%"
-              styles={{ content: {
-                color:
-                  (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75)
-                    ? COLORS.success
-                    : COLORS.error,
-              } }}
+              styles={{
+                content: {
+                  color:
+                    (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75)
+                      ? COLORS.success
+                      : COLORS.error,
+                },
+              }}
               prefix={
                 (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? (
                   <RiseOutlined />
@@ -476,12 +468,14 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.backend_coverage ?? 0}
               precision={1}
               suffix="%"
-              styles={{ content: {
-                color:
-                  (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80)
-                    ? COLORS.success
-                    : COLORS.error,
-              } }}
+              styles={{
+                content: {
+                  color:
+                    (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80)
+                      ? COLORS.success
+                      : COLORS.error,
+                },
+              }}
               prefix={
                 (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? (
                   <CheckCircleOutlined />
@@ -504,12 +498,15 @@ const TestCoverageDashboard: React.FC = () => {
               value={coverageReport?.frontend_coverage ?? 0}
               precision={1}
               suffix="%"
-              styles={{ content: {
-                color:
-                  (coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70)
-                    ? COLORS.success
-                    : COLORS.error,
-              } }}
+              styles={{
+                content: {
+                  color:
+                    (coverageReport?.frontend_coverage ?? 0) >=
+                    (thresholds?.frontend_threshold ?? 70)
+                      ? COLORS.success
+                      : COLORS.error,
+                },
+              }}
               prefix={
                 (coverageReport?.frontend_coverage ?? 0) >=
                 (thresholds?.frontend_threshold ?? 70) ? (

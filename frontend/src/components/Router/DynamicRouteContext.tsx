@@ -1,17 +1,6 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import DynamicRouteLoader from './DynamicRouteLoaderCore';
-import type {
-  DynamicRoute,
-  DynamicRouteConfig,
-  RouteLoaderContextType,
-} from './dynamicRouteTypes';
+import type { DynamicRoute, DynamicRouteConfig, RouteLoaderContextType } from './dynamicRouteTypes';
 
 const DynamicRouteContext = createContext<RouteLoaderContextType | null>(null);
 
@@ -121,9 +110,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
   );
 
   return (
-    <DynamicRouteContext.Provider value={contextValue}>
-      {children}
-    </DynamicRouteContext.Provider>
+    <DynamicRouteContext.Provider value={contextValue}>{children}</DynamicRouteContext.Provider>
   );
 };
 
@@ -144,10 +131,7 @@ export const usePermissionBasedRoutes = () => {
       const permissionRoutes: DynamicRoute[] = [];
 
       for (const permission of permissions) {
-        const matchedRoutes = getRoutesByPermission(
-          permission.resource,
-          permission.action
-        );
+        const matchedRoutes = getRoutesByPermission(permission.resource, permission.action);
         permissionRoutes.push(...matchedRoutes);
       }
 

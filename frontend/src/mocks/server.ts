@@ -10,7 +10,7 @@ import { allHandlers as statisticsHandlers } from '@/test/utils/handlers-statist
 
 // 合并所有 handlers
 export const handlers = [
-  ...statisticsHandlers,  // 新增：统计 API handlers (优先级高)
+  ...statisticsHandlers, // 新增：统计 API handlers (优先级高)
   ...oldHandlers,
   ...newHandlers,
 ];

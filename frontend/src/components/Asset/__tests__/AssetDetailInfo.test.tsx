@@ -95,26 +95,14 @@ vi.mock('antd', () => {
   DescriptionsItem.displayName = 'MockDescriptionsItem';
   Descriptions.Item = DescriptionsItem;
 
-  const Tag = ({
-    children,
-    color,
-  }: {
-    children: React.ReactNode;
-    color?: string;
-  }) => (
+  const Tag = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>
   );
   Tag.displayName = 'MockTag';
 
-  const Progress = ({
-    percent,
-    strokeColor,
-  }: {
-    percent: number;
-    strokeColor?: string;
-  }) => (
+  const Progress = ({ percent, strokeColor }: { percent: number; strokeColor?: string }) => (
     <div
       data-testid="progress"
       data-percent={percent}
@@ -124,13 +112,7 @@ vi.mock('antd', () => {
   );
   Progress.displayName = 'MockProgress';
 
-  const Row = ({
-    children,
-    gutter,
-  }: {
-    children: React.ReactNode;
-    gutter?: number;
-  }) => (
+  const Row = ({ children, gutter }: { children: React.ReactNode; gutter?: number }) => (
     <div data-testid="row" data-gutter={gutter}>
       {children}
     </div>

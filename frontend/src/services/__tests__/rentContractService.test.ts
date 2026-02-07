@@ -22,7 +22,7 @@ vi.mock('@/api/client', () => ({
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -489,9 +489,9 @@ describe('RentContractService', () => {
         error: '原合同未到期',
       });
 
-      await expect(
-        service.renewContract('1', { contract_number: 'HT-002' }, true)
-      ).rejects.toThrow('合同续签失败');
+      await expect(service.renewContract('1', { contract_number: 'HT-002' }, true)).rejects.toThrow(
+        '合同续签失败'
+      );
     });
   });
 
@@ -502,13 +502,7 @@ describe('RentContractService', () => {
         data: { id: '1', status: '已终止' },
       });
 
-      const result = await service.terminateContract(
-        '1',
-        '2026-06-30',
-        true,
-        0,
-        '双方协商终止'
-      );
+      const result = await service.terminateContract('1', '2026-06-30', true, 0, '双方协商终止');
 
       expect(result.status).toBe('已终止');
     });
@@ -565,11 +559,7 @@ describe('RentContractService', () => {
 
   describe('calculateTotalRentAmount', () => {
     it('should calculate total rent', () => {
-      const terms = [
-        { monthly_rent: 10000 },
-        { monthly_rent: 12000 },
-        { monthly_rent: 15000 },
-      ];
+      const terms = [{ monthly_rent: 10000 }, { monthly_rent: 12000 }, { monthly_rent: 15000 }];
 
       const result = service.calculateTotalRentAmount(terms as Array<{ monthly_rent: number }>);
 
@@ -585,11 +575,7 @@ describe('RentContractService', () => {
 
   describe('calculateAverageRent', () => {
     it('should calculate average rent', () => {
-      const terms = [
-        { monthly_rent: 10000 },
-        { monthly_rent: 12000 },
-        { monthly_rent: 14000 },
-      ];
+      const terms = [{ monthly_rent: 10000 }, { monthly_rent: 12000 }, { monthly_rent: 14000 }];
 
       const result = service.calculateAverageRent(terms as Array<{ monthly_rent: number }>);
 

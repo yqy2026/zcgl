@@ -100,10 +100,7 @@ export class LLMPromptService {
    */
   async activatePrompt(id: string): Promise<PromptTemplate> {
     try {
-      const response = await apiClient.post<PromptTemplate>(
-        `${API_BASE}/${id}/activate`,
-        {}
-      );
+      const response = await apiClient.post<PromptTemplate>(`${API_BASE}/${id}/activate`, {});
       const result = extractData(response, `激活 Prompt 失败: ${id}`);
       logger.info(`激活 Prompt 成功: ${result.name}`);
       return result;
@@ -118,10 +115,7 @@ export class LLMPromptService {
    */
   async rollbackPrompt(id: string, request: PromptRollbackRequest): Promise<PromptTemplate> {
     try {
-      const response = await apiClient.post<PromptTemplate>(
-        `${API_BASE}/${id}/rollback`,
-        request
-      );
+      const response = await apiClient.post<PromptTemplate>(`${API_BASE}/${id}/rollback`, request);
       const result = extractData(response, `回滚 Prompt 失败: ${id}`);
       logger.info(`回滚 Prompt 成功: ${result.name} -> v${result.version}`);
       return result;
@@ -149,9 +143,7 @@ export class LLMPromptService {
    */
   async getStatistics(): Promise<PromptStatistics> {
     try {
-      const response = await apiClient.get<PromptStatistics>(
-        `${API_BASE}/statistics/overview`
-      );
+      const response = await apiClient.get<PromptStatistics>(`${API_BASE}/statistics/overview`);
       return extractData(response, '获取统计概览失败: 响应数据为空');
     } catch (error) {
       logger.error('获取统计概览失败', error);
@@ -182,10 +174,7 @@ export class LLMPromptService {
   /**
    * 获取活跃的 Prompt (按文档类型和提供商)
    */
-  async getActivePrompt(
-    docType: DocType,
-    provider?: LLMProvider
-  ): Promise<PromptTemplate | null> {
+  async getActivePrompt(docType: DocType, provider?: LLMProvider): Promise<PromptTemplate | null> {
     try {
       const params: PromptQueryParams = {
         doc_type: docType,

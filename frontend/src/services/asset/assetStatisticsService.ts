@@ -70,15 +70,12 @@ export class AssetStatisticsService {
    */
   async getAssetDistributionStats(filters?: AssetSearchParams): Promise<AssetDistributionStats> {
     try {
-      const result = await apiClient.get<AssetDistributionStats>(
-        '/statistics/distribution',
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<AssetDistributionStats>('/statistics/distribution', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取资产分布统计失败: ${result.error}`);

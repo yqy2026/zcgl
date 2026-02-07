@@ -78,11 +78,7 @@ describe('OwnershipForm', () => {
   describe('渲染测试', () => {
     it('应该正确渲染表单', () => {
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       expect(screen.getByRole('form')).toBeInTheDocument();
@@ -90,11 +86,7 @@ describe('OwnershipForm', () => {
 
     it('应该渲染提交和取消按钮', () => {
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       expect(screen.getByRole('button', { name: /提交/i })).toBeInTheDocument();
@@ -105,11 +97,7 @@ describe('OwnershipForm', () => {
   describe('创建模式', () => {
     it('创建模式下表单应为空', () => {
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       expect(mockFormInstance.resetFields).toHaveBeenCalled();
@@ -125,11 +113,7 @@ describe('OwnershipForm', () => {
       );
 
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       const submitBtn = screen.getByRole('button', { name: /提交/i });
@@ -196,11 +180,7 @@ describe('OwnershipForm', () => {
       vi.mocked(ownershipService.validateOwnershipName).mockResolvedValue(true);
 
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       expect(ownershipService.validateOwnershipName).toBeDefined();
@@ -210,11 +190,7 @@ describe('OwnershipForm', () => {
   describe('取消操作', () => {
     it('点击取消应调用 onCancel', () => {
       renderWithProviders(
-        <OwnershipForm
-          initialValues={null}
-          onSuccess={mockOnSuccess}
-          onCancel={mockOnCancel}
-        />
+        <OwnershipForm initialValues={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
       );
 
       const cancelBtn = screen.getByRole('button', { name: /取消/i });

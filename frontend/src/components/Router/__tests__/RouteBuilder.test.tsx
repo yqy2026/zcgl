@@ -18,7 +18,15 @@ interface RouteMockProps {
 }
 
 vi.mock('../ProtectedRoute', () => ({
-  default: ({ path, title, permissions }: { path?: string; title?: string; permissions?: unknown }) => (
+  default: ({
+    path,
+    title,
+    permissions,
+  }: {
+    path?: string;
+    title?: string;
+    permissions?: unknown;
+  }) => (
     <div
       data-testid="protected-route"
       data-path={path}
@@ -31,7 +39,15 @@ vi.mock('../ProtectedRoute', () => ({
 }));
 
 vi.mock('../LazyRoute', () => ({
-  default: ({ path, preload, permissions }: { path?: string; preload?: () => void; permissions?: unknown }) => (
+  default: ({
+    path,
+    preload,
+    permissions,
+  }: {
+    path?: string;
+    preload?: () => void;
+    permissions?: unknown;
+  }) => (
     <div
       data-testid="lazy-route"
       data-path={path}
@@ -161,12 +177,7 @@ describe('RouteBuilder', () => {
     const TestComponent = () => <div>Protected</div>;
 
     renderWithProviders(
-      RouteBuilder.createProtectedRoute(
-        '/protected',
-        TestComponent,
-        'ASSET_VIEW',
-        '资产查看'
-      )
+      RouteBuilder.createProtectedRoute('/protected', TestComponent, 'ASSET_VIEW', '资产查看')
     );
 
     expect(screen.getByTestId('protected-route')).toHaveAttribute(

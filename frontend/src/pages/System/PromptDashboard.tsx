@@ -92,17 +92,12 @@ const PromptDashboard: React.FC = () => {
 
   const prompts: PromptTemplate[] = promptsQuery.data?.items ?? [];
   const statistics: PromptStatistics | null = statisticsQuery.data ?? null;
-  const isInitialLoading =
-    promptsQuery.isLoading === true || statisticsQuery.isLoading === true;
-  const isRefreshing =
-    promptsQuery.isFetching === true || statisticsQuery.isFetching === true;
-  const hasError =
-    promptsQuery.isError === true || statisticsQuery.isError === true;
+  const isInitialLoading = promptsQuery.isLoading === true || statisticsQuery.isLoading === true;
+  const isRefreshing = promptsQuery.isFetching === true || statisticsQuery.isFetching === true;
+  const hasError = promptsQuery.isError === true || statisticsQuery.isError === true;
   const errorMessage =
     (promptsQuery.error instanceof Error ? promptsQuery.error.message : null) ??
-    (statisticsQuery.error instanceof Error
-      ? statisticsQuery.error.message
-      : null);
+    (statisticsQuery.error instanceof Error ? statisticsQuery.error.message : null);
 
   const handleRefresh = () => {
     void Promise.all([promptsQuery.refetch(), statisticsQuery.refetch()]);
@@ -496,9 +491,12 @@ const PromptDashboard: React.FC = () => {
                 title="平均准确率"
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                styles={{ content: {
-                  color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
-                } }}
+                styles={{
+                  content: {
+                    color:
+                      statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
+                  },
+                }}
                 prefix={
                   accuracyTrend === 'up' ? (
                     <RiseOutlined />
@@ -515,9 +513,12 @@ const PromptDashboard: React.FC = () => {
                 title="平均置信度"
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                styles={{ content: {
-                  color: statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
-                } }}
+                styles={{
+                  content: {
+                    color:
+                      statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
+                  },
+                }}
                 prefix={
                   confidenceTrend === 'up' ? (
                     <RiseOutlined />
@@ -555,14 +556,16 @@ const PromptDashboard: React.FC = () => {
                     title="平均准确率"
                     value={(selectedPrompt.avg_accuracy * 100).toFixed(1)}
                     suffix="%"
-                    styles={{ content: {
-                      color:
-                        selectedPrompt.avg_accuracy >= 0.85
-                          ? COLORS.success
-                          : selectedPrompt.avg_accuracy >= 0.75
-                            ? COLORS.warning
-                            : COLORS.error,
-                    } }}
+                    styles={{
+                      content: {
+                        color:
+                          selectedPrompt.avg_accuracy >= 0.85
+                            ? COLORS.success
+                            : selectedPrompt.avg_accuracy >= 0.75
+                              ? COLORS.warning
+                              : COLORS.error,
+                      },
+                    }}
                   />
                 </Col>
                 <Col span={6}>
@@ -570,14 +573,16 @@ const PromptDashboard: React.FC = () => {
                     title="平均置信度"
                     value={(selectedPrompt.avg_confidence * 100).toFixed(1)}
                     suffix="%"
-                    styles={{ content: {
-                      color:
-                        selectedPrompt.avg_confidence >= 0.8
-                          ? COLORS.success
-                          : selectedPrompt.avg_confidence >= 0.7
-                            ? COLORS.warning
-                            : COLORS.error,
-                    } }}
+                    styles={{
+                      content: {
+                        color:
+                          selectedPrompt.avg_confidence >= 0.8
+                            ? COLORS.success
+                            : selectedPrompt.avg_confidence >= 0.7
+                              ? COLORS.warning
+                              : COLORS.error,
+                      },
+                    }}
                   />
                 </Col>
                 <Col span={6}>

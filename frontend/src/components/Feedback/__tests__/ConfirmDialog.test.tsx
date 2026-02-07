@@ -131,9 +131,7 @@ describe('ConfirmDialog - 内容渲染测试', () => {
 
   it('details应渲染在内容区域', async () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    renderWithProviders(
-      <ConfirmDialog type="save" visible={true} details={['更改1', '更改2']} />
-    );
+    renderWithProviders(<ConfirmDialog type="save" visible={true} details={['更改1', '更改2']} />);
 
     expect(screen.getByText('更改1')).toBeInTheDocument();
     expect(screen.getByText('更改2')).toBeInTheDocument();

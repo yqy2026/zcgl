@@ -70,7 +70,8 @@ describe('LoadingProvider - 基础功能测试', () => {
   });
 
   it('useLoading应该可以控制全局Loading显示', async () => {
-    const { LoadingProvider, GlobalLoadingOverlay, useLoading } = await import('../LoadingProvider');
+    const { LoadingProvider, GlobalLoadingOverlay, useLoading } =
+      await import('../LoadingProvider');
 
     const TestComponent = () => {
       const { showGlobalLoading, hideGlobalLoading } = useLoading();

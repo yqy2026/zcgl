@@ -168,7 +168,7 @@ export interface PaginatedResponse<T> {
 }
 
 // 任务状态类型
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';  // 对齐后端: running (非processing)
+export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'; // 对齐后端: running (非processing)
 
 // 导入/导出历史记录类型
 export interface ImportExportHistory {

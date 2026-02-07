@@ -156,10 +156,7 @@ describe('BackupService', () => {
 
       const result = await service.deleteBackup('backup_old.zip');
 
-      expect(apiClient.delete).toHaveBeenCalledWith(
-        '/backup/backup_old.zip',
-        expect.any(Object)
-      );
+      expect(apiClient.delete).toHaveBeenCalledWith('/backup/backup_old.zip', expect.any(Object));
       expect(result.deleted).toBe(true);
     });
   });

@@ -6,6 +6,7 @@
  */
 
 import { createApiUrl } from '@/api/config';
+import { isProductionMode } from '@/utils/runtimeEnv';
 
 interface ErrorContext {
   component?: string;
@@ -38,7 +39,7 @@ export function initErrorMonitoring(): void {
 
   // Initialize Sentry if DSN is configured
   const sentryDSN = import.meta.env.VITE_SENTRY_DSN;
-  if (sentryDSN != null && sentryDSN !== '' && process.env.NODE_ENV === 'production') {
+  if (sentryDSN != null && sentryDSN !== '' && isProductionMode()) {
     initSentry();
   } else {
     // eslint-disable-next-line no-console
@@ -156,7 +157,7 @@ export function captureException(error: Error, context: ErrorContext = {}): void
   };
 
   // Log to console in development
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProductionMode()) {
     // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring]', errorReport);
   }

@@ -4,9 +4,9 @@ V2 Data Migration Script
 Purpose: fix existing contracts by setting default V2 fields (contract_type, payment_cycle)
 """
 
+import asyncio
 import logging
 import sys
-import asyncio
 from pathlib import Path
 
 from sqlalchemy import text

@@ -6,13 +6,13 @@ Create Date: 2026-02-06 00:00:00.000000
 
 """
 
+import uuid
 from collections.abc import Sequence
 from datetime import datetime
-import uuid
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "20260206_remove_legacy_role_and_asset_ownership_entity"

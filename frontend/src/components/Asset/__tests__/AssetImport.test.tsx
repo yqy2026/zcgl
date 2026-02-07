@@ -51,17 +51,24 @@ interface TableMockProps {
   dataSource?: unknown[];
 }
 
-const { uploadDraggerMock, messageSuccessMock, messageErrorMock } = vi.hoisted(() => ({
+const {
+  uploadDraggerMock,
+  messageSuccessMock,
+  messageErrorMock,
+  importAssetsMock,
+  downloadTemplateMock,
+} = vi.hoisted(() => ({
   uploadDraggerMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageErrorMock: vi.fn(),
+  importAssetsMock: vi.fn(),
+  downloadTemplateMock: vi.fn(),
 }));
 
-// Mock apiClient before importing
-vi.mock('@/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
+vi.mock('@/services/assetImportService', () => ({
+  assetImportService: {
+    importAssets: (...args: unknown[]) => importAssetsMock(...args),
+    downloadTemplate: (...args: unknown[]) => downloadTemplateMock(...args),
   },
 }));
 
@@ -87,11 +94,7 @@ vi.mock('antd', async () => {
   };
 
   const mockSteps = vi.fn(({ current, items }: StepsMockProps) => (
-    <div
-      data-testid="steps"
-      data-current={current}
-      data-steps-count={items?.length ?? 0}
-    >
+    <div data-testid="steps" data-current={current} data-steps-count={items?.length ?? 0}>
       Step {current}
     </div>
   ));
@@ -159,9 +162,11 @@ vi.mock('antd', async () => {
     <select data-testid="select">{children}</select>
   ));
 
-  const mockSelectOption = vi.fn(({ children, value }: { children?: React.ReactNode; value?: number }) => (
-    <option value={value}>{children}</option>
-  ));
+  const mockSelectOption = vi.fn(
+    ({ children, value }: { children?: React.ReactNode; value?: number }) => (
+      <option value={value}>{children}</option>
+    )
+  );
 
   const mockStatistic = vi.fn(({ title, value }: StatisticMockProps) => (
     <div data-testid="statistic">
@@ -243,6 +248,8 @@ describe('AssetImport - 渲染与交互测试', () => {
     uploadDraggerMock.mockClear();
     messageSuccessMock.mockClear();
     messageErrorMock.mockClear();
+    importAssetsMock.mockClear();
+    downloadTemplateMock.mockClear();
 
     if (typeof URL !== 'undefined') {
       URL.createObjectURL = vi.fn(() => 'blob:mock');
@@ -256,7 +263,7 @@ describe('AssetImport - 渲染与交互测试', () => {
     expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
     expect(screen.getByText('下载Excel模板')).toBeInTheDocument();
     expect(screen.getByTestId('upload-dragger')).toBeInTheDocument();
-    expect(screen.getByText('导入说明')).toBeInTheDocument();
+    expect(screen.getByText('第一步：下载模板')).toBeInTheDocument();
   });
 
   it('上传无效类型文件应提示错误且不前进', () => {
@@ -287,16 +294,13 @@ describe('AssetImport - 渲染与交互测试', () => {
   });
 
   it('导入成功应显示结果摘要', async () => {
-    const { apiClient } = await import('@/api/client');
-    vi.mocked(apiClient.post).mockResolvedValue({
-      data: {
-        success: 2,
-        failed: 0,
-        total: 2,
-        errors: [],
-        message: 'ok',
-        processing_time: 5,
-      },
+    importAssetsMock.mockResolvedValue({
+      success: 2,
+      failed: 0,
+      total: 2,
+      errors: [],
+      message: 'ok',
+      processing_time: 5,
     });
 
     renderWithProviders(<AssetImport />);
@@ -317,19 +321,20 @@ describe('AssetImport - 渲染与交互测试', () => {
       expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '2');
     });
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      '/excel/import/optimized',
-      expect.any(FormData),
+    expect(importAssetsMock).toHaveBeenCalledWith(
+      expect.any(File),
       expect.objectContaining({
-        params: { sheet_name: '土地物业资产数据', skip_errors: true },
+        sheetName: '土地物业资产数据',
+        skipErrors: true,
+        useOptimized: true,
+        timeoutSeconds: 600,
       })
     );
     expect(screen.getByText(/导入成功/)).toBeInTheDocument();
   });
 
   it('导入失败应提示错误并显示失败摘要', async () => {
-    const { apiClient } = await import('@/api/client');
-    vi.mocked(apiClient.post).mockRejectedValue(new Error('Network error'));
+    importAssetsMock.mockRejectedValue(new Error('Network error'));
 
     renderWithProviders(<AssetImport />);
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;

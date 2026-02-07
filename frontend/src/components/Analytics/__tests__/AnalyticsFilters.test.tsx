@@ -24,7 +24,7 @@ vi.mock('@/hooks/useSearchHistory', () => ({
   })),
 }));
 
-vi.mock('@tanstack/react-query', async (importOriginal) => {
+vi.mock('@tanstack/react-query', async importOriginal => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
   return {
     ...actual,
@@ -95,10 +95,7 @@ vi.mock('../Filters', () => ({
       <button data-testid="toggle-advanced-btn" onClick={onToggleAdvanced}>
         Toggle Advanced
       </button>
-      <button
-        data-testid="change-filters-btn"
-        onClick={() => onFiltersChange({ test: 'value' })}
-      >
+      <button data-testid="change-filters-btn" onClick={() => onFiltersChange({ test: 'value' })}>
         Change Filters
       </button>
     </div>
@@ -171,7 +168,9 @@ describe('AnalyticsFilters - 渲染测试', () => {
 
   it('应该传递showAdvanced给Provider', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} showAdvanced={true} />);
+    renderWithProviders(
+      <AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} showAdvanced={true} />
+    );
 
     expect(screen.getByTestId('filters-provider')).toHaveAttribute('data-show-advanced', 'true');
   });
@@ -201,7 +200,9 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onApplyFilters', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleApply = vi.fn();
-    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onApplyFilters={handleApply} />);
+    renderWithProviders(
+      <AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onApplyFilters={handleApply} />
+    );
 
     fireEvent.click(screen.getByTestId('apply-btn'));
     expect(handleApply).toHaveBeenCalled();
@@ -210,7 +211,9 @@ describe('AnalyticsFilters - 回调函数测试', () => {
   it('应该调用onResetFilters', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
     const handleReset = vi.fn();
-    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onResetFilters={handleReset} />);
+    renderWithProviders(
+      <AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} onResetFilters={handleReset} />
+    );
 
     fireEvent.click(screen.getByTestId('reset-btn'));
     expect(handleReset).toHaveBeenCalled();
@@ -242,7 +245,9 @@ describe('AnalyticsFilters - 边界情况测试', () => {
 
   it('应该处理realTimeUpdate属性', async () => {
     const { AnalyticsFilters } = await import('../AnalyticsFilters');
-    renderWithProviders(<AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} realTimeUpdate={false} />);
+    renderWithProviders(
+      <AnalyticsFilters filters={{}} onFiltersChange={vi.fn()} realTimeUpdate={false} />
+    );
 
     expect(screen.getByTestId('filters-provider')).toBeInTheDocument();
   });

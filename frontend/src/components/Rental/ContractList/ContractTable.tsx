@@ -80,11 +80,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
         const assetList = record.assets ?? [];
         if (assetList.length === 0) return '未关联';
         if (assetList.length === 1) {
-          return (
-            <Tooltip title={assetList[0].address ?? ''}>
-              {assetList[0].property_name}
-            </Tooltip>
-          );
+          return <Tooltip title={assetList[0].address ?? ''}>{assetList[0].property_name}</Tooltip>;
         }
         return (
           <Tooltip title={assetList.map(a => a.property_name).join(', ')}>
@@ -142,18 +138,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
       render: (_: unknown, record: RentContract) => (
         <Space size="small">
           <Tooltip title="查看详情">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => onView(record)}
-            />
+            <Button type="text" icon={<EyeOutlined />} onClick={() => onView(record)} />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => onEdit(record)}
-            />
+            <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
           </Tooltip>
           <Tooltip title="生成台账">
             <Button
@@ -165,11 +153,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
           {record.contract_status === ContractStatus.ACTIVE && (
             <>
               <Tooltip title="续签">
-                <Button
-                  type="text"
-                  icon={<SyncOutlined />}
-                  onClick={() => onRenew(record)}
-                />
+                <Button type="text" icon={<SyncOutlined />} onClick={() => onRenew(record)} />
               </Tooltip>
               <Tooltip title="终止">
                 <Button

@@ -2,7 +2,6 @@
 Supplemental Task Service Integration Tests (Async)
 """
 
-from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import delete, select

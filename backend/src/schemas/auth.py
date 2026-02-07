@@ -4,7 +4,6 @@
 
 import re
 from datetime import datetime
-from typing import Any
 
 from pydantic import (
     BaseModel,
@@ -14,6 +13,7 @@ from pydantic import (
     field_validator,
 )
 from pydantic_core import PydanticCustomError
+
 
 # 用户相关模型
 class UserBase(BaseModel):

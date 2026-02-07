@@ -146,15 +146,12 @@ export class StatisticsService {
    * 获取权属方分布数�?   */
   async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await apiClient.get<ChartDataItem[]>(
-        '/statistics/ownership-distribution',
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ChartDataItem[]>('/statistics/ownership-distribution', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取权属方分布数据失败: ${result.error}`);
@@ -199,15 +196,12 @@ export class StatisticsService {
    * 获取使用状态分布数�?   */
   async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await apiClient.get<ChartDataItem[]>(
-        '/statistics/usage-status-distribution',
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ChartDataItem[]>('/statistics/usage-status-distribution', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取使用状态分布数据失败: ${result.error}`);
@@ -316,15 +310,12 @@ export class StatisticsService {
     filters?: Filters
   ): Promise<ComparisonData> {
     try {
-      const result = await apiClient.get<ComparisonData>(
-        `/statistics/comparison/${metric}`,
-        {
-          params: { compare_type: compareType, ...filters },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<ComparisonData>(`/statistics/comparison/${metric}`, {
+        params: { compare_type: compareType, ...filters },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取对比数据失败: ${result.error}`);
@@ -461,14 +452,15 @@ export class StatisticsService {
     filters?: Filters
   ): Promise<Array<{ name: string; value: number; rank: number }>> {
     try {
-      const result = await apiClient.get<
-        Array<{ name: string; value: number; rank: number }>
-      >(`/statistics/rankings/asset/${metric}`, {
-        params: { page_size: pageSize, ...filters },
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.get<Array<{ name: string; value: number; rank: number }>>(
+        `/statistics/rankings/asset/${metric}`,
+        {
+          params: { page_size: pageSize, ...filters },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         throw new Error(`获取资产排名失败: ${result.error}`);

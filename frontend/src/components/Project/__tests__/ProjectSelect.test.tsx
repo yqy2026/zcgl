@@ -16,9 +16,7 @@ vi.mock('@tanstack/react-query', () => ({
         id: '1',
         name: '项目1',
         code: 'PROJ-001',
-        children: [
-          { id: '1-1', name: '子项目1', code: 'PROJ-001-1', children: [] },
-        ],
+        children: [{ id: '1-1', name: '子项目1', code: 'PROJ-001-1', children: [] }],
       },
       { id: '2', name: '项目2', code: 'PROJ-002', children: [] },
     ],

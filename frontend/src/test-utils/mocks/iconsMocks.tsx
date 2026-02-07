@@ -12,7 +12,7 @@ interface IconProps {
 }
 
 const createMockIcon = (name: string): FC<IconProps> => {
-  const Icon: FC<IconProps> = (props) => (
+  const Icon: FC<IconProps> = props => (
     <span data-testid={`icon-${name.toLowerCase()}`} {...props} />
   );
   Icon.displayName = name;

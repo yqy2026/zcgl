@@ -29,6 +29,7 @@ import 'dayjs/locale/zh-cn';
 import type { ColumnsType } from 'antd/es/table';
 
 import { rentContractService } from '@/services/rentContractService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ChartErrorBoundary } from '@/components/Analytics';
@@ -89,40 +90,34 @@ const RentStatisticsPage: React.FC = () => {
   ]);
   const [selectedYear, setSelectedYear] = useState<number>(dayjs().year());
 
-  const startDateStr = useMemo(
-    () => dateRange[0].format('YYYY-MM-DD'),
-    [dateRange]
-  );
-  const endDateStr = useMemo(
-    () => dateRange[1].format('YYYY-MM-DD'),
-    [dateRange]
-  );
+  const startDateStr = useMemo(() => dateRange[0].format('YYYY-MM-DD'), [dateRange]);
+  const endDateStr = useMemo(() => dateRange[1].format('YYYY-MM-DD'), [dateRange]);
 
   const statisticsQuery = useQuery<RentStatisticsData, Error>({
-    queryKey: [
-      'rent-statistics',
-      { start: startDateStr, end: endDateStr, year: selectedYear },
-    ],
+    queryKey: RENTAL_QUERY_KEYS.rentStatistics({
+      start: startDateStr,
+      end: endDateStr,
+      year: selectedYear,
+    }),
     queryFn: async () => {
       try {
-        const [overview, ownershipData, assetData, monthlyData] =
-          await Promise.all([
-            rentContractService.getStatisticsOverview({
-              start_date: startDateStr,
-              end_date: endDateStr,
-            }),
-            rentContractService.getOwnershipStatistics({
-              start_date: startDateStr,
-              end_date: endDateStr,
-            }),
-            rentContractService.getAssetStatistics({
-              start_date: startDateStr,
-              end_date: endDateStr,
-            }),
-            rentContractService.getMonthlyStatistics({
-              year: selectedYear,
-            }),
-          ]);
+        const [overview, ownershipData, assetData, monthlyData] = await Promise.all([
+          rentContractService.getStatisticsOverview({
+            start_date: startDateStr,
+            end_date: endDateStr,
+          }),
+          rentContractService.getOwnershipStatistics({
+            start_date: startDateStr,
+            end_date: endDateStr,
+          }),
+          rentContractService.getAssetStatistics({
+            start_date: startDateStr,
+            end_date: endDateStr,
+          }),
+          rentContractService.getMonthlyStatistics({
+            year: selectedYear,
+          }),
+        ]);
 
         return {
           overview,
@@ -143,16 +138,13 @@ const RentStatisticsPage: React.FC = () => {
     }
   }, [statisticsQuery.isError]);
 
-  const overviewData: RentStatisticsOverview | null =
-    statisticsQuery.data?.overview ?? null;
-  const ownershipStats: OwnershipRentStatistics[] =
-    statisticsQuery.data?.ownershipData ?? [];
+  const overviewData: RentStatisticsOverview | null = statisticsQuery.data?.overview ?? null;
+  const ownershipStats: OwnershipRentStatistics[] = statisticsQuery.data?.ownershipData ?? [];
   const assetStats: AssetRentStatistics[] = useMemo(
     () => statisticsQuery.data?.assetData ?? [],
     [statisticsQuery.data?.assetData]
   );
-  const monthlyStats: MonthlyRentStatistics[] =
-    statisticsQuery.data?.monthlyData ?? [];
+  const monthlyStats: MonthlyRentStatistics[] = statisticsQuery.data?.monthlyData ?? [];
   const isStatisticsLoading = statisticsQuery.isLoading || statisticsQuery.isFetching;
 
   const {
@@ -363,8 +355,7 @@ const RentStatisticsPage: React.FC = () => {
       content: (datum: { type?: string; percent?: number }) => {
         const name = typeof datum.type === 'string' ? datum.type : '';
         const percentValue = typeof datum.percent === 'number' ? datum.percent : undefined;
-        const percentText =
-          percentValue !== undefined ? `${(percentValue * 100).toFixed(1)}%` : '';
+        const percentText = percentValue !== undefined ? `${(percentValue * 100).toFixed(1)}%` : '';
         return percentText !== '' ? `${name} ${percentText}` : name;
       },
     },
@@ -615,10 +606,12 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  styles={{ content: {
-                    color:
-                      Number(overviewData.total_overdue || 0) > 0 ? COLORS.error : COLORS.success,
-                  } }}
+                  styles={{
+                    content: {
+                      color:
+                        Number(overviewData.total_overdue || 0) > 0 ? COLORS.error : COLORS.success,
+                    },
+                  }}
                 />
               </Card>
             </Col>
@@ -630,12 +623,14 @@ const RentStatisticsPage: React.FC = () => {
                   precision={1}
                   prefix={<RiseOutlined />}
                   suffix="%"
-                  styles={{ content: {
-                    color:
-                      Number(overviewData.payment_rate || 0) >= 90
-                        ? COLORS.success
-                        : COLORS.warning,
-                  } }}
+                  styles={{
+                    content: {
+                      color:
+                        Number(overviewData.payment_rate || 0) >= 90
+                          ? COLORS.success
+                          : COLORS.warning,
+                    },
+                  }}
                 />
               </Card>
             </Col>

@@ -234,7 +234,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
           return (
             <div style={{ padding: '8px' }}>
               <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                {(datum.full_name as string | undefined) ?? (datum.ownership as string)}
+                {datum.full_name ?? (datum.ownership as string)}
               </div>
               <div>出租率: {(datum.rate as number).toFixed(2)}%</div>
               <div>资产数量: {datum.asset_count as number} 个</div>
@@ -308,14 +308,16 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
               precision={2}
               suffix="%"
               prefix={<PercentageOutlined />}
-              styles={{ content: {
-                color:
-                  (data?.overall_rate ?? 0) >= 80
-                    ? '#52c41a'
-                    : (data?.overall_rate ?? 0) >= 60
-                      ? '#faad14'
-                      : '#ff4d4f',
-              } }}
+              styles={{
+                content: {
+                  color:
+                    (data?.overall_rate ?? 0) >= 80
+                      ? '#52c41a'
+                      : (data?.overall_rate ?? 0) >= 60
+                        ? '#faad14'
+                        : '#ff4d4f',
+                },
+              }}
             />
           </Card>
         </Col>

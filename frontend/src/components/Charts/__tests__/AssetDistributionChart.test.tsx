@@ -29,24 +29,14 @@ vi.mock('@ant-design/plots', () => ({
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({
-    children,
-    title,
-  }: {
-    children?: React.ReactNode;
-    title?: React.ReactNode;
-  }) => (
+  Card: ({ children, title }: { children?: React.ReactNode; title?: React.ReactNode }) => (
     <div data-testid="card">
       {title && <div data-testid="card-title">{title}</div>}
       {children}
     </div>
   ),
-  Row: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="row">{children}</div>
-  ),
-  Col: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="col">{children}</div>
-  ),
+  Row: ({ children }: { children?: React.ReactNode }) => <div data-testid="row">{children}</div>,
+  Col: ({ children }: { children?: React.ReactNode }) => <div data-testid="col">{children}</div>,
   Statistic: ({
     title,
     value,
@@ -62,13 +52,7 @@ vi.mock('antd', () => ({
       {suffix && <span data-testid="statistic-suffix">{suffix}</span>}
     </div>
   ),
-  Spin: ({
-    children,
-    spinning,
-  }: {
-    children?: React.ReactNode;
-    spinning?: boolean;
-  }) => (
+  Spin: ({ children, spinning }: { children?: React.ReactNode; spinning?: boolean }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {children}
     </div>
@@ -98,13 +82,7 @@ vi.mock('antd', () => ({
   Space: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="space">{children}</div>
   ),
-  Tag: ({
-    children,
-    color,
-  }: {
-    children?: React.ReactNode;
-    color?: string;
-  }) => (
+  Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>

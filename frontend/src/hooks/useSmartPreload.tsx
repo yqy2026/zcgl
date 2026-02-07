@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { ComponentType } from 'react';
 import { useLocation } from 'react-router-dom';
 import { createLogger } from '@/utils/logger';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 const preloadLogger = createLogger('SmartPreload');
 
@@ -354,7 +355,7 @@ export const usePreloadDirective = (routes: string[]) => {
 export const usePreloadDebug = () => {
   const { getStats, clearCache } = useSmartPreload();
 
-  if (process.env.NODE_ENV === 'development') {
+  if (isDevelopmentMode()) {
     // 暴露到全局对象用于调试
     if (typeof window !== 'undefined') {
       window.__PRELOAD_DEBUG__ = {

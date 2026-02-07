@@ -3,6 +3,8 @@
  * 统一管理版本号、兼容性标志和功能开关
  */
 
+import { getRuntimeMode } from '@/utils/runtimeEnv';
+
 export const VERSION_CONFIG = {
   // 应用版本
   APP_VERSION: '1.0.0',
@@ -134,7 +136,7 @@ export const isVersionCompatible = (
 
 // 获取当前环境
 export const getCurrentEnvironment = (): string => {
-  return process.env.NODE_ENV ?? VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT;
+  return getRuntimeMode();
 };
 
 // 检查是否为开发环境

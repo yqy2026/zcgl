@@ -19,12 +19,9 @@ from ..core.search_index import (
     build_asset_id_subquery,
     build_search_index_entries,
 )
-from ..models.asset import Asset
-from ..models.asset_history import AssetHistory
+from ..models.asset import Asset, AssetHistory, Project, ProjectOwnershipRelation
 from ..models.asset_search_index import AssetSearchIndex
 from ..models.ownership import Ownership
-from ..models.project import Project
-from ..models.project_relations import ProjectOwnershipRelation
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
 

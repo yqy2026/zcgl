@@ -19,9 +19,7 @@ vi.mock('@/services/assetService', () => ({
 // Mock AssetDetailInfo component
 vi.mock('@/components/Asset/AssetDetailInfo', () => ({
   default: ({ asset }: { asset: { property_name: string } }) => (
-    <div data-testid="asset-detail-info">
-      Asset Info: {asset.property_name}
-    </div>
+    <div data-testid="asset-detail-info">Asset Info: {asset.property_name}</div>
   ),
 }));
 
@@ -129,9 +127,7 @@ describe('AssetDetailPage', () => {
 
   describe('错误处理', () => {
     it('显示错误信息', async () => {
-      vi.mocked(assetService.getAsset).mockRejectedValue(
-        new Error('网络错误：无法连接到服务器')
-      );
+      vi.mocked(assetService.getAsset).mockRejectedValue(new Error('网络错误：无法连接到服务器'));
 
       renderWithProviders('asset_error');
 

@@ -30,11 +30,15 @@ export class AssetCoreService {
    */
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
     try {
+      const { page_size, pageSize, ...restParams } = params ?? {};
+      const legacyPageSize = typeof pageSize === 'number' ? pageSize : undefined;
+      const normalizedPageSize = page_size ?? legacyPageSize ?? 20;
+
       const result = await apiClient.get<AssetListResponse>(ASSET_API.LIST, {
         params: {
-          ...params,
+          ...restParams,
           page: params?.page ?? 1,
-          page_size: params?.page_size ?? 20,
+          page_size: normalizedPageSize,
         },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -89,10 +93,7 @@ export class AssetCoreService {
   /**
    * 根据ID列表获取资产
    */
-  async getAssetsByIds(
-    ids: string[],
-    options?: { includeRelations?: boolean }
-  ): Promise<Asset[]> {
+  async getAssetsByIds(ids: string[], options?: { includeRelations?: boolean }): Promise<Asset[]> {
     try {
       const params = options?.includeRelations ? { include_relations: true } : undefined;
       const result = await apiClient.post<Asset[]>(
@@ -208,10 +209,14 @@ export class AssetCoreService {
    */
   async restoreAsset(id: string): Promise<Asset> {
     try {
-      const result = await apiClient.post<Asset>(ASSET_API.RESTORE(id), {}, {
-        retry: false,
-        smartExtract: true,
-      });
+      const result = await apiClient.post<Asset>(
+        ASSET_API.RESTORE(id),
+        {},
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         throw new Error(`恢复资产失败: ${result.error}`);
@@ -275,9 +280,10 @@ export class AssetCoreService {
    * 搜索资产
    */
   async searchAssets(query: string, filters?: AssetSearchFilters): Promise<AssetListResponse> {
+    const normalizedFilters = (filters ?? {}) as Partial<AssetSearchParams>;
     return this.getAssets({
       search: query,
-      ...filters,
+      ...normalizedFilters,
     });
   }
 

@@ -4,6 +4,8 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { abTestingReportService } from '@/services/abTestingReportService';
+import { isProductionMode } from '@/utils/runtimeEnv';
 
 interface ABTestVariant {
   id: string;
@@ -240,39 +242,28 @@ class ABTestManager {
     // A/B Test Event
 
     // 这里可以发送到分析服务
-    if (process.env.NODE_ENV === 'production') {
-      // 实际项目中发送到分析服务
-      fetch('/api/analytics/abtest-events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    if (isProductionMode()) {
+      abTestingReportService
+        .reportEvent({
           eventType,
           data,
           timestamp: new Date().toISOString(),
-        }),
-      }).catch(error => {
-        // eslint-disable-next-line no-console
-        console.warn('A/B Test event reporting failed:', error);
-      });
+        })
+        .catch(error => {
+          // eslint-disable-next-line no-console
+          console.warn('A/B Test event reporting failed:', error);
+        });
     }
   }
 
   private async reportConversion(testId: string, metric: string, value?: unknown) {
     try {
-      await fetch('/api/analytics/abtest-conversions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          testId,
-          metric,
-          value,
-          userId: this.userId,
-          timestamp: new Date().toISOString(),
-        }),
+      await abTestingReportService.reportConversion({
+        testId,
+        metric,
+        value,
+        userId: this.userId ?? 'anonymous',
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       // eslint-disable-next-line no-console

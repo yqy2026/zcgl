@@ -94,9 +94,7 @@ const EnumFieldPage: React.FC = () => {
 
   const handleValuesError = useCallback((error: unknown) => {
     const apiError = error as ApiError;
-    MessageManager.error(
-      apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败'
-    );
+    MessageManager.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败');
   }, []);
 
   const {

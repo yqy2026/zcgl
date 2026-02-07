@@ -64,12 +64,7 @@ const AssetExportProgress: React.FC<AssetExportProgressProps> = ({ exportTask, o
         )}
 
         {exportTask.status === 'failed' && (
-          <Alert
-            title="导出失败"
-            description={exportTask.error_message}
-            type="error"
-            showIcon
-          />
+          <Alert title="导出失败" description={exportTask.errorMessage} type="error" showIcon />
         )}
       </div>
     </div>

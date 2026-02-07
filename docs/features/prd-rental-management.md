@@ -26,5 +26,5 @@
 - 统计指标可用
 
 ## 参考
-- `backend/src/api/v1/rent_contract/`
+- `backend/src/api/v1/rent_contracts/`
 - [数据库设计](../database-design.md)

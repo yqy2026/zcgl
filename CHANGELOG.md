@@ -257,6 +257,25 @@
 
 #### Fixed / 修复
 
+- 前端 ESLint 启用 `@typescript-eslint/no-explicit-any`（生产代码设为 error，测试文件通过 overrides 保持放行），强化类型安全基线
+- 新增 `@typescript-eslint/no-unnecessary-type-assertion`（测试文件关闭）并自动清理一批冗余 `as` 断言，降低类型断言滥用风险
+- 明确前端 API 分层边界：新增 `assetImportService` 并让 `AssetImport` 仅通过服务层调接口，新增 ESLint 限制组件/页面/Hook/Context 直接导入 `@/api/client`，避免 HTTP 层与业务层职责混用
+- 继续收敛 UI 网络调用边界：`TestCoverageDashboard` 改为复用 `testCoverageService`，`AnalyticsDashboard` 导出改由 `analyticsService` 统一封装，`ErrorBoundary`/`RouteABTesting` 上报请求迁移到独立 service；并新增 ESLint 限制 UI 层直接调用全局 `fetch`
+- `testCoverageService` 全量从原生 `fetch` 迁移到 `apiClient`，统一 `ExtractResult` 解包与错误处理语义；新增 `testCoverageService` 单元测试覆盖报告、趋势、模块、阈值与质量门禁等关键接口
+- 继续统一前端上报链路：`errorReportService` 与 `abTestingReportService` 改为 `apiClient` 调用（去除硬编码 `/api/*` 与原生 `fetch`）；补充对应单元测试，并在 MSW 中新增 `/errors/report`、`/analytics/abtest-events`、`/analytics/abtest-conversions` handler，消除 ErrorBoundary 测试中的未匹配请求告警
+- 前端环境判断收敛：新增 `utils/runtimeEnv`，并将 `ErrorBoundary`、`RouteABTesting`、`AnalyticsDashboard` 的 `process.env.NODE_ENV` 判定统一为运行时 helper（优先兼容 Vite `import.meta.env`，保留测试场景下的 `NODE_ENV` 覆盖能力）
+- 修复 `AnalyticsDashboard` 组件测试的历史失稳项：统一 `useAnalytics` 与子组件 mock 路径为 `@/` 别名、`api/config` 改为部分 mock 保留 `API_BASE_URL` 导出、并将导出菜单断言改为 hover 打开下拉后校验文案，恢复测试文件可稳定执行
+- 继续清理前端环境判定遗留：`api/client`、`errorHandler`、`colorMap`、`optimization`、`errorMonitoring`、`RoutePerformanceMonitor`、`messageManager`、`responseExtractor`、`versionConfig`、`userExperience`、`useSmartPreload`、`apiPathTest` 全部改为 `runtimeEnv` helper，移除业务代码中的 `process.env.NODE_ENV` 直接判断
+- 测试环境一致性补充：`ErrorBoundary` 单测改为 mock `runtimeEnv` 控制开发/生产分支，不再直接读写 `process.env.NODE_ENV`，减少测试对 Node 进程全局状态的耦合
+- Node 侧环境变量读取规范化：`vite.config.ts`、`playwright.config.ts`、`tests/e2e/asset-flow.spec.ts` 与 `scripts/diagnose/*` 新增统一读取 helper（字符串/布尔/数值），避免业务逻辑散落直接访问 `process.env.*`；当前 `frontend/` 仅保留 `runtimeEnv` 与 Vite `define` 的 `process.env.NODE_ENV` 注入点
+- 修复前端类型检查阻断项：`AssetSearchResult` 对 `ownership_entity` 增加空值兜底；`tsconfig.json` 排除 `src/e2e/**` 与 `*.spec.ts(x)`，避免应用构建类型检查依赖 Playwright 测试类型
+- 新增前端 E2E 独立类型检查链路：增加 `tsconfig.e2e.json`、`type-check:e2e` 脚本与 `types/playwright-test.d.ts` 声明；同时修复 `analyticsService` 与 `ContractListPage` 的严格类型报错，并补齐 `src/e2e/auth.spec.ts` 回调参数类型
+- 修复 `useContractList` Hook 单测的 `react/display-name` lint 阻断：QueryClient 包装组件补充显式 `displayName`
+- 清理前端剩余 3 条 `no-unnecessary-type-assertion` 警告：移除 `useContractList` 与 `AssetListPage` 中冗余 `as Error` 断言
+- `Makefile` 的 `type-check` 目标改为串行执行 `pnpm type-check && pnpm type-check:e2e`，并新增 `type-check-e2e` 目标；`make check` 随之默认覆盖前端 E2E 类型检查
+- 前端 `package.json` 的 `check`/`audit:ui`/`audit:full` 脚本统一纳入 `type-check:e2e`，确保本地与 CI 流程默认覆盖 E2E 类型检查
+- 继续清理 `no-unnecessary-type-assertion`：移除 `UserManagementPage` 与 `RentLedgerPage` 中冗余 `as Error` 断言，减少无效类型收窄噪音
+- 执行前端全量 Prettier 规范化并修复 175 处格式漂移，`pnpm check` 现已通过（lint + app type-check + e2e type-check + format:check）
 - 开发启动脚本限制 Uvicorn reload 监听目录为 `backend/src`，并支持 `RELOAD` 环境变量关闭重载，避免非源码变更触发重启
 - 修复 RBAC 初始化脚本可重复执行并补齐 `property_certificate` 权限，遇到遗留 `users.role` 约束时跳过测试用户创建以保证初始化可完成
 - 修复 RBAC 初始化脚本动态权限示例的 `assigned_by` 外键错误，避免插入失败并保持幂等
@@ -266,6 +285,33 @@
 - CORS 允许 `Authorization` 请求头，修复携带登录令牌的预检请求被拒绝
 - 本地开发环境补齐 `backend/.env` 基础配置（development 模式 + PostgreSQL 连接信息）
 - Makefile 后端命令默认使用 `backend/.venv` 的 Python，避免调用系统 Python 导致依赖缺失
+- 修复前端资产查询分页参数漂移：`assetCoreService.getAssets` 兼容 legacy `pageSize` 并统一映射为 `page_size`；同步修正项目详情、权属方详情、合同列表、租金台账中的资产查询调用，避免分页参数被忽略导致结果默认截断
+- 统一前端认证状态单一来源：`hooks/useAuth` 改为 `AuthContext` 兼容代理，并在 `AuthContext` 补齐 `permissions`、`refreshUser`、权限判断与清错能力，消除 Context 与本地 Hook 双状态并存风险
+- 前端状态管理收敛（P2）：资产列表页移除 `useListData + useEffect` 命令式加载，改为 React Query 单轨查询（分页/排序/筛选驱动 queryKey）；租赁合同列表 Hook 同步迁移到 React Query 单轨（列表/统计/参考数据），并更新对应单测适配 QueryClientProvider
+- 前端状态管理收敛（P2 扩展）：租金台账页移除 `useListData`，列表/统计/参考数据统一改为 React Query 单轨查询，并统一支付更新与批量更新后的刷新逻辑（`refetchLedgers + refetchStatistics`）
+- 前端状态管理收敛（P2 延伸）：用户管理页移除 `useListData` 与手动 `load*` 副作用，用户列表/组织/角色/统计统一改为 React Query 单轨查询；增删改与锁定/启停操作统一走 `refetchUsers + refetchStatistics` 刷新链路，减少状态漂移
+- 前端状态管理收敛（P2 延伸）：角色管理页移除 `useListData` 与手动 `load*` 副作用，角色列表/权限/统计统一改为 React Query 单轨查询；增删改、状态切换与权限保存统一走 `refetchRoles + refetchStatistics` 刷新链路，降低多源状态不一致风险
+- 前端状态管理收敛（P2 延伸）：操作日志页移除 `useListData`，日志列表查询统一改为 React Query（筛选/分页驱动 queryKey），并将刷新与分页入口收敛到 `refetchLogs + paginationState`，减少命令式加载分支
+- 前端状态管理收敛（P2 延伸）：组织管理页移除 `useListData`，组织列表/树形结构/统计统一改为 React Query 查询；列表分页与刷新统一收敛到本地 `paginationState` + `refetchOrganizations/refetchOrganizationTree/refetchStatistics`
+- 前端状态管理收敛（P2 延伸）：通知中心页移除 `useListData`，通知列表改为 React Query 查询并由分页/类型筛选驱动 `queryKey`；已读/全部已读/删除后的刷新统一走 `refetchNotifications`
+- 前端状态管理收敛（P2 延伸）：Prompt 管理页移除 `useListData`，Prompt 列表与统计改为 React Query 查询；激活、新建/编辑成功后的刷新统一收敛到 `refetchPrompts + refetchStatistics`
+- 修复 `NotificationCenter` 分页回调中的未使用参数 lint 告警，避免 `@typescript-eslint/no-unused-vars` 阻断
+- 前端状态管理收敛（P2 组件层）：`OwnershipList` 移除 `useListData`，权属方列表与统计改为 React Query 查询；删除/状态切换/表单提交后统一走 `refetchOwnerships + refetchStatistics`
+- 前端状态管理收敛（P2 组件层）：`AssetHistory` 移除 `useListData`，历史列表改为 React Query（按资产/分页/筛选驱动 queryKey），刷新与分页切换统一收敛到 `refetchHistory + paginationState`
+- 前端状态管理收敛（P2 组件层）：`ProjectList` 移除 `useListData`，项目列表与权属方下拉改为 React Query 查询；删除/状态切换/表单提交后统一走 `refetchProjects`
+- 组件单测对齐 React Query：`OwnershipList.test.tsx`、`AssetHistory.test.tsx`、`ProjectList.test.tsx` 移除 `useListData` 依赖并改为按 `queryKey` mock `useQuery` 返回数据/刷新函数，修复迁移后的断言失配
+- 列表 Hook 依赖继续收敛：`useArrayListData` 内部改为独立分页/筛选/加载状态管理并保留原有 `loadList`/`applyFilters`/`resetFilters`/`updatePagination` 契约，移除对 `useListData` 的耦合以降低迁移链路风险
+- `AssetListPage` 单测同步对齐 React Query：移除遗留 `useListData` mock，改为基于 `queryKey` 的 `useQuery` mock，并修复测试渲染 helper 递归调用导致的栈溢出（`Maximum call stack size exceeded`）
+- 前端 legacy 列表 Hook 正式下线：删除已无引用的 `useListData` 与 `useFilters`，并同步更新 `ProjectList` 测试头注释为 React Query 版本，避免后续误导与死代码回流
+- 统一租赁合同 API 模块命名：`backend/src/api/v1/rent_contract/` 重命名为 `backend/src/api/v1/rent_contracts/`，并同步更新路由聚合导入、单元/集成测试 patch 路径与相关文档引用，消除单复数命名不一致
+- 命名一致性补充清理：更新 `scripts/test_file_naming.py` 中后端 API 示例路径至当前目录结构（含 `rent_contracts`），修正自定义字段 API 单测注释中的历史路径与接口前缀，并同步更新历史测试重构计划文档中的租赁合同 API 路径引用，避免后续审计误判
+- 规范自定义字段类型列表路由：新增标准路径 `/api/v1/asset-custom-fields/types`，并保留旧路径 `/types/list[Any]` 作为隐藏兼容入口，避免历史调用中断
+- 统一租赁合同路由前缀命名：将前端测试 Mock 与后端集成测试中的遗留 `/rent-contracts`、`/api/v1/rent/*` 引用收敛到当前标准 `/rental-contracts/*` 路径，避免测试与真实 API 前缀漂移
+- 修复租赁合同缓存键失配：将合同创建/续签页中无效的 `invalidateQueries(['rent-contracts'])` 改为实际使用的 `['rent-contract-list']` 与 `['rent-contract-statistics']`，确保列表与统计数据能正确刷新
+- 抽取租赁模块 React Query 键常量：新增 `frontend/src/constants/queryKeys/rental.ts`，并将合同列表/详情/续签/创建/统计页与相关失效调用统一改为 `RENTAL_QUERY_KEYS`，降低 key 拼写漂移与局部失效风险
+- 继续统一租赁台账 React Query 键：`RentLedgerPage` 的列表/统计/参考数据查询改为 `RENTAL_QUERY_KEYS` 常量，减少页面内字面量 key 并保持租赁模块缓存策略一致
+- 统一租赁台账刷新策略：`RentLedgerPage` 将手动 `refetch` 改为基于 `queryClient.invalidateQueries` + `RENTAL_QUERY_KEYS` 的失效刷新，统一与其他租赁页面的缓存更新模式
+- 增加 `queryKeys` 统一导出入口：新增 `frontend/src/constants/queryKeys/index.ts` 并将租赁相关页面/Hook 导入切换为 `@/constants/queryKeys`，简化后续扩展与重构成本
 
 #### Removed / 删除
 

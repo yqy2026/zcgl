@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginCredentials } from '@/types/auth';
+import { User, LoginCredentials, Permission } from '@/types/auth';
 import { AuthService } from '@/services/authService';
 import { AuthStorage } from '@/utils/AuthStorage';
 import { createLogger } from '@/utils/logger';
@@ -9,9 +9,14 @@ const logger = createLogger('AuthContext');
 
 interface AuthContextType {
   user: User | null;
+  permissions: Permission[];
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  hasPermission: (resource: string, action: string) => boolean;
+  hasAnyPermission: (permissions: Array<{ resource: string; action: string }>) => boolean;
+  clearError: () => void;
   loading: boolean;
   error: string | null;
 }
@@ -64,6 +69,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           AuthStorage.clearAuthData();
           if (isMounted) {
             setUser(null);
+            setError('登录状态已失效，请重新登录');
           }
         } else {
           logger.debug('登录会话校验通过');
@@ -135,15 +141,63 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      if (AuthService.isAuthenticated()) {
+        const currentUser = await AuthService.getCurrentUser();
+        setUser(currentUser);
+        setError(null);
+      }
+    } catch (refreshError) {
+      logger.error(
+        '刷新用户信息失败',
+        refreshError instanceof Error ? refreshError : new Error(String(refreshError))
+      );
+      try {
+        await AuthService.refreshToken();
+        const currentUser = await AuthService.getCurrentUser();
+        setUser(currentUser);
+        setError(null);
+      } catch (tokenRefreshError) {
+        logger.error(
+          '刷新令牌失败，清理本地认证信息',
+          tokenRefreshError instanceof Error
+            ? tokenRefreshError
+            : new Error(String(tokenRefreshError))
+        );
+        AuthStorage.clearAuthData();
+        setUser(null);
+        setError('登录状态已失效，请重新登录');
+      }
+    }
+  };
+
+  const hasPermission = (resource: string, action: string): boolean => {
+    return AuthService.hasPermission(resource, action);
+  };
+
+  const hasAnyPermission = (permissions: Array<{ resource: string; action: string }>): boolean => {
+    return AuthService.hasAnyPermission(permissions);
+  };
+
+  const clearError = () => {
+    setError(null);
+  };
+
   // Token自动刷新机制 - Now handled by httpOnly cookies and API client interceptor
   // The API client automatically handles 401 errors and refreshes tokens via cookies
   // No need for manual token refresh logic here
 
   const value: AuthContextType = {
     user,
+    permissions: AuthService.getLocalPermissions() as Permission[],
     isAuthenticated: !!user,
     login,
     logout,
+    refreshUser,
+    hasPermission,
+    hasAnyPermission,
+    clearError,
     loading,
     error,
   };

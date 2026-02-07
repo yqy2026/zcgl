@@ -51,11 +51,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  */
 export const renderWithProviders = (
   ui: ReactElement,
-  {
-    queryClient = createTestQueryClient(),
-    route = '/',
-    ...renderOptions
-  }: CustomRenderOptions = {}
+  { queryClient = createTestQueryClient(), route = '/', ...renderOptions }: CustomRenderOptions = {}
 ) => {
   // 设置路由
   window.history.pushState({}, 'Test page', route);
@@ -149,14 +145,14 @@ export const generateMockOrganizations = (count: number = 10) => {
  * 等待加载完成
  */
 export const waitForLoadingToFinish = () => {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise(resolve => setTimeout(resolve, 0));
 };
 
 /**
  * 等待指定时间（毫秒）
  */
 export const wait = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 };
 
 // =============================================================================

@@ -118,11 +118,7 @@ const renderMenuItems = (menu?: DropdownMenuMockProps) => {
     }
     const key = String(item.key ?? index);
     return (
-      <button
-        key={key}
-        data-testid={`menu-item-${key}`}
-        onClick={() => menu.onClick?.({ key })}
-      >
+      <button key={key} data-testid={`menu-item-${key}`} onClick={() => menu.onClick?.({ key })}>
         {item.label}
       </button>
     );

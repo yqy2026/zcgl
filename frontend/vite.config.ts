@@ -4,8 +4,15 @@ import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
 import compression from 'vite-plugin-compression';
 
+const readNodeEnv = (name: string): string | undefined => {
+  const rawValue = process.env[name];
+  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : undefined;
+};
+
+const hasNodeEnv = (name: string): boolean => readNodeEnv(name) != null;
+
 // https://vitejs.dev/config/
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command: _command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const isProduction = mode === 'production';
   const isDevelopment = mode === 'development';
@@ -33,7 +40,7 @@ export default defineConfig(({ command, mode }) => {
       }),
 
       // 包分析报告（可选）
-      process.env.ANALYZE &&
+      hasNodeEnv('ANALYZE') &&
       visualizer({
         filename: 'dist/stats.html',
         open: true,

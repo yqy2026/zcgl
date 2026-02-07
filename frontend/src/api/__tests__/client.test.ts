@@ -438,9 +438,7 @@ describe('ApiClient', () => {
       expect(postSpy).toHaveBeenCalledTimes(1);
       expect(postSpy).toHaveBeenCalledWith('/auth/refresh');
       expect(mockClearAuthData).toHaveBeenCalledTimes(1);
-      expect(window.location.href).toBe(
-        `/login?redirect=${encodeURIComponent('/assets')}`
-      );
+      expect(window.location.href).toBe(`/login?redirect=${encodeURIComponent('/assets')}`);
     });
   });
 });

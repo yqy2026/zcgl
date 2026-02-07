@@ -142,7 +142,7 @@ describe('useAuth Hook', () => {
   describe('logout', () => {
     it('应该处理登出', async () => {
       vi.mocked(AuthService.logout).mockResolvedValue(undefined);
-      
+
       // Setup initial state
       vi.mocked(AuthService.isAuthenticated).mockReturnValue(true);
       vi.mocked(AuthService.getLocalUser).mockReturnValue(mockUser);

@@ -160,9 +160,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
         onExport={handleExport}
         onShowHistory={() => setHistoryVisible(true)}
       >
-        {exportTask && (
-          <AssetExportProgress exportTask={exportTask} onDownload={handleDownload} />
-        )}
+        {exportTask && <AssetExportProgress exportTask={exportTask} onDownload={handleDownload} />}
       </AssetExportForm>
 
       <AssetExportHistoryModal

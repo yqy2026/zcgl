@@ -35,30 +35,16 @@ export const SearchActionButtons = React.memo(function SearchActionButtons({
   return (
     <Space>
       {showSaveButton && (
-        <Button
-          type="default"
-          icon={<SaveOutlined />}
-          onClick={onSave}
-          disabled={loading}
-        >
+        <Button type="default" icon={<SaveOutlined />} onClick={onSave} disabled={loading}>
           保存条件
         </Button>
       )}
       {showHistoryButton && (
-        <Button
-          type="default"
-          icon={<HistoryOutlined />}
-          onClick={onShowHistory}
-        >
+        <Button type="default" icon={<HistoryOutlined />} onClick={onShowHistory}>
           搜索历史
         </Button>
       )}
-      <Button
-        type="primary"
-        icon={<SearchOutlined />}
-        onClick={onSearch}
-        loading={loading}
-      >
+      <Button type="primary" icon={<SearchOutlined />} onClick={onSearch} loading={loading}>
         搜索
       </Button>
       <Button icon={<ReloadOutlined />} onClick={onReset} disabled={loading}>

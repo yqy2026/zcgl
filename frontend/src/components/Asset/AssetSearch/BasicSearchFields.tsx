@@ -18,11 +18,7 @@ export const BasicSearchFields = React.memo(function BasicSearchFields({
     <>
       <Col xs={24} sm={12} md={8} lg={6}>
         <Form.Item name="search" label="关键词搜索">
-          <Input
-            placeholder="输入物业名称、地址等关键词"
-            prefix={<SearchOutlined />}
-            allowClear
-          />
+          <Input placeholder="输入物业名称、地址等关键词" prefix={<SearchOutlined />} allowClear />
         </Form.Item>
       </Col>
 

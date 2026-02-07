@@ -30,7 +30,7 @@ from .documents.pdf_import import router as pdf_import_router
 from .llm_prompts import router as llm_prompts_router
 
 # 导入各个模块的路由 - Rent Contract
-from .rent_contract import router as rent_contract_router
+from .rent_contracts import router as rent_contract_router
 
 # 导入各个模块的路由 - System
 from .system.backup import router as backup_router

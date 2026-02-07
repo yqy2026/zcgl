@@ -31,8 +31,8 @@ describe('usePermission', () => {
       },
       permissions: [
         { resource: 'assets', action: 'read' },
-        { resource: 'users', action: 'write' }
-      ]
+        { resource: 'users', action: 'write' },
+      ],
     };
 
     AuthStorage.setAuthData(mockAuthData);
@@ -48,9 +48,9 @@ describe('usePermission', () => {
       isAdmin: false,
       permissions: [
         { resource: 'assets', action: 'read' },
-        { resource: 'users', action: 'write' }
+        { resource: 'users', action: 'write' },
       ],
-      organizationId: undefined
+      organizationId: undefined,
     });
     expect(result.current.loading).toBe(false);
   });
@@ -74,9 +74,7 @@ describe('usePermission', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       },
-      permissions: [
-        { resource: 'assets', action: 'read' }
-      ]
+      permissions: [{ resource: 'assets', action: 'read' }],
     };
 
     AuthStorage.setAuthData(mockAuthData);
@@ -101,7 +99,7 @@ describe('usePermission', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       },
-      permissions: []
+      permissions: [],
     };
 
     AuthStorage.setAuthData(mockAuthData);
@@ -151,9 +149,7 @@ describe('usePermission', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       },
-      permissions: [
-        { resource: 'assets', action: 'read' }
-      ]
+      permissions: [{ resource: 'assets', action: 'read' }],
     };
 
     AuthStorage.setAuthData(mockAuthData);
@@ -178,7 +174,7 @@ describe('usePermission', () => {
         updated_at: '2024-01-01T00:00:00Z',
         default_organization_id: 'org-123',
       },
-      permissions: []
+      permissions: [],
     };
 
     AuthStorage.setAuthData(mockAuthData);

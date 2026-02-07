@@ -315,11 +315,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           description: '文件名修复过程中发生错误',
           status: 'error',
           content: (
-            <Alert
-              type="error"
-              title="文件名修复失败"
-              description="请检查文件名格式或手动重命名"
-            />
+            <Alert type="error" title="文件名修复失败" description="请检查文件名格式或手动重命名" />
           ),
         },
       ]);

@@ -212,7 +212,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
     await renderRoleManagementPage();
 
     await user.click(screen.getByText('新建角色'));
-    
+
     // Check for form field in the modal
     expect(await screen.findByLabelText('角色名称')).toBeInTheDocument();
   });

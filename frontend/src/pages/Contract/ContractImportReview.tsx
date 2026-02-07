@@ -95,7 +95,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   const fieldSources = result.extraction_result.field_sources ?? undefined;
 
   const hasExtractedValue = (fieldKey: string): boolean => {
-    const value = (result.extraction_result.data as Record<string, unknown>)[fieldKey];
+    const value = result.extraction_result.data[fieldKey];
     if (value == null) {
       return false;
     }
@@ -112,7 +112,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     if (fieldEvidence == null) {
       return null;
     }
-    const rawEvidence = (fieldEvidence as Record<string, unknown>)[fieldKey];
+    const rawEvidence = fieldEvidence[fieldKey];
     if (rawEvidence == null || Array.isArray(rawEvidence) || typeof rawEvidence !== 'object') {
       return null;
     }
@@ -137,7 +137,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   const renderEvidenceTag = (fieldKey: string) => {
     const evidence = getEvidenceSnippet(fieldKey);
     const evidenceSource = evidence?.source;
-    const mappedSource = fieldSources != null ? (fieldSources as Record<string, unknown>)[fieldKey] : undefined;
+    const mappedSource = fieldSources != null ? fieldSources[fieldKey] : undefined;
     const sourceKey =
       typeof evidenceSource === 'string' && evidenceSource.trim() !== ''
         ? evidenceSource
@@ -324,10 +324,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           </Form.Item>
         </Col>
         <Col span={12}>
-          <Form.Item
-            label={renderFieldLabel('合同状态', 'contract_status')}
-            name="contract_status"
-          >
+          <Form.Item label={renderFieldLabel('合同状态', 'contract_status')} name="contract_status">
             <Select placeholder="请选择合同状态">
               {Object.values(ContractStatus).map(status => (
                 <Select.Option key={status} value={status}>
@@ -346,10 +343,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item
-            label={renderFieldLabel('签订日期', 'sign_date')}
-            name="sign_date"
-          >
+          <Form.Item label={renderFieldLabel('签订日期', 'sign_date')} name="sign_date">
             <DatePicker style={{ width: '100%' }} placeholder="请选择签订日期" />
           </Form.Item>
         </Col>
@@ -375,10 +369,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item
-            label={renderFieldLabel('租赁面积(㎡)', 'rentable_area')}
-            name="rentable_area"
-          >
+          <Form.Item label={renderFieldLabel('租赁面积(㎡)', 'rentable_area')} name="rentable_area">
             <InputNumber
               style={{ width: '100%' }}
               placeholder="请输入租赁面积"
@@ -404,10 +395,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label={renderFieldLabel('押金(元)', 'total_deposit')}
-            name="total_deposit"
-          >
+          <Form.Item label={renderFieldLabel('押金(元)', 'total_deposit')} name="total_deposit">
             <InputNumber
               style={{ width: '100%' }}
               placeholder="请输入押金金额"
@@ -547,17 +535,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   // 高级字段表单
   const AdvancedForm = () => (
     <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
-      <Form.Item
-        label={renderFieldLabel('支付条款', 'payment_terms')}
-        name="payment_terms"
-      >
+      <Form.Item label={renderFieldLabel('支付条款', 'payment_terms')} name="payment_terms">
         <TextArea rows={3} placeholder="请输入支付条款" />
       </Form.Item>
 
-      <Form.Item
-        label={renderFieldLabel('合同备注', 'contract_notes')}
-        name="contract_notes"
-      >
+      <Form.Item label={renderFieldLabel('合同备注', 'contract_notes')} name="contract_notes">
         <TextArea rows={3} placeholder="请输入合同备注" />
       </Form.Item>
     </Form>
@@ -574,7 +556,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               value={result.summary.extraction_confidence}
               precision={2}
               suffix="%"
-              styles={{ content: { color: getConfidenceColor(result.summary.extraction_confidence) } }}
+              styles={{
+                content: { color: getConfidenceColor(result.summary.extraction_confidence) },
+              }}
             />
           </Col>
           <Col span={6}>

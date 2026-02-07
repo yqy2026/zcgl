@@ -122,14 +122,14 @@ def main():
         (
             "测试5: Backend API 文件",
             [
-                "backend/src/api/v1/assets.py",
-                "backend/src/api/v1/auth.py",
-                "backend/src/api/v1/rent_contract.py",
-                "backend/src/api/v1/organization.py",
-                "backend/src/api/v1/ownership.py",
-                "backend/src/api/v1/project.py",
-                "backend/src/api/v1/excel.py",
-                "backend/src/api/v1/monitoring.py",
+                "backend/src/api/v1/assets/assets.py",
+                "backend/src/api/v1/auth/auth.py",
+                "backend/src/api/v1/rent_contracts/contracts.py",
+                "backend/src/api/v1/auth/organization.py",
+                "backend/src/api/v1/assets/ownership.py",
+                "backend/src/api/v1/assets/project.py",
+                "backend/src/api/v1/documents/excel.py",
+                "backend/src/api/v1/system/monitoring.py",
             ],
             True
         ),
@@ -186,7 +186,7 @@ def main():
             "测试10: 混合 Frontend 和 Backend 文件",
             [
                 "frontend/src/hooks/useAuth.ts",
-                "backend/src/api/v1/auth.py",
+                "backend/src/api/v1/auth/auth.py",
                 "frontend/src/components/Auth/AuthGuard.tsx",
                 "backend/src/crud/auth.py",
                 "frontend/src/utils/format.ts",

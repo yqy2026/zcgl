@@ -1,5 +1,5 @@
 .PHONY: help dev dev-backend dev-frontend \
-	lint lint-backend lint-frontend type-check \
+	lint lint-backend lint-frontend type-check type-check-e2e \
 	test test-backend test-frontend \
 	build-frontend backend-import check \
 	backend-org-cov secrets migrate
@@ -15,7 +15,8 @@ help:
 	@echo "  dev-frontend      Run frontend dev server"
 	@echo "  lint-backend      Run Ruff for backend"
 	@echo "  lint-frontend     Run ESLint for frontend"
-	@echo "  type-check        Run TypeScript type check"
+	@echo "  type-check        Run frontend TypeScript checks (app + e2e)"
+	@echo "  type-check-e2e    Run frontend E2E TypeScript check"
 	@echo "  test-backend      Run backend unit tests"
 	@echo "  test-frontend     Run frontend tests"
 	@echo "  build-frontend    Build frontend"
@@ -43,7 +44,10 @@ lint-frontend:
 	cd frontend && pnpm lint
 
 type-check:
-	cd frontend && pnpm type-check
+	cd frontend && pnpm type-check && pnpm type-check:e2e
+
+type-check-e2e:
+	cd frontend && pnpm type-check:e2e
 
 test: test-backend test-frontend
 

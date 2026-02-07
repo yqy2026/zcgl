@@ -36,7 +36,7 @@ const PerformanceMonitor: React.FC = () => {
   const [isMonitoring, setIsMonitoring] = useState(false);
 
   const collectWebVitals = useCallback(() => {
-    const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0] as PerformanceEntry;
+    const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0];
     if (fcpEntry != null) {
       setMetrics(prev => ({ ...prev, fcp: fcpEntry.startTime }));
     }
@@ -44,7 +44,7 @@ const PerformanceMonitor: React.FC = () => {
     if ('PerformanceObserver' in window) {
       const lcpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as PerformanceEntry;
+        const lastEntry = entries[entries.length - 1];
         setMetrics(prev => ({ ...prev, lcp: lastEntry.startTime }));
       });
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
@@ -88,8 +88,8 @@ const PerformanceMonitor: React.FC = () => {
     jsHeapSizeLimit: number;
   }
 
-type NavigatorWithConnection = Navigator & { connection?: NetworkConnection };
-type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
+  type NavigatorWithConnection = Navigator & { connection?: NetworkConnection };
+  type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
 
   const collectNetworkInfo = useCallback(() => {
     if ('connection' in navigator) {
@@ -253,7 +253,9 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="FCP"
                   value={metrics.fcp ? metrics.fcp.toFixed(0) : '-'}
                   suffix="ms"
-                  styles={{ content: { color: getPerformanceScore(metrics.fcp || 0, [1800, 3000]).color } }}
+                  styles={{
+                    content: { color: getPerformanceScore(metrics.fcp || 0, [1800, 3000]).color },
+                  }}
                 />
               </Col>
               <Col span={6}>
@@ -261,7 +263,9 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="LCP"
                   value={metrics.lcp ? metrics.lcp.toFixed(0) : '-'}
                   suffix="ms"
-                  styles={{ content: { color: getPerformanceScore(metrics.lcp || 0, [2500, 4000]).color } }}
+                  styles={{
+                    content: { color: getPerformanceScore(metrics.lcp || 0, [2500, 4000]).color },
+                  }}
                 />
               </Col>
               <Col span={6}>
@@ -269,14 +273,18 @@ type PerformanceWithMemory = Performance & { memory?: MemoryInfo };
                   title="FID"
                   value={metrics.fid ? metrics.fid.toFixed(0) : '-'}
                   suffix="ms"
-                  styles={{ content: { color: getPerformanceScore(metrics.fid || 0, [100, 300]).color } }}
+                  styles={{
+                    content: { color: getPerformanceScore(metrics.fid || 0, [100, 300]).color },
+                  }}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
                   title="CLS"
                   value={metrics.cls ? metrics.cls.toFixed(3) : '-'}
-                  styles={{ content: { color: getPerformanceScore(metrics.cls || 0, [0.1, 0.25]).color } }}
+                  styles={{
+                    content: { color: getPerformanceScore(metrics.cls || 0, [0.1, 0.25]).color },
+                  }}
                 />
               </Col>
             </Row>

@@ -312,9 +312,7 @@ export class DictionaryService {
         performanceMetrics: {
           averageResponseTime: responseTime,
           cacheHitRate:
-            cacheStats.status === 'fulfilled'
-              ? (cacheStats.value.cacheHitRate ?? 0)
-              : 0,
+            cacheStats.status === 'fulfilled' ? (cacheStats.value.cacheHitRate ?? 0) : 0,
           errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0,
         },
       };

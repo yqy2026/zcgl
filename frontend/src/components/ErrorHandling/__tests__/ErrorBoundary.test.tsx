@@ -14,6 +14,16 @@ import {
   useErrorHandler,
 } from '../ErrorBoundary';
 
+const runtimeEnvState = vi.hoisted(() => ({
+  isDevelopment: true,
+  isProduction: false,
+}));
+
+vi.mock('@/utils/runtimeEnv', () => ({
+  isDevelopmentMode: () => runtimeEnvState.isDevelopment,
+  isProductionMode: () => runtimeEnvState.isProduction,
+}));
+
 // =============================================================================
 // 测试组件 - 用于触发错误
 // =============================================================================
@@ -399,16 +409,16 @@ describe('ErrorBoundary - 边界情况', () => {
 // =============================================================================
 
 describe('ErrorBoundary - 开发模式功能', () => {
-  const originalEnv = process.env.NODE_ENV;
-
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    runtimeEnvState.isDevelopment = true;
+    runtimeEnvState.isProduction = false;
   });
 
   it('开发模式应该显示错误详情', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    process.env.NODE_ENV = 'development';
+    runtimeEnvState.isDevelopment = true;
+    runtimeEnvState.isProduction = false;
 
     render(
       <ErrorBoundary showErrorDetails={true}>
@@ -425,7 +435,8 @@ describe('ErrorBoundary - 开发模式功能', () => {
   it('生产模式不应该显示错误详情', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    process.env.NODE_ENV = 'production';
+    runtimeEnvState.isDevelopment = false;
+    runtimeEnvState.isProduction = true;
 
     render(
       <ErrorBoundary showErrorDetails={false}>

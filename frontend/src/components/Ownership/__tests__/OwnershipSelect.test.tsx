@@ -146,13 +146,9 @@ vi.mock('antd', () => {
       )}
     </div>
   );
-  const Option = ({
-    children,
-    value,
-  }: {
-    children?: React.ReactNode;
-    value?: string;
-  }) => <option value={value}>{children}</option>;
+  const Option = ({ children, value }: { children?: React.ReactNode; value?: string }) => (
+    <option value={value}>{children}</option>
+  );
   Option.displayName = 'MockSelectOption';
 
   Select.displayName = 'MockSelect';

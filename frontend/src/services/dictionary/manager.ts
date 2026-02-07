@@ -284,9 +284,7 @@ class DictionaryManagerService {
     return Date.now() - this.enumTypeCacheAt < this.enumTypeCacheTtlMs;
   }
 
-  private async resolveEnumTypeInfo(
-    typeIdOrCode: string
-  ): Promise<{ id: string; code?: string }> {
+  private async resolveEnumTypeInfo(typeIdOrCode: string): Promise<{ id: string; code?: string }> {
     if (typeIdOrCode === '') {
       return { id: typeIdOrCode };
     }
@@ -543,14 +541,10 @@ class DictionaryManagerService {
         }
       }
 
-      const result = await apiClient.put<EnumFieldType>(
-        `${this.baseUrl}/types/${typeId}`,
-        data,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.put<EnumFieldType>(`${this.baseUrl}/types/${typeId}`, data, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (result.success === false) {
         throw new Error(`更新枚举类型失败: ${result.error}`);

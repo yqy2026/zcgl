@@ -126,14 +126,11 @@ class RentContractService {
    */
   async getContract(id: string): Promise<RentContract> {
     try {
-      const result = await apiClient.get<RentContract>(
-        API_ENDPOINTS.RENT_CONTRACT.DETAIL(id),
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<RentContract>(API_ENDPOINTS.RENT_CONTRACT.DETAIL(id), {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取合同详情失败: ${result.error}`);
@@ -151,19 +148,15 @@ class RentContractService {
    */
   async createContract(data: RentContractCreate): Promise<RentContract> {
     try {
-      const result = await apiClient.post<RentContract>(
-        API_ENDPOINTS.RENT_CONTRACT.CREATE,
-        data,
-        {
-          retry: {
-            maxAttempts: 3,
-            delay: 1000,
-            backoffMultiplier: 2,
-            retryCondition: shouldRetryOnServerError,
-          },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.post<RentContract>(API_ENDPOINTS.RENT_CONTRACT.CREATE, data, {
+        retry: {
+          maxAttempts: 3,
+          delay: 1000,
+          backoffMultiplier: 2,
+          retryCondition: shouldRetryOnServerError,
+        },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`创建租金合同失败: ${result.error}`);
@@ -537,14 +530,11 @@ class RentContractService {
    */
   async exportStatistics(params?: RentStatisticsQuery): Promise<Blob> {
     try {
-      const result = await apiClient.get<Blob>(
-        API_ENDPOINTS.RENT_CONTRACT.STATISTICS_EXPORT,
-        {
-          params,
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        }
-      );
+      const result = await apiClient.get<Blob>(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_EXPORT, {
+        params,
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出统计数据失败: ${result.error}`);
@@ -562,14 +552,11 @@ class RentContractService {
    */
   async exportContractsToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     try {
-      const result = await apiClient.get<Blob>(
-        API_ENDPOINTS.RENT_CONTRACT.CONTRACTS_EXPORT,
-        {
-          params: filters,
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        }
-      );
+      const result = await apiClient.get<Blob>(API_ENDPOINTS.RENT_CONTRACT.CONTRACTS_EXPORT, {
+        params: filters,
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出合同Excel失败: ${result.error}`);

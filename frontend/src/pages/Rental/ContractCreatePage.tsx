@@ -23,6 +23,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RentContractForm } from '@/components/Forms';
 import { RentContractCreate, RentContractUpdate } from '@/types/rentContract';
 import { rentContractService } from '@/services/rentContractService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -45,7 +46,7 @@ const ContractCreatePage: React.FC = () => {
 
   // 获取合同详情（编辑模式）
   const { data: contract, isLoading: isLoadingContract } = useQuery({
-    queryKey: ['rent-contract', id],
+    queryKey: RENTAL_QUERY_KEYS.contract(id),
     queryFn: () => rentContractService.getContract(id!),
     enabled: isEdit,
   });
@@ -64,7 +65,7 @@ const ContractCreatePage: React.FC = () => {
       }, 3000);
     },
     onError: error => {
-      pageLogger.error('创建合同失败:', error as Error);
+      pageLogger.error('创建合同失败:', error);
       const errorMessage =
         error instanceof Error && error.message.trim() !== ''
           ? error.message
@@ -80,8 +81,9 @@ const ContractCreatePage: React.FC = () => {
       MessageManager.success('合同更新成功！');
 
       // 使相关查询缓存失效
-      void queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
-      void queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractRoot });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractListRoot });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractStatistics });
 
       // 跳转到详情页
       setTimeout(() => {
@@ -89,7 +91,7 @@ const ContractCreatePage: React.FC = () => {
       }, 1000);
     },
     onError: error => {
-      pageLogger.error('更新合同失败:', error as Error);
+      pageLogger.error('更新合同失败:', error);
       MessageManager.error('更新合同失败，请检查网络连接');
     },
   });

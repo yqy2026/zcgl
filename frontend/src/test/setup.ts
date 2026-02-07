@@ -41,8 +41,9 @@ vi.stubGlobal('import.meta', {
   },
 });
 
-(globalThis as typeof globalThis & { renderWithProviders: typeof renderWithProviders }).renderWithProviders =
-  renderWithProviders;
+(
+  globalThis as typeof globalThis & { renderWithProviders: typeof renderWithProviders }
+).renderWithProviders = renderWithProviders;
 
 // =============================================================================
 // 浏览器API Mock

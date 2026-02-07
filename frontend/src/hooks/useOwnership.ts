@@ -85,7 +85,7 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
   });
 
   return {
-    ownership: (data ?? null) as Ownership | null,
+    ownership: data ?? null,
     loading: isLoading,
     error: error?.message ?? null,
     refresh: refetch,

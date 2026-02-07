@@ -81,7 +81,10 @@ test.describe('Authentication Flow', () => {
     await page.goto('/system/users');
 
     // Should show access denied or redirect
-    const isAccessDenied = await page.locator('.access-denied').isVisible().catch(() => false);
+    const isAccessDenied = await page
+      .locator('.access-denied')
+      .isVisible()
+      .catch(() => false);
     const isRedirected = page.url().includes('/dashboard') || page.url().includes('/403');
 
     expect(isAccessDenied || isRedirected).toBeTruthy();
@@ -171,9 +174,11 @@ test.describe('Authentication Flow', () => {
 
     // Make multiple rapid requests to trigger rate limiting
     // Note: This might not trigger in all environments depending on rate limit settings
-    const healthUrl = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}health` : `${API_BASE_URL}/health`;
+    const healthUrl = API_BASE_URL.endsWith('/')
+      ? `${API_BASE_URL}health`
+      : `${API_BASE_URL}/health`;
     for (let i = 0; i < 70; i++) {
-      await page.evaluate(async url => {
+      await page.evaluate(async (url: string) => {
         await fetch(url);
       }, healthUrl);
     }

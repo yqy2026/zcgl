@@ -1,7 +1,11 @@
 import React from 'react';
 import { Card, Row, Col, Statistic } from 'antd';
 
-import { getStatusColor, type ApplicationMetrics, type SystemMetrics } from './systemMonitoringTypes';
+import {
+  getStatusColor,
+  type ApplicationMetrics,
+  type SystemMetrics,
+} from './systemMonitoringTypes';
 
 interface SystemMonitoringDetailsProps {
   system?: SystemMetrics;
@@ -62,9 +66,13 @@ const SystemMonitoringDetails: React.FC<SystemMonitoringDetailsProps> = ({
                 value={application?.error_rate ?? 0}
                 suffix="%"
                 precision={2}
-                styles={{ content: {
-                  color: getStatusColor((application?.error_rate ?? 0) > 5 ? 'critical' : 'normal'),
-                } }}
+                styles={{
+                  content: {
+                    color: getStatusColor(
+                      (application?.error_rate ?? 0) > 5 ? 'critical' : 'normal'
+                    ),
+                  },
+                }}
               />
             </Col>
             <Col span={12}>

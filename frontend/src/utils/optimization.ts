@@ -1,6 +1,7 @@
 // 前端性能优化工具
 
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 // 防抖Hook
 export const useDebounce = <T extends (...args: unknown[]) => unknown>(
@@ -136,7 +137,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
       });
 
       // 在开发环境下记录组件生命周期
-      if (process.env.NODE_ENV === 'development') {
+      if (isDevelopmentMode()) {
         // Component unmounted
 
         if (timersRef.current.size > 0) {
@@ -189,7 +190,7 @@ export const useRenderPerformance = (componentName: string) => {
     if (lastRenderTimeRef.current != null) {
       const renderTime = now - lastRenderTimeRef.current;
 
-      if (process.env.NODE_ENV === 'development' && renderTime > 16) {
+      if (isDevelopmentMode() && renderTime > 16) {
         // eslint-disable-next-line no-console
         console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`);
       }
@@ -200,7 +201,7 @@ export const useRenderPerformance = (componentName: string) => {
 
   useEffect(() => {
     return () => {
-      if (process.env.NODE_ENV === 'development') {
+      if (isDevelopmentMode()) {
         // Component rendered
       }
     };

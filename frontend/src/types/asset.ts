@@ -147,7 +147,7 @@ export enum DataStatus {
   NORMAL = '正常',
   DELETED = '已删除',
   ARCHIVED = '已归档',
-  ABNORMAL = '异常',  // 对齐后端
+  ABNORMAL = '异常', // 对齐后端
 }
 
 export enum AuditStatus {
@@ -162,8 +162,8 @@ export enum ContractStatus {
   TERMINATED = '已终止',
   PENDING = '待生效',
   SUSPENDED = '暂停',
-  DRAFT = '草稿',  // 对齐后端
-  PENDING_RENEWAL = '待续签',  // 对齐后端
+  DRAFT = '草稿', // 对齐后端
+  PENDING_RENEWAL = '待续签', // 对齐后端
 }
 
 export enum BusinessCategory {

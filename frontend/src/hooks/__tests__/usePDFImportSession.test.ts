@@ -93,9 +93,7 @@ describe('usePDFImportSession', () => {
     });
 
     it('应该处理加载失败', async () => {
-      vi.mocked(pdfImportService.getActiveSessions).mockRejectedValue(
-        new Error('Network error')
-      );
+      vi.mocked(pdfImportService.getActiveSessions).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => usePDFImportSession());
 
@@ -207,10 +205,7 @@ describe('usePDFImportSession', () => {
         await result.current.handleConfirmImport(confirmedData);
       });
 
-      expect(pdfImportService.confirmImport).toHaveBeenCalledWith(
-        'session-123',
-        confirmedData
-      );
+      expect(pdfImportService.confirmImport).toHaveBeenCalledWith('session-123', confirmedData);
     });
 
     it('应该处理导入失败', async () => {

@@ -1,7 +1,11 @@
 import React from 'react';
 import { Card, Row, Col, Statistic, Progress } from 'antd';
 
-import { getStatusColor, type ApplicationMetrics, type SystemMetrics } from './systemMonitoringTypes';
+import {
+  getStatusColor,
+  type ApplicationMetrics,
+  type SystemMetrics,
+} from './systemMonitoringTypes';
 
 interface SystemMonitoringOverviewProps {
   system?: SystemMetrics;
@@ -25,9 +29,11 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="CPU使用率"
             value={cpuPercent}
             suffix="%"
-            styles={{ content: {
-              color: getStatusColor(cpuPercent > 80 ? 'critical' : 'normal'),
-            } }}
+            styles={{
+              content: {
+                color: getStatusColor(cpuPercent > 80 ? 'critical' : 'normal'),
+              },
+            }}
           />
           <Progress
             percent={cpuPercent}
@@ -42,9 +48,11 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="内存使用率"
             value={memoryPercent}
             suffix="%"
-            styles={{ content: {
-              color: getStatusColor(memoryPercent > 85 ? 'critical' : 'normal'),
-            } }}
+            styles={{
+              content: {
+                color: getStatusColor(memoryPercent > 85 ? 'critical' : 'normal'),
+              },
+            }}
           />
           <Progress
             percent={memoryPercent}
@@ -59,9 +67,11 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
             title="磁盘使用率"
             value={diskPercent}
             suffix="%"
-            styles={{ content: {
-              color: getStatusColor(diskPercent > 90 ? 'critical' : 'normal'),
-            } }}
+            styles={{
+              content: {
+                color: getStatusColor(diskPercent > 90 ? 'critical' : 'normal'),
+              },
+            }}
           />
           <Progress
             percent={diskPercent}
@@ -72,7 +82,11 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
       </Col>
       <Col span={6}>
         <Card size="small">
-          <Statistic title="活跃连接" value={activeConnections} styles={{ content: { color: '#1890ff' } }} />
+          <Statistic
+            title="活跃连接"
+            value={activeConnections}
+            styles={{ content: { color: '#1890ff' } }}
+          />
         </Card>
       </Col>
     </Row>

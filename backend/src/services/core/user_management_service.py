@@ -4,10 +4,10 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...crud.rbac import role_crud
 from ...exceptions import BusinessLogicError
 from ...models.auth import User
 from ...schemas.auth import UserCreate, UserUpdate
-from ...crud.rbac import role_crud
 from ...schemas.rbac import UserRoleAssignmentCreate
 from ..permission.rbac_service import RBACService
 from .password_service import PasswordService

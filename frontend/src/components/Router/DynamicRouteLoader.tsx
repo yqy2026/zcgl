@@ -6,6 +6,10 @@ export type {
   RouteLoaderContextType,
   RouteMetrics,
 } from './dynamicRouteTypes';
-export { DynamicRouteProvider, useDynamicRoute, usePermissionBasedRoutes } from './DynamicRouteContext';
+export {
+  DynamicRouteProvider,
+  useDynamicRoute,
+  usePermissionBasedRoutes,
+} from './DynamicRouteContext';
 export { DynamicRouteRenderer } from './DynamicRouteRenderer';
 export { RouteModuleLoader } from './RouteModuleLoader';

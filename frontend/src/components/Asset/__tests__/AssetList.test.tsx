@@ -565,12 +565,7 @@ describe('AssetList - 属性传递测试', () => {
 
     // 验证组件可以接收所有属性而正常渲染
     renderWithProviders(
-      <AssetList
-        data={mockData}
-        loading={false}
-        selectedRowKeys={[]}
-        {...mockHandlers}
-      />
+      <AssetList data={mockData} loading={false} selectedRowKeys={[]} {...mockHandlers} />
     );
 
     const table = screen.getByTestId('table');

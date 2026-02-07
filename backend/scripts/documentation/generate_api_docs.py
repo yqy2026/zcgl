@@ -154,10 +154,10 @@ class APIDocumentationGenerator:
 
         # 扫描schemas模块获取类型定义
         try:
-            from models.ownership import Ownership
             from models.project import Project
 
             from models.asset import Asset
+            from models.ownership import Ownership
             from models.task import AsyncTask
 
             # 模型类型

@@ -99,13 +99,7 @@ vi.mock('antd', () => {
   );
   Card.displayName = 'MockCard';
 
-  const Form = ({
-    children,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    disabled?: boolean;
-  }) => (
+  const Form = ({ children, disabled }: { children: React.ReactNode; disabled?: boolean }) => (
     <form data-testid="search-form" data-disabled={disabled}>
       {children}
     </form>
@@ -154,13 +148,9 @@ vi.mock('antd', () => {
   );
   Select.displayName = 'MockSelect';
 
-  const Option = ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => <option value={value}>{children}</option>;
+  const Option = ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <option value={value}>{children}</option>
+  );
   Option.displayName = 'MockSelectOption';
 
   Select.Option = Option;
@@ -269,13 +259,7 @@ vi.mock('antd', () => {
   SpaceCompact.displayName = 'MockSpaceCompact';
   Space.Compact = SpaceCompact;
 
-  const Row = ({
-    children,
-    gutter,
-  }: {
-    children: React.ReactNode;
-    gutter?: number;
-  }) => (
+  const Row = ({ children, gutter }: { children: React.ReactNode; gutter?: number }) => (
     <div data-testid="row" data-gutter={gutter}>
       {children}
     </div>
@@ -369,9 +353,7 @@ vi.mock('antd', () => {
   }) => (
     <div data-testid="list-item-meta">
       {title && <div data-testid="list-item-meta-title">{title}</div>}
-      {description && (
-        <div data-testid="list-item-meta-description">{description}</div>
-      )}
+      {description && <div data-testid="list-item-meta-description">{description}</div>}
     </div>
   );
   ListItemMeta.displayName = 'MockListItemMeta';
@@ -399,13 +381,7 @@ vi.mock('antd', () => {
   );
   Popconfirm.displayName = 'MockPopconfirm';
 
-  const Tag = ({
-    children,
-    color,
-  }: {
-    children: React.ReactNode;
-    color?: string;
-  }) => (
+  const Tag = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>

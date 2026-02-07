@@ -78,10 +78,7 @@ describe('AuthGuard', () => {
   });
 
   it('redirects unauthenticated users with source info', () => {
-    renderAuthGuard(
-      { children: <div>Protected</div> },
-      { isAuthenticated: false, user: null }
-    );
+    renderAuthGuard({ children: <div>Protected</div> }, { isAuthenticated: false, user: null });
 
     const navigate = screen.getByTestId('navigate');
     expect(navigate).toHaveAttribute('data-to', '/login');

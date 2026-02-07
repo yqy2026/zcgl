@@ -160,7 +160,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
           return (
             <div style={{ padding: '8px' }}>
               <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+                {datum.full_name ?? datum.entity}
               </div>
               <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
               <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>

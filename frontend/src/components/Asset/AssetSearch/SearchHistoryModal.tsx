@@ -51,12 +51,7 @@ export const SearchHistoryModal = React.memo(function SearchHistoryModal({
           <List.Item
             key={item.id}
             actions={[
-              <Button
-                key="apply"
-                type="link"
-                size="small"
-                onClick={() => onApply(item.id)}
-              >
+              <Button key="apply" type="link" size="small" onClick={() => onApply(item.id)}>
                 应用
               </Button>,
               <Button

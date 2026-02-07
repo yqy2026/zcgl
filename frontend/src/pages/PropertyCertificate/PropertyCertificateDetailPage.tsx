@@ -128,10 +128,13 @@ const PropertyCertificateDetailPage: React.FC = () => {
       land_area: certificate.land_area,
       floor_info: certificate.floor_info,
       land_use_type: certificate.land_use_type,
-      land_use_term: certificate.land_use_term_start && certificate.land_use_term_end
-        ? [dayjs(certificate.land_use_term_start), dayjs(certificate.land_use_term_end)]
+      land_use_term:
+        certificate.land_use_term_start && certificate.land_use_term_end
+          ? [dayjs(certificate.land_use_term_start), dayjs(certificate.land_use_term_end)]
+          : null,
+      registration_date: certificate.registration_date
+        ? dayjs(certificate.registration_date)
         : null,
-      registration_date: certificate.registration_date ? dayjs(certificate.registration_date) : null,
       co_ownership: certificate.co_ownership,
       restrictions: certificate.restrictions,
       remarks: certificate.remarks,
@@ -240,7 +243,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+          >
             返回列表
           </Button>
           <Title level={4} style={{ margin: 0 }}>
@@ -305,32 +311,52 @@ const PropertyCertificateDetailPage: React.FC = () => {
             <Card title="基础信息">
               <Descriptions column={3} bordered>
                 <Descriptions.Item label="登记日期">
-                  {certificate.registration_date ? dayjs(certificate.registration_date).format('YYYY-MM-DD') : '-'}
+                  {certificate.registration_date
+                    ? dayjs(certificate.registration_date).format('YYYY-MM-DD')
+                    : '-'}
                 </Descriptions.Item>
-                <Descriptions.Item label="坐落地址">{certificate.property_address ?? '-'}</Descriptions.Item>
-                <Descriptions.Item label="物业类型">{certificate.property_type ?? '-'}</Descriptions.Item>
+                <Descriptions.Item label="坐落地址">
+                  {certificate.property_address ?? '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="物业类型">
+                  {certificate.property_type ?? '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="建筑面积">
                   {certificate.building_area != null ? `${certificate.building_area}㎡` : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="土地面积">
                   {certificate.land_area != null ? `${certificate.land_area}㎡` : '-'}
                 </Descriptions.Item>
-                <Descriptions.Item label="楼层信息">{certificate.floor_info ?? '-'}</Descriptions.Item>
-                <Descriptions.Item label="土地用途">{certificate.land_use_type ?? '-'}</Descriptions.Item>
+                <Descriptions.Item label="楼层信息">
+                  {certificate.floor_info ?? '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="土地用途">
+                  {certificate.land_use_type ?? '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="土地使用期限">
                   {certificate.land_use_term_start && certificate.land_use_term_end
                     ? `${certificate.land_use_term_start} ~ ${certificate.land_use_term_end}`
                     : '-'}
                 </Descriptions.Item>
-                <Descriptions.Item label="共有情况">{certificate.co_ownership ?? '-'}</Descriptions.Item>
-                <Descriptions.Item label="权利限制">{certificate.restrictions ?? '-'}</Descriptions.Item>
+                <Descriptions.Item label="共有情况">
+                  {certificate.co_ownership ?? '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="权利限制">
+                  {certificate.restrictions ?? '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="备注">{certificate.remarks ?? '-'}</Descriptions.Item>
-                <Descriptions.Item label="来源">{certificate.extraction_source ?? '-'}</Descriptions.Item>
+                <Descriptions.Item label="来源">
+                  {certificate.extraction_source ?? '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="创建时间">
-                  {certificate.created_at ? dayjs(certificate.created_at).format('YYYY-MM-DD') : '-'}
+                  {certificate.created_at
+                    ? dayjs(certificate.created_at).format('YYYY-MM-DD')
+                    : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="更新时间">
-                  {certificate.updated_at ? dayjs(certificate.updated_at).format('YYYY-MM-DD') : '-'}
+                  {certificate.updated_at
+                    ? dayjs(certificate.updated_at).format('YYYY-MM-DD')
+                    : '-'}
                 </Descriptions.Item>
               </Descriptions>
             </Card>

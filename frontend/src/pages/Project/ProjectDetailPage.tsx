@@ -70,7 +70,7 @@ const ProjectDetailPage: React.FC = () => {
       assetService.getAssets({
         project_id: id,
         page: 1,
-        pageSize: 100,
+        page_size: 100,
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });
@@ -247,14 +247,16 @@ const ProjectDetailPage: React.FC = () => {
               value={occupancyRate}
               precision={1}
               suffix="%"
-              styles={{ content: {
-                color:
-                  parseFloat(occupancyRate) >= 80
-                    ? COLORS.success
-                    : parseFloat(occupancyRate) >= 50
-                      ? COLORS.warning
-                      : COLORS.error,
-              } }}
+              styles={{
+                content: {
+                  color:
+                    parseFloat(occupancyRate) >= 80
+                      ? COLORS.success
+                      : parseFloat(occupancyRate) >= 50
+                        ? COLORS.warning
+                        : COLORS.error,
+                },
+              }}
             />
           </Card>
         </Col>

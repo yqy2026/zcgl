@@ -989,12 +989,16 @@ def _ensure_whitelists_registered() -> None:
     if WHITELIST_REGISTRY:
         return
     try:
-        from ..models.asset import Asset
+        from ..models.asset import (
+            Asset,
+            AssetCustomField,
+            Project,
+            SystemDictionary,
+        )
         from ..models.collection import CollectionRecord
         from ..models.llm_prompt import PromptTemplate
         from ..models.organization import Organization
         from ..models.ownership import Ownership
-        from ..models.project import Project
         from ..models.property_certificate import PropertyCertificate, PropertyOwner
         from ..models.rbac import (
             Permission,

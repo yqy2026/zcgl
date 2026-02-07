@@ -47,7 +47,7 @@
 - API层：26.0%（入口未保护）
 
 **完全未测试的关键文件**：
-- `src/api/v1/rent_contract.py` - 0%（核心业务）
+- `src/api/v1/rent_contracts/contracts.py` - 0%（核心业务）
 - `src/api/v1/system_monitoring.py` - 0%
 - `src/api/v1/excel.py` - 0%
 - `src/services/document/cache.py` - 0%

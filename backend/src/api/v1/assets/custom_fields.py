@@ -214,7 +214,8 @@ async def validate_custom_field_value(
         raise internal_error(f"验证字段值失败: {str(e)}")
 
 
-@router.get("/types/list", summary="获取字段类型列表")
+@router.get("/types", summary="获取字段类型列表")
+@router.get("/types/list[Any]", include_in_schema=False)
 def get_field_types(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:

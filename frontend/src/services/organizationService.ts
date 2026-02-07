@@ -132,14 +132,10 @@ class OrganizationService {
    */
   async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
     try {
-      const result = await apiClient.put<Organization>(
-        `${this.baseUrl}/${id}`,
-        organization,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.put<Organization>(`${this.baseUrl}/${id}`, organization, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`更新组织失败: ${result.error}`);
@@ -267,7 +263,7 @@ class OrganizationService {
           keyword,
           ...params,
           page: params?.page ?? 1,
-          page_size: params?.page_size ?? 20
+          page_size: params?.page_size ?? 20,
         },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -319,14 +315,11 @@ class OrganizationService {
    */
   async getStatistics(): Promise<OrganizationStatistics> {
     try {
-      const result = await apiClient.get<OrganizationStatistics>(
-        `${this.baseUrl}/statistics`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<OrganizationStatistics>(`${this.baseUrl}/statistics`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取组织统计失败: ${result.error}`);
@@ -347,19 +340,16 @@ class OrganizationService {
     params?: { page?: number; page_size?: number }
   ): Promise<OrganizationHistory[]> {
     try {
-      const result = await apiClient.get<OrganizationHistory[]>(
-        `${this.baseUrl}/${id}/history`,
-        {
-          params: {
-            ...params,
-            page: params?.page ?? 1,
-            page_size: params?.page_size ?? 20
-          },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<OrganizationHistory[]>(`${this.baseUrl}/${id}/history`, {
+        params: {
+          ...params,
+          page: params?.page ?? 1,
+          page_size: params?.page_size ?? 20,
+        },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取组织历史失败: ${result.error}`);

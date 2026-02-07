@@ -51,11 +51,9 @@ const usePermission = () => {
         userId: authData.user.id,
         username: authData.user.username,
         roles:
-          authData.user.roles ??
-          (authData.user.role_name != null ? [authData.user.role_name] : []),
+          authData.user.roles ?? (authData.user.role_name != null ? [authData.user.role_name] : []),
         roleIds:
-          authData.user.role_ids ??
-          (authData.user.role_id != null ? [authData.user.role_id] : []),
+          authData.user.role_ids ?? (authData.user.role_id != null ? [authData.user.role_id] : []),
         isAdmin: authData.user.is_admin === true,
         permissions: authData.permissions,
         organizationId: authData.user.default_organization_id,

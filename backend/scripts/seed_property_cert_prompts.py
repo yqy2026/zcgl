@@ -4,8 +4,8 @@ Seed Property Certificate Prompts
 初始化产权证提取Prompt模板
 """
 
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv

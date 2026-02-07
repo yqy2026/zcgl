@@ -34,11 +34,8 @@ import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
-import type {
-  Project,
-  ProjectStatisticsResponse,
-} from '@/types/project';
+import { useQuery } from '@tanstack/react-query';
+import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
@@ -69,69 +66,66 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
+  const [filters, setFilters] = useState<ProjectFilters>({
+    keyword: '',
+    isActive: null,
+    ownershipId: '',
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
-  const [ownerships, setOwnerships] = useState<Ownership[]>([]);
-  const [ownershipsLoading, setOwnershipsLoading] = useState(false);
 
-  const fetchProjectList = useCallback(
-    async ({
-      page,
-      pageSize,
-      keyword,
-      isActive,
-      ownershipId,
-    }: {
-      page: number;
-      pageSize: number;
-    } & ProjectFilters) => {
-      const params: ProjectQueryParams = {
-        page,
-        page_size: pageSize,
-      };
+  const fetchProjectList = useCallback(async () => {
+    const params: ProjectQueryParams = {
+      page: paginationState.current,
+      page_size: paginationState.pageSize,
+    };
 
-      const trimmedKeyword = keyword.trim();
-      if (trimmedKeyword !== '') {
-        params.keyword = trimmedKeyword;
-      }
+    const trimmedKeyword = filters.keyword.trim();
+    if (trimmedKeyword !== '') {
+      params.keyword = trimmedKeyword;
+    }
 
-      if (isActive !== null) {
-        params.is_active = isActive;
-      }
+    if (filters.isActive !== null) {
+      params.is_active = filters.isActive;
+    }
 
-      const trimmedOwnership = ownershipId.trim();
-      if (trimmedOwnership !== '') {
-        params.ownership_id = trimmedOwnership;
-      }
+    const trimmedOwnership = filters.ownershipId.trim();
+    if (trimmedOwnership !== '') {
+      params.ownership_id = trimmedOwnership;
+    }
 
-      return await projectService.getProjects(params);
-    },
-    []
-  );
+    return await projectService.getProjects(params);
+  }, [
+    filters.isActive,
+    filters.keyword,
+    filters.ownershipId,
+    paginationState.current,
+    paginationState.pageSize,
+  ]);
 
   const {
-    data: projects,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters: resetListFilters,
-    updatePagination,
-  } = useListData<Project, ProjectFilters>({
-    fetcher: fetchProjectList,
-    initialFilters: {
-      keyword: '',
-      isActive: null,
-      ownershipId: '',
-    },
-    initialPageSize: 10,
-    onError: error => {
+    data: projectsResponse,
+    error: projectsError,
+    isLoading: isProjectsLoading,
+    isFetching: isProjectsFetching,
+    refetch: refetchProjects,
+  } = useQuery<ProjectListResponse>({
+    queryKey: ['project-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchProjectList,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (projectsError != null) {
       // eslint-disable-next-line no-console
-      console.error('获取项目列表失败:', error);
-      const err = error as Error & { response?: { status?: number; data?: unknown } };
+      console.error('获取项目列表失败:', projectsError);
+      const err = projectsError as Error & { response?: { status?: number; data?: unknown } };
       // eslint-disable-next-line no-console
       console.error('Error details:', {
         message: err.message,
@@ -139,8 +133,19 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
         data: err.response?.data,
       });
       MessageManager.error(`获取项目列表失败: ${err.message ?? '未知错误'}`);
-    },
-  });
+    }
+  }, [projectsError]);
+
+  const projects = projectsResponse?.items ?? [];
+  const loading = isProjectsLoading || isProjectsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: projectsResponse?.total ?? 0,
+    }),
+    [paginationState.current, paginationState.pageSize, projectsResponse?.total]
+  );
 
   const statistics = useMemo<ProjectStatisticsResponse>(() => {
     const totalCount = projects.length;
@@ -152,24 +157,43 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     };
   }, [projects]);
 
-  // 获取权属方列表（使用下拉选项API，更高效）
-  const fetchOwnerships = useCallback(async () => {
-    setOwnershipsLoading(true);
-    try {
-      const response = await ownershipService.getOwnershipOptions(true);
-      setOwnerships(response);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('获取权属方列表失败:', error);
-    } finally {
-      setOwnershipsLoading(false);
-    }
+  const {
+    data: ownerships = [],
+    isLoading: isOwnershipsLoading,
+    isFetching: isOwnershipsFetching,
+  } = useQuery<Ownership[]>({
+    queryKey: ['project-ownership-options'],
+    queryFn: () => ownershipService.getOwnershipOptions(true),
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const ownershipsLoading = isOwnershipsLoading || isOwnershipsFetching;
+
+  const refreshProjects = useCallback(() => {
+    void refetchProjects();
+  }, [refetchProjects]);
+
+  const updateFilters = useCallback((nextFilters: Partial<ProjectFilters>) => {
+    setFilters(prev => ({ ...prev, ...nextFilters }));
+    setPaginationState(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  useEffect(() => {
-    void loadList();
-    void fetchOwnerships();
-  }, [fetchOwnerships, loadList]);
+  const resetListFilters = useCallback(() => {
+    setFilters({
+      keyword: '',
+      isActive: null,
+      ownershipId: '',
+    });
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
 
   // 删除项目
   const handleDelete = (project: Project) => {
@@ -183,7 +207,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
         try {
           await projectService.deleteProject(project.id);
           MessageManager.success('项目删除成功');
-          void loadList();
+          refreshProjects();
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('删除项目失败:', error);
@@ -198,7 +222,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     try {
       await projectService.toggleProjectStatus(project.id);
       MessageManager.success('项目状态切换成功');
-      void loadList();
+      refreshProjects();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('切换项目状态失败:', error);
@@ -373,35 +397,23 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   const handleKeywordChange = useCallback(
     (value: string) => {
-      applyFilters({
-        keyword: value,
-        isActive: filters.isActive,
-        ownershipId: filters.ownershipId,
-      });
+      updateFilters({ keyword: value });
     },
-    [applyFilters, filters.isActive, filters.ownershipId]
+    [updateFilters]
   );
 
   const handleStatusChange = useCallback(
     (value: boolean | undefined) => {
-      applyFilters({
-        keyword: filters.keyword,
-        isActive: value === undefined ? null : value,
-        ownershipId: filters.ownershipId,
-      });
+      updateFilters({ isActive: value === undefined ? null : value });
     },
-    [applyFilters, filters.keyword, filters.ownershipId]
+    [updateFilters]
   );
 
   const handleOwnershipChange = useCallback(
     (value: string | undefined) => {
-      applyFilters({
-        keyword: filters.keyword,
-        isActive: filters.isActive,
-        ownershipId: value ?? '',
-      });
+      updateFilters({ ownershipId: value ?? '' });
     },
-    [applyFilters, filters.isActive, filters.keyword]
+    [updateFilters]
   );
 
   return (
@@ -530,7 +542,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
                 <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
                   新建项目
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
+                <Button icon={<ReloadOutlined />} onClick={refreshProjects}>
                   刷新
                 </Button>
               </Space>
@@ -547,7 +559,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           rowKey="id"
           loading={loading}
           paginationState={pagination}
-          onPageChange={updatePagination}
+          onPageChange={handlePageChange}
           paginationProps={{
             showTotal: (total: number, range: [number, number]) =>
               `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
@@ -573,7 +585,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           onSuccess={() => {
             setIsModalVisible(false);
             setEditingProject(null);
-            void loadList();
+            refreshProjects();
           }}
           onCancel={() => {
             setIsModalVisible(false);

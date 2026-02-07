@@ -18,7 +18,7 @@ import { createMockAsset } from '@/test-utils/factories';
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
   formatPercentage: (value: number) => `${value.toFixed(2)}%`,
-  formatDate: (date: string) => date ? '2024-01-01' : '-',
+  formatDate: (date: string) => (date ? '2024-01-01' : '-'),
   getStatusColor: (status: string, type: string) => {
     if (type === 'ownership') return 'blue';
     if (type === 'property') return 'green';
@@ -49,9 +49,7 @@ vi.mock('@ant-design/icons', () => ({
   DeleteOutlined: () => <span data-testid="icon-delete">DeleteIcon</span>,
   EyeOutlined: () => <span data-testid="icon-eye">EyeIcon</span>,
   HistoryOutlined: () => <span data-testid="icon-history">HistoryIcon</span>,
-  EnvironmentOutlined: () => (
-    <span data-testid="icon-environment">EnvIcon</span>
-  ),
+  EnvironmentOutlined: () => <span data-testid="icon-environment">EnvIcon</span>,
   UserOutlined: () => <span data-testid="icon-user">UserIcon</span>,
 }));
 
@@ -351,9 +349,7 @@ describe('AssetCard', () => {
     it('点击删除按钮应该触发onDelete', () => {
       const handleDelete = vi.fn();
       const asset = createMockAsset({ id: 'test-id' });
-      renderWithProviders(
-        <AssetCard asset={asset} {...defaultProps} onDelete={handleDelete} />
-      );
+      renderWithProviders(<AssetCard asset={asset} {...defaultProps} onDelete={handleDelete} />);
 
       const deleteButton = screen.getByLabelText('删除');
       fireEvent.click(deleteButton);
@@ -378,12 +374,7 @@ describe('AssetCard', () => {
       const handleSelect = vi.fn();
       const asset = createMockAsset({ id: 'test-id' });
       const { container } = renderWithProviders(
-        <AssetCard
-          asset={asset}
-          {...defaultProps}
-          selected={true}
-          onSelect={handleSelect}
-        />
+        <AssetCard asset={asset} {...defaultProps} selected={true} onSelect={handleSelect} />
       );
 
       const card = container.querySelector('.asset-card');
@@ -397,12 +388,7 @@ describe('AssetCard', () => {
       const handleView = vi.fn();
       const asset = createMockAsset();
       renderWithProviders(
-        <AssetCard
-          asset={asset}
-          {...defaultProps}
-          onView={handleView}
-          onSelect={handleSelect}
-        />
+        <AssetCard asset={asset} {...defaultProps} onView={handleView} onSelect={handleSelect} />
       );
 
       const viewButton = screen.getByLabelText('查看详情');
@@ -436,9 +422,7 @@ describe('AssetCard', () => {
 
     it('默认selected应该是false', () => {
       const asset = createMockAsset();
-      const { container } = renderWithProviders(
-        <AssetCard asset={asset} {...defaultProps} />
-      );
+      const { container } = renderWithProviders(<AssetCard asset={asset} {...defaultProps} />);
 
       const card = container.querySelector('.asset-card');
       expect(card).not.toHaveClass('selected');

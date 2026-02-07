@@ -7,6 +7,8 @@
 import React, { Component, ErrorInfo, ReactNode, useCallback } from 'react';
 import { Result, Button, Typography, Alert, Space } from 'antd';
 import { captureException } from '@/utils/errorMonitoring';
+import { errorReportService, type FrontendErrorReportPayload } from '@/services/errorReportService';
+import { isDevelopmentMode, isProductionMode } from '@/utils/runtimeEnv';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -27,15 +29,7 @@ interface ErrorBoundaryProps {
   showErrorDetails?: boolean;
 }
 
-interface ErrorReport {
-  error: string;
-  stack: string;
-  componentStack: string;
-  timestamp: string;
-  userAgent: string;
-  url: string;
-  retryCount: number;
-}
+type ErrorReport = FrontendErrorReportPayload;
 
 interface RouterErrorHandlerProps {
   error: Error | null;
@@ -104,7 +98,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
     };
 
     // 存储错误到 window 对象用于调试
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode()) {
       const debugWindow = window as Window & { __lastError?: ErrorReport };
       debugWindow.__lastError = errorReport;
     }
@@ -115,15 +109,8 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
 
   private sendErrorReport = async (errorReport: ErrorReport) => {
     try {
-      if (process.env.NODE_ENV === 'production') {
-        // 发送到错误监控服务
-        await fetch('/api/errors/report', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(errorReport),
-        });
+      if (isProductionMode()) {
+        await errorReportService.report(errorReport);
       } else {
         // 开发环境打印到控制台
         console.group('错误报告');
@@ -198,7 +185,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
   canRetry,
   retryCount,
   maxRetries,
-  showErrorDetails = process.env.NODE_ENV === 'development',
+  showErrorDetails = isDevelopmentMode(),
 }) => {
   const handleGoBack = () => {
     // React 19 兼容性：ErrorBoundary 可能在 Router 上下文外渲染
@@ -366,7 +353,7 @@ export const useErrorHandler = () => {
     setError(error);
 
     // 存储错误到 window 对象用于调试
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode()) {
       const debugWindow = window as Window & {
         __lastError?: { message: string; stack?: string; timestamp: string };
       };
@@ -378,7 +365,7 @@ export const useErrorHandler = () => {
     }
 
     // 生产环境下上报错误
-    if (process.env.NODE_ENV === 'production') {
+    if (isProductionMode()) {
       captureException(error, {
         component: 'ErrorBoundary',
         action: 'captureError',

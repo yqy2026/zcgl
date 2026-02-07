@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   Button,
@@ -23,6 +23,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { roleService, type Role } from '@/services/systemService';
 import SystemBreadcrumb from '@/components/System/SystemBreadcrumb';
+import { useQuery } from '@tanstack/react-query';
 import {
   PlusOutlined,
   EditOutlined,
@@ -42,7 +43,6 @@ import dayjs from 'dayjs';
 import { COLORS } from '@/styles/colorMap';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -119,15 +119,25 @@ interface RoleFilters {
   status: string;
 }
 
+interface RoleListQueryResult {
+  items: Role[];
+  total: number;
+}
+
 const RoleManagementPage: React.FC = () => {
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [statistics, setStatistics] = useState<RoleStatistics | null>(null);
+  const [filters, setFilters] = useState<RoleFilters>({
+    keyword: '',
+    status: '',
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [modalVisible, setModalVisible] = useState(false);
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [targetPermissions, setTargetPermissions] = useState<string[]>([]);
-  const [permissionTreeData, setPermissionTreeData] = useState<DataNode[]>([]);
 
   const [form] = Form.useForm();
 
@@ -138,7 +148,7 @@ const RoleManagementPage: React.FC = () => {
   ];
 
   // 权限模块选项
-  const permissionModules = React.useMemo(
+  const permissionModules = useMemo(
     () => [
       { value: 'dashboard', label: '数据看板', icon: <SettingOutlined /> },
       { value: 'assets', label: '资产管理', icon: <ApartmentOutlined /> },
@@ -150,66 +160,48 @@ const RoleManagementPage: React.FC = () => {
     []
   );
 
-  const fetchRoleList = React.useCallback(
-    async ({
-      page,
-      pageSize,
-      keyword,
-      status,
-    }: {
-      page: number;
-      pageSize: number;
-    } & RoleFilters) => {
-      const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
-      const trimmedKeyword = keyword.trim();
-      const data = (await roleService.getRoles({
-        page,
-        page_size: pageSize,
-        search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
-        is_active: isActive,
-      })) as RoleListResponse;
-      const items = Array.isArray(data) ? data : (data.items ?? []);
-      const mapped: Role[] = items.map(r => ({
-        id: r.id,
-        name: r.display_name ?? '',
-        code: r.name,
-        description: r.description ?? '',
-        status: r.is_active ? 'active' : 'inactive',
-        permissions: Array.isArray(r.permissions) ? r.permissions.map(p => p.id) : [],
-        user_count: r.user_count ?? 0,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_system: !!r.is_system_role,
-      }));
-      const total = Array.isArray(data) ? mapped.length : (data.total ?? mapped.length);
-      return { items: mapped, total };
-    },
-    []
-  );
-
-  const handleLoadError = React.useCallback(() => {
-    MessageManager.error('加载角色列表失败');
-  }, []);
+  const fetchRoleList = useCallback(async (): Promise<RoleListQueryResult> => {
+    const isActive =
+      filters.status === 'active' ? true : filters.status === 'inactive' ? false : undefined;
+    const trimmedKeyword = filters.keyword.trim();
+    const data = (await roleService.getRoles({
+      page: paginationState.current,
+      page_size: paginationState.pageSize,
+      search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
+      is_active: isActive,
+    })) as RoleListResponse;
+    const items = Array.isArray(data) ? data : (data.items ?? []);
+    const mapped: Role[] = items.map(roleItem => ({
+      id: roleItem.id,
+      name: roleItem.display_name ?? roleItem.name,
+      code: roleItem.name,
+      description: roleItem.description ?? '',
+      status: roleItem.is_active === true ? 'active' : 'inactive',
+      permissions: Array.isArray(roleItem.permissions)
+        ? roleItem.permissions.map(permission => permission.id)
+        : [],
+      user_count: roleItem.user_count ?? 0,
+      created_at: roleItem.created_at,
+      updated_at: roleItem.updated_at,
+      is_system: roleItem.is_system_role === true,
+    }));
+    const total = Array.isArray(data) ? mapped.length : (data.total ?? mapped.length);
+    return { items: mapped, total };
+  }, [filters.keyword, filters.status, paginationState.current, paginationState.pageSize]);
 
   const {
-    data: roles,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    updatePagination,
-  } = useListData<Role, RoleFilters>({
-    fetcher: fetchRoleList,
-    initialFilters: {
-      keyword: '',
-      status: '',
-    },
-    initialPageSize: 10,
-    onError: handleLoadError,
+    data: rolesResponse,
+    error: rolesError,
+    isLoading: isRolesLoading,
+    isFetching: isRolesFetching,
+    refetch: refetchRoles,
+  } = useQuery<RoleListQueryResult>({
+    queryKey: ['role-management-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchRoleList,
+    retry: 1,
   });
 
-  const buildPermissionTree = React.useCallback(
+  const buildPermissionTree = useCallback(
     (permissionList: Permission[]): DataNode[] => {
       const moduleMap: Record<string, DataNode> = {};
 
@@ -259,11 +251,15 @@ const RoleManagementPage: React.FC = () => {
     [permissionModules]
   );
 
-  const loadPermissions = React.useCallback(async () => {
-    try {
+  const {
+    data: permissions = [],
+    error: permissionsError,
+  } = useQuery<Permission[]>({
+    queryKey: ['role-management-permissions'],
+    queryFn: async () => {
       const resp = (await roleService.getPermissions()) as PermissionListResponse;
       const grouped = resp.data ?? {};
-      const list: Permission[] = Object.keys(grouped).flatMap(resource =>
+      return Object.keys(grouped).flatMap(resource =>
         (grouped[resource] ?? []).map(p => {
           const action = p.action ?? 'action';
           const resourceKey = p.resource ?? resource;
@@ -275,80 +271,122 @@ const RoleManagementPage: React.FC = () => {
             description: p.description ?? '',
             type: action === 'view' || action === 'read' ? 'menu' : 'action',
           };
-        }),
+        })
       );
-      setPermissions(list);
-      const treeData = buildPermissionTree(list);
-      setPermissionTreeData(treeData);
-    } catch {
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const {
+    data: statisticsResponse,
+    error: statisticsError,
+    refetch: refetchStatistics,
+  } = useQuery<RoleStatisticsApiResponse>({
+    queryKey: ['role-management-statistics'],
+    queryFn: async () => (await roleService.getRoleStatistics()) as RoleStatisticsApiResponse,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (rolesError != null) {
+      MessageManager.error('加载角色列表失败');
+    }
+  }, [rolesError]);
+
+  useEffect(() => {
+    if (permissionsError != null) {
       MessageManager.error('加载权限列表失败');
     }
-  }, [buildPermissionTree]);
+  }, [permissionsError]);
 
-  const loadStatistics = React.useCallback(async () => {
-    const fallbackStats: RoleStatistics = {
-      total: roles.length,
-      active: roles.filter(r => r.status === 'active').length,
-      inactive: roles.filter(r => r.status === 'inactive').length,
-      system: roles.filter(r => r.is_system).length,
-      custom: roles.filter(r => !r.is_system).length,
-      avg_permissions:
-        roles.length > 0
-          ? Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length)
-          : 0,
-    };
-    try {
-      const resp = (await roleService.getRoleStatistics()) as RoleStatisticsApiResponse;
-      const stats = resp.data ?? resp;
-      if (stats && typeof stats.total_roles === 'number') {
-        const total = stats.total_roles;
-        const active = stats.active_roles ?? 0;
-        const system = stats.system_roles ?? 0;
-        const custom = stats.custom_roles ?? Math.max(total - system, 0);
-        setStatistics({
-          total,
-          active,
-          inactive: Math.max(total - active, 0),
-          system,
-          custom,
-          avg_permissions: fallbackStats.avg_permissions,
-        });
-        return;
-      }
-    } catch {
+  useEffect(() => {
+    if (statisticsError != null) {
       MessageManager.error('加载统计信息失败');
     }
-    setStatistics(fallbackStats);
-  }, [roles]);
+  }, [statisticsError]);
 
-  useEffect(() => {
-    void loadList();
-    void loadPermissions();
-  }, [loadList, loadPermissions]);
+  const roles = rolesResponse?.items ?? [];
+  const loading = isRolesLoading || isRolesFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: rolesResponse?.total ?? 0,
+    }),
+    [paginationState.current, paginationState.pageSize, rolesResponse?.total]
+  );
 
-  useEffect(() => {
-    void loadStatistics();
-  }, [loadStatistics]);
+  const permissionTreeData = useMemo(() => buildPermissionTree(permissions), [
+    buildPermissionTree,
+    permissions,
+  ]);
 
-  const handleSearch = React.useCallback(
+  const statistics = useMemo<RoleStatistics>(() => {
+    const fallbackStats: RoleStatistics = {
+      total: roles.length,
+      active: roles.filter(role => role.status === 'active').length,
+      inactive: roles.filter(role => role.status === 'inactive').length,
+      system: roles.filter(role => role.is_system).length,
+      custom: roles.filter(role => !role.is_system).length,
+      avg_permissions:
+        roles.length > 0
+          ? Math.round(
+              roles.reduce((sum, role) => sum + role.permissions.length, 0) / roles.length
+            )
+          : 0,
+    };
+
+    const stats = statisticsResponse?.data ?? statisticsResponse;
+    if (stats != null && typeof stats.total_roles === 'number') {
+      const total = stats.total_roles;
+      const active = stats.active_roles ?? 0;
+      const system = stats.system_roles ?? 0;
+      const custom = stats.custom_roles ?? Math.max(total - system, 0);
+      return {
+        total,
+        active,
+        inactive: Math.max(total - active, 0),
+        system,
+        custom,
+        avg_permissions: fallbackStats.avg_permissions,
+      };
+    }
+
+    return fallbackStats;
+  }, [roles, statisticsResponse]);
+
+  const refreshRolesAndStatistics = useCallback(() => {
+    void refetchRoles();
+    void refetchStatistics();
+  }, [refetchRoles, refetchStatistics]);
+
+  const updateFilters = useCallback((nextFilters: Partial<RoleFilters>) => {
+    setFilters(prev => ({ ...prev, ...nextFilters }));
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleSearch = useCallback(
     (value: string) => {
-      applyFilters({
-        keyword: value,
-        status: filters.status,
-      });
+      updateFilters({ keyword: value });
     },
-    [applyFilters, filters.status]
+    [updateFilters]
   );
 
-  const handleStatusFilterChange = React.useCallback(
+  const handleStatusFilterChange = useCallback(
     (value?: string) => {
-      applyFilters({
-        keyword: filters.keyword,
-        status: value ?? '',
-      });
+      updateFilters({ status: value ?? '' });
     },
-    [applyFilters, filters.keyword]
+    [updateFilters]
   );
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
 
   const handleCreate = () => {
     setEditingRole(null);
@@ -372,7 +410,7 @@ const RoleManagementPage: React.FC = () => {
     try {
       await roleService.deleteRole(id);
       MessageManager.success('删除成功');
-      void loadList();
+      refreshRolesAndStatistics();
     } catch {
       MessageManager.error('删除失败');
     }
@@ -384,7 +422,7 @@ const RoleManagementPage: React.FC = () => {
         is_active: newStatus === 'active',
       });
       MessageManager.success('状态已更新');
-      void loadList();
+      refreshRolesAndStatistics();
     } catch {
       MessageManager.error('状态更新失败');
     }
@@ -421,7 +459,7 @@ const RoleManagementPage: React.FC = () => {
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
-      void loadList();
+      refreshRolesAndStatistics();
     } catch {
       MessageManager.error(editingRole ? '更新失败' : '创建失败');
     }
@@ -434,7 +472,7 @@ const RoleManagementPage: React.FC = () => {
       }
       MessageManager.success('权限配置已保存');
       setPermissionModalVisible(false);
-      void loadList();
+      refreshRolesAndStatistics();
     } catch {
       MessageManager.error('保存权限失败');
     }
@@ -628,6 +666,7 @@ const RoleManagementPage: React.FC = () => {
                       placeholder="状态筛选"
                       allowClear
                       style={{ width: '100%' }}
+                      value={filters.status !== '' ? filters.status : undefined}
                       onChange={handleStatusFilterChange}
                     >
                       {statusOptions.map(status => (
@@ -642,7 +681,7 @@ const RoleManagementPage: React.FC = () => {
                   key: 'refresh',
                   col: { xs: 24, sm: 12, md: 4, lg: 3 },
                   content: (
-                    <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
+                    <Button icon={<ReloadOutlined />} onClick={refreshRolesAndStatistics}>
                       刷新
                     </Button>
                   ),
@@ -666,7 +705,7 @@ const RoleManagementPage: React.FC = () => {
             rowKey="id"
             loading={loading}
             paginationState={pagination}
-            onPageChange={updatePagination}
+            onPageChange={handlePageChange}
             paginationProps={{
               pageSizeOptions: ['10', '20', '50', '100'],
               showTotal: (total: number) => `共 ${total} 条记录`,

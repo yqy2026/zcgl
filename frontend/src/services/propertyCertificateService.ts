@@ -108,9 +108,7 @@ export const propertyCertificateService = {
    * Delete certificate
    */
   async deleteCertificate(id: string): Promise<{ status: string }> {
-    const result = await apiClient.delete<{ status: string }>(
-      `/property-certificates/${id}`
-    );
+    const result = await apiClient.delete<{ status: string }>(`/property-certificates/${id}`);
     if (result.data == null) {
       throw new Error('Failed to delete certificate');
     }

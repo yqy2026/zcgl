@@ -155,7 +155,7 @@ describe('PDFImportContext', () => {
       const icon = result.current.getStepIcon({
         title: 'Test',
         description: 'Test',
-        status: 'finish'
+        status: 'finish',
       });
 
       expect(icon).toBeDefined();
@@ -167,7 +167,7 @@ describe('PDFImportContext', () => {
       const icon = result.current.getStepIcon({
         title: 'Test',
         description: 'Test',
-        status: 'process'
+        status: 'process',
       });
 
       expect(icon).toBeDefined();
@@ -179,7 +179,7 @@ describe('PDFImportContext', () => {
       const icon = result.current.getStepIcon({
         title: 'Test',
         description: 'Test',
-        status: 'error'
+        status: 'error',
       });
 
       expect(icon).toBeDefined();
@@ -191,7 +191,7 @@ describe('PDFImportContext', () => {
       const icon = result.current.getStepIcon({
         title: 'Test',
         description: 'Test',
-        status: 'wait'
+        status: 'wait',
       });
 
       expect(icon).toBeDefined();
@@ -280,9 +280,7 @@ describe('PDFImportContext', () => {
     });
 
     it('上传失败时调用错误回调', async () => {
-      vi.mocked(pdfImportService.uploadPdfFileWithOptions).mockRejectedValue(
-        new Error('上传失败')
-      );
+      vi.mocked(pdfImportService.uploadPdfFileWithOptions).mockRejectedValue(new Error('上传失败'));
 
       const { result } = renderHook(() => usePDFImportUpload(), { wrapper });
 

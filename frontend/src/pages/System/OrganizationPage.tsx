@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -44,7 +44,7 @@ import {
 } from '@/types/organization';
 import { organizationService } from '@/services/organizationService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
-import { useListData } from '@/hooks/useListData';
+import { useQuery } from '@tanstack/react-query';
 import { useArrayListData } from '@/hooks/useArrayListData';
 // 组织表单数据类型
 interface OrganizationFormData {
@@ -64,9 +64,19 @@ interface OrganizationFilters {
   keyword: string;
 }
 
+interface OrganizationListQueryResult {
+  items: Organization[];
+  total: number;
+}
+
 const OrganizationPage: React.FC = () => {
-  const [organizationTree, setOrganizationTree] = useState<DataNode[]>([]);
-  const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null);
+  const [filters, setFilters] = useState<OrganizationFilters>({
+    keyword: '',
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [modalVisible, setModalVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
@@ -93,89 +103,6 @@ const OrganizationPage: React.FC = () => {
     { value: 'inactive', label: '停用', color: 'red' },
     { value: 'suspended', label: '暂停', color: 'orange' },
   ];
-
-  const fetchOrganizationList = useCallback(
-    async ({
-      page,
-      pageSize,
-      keyword,
-    }: {
-      page: number;
-      pageSize: number;
-    } & OrganizationFilters) => {
-      const trimmedKeyword = keyword.trim();
-      const data =
-        trimmedKeyword !== ''
-          ? await organizationService.searchOrganizations(trimmedKeyword, {
-              page,
-              page_size: pageSize,
-            })
-          : await organizationService.getOrganizations({ page, page_size: pageSize });
-      return { items: data, total: data.length };
-    },
-    []
-  );
-
-  const handleLoadError = useCallback(() => {
-    MessageManager.error('加载组织列表失败');
-  }, []);
-
-  const {
-    data: organizations,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    updatePagination,
-  } = useListData<Organization, OrganizationFilters>({
-    fetcher: fetchOrganizationList,
-    initialFilters: {
-      keyword: '',
-    },
-    initialPageSize: 10,
-    onError: handleLoadError,
-  });
-
-  const loadOrganizationTree = useCallback(async () => {
-    try {
-      const data = await organizationService.getOrganizationTree();
-      setOrganizationTree(convertTreeToDataNodes(data));
-    } catch {
-      MessageManager.error('加载组织树失败');
-    }
-  }, []);
-
-  const loadStatistics = useCallback(async () => {
-    try {
-      const data = await organizationService.getStatistics();
-      setStatistics(data);
-    } catch {
-      MessageManager.error('加载统计信息失败');
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadList();
-    void loadOrganizationTree();
-    void loadStatistics();
-  }, [loadList, loadOrganizationTree, loadStatistics]);
-
-  const _convertToTreeData = (organizations: Organization[]): DataNode[] => {
-    return organizations.map(org => ({
-      key: org.id,
-      title: (
-        <span>
-          {getTypeIcon(org.type)} {org.name} ({org.code})
-          <Tag color={getStatusColor(org.status)} style={{ marginLeft: 8 }}>
-            {getStatusLabel(org.status)}
-          </Tag>
-        </span>
-      ),
-      children:
-        org.children != null && org.children.length > 0 ? _convertToTreeData(org.children) : [],
-    }));
-  };
 
   const convertTreeToDataNodes = (treeNodes: OrganizationTree[]): DataNode[] => {
     return treeNodes.map(node => ({
@@ -210,20 +137,108 @@ const OrganizationPage: React.FC = () => {
     return statusConfig?.label ?? status;
   };
 
-  const handleSearch = useCallback(
-    (keyword: string) => {
-      applyFilters({
-        keyword,
-      });
+  const fetchOrganizationList = useCallback(async (): Promise<OrganizationListQueryResult> => {
+    const trimmedKeyword = filters.keyword.trim();
+    const data =
+      trimmedKeyword !== ''
+        ? await organizationService.searchOrganizations(trimmedKeyword, {
+            page: paginationState.current,
+            page_size: paginationState.pageSize,
+          })
+        : await organizationService.getOrganizations({
+            page: paginationState.current,
+            page_size: paginationState.pageSize,
+          });
+    return { items: data, total: data.length };
+  }, [filters.keyword, paginationState.current, paginationState.pageSize]);
+
+  const {
+    data: organizationsResponse,
+    error: organizationsError,
+    isLoading: isOrganizationsLoading,
+    isFetching: isOrganizationsFetching,
+    refetch: refetchOrganizations,
+  } = useQuery<OrganizationListQueryResult>({
+    queryKey: ['organization-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchOrganizationList,
+    retry: 1,
+  });
+
+  const {
+    data: organizationTree = [],
+    error: organizationTreeError,
+    refetch: refetchOrganizationTree,
+  } = useQuery<DataNode[]>({
+    queryKey: ['organization-tree'],
+    queryFn: async () => {
+      const data = await organizationService.getOrganizationTree();
+      return convertTreeToDataNodes(data);
     },
-    [applyFilters]
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const {
+    data: statistics = null,
+    error: statisticsError,
+    refetch: refetchStatistics,
+  } = useQuery<OrganizationStatistics>({
+    queryKey: ['organization-statistics'],
+    queryFn: () => organizationService.getStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (organizationsError != null) {
+      MessageManager.error('加载组织列表失败');
+    }
+  }, [organizationsError]);
+
+  useEffect(() => {
+    if (organizationTreeError != null) {
+      MessageManager.error('加载组织树失败');
+    }
+  }, [organizationTreeError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      MessageManager.error('加载统计信息失败');
+    }
+  }, [statisticsError]);
+
+  const organizations = organizationsResponse?.items ?? [];
+  const loading = isOrganizationsLoading || isOrganizationsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: organizationsResponse?.total ?? 0,
+    }),
+    [organizationsResponse?.total, paginationState.current, paginationState.pageSize]
   );
 
+  const refreshOrganizations = useCallback(() => {
+    void refetchOrganizations();
+    void refetchOrganizationTree();
+    void refetchStatistics();
+  }, [refetchOrganizationTree, refetchOrganizations, refetchStatistics]);
+
+  const handleSearch = useCallback((keyword: string) => {
+    setFilters({ keyword });
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
+
   const handleRefresh = useCallback(() => {
-    void loadList();
-    void loadOrganizationTree();
-    void loadStatistics();
-  }, [loadList, loadOrganizationTree, loadStatistics]);
+    refreshOrganizations();
+  }, [refreshOrganizations]);
 
   const handleCreate = () => {
     setEditingOrganization(null);
@@ -457,7 +472,7 @@ const OrganizationPage: React.FC = () => {
             rowKey="id"
             loading={loading}
             paginationState={pagination}
-            onPageChange={updatePagination}
+            onPageChange={handlePageChange}
             paginationProps={{
               showTotal: (total: number) => `共 ${total} 条记录`,
             }}
@@ -471,7 +486,7 @@ const OrganizationPage: React.FC = () => {
       children: (
         <>
           <div style={{ marginBottom: 16 }}>
-            <Button icon={<ReloadOutlined />} onClick={loadOrganizationTree}>
+            <Button icon={<ReloadOutlined />} onClick={() => void refetchOrganizationTree()}>
               刷新树形结构
             </Button>
           </div>

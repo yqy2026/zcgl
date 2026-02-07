@@ -12,13 +12,16 @@ import type {
 } from 'antd/es/table/interface';
 import { assetService } from '@/services/assetService';
 import { analyticsService } from '@/services/analyticsService';
-import { useListData } from '@/hooks/useListData';
 import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
-import { PageContainer, ContentSection, LoadingContainer } from '@/components/Common/StateContainer';
+import {
+  PageContainer,
+  ContentSection,
+  LoadingContainer,
+} from '@/components/Common/StateContainer';
 
 const pageLogger = createLogger('AssetList');
 
@@ -29,52 +32,44 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  const fetchAssets = useCallback(
-    async ({ page, pageSize, ...filters }: { page: number; pageSize: number } & AssetListFilters) => {
-      const response = await assetService.getAssets({
-        ...filters,
-        page,
-        page_size: pageSize,
-      });
-      return {
-        items: response.items,
-        total: response.total,
-        pages: response.pages,
-      };
-    },
-    []
-  );
+  const [filters, setFilters] = useState<AssetListFilters>({});
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+  });
 
   const {
-    data: assetRows,
-    loading: isLoading,
+    data: assetsData,
     error,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters: resetListFilters,
-  } = useListData<Asset, AssetListFilters>({
-    fetcher: fetchAssets,
-    initialFilters: {},
-    initialPageSize: 20,
-    onError: error => {
-      const message = error instanceof Error ? error.message : '加载资产数据失败';
-      pageLogger.error('资产列表加载失败:', error as Error);
-      MessageManager.error(message);
-    },
+    isLoading: isAssetsInitialLoading,
+    isFetching: isAssetsFetching,
+    refetch: refetchAssets,
+  } = useQuery({
+    queryKey: ['assets-list', pagination.current, pagination.pageSize, filters],
+    queryFn: () =>
+      assetService.getAssets({
+        ...filters,
+        page: pagination.current,
+        page_size: pagination.pageSize,
+      }),
+    retry: 1,
   });
 
   useEffect(() => {
-    void loadList();
-  }, [loadList]);
+    if (error != null) {
+      const message = error instanceof Error ? error.message : '加载资产数据失败';
+      pageLogger.error('资产列表加载失败:', error);
+      MessageManager.error(message);
+    }
+  }, [error]);
+
+  const assetRows = assetsData?.items ?? [];
+  const isLoading = isAssetsFetching;
 
   const analyticsFilters = useMemo(() => {
     const {
-      sort_field: _sortField,
-      sort_by: _sortBy,
-      sort_order: _sortOrder,
+      sort_by: _sort_by,
+      sort_order: _sort_order,
       data_status: _dataStatus,
       ...rest
     } = filters;
@@ -90,29 +85,29 @@ const AssetListPage: React.FC = () => {
   const listData = useMemo(
     () => ({
       items: assetRows,
-      total: pagination.total,
+      total: assetsData?.total ?? 0,
       page: pagination.current,
       page_size: pagination.pageSize,
       pages:
-        pagination.pageSize > 0 ? Math.ceil(pagination.total / pagination.pageSize) : 0,
+        assetsData?.pages ??
+        (pagination.pageSize > 0 ? Math.ceil((assetsData?.total ?? 0) / pagination.pageSize) : 0),
     }),
-    [assetRows, pagination.current, pagination.pageSize, pagination.total]
+    [assetRows, assetsData?.pages, assetsData?.total, pagination.current, pagination.pageSize]
   );
-  const showInitialLoading = isLoading && assetRows.length === 0;
+  const showInitialLoading = isAssetsInitialLoading && assetRows.length === 0;
 
   // 处理搜索
-  const handleSearch = useCallback(
-    (params: AssetSearchParams) => {
-      const { page: _page, page_size: _pageSize, ...nextFilters } = params;
-      applyFilters(nextFilters);
-    },
-    [applyFilters]
-  );
+  const handleSearch = useCallback((params: AssetSearchParams) => {
+    const { page: _page, page_size: _pageSize, ...nextFilters } = params;
+    setFilters(nextFilters);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
 
   // 重置搜索
   const handleReset = useCallback(() => {
-    resetListFilters();
-  }, [resetListFilters]);
+    setFilters({});
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
 
   // 处理表格变化
   const handleTableChange = useCallback(
@@ -148,66 +143,82 @@ const AssetListPage: React.FC = () => {
         delete nextFilters.sort_order;
       }
 
-      void loadList({
-        page: paginationConfig.current ?? pagination.current,
+      setFilters(nextFilters);
+      setPagination({
+        current: paginationConfig.current ?? pagination.current,
         pageSize: paginationConfig.pageSize ?? pagination.pageSize,
-        filters: nextFilters,
-        replaceFilters: true,
       });
     },
-    [filters, loadList, pagination.current, pagination.pageSize]
+    [filters, pagination.current, pagination.pageSize]
   );
 
   // 处理编辑
-  const handleEdit = useCallback((asset: { id: string }) => {
-    navigate(`/assets/${asset.id}/edit`);
-  }, [navigate]);
+  const handleEdit = useCallback(
+    (asset: { id: string }) => {
+      navigate(`/assets/${asset.id}/edit`);
+    },
+    [navigate]
+  );
 
   // 处理删除
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await assetService.deleteAsset(id);
-      MessageManager.success('删除成功，已移入回收站');
-      // 重新加载数据
-      void loadList();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '删除失败';
-      MessageManager.error(errorMessage);
-    }
-  }, [loadList]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await assetService.deleteAsset(id);
+        MessageManager.success('删除成功，已移入回收站');
+        void refetchAssets();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '删除失败';
+        MessageManager.error(errorMessage);
+      }
+    },
+    [refetchAssets]
+  );
 
-  const handleRestore = useCallback(async (id: string) => {
-    try {
-      await assetService.restoreAsset(id);
-      MessageManager.success('恢复成功');
-      void loadList();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '恢复失败';
-      MessageManager.error(errorMessage);
-    }
-  }, [loadList]);
+  const handleRestore = useCallback(
+    async (id: string) => {
+      try {
+        await assetService.restoreAsset(id);
+        MessageManager.success('恢复成功');
+        void refetchAssets();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '恢复失败';
+        MessageManager.error(errorMessage);
+      }
+    },
+    [refetchAssets]
+  );
 
-  const handleHardDelete = useCallback(async (id: string) => {
-    try {
-      await assetService.hardDeleteAsset(id);
-      MessageManager.success('彻底删除成功');
-      void loadList();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '彻底删除失败';
-      MessageManager.error(errorMessage);
-      throw error;
-    }
-  }, [loadList]);
+  const handleHardDelete = useCallback(
+    async (id: string) => {
+      try {
+        await assetService.hardDeleteAsset(id);
+        MessageManager.success('彻底删除成功');
+        void refetchAssets();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '彻底删除失败';
+        MessageManager.error(errorMessage);
+        throw error;
+      }
+    },
+    [refetchAssets]
+  );
 
   // 处理查看
-  const handleView = useCallback((asset: { id: string }) => {
-    navigate(`/assets/${asset.id}`);
-  }, [navigate]);
+  const handleView = useCallback(
+    (asset: { id: string }) => {
+      navigate(`/assets/${asset.id}`);
+    },
+    [navigate]
+  );
 
   // 处理查看历史
-  const handleViewHistory = useCallback((asset: { id: string }) => {
-    navigate(`/assets/${asset.id}/history`);
-  }, [navigate]);
+  const handleViewHistory = useCallback(
+    (asset: { id: string }) => {
+      navigate(`/assets/${asset.id}/history`);
+    },
+    [navigate]
+  );
 
   // 处理选择变化
   const handleSelectChange = useCallback((selectedRowKeys: React.Key[]) => {
@@ -289,7 +300,7 @@ const AssetListPage: React.FC = () => {
           type="error"
           showIcon
           action={
-            <Button size="small" onClick={() => void loadList()}>
+            <Button size="small" onClick={() => void refetchAssets()}>
               重新加载
             </Button>
           }

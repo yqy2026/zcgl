@@ -15,7 +15,7 @@ const API_BASE_URL = '/api/v1';
 export const authHandlers = [
   // 登录
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
-    const body = await request.json() as { username: string; password: string };
+    const body = (await request.json()) as { username: string; password: string };
 
     if (body.username === 'testuser' && body.password === 'password123') {
       return HttpResponse.json({
@@ -39,10 +39,7 @@ export const authHandlers = [
       });
     }
 
-    return HttpResponse.json(
-      { message: '用户名或密码错误', success: false },
-      { status: 401 }
-    );
+    return HttpResponse.json({ message: '用户名或密码错误', success: false }, { status: 401 });
   }),
 
   // 获取当前用户信息
@@ -185,7 +182,7 @@ export const assetHandlers = [
 
 export const rentContractHandlers = [
   // 获取合同列表
-  http.get(`${API_BASE_URL}/rent-contracts`, ({ request }) => {
+  http.get(`${API_BASE_URL}/rental-contracts/contracts`, ({ request }) => {
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('page_size') || '10');
@@ -224,7 +221,7 @@ export const rentContractHandlers = [
   }),
 
   // 获取合同详情
-  http.get(`${API_BASE_URL}/rent-contracts/:id`, ({ params }) => {
+  http.get(`${API_BASE_URL}/rental-contracts/contracts/:id`, ({ params }) => {
     const id = parseInt(params.id as string);
 
     return HttpResponse.json({
@@ -258,7 +255,7 @@ export const rentContractHandlers = [
   }),
 
   // 创建合同
-  http.post(`${API_BASE_URL}/rent-contracts`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/rental-contracts/contracts`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
     return HttpResponse.json({
@@ -276,7 +273,7 @@ export const rentContractHandlers = [
   }),
 
   // 更新合同
-  http.put(`${API_BASE_URL}/rent-contracts/:id`, async ({ request }) => {
+  http.put(`${API_BASE_URL}/rental-contracts/contracts/:id`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
     return HttpResponse.json({
@@ -290,7 +287,7 @@ export const rentContractHandlers = [
   }),
 
   // 删除合同
-  http.delete(`${API_BASE_URL}/rent-contracts/:id`, () => {
+  http.delete(`${API_BASE_URL}/rental-contracts/contracts/:id`, () => {
     return HttpResponse.json({
       message: '删除成功',
       success: true,
@@ -298,7 +295,7 @@ export const rentContractHandlers = [
   }),
 
   // 续签合同
-  http.post(`${API_BASE_URL}/rent-contracts/:id/renew`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/rental-contracts/contracts/:id/renew`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
     return HttpResponse.json({
@@ -314,7 +311,7 @@ export const rentContractHandlers = [
   }),
 
   // 终止合同
-  http.post(`${API_BASE_URL}/rent-contracts/:id/terminate`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/rental-contracts/contracts/:id/terminate`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     const terminationReason =
       typeof body.termination_reason === 'string' ? body.termination_reason : '';
@@ -522,6 +519,39 @@ export const analyticsHandlers = [
 ];
 
 // =============================================================================
+// Reporting Handlers
+// =============================================================================
+
+export const reportingHandlers = [
+  // 前端错误上报
+  http.post(`${API_BASE_URL}/errors/report`, async () => {
+    return HttpResponse.json({
+      data: { accepted: true },
+      message: '错误上报成功',
+      success: true,
+    });
+  }),
+
+  // A/B 测试事件上报
+  http.post(`${API_BASE_URL}/analytics/abtest-events`, async () => {
+    return HttpResponse.json({
+      data: { accepted: true },
+      message: '事件上报成功',
+      success: true,
+    });
+  }),
+
+  // A/B 测试转化上报
+  http.post(`${API_BASE_URL}/analytics/abtest-conversions`, async () => {
+    return HttpResponse.json({
+      data: { accepted: true },
+      message: '转化上报成功',
+      success: true,
+    });
+  }),
+];
+
+// =============================================================================
 // Export All Handlers
 // =============================================================================
 
@@ -532,4 +562,5 @@ export const handlers = [
   ...ownershipHandlers,
   ...organizationHandlers,
   ...analyticsHandlers,
+  ...reportingHandlers,
 ];

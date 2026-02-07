@@ -16,6 +16,7 @@ import {
   ApiClientError,
   ApiErrorType,
 } from '@/types/apiResponse';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 import { validateApiResponse } from './responseValidator';
 
 // ==================== 类型定义 ====================
@@ -179,7 +180,7 @@ export class ResponseExtractor {
       const responseData = response.data as ApiResponseData;
 
       // 开发模式下启用响应格式验证
-      if (process.env.NODE_ENV === 'development' && finalOptions.detection?.strict !== false) {
+      if (isDevelopmentMode() && finalOptions.detection?.strict !== false) {
         const validation = validateApiResponse(responseData);
 
         if (!validation.valid) {
@@ -295,9 +296,7 @@ export class ResponseExtractor {
   /**
    * 规范化分页数据，输出统一的列表结构
    */
-  private static normalizePaginatedData(
-    dataContainer: PaginatedData
-  ): Record<string, unknown> {
+  private static normalizePaginatedData(dataContainer: PaginatedData): Record<string, unknown> {
     const items = Array.isArray(dataContainer.items) ? dataContainer.items : [];
     const pagination =
       dataContainer.pagination && typeof dataContainer.pagination === 'object'
@@ -402,11 +401,11 @@ export class ResponseExtractor {
       // 如果数据已经是期望的类型，直接返回
       const expectedType = options.expectedType as new (...args: unknown[]) => T;
       if (data instanceof expectedType) {
-        return data as T;
+        return data;
       }
 
       // 尝试构造新实例（适用于简单对象）
-      return new expectedType(data) as T;
+      return new expectedType(data);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);

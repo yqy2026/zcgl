@@ -56,7 +56,9 @@ const renderMenuItems = (items: MenuItemMock[] | undefined, onClick?: MenuMockPr
       >
         {item.label}
       </div>
-      {item.children && <div data-testid={`submenu-${item.key}`}>{renderMenuItems(item.children, onClick)}</div>}
+      {item.children && (
+        <div data-testid={`submenu-${item.key}`}>{renderMenuItems(item.children, onClick)}</div>
+      )}
     </div>
   ));
 
@@ -69,15 +71,7 @@ vi.mock('antd', () => ({
       </div>
     ),
   },
-  Menu: ({
-    selectedKeys,
-    defaultOpenKeys,
-    items,
-    onClick,
-    mode,
-    theme,
-    style,
-  }: MenuMockProps) => (
+  Menu: ({ selectedKeys, defaultOpenKeys, items, onClick, mode, theme, style }: MenuMockProps) => (
     <div
       data-testid="menu"
       data-selected-keys={JSON.stringify(selectedKeys)}

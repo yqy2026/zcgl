@@ -42,9 +42,7 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 vi.mock('@/components/System/PromptEditor', () => ({
-  default: vi.fn(({ visible }) =>
-    visible ? <div data-testid="prompt-editor" /> : null
-  ),
+  default: vi.fn(({ visible }) => (visible ? <div data-testid="prompt-editor" /> : null)),
 }));
 
 vi.mock('dayjs', () => ({

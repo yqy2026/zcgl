@@ -20,7 +20,7 @@ vi.mock('@/api/client', () => ({
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -176,9 +176,9 @@ describe('ProjectService', () => {
         error: '编码重复',
       });
 
-      await expect(
-        service.createProject({ name: '测试', code: 'PRJ-001' })
-      ).rejects.toThrow('创建项目失败');
+      await expect(service.createProject({ name: '测试', code: 'PRJ-001' })).rejects.toThrow(
+        '创建项目失败'
+      );
     });
   });
 
@@ -701,9 +701,7 @@ describe('ProjectService', () => {
         error: '文件格式错误',
       });
 
-      await expect(service.importProjects(mockFile)).rejects.toThrow(
-        '导入项目数据失败'
-      );
+      await expect(service.importProjects(mockFile)).rejects.toThrow('导入项目数据失败');
     });
   });
 

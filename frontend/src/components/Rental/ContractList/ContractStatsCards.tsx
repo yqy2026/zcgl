@@ -51,9 +51,11 @@ const ContractStatsCards: React.FC<ContractStatsCardsProps> = ({ statistics }) =
             value={statistics.payment_rate}
             precision={2}
             suffix="%"
-            styles={{ content: {
-              color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error,
-            } }}
+            styles={{
+              content: {
+                color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error,
+              },
+            }}
           />
         </Card>
       </Col>

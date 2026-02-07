@@ -22,9 +22,7 @@ interface PermissionGuardMockProps {
 }
 
 vi.mock('react-router-dom', () => ({
-  Route: ({ element }: { element?: ReactNode }) => (
-    <div data-testid="route">{element}</div>
-  ),
+  Route: ({ element }: { element?: ReactNode }) => <div data-testid="route">{element}</div>,
 }));
 
 vi.mock('@/components/ErrorHandling', () => ({
@@ -49,13 +47,7 @@ describe('ProtectedRoute', () => {
   it('renders component inside error boundary by default', () => {
     const TestComponent = () => <div data-testid="content">Protected Content</div>;
 
-    renderWithProviders(
-      <ProtectedRoute
-        path="/test"
-        title="测试路由"
-        component={TestComponent}
-      />
-    );
+    renderWithProviders(<ProtectedRoute path="/test" title="测试路由" component={TestComponent} />);
 
     expect(screen.getByTestId('route')).toBeInTheDocument();
     expect(screen.getByTestId('error-boundary')).toBeInTheDocument();
@@ -117,12 +109,7 @@ describe('ProtectedRoute', () => {
     const TestComponent = () => <div data-testid="content">Public Content</div>;
 
     renderWithProviders(
-      <ProtectedRoute
-        path="/public"
-        title="公共路由"
-        component={TestComponent}
-        permissions={[]}
-      />
+      <ProtectedRoute path="/public" title="公共路由" component={TestComponent} permissions={[]} />
     );
 
     expect(screen.getByTestId('content')).toBeInTheDocument();

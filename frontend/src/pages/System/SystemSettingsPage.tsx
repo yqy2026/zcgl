@@ -74,7 +74,6 @@ const SystemSettingsPage: React.FC = () => {
   const isSettingsLoading = settingsQuery.isLoading || settingsQuery.isFetching;
   const isInfoLoading = systemInfoQuery.isLoading || systemInfoQuery.isFetching;
 
-
   // 保存设置
   const updateSettingsMutation = useMutation({
     mutationFn: async (values: Partial<SystemSettings>) => {
@@ -152,10 +151,7 @@ const SystemSettingsPage: React.FC = () => {
       key: 'settings',
       label: '基本设置',
       children: (
-        <Card
-          title="系统基本设置"
-          loading={isSettingsLoading || updateSettingsMutation.isPending}
-        >
+        <Card title="系统基本设置" loading={isSettingsLoading || updateSettingsMutation.isPending}>
           <Form
             form={form}
             layout="vertical"

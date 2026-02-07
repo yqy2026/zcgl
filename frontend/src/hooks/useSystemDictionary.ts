@@ -42,9 +42,7 @@ export const useSystemDictionary = (dictType: string): UseSystemDictionaryResult
   };
 
   const errorMessage =
-    data?.success === true
-      ? null
-      : new Error(data?.error ?? error?.message ?? '字典数据获取失败');
+    data?.success === true ? null : new Error(data?.error ?? error?.message ?? '字典数据获取失败');
 
   return {
     options,

@@ -27,7 +27,7 @@ vi.mock('@/services/ownershipService', () => ({
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -180,11 +180,7 @@ describe('AssetCoreService', () => {
 
       expect(result.id).toBe('3');
       expect(result.name).toBe('新资产');
-      expect(apiClient.post).toHaveBeenCalledWith(
-        expect.any(String),
-        newAsset,
-        expect.any(Object)
-      );
+      expect(apiClient.post).toHaveBeenCalledWith(expect.any(String), newAsset, expect.any(Object));
     });
 
     it('should throw error on creation failure', async () => {
@@ -193,9 +189,9 @@ describe('AssetCoreService', () => {
         error: '资产编码重复',
       });
 
-      await expect(
-        service.createAsset({ name: '测试', asset_code: 'A001' })
-      ).rejects.toThrow('创建资产失败');
+      await expect(service.createAsset({ name: '测试', asset_code: 'A001' })).rejects.toThrow(
+        '创建资产失败'
+      );
     });
   });
 
@@ -234,9 +230,7 @@ describe('AssetCoreService', () => {
         error: '更新失败',
       });
 
-      await expect(service.updateAsset('1', { name: '测试' })).rejects.toThrow(
-        '更新资产失败'
-      );
+      await expect(service.updateAsset('1', { name: '测试' })).rejects.toThrow('更新资产失败');
     });
   });
 
@@ -288,9 +282,7 @@ describe('AssetCoreService', () => {
         error: '部分资产删除失败',
       });
 
-      await expect(service.deleteAssets(['1', '2'])).rejects.toThrow(
-        '批量删除资产失败'
-      );
+      await expect(service.deleteAssets(['1', '2'])).rejects.toThrow('批量删除资产失败');
     });
   });
 
@@ -513,9 +505,7 @@ describe('AssetCoreService', () => {
         error: '获取失败',
       });
 
-      await expect(service.getManagementEntities()).rejects.toThrow(
-        '获取管理实体列表失败'
-      );
+      await expect(service.getManagementEntities()).rejects.toThrow('获取管理实体列表失败');
     });
   });
 

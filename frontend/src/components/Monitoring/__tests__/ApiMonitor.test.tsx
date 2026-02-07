@@ -43,7 +43,7 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
       <div data-testid="table-header">
         {columns?.map((column, colIndex) => {
           const title =
-            typeof column.title === 'function' ? column.title({}) : column.title ?? '';
+            typeof column.title === 'function' ? column.title({}) : (column.title ?? '');
           return <span key={column.key ?? `header-${colIndex}`}>{title}</span>;
         })}
       </div>

@@ -144,9 +144,7 @@ describe('FinancialStatisticCard - 渲染测试', () => {
 
   it('默认isPositive应该是true', async () => {
     const { FinancialStatisticCard } = await import('../StatisticCard');
-    const { container } = renderWithProviders(
-      <FinancialStatisticCard title="测试" value={100} />
-    );
+    const { container } = renderWithProviders(<FinancialStatisticCard title="测试" value={100} />);
 
     const value = container.querySelector('.ant-statistic-content');
     expect(value?.getAttribute('style')).toContain('rgb(63, 134, 0)');

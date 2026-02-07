@@ -6,6 +6,7 @@ import type { ErrorResponse } from '@/types/api';
 import { HTTP_STATUS, ERROR_CODES } from '@/api/config';
 import { createLogger } from '@/utils/logger';
 import { AuthStorage } from '@/utils/AuthStorage';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 const errorLogger = createLogger('ErrorHandler');
 
@@ -150,7 +151,7 @@ export class ApiErrorHandler {
     errorLogger.error('API Error', undefined, logMeta);
 
     // 在开发环境下打印详细错误
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode()) {
       // console.error('API Error Details:', error)
     }
   }

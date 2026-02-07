@@ -72,7 +72,7 @@ const AssetCreatePage: React.FC = () => {
     if (isEdit) {
       updateMutation.mutate(data as AssetUpdateRequest);
     } else {
-      createMutation.mutate(data as AssetCreateRequest);
+      createMutation.mutate(data);
     }
   };
 

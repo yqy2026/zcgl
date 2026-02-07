@@ -123,9 +123,7 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
   });
 
   it('上传成功应调用服务与回调', async () => {
-    const { propertyCertificateService } = await import(
-      '@/services/propertyCertificateService'
-    );
+    const { propertyCertificateService } = await import('@/services/propertyCertificateService');
     const mockResult = createMockExtractionResult();
     vi.mocked(propertyCertificateService.uploadCertificate).mockResolvedValue(mockResult);
 
@@ -157,9 +155,7 @@ describe('PropertyCertificateUpload - 渲染与交互测试', () => {
   });
 
   it('上传失败应提示错误并触发onError', async () => {
-    const { propertyCertificateService } = await import(
-      '@/services/propertyCertificateService'
-    );
+    const { propertyCertificateService } = await import('@/services/propertyCertificateService');
     vi.mocked(propertyCertificateService.uploadCertificate).mockRejectedValue(
       new Error('Upload failed')
     );

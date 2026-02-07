@@ -113,7 +113,9 @@ describe('AnalyticsStatsGrid - loading状态测试', () => {
 
   it('loading为true时应该显示loading状态', async () => {
     const { AnalyticsStatsGrid } = await import('../AnalyticsStatsCard');
-    const { container } = renderWithProviders(<AnalyticsStatsGrid data={mockData} loading={true} />);
+    const { container } = renderWithProviders(
+      <AnalyticsStatsGrid data={mockData} loading={true} />
+    );
 
     const skeletons = container.querySelectorAll('.ant-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);
@@ -238,7 +240,9 @@ describe('FinancialStatsGrid - loading状态测试', () => {
 
   it('loading为true时应该显示loading状态', async () => {
     const { FinancialStatsGrid } = await import('../AnalyticsStatsCard');
-    const { container } = renderWithProviders(<FinancialStatsGrid data={mockFinancialData} loading={true} />);
+    const { container } = renderWithProviders(
+      <FinancialStatsGrid data={mockFinancialData} loading={true} />
+    );
 
     const skeletons = container.querySelectorAll('.ant-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);

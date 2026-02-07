@@ -1,116 +1,148 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
 import { ownershipService } from '@/services/ownershipService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import type {
   RentContract,
+  RentContractListResponse,
   RentContractPageState,
   RentContractSearchFilters,
   RentStatisticsOverview,
 } from '@/types/rentContract';
-import type { Asset } from '@/types/asset';
+import type { Asset, AssetListResponse } from '@/types/asset';
 import type { Ownership } from '@/types/ownership';
-import { useListData } from '@/hooks/useListData';
 
 const logger = createLogger('useContractList');
 
 export const useContractList = () => {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [ownerships, setOwnerships] = useState<Ownership[]>([]);
-  const [statistics, setStatistics] = useState<RentStatisticsOverview | null>(null);
-
-  // 加载合同列表
-  const fetchContracts = useCallback(
-    async ({
-      page,
-      pageSize,
-      ...filters
-    }: { page: number; pageSize: number } & RentContractSearchFilters) => {
-      const response = await rentContractService.getContracts({
-        page,
-        pageSize,
-        ...filters,
-      });
-      const contracts = Array.isArray(response.items) ? response.items : [];
-      return {
-        items: contracts,
-        total: response.total ?? 0,
-        pages: response.pages ?? 0,
-      };
-    },
-    []
-  );
-
-  const handleListError = useCallback((error: unknown) => {
-    logger.error('加载合同列表失败:', error as Error);
-    MessageManager.error(
-      `加载合同列表失败: ${error instanceof Error ? error.message : '未知错误'}`
-    );
-  }, []);
-
-  const {
-    data: contracts,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters,
-    updatePagination,
-  } = useListData<RentContract, RentContractSearchFilters>({
-    fetcher: fetchContracts,
-    initialFilters: {},
-    initialPageSize: 10,
-    onError: handleListError,
+  const [filters, setFilters] = useState<RentContractSearchFilters>({});
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
   });
 
-  // 加载统计数据
-  const loadStatistics = useCallback(async () => {
-    try {
-      const stats = await rentContractService.getRentStatistics();
-      setStatistics(stats);
-    } catch (error) {
-      logger.error('加载统计数据失败:', error as Error);
-    }
-  }, []);
+  const {
+    data: contractsResponse,
+    error: contractsError,
+    isLoading: isContractsLoading,
+    isFetching: isContractsFetching,
+    refetch: refetchContracts,
+  } = useQuery<RentContractListResponse>({
+    queryKey: RENTAL_QUERY_KEYS.contractList(
+      paginationState.current,
+      paginationState.pageSize,
+      filters
+    ),
+    queryFn: () =>
+      rentContractService.getContracts({
+        page: paginationState.current,
+        pageSize: paginationState.pageSize,
+        ...filters,
+      }),
+    retry: 1,
+  });
 
-  // 加载资产和权属方数据
-  const loadReferenceData = useCallback(async () => {
-    try {
-      const [assetsResponse, ownershipsData] = await Promise.all([
-        assetService.getAssets({ pageSize: 100 }),
-        ownershipService.getOwnershipOptions(true),
-      ]);
-      setAssets(assetsResponse.items);
-      setOwnerships(ownershipsData);
-    } catch {
-      MessageManager.error('加载参考数据失败');
-    }
-  }, []);
+  const {
+    data: statistics,
+    error: statisticsError,
+    refetch: refetchStatistics,
+  } = useQuery<RentStatisticsOverview>({
+    queryKey: RENTAL_QUERY_KEYS.contractStatistics,
+    queryFn: () => rentContractService.getRentStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  const { data: assetsResponse, error: assetsError } = useQuery<AssetListResponse>({
+    queryKey: RENTAL_QUERY_KEYS.referenceAssets,
+    queryFn: () => assetService.getAssets({ page_size: 100 }),
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const { data: ownershipsData, error: ownershipsError } = useQuery<Ownership[]>({
+    queryKey: RENTAL_QUERY_KEYS.referenceOwnerships,
+    queryFn: () => ownershipService.getOwnershipOptions(true),
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
 
   useEffect(() => {
-    void loadList();
-    void loadStatistics();
-    void loadReferenceData();
-  }, [loadList, loadStatistics, loadReferenceData]);
+    if (contractsError != null) {
+      logger.error('加载合同列表失败:', contractsError);
+      MessageManager.error(
+        `加载合同列表失败: ${contractsError instanceof Error ? contractsError.message : '未知错误'}`
+      );
+    }
+  }, [contractsError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      logger.error('加载统计数据失败:', statisticsError);
+    }
+  }, [statisticsError]);
+
+  useEffect(() => {
+    if (assetsError != null || ownershipsError != null) {
+      MessageManager.error('加载参考数据失败');
+    }
+  }, [assetsError, ownershipsError]);
+
+  const contracts = Array.isArray(contractsResponse?.items) ? contractsResponse.items : [];
+  const assets: Asset[] = assetsResponse?.items ?? [];
+  const ownerships = ownershipsData ?? [];
+  const statisticsData = statistics ?? null;
+  const loading = isContractsLoading || isContractsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: contractsResponse?.total ?? 0,
+      pages: contractsResponse?.pages ?? 0,
+    }),
+    [
+      contractsResponse?.pages,
+      contractsResponse?.total,
+      paginationState.current,
+      paginationState.pageSize,
+    ]
+  );
 
   // 处理分页变化
   const handleTableChange = (next: { current?: number; pageSize?: number }) => {
-    updatePagination(next);
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
   };
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
-    applyFilters(values as RentContractSearchFilters);
+    setFilters(values as RentContractSearchFilters);
+    setPaginationState(prev => ({
+      ...prev,
+      current: 1,
+    }));
   };
 
   // 重置搜索
   const handleReset = () => {
-    resetFilters();
+    setFilters({});
+    setPaginationState(prev => ({
+      ...prev,
+      current: 1,
+    }));
   };
+
+  const refreshListAndStatistics = useCallback(() => {
+    void refetchContracts();
+    void refetchStatistics();
+  }, [refetchContracts, refetchStatistics]);
 
   // 删除合同
   const handleDelete = async (id: string) => {
@@ -123,8 +155,7 @@ export const useContractList = () => {
         try {
           await rentContractService.deleteContract(id);
           MessageManager.success('删除成功');
-          void loadList(); // Reload list
-          void loadStatistics(); // Reload stats
+          refreshListAndStatistics();
         } catch {
           MessageManager.error('删除失败');
         }
@@ -157,8 +188,7 @@ export const useContractList = () => {
             new Date().toISOString().split('T')[0]
           );
           MessageManager.success('合同已终止');
-          void loadList();
-          void loadStatistics();
+          refreshListAndStatistics();
         } catch {
           MessageManager.error('终止合同失败');
         }
@@ -168,8 +198,7 @@ export const useContractList = () => {
 
   // 导入成功的回调
   const handleImportSuccess = () => {
-    void loadList();
-    void loadStatistics();
+    refreshListAndStatistics();
   };
 
   const state = useMemo<RentContractPageState>(
@@ -188,7 +217,7 @@ export const useContractList = () => {
     state,
     assets,
     ownerships,
-    statistics,
+    statistics: statisticsData,
     handleTableChange,
     handleSearch,
     handleReset,

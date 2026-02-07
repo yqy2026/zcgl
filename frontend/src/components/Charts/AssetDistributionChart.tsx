@@ -235,11 +235,11 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           return (
             <div style={{ padding: '8px' }}>
               <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+                {datum.full_name ?? (datum.entity as string)}
               </div>
               <div>资产数量: {datum.count as number} 个</div>
-              <div>占比: {(datum.percentage as number | undefined)?.toFixed(1) ?? 0}%</div>
-              <div>总面积: {(datum.total_area as number | undefined)?.toLocaleString()} ㎡</div>
+              <div>占比: {datum.percentage?.toFixed(1) ?? 0}%</div>
+              <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             </div>
           );
         },

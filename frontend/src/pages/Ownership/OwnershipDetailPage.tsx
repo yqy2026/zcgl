@@ -74,7 +74,7 @@ const OwnershipDetailPage: React.FC = () => {
       assetService.getAssets({
         ownership_id: id,
         page: 1,
-        pageSize: 100,
+        page_size: 100,
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });
@@ -275,12 +275,7 @@ const OwnershipDetailPage: React.FC = () => {
   if (!ownership) {
     return (
       <div style={{ padding: '24px' }}>
-        <Alert
-          title="权属方不存在"
-          description="未找到指定的权属方信息"
-          type="warning"
-          showIcon
-        />
+        <Alert title="权属方不存在" description="未找到指定的权属方信息" type="warning" showIcon />
       </div>
     );
   }
@@ -414,14 +409,16 @@ const OwnershipDetailPage: React.FC = () => {
               precision={1}
               prefix={<PercentageOutlined />}
               suffix="%"
-              styles={{ content: {
-                color:
-                  parseFloat(collectionRate) >= 90
-                    ? COLORS.success
-                    : parseFloat(collectionRate) >= 70
-                      ? COLORS.warning
-                      : COLORS.error,
-              } }}
+              styles={{
+                content: {
+                  color:
+                    parseFloat(collectionRate) >= 90
+                      ? COLORS.success
+                      : parseFloat(collectionRate) >= 70
+                        ? COLORS.warning
+                        : COLORS.error,
+                },
+              }}
             />
           </Card>
         </Col>

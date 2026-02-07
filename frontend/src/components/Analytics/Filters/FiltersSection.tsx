@@ -12,10 +12,7 @@ const { Option } = Select;
  */
 const FiltersSection: React.FC = () => {
   const { localFilters, handleFilterChange, loading, showAdvanced } = useAnalyticsFiltersContext();
-  const {
-    data: ownershipOptions = [],
-    isLoading: ownershipLoading,
-  } = useQuery({
+  const { data: ownershipOptions = [], isLoading: ownershipLoading } = useQuery({
     queryKey: ['ownership-select-options'],
     queryFn: () => ownershipService.getOwnershipSelectOptions(),
     staleTime: 30 * 60 * 1000,
@@ -139,8 +136,7 @@ const FiltersSection: React.FC = () => {
           onChange={value => handleFilterChange('ownership_id', value)}
           loading={loading || ownershipLoading}
           options={ownershipOptions}
-        >
-        </Select>
+        ></Select>
       </Col>
     </Row>
   );

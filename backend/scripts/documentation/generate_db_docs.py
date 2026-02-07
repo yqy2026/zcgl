@@ -16,11 +16,11 @@ from sqlalchemy import MetaData, inspect
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from models.ownership import Ownership
 from models.project import Project
 
 from database import get_database_engine
 from models.asset import Asset
+from models.ownership import Ownership
 from models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 
 

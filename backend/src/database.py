@@ -16,7 +16,6 @@ from queue import Empty, Queue
 from typing import Any
 
 from sqlalchemy import event, text
-from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import (

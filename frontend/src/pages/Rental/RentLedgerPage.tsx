@@ -2,7 +2,7 @@
  * 租金台账页面
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -23,7 +23,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   SearchOutlined,
   EditOutlined,
@@ -38,15 +38,17 @@ import dayjs from 'dayjs';
 
 import {
   RentLedger,
+  RentLedgerListResponse,
   RentLedgerQueryParams,
   RentLedgerUpdate,
   RentStatisticsOverview,
 } from '@/types/rentContract';
-import { Asset } from '@/types/asset';
-import { Ownership } from '@/types/ownership';
+import { Asset, AssetListResponse } from '@/types/asset';
+import { OwnershipListResponse } from '@/types/ownership';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
 import { ownershipService } from '@/services/ownershipService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -64,107 +66,129 @@ interface BatchUpdateValues {
   notes?: string;
 }
 
-type RentLedgerFilters = Omit<
-  RentLedgerQueryParams,
-  'page' | 'pageSize' | 'page_size'
->;
+type RentLedgerFilters = Omit<RentLedgerQueryParams, 'page' | 'pageSize' | 'page_size'>;
 
 const RentLedgerPage: React.FC = () => {
   const [form] = Form.useForm();
+  const queryClient = useQueryClient();
 
   const [uiState, setUiState] = useState({
     selectedLedgers: [] as RentLedger[],
     showBatchModal: false,
     showGenerateModal: false,
   });
-
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [ownerships, setOwnerships] = useState<Ownership[]>([]);
-  const [statistics, setStatistics] = useState<RentStatisticsOverview | null>(null);
+  const [filters, setFilters] = useState<RentLedgerFilters>({});
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
 
   const format = useFormat();
 
-  const fetchLedgers = useCallback(
-    async (params: { page: number; pageSize: number } & RentLedgerFilters) => {
-      const response = await rentContractService.getRentLedgers(params);
-      if (response == null) {
-        throw new Error('API响应为空');
-      }
-      return response;
-    },
-    []
-  );
-
   const {
-    data: ledgers,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters,
-    updatePagination,
-  } = useListData<RentLedger, RentLedgerFilters>({
-    fetcher: fetchLedgers,
-    initialFilters: {},
-    initialPageSize: 10,
-    onError: error => {
-      pageLogger.error('加载台账列表失败:', error as Error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      MessageManager.error(`加载台账列表失败: ${errorMessage}`);
-    },
+    data: ledgersResponse,
+    error: ledgersError,
+    isLoading: isLedgersLoading,
+    isFetching: isLedgersFetching,
+  } = useQuery<RentLedgerListResponse>({
+    queryKey: RENTAL_QUERY_KEYS.ledgerList(
+      paginationState.current,
+      paginationState.pageSize,
+      filters as Record<string, unknown>
+    ),
+    queryFn: () =>
+      rentContractService.getRentLedgers({
+        page: paginationState.current,
+        pageSize: paginationState.pageSize,
+        ...filters,
+      }),
+    retry: 1,
   });
 
-  // 加载统计数据
-  const loadStatistics = useCallback(async () => {
-    try {
-      const stats = await rentContractService.getRentStatistics();
-      setStatistics(stats);
-    } catch (error) {
-      pageLogger.error('加载统计数据失败:', error as Error);
-    }
-  }, []);
+  const { data: statistics, error: statisticsError } = useQuery<RentStatisticsOverview>({
+    queryKey: RENTAL_QUERY_KEYS.ledgerStatistics,
+    queryFn: () => rentContractService.getRentStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
 
-  // 加载资产和权属方数据
-  const loadReferenceData = useCallback(async () => {
-    try {
-      const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ pageSize: 100 }),
-        ownershipService.getOwnerships({ page_size: 100 }),
-      ]);
+  const { data: assetsResponse, error: assetsError } = useQuery<AssetListResponse>({
+    queryKey: RENTAL_QUERY_KEYS.ledgerReferenceAssets,
+    queryFn: () => assetService.getAssets({ page_size: 100 }),
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
 
-      // 安全检查：确保响应和items存在
-      const assetItems = assetsResponse?.items ?? [];
-      const ownershipItems = ownershipsResponse?.items ?? [];
-
-      setAssets(assetItems);
-      setOwnerships(ownershipItems);
-    } catch (error) {
-      pageLogger.error('加载参考数据失败:', error as Error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      MessageManager.error(`加载参考数据失败: ${errorMessage}`);
-    }
-  }, []);
+  const { data: ownershipsResponse, error: ownershipsError } = useQuery<OwnershipListResponse>({
+    queryKey: RENTAL_QUERY_KEYS.ledgerReferenceOwnerships,
+    queryFn: () => ownershipService.getOwnerships({ page_size: 100 }),
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
 
   useEffect(() => {
-    void loadList();
-    void loadStatistics();
-    void loadReferenceData();
-  }, [loadList, loadStatistics, loadReferenceData]);
+    if (ledgersError != null) {
+      pageLogger.error('加载台账列表失败:', ledgersError);
+      const errorMessage = ledgersError instanceof Error ? ledgersError.message : '未知错误';
+      MessageManager.error(`加载台账列表失败: ${errorMessage}`);
+    }
+  }, [ledgersError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      pageLogger.error('加载统计数据失败:', statisticsError);
+    }
+  }, [statisticsError]);
+
+  useEffect(() => {
+    if (assetsError != null || ownershipsError != null) {
+      if (assetsError != null) {
+        pageLogger.error('加载资产参考数据失败:', assetsError);
+      }
+      if (ownershipsError != null) {
+        pageLogger.error('加载权属方参考数据失败:', ownershipsError);
+      }
+      MessageManager.error('加载参考数据失败');
+    }
+  }, [assetsError, ownershipsError]);
+
+  const ledgers = ledgersResponse?.items ?? [];
+  const assets: Asset[] = assetsResponse?.items ?? [];
+  const ownerships = ownershipsResponse?.items ?? [];
+  const statisticsData = statistics ?? null;
+  const loading = isLedgersLoading || isLedgersFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: ledgersResponse?.total ?? 0,
+    }),
+    [ledgersResponse?.total, paginationState.current, paginationState.pageSize]
+  );
+
+  const refreshLedgersAndStatistics = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.ledgerListRoot });
+    void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.ledgerStatistics });
+  }, [queryClient]);
 
   // 处理分页变化
   const handleTableChange = (pagination: { current?: number; pageSize?: number }): void => {
-    updatePagination(pagination);
+    setPaginationState(prev => ({
+      current: pagination.current ?? prev.current,
+      pageSize: pagination.pageSize ?? prev.pageSize,
+    }));
   };
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
-    applyFilters(values as RentLedgerFilters);
+    setFilters(values as RentLedgerFilters);
+    setPaginationState(prev => ({ ...prev, current: 1 }));
   };
 
   // 重置搜索
   const handleReset = () => {
-    resetFilters();
+    setFilters({});
+    setPaginationState(prev => ({ ...prev, current: 1 }));
   };
 
   // 更新台账支付状态
@@ -172,8 +196,7 @@ const RentLedgerPage: React.FC = () => {
     try {
       await rentContractService.updateRentLedger(id, data);
       MessageManager.success('更新成功');
-      void loadList();
-      void loadStatistics();
+      refreshLedgersAndStatistics();
     } catch {
       MessageManager.error('更新失败');
     }
@@ -196,8 +219,7 @@ const RentLedgerPage: React.FC = () => {
       });
       MessageManager.success('批量更新成功');
       setUiState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
-      void loadList();
-      void loadStatistics();
+      refreshLedgersAndStatistics();
     } catch {
       MessageManager.error('批量更新失败');
     }
@@ -386,13 +408,13 @@ const RentLedgerPage: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      {statistics && (
+      {statisticsData != null && (
         <Row gutter={16} style={{ marginBottom: '24px' }}>
           <Col span={6}>
             <Card>
               <Statistic
                 title="应收总额"
-                value={statistics.total_due}
+                value={statisticsData.total_due}
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
@@ -403,7 +425,7 @@ const RentLedgerPage: React.FC = () => {
             <Card>
               <Statistic
                 title="已收总额"
-                value={statistics.total_paid}
+                value={statisticsData.total_paid}
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
@@ -414,7 +436,7 @@ const RentLedgerPage: React.FC = () => {
             <Card>
               <Statistic
                 title="欠款总额"
-                value={statistics.total_overdue}
+                value={statisticsData.total_overdue}
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
@@ -426,10 +448,14 @@ const RentLedgerPage: React.FC = () => {
             <Card>
               <Statistic
                 title="收缴率"
-                value={statistics.payment_rate}
+                value={statisticsData.payment_rate}
                 precision={2}
                 suffix="%"
-                styles={{ content: { color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error } }}
+                styles={{
+                  content: {
+                    color: statisticsData.payment_rate > 80 ? COLORS.success : COLORS.error,
+                  },
+                }}
               />
             </Card>
           </Col>
@@ -615,9 +641,7 @@ const RentLedgerPage: React.FC = () => {
 
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => setUiState(prev => ({ ...prev, showBatchModal: false }))}
-              >
+              <Button onClick={() => setUiState(prev => ({ ...prev, showBatchModal: false }))}>
                 取消
               </Button>
               <Button type="primary" htmlType="submit">

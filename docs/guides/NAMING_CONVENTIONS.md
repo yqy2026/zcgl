@@ -183,7 +183,7 @@ const displayPageSize = page_size;  // 可赋值给 camelCase 变量用于 UI
 
 ```
 # ✅ 正确 - kebab-case
-GET  /api/v1/rent-contracts
+GET  /api/v1/rental-contracts/contracts
 GET  /api/v1/assets/{id}/attachments
 POST /api/v1/user-permissions
 

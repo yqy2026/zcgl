@@ -9,6 +9,7 @@
 
 import type { MessageInstance } from 'antd/es/message/interface';
 import { message as antdMessage } from 'antd';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 class MessageManagerClass {
   private messageInstance: MessageInstance | null = null;
@@ -28,7 +29,7 @@ class MessageManagerClass {
   private ensureInitialized(methodName: string) {
     if (!this.isInitialized || !this.messageInstance) {
       // 在开发环境下记录详细错误
-      if (process.env.NODE_ENV === 'development') {
+      if (isDevelopmentMode()) {
         // eslint-disable-next-line no-console
         console.error(
           `[MessageManager] 未初始化 - 调用了 ${methodName}()。` +

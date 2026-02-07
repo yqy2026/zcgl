@@ -71,14 +71,11 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
       queryKey: ['dictionary', dictType, true],
       queryFn: async () => {
         if (!dictType) return { success: false, data: [], error: '字典类型不能为空' };
-        const result: DictionaryServiceResult = await dictionaryService.getOptions(
-          dictType,
-          {
-            useCache: true,
-            useFallback: true,
-            isActive: true,
-          }
-        );
+        const result: DictionaryServiceResult = await dictionaryService.getOptions(dictType, {
+          useCache: true,
+          useFallback: true,
+          isActive: true,
+        });
         return result;
       },
       staleTime: 10 * 60 * 1000,

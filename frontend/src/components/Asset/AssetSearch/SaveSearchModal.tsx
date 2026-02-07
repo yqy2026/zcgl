@@ -17,13 +17,7 @@ export const SaveSearchModal = React.memo(function SaveSearchModal({
   onChange,
 }: SaveSearchModalProps) {
   return (
-    <Modal
-      title="保存搜索条件"
-      open={open}
-      onOk={onSave}
-      onCancel={onCancel}
-      destroyOnHidden
-    >
+    <Modal title="保存搜索条件" open={open} onOk={onSave} onCancel={onCancel} destroyOnHidden>
       <Input
         placeholder="输入保存名称"
         value={value}

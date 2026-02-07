@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import { List, Card, Typography, Tag, Button, Space, Empty, Tabs, Badge, Spin, Modal } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
@@ -17,9 +17,14 @@ dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
-import { Notification, NotificationType, NotificationPriority } from '@/types/notification';
-import { useListData } from '@/hooks/useListData';
+import {
+  Notification,
+  NotificationType,
+  NotificationPriority,
+  NotificationListResponse,
+} from '@/types/notification';
 
 const { Text, Paragraph } = Typography;
 
@@ -29,64 +34,77 @@ interface NotificationFilters {
 
 const NotificationCenter: React.FC = () => {
   const navigate = useNavigate();
+  const [filters, setFilters] = useState<NotificationFilters>({
+    type: 'all',
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
 
-  const fetchNotifications = useCallback(
-    async ({
-      page,
-      pageSize,
-      type,
-    }: {
-      page: number;
-      pageSize: number;
-    } & NotificationFilters) => {
-      return await notificationService.getNotifications({
-        page,
-        page_size: pageSize,
-        type: type === 'all' ? undefined : type,
-      });
-    },
-    []
-  );
-
-  const handleLoadError = useCallback(() => {
-    MessageManager.error('加载通知列表失败');
-  }, []);
+  const fetchNotifications = useCallback(async (): Promise<NotificationListResponse> => {
+    return await notificationService.getNotifications({
+      page: paginationState.current,
+      page_size: paginationState.pageSize,
+      type: filters.type === 'all' ? undefined : filters.type,
+    });
+  }, [filters.type, paginationState.current, paginationState.pageSize]);
 
   const {
-    data: notifications,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    updatePagination,
-  } = useListData<Notification, NotificationFilters>({
-    fetcher: fetchNotifications,
-    initialFilters: {
-      type: 'all',
-    },
-    initialPageSize: 10,
-    onError: handleLoadError,
+    data: notificationsResponse,
+    error: notificationsError,
+    isLoading: isNotificationsLoading,
+    isFetching: isNotificationsFetching,
+    refetch: refetchNotifications,
+  } = useQuery<NotificationListResponse>({
+    queryKey: ['notification-list', paginationState.current, paginationState.pageSize, filters.type],
+    queryFn: fetchNotifications,
+    retry: 1,
   });
 
   useEffect(() => {
-    void loadList();
-  }, [loadList]);
+    if (notificationsError != null) {
+      MessageManager.error('加载通知列表失败');
+    }
+  }, [notificationsError]);
+
+  const notifications = notificationsResponse?.items ?? [];
+  const loading = isNotificationsLoading || isNotificationsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: notificationsResponse?.total ?? 0,
+    }),
+    [notificationsResponse?.total, paginationState.current, paginationState.pageSize]
+  );
+
+  const refreshNotifications = useCallback(() => {
+    void refetchNotifications();
+  }, [refetchNotifications]);
 
   // 处理Tab切换
   const handleTabChange = useCallback(
     (key: string) => {
-      applyFilters({ type: key });
+      setFilters({ type: key });
+      setPaginationState(prev => ({ ...prev, current: 1 }));
     },
-    [applyFilters]
+    []
   );
+
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    setPaginationState({
+      current: page,
+      pageSize,
+    });
+  }, []);
 
   // 标记为已读
   const handleMarkAsRead = async (id: string) => {
     try {
       await notificationService.markAsRead(id);
       MessageManager.success('已标记为已读');
-      void loadList();
+      refreshNotifications();
     } catch {
       MessageManager.error('操作失败');
     }
@@ -101,7 +119,8 @@ const NotificationCenter: React.FC = () => {
         try {
           await notificationService.markAllAsRead();
           MessageManager.success('全部已读成功');
-          void loadList({ page: 1 });
+          setPaginationState(prev => ({ ...prev, current: 1 }));
+          refreshNotifications();
         } catch {
           MessageManager.error('操作失败');
         }
@@ -119,7 +138,7 @@ const NotificationCenter: React.FC = () => {
         try {
           await notificationService.deleteNotification(id);
           MessageManager.success('删除成功');
-          void loadList();
+          refreshNotifications();
         } catch {
           MessageManager.error('删除失败');
         }
@@ -213,13 +232,13 @@ const NotificationCenter: React.FC = () => {
           <List
             dataSource={notifications}
             pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              onChange: (page, pageSize) => {
-                updatePagination({ current: page, pageSize });
-              },
-            }}
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                onChange: (page, pageSize) => {
+                  handlePageChange(page, pageSize);
+                },
+              }}
             locale={{ emptyText: <Empty description="暂无通知" /> }}
             renderItem={item => (
               <List.Item

@@ -86,10 +86,7 @@ export class AssetService {
     return assetCoreService.getAllAssets(params);
   }
 
-  async getAssetsByIds(
-    ids: string[],
-    options?: { includeRelations?: boolean }
-  ): Promise<Asset[]> {
+  async getAssetsByIds(ids: string[], options?: { includeRelations?: boolean }): Promise<Asset[]> {
     return assetCoreService.getAssetsByIds(ids, options);
   }
 

@@ -1,3 +1,28 @@
+"""
+Comprehensive Unit Tests for Custom Fields API Routes (src/api/v1/assets/custom_fields.py)
+
+This test module covers all endpoints in the custom_fields router to achieve 70%+ coverage.
+
+Endpoints Tested:
+1. GET /api/v1/asset-custom-fields/ - Get custom fields list
+2. GET /api/v1/asset-custom-fields/{field_id} - Get custom field details
+3. POST /api/v1/asset-custom-fields/ - Create custom field
+4. PUT /api/v1/asset-custom-fields/{field_id} - Update custom field
+5. DELETE /api/v1/asset-custom-fields/{field_id} - Delete custom field
+6. POST /api/v1/asset-custom-fields/validate - Validate custom field value
+7. GET /api/v1/asset-custom-fields/types - Get field types list
+8. GET /api/v1/asset-custom-fields/assets/{asset_id}/values - Get asset custom field values
+9. PUT /api/v1/asset-custom-fields/assets/{asset_id}/values - Update asset custom field values
+10. POST /api/v1/asset-custom-fields/assets/batch-values - Batch set custom field values
+
+Testing Approach:
+- Mock all dependencies (CustomFieldService, CustomFieldCRUD, database, auth)
+- Test successful responses
+- Test error handling scenarios
+- Test request validation
+- Test response schemas
+"""
+
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 

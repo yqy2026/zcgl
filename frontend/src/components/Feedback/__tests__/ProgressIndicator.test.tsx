@@ -97,7 +97,11 @@ describe('ProgressIndicator', () => {
         percent={60}
         status="active"
         extra={<button type="button">额外</button>}
-        actions={[<button key="pause" type="button">暂停</button>]}
+        actions={[
+          <button key="pause" type="button">
+            暂停
+          </button>,
+        ]}
       />
     );
 

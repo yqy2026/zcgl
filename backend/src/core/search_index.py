@@ -6,8 +6,8 @@ from typing import Any
 
 from sqlalchemy import Select, func, or_, select
 
-from .encryption import EncryptionKeyManager
 from ..models.asset_search_index import AssetSearchIndex
+from .encryption import EncryptionKeyManager
 
 DEFAULT_NGRAM_MIN = 2
 DEFAULT_NGRAM_MAX = 3

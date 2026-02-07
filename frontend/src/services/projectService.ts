@@ -33,10 +33,14 @@ export class ProjectService {
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
     try {
-      const result = await apiClient.post<ProjectListResponse>(`${this.baseUrl}/search`, searchParams, {
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.post<ProjectListResponse>(
+        `${this.baseUrl}/search`,
+        searchParams,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         throw new Error(`搜索项目失败: ${result.error}`);
@@ -201,11 +205,14 @@ export class ProjectService {
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
     try {
-      const result = await apiClient.get<ProjectStatisticsResponse>(`${this.baseUrl}/stats/overview`, {
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.get<ProjectStatisticsResponse>(
+        `${this.baseUrl}/stats/overview`,
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         throw new Error(`获取项目统计失败: ${result.error}`);

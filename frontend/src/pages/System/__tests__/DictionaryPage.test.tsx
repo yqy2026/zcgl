@@ -53,7 +53,11 @@ vi.mock('@/utils/messageManager', () => ({
 }));
 
 vi.mock('@/components/Common/TableWithPagination', () => ({
-  TableWithPagination: ({ columns = [], dataSource = [], rowKey }: {
+  TableWithPagination: ({
+    columns = [],
+    dataSource = [],
+    rowKey,
+  }: {
     columns?: Array<{
       key?: string | number;
       dataIndex?: string | string[];
@@ -64,12 +68,7 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
   }) => (
     <div data-testid="table">
       {dataSource.map((record, index) => {
-        const key =
-          typeof rowKey === 'function'
-            ? rowKey(record)
-            : rowKey
-              ? record[rowKey]
-              : index;
+        const key = typeof rowKey === 'function' ? rowKey(record) : rowKey ? record[rowKey] : index;
         return (
           <div key={String(key)} data-testid="table-row">
             {columns.map((column, colIndex) => {

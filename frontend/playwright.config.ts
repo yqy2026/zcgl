@@ -10,6 +10,15 @@ const artifactsRoot = path.resolve(__dirname, '../test-results/frontend/playwrig
 const reportRoot = path.join(artifactsRoot, 'reports');
 const outputRoot = path.join(artifactsRoot, 'output');
 
+const readNodeEnv = (name: string): string | undefined => {
+  const rawValue = process.env[name];
+  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : undefined;
+};
+
+const isCI = readNodeEnv('CI') != null;
+const baseUrl = readNodeEnv('BASE_URL') ?? 'http://localhost:5173';
+const testEnvironment = readNodeEnv('NODE_ENV') ?? 'test';
+
 // 测试配置
 const config = defineConfig({
   // 测试目录
@@ -17,7 +26,7 @@ const config = defineConfig({
 
   // 并行执行配置
   fullyParallel: true,
-  workers: process.env.CI ? 2 : 4,
+  workers: isCI ? 2 : 4,
 
   // 全局测试配置
   globalSetup: require.resolve('./tests/e2e/global-setup.ts'),
@@ -30,7 +39,7 @@ const config = defineConfig({
   },
 
   // 重试配置
-  retries: process.env.CI ? 2 : 0,
+  retries: isCI ? 2 : 0,
 
   // 报告配置
   reporter: [
@@ -38,7 +47,7 @@ const config = defineConfig({
       'html',
       {
         outputFolder: path.join(reportRoot, 'html'),
-        open: process.env.CI ? 'never' : 'on-failure',
+        open: isCI ? 'never' : 'on-failure',
       },
     ],
     [
@@ -53,7 +62,7 @@ const config = defineConfig({
         outputFile: path.join(reportRoot, 'junit.xml'),
       },
     ],
-    process.env.CI ? ['github'] : ['list'],
+    isCI ? ['github'] : ['list'],
   ],
 
   // 输出目录
@@ -68,7 +77,7 @@ const config = defineConfig({
   // 测试环境
   use: {
     // 基础URL
-    baseURL: process.env.BASE_URL || 'http://localhost:5173',
+    baseURL: baseUrl,
 
     // 操作配置
     actionTimeout: 15 * 1000,
@@ -94,7 +103,7 @@ const config = defineConfig({
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Playwright',
 
     // 忽略HTTPS错误
-    ignoreHTTPSErrors: !process.env.CI,
+    ignoreHTTPSErrors: !isCI,
   },
 
   // 项目配置 - 多浏览器支持
@@ -189,14 +198,14 @@ const config = defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !isCI,
     timeout: 120 * 1000,
   },
 
   // 元数据配置
   metadata: {
-    'Test Environment': process.env.NODE_ENV || 'test',
-    'Base URL': process.env.BASE_URL || 'http://localhost:5173',
+    'Test Environment': testEnvironment,
+    'Base URL': baseUrl,
     Browser: 'Playwright',
     'Test Suite': 'Asset Management E2E Tests',
   },

@@ -27,10 +27,11 @@ module.exports = {
   },
   rules: {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-    '@typescript-eslint/no-explicit-any': 'off', // 允许 any 类型用于测试和复杂转换
+    '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true, ignoreRestArgs: false }], // 生产代码禁止 any，测试文件在 overrides 中放行
     '@typescript-eslint/ban-ts-comment': ['warn', { 'ts-ignore': true }],
     '@typescript-eslint/explicit-module-boundary-types': 'off', // 关闭严格边界类型要求
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+    '@typescript-eslint/no-unnecessary-type-assertion': 'warn', // 预防不必要的 as 断言滥用
     '@typescript-eslint/strict-boolean-expressions': 'off', // 暂时关闭以避免大量警告
     '@typescript-eslint/no-unsafe-assignment': 'off', // 暂时关闭 unsafe 类型警告
     '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -53,6 +54,40 @@ module.exports = {
   },
   overrides: [
     {
+      // API边界守卫：组件/页面/Hook/Context 不直接使用底层 API client
+      files: [
+        'src/components/**/*.{ts,tsx}',
+        'src/pages/**/*.{ts,tsx}',
+        'src/hooks/**/*.{ts,tsx}',
+        'src/contexts/**/*.{ts,tsx}',
+      ],
+      excludedFiles: ['**/__tests__/**/*', '**/*.test.ts', '**/*.test.tsx'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@/api/client',
+                message: '请在 services 层封装 API 调用，再由组件/页面/Hook 使用 service。',
+              },
+              {
+                name: '@/api',
+                message: '请在 services 层封装 API 调用，再由组件/页面/Hook 使用 service。',
+              },
+            ],
+          },
+        ],
+        'no-restricted-globals': [
+          'error',
+          {
+            name: 'fetch',
+            message: '请在 services 层封装网络请求，UI 层不要直接调用 fetch。',
+          },
+        ],
+      },
+    },
+    {
       // 测试文件的特殊规则
       files: ['**/__tests__/**/*', '**/*.test.ts', '**/*.test.tsx', 'src/test/**/*', 'src/test-utils.*', 'src/vitest-setup.*'],
       env: { jest: true },
@@ -65,6 +100,7 @@ module.exports = {
         '@typescript-eslint/no-unsafe-assignment': 'off',
         // Disable type-aware rules for test files (no project config)
         '@typescript-eslint/strict-boolean-expressions': 'off',
+        '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-call': 'off',
         '@typescript-eslint/no-unsafe-return': 'off',

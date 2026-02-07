@@ -85,13 +85,7 @@ vi.mock('antd', () => {
   );
   Descriptions.displayName = 'MockDescriptions';
 
-  const DescriptionsItem = ({
-    children,
-    label,
-  }: {
-    children: React.ReactNode;
-    label: string;
-  }) => (
+  const DescriptionsItem = ({ children, label }: { children: React.ReactNode; label: string }) => (
     <div data-testid={`desc-item-${label}`}>
       <span>{label}</span>
       <span>{children}</span>
@@ -113,24 +107,14 @@ vi.mock('antd', () => {
     type?: string;
     danger?: boolean;
   }) => (
-    <button
-      data-testid={`btn-${type || 'default'}`}
-      data-danger={danger}
-      onClick={onClick}
-    >
+    <button data-testid={`btn-${type || 'default'}`} data-danger={danger} onClick={onClick}>
       {icon}
       {children}
     </button>
   );
   Button.displayName = 'MockButton';
 
-  const Tag = ({
-    children,
-    color,
-  }: {
-    children: React.ReactNode;
-    color?: string;
-  }) => (
+  const Tag = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>
@@ -174,26 +158,14 @@ vi.mock('antd', () => {
   const Divider = () => <hr data-testid="divider" />;
   Divider.displayName = 'MockDivider';
 
-  const Spin = ({
-    children,
-    spinning,
-  }: {
-    children?: React.ReactNode;
-    spinning?: boolean;
-  }) => (
+  const Spin = ({ children, spinning }: { children?: React.ReactNode; spinning?: boolean }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {spinning ? '加载中...' : children}
     </div>
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({
-    message,
-    type,
-  }: {
-    message: string;
-    type?: string;
-  }) => (
+  const Alert = ({ message, type }: { message: string; type?: string }) => (
     <div data-testid="alert" data-type={type}>
       {message}
     </div>
@@ -205,13 +177,7 @@ vi.mock('antd', () => {
   );
   Empty.displayName = 'MockEmpty';
 
-  const Progress = ({
-    percent,
-    status,
-  }: {
-    percent: number;
-    status?: string;
-  }) => (
+  const Progress = ({ percent, status }: { percent: number; status?: string }) => (
     <div data-testid="progress" data-percent={percent} data-status={status}>
       {percent}%
     </div>
@@ -236,11 +202,7 @@ vi.mock('antd', () => {
   );
   Tabs.displayName = 'MockTabs';
 
-  const Table = ({
-    dataSource,
-  }: {
-    dataSource?: Array<{ id: string }>;
-  }) => (
+  const Table = ({ dataSource }: { dataSource?: Array<{ id: string }> }) => (
     <div data-testid="table">
       {dataSource?.map(item => (
         <div key={item.id}>{item.id}</div>

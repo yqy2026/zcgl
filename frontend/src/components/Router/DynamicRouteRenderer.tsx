@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useMemo,
-  useState,
-  ReactNode,
-  Suspense,
-} from 'react';
+import React, { useCallback, useMemo, useState, ReactNode, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { PermissionGuard } from '@/components/System/PermissionGuard';
 import { componentLogger } from './DynamicRouteLoaderCore';
@@ -18,44 +12,41 @@ export const DynamicRouteRenderer: React.FC = () => {
   const routeList = useMemo(() => Array.from(routes.values()), [routes]);
 
   // 将路由转换为React Router格式
-  const renderRoutes = useCallback(
-    (routeList: DynamicRoute[], parentPath = ''): ReactNode[] => {
-      return routeList.map(route => {
-        const fullPath = parentPath + route.path;
+  const renderRoutes = useCallback((routeList: DynamicRoute[], parentPath = ''): ReactNode[] => {
+    return routeList.map(route => {
+      const fullPath = parentPath + route.path;
 
-        const element = (
-          <Suspense fallback={<div>Loading {route.meta?.title ?? route.id}...</div>}>
-            <ErrorBoundary
-              onError={error => {
-                componentLogger.error(`Route ${route.id} error:`, error);
-                setError(`Failed to load ${route.meta?.title ?? route.id}`);
-              }}
-              fallback={<div>Error loading {route.meta?.title ?? route.id}</div>}
-            >
-              {route.permissions != null && route.permissions.length > 0 ? (
-                <PermissionGuard permissions={route.permissions}>
-                  <route.component />
-                </PermissionGuard>
-              ) : (
+      const element = (
+        <Suspense fallback={<div>Loading {route.meta?.title ?? route.id}...</div>}>
+          <ErrorBoundary
+            onError={error => {
+              componentLogger.error(`Route ${route.id} error:`, error);
+              setError(`Failed to load ${route.meta?.title ?? route.id}`);
+            }}
+            fallback={<div>Error loading {route.meta?.title ?? route.id}</div>}
+          >
+            {route.permissions != null && route.permissions.length > 0 ? (
+              <PermissionGuard permissions={route.permissions}>
                 <route.component />
-              )}
-            </ErrorBoundary>
-          </Suspense>
+              </PermissionGuard>
+            ) : (
+              <route.component />
+            )}
+          </ErrorBoundary>
+        </Suspense>
+      );
+
+      if (route.children && route.children.length > 0) {
+        return (
+          <Route key={route.id} path={route.path} element={element}>
+            {renderRoutes(route.children, fullPath)}
+          </Route>
         );
+      }
 
-        if (route.children && route.children.length > 0) {
-          return (
-            <Route key={route.id} path={route.path} element={element}>
-              {renderRoutes(route.children, fullPath)}
-            </Route>
-          );
-        }
-
-        return <Route key={route.id} path={route.path} element={element} />;
-      });
-    },
-    []
-  );
+      return <Route key={route.id} path={route.path} element={element} />;
+    });
+  }, []);
 
   const renderedRoutes = useMemo(() => renderRoutes(routeList), [renderRoutes, routeList]);
 
@@ -131,9 +122,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           >
             <h3>路由加载失败</h3>
             <p>{this.state.error?.message}</p>
-            <button onClick={() => this.setState({ hasError: false, error: null })}>
-              重试
-            </button>
+            <button onClick={() => this.setState({ hasError: false, error: null })}>重试</button>
           </div>
         )
       );

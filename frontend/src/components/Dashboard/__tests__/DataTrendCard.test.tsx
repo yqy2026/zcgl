@@ -98,13 +98,7 @@ describe('DataTrendCard - 渲染与趋势测试', () => {
 
   it('应该根据loading状态显示loading', () => {
     const { container } = renderWithProviders(
-      <DataTrendCard
-        title="总资产"
-        value={100}
-        color="success"
-        size="large"
-        loading={true}
-      />
+      <DataTrendCard title="总资产" value={100} color="success" size="large" loading={true} />
     );
 
     const card = container.querySelector('.ant-card');

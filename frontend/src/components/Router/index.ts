@@ -7,7 +7,11 @@ export { default as RouteTransitions } from './RouteTransitions';
 export { default as RouteABTesting } from './RouteABTesting';
 export { default as DynamicRouteLoader } from './DynamicRouteLoader';
 export { default as DynamicRouteLoaderCore } from './DynamicRouteLoaderCore';
-export { DynamicRouteProvider, useDynamicRoute, usePermissionBasedRoutes } from './DynamicRouteContext';
+export {
+  DynamicRouteProvider,
+  useDynamicRoute,
+  usePermissionBasedRoutes,
+} from './DynamicRouteContext';
 export { DynamicRouteRenderer } from './DynamicRouteRenderer';
 export { RouteModuleLoader } from './RouteModuleLoader';
 export type {

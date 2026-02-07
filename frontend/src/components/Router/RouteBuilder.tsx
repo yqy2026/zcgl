@@ -174,12 +174,7 @@ export const AssetRoutes = {
     RouteBuilder.createProtectedRoute(ASSET_ROUTES.IMPORT, Component, 'ASSET_IMPORT', '资产导入'),
 
   analytics: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute(
-      ASSET_ROUTES.ANALYTICS,
-      Component,
-      'ASSET_VIEW',
-      '资产分析'
-    ),
+    RouteBuilder.createProtectedRoute(ASSET_ROUTES.ANALYTICS, Component, 'ASSET_VIEW', '资产分析'),
 };
 
 export const SystemRoutes = {

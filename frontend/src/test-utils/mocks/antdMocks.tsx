@@ -27,12 +27,7 @@ export const MockCard: FC<MockCardProps> = ({
   actions,
   title,
 }) => (
-  <div
-    data-testid="card"
-    className={className}
-    style={style}
-    data-hoverable={hoverable}
-  >
+  <div data-testid="card" className={className} style={style} data-hoverable={hoverable}>
     {title && <div data-testid="card-title">{title}</div>}
     {actions && <div data-testid="card-actions">{actions}</div>}
     {children}
@@ -179,12 +174,7 @@ export interface MockProgressProps {
   status?: 'success' | 'exception' | 'normal' | 'active';
 }
 
-export const MockProgress: FC<MockProgressProps> = ({
-  percent,
-  strokeColor,
-  size,
-  showInfo,
-}) => (
+export const MockProgress: FC<MockProgressProps> = ({ percent, strokeColor, size, showInfo }) => (
   <div
     data-testid="progress"
     data-percent={percent}
@@ -212,7 +202,7 @@ export const MockForm: FC<MockFormProps> & {
 } = ({ children, onFinish }) => (
   <form
     data-testid="form"
-    onSubmit={(e) => {
+    onSubmit={e => {
       e.preventDefault();
       onFinish?.({});
     }}
@@ -280,11 +270,11 @@ export const MockSelect: FC<MockSelectProps> = ({
   <select
     data-testid="select"
     value={value as string}
-    onChange={(e) => onChange?.(e.target.value)}
+    onChange={e => onChange?.(e.target.value)}
     disabled={disabled}
   >
     {placeholder && <option value="">{placeholder}</option>}
-    {options?.map((opt) => (
+    {options?.map(opt => (
       <option key={opt.value} value={opt.value}>
         {opt.label}
       </option>
@@ -351,7 +341,7 @@ export const MockTable = <T extends object>({
     <table>
       <thead>
         <tr>
-          {columns?.map((col) => (
+          {columns?.map(col => (
             <th key={col.dataIndex}>{col.title}</th>
           ))}
         </tr>
@@ -359,7 +349,7 @@ export const MockTable = <T extends object>({
       <tbody>
         {dataSource?.map((record, index) => (
           <tr key={index}>
-            {columns?.map((col) => (
+            {columns?.map(col => (
               <td key={col.dataIndex}>
                 {col.render
                   ? col.render((record as Record<string, unknown>)[col.dataIndex], record, index)

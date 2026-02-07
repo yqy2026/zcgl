@@ -32,10 +32,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
-import {
-  rentContractExcelService,
-  ExcelImportResult,
-} from '@/services/rentContractExcelService';
+import { rentContractExcelService, ExcelImportResult } from '@/services/rentContractExcelService';
 
 const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;

@@ -33,7 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ownershipService } from '@/services/ownershipService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
+import { useQuery } from '@tanstack/react-query';
 import type {
   Ownership,
   OwnershipListResponse,
@@ -58,7 +58,14 @@ interface OwnershipFilters {
 }
 
 const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode = 'list' }) => {
-  const [statistics, setStatistics] = useState<OwnershipStatisticsResponse | null>(null);
+  const [filters, setFilters] = useState<OwnershipFilters>({
+    keyword: '',
+    isActive: null,
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
 
   // 模态框状态
   const [formVisible, setFormVisible] = useState(false);
@@ -66,103 +73,117 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
   const [editingOwnership, setEditingOwnership] = useState<Ownership | null>(null);
   const [viewingOwnership, setViewingOwnership] = useState<Ownership | null>(null);
 
-  const fetchOwnershipList = useCallback(
-    async ({
-      page,
-      pageSize,
-      keyword,
-      isActive,
-    }: {
+  const fetchOwnershipList = useCallback(async (): Promise<OwnershipListResponse> => {
+    const params: {
+      keyword?: string;
+      is_active?: boolean;
       page: number;
-      pageSize: number;
-    } & OwnershipFilters): Promise<OwnershipListResponse> => {
-      const params: {
-        keyword?: string;
-        is_active?: boolean;
-        page: number;
-        page_size: number;
-      } = {
-        page,
-        page_size: pageSize,
-      };
+      page_size: number;
+    } = {
+      page: paginationState.current,
+      page_size: paginationState.pageSize,
+    };
 
-      const trimmedKeyword = keyword.trim();
-      if (trimmedKeyword !== '') {
-        params.keyword = trimmedKeyword;
-      }
+    const trimmedKeyword = filters.keyword.trim();
+    if (trimmedKeyword !== '') {
+      params.keyword = trimmedKeyword;
+    }
 
-      if (isActive !== null) {
-        params.is_active = isActive;
-      }
+    if (filters.isActive !== null) {
+      params.is_active = filters.isActive;
+    }
 
-      return await ownershipService.getOwnerships(params);
-    },
-    []
-  );
+    return await ownershipService.getOwnerships(params);
+  }, [filters.isActive, filters.keyword, paginationState.current, paginationState.pageSize]);
 
   const {
-    data: ownerships,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters,
-    updatePagination,
-  } = useListData<Ownership, OwnershipFilters>({
-    fetcher: fetchOwnershipList,
-    initialFilters: {
-      keyword: '',
-      isActive: null,
-    },
-    initialPageSize: 10,
-    onError: () => {
-      MessageManager.error('加载权属方列表失败');
-    },
+    data: ownershipsResponse,
+    error: ownershipsError,
+    isLoading: isOwnershipsLoading,
+    isFetching: isOwnershipsFetching,
+    refetch: refetchOwnerships,
+  } = useQuery<OwnershipListResponse>({
+    queryKey: ['ownership-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchOwnershipList,
+    retry: 1,
   });
 
-  const loadStatistics = useCallback(async () => {
-    try {
-      const stats = await ownershipService.getOwnershipStatistics();
-      setStatistics(stats);
-    } catch {
-      componentLogger.warn('加载统计信息失败');
-    }
-  }, []);
+  const {
+    data: statistics = null,
+    error: statisticsError,
+    refetch: refetchStatistics,
+  } = useQuery<OwnershipStatisticsResponse>({
+    queryKey: ['ownership-statistics'],
+    queryFn: () => ownershipService.getOwnershipStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
 
   useEffect(() => {
-    void loadList();
-    void loadStatistics();
-  }, [loadList, loadStatistics]);
+    if (ownershipsError != null) {
+      MessageManager.error('加载权属方列表失败');
+    }
+  }, [ownershipsError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      componentLogger.warn('加载统计信息失败');
+    }
+  }, [statisticsError]);
+
+  const ownerships = ownershipsResponse?.items ?? [];
+  const loading = isOwnershipsLoading || isOwnershipsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: ownershipsResponse?.total ?? 0,
+    }),
+    [ownershipsResponse?.total, paginationState.current, paginationState.pageSize]
+  );
+
+  const refreshOwnershipsAndStatistics = useCallback(() => {
+    void refetchOwnerships();
+    void refetchStatistics();
+  }, [refetchOwnerships, refetchStatistics]);
 
   const handleRefresh = useCallback(() => {
-    void loadList();
-    void loadStatistics();
-  }, [loadList, loadStatistics]);
+    refreshOwnershipsAndStatistics();
+  }, [refreshOwnershipsAndStatistics]);
+
+  const updateFilters = useCallback((nextFilters: Partial<OwnershipFilters>) => {
+    setFilters(prev => ({ ...prev, ...nextFilters }));
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
 
   const handleKeywordChange = useCallback(
     (value: string) => {
-      applyFilters({
-        keyword: value,
-        isActive: filters.isActive,
-      });
+      updateFilters({ keyword: value });
     },
-    [applyFilters, filters.isActive]
+    [updateFilters]
   );
 
   const handleStatusChange = useCallback(
     (value: boolean | undefined) => {
-      applyFilters({
-        keyword: filters.keyword,
-        isActive: value === undefined ? null : value,
-      });
+      updateFilters({ isActive: value === undefined ? null : value });
     },
-    [applyFilters, filters.keyword]
+    [updateFilters]
   );
 
   const handleReset = useCallback(() => {
-    resetFilters();
-  }, [resetFilters]);
+    setFilters({
+      keyword: '',
+      isActive: null,
+    });
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
 
   const derivedStatistics = useMemo(() => {
     if (statistics != null) {
@@ -208,8 +229,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
         try {
           await ownershipService.deleteOwnership(record.id);
           MessageManager.success('删除成功');
-          void loadList();
-          void loadStatistics();
+          refreshOwnershipsAndStatistics();
         } catch (error: unknown) {
           MessageManager.error(error instanceof Error ? error.message : '删除失败');
         }
@@ -222,8 +242,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
     try {
       await ownershipService.toggleOwnershipStatus(record.id);
       MessageManager.success(`${record.is_active ? '禁用' : '启用'}成功`);
-      void loadList();
-      void loadStatistics();
+      refreshOwnershipsAndStatistics();
     } catch {
       MessageManager.error('操作失败');
     }
@@ -232,8 +251,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
   // 表单提交成功
   const handleFormSuccess = () => {
     setFormVisible(false);
-    void loadList();
-    void loadStatistics();
+    refreshOwnershipsAndStatistics();
   };
 
   // 选中权属方（选择模式）
@@ -445,7 +463,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
           rowKey="id"
           loading={loading}
           paginationState={pagination}
-          onPageChange={updatePagination}
+          onPageChange={handlePageChange}
           paginationProps={{
             showTotal: (total: number, range: [number, number]) =>
               `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,

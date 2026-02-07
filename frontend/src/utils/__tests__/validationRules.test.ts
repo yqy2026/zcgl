@@ -266,7 +266,9 @@ describe('customValidators', () => {
 
     it('应该忽略 undefined', async () => {
       const validator = customValidators.numberRange(1, 100);
-      await expect(validator.validator({}, undefined as unknown as number)).resolves.toBeUndefined();
+      await expect(
+        validator.validator({}, undefined as unknown as number)
+      ).resolves.toBeUndefined();
     });
   });
 

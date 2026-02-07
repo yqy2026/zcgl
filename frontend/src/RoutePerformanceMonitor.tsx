@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 interface RoutePerformanceMetrics {
   FCP?: number;
@@ -486,7 +487,7 @@ export const usePerformanceDebug = () => {
   const { getMetrics, getAggregatedMetrics } = useRoutePerformanceMonitor();
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode()) {
       const performanceWindow = window as PerformanceWindow;
       performanceWindow.__ROUTE_PERFORMANCE__ = {
         getMetrics,

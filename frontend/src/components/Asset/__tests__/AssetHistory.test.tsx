@@ -6,20 +6,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { useQuery } from '@tanstack/react-query';
 
 // Mock @tanstack/react-query
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: null,
-  })),
-}));
-
-// Mock list hook
-vi.mock('@/hooks/useListData', () => ({
-  useListData: vi.fn(),
+  useQuery: vi.fn(),
 }));
 
 // Mock format utilities
@@ -114,13 +105,9 @@ vi.mock('antd', () => {
       {children}
     </select>
   );
-  const SelectOption = ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value?: string;
-  }) => <option value={value}>{children}</option>;
+  const SelectOption = ({ children, value }: { children: React.ReactNode; value?: string }) => (
+    <option value={value}>{children}</option>
+  );
   SelectOption.displayName = 'MockSelectOption';
   Select.Option = SelectOption;
 
@@ -181,11 +168,7 @@ vi.mock('antd', () => {
       type?: string;
       loading?: boolean;
     }) => (
-      <button
-        data-testid={`btn-${type || 'default'}`}
-        data-loading={loading}
-        onClick={onClick}
-      >
+      <button data-testid={`btn-${type || 'default'}`} data-loading={loading} onClick={onClick}>
         {icon}
         {children}
       </button>
@@ -210,13 +193,7 @@ vi.mock('antd', () => {
           </button>
         </div>
       ) : null,
-    Tag: ({
-      children,
-      color,
-    }: {
-      children: React.ReactNode;
-      color?: string;
-    }) => (
+    Tag: ({ children, color }: { children: React.ReactNode; color?: string }) => (
       <span data-testid="tag" data-color={color}>
         {children}
       </span>
@@ -237,13 +214,7 @@ vi.mock('antd', () => {
         {spinning ? <div data-testid="spin-tip">{tip || '加载中...'}</div> : children}
       </div>
     ),
-    Alert: ({
-      message,
-      type,
-    }: {
-      message: string;
-      type?: string;
-    }) => (
+    Alert: ({ message, type }: { message: string; type?: string }) => (
       <div data-testid="alert" data-type={type}>
         {message}
       </div>
@@ -276,12 +247,8 @@ vi.mock('antd', () => {
     Space: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="space">{children}</div>
     ),
-    Row: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="row">{children}</div>
-    ),
-    Col: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="col">{children}</div>
-    ),
+    Row: ({ children }: { children: React.ReactNode }) => <div data-testid="row">{children}</div>,
+    Col: ({ children }: { children: React.ReactNode }) => <div data-testid="col">{children}</div>,
   };
 });
 
@@ -301,12 +268,7 @@ vi.mock('@ant-design/icons', () => ({
 }));
 
 import AssetHistory from '../AssetHistory';
-import { useListData } from '@/hooks/useListData';
-
-const mockLoadList = vi.fn();
-const mockApplyFilters = vi.fn();
-const mockResetFilters = vi.fn();
-const mockUpdatePagination = vi.fn();
+const mockRefetchHistory = vi.fn();
 
 let mockData: Array<{
   id: string;
@@ -317,12 +279,12 @@ let mockData: Array<{
 }> = [];
 let mockLoading = false;
 let mockPagination = { current: 1, pageSize: 10, total: 20 };
-let mockFilters = { changeType: undefined as string | undefined, dateRange: null as null };
 let triggerError = false;
 
 describe('AssetHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRefetchHistory.mockClear();
     triggerError = false;
     mockData = [
       {
@@ -342,25 +304,47 @@ describe('AssetHistory', () => {
     ];
     mockLoading = false;
     mockPagination = { current: 1, pageSize: 10, total: 20 };
-    mockFilters = { changeType: undefined, dateRange: null };
 
-    vi.mocked(useListData).mockImplementation(options => {
-      if (triggerError && options.onError) {
-        Promise.resolve().then(() => {
-          options.onError?.(new Error('加载失败'));
-        });
+    vi.mocked(useQuery).mockImplementation(options => {
+      const queryKey = (options as { queryKey?: unknown[] }).queryKey;
+      const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
+
+      if (key === 'asset-history-list') {
+        return {
+          data: triggerError
+            ? undefined
+            : {
+                items: mockData,
+                total: mockPagination.total,
+                pages:
+                  mockPagination.pageSize > 0
+                    ? Math.ceil(mockPagination.total / mockPagination.pageSize)
+                    : 0,
+              },
+          error: triggerError ? new Error('加载失败') : null,
+          isLoading: mockLoading,
+          isFetching: false,
+          refetch: mockRefetchHistory,
+        };
+      }
+
+      if (key === 'history-detail') {
+        return {
+          data: {},
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: vi.fn(),
+        };
       }
 
       return {
-        data: mockData,
-        loading: mockLoading,
-        pagination: mockPagination,
-        filters: mockFilters,
-        loadList: mockLoadList,
-        applyFilters: mockApplyFilters,
-        resetFilters: mockResetFilters,
-        updatePagination: mockUpdatePagination,
-      } as ReturnType<typeof useListData>;
+        data: undefined,
+        error: null,
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      };
     });
   });
 
@@ -426,7 +410,7 @@ describe('AssetHistory', () => {
       const refreshButton = screen.getByText('刷新');
       fireEvent.click(refreshButton);
 
-      expect(mockLoadList).toHaveBeenCalled();
+      expect(mockRefetchHistory).toHaveBeenCalled();
     });
 
     it('刷新按钮应该显示刷新图标', () => {
@@ -463,16 +447,18 @@ describe('AssetHistory', () => {
 
   describe('分页功能', () => {
     it('应该显示分页组件', () => {
+      mockPagination = { current: 1, pageSize: 20, total: 40 };
       renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       expect(screen.getByTestId('pagination')).toBeInTheDocument();
     });
 
     it('分页应该显示正确的总数', () => {
+      mockPagination = { current: 1, pageSize: 20, total: 40 };
       renderWithProviders(<AssetHistory assetId="asset-1" />);
 
       const pagination = screen.getByTestId('pagination');
-      expect(pagination).toHaveAttribute('data-total', '20');
+      expect(pagination).toHaveAttribute('data-total', '40');
     });
   });
 

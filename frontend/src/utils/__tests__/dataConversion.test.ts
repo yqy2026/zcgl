@@ -103,7 +103,10 @@ describe('convertBackendToFrontend', () => {
         total_area: '150.00',
       };
       const result = convertBackendToFrontend(data);
-      expect((result as { items: Array<{ rentable_area: number }>; total_area: number }).items[0].rentable_area).toBe(50);
+      expect(
+        (result as { items: Array<{ rentable_area: number }>; total_area: number }).items[0]
+          .rentable_area
+      ).toBe(50);
       expect((result as { total_area: number }).total_area).toBe(150);
     });
   });

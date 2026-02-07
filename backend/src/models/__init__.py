@@ -31,8 +31,6 @@ from .organization import (  # noqa: F401
     Position,
 )
 from .ownership import Ownership  # noqa: F401
-from .project import Project  # noqa: F401
-from .project_relations import ProjectOwnershipRelation  # noqa: F401
 from .property_certificate import (  # noqa: F401
     CertificateType,
     OwnerType,

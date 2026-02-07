@@ -109,9 +109,10 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     setSearchText(text);
   }, []);
 
-  const handleChange: SelectProps<OwnershipSelectValue, OwnershipSelectOption>['onChange'] = (
-    selectedValue
-  ) => {
+  const handleChange: SelectProps<
+    OwnershipSelectValue,
+    OwnershipSelectOption
+  >['onChange'] = selectedValue => {
     if (selectedValue == null || selectedValue === '') {
       onChange?.(mode === 'multiple' ? [] : '', mode === 'multiple' ? [] : undefined);
       return;

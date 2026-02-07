@@ -276,7 +276,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
       const formatDate = (val: unknown): string | undefined => {
         if (val == null) return undefined;
-        if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD');
+        if (dayjs.isDayjs(val)) return val.format('YYYY-MM-DD');
         const parsed = dayjs(String(val));
         return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
       };

@@ -21,9 +21,7 @@ interface PermissionGuardMockProps {
 }
 
 vi.mock('react-router-dom', () => ({
-  Route: ({ element }: { element?: ReactNode }) => (
-    <div data-testid="route">{element}</div>
-  ),
+  Route: ({ element }: { element?: ReactNode }) => <div data-testid="route">{element}</div>,
 }));
 
 vi.mock('@/components/Loading', () => ({
@@ -54,17 +52,10 @@ vi.mock('@/components/System/PermissionGuard', () => ({
 describe('LazyRoute', () => {
   it('renders default fallback for pending lazy component', () => {
     const PendingComponent = React.lazy(
-      () =>
-        new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
+      () => new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
     );
 
-    renderWithProviders(
-      <LazyRoute
-        path="/test"
-        title="测试路由"
-        component={PendingComponent}
-      />
-    );
+    renderWithProviders(<LazyRoute path="/test" title="测试路由" component={PendingComponent} />);
 
     expect(screen.getByTestId('skeleton')).toBeInTheDocument();
     expect(screen.getByTestId('error-boundary')).toBeInTheDocument();
@@ -72,8 +63,7 @@ describe('LazyRoute', () => {
 
   it('renders custom fallback when provided', () => {
     const PendingComponent = React.lazy(
-      () =>
-        new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
+      () => new Promise<{ default: React.ComponentType<Record<string, unknown>> }>(() => {})
     );
 
     renderWithProviders(
@@ -94,13 +84,7 @@ describe('LazyRoute', () => {
       default: () => <div data-testid="lazy-content">Lazy Content</div>,
     }));
 
-    renderWithProviders(
-      <LazyRoute
-        path="/test"
-        title="测试路由"
-        component={ResolvedComponent}
-      />
-    );
+    renderWithProviders(<LazyRoute path="/test" title="测试路由" component={ResolvedComponent} />);
 
     expect(await screen.findByTestId('lazy-content')).toBeInTheDocument();
   });
@@ -149,12 +133,7 @@ describe('LazyRoute', () => {
     }));
 
     renderWithProviders(
-      <LazyRoute
-        path="/test"
-        title="测试路由"
-        component={ResolvedComponent}
-        permissions={[]}
-      />
+      <LazyRoute path="/test" title="测试路由" component={ResolvedComponent} permissions={[]} />
     );
 
     expect(await screen.findByTestId('lazy-content')).toBeInTheDocument();

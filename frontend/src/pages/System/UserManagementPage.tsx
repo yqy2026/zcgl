@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -31,11 +31,9 @@ import {
 import { organizationService } from '@/services/organizationService';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
-
-const pageLogger = createLogger('UserManagement');
+import { useQuery } from '@tanstack/react-query';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
 import {
   PlusOutlined,
   EditOutlined,
@@ -52,6 +50,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { COLORS } from '@/styles/colorMap';
+
+const pageLogger = createLogger('UserManagement');
 
 const { Option } = Select;
 const { Search } = Input;
@@ -74,10 +74,22 @@ interface UserFilters {
   organizationId: string;
 }
 
+interface UsersQueryResult {
+  items: User[];
+  total: number;
+}
+
 const UserManagementPage: React.FC = () => {
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [statistics, setStatistics] = useState<UserStatistics | null>(null);
+  const [filters, setFilters] = useState<UserFilters>({
+    keyword: '',
+    status: '',
+    roleId: '',
+    organizationId: '',
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [modalVisible, setModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -92,69 +104,51 @@ const UserManagementPage: React.FC = () => {
     { value: 'locked', label: '锁定', color: 'orange' },
   ];
 
-  const fetchUsers = useCallback(
-    async ({
-      page,
-      pageSize,
-      keyword,
-      status,
-      roleId,
-      organizationId,
-    }: {
-      page: number;
-      pageSize: number;
-    } & UserFilters) => {
-      const trimmedKeyword = keyword.trim();
-      const response = await userService.getUsers({
-        page,
-        page_size: pageSize,
-        search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
-        status: status !== '' ? status : undefined,
-        role_id: roleId !== '' ? roleId : undefined,
-        organization_id: organizationId !== '' ? organizationId : undefined,
-      });
-      return { items: response.items ?? [], total: response.total ?? 0 };
-    },
-    []
-  );
-
-  const handleLoadError = useCallback((error: unknown) => {
-    pageLogger.error('加载用户列表失败:', error as Error);
-    MessageManager.error('加载用户列表失败');
-  }, []);
+  const fetchUsers = useCallback(async (): Promise<UsersQueryResult> => {
+    const trimmedKeyword = filters.keyword.trim();
+    const response = await userService.getUsers({
+      page: paginationState.current,
+      page_size: paginationState.pageSize,
+      search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
+      status: filters.status !== '' ? filters.status : undefined,
+      role_id: filters.roleId !== '' ? filters.roleId : undefined,
+      default_organization_id: filters.organizationId !== '' ? filters.organizationId : undefined,
+    });
+    return { items: response.items ?? [], total: response.total ?? 0 };
+  }, [
+    filters.keyword,
+    filters.organizationId,
+    filters.roleId,
+    filters.status,
+    paginationState.current,
+    paginationState.pageSize,
+  ]);
 
   const {
-    data: users,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    updatePagination,
-  } = useListData<User, UserFilters>({
-    fetcher: fetchUsers,
-    initialFilters: {
-      keyword: '',
-      status: '',
-      roleId: '',
-      organizationId: '',
-    },
-    initialPageSize: 10,
-    onError: handleLoadError,
+    data: usersResponse,
+    error: usersError,
+    isLoading: isUsersLoading,
+    isFetching: isUsersFetching,
+    refetch: refetchUsers,
+  } = useQuery<UsersQueryResult>({
+    queryKey: ['user-management-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchUsers,
+    retry: 1,
   });
 
-  const loadOrganizations = useCallback(async () => {
-    try {
+  const { data: organizations = [], error: organizationsError } = useQuery<OrganizationOption[]>({
+    queryKey: ['user-management-organizations'],
+    queryFn: async () => {
       const data = await organizationService.getOrganizations({ page_size: 1000 });
-      const options = data.map(org => ({ id: org.id, name: org.name }));
-      setOrganizations(options);
-    } catch {
-      MessageManager.error('加载组织列表失败');
-    }
-  }, []);
+      return data.map(org => ({ id: org.id, name: org.name }));
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
 
-  const loadRoles = useCallback(async () => {
-    try {
+  const { data: roles = [], error: rolesError } = useQuery<RoleOption[]>({
+    queryKey: ['user-management-roles'],
+    queryFn: async () => {
       const data = await roleService.getRoles({ page_size: 100 });
       const roleItems = Array.isArray(data)
         ? data
@@ -163,7 +157,8 @@ const UserManagementPage: React.FC = () => {
           : Array.isArray((data as { data?: unknown[] }).data)
             ? (data as { data: unknown[] }).data
             : [];
-      const options: RoleOption[] = roleItems
+
+      return roleItems
         .map(role => {
           const roleRecord = role as { id?: string; code?: string; name?: string };
           return {
@@ -172,99 +167,133 @@ const UserManagementPage: React.FC = () => {
           };
         })
         .filter(role => role.id.length > 0);
-      setRoles(options);
-    } catch {
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const {
+    data: statisticsResponse,
+    error: statisticsError,
+    refetch: refetchStatistics,
+    isFetched: isStatisticsFetched,
+  } = useQuery<unknown>({
+    queryKey: ['user-management-statistics'],
+    queryFn: () => userService.getUserStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (usersError != null) {
+      pageLogger.error('加载用户列表失败:', usersError);
+      MessageManager.error('加载用户列表失败');
+    }
+  }, [usersError]);
+
+  useEffect(() => {
+    if (organizationsError != null) {
+      pageLogger.error('加载组织列表失败:', organizationsError);
+      MessageManager.error('加载组织列表失败');
+    }
+  }, [organizationsError]);
+
+  useEffect(() => {
+    if (rolesError != null) {
+      pageLogger.error('加载角色列表失败:', rolesError);
       MessageManager.error('加载角色列表失败');
     }
-  }, []);
+  }, [rolesError]);
 
-  const loadStatistics = useCallback(async () => {
-    try {
-      const data = await userService.getUserStatistics();
-      if (
-        data != null &&
-        typeof data === 'object' &&
-        'total' in data &&
-        'active' in data &&
-        'inactive' in data &&
-        'locked' in data
-      ) {
-        setStatistics(data as UserStatistics);
-        return;
-      }
-      const computedStats: UserStatistics = {
-        total: users.length,
-        active: users.filter(u => u.status === 'active').length,
-        inactive: users.filter(u => u.status === 'inactive').length,
-        locked: users.filter(u => u.status === 'locked').length,
-        by_role: {},
-        by_organization: {},
-      };
-      setStatistics(computedStats);
-    } catch (error) {
-      pageLogger.error('加载统计信息失败:', error as Error);
+  useEffect(() => {
+    if (statisticsError != null) {
+      pageLogger.error('加载统计信息失败:', statisticsError);
       MessageManager.error('加载统计信息失败');
-      setStatistics(null);
     }
-  }, [users]);
+  }, [statisticsError]);
 
-  useEffect(() => {
-    void loadList();
-    void loadOrganizations();
-    void loadRoles();
-  }, [loadList, loadOrganizations, loadRoles]);
+  const users = usersResponse?.items ?? [];
+  const loading = isUsersLoading || isUsersFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: usersResponse?.total ?? 0,
+    }),
+    [paginationState.current, paginationState.pageSize, usersResponse?.total]
+  );
 
-  useEffect(() => {
-    void loadStatistics();
-  }, [loadStatistics]);
+  const statistics = useMemo<UserStatistics | null>(() => {
+    if (statisticsError != null) {
+      return null;
+    }
+    if (!isStatisticsFetched) {
+      return null;
+    }
+    if (
+      statisticsResponse != null &&
+      typeof statisticsResponse === 'object' &&
+      'total' in statisticsResponse &&
+      'active' in statisticsResponse &&
+      'inactive' in statisticsResponse &&
+      'locked' in statisticsResponse
+    ) {
+      return statisticsResponse as UserStatistics;
+    }
+    return {
+      total: users.length,
+      active: users.filter(user => user.status === 'active').length,
+      inactive: users.filter(user => user.status === 'inactive').length,
+      locked: users.filter(user => user.status === 'locked').length,
+      by_role: {},
+      by_organization: {},
+    };
+  }, [isStatisticsFetched, statisticsError, statisticsResponse, users]);
+
+  const refreshUsersAndStatistics = useCallback(() => {
+    void refetchUsers();
+    void refetchStatistics();
+  }, [refetchUsers, refetchStatistics]);
+
+  const updateFilters = useCallback((nextFilters: Partial<UserFilters>) => {
+    setFilters(prev => ({ ...prev, ...nextFilters }));
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
 
   const handleSearch = useCallback(
     (value: string) => {
-      applyFilters({
-        keyword: value,
-        status: filters.status,
-        roleId: filters.roleId,
-        organizationId: filters.organizationId,
-      });
+      updateFilters({ keyword: value });
     },
-    [applyFilters, filters.organizationId, filters.roleId, filters.status]
+    [updateFilters]
   );
 
   const handleStatusFilterChange = useCallback(
     (value?: string) => {
-      applyFilters({
-        keyword: filters.keyword,
-        status: value ?? '',
-        roleId: filters.roleId,
-        organizationId: filters.organizationId,
-      });
+      updateFilters({ status: value ?? '' });
     },
-    [applyFilters, filters.keyword, filters.organizationId, filters.roleId]
+    [updateFilters]
   );
 
   const handleRoleFilterChange = useCallback(
     (value?: string) => {
-      applyFilters({
-        keyword: filters.keyword,
-        status: filters.status,
-        roleId: value ?? '',
-        organizationId: filters.organizationId,
-      });
+      updateFilters({ roleId: value ?? '' });
     },
-    [applyFilters, filters.keyword, filters.organizationId, filters.status]
+    [updateFilters]
   );
 
   const handleOrganizationFilterChange = useCallback(
     (value?: string) => {
-      applyFilters({
-        keyword: filters.keyword,
-        status: filters.status,
-        roleId: filters.roleId,
-        organizationId: value ?? '',
-      });
+      updateFilters({ organizationId: value ?? '' });
     },
-    [applyFilters, filters.keyword, filters.roleId, filters.status]
+    [updateFilters]
   );
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
 
   const handleCreate = () => {
     setEditingUser(null);
@@ -290,8 +319,7 @@ const UserManagementPage: React.FC = () => {
     try {
       await userService.deleteUser(_id);
       MessageManager.success('删除成功');
-      void loadList();
-      void loadStatistics();
+      refreshUsersAndStatistics();
     } catch (error) {
       pageLogger.error('删除用户失败:', error as Error);
       MessageManager.error('删除失败');
@@ -302,8 +330,7 @@ const UserManagementPage: React.FC = () => {
     try {
       await userService.updateUser(_user.id, { status: _newStatus as 'active' | 'inactive' });
       MessageManager.success('状态已更新');
-      void loadList();
-      void loadStatistics();
+      refreshUsersAndStatistics();
     } catch (error) {
       pageLogger.error('更新用户状态失败:', error as Error);
       MessageManager.error('状态更新失败');
@@ -318,8 +345,7 @@ const UserManagementPage: React.FC = () => {
         await userService.lockUser(user.id);
       }
       MessageManager.success(user.is_locked ? '用户已解锁' : '用户已锁定');
-      void loadList();
-      void loadStatistics();
+      refreshUsersAndStatistics();
     } catch (error) {
       pageLogger.error('更新用户锁定状态失败:', error as Error);
       MessageManager.error('操作失败');
@@ -341,8 +367,7 @@ const UserManagementPage: React.FC = () => {
         MessageManager.success('创建成功');
       }
       setModalVisible(false);
-      void loadList();
-      void loadStatistics();
+      refreshUsersAndStatistics();
     } catch (error) {
       pageLogger.error('保存用户失败:', error as Error);
       MessageManager.error(editingUser ? '更新失败' : '创建失败');
@@ -536,7 +561,7 @@ const UserManagementPage: React.FC = () => {
                       placeholder="状态筛选"
                       allowClear
                       style={{ width: '100%' }}
-                      value={filters.status || undefined}
+                      value={filters.status !== '' ? filters.status : undefined}
                       onChange={handleStatusFilterChange}
                     >
                       {statusOptions.map(status => (
@@ -555,7 +580,7 @@ const UserManagementPage: React.FC = () => {
                       placeholder="角色筛选"
                       allowClear
                       style={{ width: '100%' }}
-                      value={filters.roleId || undefined}
+                      value={filters.roleId !== '' ? filters.roleId : undefined}
                       onChange={handleRoleFilterChange}
                     >
                       {roles.map(role => (
@@ -574,7 +599,7 @@ const UserManagementPage: React.FC = () => {
                       placeholder="组织筛选"
                       allowClear
                       style={{ width: '100%' }}
-                      value={filters.organizationId || undefined}
+                      value={filters.organizationId !== '' ? filters.organizationId : undefined}
                       onChange={handleOrganizationFilterChange}
                     >
                       {organizations.map(org => (
@@ -589,7 +614,7 @@ const UserManagementPage: React.FC = () => {
                   key: 'refresh',
                   col: { xs: 24, sm: 12, md: 4, lg: 3 },
                   content: (
-                    <Button icon={<ReloadOutlined />} onClick={() => void loadList()}>
+                    <Button icon={<ReloadOutlined />} onClick={refreshUsersAndStatistics}>
                       刷新
                     </Button>
                   ),
@@ -612,12 +637,12 @@ const UserManagementPage: React.FC = () => {
             dataSource={users}
             rowKey="id"
             loading={loading}
-          paginationState={pagination}
-          onPageChange={updatePagination}
-          paginationProps={{
-            showTotal: (total: number) => `共 ${total} 条记录`,
-          }}
-        />
+            paginationState={pagination}
+            onPageChange={handlePageChange}
+            paginationProps={{
+              showTotal: (total: number) => `共 ${total} 条记录`,
+            }}
+          />
         </Card>
 
         {/* 创建/编辑模态框 */}

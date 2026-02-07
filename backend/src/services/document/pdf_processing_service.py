@@ -62,7 +62,7 @@ class PDFProcessingService:
                     for page_index in range(effective_limit):
                         page = doc[page_index]
                         texts.append(page.get_text("text"))
-                    
+
                     return "\n".join(texts).strip(), page_count, effective_limit
 
             text, page_count, extracted_pages = await anyio.to_thread.run_sync(_extract)

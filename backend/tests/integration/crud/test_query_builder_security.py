@@ -401,7 +401,9 @@ class TestWhitelistCompliance:
             EmptyWhitelist,
             get_whitelist_for_model,
         )
-        from src.models.ownership import Ownership  # Ownership lives in models/ownership.py
+        from src.models.ownership import (
+            Ownership,  # Ownership lives in models/ownership.py
+        )
 
         whitelist = get_whitelist_for_model(Ownership)
         assert not isinstance(whitelist, EmptyWhitelist), (

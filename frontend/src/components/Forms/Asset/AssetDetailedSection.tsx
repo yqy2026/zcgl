@@ -133,18 +133,8 @@ const AssetDetailedSection: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                label="租户类型"
-                name="tenant_type"
-                htmlFor={tenantTypeIds.inputId}
-              >
-                <DictionarySelect
-                  dictType="tenant_type"
-                  placeholder="自动从合同获取"
-                  disabled
-                  id={tenantTypeIds.inputId}
-                  aria-label={tenantTypeIds.labelId}
-                />
+              <Form.Item label="租户类型" name="tenant_type">
+                <DictionarySelect dictType="tenant_type" placeholder="自动从合同获取" disabled />
               </Form.Item>
             </Col>
           </Row>

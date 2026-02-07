@@ -12,9 +12,7 @@ import { useMutation } from '@tanstack/react-query';
 vi.mock('@/services/assetService', () => ({
   assetService: {
     exportAssets: vi.fn(() => Promise.resolve({ url: '/download/export.xlsx' })),
-    exportSelectedAssets: vi.fn(() =>
-      Promise.resolve({ url: '/download/selected.xlsx' })
-    ),
+    exportSelectedAssets: vi.fn(() => Promise.resolve({ url: '/download/selected.xlsx' })),
     getExportHistory: vi.fn(() =>
       Promise.resolve([
         {
@@ -93,11 +91,9 @@ vi.mock('antd', () => {
   );
   Card.displayName = 'MockCard';
 
-  const Form = ({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) => <form data-testid="export-form">{children}</form>;
+  const Form = ({ children }: { children: React.ReactNode }) => (
+    <form data-testid="export-form">{children}</form>
+  );
   Form.displayName = 'MockForm';
 
   const FormItem = ({
@@ -131,24 +127,16 @@ vi.mock('antd', () => {
     onChange?: (value: string) => void;
     value?: string;
   }) => (
-    <select
-      data-testid="select"
-      value={value}
-      onChange={e => onChange?.(e.target.value)}
-    >
+    <select data-testid="select" value={value} onChange={e => onChange?.(e.target.value)}>
       <option value="">{placeholder}</option>
       {children}
     </select>
   );
   Select.displayName = 'MockSelect';
 
-  const SelectOption = ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => <option value={value}>{children}</option>;
+  const SelectOption = ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <option value={value}>{children}</option>
+  );
   SelectOption.displayName = 'MockSelectOption';
 
   Select.Option = SelectOption;
@@ -209,39 +197,21 @@ vi.mock('antd', () => {
   );
   Space.displayName = 'MockSpace';
 
-  const Alert = ({
-    message,
-    type,
-  }: {
-    message: string;
-    type?: string;
-  }) => (
+  const Alert = ({ message, type }: { message: string; type?: string }) => (
     <div data-testid="alert" data-type={type}>
       {message}
     </div>
   );
   Alert.displayName = 'MockAlert';
 
-  const Progress = ({
-    percent,
-    status,
-  }: {
-    percent: number;
-    status?: string;
-  }) => (
+  const Progress = ({ percent, status }: { percent: number; status?: string }) => (
     <div data-testid="progress" data-percent={percent} data-status={status}>
       {percent}%
     </div>
   );
   Progress.displayName = 'MockProgress';
 
-  const TypographyTitle = ({
-    children,
-    level,
-  }: {
-    children: React.ReactNode;
-    level?: number;
-  }) => (
+  const TypographyTitle = ({ children, level }: { children: React.ReactNode; level?: number }) => (
     <div data-testid="title" data-level={level}>
       {children}
     </div>
@@ -276,13 +246,7 @@ vi.mock('antd', () => {
   );
   Col.displayName = 'MockCol';
 
-  const Tag = ({
-    children,
-    color,
-  }: {
-    children: React.ReactNode;
-    color?: string;
-  }) => (
+  const Tag = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>
@@ -369,13 +333,7 @@ vi.mock('antd', () => {
   List.Item = ListItem;
   List.Item.Meta = ListItemMeta;
 
-  const Tooltip = ({
-    children,
-    title,
-  }: {
-    children: React.ReactNode;
-    title: string;
-  }) => (
+  const Tooltip = ({ children, title }: { children: React.ReactNode; title: string }) => (
     <div data-testid="tooltip" title={title}>
       {children}
     </div>

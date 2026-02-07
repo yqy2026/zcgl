@@ -225,11 +225,14 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     try {
-      const result = await apiClient.get<OwnershipStatisticsResponse>(`${this.baseUrl}/statistics/summary`, {
+      const result = await apiClient.get<OwnershipStatisticsResponse>(
+        `${this.baseUrl}/statistics/summary`,
+        {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        });
+        }
+      );
 
       if (!result.success) {
         throw new Error(`获取权属方统计失败: ${result.error}`);

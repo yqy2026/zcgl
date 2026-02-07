@@ -74,11 +74,11 @@ export class AuthService {
 
       logger.debug('用户数据解析成功', { user });
 
-      const permissions = (Array.isArray(responseData.permissions)
+      const permissions = Array.isArray(responseData.permissions)
         ? responseData.permissions
         : Array.isArray(responseData.data?.permissions)
           ? responseData.data?.permissions
-          : []) as AuthResponse['permissions'];
+          : [];
 
       // Store user/permissions locally (tokens stay in httpOnly cookies)
       AuthStorage.setAuthData({ user, permissions });
@@ -119,22 +119,18 @@ export class AuthService {
     StandardApiResponse<{ message?: string; auth_mode?: string }>
   > {
     try {
-      const result = await apiClient.post(
-        AUTH_API.REFRESH,
-        undefined,
-        {
-          retry: {
-            maxAttempts: 2,
-            delay: 500,
-            backoffMultiplier: 1.5,
-            retryCondition: (error: unknown) => {
-              // 刷新令牌失败一般不重试，除非是网络问题
-              const axiosError = error as { response?: unknown };
-              return axiosError.response === undefined;
-            },
+      const result = await apiClient.post(AUTH_API.REFRESH, undefined, {
+        retry: {
+          maxAttempts: 2,
+          delay: 500,
+          backoffMultiplier: 1.5,
+          retryCondition: (error: unknown) => {
+            // 刷新令牌失败一般不重试，除非是网络问题
+            const axiosError = error as { response?: unknown };
+            return axiosError.response === undefined;
           },
-        }
-      );
+        },
+      });
 
       if (!result.success) {
         throw new Error(`令牌刷新失败: ${result.error}`);

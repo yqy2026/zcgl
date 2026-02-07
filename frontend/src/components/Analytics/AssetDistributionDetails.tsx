@@ -1,10 +1,7 @@
 import React from 'react';
 import { Row, Col, Card, Typography } from 'antd';
 import styles from '../../pages/Assets/AssetAnalyticsPage.module.css';
-import type {
-  AnalyticsData,
-  BusinessCategoryAreaDistribution,
-} from '@/types/analytics';
+import type { AnalyticsData, BusinessCategoryAreaDistribution } from '@/types/analytics';
 import type { AnalysisDimension } from '@/hooks/useAssetAnalytics';
 
 interface AssetDistributionDetailsProps {
@@ -30,9 +27,7 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
               : (analyticsData.property_nature_area_distribution ?? [])
             ).map(item => (
               <div key={item.name} className={styles.distributionItem}>
-                <span className={styles.itemName}>
-                  {item.name}
-                </span>
+                <span className={styles.itemName}>{item.name}</span>
                 <span className={styles.itemStats}>
                   {dimension === 'count'
                     ? `${(item as { count: number; percentage: number }).count} (${(item as { percentage: number }).percentage}%)`
@@ -54,9 +49,7 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
               : (analyticsData.ownership_status_area_distribution ?? [])
             ).map(item => (
               <div key={(item as { status: string }).status} className={styles.distributionItem}>
-                <span className={styles.itemName}>
-                  {(item as { status: string }).status}
-                </span>
+                <span className={styles.itemName}>{(item as { status: string }).status}</span>
                 <span className={styles.itemStats}>
                   {dimension === 'count'
                     ? `${(item as { count: number; percentage: number }).count} (${(item as { percentage: number }).percentage}%)`
@@ -78,9 +71,7 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
               : (analyticsData.usage_status_area_distribution ?? [])
             ).map(item => (
               <div key={(item as { status: string }).status} className={styles.distributionItem}>
-                <span className={styles.itemName}>
-                  {(item as { status: string }).status}
-                </span>
+                <span className={styles.itemName}>{(item as { status: string }).status}</span>
                 <span className={styles.itemStats}>
                   {dimension === 'count'
                     ? `${(item as { count: number; percentage: number }).count} (${(item as { percentage: number }).percentage}%)`
@@ -103,20 +94,14 @@ const AssetDistributionDetails: React.FC<AssetDistributionDetailsProps> = ({
             ).map(item => {
               const isCount = dimension === 'count';
               const countItem = isCount ? item : null;
-              const areaItem = isCount
-                ? null
-                : (item as BusinessCategoryAreaDistribution);
+              const areaItem = isCount ? null : (item as BusinessCategoryAreaDistribution);
               const itemKey =
-                isCount && countItem
-                  ? countItem.category
-                  : (areaItem?.category ?? '');
+                isCount && countItem ? countItem.category : (areaItem?.category ?? '');
 
               return (
                 <div key={itemKey} className={styles.distributionItem}>
                   <span className={styles.itemName}>
-                    {isCount && countItem
-                      ? countItem.category
-                      : (areaItem?.category ?? '')}
+                    {isCount && countItem ? countItem.category : (areaItem?.category ?? '')}
                   </span>
                   <span className={styles.itemStats}>
                     {isCount && countItem

@@ -119,8 +119,9 @@ vi.mock('antd', () => {
   };
 
   // Attach Item as a property before returning
-  (DescriptionsMock as typeof DescriptionsMock & { Item?: React.FC<DescriptionsItemMockProps> }).Item =
-    DescriptionsItemMock;
+  (
+    DescriptionsMock as typeof DescriptionsMock & { Item?: React.FC<DescriptionsItemMockProps> }
+  ).Item = DescriptionsItemMock;
 
   return {
     Card: ({ children, title }: CardMockProps) => (

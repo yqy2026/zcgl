@@ -94,9 +94,7 @@ describe('NotificationService', () => {
         error: '服务器错误',
       });
 
-      await expect(notificationService.getNotifications()).rejects.toThrow(
-        '获取通知列表失败'
-      );
+      await expect(notificationService.getNotifications()).rejects.toThrow('获取通知列表失败');
     });
   });
 
@@ -171,9 +169,7 @@ describe('NotificationService', () => {
         error: '操作失败',
       });
 
-      await expect(notificationService.markAllAsRead()).rejects.toThrow(
-        '标记所有通知已读失败'
-      );
+      await expect(notificationService.markAllAsRead()).rejects.toThrow('标记所有通知已读失败');
     });
   });
 

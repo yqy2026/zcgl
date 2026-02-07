@@ -33,7 +33,11 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
-import { apiClient } from '@/api/client';
+import {
+  assetImportService,
+  type AssetImportResult,
+  type AssetImportConfig as AssetImportServiceConfig,
+} from '@/services/assetImportService';
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '@/config/excelConfig';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -44,32 +48,16 @@ const importLogger = createLogger('AssetImport');
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-interface ImportResult {
-  success: number;
-  failed: number;
-  total: number;
-  errors: string[];
-  message: string;
-  processing_time?: number;
-  filename?: string;
-  performance_metrics?: {
-    records_per_second: number;
-    estimated_time_for_1000: number;
-  };
-}
-
-interface ImportConfig {
-  useOptimized: boolean;
+type ImportConfig = Pick<AssetImportServiceConfig, 'useOptimized' | 'skipErrors'> & {
   batchSize: number;
-  skipErrors: boolean;
   timeout: number;
-}
+};
 
 const OptimizedAssetImport: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] = useState<AssetImportResult | null>(null);
   const [progress, setProgress] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<ImportConfig>({
@@ -82,20 +70,7 @@ const OptimizedAssetImport: React.FC = () => {
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      const response = await apiClient.get('/excel/template', {
-        responseType: 'blob',
-      });
-
-      const blob = new Blob([response.data as BlobPart]);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'land_property_asset_template.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
+      await assetImportService.downloadTemplate('land_property_asset_template.xlsx');
       MessageManager.success('模板下载成功');
     } catch {
       MessageManager.error('模板下载失败');
@@ -159,33 +134,23 @@ const OptimizedAssetImport: React.FC = () => {
     const progressInterval = simulateProgress();
 
     try {
-      const formData = new FormData();
-      // Get the actual File object from UploadFile
       const file = fileList[0]?.originFileObj;
-      if (file !== undefined && file !== null) {
-        formData.append('file', file);
+      if (file == null) {
+        clearInterval(progressInterval);
+        setUploading(false);
+        MessageManager.error('未检测到可导入文件');
+        return;
       }
 
-      // Start enhanced import process
-      setUploading(true);
-
-      const endpoint = config.useOptimized ? '/excel/import/optimized' : '/excel/import';
-
-      const response = await apiClient.post(endpoint, formData, {
-        params: {
-          sheet_name: STANDARD_SHEET_NAME,
-          skip_errors: config.skipErrors,
-        },
-        timeout: config.timeout * 1000,
+      const result = await assetImportService.importAssets(file, {
+        sheetName: STANDARD_SHEET_NAME,
+        skipErrors: config.skipErrors,
+        useOptimized: config.useOptimized,
+        timeoutSeconds: config.timeout,
       });
 
       clearInterval(progressInterval);
       setProgress(100);
-
-      const result = response.data as ImportResult;
-      // Import completed successfully
-      // console.log('=== 导入结果 ===')
-      // console.log('响应数据:', result)
 
       setImportResult(result);
       setCurrentStep(2);
@@ -200,23 +165,13 @@ const OptimizedAssetImport: React.FC = () => {
       clearInterval(progressInterval);
       importLogger.error('导入错误', err instanceof Error ? err : new Error(String(err)));
 
-      interface ErrorResponse {
-        response?: { data?: Partial<ImportResult> };
-        message?: string;
-      }
-      const error = err as ErrorResponse;
-      importLogger.error(
-        '错误响应',
-        error.response?.data
-          ? new Error(JSON.stringify(error.response.data))
-          : new Error('Unknown error')
-      );
+      const errorMessage = err instanceof Error ? err.message : '网络错误';
 
-      const errorResult: ImportResult = {
+      const errorResult: AssetImportResult = {
         success: 0,
         failed: 0,
         total: 0,
-        errors: [error.message ?? '网络错误'],
+        errors: [errorMessage],
         message: '导入失败',
         processing_time: 0,
         filename: fileList[0]?.name,

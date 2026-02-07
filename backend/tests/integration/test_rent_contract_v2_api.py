@@ -70,10 +70,10 @@ def v2_contract_payload():
 class TestContractV2API:
     """Test V2 Contract API endpoints"""
 
-    @patch("src.api.v1.rent_contract.get_current_active_user")
-    @patch("src.api.v1.rent_contract.rent_contract_service")
-    @patch("src.api.v1.rent_contract.asset_crud")
-    @patch("src.api.v1.rent_contract.ownership")
+    @patch("src.api.v1.rent_contracts.contracts.get_current_active_user")
+    @patch("src.api.v1.rent_contracts.contracts.rent_contract_service")
+    @patch("src.api.v1.rent_contracts.contracts.asset_crud")
+    @patch("src.api.v1.rent_contracts.contracts.ownership")
     def test_create_contract_with_v2_fields(
         self,
         mock_ownership,
@@ -101,7 +101,7 @@ class TestContractV2API:
 
         # Make request
         response = client.post(
-            "/api/v1/rent/contracts",
+            "/api/v1/rental-contracts/contracts",
             json=v2_contract_payload,
             cookies={"auth_token": "test_token"},
         )
@@ -109,8 +109,8 @@ class TestContractV2API:
         # Verify
         assert response.status_code in [200, 201, 401]  # May need auth bypass
 
-    @patch("src.api.v1.rent_contract.get_current_active_user")
-    @patch("src.api.v1.rent_contract.rent_contract_service")
+    @patch("src.api.v1.rent_contracts.lifecycle.get_current_active_user")
+    @patch("src.api.v1.rent_contracts.lifecycle.rent_contract_service")
     def test_renew_contract_endpoint(self, mock_service, mock_auth, mock_current_user):
         """Test contract renewal endpoint"""
         from src.main import app
@@ -138,7 +138,7 @@ class TestContractV2API:
         }
 
         response = client.post(
-            "/api/v1/rent/contracts/original_001/renew",
+            "/api/v1/rental-contracts/contracts/original_001/renew",
             json=renewal_payload,
             params={"transfer_deposit": True},
             cookies={"auth_token": "test_token"},
@@ -147,8 +147,8 @@ class TestContractV2API:
         # Endpoint should exist
         assert response.status_code != 404
 
-    @patch("src.api.v1.rent_contract.get_current_active_user")
-    @patch("src.api.v1.rent_contract.rent_contract_service")
+    @patch("src.api.v1.rent_contracts.lifecycle.get_current_active_user")
+    @patch("src.api.v1.rent_contracts.lifecycle.rent_contract_service")
     def test_terminate_contract_endpoint(
         self, mock_service, mock_auth, mock_current_user
     ):
@@ -165,7 +165,7 @@ class TestContractV2API:
         mock_service.terminate_contract.return_value = terminated_contract
 
         response = client.post(
-            "/api/v1/rent/contracts/contract_001/terminate",
+            "/api/v1/rental-contracts/contracts/contract_001/terminate",
             params={
                 "termination_date": "2026-06-30",
                 "refund_deposit": True,
@@ -260,8 +260,8 @@ class TestContractV2Validation:
 class TestStatisticsV2API:
     """Test V2 statistics API endpoints"""
 
-    @patch("src.api.v1.rent_contract.get_current_active_user")
-    @patch("src.api.v1.rent_contract.rent_contract_service")
+    @patch("src.api.v1.rent_contracts.statistics.get_current_active_user")
+    @patch("src.api.v1.rent_contracts.statistics.rent_contract_service")
     def test_ownership_statistics_endpoint(
         self, mock_service, mock_auth, mock_current_user
     ):
@@ -282,14 +282,14 @@ class TestStatisticsV2API:
         ]
 
         response = client.get(
-            "/api/v1/rent/statistics/ownership",
+            "/api/v1/rental-contracts/statistics/ownership",
             cookies={"auth_token": "test_token"},
         )
 
         assert response.status_code != 404
 
-    @patch("src.api.v1.rent_contract.get_current_active_user")
-    @patch("src.api.v1.rent_contract.rent_contract_service")
+    @patch("src.api.v1.rent_contracts.statistics.get_current_active_user")
+    @patch("src.api.v1.rent_contracts.statistics.rent_contract_service")
     def test_asset_statistics_endpoint(
         self, mock_service, mock_auth, mock_current_user
     ):
@@ -302,7 +302,7 @@ class TestStatisticsV2API:
         mock_service.get_asset_statistics.return_value = []
 
         response = client.get(
-            "/api/v1/rent/statistics/asset",
+            "/api/v1/rental-contracts/statistics/asset",
             cookies={"auth_token": "test_token"},
         )
 

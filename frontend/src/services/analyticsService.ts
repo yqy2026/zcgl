@@ -85,7 +85,12 @@ export class AnalyticsService {
         throw new Error('综合分析接口返回为空');
       }
 
-      const apiData = response.data as RawApiData;
+      const apiData = response.data as AnalyticsResponse | RawApiData;
+
+      if ('success' in apiData && 'data' in apiData) {
+        return apiData;
+      }
+
       const adaptedData = this.adaptApiDataToAnalyticsData(apiData);
       return {
         success: true,
@@ -236,6 +241,43 @@ export class AnalyticsService {
       throw new Error(response.error ?? 'Failed to fetch financial summary');
     } catch (error) {
       serviceLogger.error('Financial summary API Error:', error as Error);
+      throw error;
+    }
+  }
+
+  async exportAnalyticsReport(
+    format: 'excel' | 'pdf' | 'csv',
+    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>
+  ): Promise<Blob> {
+    try {
+      const params: Record<string, string | boolean> = {
+        export_format: format,
+      };
+
+      if (filters?.start_date != null && filters.start_date !== '') {
+        params.date_from = filters.start_date;
+      }
+      if (filters?.end_date != null && filters.end_date !== '') {
+        params.date_to = filters.end_date;
+      }
+      if (typeof filters?.include_deleted === 'boolean') {
+        params.include_deleted = filters.include_deleted;
+      }
+
+      const response = await this.api.post<Blob>('/analytics/export', undefined, {
+        params,
+        responseType: 'blob',
+        retry: false,
+        smartExtract: false,
+      });
+
+      if (!response.success || response.data == null) {
+        throw new Error(response.error ?? '导出失败');
+      }
+
+      return response.data;
+    } catch (error) {
+      serviceLogger.error('Analytics export API Error:', error as Error);
       throw error;
     }
   }

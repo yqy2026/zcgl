@@ -142,7 +142,9 @@ describe('AnalyticsBarChart - 渲染测试', () => {
   it('应该支持自定义height', async () => {
     const { AnalyticsBarChart } = await import('../Charts');
     const data = [{ name: '项目1', value: 100 }];
-    renderWithProviders(<AnalyticsBarChart data={data} xDataKey="name" yDataKey="value" height={400} />);
+    renderWithProviders(
+      <AnalyticsBarChart data={data} xDataKey="name" yDataKey="value" height={400} />
+    );
 
     expect(screen.getByTestId('column-chart')).toHaveAttribute('data-height', '400');
   });
@@ -176,7 +178,9 @@ describe('AnalyticsLineChart - 渲染测试', () => {
   it('应该支持自定义height', async () => {
     const { AnalyticsLineChart } = await import('../Charts');
     const data = [{ date: '2024-01', value: 100 }];
-    renderWithProviders(<AnalyticsLineChart data={data} xDataKey="date" yDataKey="value" height={400} />);
+    renderWithProviders(
+      <AnalyticsLineChart data={data} xDataKey="date" yDataKey="value" height={400} />
+    );
 
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-height', '400');
   });
@@ -237,7 +241,9 @@ describe('AnalyticsAreaChart - 渲染测试', () => {
   it('应该支持自定义height', async () => {
     const { AnalyticsAreaChart } = await import('../Charts');
     const data = [{ date: '2024-01', value: 100 }];
-    renderWithProviders(<AnalyticsAreaChart data={data} xDataKey="date" yDataKey="value" height={400} />);
+    renderWithProviders(
+      <AnalyticsAreaChart data={data} xDataKey="date" yDataKey="value" height={400} />
+    );
 
     expect(screen.getByTestId('area-chart')).toHaveAttribute('data-height', '400');
   });

@@ -176,10 +176,7 @@ const ApiMonitor: React.FC = () => {
     return '#ff4d4f';
   };
 
-  const loading = useMemo(
-    () => isRefreshing || listLoading,
-    [isRefreshing, listLoading]
-  );
+  const loading = useMemo(() => isRefreshing || listLoading, [isRefreshing, listLoading]);
 
   return (
     <div style={{ padding: '24px' }}>

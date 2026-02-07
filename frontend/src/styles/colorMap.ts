@@ -3,6 +3,8 @@
  * Maps legacy hardcoded color values to CSS variables
  */
 
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
+
 // Color value to CSS variable mapping
 export const COLOR_MAP = {
   // Primary colors
@@ -56,7 +58,7 @@ export function toCssVar(color: string): string {
   const mappedColor = COLOR_MAP[lowerColor as keyof typeof COLOR_MAP];
 
   // Warn in development if color not found in map
-  if (!mappedColor && process.env.NODE_ENV === 'development') {
+  if (!mappedColor && isDevelopmentMode()) {
     // eslint-disable-next-line no-console
     console.warn(
       `[ColorMap] Unknown color "${color}" not found in COLOR_MAP. ` +

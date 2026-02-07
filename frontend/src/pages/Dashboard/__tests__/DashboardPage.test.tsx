@@ -42,7 +42,17 @@ vi.mock('../DashboardPage.module.css', () => ({
 
 // Mock DataTrendCard component
 vi.mock('../../../components/Dashboard/DataTrendCard', () => ({
-  default: ({ title, value, suffix, loading }: { title: string; value: number; suffix: string; loading: boolean }) => (
+  default: ({
+    title,
+    value,
+    suffix,
+    loading,
+  }: {
+    title: string;
+    value: number;
+    suffix: string;
+    loading: boolean;
+  }) => (
     <div data-testid={`trend-card-${title}`}>
       {loading ? 'Loading...' : `${title}: ${value}${suffix}`}
     </div>
@@ -52,9 +62,7 @@ vi.mock('../../../components/Dashboard/DataTrendCard', () => ({
 // Mock QuickInsights component
 vi.mock('../../../components/Dashboard/QuickInsights', () => ({
   default: ({ data: _data, loading }: { data: unknown; loading: boolean }) => (
-    <div data-testid="quick-insights">
-      {loading ? 'Loading insights...' : 'Quick Insights'}
-    </div>
+    <div data-testid="quick-insights">{loading ? 'Loading insights...' : 'Quick Insights'}</div>
   ),
 }));
 

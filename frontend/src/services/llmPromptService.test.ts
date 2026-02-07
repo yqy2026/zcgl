@@ -87,10 +87,7 @@ describe('LLMPromptService', () => {
       const updatedPrompt = response.data;
 
       expect(updatedPrompt.name).toBe('Updated Prompt');
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/llm-prompts/prompt-1',
-        updateData
-      );
+      expect(mockApiClient.put).toHaveBeenCalledWith('/llm-prompts/prompt-1', updateData);
     });
 
     it('deletes a prompt', async () => {
@@ -180,9 +177,7 @@ describe('LLMPromptService', () => {
         data: comparison,
       });
 
-      const response = await mockApiClient.get(
-        '/llm-prompts/prompt-1/compare?v1=1&v2=2'
-      );
+      const response = await mockApiClient.get('/llm-prompts/prompt-1/compare?v1=1&v2=2');
       const versionComparison = response.data;
 
       expect(versionComparison.improvement).toContain('+8.2%');
@@ -321,9 +316,7 @@ describe('LLMPromptService', () => {
     it('handles network errors gracefully', async () => {
       mockApiClient.get.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(mockApiClient.get('/llm-prompts')).rejects.toThrow(
-        'Network error'
-      );
+      await expect(mockApiClient.get('/llm-prompts')).rejects.toThrow('Network error');
     });
 
     it('handles validation errors', async () => {
@@ -352,9 +345,7 @@ describe('LLMPromptService', () => {
         },
       });
 
-      await expect(
-        mockApiClient.get('/llm-prompts/nonexistent')
-      ).rejects.toThrow();
+      await expect(mockApiClient.get('/llm-prompts/nonexistent')).rejects.toThrow();
     });
   });
 

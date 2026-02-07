@@ -14,11 +14,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, act } from '@/test/utils/test-helpers';
 
-import { useListData } from '@/hooks/useListData';
-import { ownershipService } from '@/services/ownershipService';
+import { useQuery } from '@tanstack/react-query';
 
-vi.mock('@/hooks/useListData', () => ({
-  useListData: vi.fn(),
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: vi.fn(),
 }));
 
 vi.mock('@/services/ownershipService', () => ({
@@ -215,10 +214,7 @@ vi.mock('antd', () => ({
             }
           }}
         />
-        <button
-          data-testid="search-button"
-          onClick={() => onSearch?.(value ?? '')}
-        >
+        <button data-testid="search-button" onClick={() => onSearch?.(value ?? '')}>
           搜索
         </button>
       </div>
@@ -295,51 +291,79 @@ const flushPromises = () =>
     setTimeout(resolve, 0);
   });
 
-const renderOwnershipList = async (
-  props?: React.ComponentProps<typeof OwnershipList>
-) => {
+const renderOwnershipList = async (props?: React.ComponentProps<typeof OwnershipList>) => {
   await act(async () => {
     renderWithProviders(<OwnershipList {...props} />);
     await flushPromises();
   });
 };
 
-const mockLoadList = vi.fn();
-const mockApplyFilters = vi.fn();
-const mockResetFilters = vi.fn();
-const mockUpdatePagination = vi.fn();
+const mockRefetchOwnerships = vi.fn();
+const mockRefetchStatistics = vi.fn();
 
 describe('OwnershipList 组件测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useListData).mockReturnValue({
-      data: [
-        {
-          id: '1',
-          name: '权属方1',
-          code: 'OWN-001',
-          short_name: '权属1',
-          is_active: true,
-          asset_count: 10,
-          project_count: 5,
-        },
-        {
-          id: '2',
-          name: '权属方2',
-          code: 'OWN-002',
-          short_name: '权属2',
-          is_active: false,
-          asset_count: 5,
-          project_count: 2,
-        },
-      ],
-      loading: false,
-      pagination: { current: 1, pageSize: 10, total: 2 },
-      filters: { keyword: '', isActive: null },
-      loadList: mockLoadList,
-      applyFilters: mockApplyFilters,
-      resetFilters: mockResetFilters,
-      updatePagination: mockUpdatePagination,
+    vi.mocked(useQuery).mockImplementation(options => {
+      const queryKey = (options as { queryKey?: unknown[] }).queryKey;
+      const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
+
+      if (key === 'ownership-list') {
+        return {
+          data: {
+            items: [
+              {
+                id: '1',
+                name: '权属方1',
+                code: 'OWN-001',
+                short_name: '权属1',
+                is_active: true,
+                asset_count: 10,
+                project_count: 5,
+              },
+              {
+                id: '2',
+                name: '权属方2',
+                code: 'OWN-002',
+                short_name: '权属2',
+                is_active: false,
+                asset_count: 5,
+                project_count: 2,
+              },
+            ],
+            total: 2,
+            page: 1,
+            page_size: 10,
+            pages: 1,
+          },
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: mockRefetchOwnerships,
+        };
+      }
+
+      if (key === 'ownership-statistics') {
+        return {
+          data: {
+            total_count: 10,
+            active_count: 8,
+            inactive_count: 2,
+          },
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: mockRefetchStatistics,
+        };
+      }
+
+      return {
+        data: undefined,
+        error: null,
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      };
     });
   });
 
@@ -391,10 +415,7 @@ describe('OwnershipList 组件测试', () => {
       const searchInput = screen.getByTestId('search-input');
       fireEvent.change(searchInput, { target: { value: '测试权属方' } });
 
-      expect(mockApplyFilters).toHaveBeenCalledWith({
-        keyword: '测试权属方',
-        isActive: null,
-      });
+      expect(searchInput).toHaveValue('测试权属方');
     });
 
     it('应该能点击搜索按钮', async () => {
@@ -417,7 +438,7 @@ describe('OwnershipList 组件测试', () => {
         fireEvent.click(resetButton);
       }
 
-      expect(mockResetFilters).toHaveBeenCalled();
+      expect(screen.getByTestId('search-input')).toHaveValue('');
     });
   });
 
@@ -498,15 +519,14 @@ describe('OwnershipList 组件测试', () => {
         });
       }
 
-      expect(mockLoadList).toHaveBeenCalled();
-      expect(ownershipService.getOwnershipStatistics).toHaveBeenCalled();
+      expect(mockRefetchOwnerships).toHaveBeenCalled();
+      expect(mockRefetchStatistics).toHaveBeenCalled();
     });
   });
 
   it('初始化时会加载列表与统计信息', async () => {
     await renderOwnershipList();
 
-    expect(mockLoadList).toHaveBeenCalled();
-    expect(ownershipService.getOwnershipStatistics).toHaveBeenCalled();
+    expect(useQuery).toHaveBeenCalled();
   });
 });

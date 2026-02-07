@@ -70,12 +70,7 @@ vi.mock('@/config/menuConfig', () => ({
 
 vi.mock('antd', () => ({
   Drawer: ({ children, title, placement, onClose, open, width, extra }: DrawerMockProps) => (
-    <div
-      data-testid="drawer"
-      data-placement={placement}
-      data-open={open}
-      data-width={width}
-    >
+    <div data-testid="drawer" data-placement={placement} data-open={open} data-width={width}>
       {title && <div data-testid="drawer-title">{title}</div>}
       {extra && <div data-testid="drawer-extra">{extra}</div>}
       {children}

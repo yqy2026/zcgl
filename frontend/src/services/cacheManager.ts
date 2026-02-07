@@ -231,10 +231,14 @@ export function cached(options: CacheOptions = {}) {
     const [targetOrValue, propertyKeyOrContext, descriptor] = decoratorArgs as [
       unknown,
       unknown,
-      PropertyDescriptor | undefined
+      PropertyDescriptor | undefined,
     ];
 
-    if (descriptor === undefined && propertyKeyOrContext != null && typeof propertyKeyOrContext === 'object') {
+    if (
+      descriptor === undefined &&
+      propertyKeyOrContext != null &&
+      typeof propertyKeyOrContext === 'object'
+    ) {
       const context = propertyKeyOrContext as { kind?: string; name?: string | symbol };
       if (context.kind !== 'method') {
         return targetOrValue;
@@ -291,10 +295,14 @@ export function invalidateCache(tags: string[]) {
     const [targetOrValue, propertyKeyOrContext, descriptor] = decoratorArgs as [
       unknown,
       unknown,
-      PropertyDescriptor | undefined
+      PropertyDescriptor | undefined,
     ];
 
-    if (descriptor === undefined && propertyKeyOrContext != null && typeof propertyKeyOrContext === 'object') {
+    if (
+      descriptor === undefined &&
+      propertyKeyOrContext != null &&
+      typeof propertyKeyOrContext === 'object'
+    ) {
       const context = propertyKeyOrContext as { kind?: string };
       if (context.kind !== 'method') {
         return targetOrValue;

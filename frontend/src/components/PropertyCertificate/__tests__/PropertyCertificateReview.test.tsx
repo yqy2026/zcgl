@@ -86,11 +86,7 @@ vi.mock('antd', () => {
   formMock.useForm = vi.fn(() => [formInstance]);
 
   const ListItem = ({ children, onClick, style }: ListItemMockProps) => (
-    <div
-      data-testid="list-item"
-      data-style={JSON.stringify(style)}
-      onClick={onClick}
-    >
+    <div data-testid="list-item" data-style={JSON.stringify(style)} onClick={onClick}>
       {children}
     </div>
   );
@@ -170,12 +166,7 @@ vi.mock('antd', () => {
     onClick?: () => void;
     loading?: boolean;
   }) => (
-    <button
-      data-testid="button"
-      type={htmlType}
-      data-loading={loading}
-      onClick={onClick}
-    >
+    <button data-testid="button" type={htmlType} data-loading={loading} onClick={onClick}>
       {children}
     </button>
   );

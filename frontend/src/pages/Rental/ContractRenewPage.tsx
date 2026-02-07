@@ -21,6 +21,7 @@ import { RentContractForm } from '@/components/Forms';
 import type { RentTermData } from '@/components/Forms/RentContract';
 import type { RentContractCreate, RentTerm } from '@/types/rentContract';
 import { rentContractService } from '@/services/rentContractService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import RenewalSummarySection from '@/components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
@@ -72,7 +73,7 @@ const ContractRenewPage: React.FC = () => {
 
   // 获取原合同数据
   const { data: originalContract, isLoading: isLoadingContract } = useQuery({
-    queryKey: ['rent-contract', id],
+    queryKey: RENTAL_QUERY_KEYS.contract(id),
     queryFn: () => rentContractService.getContract(id as string),
     enabled: id != null,
   });
@@ -128,8 +129,9 @@ const ContractRenewPage: React.FC = () => {
         navigate(`/rental/contracts/${newContract.id}`);
       }, 3000);
 
-      void queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
-      void queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractRoot });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractListRoot });
+      void queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contractStatistics });
 
       pageLogger.info('合同续签成功', {
         originalContractId: id,
@@ -137,7 +139,7 @@ const ContractRenewPage: React.FC = () => {
       });
     },
     onError: error => {
-      pageLogger.error('续签合同失败:', error as Error);
+      pageLogger.error('续签合同失败:', error);
       MessageManager.error('续签合同失败，请检查网络连接');
     },
   });

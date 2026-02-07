@@ -25,7 +25,7 @@ vi.mock('@/api/client', () => ({
 
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -140,10 +140,7 @@ describe('OrganizationService', () => {
       const result = await organizationService.getOrganization('org-1');
 
       expect(result).toEqual(mockOrganization);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        '/organizations/org-1',
-        expect.any(Object)
-      );
+      expect(apiClient.get).toHaveBeenCalledWith('/organizations/org-1', expect.any(Object));
     });
 
     it('should throw error when not found', async () => {

@@ -519,12 +519,41 @@ export const DEFAULT_ROUTES = [
   '/reports/analysis',
 ];
 
+const readNodeEnv = (name: string): string | undefined => {
+  const rawValue = process.env[name];
+  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : undefined;
+};
+
+const readNodeEnvBoolean = (name: string, defaultValue: boolean): boolean => {
+  const rawValue = readNodeEnv(name);
+  if (rawValue == null) {
+    return defaultValue;
+  }
+  const normalizedValue = rawValue.toLowerCase();
+  if (normalizedValue === 'true' || normalizedValue === '1') {
+    return true;
+  }
+  if (normalizedValue === 'false' || normalizedValue === '0') {
+    return false;
+  }
+  return defaultValue;
+};
+
+const readNodeEnvNumber = (name: string, defaultValue: number): number => {
+  const rawValue = readNodeEnv(name);
+  if (rawValue == null) {
+    return defaultValue;
+  }
+  const parsedValue = Number.parseInt(rawValue, 10);
+  return Number.isNaN(parsedValue) ? defaultValue : parsedValue;
+};
+
 /**
  * CLI 入口
  */
 export async function main() {
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5173';
-  const pages = process.env.PAGES?.split(',') || DEFAULT_ROUTES;
+  const baseUrl = readNodeEnv('BASE_URL') ?? 'http://localhost:5173';
+  const pages = readNodeEnv('PAGES')?.split(',') ?? DEFAULT_ROUTES;
 
   const diagnostics = new FrontendDiagnostics();
 
@@ -532,8 +561,8 @@ export async function main() {
     const report = await diagnostics.runDiagnostics({
       baseUrl,
       pages,
-      headless: process.env.HEADLESS !== 'false',
-      timeout: parseInt(process.env.TIMEOUT || '30000', 10),
+      headless: readNodeEnvBoolean('HEADLESS', true),
+      timeout: readNodeEnvNumber('TIMEOUT', 30000),
     });
 
     // 根据结果设置退出码

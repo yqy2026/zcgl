@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "noEmit": true
+  },
+  "include": [
+    "playwright.config.ts",
+    "src/e2e/**/*.ts",
+    "tests/e2e/**/*.ts",
+    "types/playwright-test.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

@@ -414,22 +414,22 @@ const Statistic: React.FC<{
   const contentStyle = styles?.content ?? valueStyle;
 
   return (
-  <div>
-    <div style={{ color: COLORS.textSecondary, fontSize: '14px', marginBottom: '4px' }}>
-      {title}
+    <div>
+      <div style={{ color: COLORS.textSecondary, fontSize: '14px', marginBottom: '4px' }}>
+        {title}
+      </div>
+      <div
+        style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: COLORS.textPrimary,
+          ...(contentStyle ?? {}),
+        }}
+      >
+        {value}
+        {suffix != null && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
+      </div>
     </div>
-    <div
-      style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        color: COLORS.textPrimary,
-        ...(contentStyle ?? {}),
-      }}
-    >
-      {value}
-      {suffix != null && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
-    </div>
-  </div>
   );
 };
 

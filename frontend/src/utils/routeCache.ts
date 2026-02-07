@@ -233,13 +233,16 @@ export class RoutePerformanceMonitor {
   }
 
   getMetrics() {
-    const result: Record<string, {
-      averageLoadTime: number;
-      hitCount: number;
-      errorCount: number;
-      errorRate: number;
-      lastLoad: number;
-    }> = {};
+    const result: Record<
+      string,
+      {
+        averageLoadTime: number;
+        hitCount: number;
+        errorCount: number;
+        errorRate: number;
+        lastLoad: number;
+      }
+    > = {};
 
     for (const [key, value] of this.metrics.entries()) {
       result[key] = {

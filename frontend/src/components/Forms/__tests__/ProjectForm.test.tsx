@@ -47,11 +47,7 @@ describe('ProjectForm', () => {
 
   it('应该正确渲染表单', () => {
     renderWithProviders(
-      <ProjectForm
-        project={null}
-        onSuccess={mockOnSuccess}
-        onCancel={mockOnCancel}
-      />
+      <ProjectForm project={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
     );
     expect(screen.getByRole('form')).toBeInTheDocument();
   });
@@ -62,11 +58,7 @@ describe('ProjectForm', () => {
     );
 
     renderWithProviders(
-      <ProjectForm
-        project={null}
-        onSuccess={mockOnSuccess}
-        onCancel={mockOnCancel}
-      />
+      <ProjectForm project={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
     );
 
     const submitBtn = screen.getByRole('button', { name: /提交/i });

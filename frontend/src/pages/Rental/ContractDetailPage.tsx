@@ -11,6 +11,7 @@ import { EditOutlined, ArrowLeftOutlined, StopOutlined, SyncOutlined } from '@an
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { rentContractService } from '@/services/rentContractService';
+import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import ContractDetailInfo from '@/components/Rental/ContractDetailInfo';
 import ContractTerminateModal from '@/components/Rental/ContractTerminateModal';
 import { ContractStatus } from '@/types/rentContract';
@@ -38,21 +39,21 @@ const ContractDetailPage: React.FC = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['rent-contract', id],
+    queryKey: RENTAL_QUERY_KEYS.contract(id),
     queryFn: () => rentContractService.getContract(id as string),
     enabled: id !== null && id !== undefined && id !== '',
   });
 
   // V2: 获取押金变动记录
   const { data: depositLedgers, isLoading: depositLoading } = useQuery({
-    queryKey: ['contract-deposit-ledger', id],
+    queryKey: RENTAL_QUERY_KEYS.contractDepositLedger(id),
     queryFn: () => rentContractService.getContractDepositLedger(id as string),
     enabled: id !== null && id !== undefined && id !== '',
   });
 
   // V2: 获取服务费台账
   const { data: serviceFeeLedgers, isLoading: serviceFeeLoading } = useQuery({
-    queryKey: ['contract-service-fee-ledger', id],
+    queryKey: RENTAL_QUERY_KEYS.contractServiceFeeLedger(id),
     queryFn: () => rentContractService.getServiceFeeLedgers(id as string),
     enabled: id !== null && id !== undefined && id !== '',
   });
@@ -164,7 +165,7 @@ const ContractDetailPage: React.FC = () => {
         onSuccess={() => {
           setTerminateModalVisible(false);
           // 刷新合同详情数据
-          queryClient.invalidateQueries({ queryKey: ['rent-contract', id] });
+          queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contract(id) });
         }}
       />
     </div>

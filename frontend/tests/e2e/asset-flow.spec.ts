@@ -3,6 +3,14 @@ import { LoginPage } from './pages/LoginPage';
 import { AssetListPage } from './pages/AssetListPage';
 import { AssetDetailPage } from './pages/AssetDetailPage';
 
+const readTestCredential = (
+  name: 'E2E_USERNAME' | 'E2E_PASSWORD',
+  fallbackValue: string
+): string => {
+  const rawValue = process.env[name];
+  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : fallbackValue;
+};
+
 test.describe('Asset Management Flow', () => {
   let loginPage: LoginPage;
   let assetListPage: AssetListPage;
@@ -22,7 +30,10 @@ test.describe('Asset Management Flow', () => {
     // Check if redirected to login or already logged in
     if (await page.url().includes('/login')) {
       // Use env vars or default dev creds
-      await loginPage.login(process.env.E2E_USERNAME || 'admin', process.env.E2E_PASSWORD || 'password123');
+      await loginPage.login(
+        readTestCredential('E2E_USERNAME', 'admin'),
+        readTestCredential('E2E_PASSWORD', 'password123')
+      );
     }
   });
 

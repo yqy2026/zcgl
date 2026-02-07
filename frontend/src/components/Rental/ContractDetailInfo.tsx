@@ -17,7 +17,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { RentContract, RentTerm, DepositLedger, ServiceFeeLedger } from '@/types/rentContract';
-import { ContractStatus, ContractStatusColors, ContractStatusLabels } from '@/types/rentContract';
+import { ContractStatusColors, ContractStatusLabels } from '@/types/rentContract';
 import type { ColumnsType } from 'antd/es/table';
 import DepositLedgerHistory from './DepositLedgerHistory';
 import ServiceFeeLedgerTable from './ServiceFeeLedgerTable';
@@ -196,8 +196,8 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               </span>
             }
           >
-            <Tag color={ContractStatusColors[contract.contract_status as ContractStatus] || 'default'}>
-              {ContractStatusLabels[contract.contract_status as ContractStatus] || contract.contract_status}
+            <Tag color={ContractStatusColors[contract.contract_status] || 'default'}>
+              {ContractStatusLabels[contract.contract_status] || contract.contract_status}
             </Tag>
           </Descriptions.Item>
 

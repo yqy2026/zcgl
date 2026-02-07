@@ -9,10 +9,10 @@ import {
 } from '@ant-design/icons';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import type { AssetSearchParams } from '@/types/asset';
-import type { AnalyticsResponse } from '@/types/analytics';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
-import { createApiUrl } from '@/api/config';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
+import { analyticsService } from '@/services/analyticsService';
 
 const logger = createLogger('AnalyticsDashboard');
 
@@ -74,43 +74,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
-  const analytics = (analyticsResponse as AnalyticsResponse | undefined)?.data;
+  const analytics = analyticsResponse?.data;
 
   const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     try {
       MessageManager.loading('正在导出...');
-
-      // 构建查询参数
-      const params = new URLSearchParams();
-      params.append('export_format', format);
-
-      if (filters.start_date) {
-        params.append('date_from', filters.start_date);
-      }
-      if (filters.end_date) {
-        params.append('date_to', filters.end_date);
-      }
-      if (filters.include_deleted !== undefined) {
-        params.append('include_deleted', String(filters.include_deleted));
-      }
-
-      // 调用导出API
-      const exportUrl = createApiUrl('/analytics/export');
-      const response = await fetch(`${exportUrl}?${params.toString()}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const blob = await analyticsService.exportAnalyticsReport(format, {
+        start_date: filters.start_date,
+        end_date: filters.end_date,
+        include_deleted: filters.include_deleted,
       });
 
-      if (!response.ok) {
-        throw new Error('导出失败');
-      }
-
-      // 下载文件
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -260,7 +236,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       }}
     >
       {/* 性能监控 */}
-      {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
+      {isDevelopmentMode() && <PerformanceMonitor />}
 
       {/* 头部操作栏 */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>

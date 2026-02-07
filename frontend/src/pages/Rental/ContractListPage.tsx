@@ -57,7 +57,7 @@ const ContractListPage: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <ContractStatsCards statistics={statistics} />
+      <ContractStatsCards statistics={statistics ?? null} />
 
       {/* 搜索区域 */}
       <ContractFilterBar

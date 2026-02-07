@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
-import { screen, fireEvent, waitFor, renderWithProviders } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useQuery } from '@tanstack/react-query';
 import AssetListPage from '../AssetListPage';
 
 // Mock services
@@ -18,20 +19,23 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-vi.mock('@/services/analyticsService', () => ({
-  analyticsService: {
-    getComprehensiveAnalytics: vi.fn(),
-  },
-}));
-
-// Mock hooks
-vi.mock('@/hooks/useListData', () => ({
-  useListData: vi.fn(),
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: vi.fn(),
 }));
 
 // Mock components
 vi.mock('@/components/Asset/AssetList', () => ({
-  default: ({ data: _data, onEdit, onDelete, onView }: { data: unknown; onEdit: (asset: { id: string }) => void; onDelete: (id: string) => void; onView: (asset: { id: string }) => void }) => (
+  default: ({
+    data: _data,
+    onEdit,
+    onDelete,
+    onView,
+  }: {
+    data: unknown;
+    onEdit: (asset: { id: string }) => void;
+    onDelete: (id: string) => void;
+    onView: (asset: { id: string }) => void;
+  }) => (
     <div data-testid="asset-list">
       Asset List Component
       <button onClick={() => onEdit({ id: 'asset_1' })}>Edit</button>
@@ -42,7 +46,13 @@ vi.mock('@/components/Asset/AssetList', () => ({
 }));
 
 vi.mock('@/components/Asset/AssetSearch', () => ({
-  default: ({ onSearch, onReset }: { onSearch: (params: unknown) => void; onReset: () => void }) => (
+  default: ({
+    onSearch,
+    onReset,
+  }: {
+    onSearch: (params: unknown) => void;
+    onReset: () => void;
+  }) => (
     <div data-testid="asset-search">
       <button onClick={() => onSearch({ keyword: 'test' })}>Search</button>
       <button onClick={onReset}>Reset</button>
@@ -55,7 +65,9 @@ vi.mock('@/components/Asset/AssetAreaSummary', () => ({
 }));
 
 vi.mock('@/components/Common/StateContainer', () => ({
-  PageContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="page-container">{children}</div>,
+  PageContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="page-container">{children}</div>
+  ),
   ContentSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   LoadingContainer: ({ text }: { text: string }) => <div data-testid="loading">{text}</div>,
 }));
@@ -77,9 +89,7 @@ vi.mock('@/utils/messageManager', () => ({
 }));
 
 import { assetService } from '@/services/assetService';
-import { analyticsService } from '@/services/analyticsService';
 import { MessageManager } from '@/utils/messageManager';
-import { useListData } from '@/hooks/useListData';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -90,16 +100,46 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const renderPage = () => renderWithProviders(<AssetListPage />);
+
 let mockData: Array<{ id: string; property_name: string }> = [];
-let mockLoading = false;
+let mockIsAssetsInitialLoading = false;
+let mockIsAssetsFetching = false;
 let mockError: Error | null = null;
 let mockPagination = { current: 1, pageSize: 20, total: 0 };
-let mockFilters: Record<string, unknown> = {};
+let mockAnalyticsData: { data: Record<string, unknown> } = { data: {} };
+let mockAnalyticsLoading = false;
 
-const mockLoadList = vi.fn();
-const mockApplyFilters = vi.fn();
-const mockResetFilters = vi.fn();
-const mockUpdatePagination = vi.fn();
+const mockRefetchAssets = vi.fn().mockResolvedValue({ data: undefined });
+const mockFallbackRefetch = vi.fn().mockResolvedValue({ data: undefined });
+
+const buildAssetsQueryResult = () =>
+  ({
+    data: {
+      items: mockData,
+      total: mockPagination.total,
+      pages: mockPagination.pageSize > 0 ? Math.ceil(mockPagination.total / mockPagination.pageSize) : 0,
+    },
+    error: mockError,
+    isLoading: mockIsAssetsInitialLoading,
+    isFetching: mockIsAssetsFetching,
+    refetch: mockRefetchAssets,
+  }) as unknown as ReturnType<typeof useQuery>;
+
+const buildAnalyticsQueryResult = () =>
+  ({
+    data: mockAnalyticsData,
+    isLoading: mockAnalyticsLoading,
+  }) as unknown as ReturnType<typeof useQuery>;
+
+const buildFallbackQueryResult = () =>
+  ({
+    data: undefined,
+    error: null,
+    isLoading: false,
+    isFetching: false,
+    refetch: mockFallbackRefetch,
+  }) as unknown as ReturnType<typeof useQuery>;
 
 describe('AssetListPage', () => {
   beforeEach(() => {
@@ -108,39 +148,34 @@ describe('AssetListPage', () => {
       { id: 'asset_1', property_name: '资产A' },
       { id: 'asset_2', property_name: '资产B' },
     ];
-    mockLoading = false;
+    mockIsAssetsInitialLoading = false;
+    mockIsAssetsFetching = false;
     mockError = null;
     mockPagination = { current: 1, pageSize: 20, total: 2 };
-    mockFilters = {};
-    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue({
-      success: true,
-      data: {},
-    } as unknown as ReturnType<typeof analyticsService.getComprehensiveAnalytics>);
+    mockAnalyticsData = { data: {} };
+    mockAnalyticsLoading = false;
 
-    vi.mocked(useListData).mockImplementation(_options => {
-      return {
-        data: mockData,
-        loading: mockLoading,
-        error: mockError,
-        pagination: mockPagination,
-        filters: mockFilters,
-        loadList: mockLoadList,
-        applyFilters: mockApplyFilters,
-        resetFilters: mockResetFilters,
-        updatePagination: mockUpdatePagination,
-      } as unknown as ReturnType<typeof useListData>;
+    vi.mocked(useQuery).mockImplementation(options => {
+      const [scope] = options.queryKey as [string, ...unknown[]];
+      if (scope === 'assets-list') {
+        return buildAssetsQueryResult();
+      }
+      if (scope === 'analytics') {
+        return buildAnalyticsQueryResult();
+      }
+      return buildFallbackQueryResult();
     });
   });
 
   describe('渲染', () => {
     it('渲染页面标题', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByText('资产列表')).toBeInTheDocument();
     });
 
     it('渲染操作按钮', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByText('新增资产')).toBeInTheDocument();
       expect(screen.getByText('导入资产')).toBeInTheDocument();
@@ -148,19 +183,19 @@ describe('AssetListPage', () => {
     });
 
     it('渲染搜索组件', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByTestId('asset-search')).toBeInTheDocument();
     });
 
     it('渲染面积汇总组件', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByTestId('asset-area-summary')).toBeInTheDocument();
     });
 
     it('渲染资产列表组件', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
     });
@@ -168,11 +203,11 @@ describe('AssetListPage', () => {
 
   describe('加载状态', () => {
     it('加载中显示加载状态', () => {
-      mockLoading = true;
+      mockIsAssetsInitialLoading = true;
       mockData = [];
       mockPagination = { current: 1, pageSize: 20, total: 0 };
 
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       expect(screen.getByTestId('loading')).toBeInTheDocument();
       expect(screen.getByText('加载资产数据中...')).toBeInTheDocument();
@@ -183,21 +218,26 @@ describe('AssetListPage', () => {
     it('显示错误信息', async () => {
       mockError = new Error('服务器错误');
       mockData = [];
-      mockLoading = false;
+      mockIsAssetsInitialLoading = false;
       mockPagination = { current: 1, pageSize: 20, total: 0 };
 
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText('数据加载失败')).toBeInTheDocument();
       });
       expect(screen.getByText('重新加载')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('重新加载'));
+      await waitFor(() => {
+        expect(mockRefetchAssets).toHaveBeenCalled();
+      });
     });
   });
 
   describe('导航功能', () => {
     it('点击新增资产导航到创建页', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('新增资产'));
 
@@ -205,7 +245,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击导入资产导航到导入页', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('导入资产'));
 
@@ -213,7 +253,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击编辑导航到编辑页', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('Edit'));
 
@@ -221,7 +261,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击查看导航到详情页', () => {
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('View'));
 
@@ -233,7 +273,7 @@ describe('AssetListPage', () => {
     it('删除成功显示成功消息', async () => {
       vi.mocked(assetService.deleteAsset).mockResolvedValue(undefined);
 
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('Delete'));
 
@@ -246,7 +286,7 @@ describe('AssetListPage', () => {
     it('删除失败显示错误消息', async () => {
       vi.mocked(assetService.deleteAsset).mockRejectedValue(new Error('删除失败'));
 
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('Delete'));
 
@@ -257,20 +297,50 @@ describe('AssetListPage', () => {
   });
 
   describe('搜索功能', () => {
-    it('点击搜索触发搜索', () => {
-      renderWithProviders(<AssetListPage />);
+    it('点击搜索触发带关键字的查询键更新', async () => {
+      renderPage();
 
       fireEvent.click(screen.getByText('Search'));
 
-      expect(mockApplyFilters).toHaveBeenCalledWith({ keyword: 'test' });
+      await waitFor(() => {
+        const calls = vi.mocked(useQuery).mock.calls;
+        const hasKeywordQuery = calls.some(([queryOptions]) => {
+          const queryKey = queryOptions.queryKey;
+          if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
+            return false;
+          }
+          const filters = queryKey[3];
+          if (filters == null || typeof filters !== 'object') {
+            return false;
+          }
+          return (filters as { keyword?: string }).keyword === 'test';
+        });
+        expect(hasKeywordQuery).toBe(true);
+      });
     });
 
-    it('点击重置清空搜索条件', () => {
-      renderWithProviders(<AssetListPage />);
+    it('点击重置触发空筛选查询键', async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByText('Search'));
 
       fireEvent.click(screen.getByText('Reset'));
 
-      expect(mockResetFilters).toHaveBeenCalled();
+      await waitFor(() => {
+        const calls = vi.mocked(useQuery).mock.calls;
+        const hasEmptyFiltersQuery = calls.some(([queryOptions]) => {
+          const queryKey = queryOptions.queryKey;
+          if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
+            return false;
+          }
+          const filters = queryKey[3];
+          if (filters == null || typeof filters !== 'object') {
+            return false;
+          }
+          return Object.keys(filters).length === 0;
+        });
+        expect(hasEmptyFiltersQuery).toBe(true);
+      });
     });
   });
 
@@ -283,7 +353,7 @@ describe('AssetListPage', () => {
       global.URL.createObjectURL = vi.fn(() => 'blob:test');
       global.URL.revokeObjectURL = vi.fn();
 
-      renderWithProviders(<AssetListPage />);
+      renderPage();
 
       fireEvent.click(screen.getByText('导出全部'));
 

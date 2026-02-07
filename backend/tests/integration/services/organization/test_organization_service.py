@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src import database as database
+from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.models.organization import OrganizationHistory
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService

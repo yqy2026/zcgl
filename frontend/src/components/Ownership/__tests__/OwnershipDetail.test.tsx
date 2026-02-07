@@ -28,13 +28,7 @@ vi.mock('antd', () => {
       {children}
     </div>
   );
-  Descriptions.Item = ({
-    children,
-    label,
-  }: {
-    children?: React.ReactNode;
-    label?: string;
-  }) => (
+  Descriptions.Item = ({ children, label }: { children?: React.ReactNode; label?: string }) => (
     <div data-testid="descriptions-item" data-label={label}>
       {children}
     </div>
@@ -43,94 +37,94 @@ vi.mock('antd', () => {
   Descriptions.Item.displayName = 'MockDescriptionsItem';
   return {
     Descriptions,
-  Card: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
-    <div data-testid="card" data-title={title}>
-      {title && <div data-testid="card-title">{title}</div>}
-      {children}
-    </div>
-  ),
-  Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
-    <span data-testid="tag" data-color={color}>
-      {children}
-    </span>
-  ),
-  Space: ({
-    children,
-    size,
-    align,
-  }: {
-    children?: React.ReactNode;
-    size?: string;
-    align?: string;
-  }) => (
-    <div data-testid="space" data-size={size} data-align={align}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    icon,
-    type,
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-    icon?: React.ReactNode;
-    type?: string;
-  }) => (
-    <button data-testid="button" data-type={type} onClick={onClick}>
-      {icon}
-      {children}
-    </button>
-  ),
-  Badge: ({ status, text }: { status?: string; text?: string }) => (
-    <span data-testid="badge" data-status={status}>
-      {text}
-    </span>
-  ),
-  Typography: {
-    Text: ({
-      children,
-      strong,
-      style,
-    }: {
-      children?: React.ReactNode;
-      strong?: boolean;
-      style?: React.CSSProperties;
-    }) => (
-      <span data-testid="text" data-strong={strong} style={style}>
+    Card: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+      <div data-testid="card" data-title={title}>
+        {title && <div data-testid="card-title">{title}</div>}
+        {children}
+      </div>
+    ),
+    Tag: ({ children, color }: { children?: React.ReactNode; color?: string }) => (
+      <span data-testid="tag" data-color={color}>
         {children}
       </span>
     ),
-  },
-  Table: ({
-    dataSource,
-    columns,
-    rowKey,
-    pagination,
-    size,
-  }: {
-    dataSource?: Array<{ id: string; name: string; code: string }>;
-    columns?: Array<{ title: string; key: string }>;
-    rowKey?: string;
-    pagination?: boolean;
-    size?: string;
-  }) => (
-    <div
-      data-testid="table"
-      data-row-key={rowKey}
-      data-pagination={pagination}
-      data-size={size}
-      data-column-count={columns?.length}
-    >
-      {dataSource?.map(item => (
-        <div key={item.id} data-testid={`project-row-${item.id}`}>
-          <span data-testid={`project-name-${item.id}`}>{item.name}</span>
-          <span data-testid={`project-code-${item.id}`}>{item.code}</span>
-        </div>
-      ))}
-    </div>
-  ),
+    Space: ({
+      children,
+      size,
+      align,
+    }: {
+      children?: React.ReactNode;
+      size?: string;
+      align?: string;
+    }) => (
+      <div data-testid="space" data-size={size} data-align={align}>
+        {children}
+      </div>
+    ),
+    Button: ({
+      children,
+      onClick,
+      icon,
+      type,
+    }: {
+      children?: React.ReactNode;
+      onClick?: () => void;
+      icon?: React.ReactNode;
+      type?: string;
+    }) => (
+      <button data-testid="button" data-type={type} onClick={onClick}>
+        {icon}
+        {children}
+      </button>
+    ),
+    Badge: ({ status, text }: { status?: string; text?: string }) => (
+      <span data-testid="badge" data-status={status}>
+        {text}
+      </span>
+    ),
+    Typography: {
+      Text: ({
+        children,
+        strong,
+        style,
+      }: {
+        children?: React.ReactNode;
+        strong?: boolean;
+        style?: React.CSSProperties;
+      }) => (
+        <span data-testid="text" data-strong={strong} style={style}>
+          {children}
+        </span>
+      ),
+    },
+    Table: ({
+      dataSource,
+      columns,
+      rowKey,
+      pagination,
+      size,
+    }: {
+      dataSource?: Array<{ id: string; name: string; code: string }>;
+      columns?: Array<{ title: string; key: string }>;
+      rowKey?: string;
+      pagination?: boolean;
+      size?: string;
+    }) => (
+      <div
+        data-testid="table"
+        data-row-key={rowKey}
+        data-pagination={pagination}
+        data-size={size}
+        data-column-count={columns?.length}
+      >
+        {dataSource?.map(item => (
+          <div key={item.id} data-testid={`project-row-${item.id}`}>
+            <span data-testid={`project-name-${item.id}`}>{item.name}</span>
+            <span data-testid={`project-code-${item.id}`}>{item.code}</span>
+          </div>
+        ))}
+      </div>
+    ),
   };
 });
 
@@ -300,7 +294,9 @@ describe('OwnershipDetail 组件测试', () => {
 
     it('没有关联项目时不应该显示关联项目卡片', () => {
       const ownershipWithoutProjects = { ...mockOwnership, related_projects: [] };
-      renderWithProviders(<OwnershipDetail ownership={ownershipWithoutProjects} onEdit={mockOnEdit} />);
+      renderWithProviders(
+        <OwnershipDetail ownership={ownershipWithoutProjects} onEdit={mockOnEdit} />
+      );
 
       const cards = screen.getAllByTestId('card');
       const projectCard = cards.find(card => card.getAttribute('data-title') === '关联项目');
@@ -321,14 +317,18 @@ describe('OwnershipDetail 组件测试', () => {
   describe('无简称情况', () => {
     it('没有简称时不应该显示简称', () => {
       const ownershipWithoutShortName = { ...mockOwnership, short_name: null };
-      renderWithProviders(<OwnershipDetail ownership={ownershipWithoutShortName} onEdit={mockOnEdit} />);
+      renderWithProviders(
+        <OwnershipDetail ownership={ownershipWithoutShortName} onEdit={mockOnEdit} />
+      );
 
       expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
 
     it('简称为空字符串时不应该显示简称', () => {
       const ownershipWithEmptyShortName = { ...mockOwnership, short_name: '' };
-      renderWithProviders(<OwnershipDetail ownership={ownershipWithEmptyShortName} onEdit={mockOnEdit} />);
+      renderWithProviders(
+        <OwnershipDetail ownership={ownershipWithEmptyShortName} onEdit={mockOnEdit} />
+      );
 
       expect(screen.queryByText(/简称：/)).not.toBeInTheDocument();
     });
@@ -337,7 +337,9 @@ describe('OwnershipDetail 组件测试', () => {
   describe('资产和项目计数', () => {
     it('资产数量为0时应该显示0', () => {
       const ownershipWithZeroAssets = { ...mockOwnership, asset_count: 0 };
-      renderWithProviders(<OwnershipDetail ownership={ownershipWithZeroAssets} onEdit={mockOnEdit} />);
+      renderWithProviders(
+        <OwnershipDetail ownership={ownershipWithZeroAssets} onEdit={mockOnEdit} />
+      );
 
       const tags = screen.getAllByTestId('tag');
       const zeroTag = tags.find(tag => tag.textContent === '0 个');
@@ -346,7 +348,9 @@ describe('OwnershipDetail 组件测试', () => {
 
     it('项目数量为undefined时应该显示0', () => {
       const ownershipWithNoProjectCount = { ...mockOwnership, project_count: undefined };
-      renderWithProviders(<OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />);
+      renderWithProviders(
+        <OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />
+      );
 
       const tags = screen.getAllByTestId('tag');
       expect(tags.length).toBeGreaterThan(0);

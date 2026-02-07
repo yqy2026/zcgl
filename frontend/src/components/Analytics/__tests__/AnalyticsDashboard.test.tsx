@@ -13,9 +13,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import React from 'react';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 // Mock hooks（这些 mock 是必要的）
-vi.mock('../../hooks/useAnalytics', () => ({
+vi.mock('@/hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(() => ({
     data: {
       data: {
@@ -35,7 +36,14 @@ vi.mock('../../hooks/useAnalytics', () => ({
         usage_status_distribution: [{ status: '出租', count: 70, percentage: 70 }],
         occupancy_distribution: [{ range: '80-100%', count: 30, percentage: 30 }],
         business_category_distribution: [{ category: '零售', occupancy_rate: 90, count: 20 }],
-        occupancy_trend: [{ date: '2024-01', occupancy_rate: 85, total_rented_area: 3400, total_rentable_area: 4000 }],
+        occupancy_trend: [
+          {
+            date: '2024-01',
+            occupancy_rate: 85,
+            total_rented_area: 3400,
+            total_rentable_area: 4000,
+          },
+        ],
       },
     },
     isLoading: false,
@@ -61,12 +69,16 @@ vi.mock('@/utils/logger', () => ({
   }),
 }));
 
-vi.mock('@/api/config', () => ({
-  createApiUrl: (path: string) => `/api${path}`,
-}));
+vi.mock('@/api/config', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/api/config')>();
+  return {
+    ...actual,
+    createApiUrl: (path: string) => `/api${path}`,
+  };
+});
 
 // Mock sub-components（这些 mock 是必要的，避免测试子组件本身）
-vi.mock('./AnalyticsFilters', () => ({
+vi.mock('@/components/Analytics/AnalyticsFilters', () => ({
   AnalyticsFilters: ({
     onApplyFilters,
     onResetFilters,
@@ -81,48 +93,132 @@ vi.mock('./AnalyticsFilters', () => ({
     onToggleAdvanced?: () => void;
   }) => (
     <div data-testid="analytics-filters" data-loading={loading}>
-      <button data-testid="apply-filters" onClick={onApplyFilters}>Apply</button>
-      <button data-testid="reset-filters" onClick={onResetFilters}>Reset</button>
+      <button data-testid="apply-filters" onClick={onApplyFilters}>
+        Apply
+      </button>
+      <button data-testid="reset-filters" onClick={onResetFilters}>
+        Reset
+      </button>
     </div>
   ),
 }));
 
-vi.mock('./StatisticCard', () => ({
-  StatisticCard: ({ title, value, suffix, loading }: { title: string; value: number; suffix?: string; loading?: boolean }) => (
+vi.mock('@/components/Analytics/StatisticCard', () => ({
+  StatisticCard: ({
+    title,
+    value,
+    suffix,
+    loading,
+  }: {
+    title: string;
+    value: number;
+    suffix?: string;
+    loading?: boolean;
+  }) => (
     <div data-testid="statistic-card" data-title={title} data-loading={loading}>
-      {value}{suffix}
+      {value}
+      {suffix}
     </div>
   ),
-  FinancialStatisticCard: ({ title, value, suffix, loading }: { title: string; value: number; suffix?: string; loading?: boolean; isPositive?: boolean }) => (
+  FinancialStatisticCard: ({
+    title,
+    value,
+    suffix,
+    loading,
+  }: {
+    title: string;
+    value: number;
+    suffix?: string;
+    loading?: boolean;
+    isPositive?: boolean;
+  }) => (
     <div data-testid="financial-statistic-card" data-title={title} data-loading={loading}>
-      {value}{suffix}
+      {value}
+      {suffix}
     </div>
   ),
 }));
 
-vi.mock('./AnalyticsCard', () => ({
-  ChartCard: ({ title, children, loading }: { title: string; hasData?: boolean; loading?: boolean; children?: React.ReactNode }) => (
+vi.mock('@/components/Analytics/AnalyticsCard', () => ({
+  ChartCard: ({
+    title,
+    children,
+    loading,
+  }: {
+    title: string;
+    hasData?: boolean;
+    loading?: boolean;
+    children?: React.ReactNode;
+  }) => (
     <div data-testid="chart-card" data-title={title} data-loading={loading}>
       {children}
     </div>
   ),
 }));
 
-vi.mock('./Charts', () => ({
+vi.mock('@/components/Analytics/Charts', () => ({
   AnalyticsPieChart: ({ data }: { data: unknown[]; dataKey: string; labelKey: string }) => (
     <div data-testid="pie-chart">{JSON.stringify(data)}</div>
   ),
-  AnalyticsBarChart: ({ data }: { data: unknown[]; xDataKey: string; yDataKey: string; barName?: string; isPercentage?: boolean }) => (
-    <div data-testid="bar-chart">{JSON.stringify(data)}</div>
-  ),
-  AnalyticsLineChart: ({ data }: { data: unknown[]; xDataKey: string; yDataKey: string; lineName?: string; isPercentage?: boolean }) => (
-    <div data-testid="line-chart">{JSON.stringify(data)}</div>
-  ),
+  AnalyticsBarChart: ({
+    data,
+  }: {
+    data: unknown[];
+    xDataKey: string;
+    yDataKey: string;
+    barName?: string;
+    isPercentage?: boolean;
+  }) => <div data-testid="bar-chart">{JSON.stringify(data)}</div>,
+  AnalyticsLineChart: ({
+    data,
+  }: {
+    data: unknown[];
+    xDataKey: string;
+    yDataKey: string;
+    lineName?: string;
+    isPercentage?: boolean;
+  }) => <div data-testid="line-chart">{JSON.stringify(data)}</div>,
 }));
 
-vi.mock('../PerformanceMonitor', () => ({
+vi.mock('@/components/PerformanceMonitor', () => ({
   default: () => <div data-testid="performance-monitor" />,
 }));
+
+const resetAnalyticsHookMock = (): void => {
+  vi.mocked(useAnalytics).mockReturnValue({
+    data: {
+      data: {
+        area_summary: {
+          total_assets: 100,
+          total_area: 5000,
+          total_rentable_area: 4000,
+          occupancy_rate: 85,
+        },
+        financial_summary: {
+          estimated_annual_income: 100000,
+          total_monthly_rent: 10000,
+          total_deposit: 50000,
+        },
+        property_nature_distribution: [{ name: '商业', count: 50, percentage: 50 }],
+        ownership_status_distribution: [{ status: '已确权', count: 80, percentage: 80 }],
+        usage_status_distribution: [{ status: '出租', count: 70, percentage: 70 }],
+        occupancy_distribution: [{ range: '80-100%', count: 30, percentage: 30 }],
+        business_category_distribution: [{ category: '零售', occupancy_rate: 90, count: 20 }],
+        occupancy_trend: [
+          {
+            date: '2024-01',
+            occupancy_rate: 85,
+            total_rented_area: 3400,
+            total_rentable_area: 4000,
+          },
+        ],
+      },
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useAnalytics>);
+};
 
 describe('AnalyticsDashboard - 组件导入测试', () => {
   it('应该能够导入AnalyticsDashboard组件', async () => {
@@ -140,6 +236,7 @@ describe('AnalyticsDashboard - 组件导入测试', () => {
 describe('AnalyticsDashboard - 渲染测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('应该渲染标题', async () => {
@@ -188,6 +285,7 @@ describe('AnalyticsDashboard - 渲染测试', () => {
 describe('AnalyticsDashboard - 统计卡片测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('应该渲染关键指标卡片', async () => {
@@ -210,6 +308,7 @@ describe('AnalyticsDashboard - 统计卡片测试', () => {
 describe('AnalyticsDashboard - 图表测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('应该渲染图表卡片', async () => {
@@ -248,16 +347,26 @@ describe('AnalyticsDashboard - 图表测试', () => {
 describe('AnalyticsDashboard - 交互测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('点击刷新按钮应该调用refetch', async () => {
-    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const { useAnalytics } = await import('@/hooks/useAnalytics');
     const mockRefetch = vi.fn();
     vi.mocked(useAnalytics).mockReturnValue({
       data: {
         data: {
-          area_summary: { total_assets: 100, total_area: 5000, total_rentable_area: 4000, occupancy_rate: 85 },
-          financial_summary: { estimated_annual_income: 100000, total_monthly_rent: 10000, total_deposit: 50000 },
+          area_summary: {
+            total_assets: 100,
+            total_area: 5000,
+            total_rentable_area: 4000,
+            occupancy_rate: 85,
+          },
+          financial_summary: {
+            estimated_annual_income: 100000,
+            total_monthly_rent: 10000,
+            total_deposit: 50000,
+          },
           property_nature_distribution: [],
           ownership_status_distribution: [],
           usage_status_distribution: [],
@@ -281,13 +390,22 @@ describe('AnalyticsDashboard - 交互测试', () => {
   });
 
   it('点击应用筛选按钮应该调用refetch', async () => {
-    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const { useAnalytics } = await import('@/hooks/useAnalytics');
     const mockRefetch = vi.fn();
     vi.mocked(useAnalytics).mockReturnValue({
       data: {
         data: {
-          area_summary: { total_assets: 100, total_area: 5000, total_rentable_area: 4000, occupancy_rate: 85 },
-          financial_summary: { estimated_annual_income: 100000, total_monthly_rent: 10000, total_deposit: 50000 },
+          area_summary: {
+            total_assets: 100,
+            total_area: 5000,
+            total_rentable_area: 4000,
+            occupancy_rate: 85,
+          },
+          financial_summary: {
+            estimated_annual_income: 100000,
+            total_monthly_rent: 10000,
+            total_deposit: 50000,
+          },
           property_nature_distribution: [],
           ownership_status_distribution: [],
           usage_status_distribution: [],
@@ -314,42 +432,62 @@ describe('AnalyticsDashboard - 交互测试', () => {
 describe('AnalyticsDashboard - 导出功能测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('应该有Excel导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     renderWithProviders(<AnalyticsDashboard />);
 
-    expect(screen.getByTestId('dropdown-item-excel')).toBeInTheDocument();
+    const exportButton = screen.getByRole('button', { name: /导出/ });
+    fireEvent.mouseEnter(exportButton);
+    fireEvent.mouseOver(exportButton);
+    expect(await screen.findByText('导出为 Excel')).toBeInTheDocument();
   });
 
   it('应该有PDF导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     renderWithProviders(<AnalyticsDashboard />);
 
-    expect(screen.getByTestId('dropdown-item-pdf')).toBeInTheDocument();
+    const exportButton = screen.getByRole('button', { name: /导出/ });
+    fireEvent.mouseEnter(exportButton);
+    fireEvent.mouseOver(exportButton);
+    expect(await screen.findByText('导出为 PDF')).toBeInTheDocument();
   });
 
   it('应该有CSV导出选项', async () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     renderWithProviders(<AnalyticsDashboard />);
 
-    expect(screen.getByTestId('dropdown-item-csv')).toBeInTheDocument();
+    const exportButton = screen.getByRole('button', { name: /导出/ });
+    fireEvent.mouseEnter(exportButton);
+    fireEvent.mouseOver(exportButton);
+    expect(await screen.findByText('导出为 CSV')).toBeInTheDocument();
   });
 });
 
 describe('AnalyticsDashboard - 空状态测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('无数据时应该显示暂无数据', async () => {
-    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const { useAnalytics } = await import('@/hooks/useAnalytics');
     vi.mocked(useAnalytics).mockReturnValue({
       data: {
         data: {
-          area_summary: { total_assets: 0, total_area: 0, total_rentable_area: 0, occupancy_rate: 0 },
-          financial_summary: { estimated_annual_income: 0, total_monthly_rent: 0, total_deposit: 0 },
+          area_summary: {
+            total_assets: 0,
+            total_area: 0,
+            total_rentable_area: 0,
+            occupancy_rate: 0,
+          },
+          financial_summary: {
+            estimated_annual_income: 0,
+            total_monthly_rent: 0,
+            total_deposit: 0,
+          },
           property_nature_distribution: [],
           ownership_status_distribution: [],
           usage_status_distribution: [],
@@ -373,10 +511,11 @@ describe('AnalyticsDashboard - 空状态测试', () => {
 describe('AnalyticsDashboard - 错误状态测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('错误时应该显示错误信息', async () => {
-    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const { useAnalytics } = await import('@/hooks/useAnalytics');
     vi.mocked(useAnalytics).mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -391,7 +530,7 @@ describe('AnalyticsDashboard - 错误状态测试', () => {
   });
 
   it('错误时应该显示重试按钮', async () => {
-    const { useAnalytics } = await import('../../hooks/useAnalytics');
+    const { useAnalytics } = await import('@/hooks/useAnalytics');
     vi.mocked(useAnalytics).mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -402,13 +541,14 @@ describe('AnalyticsDashboard - 错误状态测试', () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     renderWithProviders(<AnalyticsDashboard />);
 
-    expect(screen.getByText('重试')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /重\s*试/ })).toBeInTheDocument();
   });
 });
 
 describe('AnalyticsDashboard - 属性测试', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAnalyticsHookMock();
   });
 
   it('应该支持initialFilters属性', async () => {

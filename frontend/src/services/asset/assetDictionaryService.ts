@@ -88,14 +88,10 @@ export class AssetDictionaryService {
     data: Partial<SystemDictionary>
   ): Promise<SystemDictionary> {
     try {
-      const result = await apiClient.put<SystemDictionary>(
-        `/system-dictionaries/${id}`,
-        data,
-        {
-          retry: false,
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.put<SystemDictionary>(`/system-dictionaries/${id}`, data, {
+        retry: false,
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`更新系统字典失败: ${result.error}`);
@@ -159,14 +155,11 @@ export class AssetDictionaryService {
    */
   async getDictionaryTypes(): Promise<{ types: string[] }> {
     try {
-      const result = await apiClient.get<{ types: string[] }>(
-        '/system-dictionaries/types/list',
-        {
-          cache: true,
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.get<{ types: string[] }>('/system-dictionaries/types/list', {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取字典类型列表失败: ${result.error}`);

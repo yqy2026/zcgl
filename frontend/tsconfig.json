@@ -40,6 +40,9 @@
   "exclude": [
     "node_modules",
     "dist",
+    "src/e2e/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
     "**/*.test.ts",
     "**/*.test.tsx",
     "src/test/**",

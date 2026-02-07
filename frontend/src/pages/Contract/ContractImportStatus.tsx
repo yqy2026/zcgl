@@ -340,9 +340,11 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={currentProgress.progress}
                 precision={0}
                 suffix="%"
-                styles={{ content: {
-                  color: getStatusColor(currentProgress.status),
-                } }}
+                styles={{
+                  content: {
+                    color: getStatusColor(currentProgress.status),
+                  },
+                }}
               />
             </Col>
           </Row>

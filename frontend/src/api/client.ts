@@ -13,6 +13,7 @@ import axios, {
 import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
 import { createLogger } from '@/utils/logger';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
@@ -277,7 +278,7 @@ export class ApiClient {
       },
       enableAutoRetry: config.enableAutoRetry ?? false,
       enableCaching: config.enableCaching ?? false,
-      enableLogging: config.enableLogging ?? process.env.NODE_ENV === 'development',
+      enableLogging: config.enableLogging ?? isDevelopmentMode(),
       enableTypeValidation: config.enableTypeValidation ?? false,
       globalErrorHandler: config.globalErrorHandler,
       requestInterceptors: config.requestInterceptors || [],
@@ -912,7 +913,7 @@ export const createApiClient = (config?: ApiClientConfig): ApiClient => {
 export const apiClient = new ApiClient({
   baseURL: API_BASE_URL,
   enableAutoRetry: true,
-  enableLogging: process.env.NODE_ENV === 'development',
+  enableLogging: isDevelopmentMode(),
   defaultRetryConfig: {
     maxAttempts: 3,
     delay: 1000,

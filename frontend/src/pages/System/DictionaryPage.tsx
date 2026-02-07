@@ -538,15 +538,15 @@ const DictionaryPage: React.FC = () => {
         }
         extra={
           <Space>
-              <Button
-                onClick={() => {
-                  fetchTypes();
-                  fetchAllEnumData();
-                  void loadDetailSource(activeType);
-                }}
-              >
-                刷新
-              </Button>
+            <Button
+              onClick={() => {
+                fetchTypes();
+                fetchAllEnumData();
+                void loadDetailSource(activeType);
+              }}
+            >
+              刷新
+            </Button>
           </Space>
         }
       >
@@ -556,9 +556,7 @@ const DictionaryPage: React.FC = () => {
             <Search
               placeholder="搜索枚举类型或值"
               value={overviewFilters.keyword}
-              onChange={e =>
-                applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })
-              }
+              onChange={e => applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })}
               prefix={<SearchOutlined />}
               allowClear
             />

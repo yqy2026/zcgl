@@ -106,7 +106,8 @@ describe('ActionFeedback - 回调函数测试', () => {
     renderWithProviders(<ActionFeedback result={result} onClose={handleClose} />);
 
     // 点击关闭按钮（Alert 组件的关闭图标按钮）
-    const closeButton = screen.getByRole('button', { name: /close/i }) || screen.queryByLabelText(/close/i);
+    const closeButton =
+      screen.getByRole('button', { name: /close/i }) || screen.queryByLabelText(/close/i);
     if (closeButton) {
       fireEvent.click(closeButton);
       expect(handleClose).toHaveBeenCalledTimes(1);

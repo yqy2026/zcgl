@@ -42,9 +42,7 @@ export const PropertyCertificateList: React.FC = () => {
       if (trimmedKeyword === '') {
         return items;
       }
-      return items.filter(cert =>
-        cert.certificate_number?.toLowerCase().includes(trimmedKeyword)
-      );
+      return items.filter(cert => cert.certificate_number?.toLowerCase().includes(trimmedKeyword));
     }, []),
   });
 

@@ -13,6 +13,7 @@ import {
   MONITORING_API,
   ERROR_REPORTING_API,
 } from '@/constants/api';
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
 
 // 简单的内部日志工具
 const testLogger = {
@@ -115,11 +116,7 @@ export class ApiPathTester {
     testLogger.log('🧪 Testing Test Coverage API paths...');
 
     this.testPath('COVERAGE_REPORT', TEST_COVERAGE_API.REPORT, /^\/test-coverage\/report$/);
-    this.testPath(
-      'COVERAGE_TREND',
-      TEST_COVERAGE_API.TREND(7),
-      /^\/test-coverage\/trend\?days=7$/
-    );
+    this.testPath('COVERAGE_TREND', TEST_COVERAGE_API.TREND(7), /^\/test-coverage\/trend\?days=7$/);
   }
 
   /**
@@ -280,7 +277,7 @@ export const runApiPathTests = (): {
 };
 
 // 开发环境自动运行测试
-if (process.env.NODE_ENV === 'development') {
+if (isDevelopmentMode()) {
   // 延迟执行，确保其他代码加载完成
   setTimeout(() => {
     try {

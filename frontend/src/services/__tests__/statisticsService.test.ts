@@ -19,7 +19,7 @@ vi.mock('@/api/client', () => ({
 
 vi.mock('../../utils/responseExtractor', () => ({
   ApiErrorHandler: {
-    handleError: vi.fn((error) => ({
+    handleError: vi.fn(error => ({
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'UNKNOWN',
     })),
@@ -56,7 +56,7 @@ const mockBasicStatistics = {
   totalRentedArea: 38000,
   averageOccupancyRate: 84.4,
   categoryCount: { office: 50, retail: 30, warehouse: 20 },
-  regionCount: { 'east': 40, 'west': 30, 'north': 30 },
+  regionCount: { east: 40, west: 30, north: 30 },
 };
 
 const mockAreaStatistics = {
@@ -67,8 +67,8 @@ const mockAreaStatistics = {
   vacantArea: 10000,
   averageUnitPrice: 50,
   regionStats: {
-    'east': { area: 30000, rentableArea: 25000, rentedArea: 22000 },
-    'west': { area: 25000, rentableArea: 22000, rentedArea: 19000 },
+    east: { area: 30000, rentableArea: 25000, rentedArea: 22000 },
+    west: { area: 25000, rentableArea: 22000, rentedArea: 19000 },
   },
 };
 

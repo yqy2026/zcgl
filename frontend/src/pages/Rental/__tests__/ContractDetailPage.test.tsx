@@ -22,17 +22,14 @@ vi.mock('@/services/rentContractService', () => ({
 // Mock ContractDetailInfo component
 vi.mock('@/components/Rental/ContractDetailInfo', () => ({
   default: ({ contract }: { contract: { tenant_name: string } }) => (
-    <div data-testid="contract-detail-info">
-      Contract Info: {contract.tenant_name}
-    </div>
+    <div data-testid="contract-detail-info">Contract Info: {contract.tenant_name}</div>
   ),
 }));
 
 // Mock ContractTerminateModal component
 vi.mock('@/components/Rental/ContractTerminateModal', () => ({
-  default: ({ visible }: { visible: boolean }) => (
-    visible ? <div data-testid="terminate-modal">Terminate Modal</div> : null
-  ),
+  default: ({ visible }: { visible: boolean }) =>
+    visible ? <div data-testid="terminate-modal">Terminate Modal</div> : null,
 }));
 
 import { rentContractService } from '@/services/rentContractService';
@@ -75,9 +72,7 @@ describe('ContractDetailPage', () => {
 
   describe('加载状态', () => {
     it('显示加载中状态', async () => {
-      vi.mocked(rentContractService.getContract).mockImplementation(
-        () => new Promise(() => {})
-      );
+      vi.mocked(rentContractService.getContract).mockImplementation(() => new Promise(() => {}));
 
       renderWithProviders('contract_123');
 
@@ -148,9 +143,7 @@ describe('ContractDetailPage', () => {
 
   describe('错误处理', () => {
     it('显示错误信息', async () => {
-      vi.mocked(rentContractService.getContract).mockRejectedValue(
-        new Error('网络错误')
-      );
+      vi.mocked(rentContractService.getContract).mockRejectedValue(new Error('网络错误'));
 
       renderWithProviders('contract_error');
 

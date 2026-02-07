@@ -1,5 +1,7 @@
 // 用户体验相关配置
 
+import { isDevelopmentMode } from '@/utils/runtimeEnv';
+
 export const UX_CONFIG = {
   // 加载状态配置
   loading: {
@@ -42,7 +44,7 @@ export const UX_CONFIG = {
   // 性能监控配置
   performance: {
     // 是否启用性能监控
-    enabled: process.env.NODE_ENV === 'development',
+    enabled: isDevelopmentMode(),
     // 性能警告阈值（毫秒）
     warningThreshold: 1000,
     // API请求超时时间（毫秒）
@@ -52,7 +54,7 @@ export const UX_CONFIG = {
   // 错误处理配置
   error: {
     // 是否显示详细错误信息（仅开发环境）
-    showDetails: process.env.NODE_ENV === 'development',
+    showDetails: isDevelopmentMode(),
     // 是否自动报告错误
     autoReport: true,
     // 重试配置

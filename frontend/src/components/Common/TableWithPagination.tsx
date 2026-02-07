@@ -9,7 +9,10 @@ export interface PaginationState {
   total: number;
 }
 
-export interface TableWithPaginationProps<T> extends Omit<TableProps<T>, 'pagination' | 'onChange'> {
+export interface TableWithPaginationProps<T> extends Omit<
+  TableProps<T>,
+  'pagination' | 'onChange'
+> {
   paginationState: PaginationState;
   onPageChange: (pagination: { current?: number; pageSize?: number }) => void;
   paginationProps?: Omit<
@@ -36,20 +39,8 @@ export interface TableWithPaginationProps<T> extends Omit<TableProps<T>, 'pagina
   cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: any, record: T) => React.ReactNode }>;
 }
 
-export const TableWithPagination = <T extends object,>(
-  props: TableWithPaginationProps<T>
-) => {
-  const {
-    paginationState,
-    onPageChange,
-    paginationProps,
-    onChange,
-    responsive = true,
-    cardTitle,
-    renderCard,
-    cardFields,
-    ...rest
-  } = props;
+export const TableWithPagination = <T extends object>(props: TableWithPaginationProps<T>) => {
+  const { paginationState, onPageChange, paginationProps, onChange, ...rest } = props;
 
   const handleChange: TableProps<T>['onChange'] = (pagination, filters, sorter, extra) => {
     onPageChange({ current: pagination.current, pageSize: pagination.pageSize });

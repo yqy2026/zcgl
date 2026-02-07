@@ -3,7 +3,7 @@
  * 提供 Prompt 模板的列表展示、筛选、激活、版本管理等功能
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -35,6 +35,7 @@ import {
   PromptStatus,
   DocType,
   LLMProvider,
+  PromptTemplateListResponse,
   PromptQueryParams,
   PromptStatistics,
 } from '@/types/llmPrompt';
@@ -44,7 +45,7 @@ import { COLORS } from '@/styles/colorMap';
 import PromptEditor from '@/components/System/PromptEditor';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useListData } from '@/hooks/useListData';
+import { useQuery } from '@tanstack/react-query';
 
 const logger = createLogger('PromptListPage');
 const { Title } = Typography;
@@ -57,92 +58,111 @@ interface PromptFilters {
 }
 
 const PromptListPage: React.FC = () => {
-  const [statistics, setStatistics] = useState<PromptStatistics | null>(null);
+  const [filters, setFilters] = useState<PromptFilters>({
+    doc_type: undefined,
+    status: undefined,
+    provider: undefined,
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [editorVisible, setEditorVisible] = useState(false);
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
   const [selectedPrompt, setSelectedPrompt] = useState<PromptTemplate | null>(null);
 
-  const fetchPromptList = useCallback(
-    async ({
-      page,
-      pageSize,
-      doc_type,
-      status,
-      provider,
-    }: {
-      page: number;
-      pageSize: number;
-    } & PromptFilters) => {
-      const params: PromptQueryParams = {
-        page,
-        pageSize,
-      };
+  const fetchPromptList = useCallback(async (): Promise<PromptTemplateListResponse> => {
+    const params: PromptQueryParams = {
+      page: paginationState.current,
+      pageSize: paginationState.pageSize,
+      doc_type: filters.doc_type,
+      status: filters.status,
+      provider: filters.provider,
+    };
 
-      if (doc_type != null) {
-        params.doc_type = doc_type;
-      }
-      if (status != null) {
-        params.status = status;
-      }
-      if (provider != null) {
-        params.provider = provider;
-      }
-
-      return await llmPromptService.getPrompts(params);
-    },
-    []
-  );
-
-  const handleLoadError = useCallback((error: unknown) => {
-    logger.error('加载 Prompt 列表失败', error);
-    message.error('加载 Prompt 列表失败');
-  }, []);
+    return await llmPromptService.getPrompts(params);
+  }, [
+    filters.doc_type,
+    filters.provider,
+    filters.status,
+    paginationState.current,
+    paginationState.pageSize,
+  ]);
 
   const {
-    data: prompts,
-    loading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    updatePagination,
-  } = useListData<PromptTemplate, PromptFilters>({
-    fetcher: fetchPromptList,
-    initialFilters: {
-      doc_type: undefined,
-      status: undefined,
-      provider: undefined,
-    },
-    initialPageSize: 10,
-    onError: handleLoadError,
+    data: promptsResponse,
+    error: promptsError,
+    isLoading: isPromptsLoading,
+    isFetching: isPromptsFetching,
+    refetch: refetchPrompts,
+  } = useQuery<PromptTemplateListResponse>({
+    queryKey: ['prompt-list', paginationState.current, paginationState.pageSize, filters],
+    queryFn: fetchPromptList,
+    retry: 1,
   });
 
-  // 加载统计数据
-  const loadStatistics = useCallback(async () => {
-    try {
-      const stats = await llmPromptService.getStatistics();
-      setStatistics(stats);
-    } catch (error) {
-      logger.error('加载统计数据失败', error);
-    }
-  }, []);
+  const {
+    data: statistics = null,
+    error: statisticsError,
+    refetch: refetchStatistics,
+  } = useQuery<PromptStatistics>({
+    queryKey: ['prompt-statistics'],
+    queryFn: () => llmPromptService.getStatistics(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
 
   useEffect(() => {
-    void loadList();
-    void loadStatistics();
-  }, [loadList, loadStatistics]);
+    if (promptsError != null) {
+      logger.error('加载 Prompt 列表失败', promptsError);
+      message.error('加载 Prompt 列表失败');
+    }
+  }, [promptsError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      logger.error('加载统计数据失败', statisticsError);
+    }
+  }, [statisticsError]);
+
+  const prompts = promptsResponse?.items ?? [];
+  const loading = isPromptsLoading || isPromptsFetching;
+  const pagination = useMemo(
+    () => ({
+      current: paginationState.current,
+      pageSize: paginationState.pageSize,
+      total: promptsResponse?.total ?? 0,
+    }),
+    [paginationState.current, paginationState.pageSize, promptsResponse?.total]
+  );
+
+  const refreshPromptsAndStatistics = useCallback(() => {
+    void refetchPrompts();
+    void refetchStatistics();
+  }, [refetchPrompts, refetchStatistics]);
 
   const handleRefresh = useCallback(() => {
-    void loadList();
-    void loadStatistics();
-  }, [loadList, loadStatistics]);
+    refreshPromptsAndStatistics();
+  }, [refreshPromptsAndStatistics]);
+
+  const updateFilters = useCallback((nextFilters: Partial<PromptFilters>) => {
+    setFilters(prev => ({ ...prev, ...nextFilters }));
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handlePageChange = useCallback((next: { current?: number; pageSize?: number }) => {
+    setPaginationState(prev => ({
+      current: next.current ?? prev.current,
+      pageSize: next.pageSize ?? prev.pageSize,
+    }));
+  }, []);
 
   // 激活 Prompt
   const handleActivate = async (id: string, name: string) => {
     try {
       await llmPromptService.activatePrompt(id);
       message.success(`Prompt "${name}" 已激活`);
-      void loadList();
+      refreshPromptsAndStatistics();
     } catch (error) {
       logger.error(`激活 Prompt 失败: ${id}`, error);
       message.error('激活失败');
@@ -222,8 +242,7 @@ const PromptListPage: React.FC = () => {
   const handleEditorSuccess = () => {
     setEditorVisible(false);
     setSelectedPrompt(null);
-    void loadList();
-    void loadStatistics();
+    refreshPromptsAndStatistics();
   };
 
   // 表格列定义
@@ -380,32 +399,23 @@ const PromptListPage: React.FC = () => {
 
   const handleDocTypeChange = useCallback(
     (value?: DocType) => {
-      applyFilters({
-        ...filters,
-        doc_type: value,
-      });
+      updateFilters({ doc_type: value });
     },
-    [applyFilters, filters]
+    [updateFilters]
   );
 
   const handleProviderChange = useCallback(
     (value?: LLMProvider) => {
-      applyFilters({
-        ...filters,
-        provider: value,
-      });
+      updateFilters({ provider: value });
     },
-    [applyFilters, filters]
+    [updateFilters]
   );
 
   const handleStatusChange = useCallback(
     (value?: PromptStatus) => {
-      applyFilters({
-        ...filters,
-        status: value,
-      });
+      updateFilters({ status: value });
     },
-    [applyFilters, filters]
+    [updateFilters]
   );
 
   return (
@@ -442,9 +452,12 @@ const PromptListPage: React.FC = () => {
                 title="平均准确率"
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                styles={{ content: {
-                  color: statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
-                } }}
+                styles={{
+                  content: {
+                    color:
+                      statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
+                  },
+                }}
               />
             </Card>
           </Col>
@@ -454,10 +467,12 @@ const PromptListPage: React.FC = () => {
                 title="平均置信度"
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                styles={{ content: {
-                  color:
-                    statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
-                } }}
+                styles={{
+                  content: {
+                    color:
+                      statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
+                  },
+                }}
               />
             </Card>
           </Col>
@@ -551,7 +566,7 @@ const PromptListPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           paginationState={pagination}
-          onPageChange={updatePagination}
+          onPageChange={handlePageChange}
           scroll={{ x: 1200 }}
         />
       </Card>

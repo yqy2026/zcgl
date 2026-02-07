@@ -11,11 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, screen } from '@/test/utils/test-helpers';
 
-import EmptyState, {
-  NoDataState,
-  NetworkErrorState,
-  NoFilterResultsState,
-} from '../EmptyState';
+import EmptyState, { NoDataState, NetworkErrorState, NoFilterResultsState } from '../EmptyState';
 
 describe('EmptyState', () => {
   it('renders default no-data state and create button when handler provided', () => {
@@ -63,10 +59,7 @@ describe('EmptyState', () => {
 
   it('uses actions prop instead of default buttons', () => {
     renderWithProviders(
-      <EmptyState
-        actions={<button type="button">自定义操作</button>}
-        onCreateClick={vi.fn()}
-      />
+      <EmptyState actions={<button type="button">自定义操作</button>} onCreateClick={vi.fn()} />
     );
 
     expect(screen.getByText('自定义操作')).toBeInTheDocument();

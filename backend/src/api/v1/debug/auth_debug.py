@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
-from ....schemas.auth import UserResponse
+from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
 from ....services.core.authentication_service import AsyncAuthenticationService
 from ....services.core.password_service import PasswordService

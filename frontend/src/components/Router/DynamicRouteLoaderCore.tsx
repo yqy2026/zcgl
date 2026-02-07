@@ -1,10 +1,6 @@
 import React from 'react';
 import { createLogger } from '@/utils/logger';
-import type {
-  DynamicRoute,
-  DynamicRouteConfig,
-  RouteMetrics,
-} from './dynamicRouteTypes';
+import type { DynamicRoute, DynamicRouteConfig, RouteMetrics } from './dynamicRouteTypes';
 
 export const componentLogger = createLogger('DynamicRouteLoader');
 
@@ -116,10 +112,7 @@ class DynamicRouteLoader {
     }
   }
 
-  private async performModuleLoad(
-    modulePath: string,
-    startTime: number
-  ): Promise<DynamicRoute[]> {
+  private async performModuleLoad(modulePath: string, startTime: number): Promise<DynamicRoute[]> {
     try {
       // 动态导入模块
       const module = await import(modulePath);
@@ -138,10 +131,7 @@ class DynamicRouteLoader {
 
       return routes;
     } catch (error) {
-      componentLogger.error(
-        `Failed to load route module: ${modulePath}`,
-        error as Error
-      );
+      componentLogger.error(`Failed to load route module: ${modulePath}`, error as Error);
       throw error;
     }
   }
@@ -149,9 +139,7 @@ class DynamicRouteLoader {
   private extractRoutesFromModule(
     module: {
       routes?: DynamicRoute[];
-      default?: React.LazyExoticComponent<
-        React.ComponentType<Record<string, unknown>>
-      >;
+      default?: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>;
     },
     modulePath: string
   ): DynamicRoute[] {
@@ -199,9 +187,7 @@ class DynamicRouteLoader {
       await route.component;
       // Route preloaded
     } catch (error) {
-      componentLogger.warn(
-        `Failed to preload route: ${route.id} - ${String(error)}`
-      );
+      componentLogger.warn(`Failed to preload route: ${route.id} - ${String(error)}`);
     }
   }
 
@@ -214,9 +200,7 @@ class DynamicRouteLoader {
     };
 
     this.routeMetrics.set(routeId, {
-      loadTime:
-        (existing.loadTime * existing.loadCount + loadTime) /
-        (existing.loadCount + 1),
+      loadTime: (existing.loadTime * existing.loadCount + loadTime) / (existing.loadCount + 1),
       loadCount: existing.loadCount + 1,
       lastLoaded: Date.now(),
       errorCount: existing.errorCount,
@@ -269,10 +253,7 @@ class DynamicRouteLoader {
       await route.component;
       return route;
     } catch (error) {
-      componentLogger.error(
-        `Failed to load route component: ${routeId}`,
-        error as Error
-      );
+      componentLogger.error(`Failed to load route component: ${routeId}`, error as Error);
       throw error;
     }
   }
@@ -287,15 +268,11 @@ class DynamicRouteLoader {
     );
   }
 
-  public getRoutesByPermission(
-    resource: string,
-    action: string
-  ): DynamicRoute[] {
+  public getRoutesByPermission(resource: string, action: string): DynamicRoute[] {
     return Array.from(this.routes.values()).filter(
       route =>
         route.permissions?.some(
-          permission =>
-            permission.resource === resource && permission.action === action
+          permission => permission.resource === resource && permission.action === action
         ) ?? false
     );
   }

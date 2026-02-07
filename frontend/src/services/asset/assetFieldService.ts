@@ -93,14 +93,10 @@ export class AssetFieldService {
     data: Partial<AssetCustomField>
   ): Promise<AssetCustomField> {
     try {
-      const result = await apiClient.put<AssetCustomField>(
-        `/asset-custom-fields/${id}`,
-        data,
-        {
-          retry: false,
-          smartExtract: true,
-        }
-      );
+      const result = await apiClient.put<AssetCustomField>(`/asset-custom-fields/${id}`, data, {
+        retry: false,
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`更新自定义字段配置失败: ${result.error}`);

@@ -117,7 +117,9 @@ describe('AnalyticsBarChart - 渲染测试', () => {
       { name: '项目1', value: 100 },
       { name: '项目2', value: 200 },
     ];
-    renderWithProviders(<AnalyticsBarChart title="测试柱状图" data={data} xAxisKey="name" barKey="value" />);
+    renderWithProviders(
+      <AnalyticsBarChart title="测试柱状图" data={data} xAxisKey="name" barKey="value" />
+    );
 
     expect(screen.getByText('测试柱状图')).toBeInTheDocument();
     expect(screen.getByTestId('column-chart')).toBeInTheDocument();
@@ -125,7 +127,9 @@ describe('AnalyticsBarChart - 渲染测试', () => {
 
   it('空数据时应该显示Empty', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
-    renderWithProviders(<AnalyticsBarChart title="空柱状图" data={[]} xAxisKey="name" barKey="value" />);
+    renderWithProviders(
+      <AnalyticsBarChart title="空柱状图" data={[]} xAxisKey="name" barKey="value" />
+    );
 
     const emptyText = screen.getAllByText('暂无数据');
     expect(emptyText.length).toBeGreaterThan(0);
@@ -134,7 +138,9 @@ describe('AnalyticsBarChart - 渲染测试', () => {
   it('应该支持自定义height', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
     const data = [{ name: '项目1', value: 100 }];
-    renderWithProviders(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" height={400} />);
+    renderWithProviders(
+      <AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" height={400} />
+    );
 
     expect(screen.getByTestId('column-chart')).toHaveAttribute('data-height', '400');
   });
@@ -152,7 +158,9 @@ describe('AnalyticsLineChart - 渲染测试', () => {
       { date: '2024-02', value: 200 },
     ];
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    renderWithProviders(<AnalyticsLineChart title="测试折线图" data={data} xAxisKey="date" lines={lines} />);
+    renderWithProviders(
+      <AnalyticsLineChart title="测试折线图" data={data} xAxisKey="date" lines={lines} />
+    );
 
     expect(screen.getByText('测试折线图')).toBeInTheDocument();
     expect(screen.getByTestId('line-chart')).toBeInTheDocument();
@@ -161,7 +169,9 @@ describe('AnalyticsLineChart - 渲染测试', () => {
   it('空数据时应该显示Empty', async () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    renderWithProviders(<AnalyticsLineChart title="空折线图" data={[]} xAxisKey="date" lines={lines} />);
+    renderWithProviders(
+      <AnalyticsLineChart title="空折线图" data={[]} xAxisKey="date" lines={lines} />
+    );
 
     const emptyText = screen.getAllByText('暂无数据');
     expect(emptyText.length).toBeGreaterThan(0);
@@ -171,7 +181,9 @@ describe('AnalyticsLineChart - 渲染测试', () => {
     const { AnalyticsLineChart } = await import('../AnalyticsChart');
     const data = [{ date: '2024-01', value: 100 }];
     const lines = [{ key: 'value', name: '趋势', color: '#1890ff' }];
-    renderWithProviders(<AnalyticsLineChart title="测试" data={data} xAxisKey="date" lines={lines} height={400} />);
+    renderWithProviders(
+      <AnalyticsLineChart title="测试" data={data} xAxisKey="date" lines={lines} height={400} />
+    );
 
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-height', '400');
   });
@@ -268,9 +280,7 @@ describe('chartDataUtils - 数据转换工具测试', () => {
 
   it('toBusinessCategoryAreaData应该正确转换数据格式', async () => {
     const { chartDataUtils } = await import('../AnalyticsChart');
-    const input = [
-      { category: '零售', total_area: 800, area_percentage: 40, occupancy_rate: 75 },
-    ];
+    const input = [{ category: '零售', total_area: 800, area_percentage: 40, occupancy_rate: 75 }];
     const result = chartDataUtils.toBusinessCategoryAreaData(input);
 
     expect(result[0]).toHaveProperty('name', '零售');
@@ -296,7 +306,9 @@ describe('AnalyticsChart - 边界情况测试', () => {
   it('应该处理负数value', async () => {
     const { AnalyticsBarChart } = await import('../AnalyticsChart');
     const data = [{ name: '选项1', value: -100 }];
-    renderWithProviders(<AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" />);
+    renderWithProviders(
+      <AnalyticsBarChart title="测试" data={data} xAxisKey="name" barKey="value" />
+    );
 
     // 应该正常渲染
     expect(screen.getByText('测试')).toBeInTheDocument();

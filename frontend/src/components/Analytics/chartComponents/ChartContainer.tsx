@@ -8,7 +8,12 @@ interface ChartContainerProps {
   children: React.ReactNode;
 }
 
-const ChartContainer: React.FC<ChartContainerProps> = ({ loading = false, height, hasData, children }) => {
+const ChartContainer: React.FC<ChartContainerProps> = ({
+  loading = false,
+  height,
+  hasData,
+  children,
+}) => {
   if (loading === true) {
     return (
       <div

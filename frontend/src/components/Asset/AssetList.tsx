@@ -299,9 +299,7 @@ const AssetList: React.FC<AssetListProps> = ({
         dataIndex: 'data_status',
         key: 'data_status',
         width: 100,
-        render: status => (
-          <Tag color={getDataStatusColor(status)}>{status ?? '未知'}</Tag>
-        ),
+        render: status => <Tag color={getDataStatusColor(status)}>{status ?? '未知'}</Tag>,
       },
       {
         title: '出租率',
@@ -523,52 +521,55 @@ const AssetList: React.FC<AssetListProps> = ({
   }, [items]);
 
   // 汇总行渲染函数
-  const renderSummary = useCallback((_pageData: readonly Asset[]) => {
-    if (!summary) return null;
+  const renderSummary = useCallback(
+    (_pageData: readonly Asset[]) => {
+      if (!summary) return null;
 
-    const selectionOffset = onSelectChange ? 1 : 0;
-    const leadingSpan = 5 + selectionOffset;
-    const landIndex = leadingSpan;
-    const actualIndex = landIndex + 1;
-    const rentableIndex = actualIndex + 1;
-    const rentedIndex = rentableIndex + 1;
-    const statusSpan = 4;
-    const occupancyIndex = rentedIndex + 1 + statusSpan;
-    const trailingSpan = 4;
+      const selectionOffset = onSelectChange ? 1 : 0;
+      const leadingSpan = 5 + selectionOffset;
+      const landIndex = leadingSpan;
+      const actualIndex = landIndex + 1;
+      const rentableIndex = actualIndex + 1;
+      const rentedIndex = rentableIndex + 1;
+      const statusSpan = 4;
+      const occupancyIndex = rentedIndex + 1 + statusSpan;
+      const trailingSpan = 4;
 
-    return (
-      <Table.Summary fixed>
-        <Table.Summary.Row>
-          <Table.Summary.Cell index={0} colSpan={leadingSpan} align="right">
-            <strong>当前页合计：</strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={landIndex} align="right">
-            <strong>{formatArea(summary.landArea)}</strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={actualIndex} align="right">
-            <strong>{formatArea(summary.actualArea)}</strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={rentableIndex} align="right">
-            <strong>{formatArea(summary.rentableArea)}</strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={rentedIndex} align="right">
-            <strong>{formatArea(summary.rentedArea)}</strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={rentedIndex + 1} colSpan={statusSpan} />
-          <Table.Summary.Cell index={occupancyIndex} align="right">
-            <strong
-              style={{
-                color: getOccupancyRateColor(summary.occupancyRate),
-              }}
-            >
-              {formatPercentage(summary.occupancyRate)}
-            </strong>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={occupancyIndex + 1} colSpan={trailingSpan} />
-        </Table.Summary.Row>
-      </Table.Summary>
-    );
-  }, [onSelectChange, summary]);
+      return (
+        <Table.Summary fixed>
+          <Table.Summary.Row>
+            <Table.Summary.Cell index={0} colSpan={leadingSpan} align="right">
+              <strong>当前页合计：</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={landIndex} align="right">
+              <strong>{formatArea(summary.landArea)}</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={actualIndex} align="right">
+              <strong>{formatArea(summary.actualArea)}</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={rentableIndex} align="right">
+              <strong>{formatArea(summary.rentableArea)}</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={rentedIndex} align="right">
+              <strong>{formatArea(summary.rentedArea)}</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={rentedIndex + 1} colSpan={statusSpan} />
+            <Table.Summary.Cell index={occupancyIndex} align="right">
+              <strong
+                style={{
+                  color: getOccupancyRateColor(summary.occupancyRate),
+                }}
+              >
+                {formatPercentage(summary.occupancyRate)}
+              </strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={occupancyIndex + 1} colSpan={trailingSpan} />
+          </Table.Summary.Row>
+        </Table.Summary>
+      );
+    },
+    [onSelectChange, summary]
+  );
 
   // 行选择配置
   const rowSelection = useMemo(() => {
@@ -592,12 +593,9 @@ const AssetList: React.FC<AssetListProps> = ({
     total: data?.total ?? 0,
   };
 
-  const handlePageChange = useCallback(
-    (_pagination: { current?: number; pageSize?: number }) => {
-      void _pagination;
-    },
-    []
-  );
+  const handlePageChange = useCallback((_pagination: { current?: number; pageSize?: number }) => {
+    void _pagination;
+  }, []);
 
   return (
     <>

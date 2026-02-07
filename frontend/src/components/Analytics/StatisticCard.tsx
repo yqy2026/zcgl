@@ -52,5 +52,7 @@ export const FinancialStatisticCard: React.FC<FinancialStatisticCardProps> = ({
     color: value >= 0 ? (isPositive ? '#3f8600' : '#cf1322') : '#cf1322',
   };
 
-  return <StatisticCard title={title} value={value} styles={{ content: contentStyle }} {...props} />;
+  return (
+    <StatisticCard title={title} value={value} styles={{ content: contentStyle }} {...props} />
+  );
 };

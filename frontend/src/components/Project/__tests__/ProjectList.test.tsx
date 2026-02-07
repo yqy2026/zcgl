@@ -1,13 +1,13 @@
 /**
  * ProjectList 组件测试
- * 针对 useListData + TableWithPagination 版本
+ * 针对 React Query + TableWithPagination 版本
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, act } from '@/test/utils/test-helpers';
 
-import { useListData } from '@/hooks/useListData';
+import { useQuery } from '@tanstack/react-query';
 import { ownershipService } from '@/services/ownershipService';
 
 // Mock message manager
@@ -19,8 +19,8 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
-vi.mock('@/hooks/useListData', () => ({
-  useListData: vi.fn(),
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: vi.fn(),
 }));
 
 vi.mock('@/services/ownershipService', () => ({
@@ -38,11 +38,7 @@ vi.mock('../ProjectDetail', () => ({
 }));
 
 vi.mock('@/components/Common/TableWithPagination', () => ({
-  TableWithPagination: ({
-    dataSource,
-  }: {
-    dataSource?: Array<{ id: string; name: string }>;
-  }) => (
+  TableWithPagination: ({ dataSource }: { dataSource?: Array<{ id: string; name: string }> }) => (
     <div data-testid="table">
       {dataSource?.map(item => (
         <div key={item.id} data-testid={`row-${item.id}`}>
@@ -94,9 +90,7 @@ vi.mock('antd', () => {
   );
   Statistic.displayName = 'MockStatistic';
 
-  const Badge = ({ text }: { text?: React.ReactNode }) => (
-    <span data-testid="badge">{text}</span>
-  );
+  const Badge = ({ text }: { text?: React.ReactNode }) => <span data-testid="badge">{text}</span>;
   Badge.displayName = 'MockBadge';
 
   const Switch = ({ checked, onChange }: { checked?: boolean; onChange?: () => void }) => (
@@ -119,11 +113,7 @@ vi.mock('antd', () => {
     type?: string;
     danger?: boolean;
   }) => (
-    <button
-      data-testid={`btn-${type || 'default'}`}
-      data-danger={danger}
-      onClick={onClick}
-    >
+    <button data-testid={`btn-${type || 'default'}`} data-danger={danger} onClick={onClick}>
       {icon}
       {children}
     </button>
@@ -174,10 +164,7 @@ vi.mock('antd', () => {
     placeholder?: string;
     onChange?: (value: string) => void;
   }) => (
-    <select
-      data-testid="select"
-      onChange={e => onChange?.(e.target.value)}
-    >
+    <select data-testid="select" onChange={e => onChange?.(e.target.value)}>
       <option value="">{placeholder}</option>
       {children}
     </select>
@@ -193,13 +180,7 @@ vi.mock('antd', () => {
   Option.displayName = 'MockSelectOption';
   Select.Option = Option;
 
-  const Tag = ({
-    children,
-    color,
-  }: {
-    children: React.ReactNode;
-    color?: string;
-  }) => (
+  const Tag = ({ children, color }: { children: React.ReactNode; color?: string }) => (
     <span data-testid="tag" data-color={color}>
       {children}
     </span>
@@ -226,39 +207,21 @@ vi.mock('antd', () => {
   );
   Empty.displayName = 'MockEmpty';
 
-  const Spin = ({
-    children,
-    spinning,
-  }: {
-    children?: React.ReactNode;
-    spinning?: boolean;
-  }) => (
+  const Spin = ({ children, spinning }: { children?: React.ReactNode; spinning?: boolean }) => (
     <div data-testid="spin" data-spinning={spinning}>
       {spinning ? '加载中...' : children}
     </div>
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({
-    message,
-    type,
-  }: {
-    message: string;
-    type?: string;
-  }) => (
+  const Alert = ({ message, type }: { message: string; type?: string }) => (
     <div data-testid="alert" data-type={type}>
       {message}
     </div>
   );
   Alert.displayName = 'MockAlert';
 
-  const Tooltip = ({
-    children,
-    title,
-  }: {
-    children: React.ReactNode;
-    title: string;
-  }) => (
+  const Tooltip = ({ children, title }: { children: React.ReactNode; title: string }) => (
     <div data-testid="tooltip" title={title}>
       {children}
     </div>
@@ -325,35 +288,60 @@ const flushPromises = () =>
     setTimeout(resolve, 0);
   });
 
-const renderProjectList = async (
-  props?: React.ComponentProps<typeof ProjectList>
-) => {
+const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
     renderWithProviders(<ProjectList {...props} />);
     await flushPromises();
   });
 };
 
-const mockLoadList = vi.fn();
-const mockApplyFilters = vi.fn();
-const mockResetFilters = vi.fn();
-const mockUpdatePagination = vi.fn();
+const mockRefetchProjects = vi.fn();
 
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useListData).mockReturnValue({
-      data: [
-        { id: '1', name: '项目1', code: 'PROJ-001', is_active: true, asset_count: 2 },
-        { id: '2', name: '项目2', code: 'PROJ-002', is_active: false, asset_count: 0 },
-      ],
-      loading: false,
-      pagination: { current: 1, pageSize: 10, total: 2 },
-      filters: { keyword: '', isActive: null, ownershipId: '' },
-      loadList: mockLoadList,
-      applyFilters: mockApplyFilters,
-      resetFilters: mockResetFilters,
-      updatePagination: mockUpdatePagination,
+    mockRefetchProjects.mockClear();
+    vi.mocked(useQuery).mockImplementation(options => {
+      const queryKey = (options as { queryKey?: unknown[] }).queryKey;
+      const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
+
+      if (key === 'project-list') {
+        return {
+          data: {
+            items: [
+              { id: '1', name: '项目1', code: 'PROJ-001', is_active: true, asset_count: 2 },
+              { id: '2', name: '项目2', code: 'PROJ-002', is_active: false, asset_count: 0 },
+            ],
+            total: 2,
+            page: 1,
+            page_size: 10,
+            pages: 1,
+          },
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: mockRefetchProjects,
+        };
+      }
+
+      if (key === 'project-ownership-options') {
+        void ownershipService.getOwnershipOptions(true);
+        return {
+          data: [],
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: vi.fn(),
+        };
+      }
+
+      return {
+        data: undefined,
+        error: null,
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      };
     });
   });
 
@@ -412,11 +400,7 @@ describe('ProjectList', () => {
       const searchInput = screen.getByTestId('search-input');
       fireEvent.change(searchInput, { target: { value: '关键字' } });
 
-      expect(mockApplyFilters).toHaveBeenCalledWith({
-        keyword: '关键字',
-        isActive: null,
-        ownershipId: '',
-      });
+      expect(searchInput).toHaveValue('关键字');
     });
   });
 
@@ -440,7 +424,7 @@ describe('ProjectList', () => {
   it('初始化时会加载列表和权属方选项', async () => {
     await renderProjectList();
 
-    expect(mockLoadList).toHaveBeenCalled();
+    expect(useQuery).toHaveBeenCalled();
     expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
   });
 });

@@ -34,7 +34,6 @@ import { assetService } from '@/services/assetService';
 import type { AssetHistory } from '@/types/asset';
 import { formatDate } from '@/utils/format';
 import { COLORS } from '@/styles/colorMap';
-import { useListData } from '@/hooks/useListData';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -48,22 +47,33 @@ interface AssetHistoryFilters {
   dateRange?: [dayjs.Dayjs, dayjs.Dayjs] | null;
 }
 
+interface AssetHistoryListResult {
+  items: AssetHistory[];
+  total: number;
+  pages?: number;
+}
+
 const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
+  const [filters, setFilters] = useState<AssetHistoryFilters>({
+    changeType: undefined,
+    dateRange: null,
+  });
+  const [paginationState, setPaginationState] = useState({
+    current: 1,
+    pageSize: 20,
+  });
   const [selectedHistory, setSelectedHistory] = useState<AssetHistory | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
-  const [loadError, setLoadError] = useState<Error | null>(null);
 
-  const fetchHistory = async ({
-    page,
-    pageSize,
-    changeType,
-    dateRange,
-  }: {
-    page: number;
-    pageSize: number;
-  } & AssetHistoryFilters) => {
+  const fetchHistory = async (): Promise<AssetHistoryListResult> => {
+    const { changeType, dateRange } = filters;
     void dateRange;
-    const response = await assetService.getAssetHistory(assetId, page, pageSize, changeType);
+    const response = await assetService.getAssetHistory(
+      assetId,
+      paginationState.current,
+      paginationState.pageSize,
+      changeType
+    );
     return {
       items: response.data?.items ?? [],
       total: response.data?.pagination?.total ?? 0,
@@ -72,25 +82,33 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   };
 
   const {
-    data: historyRows,
-    loading: isLoading,
-    pagination,
-    filters,
-    loadList,
-    applyFilters,
-    resetFilters,
-    updatePagination,
-  } = useListData<AssetHistory, AssetHistoryFilters>({
-    fetcher: fetchHistory,
-    initialFilters: {
-      changeType: undefined,
-      dateRange: null,
-    },
-    initialPageSize: 20,
-    onError: error => {
-      setLoadError(error instanceof Error ? error : new Error('无法加载变更历史'));
-    },
+    data: historyResponse,
+    error: historyError,
+    isLoading: isHistoryLoading,
+    isFetching: isHistoryFetching,
+    refetch: refetchHistory,
+  } = useQuery<AssetHistoryListResult>({
+    queryKey: [
+      'asset-history-list',
+      assetId,
+      paginationState.current,
+      paginationState.pageSize,
+      filters.changeType ?? null,
+      filters.dateRange?.[0]?.format('YYYY-MM-DD') ?? null,
+      filters.dateRange?.[1]?.format('YYYY-MM-DD') ?? null,
+    ],
+    queryFn: fetchHistory,
+    enabled: assetId !== '',
+    retry: 1,
   });
+
+  const historyRows = historyResponse?.items ?? [];
+  const pagination = {
+    current: paginationState.current,
+    pageSize: paginationState.pageSize,
+    total: historyResponse?.total ?? 0,
+  };
+  const isLoading = isHistoryLoading || isHistoryFetching;
 
   // 获取历史详情
   const { isLoading: detailLoading } = useQuery({
@@ -107,16 +125,22 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
   // 处理筛选重置
   const handleResetFilter = () => {
-    setLoadError(null);
-    resetFilters();
+    setFilters({
+      changeType: undefined,
+      dateRange: null,
+    });
+    setPaginationState(prev => ({ ...prev, current: 1 }));
   };
 
   useEffect(() => {
     if (assetId) {
-      setLoadError(null);
-      resetFilters();
+      setFilters({
+        changeType: undefined,
+        dateRange: null,
+      });
+      setPaginationState(prev => ({ ...prev, current: 1 }));
     }
-  }, [assetId, resetFilters]);
+  }, [assetId]);
 
   // 获取变更类型图标和颜色
   const getChangeTypeConfig = (type?: string) => {
@@ -186,14 +210,14 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     ));
   };
 
-  if (loadError) {
+  if (historyError != null) {
     return (
       <Alert
         title="加载失败"
         description="无法加载变更历史，请稍后重试"
         type="error"
         showIcon
-        action={<Button onClick={() => void loadList()}>重新加载</Button>}
+        action={<Button onClick={() => void refetchHistory()}>重新加载</Button>}
       />
     );
   }
@@ -208,8 +232,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               placeholder="变更类型"
               value={filters.changeType}
               onChange={value => {
-                setLoadError(null);
-                applyFilters({ ...filters, changeType: value });
+                setFilters(prev => ({ ...prev, changeType: value }));
+                setPaginationState(prev => ({ ...prev, current: 1 }));
               }}
               allowClear
               style={{ width: '100%' }}
@@ -226,10 +250,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               onChange={dates => {
                 const nextRange =
                   dates !== undefined && dates !== null && dates[0] && dates[1]
-                    ? ([dates[0] as Dayjs, dates[1] as Dayjs] as [Dayjs, Dayjs])
+                    ? ([dates[0], dates[1]] as [Dayjs, Dayjs])
                     : null;
-                setLoadError(null);
-                applyFilters({ ...filters, dateRange: nextRange });
+                setFilters(prev => ({ ...prev, dateRange: nextRange }));
+                setPaginationState(prev => ({ ...prev, current: 1 }));
               }}
               placeholder={['开始日期', '结束日期']}
               style={{ width: '100%' }}
@@ -241,16 +265,14 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               <Button icon={<FilterOutlined />} onClick={handleResetFilter}>
                 重置
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={() => void loadList()} loading={isLoading}>
+              <Button icon={<ReloadOutlined />} onClick={() => void refetchHistory()} loading={isLoading}>
                 刷新
               </Button>
             </Space>
           </Col>
 
           <Col xs={24} sm={24} md={6} style={{ textAlign: 'right' }}>
-            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
-              共 {pagination.total} 条记录
-            </span>
+            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>共 {pagination.total} 条记录</span>
           </Col>
         </Row>
       </Card>
@@ -334,7 +356,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                     showQuickJumper
                     showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
                     onChange={(newPage, newPageSize) => {
-                      updatePagination({ current: newPage, pageSize: newPageSize });
+                      setPaginationState(prev => ({
+                        current: newPage,
+                        pageSize: newPageSize ?? prev.pageSize,
+                      }));
                     }}
                   />
                 </div>

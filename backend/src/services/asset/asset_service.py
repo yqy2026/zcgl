@@ -14,12 +14,11 @@ from ...core.exception_handler import (
     validation_error,
 )
 from ...crud.history import history_crud
-from ...models.asset import Asset
-from ...models.asset_history import AssetHistory
-from ...models.associations import property_cert_assets, rent_contract_assets
+from ...models.asset import Asset, AssetHistory
 from ...models.auth import User
 from ...models.ownership import Ownership
-from ...models.rent_contract import RentLedger
+from ...models.property_certificate import property_cert_assets
+from ...models.rent_contract import RentLedger, rent_contract_assets
 from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async

@@ -7,10 +7,30 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
+const readNodeEnv = (name) => {
+  const rawValue = process.env[name];
+  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : undefined;
+};
+
+const readNodeEnvBoolean = (name, defaultValue) => {
+  const rawValue = readNodeEnv(name);
+  if (rawValue == null) {
+    return defaultValue;
+  }
+  const normalizedValue = rawValue.toLowerCase();
+  if (normalizedValue === 'true' || normalizedValue === '1') {
+    return true;
+  }
+  if (normalizedValue === 'false' || normalizedValue === '0') {
+    return false;
+  }
+  return defaultValue;
+};
+
 // Configuration
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-const HEADLESS = process.env.HEADLESS !== 'false';
-const PAGES = process.env.PAGES?.split(',') || [
+const BASE_URL = readNodeEnv('BASE_URL') || 'http://localhost:5173';
+const HEADLESS = readNodeEnvBoolean('HEADLESS', true);
+const PAGES = readNodeEnv('PAGES')?.split(',') || [
   '/',
   '/dashboard',
   '/assets/list',

@@ -83,9 +83,7 @@ describe('useErrorHandler', () => {
     });
 
     it('应该处理 401 错误', () => {
-      const { result } = renderHook(() =>
-        useErrorHandler({ redirectOnError: true })
-      );
+      const { result } = renderHook(() => useErrorHandler({ redirectOnError: true }));
 
       act(() => {
         result.current.handleApiError({
@@ -233,9 +231,7 @@ describe('useErrorHandler', () => {
 
   describe('选项配置', () => {
     it('showNotification=false 时不显示通知', () => {
-      const { result } = renderHook(() =>
-        useErrorHandler({ showNotification: false })
-      );
+      const { result } = renderHook(() => useErrorHandler({ showNotification: false }));
 
       act(() => {
         result.current.handleApiError({
@@ -247,9 +243,7 @@ describe('useErrorHandler', () => {
     });
 
     it('redirectOnError=false 时不重定向', () => {
-      const { result } = renderHook(() =>
-        useErrorHandler({ redirectOnError: false })
-      );
+      const { result } = renderHook(() => useErrorHandler({ redirectOnError: false }));
 
       act(() => {
         result.current.handleApiError({
