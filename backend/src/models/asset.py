@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     DECIMAL,
     Boolean,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -92,6 +93,19 @@ class Asset(Base):
     )
     rented_area: Mapped[Decimal | None] = mapped_column(
         DECIMAL(12, 2), comment="已出租面积（平方米）"
+    )
+    cached_occupancy_rate: Mapped[Decimal] = mapped_column(
+        DECIMAL(7, 2),
+        Computed(
+            "CASE "
+            "WHEN include_in_occupancy_rate = false THEN 0 "
+            "WHEN COALESCE(rentable_area, 0) = 0 THEN 0 "
+            "ELSE ROUND((COALESCE(rented_area, 0) / NULLIF(rentable_area, 0)) * 100, 2) "
+            "END",
+            persisted=True,
+        ),
+        nullable=False,
+        comment="缓存出租率（数据库生成列）",
     )
     # unrented_area 和 occupancy_rate 改为计算字段，不存储在数据库中
     non_commercial_area: Mapped[Decimal | None] = mapped_column(
@@ -283,6 +297,9 @@ class Asset(Base):
     @cached_property
     def occupancy_rate(self) -> Decimal:
         """计算出租率（百分比）"""
+        if self.cached_occupancy_rate is not None:
+            return self.cached_occupancy_rate
+
         if not self.include_in_occupancy_rate:
             return Decimal("0")
 

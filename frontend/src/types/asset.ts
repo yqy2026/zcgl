@@ -250,16 +250,22 @@ export interface AssetSearchParams {
   ownership_status?: OwnershipStatus;
   usage_status?: UsageStatus;
   property_nature?: PropertyNature;
+  management_entity?: string;
   business_category?: string; // 改为string类型以匹配使用
+  is_litigated?: boolean;
   tenant_type?: TenantType;
   contract_status?: ContractStatus;
   audit_status?: AuditStatus;
   data_status?: DataStatus;
-  sort_by?: string;
+  sort_field?: string;
+  sort_by?: string; // deprecated: use sort_field
   sort_order?: 'asc' | 'desc';
   // 面积范围筛选
   min_area?: number;
   max_area?: number;
+  // 出租率范围筛选
+  min_occupancy_rate?: number;
+  max_occupancy_rate?: number;
   // 租金范围筛选
   min_rent?: number;
   max_rent?: number;

@@ -77,8 +77,8 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
         <Col xs={24} sm={12} md={8} lg={6}>
           <Form.Item name="is_litigated" label="是否涉诉">
             <Select placeholder="选择是否涉诉" allowClear>
-              <Option value="是">是</Option>
-              <Option value="否">否</Option>
+              <Option value={true}>是</Option>
+              <Option value={false}>否</Option>
             </Select>
           </Form.Item>
         </Col>
@@ -128,8 +128,9 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
                 <Select style={{ width: '60%' }} defaultValue="created_at">
                   <Option value="created_at">创建时间</Option>
                   <Option value="property_name">物业名称</Option>
-                  <Option value="total_area">建筑面积</Option>
+                  <Option value="actual_property_area">建筑面积</Option>
                   <Option value="rentable_area">可租面积</Option>
+                  <Option value="occupancy_rate">出租率</Option>
                 </Select>
               </Form.Item>
               <Form.Item name="sort_order" noStyle>

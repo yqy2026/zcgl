@@ -33,6 +33,30 @@ def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _normalize_bool_filter(
+    value: bool | str | None, *, field_name: str
+) -> bool | None:
+    if isinstance(value, bool):
+        return value
+
+    if value is None:
+        return None
+
+    normalized = value.strip().lower()
+    if normalized == "":
+        return None
+
+    if normalized in {"true", "1", "yes", "y", "是"}:
+        return True
+    if normalized in {"false", "0", "no", "n", "否"}:
+        return False
+
+    raise validation_error(
+        f"{field_name} 参数无效，支持值: true/false/是/否",
+        field_errors={field_name: "invalid_boolean_filter"},
+    )
+
+
 def _get_asset_crud() -> Any:
     if asset_crud is not _DEFAULT_ASSET_CRUD:
         return asset_crud
@@ -58,7 +82,9 @@ class AssetService:
         data_status: str | None = None,
         min_area: float | None = None,
         max_area: float | None = None,
-        is_litigated: str | None = None,
+        min_occupancy_rate: float | None = None,
+        max_occupancy_rate: float | None = None,
+        is_litigated: bool | str | None = None,
     ) -> dict[str, Any] | None:
         filters: dict[str, Any] = {}
         if ownership_status is not None and ownership_status != "":
@@ -79,8 +105,16 @@ class AssetService:
             filters["min_area"] = min_area
         if max_area is not None:
             filters["max_area"] = max_area
-        if is_litigated is not None and is_litigated != "":
-            filters["is_litigated"] = is_litigated
+        if min_occupancy_rate is not None:
+            filters["min_occupancy_rate"] = min_occupancy_rate
+        if max_occupancy_rate is not None:
+            filters["max_occupancy_rate"] = max_occupancy_rate
+        normalized_is_litigated = _normalize_bool_filter(
+            is_litigated,
+            field_name="is_litigated",
+        )
+        if normalized_is_litigated is not None:
+            filters["is_litigated"] = normalized_is_litigated
         return filters or None
 
     @asynccontextmanager

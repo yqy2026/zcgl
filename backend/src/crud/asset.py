@@ -186,6 +186,15 @@ class SensitiveDataHandler:
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产CRUD操作类 - 优化版本"""
 
+    SORT_FIELD_ALIASES = {
+        "occupancy_rate": "cached_occupancy_rate",
+    }
+    FILTER_FIELD_ALIASES = {
+        "min_occupancy_rate": "min_cached_occupancy_rate",
+        "max_occupancy_rate": "max_cached_occupancy_rate",
+        "occupancy_rate": "cached_occupancy_rate",
+    }
+
     def __init__(self) -> None:
         super().__init__(Asset)
         # Asset 模型的敏感字段（需要加密的PII字段）
@@ -258,6 +267,33 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             joinedload(Asset.ownership),
             selectinload(Asset.rent_contracts),
         )
+
+    def _normalize_sort_field(self, sort_field: str) -> str:
+        return self.SORT_FIELD_ALIASES.get(sort_field, sort_field)
+
+    def _normalize_filters(self, filters: dict[str, Any] | None) -> dict[str, Any]:
+        qb_filters: dict[str, Any] = {}
+        if not filters:
+            return qb_filters
+
+        for key, value in filters.items():
+            normalized_key = self.FILTER_FIELD_ALIASES.get(key, key)
+            if normalized_key == "is_litigated" and isinstance(value, str):
+                normalized_bool = value.strip().lower()
+                if normalized_bool in {"true", "1", "yes", "y", "是"}:
+                    value = True
+                elif normalized_bool in {"false", "0", "no", "n", "否"}:
+                    value = False
+            if normalized_key == "min_area":
+                qb_filters["min_actual_property_area"] = value
+            elif normalized_key == "max_area":
+                qb_filters["max_actual_property_area"] = value
+            elif normalized_key == "ids":
+                qb_filters["id__in"] = value
+            else:
+                qb_filters[normalized_key] = value
+
+        return qb_filters
 
     async def create_async(
         self,
@@ -378,17 +414,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         sort_order: str = "desc",
         include_relations: bool = True,
     ) -> tuple[list[Asset], int]:
-        qb_filters = {}
-        if filters:
-            for key, value in filters.items():
-                if key == "min_area":
-                    qb_filters["min_actual_property_area"] = value
-                elif key == "max_area":
-                    qb_filters["max_actual_property_area"] = value
-                elif key == "ids":
-                    qb_filters["id__in"] = value
-                else:
-                    qb_filters[key] = value
+        qb_filters = self._normalize_filters(filters)
+        normalized_sort_field = self._normalize_sort_field(sort_field)
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
@@ -446,7 +473,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         query: Select[Any] = self.query_builder.build_query(
             filters=qb_filters,
             search_conditions=search_conditions,
-            sort_by=sort_field,
+            sort_by=normalized_sort_field,
             sort_desc=(sort_order.lower() == "desc"),
             skip=skip,
             limit=limit,

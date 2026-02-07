@@ -31,6 +31,7 @@ class TestAssetWhitelist:
         assert whitelist.can_filter("property_nature")
         assert whitelist.can_filter("usage_status")
         assert whitelist.can_filter("business_category")
+        assert whitelist.can_filter("management_entity")
         assert whitelist.can_filter("is_litigated")
         assert whitelist.can_filter("data_status")
 
@@ -38,6 +39,7 @@ class TestAssetWhitelist:
         assert whitelist.can_filter("actual_property_area")
         assert whitelist.can_filter("rentable_area")
         assert whitelist.can_filter("rented_area")
+        assert whitelist.can_filter("cached_occupancy_rate")
         assert whitelist.can_filter("land_area")
 
         # Boolean flags
@@ -109,6 +111,7 @@ class TestAssetWhitelist:
         assert whitelist.can_sort("actual_property_area")
         assert whitelist.can_sort("rentable_area")
         assert whitelist.can_sort("rented_area")
+        assert whitelist.can_sort("cached_occupancy_rate")
 
         # Alphabetic sorting
         assert whitelist.can_sort("property_name")

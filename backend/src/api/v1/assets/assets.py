@@ -106,11 +106,16 @@ async def get_assets(
     data_status: str | None = Query(None, description="数据状态筛选"),
     min_area: float | None = Query(None, ge=0, description="最小面积筛选"),
     max_area: float | None = Query(None, ge=0, description="最大面积筛选"),
-    is_litigated: str | None = Query(None, description="是否涉诉筛选"),
+    min_occupancy_rate: float | None = Query(None, ge=0, description="最小出租率筛选"),
+    max_occupancy_rate: float | None = Query(None, ge=0, description="最大出租率筛选"),
+    is_litigated: bool | str | None = Query(
+        None, description="是否涉诉筛选（支持 true/false 或 是/否）"
+    ),
     include_relations: bool = Query(False, description="是否加载关联数据"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    sort_field: str = Query(DateTimeFields.CREATED_AT, description="排序字段"),
+    sort_field: str | None = Query(None, description="排序字段"),
+    sort_by: str | None = Query(None, description="排序字段（兼容参数）"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
 ) -> Response:
     """
@@ -124,9 +129,18 @@ async def get_assets(
     - **usage_status**: 按使用状态筛选
     - **ownership_id**: 按权属方ID筛选
     - **sort_field**: 排序字段
+    - **sort_by**: 排序字段（兼容参数）
     - **sort_order**: 排序方向（asc/desc）
     - **include_relations**: 是否加载关联数据（默认不加载）
     """
+    resolved_sort_field = (
+        sort_field
+        if sort_field is not None and sort_field != ""
+        else sort_by
+        if sort_by is not None and sort_by != ""
+        else DateTimeFields.CREATED_AT
+    )
+
     filters = AssetService.build_filters(
         ownership_status=ownership_status,
         property_nature=property_nature,
@@ -137,6 +151,8 @@ async def get_assets(
         data_status=data_status,
         min_area=min_area,
         max_area=max_area,
+        min_occupancy_rate=min_occupancy_rate,
+        max_occupancy_rate=max_occupancy_rate,
         is_litigated=is_litigated,
     )
 
@@ -146,7 +162,7 @@ async def get_assets(
         limit=page_size,
         search=search,
         filters=filters,
-        sort_field=sort_field,
+        sort_field=resolved_sort_field,
         sort_order=sort_order,
         include_relations=include_relations,
     )

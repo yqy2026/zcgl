@@ -86,6 +86,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "property_nature",
         "usage_status",
         "business_category",  # High-level business classification
+        "management_entity",
         "is_litigated",
         "data_status",
         "is_active",
@@ -97,6 +98,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "actual_property_area",
         "rentable_area",
         "rented_area",
+        "cached_occupancy_rate",
         "non_commercial_area",
         # Boolean flags
         "include_in_occupancy_rate",
@@ -141,6 +143,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "actual_property_area",
         "rentable_area",
         "rented_area",
+        "cached_occupancy_rate",
         # Alphabetic sorting
         "property_name",
         "project_name",

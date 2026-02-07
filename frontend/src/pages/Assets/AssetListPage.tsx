@@ -71,7 +71,13 @@ const AssetListPage: React.FC = () => {
   }, [loadList]);
 
   const analyticsFilters = useMemo(() => {
-    const { sort_by: _sort_by, sort_order: _sort_order, data_status: _dataStatus, ...rest } = filters;
+    const {
+      sort_field: _sortField,
+      sort_by: _sortBy,
+      sort_order: _sortOrder,
+      data_status: _dataStatus,
+      ...rest
+    } = filters;
     return rest;
   }, [filters]);
 
@@ -129,8 +135,10 @@ const AssetListPage: React.FC = () => {
       const nextFilters: AssetListFilters = { ...filters };
 
       if (sortField != null) {
-        nextFilters.sort_by = sortField;
+        nextFilters.sort_field = sortField;
+        delete nextFilters.sort_by;
       } else {
+        delete nextFilters.sort_field;
         delete nextFilters.sort_by;
       }
 

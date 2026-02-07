@@ -128,6 +128,43 @@ class TestCRUDAssetGetMulti:
         mock_decrypt.assert_any_call(mock_assets[1])
 
 
+class TestCRUDAssetQueryNormalization:
+    def test_normalize_sort_field_maps_occupancy_rate(self, crud: AssetCRUD) -> None:
+        assert crud._normalize_sort_field("occupancy_rate") == "cached_occupancy_rate"
+        assert crud._normalize_sort_field("created_at") == "created_at"
+
+    def test_normalize_filters_maps_occupancy_and_area_fields(
+        self, crud: AssetCRUD
+    ) -> None:
+        normalized = crud._normalize_filters(
+            {
+                "min_area": 10,
+                "max_area": 20,
+                "min_occupancy_rate": 30,
+                "max_occupancy_rate": 90,
+                "ids": ["asset-1", "asset-2"],
+                "usage_status": "出租",
+                "management_entity": "管理方A",
+                "is_litigated": True,
+            }
+        )
+
+        assert normalized["min_actual_property_area"] == 10
+        assert normalized["max_actual_property_area"] == 20
+        assert normalized["min_cached_occupancy_rate"] == 30
+        assert normalized["max_cached_occupancy_rate"] == 90
+        assert normalized["id__in"] == ["asset-1", "asset-2"]
+        assert normalized["usage_status"] == "出租"
+        assert normalized["management_entity"] == "管理方A"
+        assert normalized["is_litigated"] is True
+
+    def test_normalize_filters_maps_is_litigated_chinese_string(
+        self, crud: AssetCRUD
+    ) -> None:
+        normalized = crud._normalize_filters({"is_litigated": "否"})
+        assert normalized["is_litigated"] is False
+
+
 class TestCRUDAssetCreate:
     async def test_create_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         create_data = {"property_name": "新物业", "address": "测试地址123号"}

@@ -3,10 +3,8 @@
  */
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { screen, fireEvent, waitFor, renderWithProviders } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
 import AssetListPage from '../AssetListPage';
 
 // Mock services
@@ -92,27 +90,6 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        gcTime: 0,
-      },
-    },
-  });
-
-const renderWithProviders = () => {
-  const queryClient = createTestQueryClient();
-  return renderWithProviders(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <AssetListPage />
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
-};
-
 let mockData: Array<{ id: string; property_name: string }> = [];
 let mockLoading = false;
 let mockError: Error | null = null;
@@ -157,13 +134,13 @@ describe('AssetListPage', () => {
 
   describe('渲染', () => {
     it('渲染页面标题', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByText('资产列表')).toBeInTheDocument();
     });
 
     it('渲染操作按钮', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByText('新增资产')).toBeInTheDocument();
       expect(screen.getByText('导入资产')).toBeInTheDocument();
@@ -171,19 +148,19 @@ describe('AssetListPage', () => {
     });
 
     it('渲染搜索组件', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByTestId('asset-search')).toBeInTheDocument();
     });
 
     it('渲染面积汇总组件', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByTestId('asset-area-summary')).toBeInTheDocument();
     });
 
     it('渲染资产列表组件', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
     });
@@ -195,7 +172,7 @@ describe('AssetListPage', () => {
       mockData = [];
       mockPagination = { current: 1, pageSize: 20, total: 0 };
 
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       expect(screen.getByTestId('loading')).toBeInTheDocument();
       expect(screen.getByText('加载资产数据中...')).toBeInTheDocument();
@@ -209,7 +186,7 @@ describe('AssetListPage', () => {
       mockLoading = false;
       mockPagination = { current: 1, pageSize: 20, total: 0 };
 
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       await waitFor(() => {
         expect(screen.getByText('数据加载失败')).toBeInTheDocument();
@@ -220,7 +197,7 @@ describe('AssetListPage', () => {
 
   describe('导航功能', () => {
     it('点击新增资产导航到创建页', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('新增资产'));
 
@@ -228,7 +205,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击导入资产导航到导入页', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('导入资产'));
 
@@ -236,7 +213,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击编辑导航到编辑页', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('Edit'));
 
@@ -244,7 +221,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击查看导航到详情页', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('View'));
 
@@ -256,7 +233,7 @@ describe('AssetListPage', () => {
     it('删除成功显示成功消息', async () => {
       vi.mocked(assetService.deleteAsset).mockResolvedValue(undefined);
 
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('Delete'));
 
@@ -269,7 +246,7 @@ describe('AssetListPage', () => {
     it('删除失败显示错误消息', async () => {
       vi.mocked(assetService.deleteAsset).mockRejectedValue(new Error('删除失败'));
 
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('Delete'));
 
@@ -281,7 +258,7 @@ describe('AssetListPage', () => {
 
   describe('搜索功能', () => {
     it('点击搜索触发搜索', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('Search'));
 
@@ -289,7 +266,7 @@ describe('AssetListPage', () => {
     });
 
     it('点击重置清空搜索条件', () => {
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('Reset'));
 
@@ -306,7 +283,7 @@ describe('AssetListPage', () => {
       global.URL.createObjectURL = vi.fn(() => 'blob:test');
       global.URL.revokeObjectURL = vi.fn();
 
-      renderWithProviders();
+      renderWithProviders(<AssetListPage />);
 
       fireEvent.click(screen.getByText('导出全部'));
 

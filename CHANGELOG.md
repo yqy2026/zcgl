@@ -9,6 +9,9 @@
 - 联系人批量创建事务批处理：`backend/src/crud/contact.py` 新增 `create_many_async`（批量加密 + 单事务提交 + primary 联系人一致性处理），`backend/src/api/v1/system/contact.py` 的批量接口改为一次调用批创建
 - 产权证导入 owner 批量化：`backend/src/crud/property_certificate.py` 新增 `PropertyOwner` 的 `create_multi_async`，`backend/src/services/property_certificate/service.py` 的 `confirm_import` 改为批量创建 owner 后统一提交
 - 新增/修复回归测试：新增 `backend/tests/unit/api/v1/test_contact_batch_api_async.py` 覆盖联系人批量接口批处理路径；更新 `backend/tests/unit/services/property_certificate/test_service.py` 对齐 `create_multi_async`；`backend/tests/unit/services/excel/test_excel_import_service.py` 与 `backend/tests/unit/services/asset/test_batch_service.py` 回归通过
+- 资产出租率数据库排序/筛选能力补齐：新增迁移 `backend/alembic/versions/20260207_add_asset_cached_occupancy_rate.py` 为 `assets` 表添加生成列 `cached_occupancy_rate` 与索引；`AssetCRUD` 支持 `occupancy_rate -> cached_occupancy_rate` 排序/筛选映射并新增 `min_occupancy_rate/max_occupancy_rate` 过滤；列表 API 增加 `sort_by` 兼容参数与出租率范围筛选；前端资产列表统一改为发送 `sort_field`
+- 资产列表页单测递归修复：`frontend/src/pages/Assets/__tests__/AssetListPage.test.tsx` 改为直接使用测试工具导出的 `renderWithProviders(<AssetListPage />)`，移除本地同名封装造成的递归调用，修复 `Maximum call stack size exceeded`
+- 资产列表筛选类型与白名单修复：`backend/src/services/asset/asset_service.py` 为 `is_litigated` 增加 `true/false/是/否` 归一化并拒绝非法值，`backend/src/crud/asset.py` 在 `_normalize_filters` 增加同类兼容转换；`backend/src/api/v1/assets/assets.py` 同步放宽入参类型；`frontend/src/components/Asset/AssetSearch/AdvancedSearchFields.tsx` 改为提交布尔值；`backend/src/crud/field_whitelist.py` 为 `AssetWhitelist` 放行 `management_entity` 过滤，补齐与 API 暴露参数的一致性
 
 - API 分层收口（最佳实践）：`backend/src/api/v1/system/tasks.py`、`backend/src/api/v1/auth/organization.py`、`backend/src/api/v1/auth/roles.py`、`backend/src/api/v1/assets/ownership.py` 去除对真实 CRUD 的直接依赖，统一改为经由 Service 层
 - Task 服务能力补齐：`backend/src/services/task/service.py` 新增任务列表/详情/历史/运行中/最近任务与 Excel 配置查询/更新/删除服务方法，供 API 统一复用

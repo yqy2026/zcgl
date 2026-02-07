@@ -216,6 +216,43 @@ class TestGetAssets:
             assert result == ([], 0)
 
 
+class TestBuildFilters:
+    async def test_build_filters_includes_occupancy_rate_range(self) -> None:
+        filters = AssetService.build_filters(
+            min_occupancy_rate=25.5,
+            max_occupancy_rate=90.0,
+        )
+
+        assert filters is not None
+        assert filters["min_occupancy_rate"] == 25.5
+        assert filters["max_occupancy_rate"] == 90.0
+
+    async def test_build_filters_returns_none_when_empty(self) -> None:
+        assert AssetService.build_filters() is None
+
+    async def test_build_filters_normalizes_is_litigated_bool(self) -> None:
+        filters = AssetService.build_filters(is_litigated=True)
+        assert filters is not None
+        assert filters["is_litigated"] is True
+
+    async def test_build_filters_normalizes_is_litigated_chinese(self) -> None:
+        filters = AssetService.build_filters(is_litigated="否")
+        assert filters is not None
+        assert filters["is_litigated"] is False
+
+    async def test_build_filters_includes_management_entity(self) -> None:
+        filters = AssetService.build_filters(management_entity="管理方A")
+        assert filters is not None
+        assert filters["management_entity"] == "管理方A"
+
+    async def test_build_filters_rejects_invalid_is_litigated(self) -> None:
+        with pytest.raises(BaseBusinessError) as exc_info:
+            AssetService.build_filters(is_litigated="maybe")
+
+        assert exc_info.value.status_code == 422
+        assert "is_litigated" in str(exc_info.value.message)
+
+
 # ============================================================================
 # AssetService.get_asset 测试
 # ============================================================================
